@@ -3,7 +3,7 @@
 - This build is for first-round user experience testing, not final analysis work.
 - The Dashboard, project creation, recent projects, workspace switching, status labels, and Testing Mode are the main things to test.
 - Bioinformatics GEO import currently creates a query plan and accession import record only; it does not perform live NCBI search or download in this step.
-- Bioinformatics Local Expression Matrix Import can read CSV / TSV / TXT / XLSX files and register an expression matrix data asset, but it does not normalize matrices, import sample annotations, edit groups, run differential expression, or create figures yet.
+- Bioinformatics Local Expression Matrix Import can read CSV / TSV / TXT / XLSX files, diagnose basic matrix structure, and write an expression matrix asset manifest, but it does not normalize matrices, import sample annotations, edit groups, run differential expression, or create figures yet.
 - Bioinformatics GEO download currently creates a download plan and target directories only; actual GEO downloading requires explicit user confirmation.
 - Bioinformatics asset detection scans only local target folders referenced by the download plan. If no files were downloaded or placed there manually, it will report no usable expression payload.
 - Bioinformatics data cleaning currently creates a preflight plan only. It does not normalize expression matrices or write cleaned tables yet.

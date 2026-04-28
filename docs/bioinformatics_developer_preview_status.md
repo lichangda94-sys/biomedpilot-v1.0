@@ -17,7 +17,7 @@ Bioinformatics is currently a Developer Preview / testing module. It provides a 
 | Step | Feature ID | Status | Current capability | Execution class | Current input | Current output |
 | --- | --- | --- | --- | --- | --- | --- |
 | 数据检索 / 导入 | `bio-data-import` | testing | Builds a GEO query/accession plan. Does not run live online search. | plan | Manual query text and/or GSE accession text | `geo_query_plan_*.json` |
-| Local Expression Matrix Import | `bio-local-expression-import` | testing | Reads CSV/TSV/TXT and optionally XLSX if `openpyxl` is installed; creates an expression matrix preflight summary. | testing preflight | Local expression matrix file path | `expression_matrix_import_*.json` |
+| Local Expression Matrix Import | `bio-local-expression-import` | testing | Reads CSV/TSV/TXT/XLSX, diagnoses basic matrix structure, and writes a summary plus asset manifest. | testing preflight | Local expression matrix file path | `expression_matrix_import_summary.json`, `expression_matrix_asset_manifest.json` |
 | 数据下载 | `bio-download` | testing | Reads GEO query plan and creates a download plan. Does not download NCBI data. | plan | `geo_query_plan_*.json` | `geo_download_plan_*.json` |
 | 数据资产识别 | `bio-asset-detection` | testing | Scans local target paths from a download plan and summarizes expression-payload candidates. Does not network. | preflight | `geo_download_plan_*.json` | `geo_asset_detection_*.json` |
 | 数据清洗 | `bio-cleaning` | testing | Creates a cleaning plan from asset detection output. Does not normalize matrices. | plan/preflight | `geo_asset_detection_*.json` | `geo_cleaning_plan_*.json` |

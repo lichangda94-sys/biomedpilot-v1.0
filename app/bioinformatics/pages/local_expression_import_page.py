@@ -15,6 +15,16 @@ class LocalExpressionImportPageState:
     file_path_placeholder: str
     import_button_label: str
     next_step: str
+    summary_fields: tuple[str, ...] = (
+        "row_count",
+        "column_count",
+        "gene_id_column_candidates",
+        "sample_expression_column_candidates",
+        "numeric_column_ratio",
+        "missing_value_summary",
+        "duplicate_gene_id_count",
+        "is_expression_matrix_suitable",
+    )
     last_result: ExpressionImportResult | None = None
 
 
@@ -107,10 +117,14 @@ if QWidget is not None:
                     f"行数：{result.row_count}\n"
                     f"列数：{result.column_count}\n"
                     f"候选 gene/probe 列：{', '.join(result.candidate_gene_columns) or '未识别'}\n"
-                    f"候选样本列：{', '.join(result.candidate_sample_columns) or '未识别'}\n"
-                    f"数值样本列数量：{result.numeric_sample_column_count}\n"
+                    f"候选表达样本列：{', '.join(result.sample_expression_column_candidates) or '未识别'}\n"
+                    f"数值样本列数量：{result.numeric_column_count}\n"
+                    f"数值列比例：{result.numeric_column_ratio:.2%}\n"
                     f"缺失比例：{result.missing_value_rate:.2%}\n"
-                    f"输出：{result.output_path}"
+                    f"重复 gene/probe/id 数：{result.duplicate_gene_id_count}\n"
+                    f"适合作为表达矩阵：{'是' if result.is_expression_matrix_suitable else '需人工确认'}\n"
+                    f"Manifest：{result.manifest_path or result.output_path}\n"
+                    f"Summary：{result.summary_path or '未生成'}"
                 )
                 self._warnings_label.setText("\n".join(result.warnings))
                 self._error_label.setText("")
