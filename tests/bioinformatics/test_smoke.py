@@ -16,6 +16,7 @@ def test_bioinformatics_workspace_steps_are_visible() -> None:
     step_names = [step.feature_name for step in steps]
     assert step_names == [
         "数据检索 / 导入",
+        "Local Expression Matrix Import",
         "数据下载",
         "数据资产识别",
         "数据清洗",
@@ -43,6 +44,14 @@ def test_bioinformatics_workspace_includes_geo_download_step() -> None:
     assert download
     assert download[0].status.value == "testing"
     assert "下载计划" in download[0].description
+
+
+def test_bioinformatics_workspace_includes_local_expression_import_step() -> None:
+    steps = bioinformatics_step_features()
+    expression_import = [step for step in steps if step.feature_id == "bio-local-expression-import"]
+    assert expression_import
+    assert expression_import[0].status.value == "testing"
+    assert "CSV / TSV / TXT / XLSX" in expression_import[0].description
 
 
 def test_bioinformatics_workspace_includes_geo_asset_detection_step() -> None:

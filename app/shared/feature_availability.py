@@ -36,6 +36,7 @@ class FeatureAvailability:
 FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-study-question", "研究问题", FeatureAvailabilityStatus.PLACEHOLDER, "研究设计入口已预留。", "接入项目向导和研究目标记录。"),
     FeatureAvailability("bioinformatics", "bio-data-import", "数据检索 / 导入", FeatureAvailabilityStatus.TESTING, "支持生成 GEO 查询计划和 GSE accession 导入记录；当前不自动下载 NCBI 数据。", "接入受控在线检索、候选列表和下载步骤。", "app/bioinformatics/legacy/geo_tool"),
+    FeatureAvailability("bioinformatics", "bio-local-expression-import", "Local Expression Matrix Import", FeatureAvailabilityStatus.TESTING, "已支持本地 CSV / TSV / TXT / XLSX 表达矩阵预检和数据资产登记；尚未进行表达矩阵标准化、样本分组和差异分析。", "接入数据资产确认、样本注释导入和表达矩阵清洗。"),
     FeatureAvailability("bioinformatics", "bio-download", "数据下载", FeatureAvailabilityStatus.TESTING, "读取 GEO 查询计划并生成下载计划；当前不实际下载 NCBI 数据。", "在用户确认后接入 legacy GEO 下载执行。", "app/bioinformatics/legacy/geo_pipeline"),
     FeatureAvailability("bioinformatics", "bio-asset-detection", "数据资产识别", FeatureAvailabilityStatus.TESTING, "读取 GEO 下载计划并扫描本地目标目录，不联网、不下载。", "接入真实下载产物后的表达矩阵、样本注释和平台注释识别。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-cleaning", "数据清洗", FeatureAvailabilityStatus.TESTING, "读取资产识别结果并生成清洗预检计划；当前不执行矩阵标准化。", "接入受控矩阵清洗、标准化结果预览和输出登记。", "app/bioinformatics/legacy/geo_processing"),

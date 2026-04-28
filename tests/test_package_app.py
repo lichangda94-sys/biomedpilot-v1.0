@@ -55,4 +55,4 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
         capture_output=True,
     )
     assert "BioMedPilot / 医研智析" in completed.stdout
-    assert "bioinformatics_features=10" in completed.stdout
+    assert "bioinformatics_features=11" in completed.stdout
