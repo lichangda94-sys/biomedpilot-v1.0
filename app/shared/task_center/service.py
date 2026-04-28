@@ -29,6 +29,7 @@ class TaskType(StrEnum):
     EXTRACTION = "extraction"
     EXTRACTION_RECORD_SAVE = "extraction_record_save"
     EXTRACTION_RECORD_VALIDATION = "extraction_record_validation"
+    EXTRACTION_EXPORT = "extraction_export"
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
     VISUALIZATION = "visualization"
