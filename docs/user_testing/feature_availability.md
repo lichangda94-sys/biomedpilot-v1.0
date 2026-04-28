@@ -22,7 +22,7 @@ Status meanings:
 | 生信分析 | 生存分析 | 暂未开放 | 暂未开放。 | 定义临床数据契约。 |
 | 生信分析 | 报告导出 | 待接入 | 统一报告入口占位。 | 接入 Report Center。 |
 | Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。 | 继续接入 Prepare for Screening 和 Duplicate Review。 |
-| Meta 分析 | 去重准备 | 测试中 | 去重准备能力来自 legacy literature 服务。 | 接入导入后的文献集合。 |
+| Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
 | Meta 分析 | Duplicate Review | 测试中 | Duplicate Review 能力已保留。 | 接入人工确认 UI。 |
 | Meta 分析 | Screening | 测试中 | Screening service 已保留。 | 接入标题摘要筛选队列。 |
 | Meta 分析 | Extraction | 测试中 | Extraction service 已保留。 | 接入提取表单和保存。 |

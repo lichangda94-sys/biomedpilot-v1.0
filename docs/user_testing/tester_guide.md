@@ -51,10 +51,13 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 7. Click `导入`.
 8. Confirm that the result summary shows the source file, format, total records,
    imported records, and output path.
-9. Return to the Dashboard and click each recent project.
-10. Open `测试模式`.
-11. Generate a feedback template.
-12. Record anything confusing, broken, missing, or mislabeled.
+9. Copy the Literature Import output path into `去重准备 / Prepare for Screening`.
+10. Click `准备筛选记录`.
+11. Confirm that the result summary shows total records, prepared records, and output path.
+12. Return to the Dashboard and click each recent project.
+13. Open `测试模式`.
+14. Generate a feedback template.
+15. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -63,6 +66,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Recent project list.
 - Workspace switching.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
+- Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 

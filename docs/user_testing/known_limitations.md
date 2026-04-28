@@ -2,7 +2,8 @@
 
 - This build is for first-round user experience testing, not final analysis work.
 - The Dashboard, project creation, recent projects, workspace switching, status labels, and Testing Mode are the main things to test.
-- Meta Literature Import is connected for NBIB / RIS / CSV smoke testing; other Meta workflow steps are still status entries.
+- Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
+- Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.
 - Formal differential expression, enrichment, correlation, survival, and complete Meta statistics are not exposed as real runs in this build.

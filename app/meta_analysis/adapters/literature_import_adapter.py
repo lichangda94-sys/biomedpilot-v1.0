@@ -15,9 +15,14 @@ class LegacyParsedRecord:
     record_id: str
     title: str
     source_record_id: str
+    abstract: str
+    authors: list[str]
+    journal: str
     doi: str
     pmid: str
     year: int | None
+    keywords: list[str]
+    language: str
 
 
 @dataclass(frozen=True)
@@ -60,9 +65,14 @@ class LiteratureImportAdapter:
                     record_id=record.record_id or f"prec-{uuid4().hex[:12]}",
                     title=record.title,
                     source_record_id=record.source_record_id,
+                    abstract=record.abstract,
+                    authors=list(record.authors),
+                    journal=record.journal,
                     doi=record.doi,
                     pmid=record.pmid,
                     year=record.year,
+                    keywords=list(record.keywords),
+                    language=record.language,
                 )
                 for record in records
             ],
@@ -84,4 +94,3 @@ def _legacy_path():
                 sys.path.remove(legacy_text)
             except ValueError:
                 pass
-

@@ -21,6 +21,7 @@ class TaskType(StrEnum):
     DOWNLOAD = "download"
     IMPORT = "import"
     LITERATURE_IMPORT = "literature_import"
+    PREPARE_SCREENING = "prepare_screening"
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
     VISUALIZATION = "visualization"

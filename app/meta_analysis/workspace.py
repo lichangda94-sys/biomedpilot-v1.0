@@ -31,6 +31,7 @@ except Exception:  # pragma: no cover
 
 if QWidget is not None:
     from app.meta_analysis.pages.literature_import_page import LiteratureImportPage
+    from app.meta_analysis.pages.prepare_screening_page import PrepareScreeningPage
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -56,8 +57,9 @@ if QWidget is not None:
             content = QWidget()
             content_layout = QVBoxLayout(content)
             content_layout.addWidget(LiteratureImportPage())
+            content_layout.addWidget(PrepareScreeningPage())
             for feature in meta_analysis_step_features():
-                if feature.feature_id == "meta-literature-import":
+                if feature.feature_id in {"meta-literature-import", "meta-dedup-prep"}:
                     continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)

@@ -31,3 +31,11 @@ def test_meta_workspace_includes_literature_import_step() -> None:
     literature_import = [step for step in steps if step.feature_id == "meta-literature-import"]
     assert literature_import
     assert literature_import[0].status.value == "testing"
+
+
+def test_meta_workspace_includes_prepare_screening_step() -> None:
+    steps = meta_analysis_step_features()
+    prepare = [step for step in steps if step.feature_id == "meta-dedup-prep"]
+    assert prepare
+    assert prepare[0].feature_name == "去重准备"
+    assert prepare[0].status.value == "testing"

@@ -47,7 +47,7 @@ FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-reporting", "报告导出", FeatureAvailabilityStatus.PLACEHOLDER, "统一报告入口占位。", "接入 Report Center。"),
     FeatureAvailability("meta_analysis", "meta-pico", "研究问题 / PICO", FeatureAvailabilityStatus.TESTING, "legacy PICO/search 能力已保留。", "接入统一项目记录。", "app/meta_analysis/legacy/pico"),
     FeatureAvailability("meta_analysis", "meta-literature-import", "文献导入", FeatureAvailabilityStatus.TESTING, "支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。", "继续接入 Prepare for Screening 和 Duplicate Review。", "app/meta_analysis/legacy/literature"),
-    FeatureAvailability("meta_analysis", "meta-dedup-prep", "去重准备", FeatureAvailabilityStatus.TESTING, "去重准备能力来自 legacy literature 服务。", "接入导入后的文献集合。", "app/meta_analysis/legacy/literature"),
+    FeatureAvailability("meta_analysis", "meta-dedup-prep", "去重准备", FeatureAvailabilityStatus.TESTING, "读取 Literature Import 输出并生成标准化筛选准备记录。", "继续接入 Duplicate Review。", "app/meta_analysis/legacy/literature"),
     FeatureAvailability("meta_analysis", "meta-duplicate-review", "Duplicate Review", FeatureAvailabilityStatus.TESTING, "Duplicate Review 能力已保留。", "接入人工确认 UI。", "app/meta_analysis/legacy/literature"),
     FeatureAvailability("meta_analysis", "meta-screening", "Screening", FeatureAvailabilityStatus.TESTING, "Screening service 已保留。", "接入标题摘要筛选队列。", "app/meta_analysis/legacy/literature"),
     FeatureAvailability("meta_analysis", "meta-extraction", "Extraction", FeatureAvailabilityStatus.TESTING, "Extraction service 已保留。", "接入提取表单和保存。", "app/meta_analysis/legacy/extraction"),

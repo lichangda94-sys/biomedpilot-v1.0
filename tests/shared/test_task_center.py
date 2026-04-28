@@ -27,3 +27,20 @@ def test_task_center_registers_literature_import_details(tmp_path) -> None:
     assert records == [task]
     assert records[0].project_id == "meta-test"
     assert records[0].summary == "Importing sample.nbib"
+
+
+def test_task_center_registers_prepare_screening_details(tmp_path) -> None:
+    center = TaskCenter(tmp_path / "tasks.json")
+    task = center.register_task(
+        "task-prepare",
+        TaskType.PREPARE_SCREENING,
+        "meta_analysis",
+        "Prepare for Screening",
+        project_id="meta-test",
+        status=TaskStatus.RUNNING,
+        started_at="2026-04-28T00:00:00+00:00",
+        summary="Preparing screening records",
+    )
+    records = center.list_tasks()
+    assert records == [task]
+    assert records[0].task_type is TaskType.PREPARE_SCREENING

@@ -20,11 +20,14 @@ def test_unavailable_features_are_not_marked_open() -> None:
 def test_feature_registry_exposes_key_statuses() -> None:
     geo_import = get_feature("bio-data-import")
     meta_import = get_feature("meta-literature-import")
+    prepare = get_feature("meta-dedup-prep")
     project_center = get_feature("shared-project-center")
     assert geo_import is not None
     assert geo_import.status is FeatureAvailabilityStatus.TESTING
     assert meta_import is not None
     assert meta_import.legacy_source
+    assert prepare is not None
+    assert prepare.status is FeatureAvailabilityStatus.TESTING
     assert project_center is not None
     assert project_center.status is FeatureAvailabilityStatus.OPEN
     assert list_features("bioinformatics")
