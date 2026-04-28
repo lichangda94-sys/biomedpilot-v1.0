@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
+from app.meta_analysis.extraction.schema_registry import list_extraction_schema_profiles
+from app.meta_analysis.models.analysis_dataset import AnalysisReadyDataset
+from app.meta_analysis.models.extraction import OutcomeDataType
+from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
 from app.shared.feature_availability import get_feature
+from app.shared.storage import default_storage_root
 
 
 @dataclass(frozen=True)
@@ -12,14 +18,46 @@ class AnalysisPageState:
     description: str
     status_label: str
     last_result: AnalysisPreflightResult | None = None
+    last_dataset: AnalysisReadyDataset | None = None
+    project_dir_placeholder: str = "选择或粘贴项目目录路径"
+    profile_options: tuple[str, ...] = ()
+    outcome_type_options: tuple[str, ...] = ()
+    available_outcome_columns: tuple[str, ...] = (
+        "profile_type",
+        "outcome_name",
+        "effect_measure",
+        "outcome_data_type",
+        "record_count",
+    )
+    dataset_summary_fields: tuple[str, ...] = (
+        "dataset_id",
+        "profile_type",
+        "outcome_name",
+        "effect_measure",
+        "included_study_count",
+        "excluded_study_count",
+        "validation_errors",
+        "validation_warnings",
+    )
+    study_row_preview_fields: tuple[str, ...] = (
+        "study_id",
+        "first_author",
+        "year",
+        "outcome_name",
+        "effect_measure",
+        "analysis_status",
+        "exclusion_reason",
+    )
 
 
 def initial_analysis_state() -> AnalysisPageState:
     feature = get_feature("meta-analysis")
     return AnalysisPageState(
         title="Analysis / Meta 统计分析预检",
-        description="读取 Extraction 输出并检查是否具备最小统计运行条件。本阶段不执行合并效应量、森林图或敏感性分析。",
+        description="读取 Extraction 输出并检查是否具备最小统计运行条件；可基于结构化 extraction_records 构建 testing analysis-ready dataset。本阶段不执行合并效应量、森林图或敏感性分析。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
+        outcome_type_options=tuple(item.value for item in OutcomeDataType),
     )
 
 
@@ -32,10 +70,17 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
 
     class AnalysisPage(QWidget):
-        def __init__(self, *, project_id: str = "manual-testing-project", service: AnalysisPreflightService | None = None) -> None:
+        def __init__(
+            self,
+            *,
+            project_id: str = "manual-testing-project",
+            service: AnalysisPreflightService | None = None,
+            dataset_service: AnalysisDatasetService | None = None,
+        ) -> None:
             super().__init__()
             self._project_id = project_id
             self._service = service or AnalysisPreflightService()
+            self._dataset_service = dataset_service or AnalysisDatasetService()
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -59,6 +104,37 @@ if QWidget is not None:
             run_button = QPushButton("运行 Analysis 预检")
             run_button.clicked.connect(self._run_preflight)
             root.addWidget(run_button)
+
+            dataset_title = QLabel("Analysis-ready Dataset（测试中）")
+            dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(dataset_title)
+
+            self._project_dir_input = QLineEdit()
+            self._project_dir_input.setPlaceholderText(self._state.project_dir_placeholder)
+            self._project_dir_input.setText(str(default_storage_root() / "projects" / self._project_id))
+            root.addWidget(self._project_dir_input)
+
+            self._profile_input = QLineEdit()
+            self._profile_input.setPlaceholderText("profile_type，例如 TREATMENT_EFFECT_META")
+            if self._state.profile_options:
+                self._profile_input.setText(self._state.profile_options[0])
+            root.addWidget(self._profile_input)
+
+            self._outcome_name_input = QLineEdit()
+            self._outcome_name_input.setPlaceholderText("outcome_name，例如 Mortality")
+            root.addWidget(self._outcome_name_input)
+
+            self._effect_measure_input = QLineEdit()
+            self._effect_measure_input.setPlaceholderText("effect_measure，例如 OR / RR / MD / SMD / HR")
+            root.addWidget(self._effect_measure_input)
+
+            build_button = QPushButton("构建 analysis-ready dataset")
+            build_button.clicked.connect(self._build_dataset)
+            root.addWidget(build_button)
+
+            self._dataset_summary_label = QLabel("analysis-ready dataset 摘要会显示在这里。")
+            self._dataset_summary_label.setWordWrap(True)
+            root.addWidget(self._dataset_summary_label)
 
             self._status_label = QLabel("分析状态：等待 Extraction 输出")
             self._status_label.setWordWrap(True)
@@ -103,6 +179,28 @@ if QWidget is not None:
                 self._status_label.setText("分析状态：预检失败")
                 self._summary_label.setText("没有生成 Analysis 预检结果。")
                 self._error_label.setText(result.message)
+
+        def _build_dataset(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            dataset = self._dataset_service.build_analysis_ready_dataset(
+                project_dir,
+                self._profile_input.text().strip(),
+                self._outcome_name_input.text().strip(),
+                self._effect_measure_input.text().strip(),
+            )
+            output_path = self._dataset_service.save_analysis_ready_dataset(project_dir, dataset)
+            self._dataset_summary_label.setText(
+                f"Dataset ID：{dataset.dataset_id}\n"
+                f"Profile：{dataset.profile_type}\n"
+                f"Outcome：{dataset.outcome_name}\n"
+                f"Effect measure：{dataset.effect_measure}\n"
+                f"Outcome type：{dataset.outcome_data_type or '未匹配'}\n"
+                f"Included：{len(dataset.included_extraction_ids)}\n"
+                f"Excluded：{len(dataset.excluded_extraction_ids)}\n"
+                f"Errors：{', '.join(dataset.validation_errors) or '无'}\n"
+                f"Warnings：{', '.join(dataset.validation_warnings) or '无'}\n"
+                f"输出：{output_path}"
+            )
 
 else:
 

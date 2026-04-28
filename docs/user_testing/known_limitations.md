@@ -19,7 +19,7 @@
 - Meta Screening can generate a title/abstract screening queue and save one record decision at a time, but it is not yet a full multi-reviewer screening workflow.
 - Meta Extraction can generate an extraction pool from included Screening records and supports testing-level structured ExtractionRecord save, validation, and CSV export.
 - Meta Extraction does not yet provide a polished production extraction form, analysis-ready dataset builder, or formal statistics handoff.
-- Meta Analysis can run a readiness preflight from Extraction output, but it does not execute pooled effect estimates, forest plots, funnel plots, subgroup analysis, or sensitivity analysis yet.
+- Meta Analysis can run a readiness preflight from Extraction output and build testing-level analysis-ready datasets from structured extraction_records, but it does not execute pooled effect estimates, forest plots, funnel plots, subgroup analysis, or sensitivity analysis yet.
 - Meta Reporting can export a testing Markdown summary from Analysis preflight output, but it does not generate formal PRISMA reports, forest plots, funnel plots, or publication-ready files yet.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.

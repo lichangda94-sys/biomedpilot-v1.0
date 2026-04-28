@@ -32,6 +32,7 @@ class TaskType(StrEnum):
     EXTRACTION_EXPORT = "extraction_export"
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
+    ANALYSIS_DATASET_BUILD = "analysis_dataset_build"
     VISUALIZATION = "visualization"
     REPORT_EXPORT = "report_export"
 
