@@ -25,5 +25,5 @@
 - Formal differential expression, enrichment, correlation, survival, and complete Meta statistics are not exposed as real runs in this build.
 - Report export is not a complete end-to-end workflow yet.
 - Manual duplicate decisions, full Screening adjudication, manual Extraction forms, full Analysis, and Reporting should not be treated as complete workflows yet.
-- Packaging/installer generation is still a placeholder.
+- Packaging now creates a local macOS `.app` launcher, but not a fully standalone installer. The target machine still needs a Python environment with PySide6.
 - Some automated GUI checks are intentionally non-window tests because Qt window creation may not work in every local test environment.

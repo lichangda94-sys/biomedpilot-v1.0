@@ -12,6 +12,15 @@ From the project folder, run:
 python3 scripts/run_app.py
 ```
 
+If you are given the local macOS app bundle, open:
+
+```text
+dist/BioMedPilot.app
+```
+
+This first app bundle is a local launcher package. It still requires a Python
+environment with PySide6 and is not the final standalone installer.
+
 If the app opens correctly, you should see the BioMedPilot Dashboard with:
 
 - `BioMedPilot / 医研智析`
@@ -148,7 +157,7 @@ Do not treat the following as completed workflows yet:
 - Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows beyond the test Markdown preflight summary
 - Bioinformatics formal report and chart package export beyond the test Markdown summary
-- installer/package generation
+- final standalone installer generation
 
 ## 7. How To Record Errors
 

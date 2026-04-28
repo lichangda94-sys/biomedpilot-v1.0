@@ -46,3 +46,23 @@ python -m pytest -q
 Legacy project tests are preserved in their source snapshots. Run them in
 isolated subprocesses with the source snapshot first on `PYTHONPATH` when doing
 full migration validation.
+
+## Package
+
+The current package step is a local macOS `.app` launcher. It does not download
+dependencies and is not a fully standalone installer. It copies the BioMedPilot
+project files into `dist/BioMedPilot.app` and launches them with the Python
+executable used at build time.
+
+```bash
+python3 scripts/package_app.py --smoke-test
+```
+
+Open the generated app from:
+
+```text
+dist/BioMedPilot.app
+```
+
+For a portable standalone app, the next packaging phase should use PyInstaller
+or py2app after dependency installation is explicitly approved.
