@@ -32,6 +32,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     enrichment = get_feature("bio-enrichment")
     correlation = get_feature("bio-correlation")
     survival = get_feature("bio-survival")
+    bio_reporting = get_feature("bio-reporting")
     meta_import = get_feature("meta-literature-import")
     prepare = get_feature("meta-dedup-prep")
     duplicate_review = get_feature("meta-duplicate-review")
@@ -67,6 +68,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert survival is not None
     assert survival.status is FeatureAvailabilityStatus.TESTING
     assert "不计算 Kaplan-Meier" in survival.description
+    assert bio_reporting is not None
+    assert bio_reporting.status is FeatureAvailabilityStatus.TESTING
+    assert "测试摘要" in bio_reporting.description
     assert meta_import is not None
     assert meta_import.legacy_source
     assert prepare is not None

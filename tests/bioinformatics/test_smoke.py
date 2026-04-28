@@ -24,6 +24,7 @@ def test_bioinformatics_workspace_steps_are_visible() -> None:
         "富集分析",
         "相关性分析",
         "生存分析",
+        "报告导出",
     ]
     assert all(step.next_step for step in steps)
 
@@ -98,3 +99,11 @@ def test_bioinformatics_workspace_includes_survival_step() -> None:
     assert survival
     assert survival[0].status.value == "testing"
     assert "不计算 Kaplan-Meier" in survival[0].description
+
+
+def test_bioinformatics_workspace_includes_reporting_step() -> None:
+    steps = bioinformatics_step_features()
+    reporting = [step for step in steps if step.feature_id == "bio-reporting"]
+    assert reporting
+    assert reporting[0].status.value == "testing"
+    assert "测试摘要" in reporting[0].description

@@ -20,7 +20,7 @@ Status meanings:
 | 生信分析 | 富集分析 | 测试中 | 读取差异表达分析预检并检查 DEG 结果或基因列表；当前不下载数据库、不运行 GO / KEGG / GSEA。 | 接入基因列表确认、数据库版本选择和受控富集 runner。 |
 | 生信分析 | 相关性分析 | 测试中 | 读取数据清洗计划并检查表达矩阵与样本注释；当前不计算相关系数、不生成相关性图。 | 接入目标基因/表型选择、相关方法设置和图表输出。 |
 | 生信分析 | 生存分析 | 测试中 | 读取数据清洗计划并检查临床/生存字段；当前不计算 Kaplan-Meier、log-rank 或 Cox 模型。 | 接入生存字段映射、分组策略和受控生存分析 runner。 |
-| 生信分析 | 报告导出 | 待接入 | 统一报告入口占位。 | 接入 Report Center。 |
+| 生信分析 | 报告导出 | 测试中 | 支持导出 Bioinformatics 测试摘要，汇总已有预检 JSON；当前不生成正式报告或图表包。 | 接入正式报告模板、图表包和 Report Center 历史。 |
 | Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。 | 继续接入 Prepare for Screening 和 Duplicate Review。 |
 | Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
 | Meta 分析 | Duplicate Review | 测试中 | 读取筛选准备记录并生成重复候选组摘要，当前不执行人工合并。 | 接入人工确认 UI 和合并决策保存。 |

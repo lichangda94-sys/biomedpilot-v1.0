@@ -56,6 +56,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 30. Copy the cleaning plan output path into `生存分析`.
 31. Click `运行生存分析预检`.
 32. Confirm that the page checks for survival time and event/status fields. It should also say Kaplan-Meier, log-rank, and Cox models were not run.
+33. In `报告导出`, paste one or more Bioinformatics JSON output paths separated by semicolons.
+34. Click `导出测试报告摘要`.
+35. Confirm that a Markdown test summary is generated and that it clearly says no formal analysis result was produced.
 
 ## 3. Create A Meta Analysis Project
 
@@ -120,6 +123,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Bioinformatics `富集分析` preflight from differential expression preflight output, without database download or GO / KEGG / GSEA execution.
 - Bioinformatics `相关性分析` preflight from cleaning output, without correlation coefficient calculation or plot generation.
 - Bioinformatics `生存分析` preflight from cleaning output, without Kaplan-Meier, log-rank, or Cox execution.
+- Bioinformatics `报告导出` test summary from existing Bioinformatics JSON outputs, without formal report or figure package generation.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
@@ -143,6 +147,7 @@ Do not treat the following as completed workflows yet:
 - complete Meta statistical analysis beyond the preflight readiness check
 - Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows beyond the test Markdown preflight summary
+- Bioinformatics formal report and chart package export beyond the test Markdown summary
 - installer/package generation
 
 ## 7. How To Record Errors

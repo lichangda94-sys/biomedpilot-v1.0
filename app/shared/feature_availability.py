@@ -44,7 +44,7 @@ FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-enrichment", "富集分析", FeatureAvailabilityStatus.TESTING, "读取差异表达分析预检并检查 DEG 结果或基因列表；当前不下载数据库、不运行 GO / KEGG / GSEA。", "接入基因列表确认、数据库版本选择和受控富集 runner。"),
     FeatureAvailability("bioinformatics", "bio-correlation", "相关性分析", FeatureAvailabilityStatus.TESTING, "读取数据清洗计划并检查表达矩阵与样本注释；当前不计算相关系数、不生成相关性图。", "接入目标基因/表型选择、相关方法设置和图表输出。"),
     FeatureAvailability("bioinformatics", "bio-survival", "生存分析", FeatureAvailabilityStatus.TESTING, "读取数据清洗计划并检查临床/生存字段；当前不计算 Kaplan-Meier、log-rank 或 Cox 模型。", "接入生存字段映射、分组策略和受控生存分析 runner。"),
-    FeatureAvailability("bioinformatics", "bio-reporting", "报告导出", FeatureAvailabilityStatus.PLACEHOLDER, "统一报告入口占位。", "接入 Report Center。"),
+    FeatureAvailability("bioinformatics", "bio-reporting", "报告导出", FeatureAvailabilityStatus.TESTING, "支持导出 Bioinformatics 测试摘要，汇总已有预检 JSON；当前不生成正式报告或图表包。", "接入正式报告模板、图表包和 Report Center 历史。"),
     FeatureAvailability("meta_analysis", "meta-pico", "研究问题 / PICO", FeatureAvailabilityStatus.TESTING, "legacy PICO/search 能力已保留。", "接入统一项目记录。", "app/meta_analysis/legacy/pico"),
     FeatureAvailability("meta_analysis", "meta-literature-import", "文献导入", FeatureAvailabilityStatus.TESTING, "支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。", "继续接入 Prepare for Screening 和 Duplicate Review。", "app/meta_analysis/legacy/literature"),
     FeatureAvailability("meta_analysis", "meta-dedup-prep", "去重准备", FeatureAvailabilityStatus.TESTING, "读取 Literature Import 输出并生成标准化筛选准备记录。", "继续接入 Duplicate Review。", "app/meta_analysis/legacy/literature"),
