@@ -25,7 +25,7 @@ Status meanings:
 | Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。 | 继续接入 Prepare for Screening 和 Duplicate Review。 |
 | Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
 | Meta 分析 | Duplicate Review | 测试中 | 已支持疑似重复组查看和最小人工决策；尚未支持完整批量合并 UI、高级 fuzzy matching 和多人审核。 | 继续完善批量处理、冲突合并预览和审核记录。 |
-| Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，支持最小 include/exclude/maybe 决策保存。 | 扩展为逐条文献判读界面和排除理由字典。 |
+| Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，支持最小 include/exclude/maybe 决策保存，并新增 testing full-text registry、全文筛选排除报告和基础质量评价输出。 | 接入 publication export 和复现包。 |
 | Meta 分析 | Extraction | 测试中 | 读取 Screening 队列并为 included 文献生成数据提取池；支持 testing 结构化 ExtractionRecord 表单保存、校验和 CSV 导出。 | 接入 Analysis-ready dataset 构建。 |
 | Meta 分析 | Analysis | 测试中 | 读取 Extraction 输出并执行 Analysis 预检，可构建 analysis-ready dataset，支持基础 testing pooled effect、forest plot PNG 和 result table CSV；当前不是生产级正式 Meta 统计。 | 接入正式报告和 PRISMA 摘要。 |
-| Meta 分析 | Reporting | 测试中 | 保留 Analysis 预检测试版 Markdown 摘要，并支持 testing PRISMA 数字摘要和 formal Markdown report 雏形；Word/PDF 正式报告尚未开放。 | 接入 full-text、质量评价和 publication export。 |
+| Meta 分析 | Reporting | 测试中 | 保留 Analysis 预检测试版 Markdown 摘要，支持 testing PRISMA 数字摘要、formal Markdown report 雏形，并引用 full-text / quality artifacts；Word/PDF 正式报告尚未开放。 | 接入 publication export 和复现包。 |

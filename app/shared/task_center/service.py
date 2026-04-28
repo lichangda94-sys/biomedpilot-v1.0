@@ -39,6 +39,11 @@ class TaskType(StrEnum):
     VISUALIZATION = "visualization"
     PRISMA_COLLECT = "prisma_collect"
     FORMAL_REPORT_EXPORT = "formal_report_export"
+    FULLTEXT_ATTACH = "fulltext_attach"
+    FULLTEXT_SCREENING_DECISION = "fulltext_screening_decision"
+    FULLTEXT_EXCLUSION_EXPORT = "fulltext_exclusion_export"
+    QUALITY_ASSESSMENT_SAVE = "quality_assessment_save"
+    QUALITY_ASSESSMENT_EXPORT = "quality_assessment_export"
     REPORT_EXPORT = "report_export"
 
 

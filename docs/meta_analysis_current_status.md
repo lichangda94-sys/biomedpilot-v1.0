@@ -24,6 +24,7 @@ The current testing chain is:
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
+- Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, and CSV export.
 - Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, and exports a basic forest plot PNG plus result table CSV.
 - Reporting exports the older testing Markdown summary, testing PRISMA flow numbers, and a formal Markdown report draft; it is not Word/PDF production output.
@@ -33,8 +34,8 @@ The current testing chain is:
 - Funnel plots, subgroup analysis, sensitivity analysis, and publication bias analysis.
 - Production-level statistical validation, advanced methods, and publication-ready result interpretation.
 - PRISMA diagram generation, Word/PDF reports, and publication-ready report packages.
-- Full-text PDF management and full-text screening.
-- Risk of bias, quality assessment, GRADE, and related evidence-certainty workflow.
+- OCR, PDF table extraction, and automated full-text data extraction.
+- Production risk of bias, GRADE, and related evidence-certainty workflow.
 - AI-assisted review and extraction.
 - Multi-reviewer adjudication, team workflow, and production audit trail.
 
@@ -44,8 +45,8 @@ The current testing chain is:
 - The current Reporting step exports Markdown drafts only; Word/PDF production reporting is not complete.
 - ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
 - Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
-- Full-text, quality assessment, publication export, and formal reproducibility packages are not complete.
+- Full-text and quality workflows are testing-level only; publication export and formal reproducibility packages are not complete.
 
 ## Next Priority
 
-The next implementation priority is Systematic Review Workflow Completion. That phase should add full-text management, full-text screening exclusions, and basic quality assessment.
+The next implementation priority is Publication Export & Reproducibility. That phase should add HTML/Word-ready exports, supplementary exports, figure packages, snapshots, and reproducibility package ZIP output.
