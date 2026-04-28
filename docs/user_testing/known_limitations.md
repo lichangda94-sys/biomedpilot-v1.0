@@ -7,6 +7,7 @@
 - Bioinformatics asset detection scans only local target folders referenced by the download plan. If no files were downloaded or placed there manually, it will report no usable expression payload.
 - Bioinformatics data cleaning currently creates a preflight plan only. It does not normalize expression matrices or write cleaned tables yet.
 - Bioinformatics sample grouping currently creates a preflight plan only. It checks for sample annotation candidates but does not infer case/control groups or provide the final group editing UI yet.
+- Bioinformatics differential expression currently creates a readiness preflight only. It does not compute p-values, adjusted p-values, formal logFC, limma, DESeq2, edgeR, volcano plots, or DEG tables.
 - Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can generate duplicate candidate group summaries, but manual keep/merge decisions are not implemented yet.

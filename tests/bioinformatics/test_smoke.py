@@ -14,7 +14,7 @@ def test_bioinformatics_feature_statuses_are_explicit() -> None:
 def test_bioinformatics_workspace_steps_are_visible() -> None:
     steps = bioinformatics_step_features()
     step_names = [step.feature_name for step in steps]
-    assert step_names == ["数据检索 / 导入", "数据下载", "数据资产识别", "数据清洗", "样本分组"]
+    assert step_names == ["数据检索 / 导入", "数据下载", "数据资产识别", "数据清洗", "样本分组", "差异表达分析"]
     assert all(step.next_step for step in steps)
 
 
@@ -56,3 +56,11 @@ def test_bioinformatics_workspace_includes_sample_grouping_step() -> None:
     assert grouping
     assert grouping[0].status.value == "testing"
     assert "样本分组预检" in grouping[0].description
+
+
+def test_bioinformatics_workspace_includes_differential_expression_step() -> None:
+    steps = bioinformatics_step_features()
+    deg = [step for step in steps if step.feature_id == "bio-deg"]
+    assert deg
+    assert deg[0].status.value == "testing"
+    assert "不运行正式差异统计" in deg[0].description

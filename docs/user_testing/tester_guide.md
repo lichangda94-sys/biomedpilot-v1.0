@@ -44,6 +44,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 18. Copy the cleaning plan output path into `样本分组`.
 19. Click `生成样本分组计划`.
 20. Confirm that the page reports whether sample annotation candidates exist. It should also say automatic group inference and differential analysis were not executed.
+21. Copy the sample grouping plan output path into `差异表达分析`.
+22. Click `运行差异分析预检`.
+23. Confirm that the page checks expression matrix, sample annotation, and case/control group readiness. It should also say formal differential statistics were not executed.
 
 ## 3. Create A Meta Analysis Project
 
@@ -104,6 +107,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Bioinformatics `数据资产识别` local scan from a GEO download plan, without network use.
 - Bioinformatics `数据清洗` preflight plan from asset detection output, without running matrix standardization.
 - Bioinformatics `样本分组` preflight plan from cleaning output, without automatic case/control inference.
+- Bioinformatics `差异表达分析` preflight from sample grouping output, without p-values, FDR, limma, DESeq2, or edgeR.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
@@ -118,7 +122,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 
 Do not treat the following as completed workflows yet:
 
-- formal bioinformatics differential expression analysis
+- formal bioinformatics differential expression analysis beyond readiness/preflight
 - live GEO online search and GEO data download as complete workflows
 - automatic Bioinformatics sample group inference and manual group editing
 - enrichment analysis
