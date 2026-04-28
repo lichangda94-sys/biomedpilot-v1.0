@@ -16,7 +16,7 @@ The current testing chain is:
 4. Screening
 5. Extraction Pool
 6. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
-7. Reporting Test Summary
+7. Reporting Test Summary / PRISMA Summary / Formal Markdown Report Draft
 
 ## Implemented Testing Capabilities
 
@@ -26,13 +26,13 @@ The current testing chain is:
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, and CSV export.
 - Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, and exports a basic forest plot PNG plus result table CSV.
-- Reporting exports a testing Markdown summary from Analysis preflight only; it is not a formal report.
+- Reporting exports the older testing Markdown summary, testing PRISMA flow numbers, and a formal Markdown report draft; it is not Word/PDF production output.
 
 ## Not Implemented Yet
 
 - Funnel plots, subgroup analysis, sensitivity analysis, and publication bias analysis.
 - Production-level statistical validation, advanced methods, and publication-ready result interpretation.
-- PRISMA formal report generation, Word/PDF reports, and publication-ready report packages.
+- PRISMA diagram generation, Word/PDF reports, and publication-ready report packages.
 - Full-text PDF management and full-text screening.
 - Risk of bias, quality assessment, GRADE, and related evidence-certainty workflow.
 - AI-assisted review and extraction.
@@ -41,11 +41,11 @@ The current testing chain is:
 ## Why This Cannot Be Marked Production
 
 - The current Analysis step has a basic testing statistics core, but it is not production-grade statistical software.
-- The current Reporting step exports a test summary only.
+- The current Reporting step exports Markdown drafts only; Word/PDF production reporting is not complete.
 - ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
 - Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
 - Full-text, quality assessment, publication export, and formal reproducibility packages are not complete.
 
 ## Next Priority
 
-The next implementation priority is PRISMA & Formal Markdown Report MVP. That phase should collect PRISMA numbers and generate a structured formal Markdown report draft.
+The next implementation priority is Systematic Review Workflow Completion. That phase should add full-text management, full-text screening exclusions, and basic quality assessment.

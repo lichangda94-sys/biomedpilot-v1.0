@@ -20,7 +20,7 @@
 - Meta Extraction can generate an extraction pool from included Screening records and supports testing-level structured ExtractionRecord save, validation, and CSV export.
 - Meta Extraction does not yet provide a polished production extraction form, analysis-ready dataset builder, or formal statistics handoff.
 - Meta Analysis can run a readiness preflight, build testing-level analysis-ready datasets, execute basic testing pooled effects, and export a basic forest plot PNG plus result table CSV, but it does not generate funnel plots, subgroup analysis, sensitivity analysis, publication-bias analysis, PRISMA reports, or production statistical reports yet.
-- Meta Reporting can export a testing Markdown summary from Analysis preflight output, but it does not generate formal PRISMA reports, forest plots, funnel plots, or publication-ready files yet.
+- Meta Reporting can export the older testing Markdown summary, testing PRISMA number summary, and a formal Markdown report draft, but it does not generate Word/PDF reports, PRISMA diagrams, GRADE summaries, or publication-ready files yet.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.
 - Formal differential expression, enrichment, correlation, survival, and complete Meta statistics are not exposed as real runs in this build.

@@ -37,6 +37,8 @@ class TaskType(StrEnum):
     FOREST_PLOT_EXPORT = "forest_plot_export"
     ANALYSIS_RESULT_TABLE_EXPORT = "analysis_result_table_export"
     VISUALIZATION = "visualization"
+    PRISMA_COLLECT = "prisma_collect"
+    FORMAL_REPORT_EXPORT = "formal_report_export"
     REPORT_EXPORT = "report_export"
 
 
