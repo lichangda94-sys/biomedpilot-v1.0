@@ -27,6 +27,8 @@ class TaskType(StrEnum):
     SCREENING = "screening"
     SCREENING_DECISION = "screening_decision"
     EXTRACTION = "extraction"
+    EXTRACTION_RECORD_SAVE = "extraction_record_save"
+    EXTRACTION_RECORD_VALIDATION = "extraction_record_validation"
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
     VISUALIZATION = "visualization"

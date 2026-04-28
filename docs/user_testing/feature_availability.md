@@ -26,6 +26,6 @@ Status meanings:
 | Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
 | Meta 分析 | Duplicate Review | 测试中 | 已支持疑似重复组查看和最小人工决策；尚未支持完整批量合并 UI、高级 fuzzy matching 和多人审核。 | 继续完善批量处理、冲突合并预览和审核记录。 |
 | Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，支持最小 include/exclude/maybe 决策保存。 | 扩展为逐条文献判读界面和排除理由字典。 |
-| Meta 分析 | Extraction | 测试中 | 读取 Screening 队列并为 included 文献生成数据提取池，正式人工提取表单尚未开放。 | 接入 PICO 字段、结局数据和来源页码的人工提取表单。 |
+| Meta 分析 | Extraction | 测试中 | 读取 Screening 队列并为 included 文献生成数据提取池；已新增结构化 ExtractionRecord core，正式人工提取表单尚未开放。 | 接入 Extraction 表单、CSV 导出和 Analysis-ready dataset 构建。 |
 | Meta 分析 | Analysis | 测试中 | 读取 Extraction 输出并执行 Analysis 预检；当前不运行正式 Meta 统计。 | 接入 outcome 提取表单、分析计划和统计 runner。 |
 | Meta 分析 | Reporting | 测试中 | 读取 Analysis 预检输出并导出测试版 Markdown 摘要；正式报告和图表包尚未开放。 | 接入森林图、漏斗图、结果表和正式报告模板。 |

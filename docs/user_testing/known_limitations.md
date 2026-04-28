@@ -17,8 +17,8 @@
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can show duplicate candidate groups and save minimal keep/merge/not-duplicate/skip decisions, but it does not yet provide complete batch merge UI, advanced fuzzy matching, or multi-reviewer adjudication.
 - Meta Screening can generate a title/abstract screening queue and save one record decision at a time, but it is not yet a full multi-reviewer screening workflow.
-- Meta Extraction can generate an extraction pool from included Screening records.
-- Meta Extraction does not yet provide the full manual data extraction form for PICO fields, outcome data, source pages, or reviewer notes.
+- Meta Extraction can generate an extraction pool from included Screening records and has a structured ExtractionRecord core for developer testing.
+- Meta Extraction does not yet provide the full manual data extraction form, CSV export UI, analysis-ready dataset builder, or formal statistics handoff.
 - Meta Analysis can run a readiness preflight from Extraction output, but it does not execute pooled effect estimates, forest plots, funnel plots, subgroup analysis, or sensitivity analysis yet.
 - Meta Reporting can export a testing Markdown summary from Analysis preflight output, but it does not generate formal PRISMA reports, forest plots, funnel plots, or publication-ready files yet.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
