@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.meta_analysis.services.project_contract_service import MetaProjectContractService
+
 
 @dataclass(frozen=True)
 class TraceabilityAuditResult:
@@ -23,6 +25,9 @@ class TraceabilityAuditResult:
 
 
 class TraceabilityAuditService:
+    def __init__(self, *, contract_service: MetaProjectContractService | None = None) -> None:
+        self._contract_service = contract_service or MetaProjectContractService()
+
     def build_artifact_manifest(self, project_dir: Path) -> list[dict[str, object]]:
         project_dir = project_dir.expanduser().resolve()
         manifest: list[dict[str, object]] = []
@@ -164,6 +169,9 @@ class TraceabilityAuditService:
             errors=lineage_errors,
         )
 
+    def save_project_manifests(self, project_dir: Path) -> dict[str, Path]:
+        return self._contract_service.write_project_manifests(project_dir)
+
 
 def _iter_files(project_dir: Path) -> list[Path]:
     if not project_dir.exists():
@@ -258,4 +266,3 @@ def _dedupe(items: list[str]) -> list[str]:
         if item and item not in result:
             result.append(item)
     return result
-

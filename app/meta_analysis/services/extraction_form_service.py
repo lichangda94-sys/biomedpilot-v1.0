@@ -60,6 +60,23 @@ class ExtractionRecordsExportResult:
     details: dict[str, object] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class ExtractionDraft:
+    draft_id: str
+    project_id: str
+    record_id: str
+    form_data: dict[str, object]
+    updated_at: str
+
+
+@dataclass(frozen=True)
+class FieldValidationSummary:
+    errors_by_field: dict[str, list[str]]
+    warnings_by_field: dict[str, list[str]]
+    completeness_score: float
+    missing_required_fields: list[str]
+
+
 class ExtractionFormService:
     def __init__(
         self,
@@ -138,6 +155,130 @@ class ExtractionFormService:
             created_at=created_at,
             updated_at=str(form_data.get("updated_at") or created_at),
         )
+
+    def build_extraction_record_with_outcomes(
+        self,
+        *,
+        project_id: str,
+        form_data: dict[str, object],
+        outcome_rows: list[dict[str, object]],
+    ) -> ExtractionRecord:
+        base = self.build_extraction_record(project_id=project_id, form_data={**form_data, **(outcome_rows[0] if outcome_rows else {})})
+        outcomes = [
+            ExtractedOutcome(
+                outcome_id=str(row.get("outcome_id") or f"out-{uuid4().hex[:12]}"),
+                outcome_data_type=str(row.get("outcome_data_type") or form_data.get("outcome_data_type") or OutcomeDataType.BINARY.value),
+                data=self._outcome_data(
+                    outcome_type=str(row.get("outcome_data_type") or form_data.get("outcome_data_type") or OutcomeDataType.BINARY.value),
+                    form_data={**form_data, **row},
+                ),
+            )
+            for row in outcome_rows
+        ]
+        return ExtractionRecord(
+            extraction_id=base.extraction_id,
+            project_id=base.project_id,
+            record_id=base.record_id,
+            study_id=base.study_id,
+            reviewer_id=base.reviewer_id,
+            profile_type=base.profile_type,
+            study_characteristics=base.study_characteristics,
+            outcomes=outcomes or base.outcomes,
+            notes=base.notes,
+            source_location=base.source_location,
+            validation_status=base.validation_status,
+            created_at=base.created_at,
+            updated_at=base.updated_at,
+        )
+
+    def save_draft(self, project_dir: Path, *, project_id: str, record_id: str, form_data: dict[str, object], draft_id: str | None = None) -> Path:
+        project_dir = project_dir.expanduser().resolve()
+        output_path = project_dir / "extraction" / "drafts" / f"{draft_id or f'draft-{uuid4().hex[:12]}'}.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = ExtractionDraft(
+            draft_id=output_path.stem,
+            project_id=project_id,
+            record_id=record_id,
+            form_data=dict(form_data),
+            updated_at=now_utc(),
+        )
+        output_path.write_text(json.dumps(payload.__dict__, ensure_ascii=False, indent=2), encoding="utf-8")
+        return output_path
+
+    def load_drafts(self, project_dir: Path) -> list[ExtractionDraft]:
+        drafts: list[ExtractionDraft] = []
+        for path in sorted((project_dir.expanduser().resolve() / "extraction" / "drafts").glob("*.json")):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            drafts.append(ExtractionDraft(**payload))
+        return drafts
+
+    def delete_draft(self, project_dir: Path, draft_id: str) -> bool:
+        path = project_dir.expanduser().resolve() / "extraction" / "drafts" / f"{draft_id}.json"
+        if not path.exists():
+            return False
+        path.unlink()
+        return True
+
+    def copy_previous_study_characteristics(self, project_dir: Path) -> dict[str, object]:
+        records = self._storage_service.load_extraction_records(project_dir)
+        if not records:
+            return {}
+        return {
+            key: value
+            for key, value in records[-1].study_characteristics.__dict__.items()
+            if key != "notes"
+        }
+
+    def required_field_metadata(self, profile_type: str = TREATMENT_EFFECT_META) -> dict[str, list[str]]:
+        return {
+            "study_characteristics": ["first_author", "year", "sample_size"],
+            "record": ["record_id", "study_id", "reviewer_id", "profile_type"],
+            "outcome_common": ["outcome_name", "effect_measure"],
+        }
+
+    def field_validation_summary(self, record: ExtractionRecord) -> FieldValidationSummary:
+        validation = self._validation_service.validate_extraction_record(record)
+        errors = _field_map(validation.errors)
+        warnings = _field_map(validation.warnings)
+        required = self.required_field_metadata(record.profile_type)
+        missing = _missing_required(record, required)
+        return FieldValidationSummary(
+            errors_by_field=errors,
+            warnings_by_field=warnings,
+            completeness_score=self.extraction_completeness_score(record),
+            missing_required_fields=missing,
+        )
+
+    def extraction_completeness_score(self, record: ExtractionRecord) -> float:
+        required = self.required_field_metadata(record.profile_type)
+        fields = [
+            ("record", field_name, getattr(record, field_name))
+            for field_name in required["record"]
+        ]
+        fields.extend(
+            ("study_characteristics", field_name, getattr(record.study_characteristics, field_name))
+            for field_name in required["study_characteristics"]
+        )
+        for outcome in record.outcomes:
+            fields.extend(("outcome", field_name, getattr(outcome.data, field_name, "")) for field_name in required["outcome_common"])
+        if not fields:
+            return 1.0
+        filled = [value for _group, _field, value in fields if value not in ("", None, [])]
+        return len(filled) / len(fields)
+
+    def pre_export_completeness_check(self, project_dir: Path) -> dict[str, object]:
+        records = self._storage_service.load_extraction_records(project_dir)
+        incomplete = [
+            {"extraction_id": record.extraction_id, "score": self.extraction_completeness_score(record)}
+            for record in records
+            if self.extraction_completeness_score(record) < 1.0
+        ]
+        return {
+            "record_count": len(records),
+            "incomplete_records": incomplete,
+            "ready_for_export": not incomplete,
+            "warnings": [f"extraction_record_incomplete:{item['extraction_id']}" for item in incomplete],
+        }
 
     def save_extraction_record(self, *, project_dir: Path, record: ExtractionRecord) -> ExtractionRecordSaveResult:
         validation = self._validation_service.validate_extraction_record(record)
@@ -462,3 +603,41 @@ def _optional_float(value: object) -> float | None:
 
 def _truthy(value: object) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y", "adjusted"}
+
+
+def _field_map(messages: list[str]) -> dict[str, list[str]]:
+    mapped: dict[str, list[str]] = {}
+    for message in messages:
+        if message.startswith("missing_required_study_field:"):
+            field = message.split(":", 1)[-1]
+        elif message == "outcome_name_required":
+            field = "outcome_name"
+        elif message.startswith("unsupported_effect_measure"):
+            field = "effect_measure"
+        elif message.endswith("_must_be_integer"):
+            field = message.removesuffix("_must_be_integer")
+        elif message.endswith("_must_be_numeric"):
+            field = message.removesuffix("_must_be_numeric")
+        elif message.endswith("_must_be_positive"):
+            field = message.removesuffix("_must_be_positive")
+        elif message.endswith("_cannot_be_negative"):
+            field = message.removesuffix("_cannot_be_negative")
+        else:
+            field = message.split(":", 1)[-1] if ":" in message else message
+        mapped.setdefault(field, []).append(message)
+    return mapped
+
+
+def _missing_required(record: ExtractionRecord, required: dict[str, list[str]]) -> list[str]:
+    missing: list[str] = []
+    for field_name in required["record"]:
+        if getattr(record, field_name) in ("", None, []):
+            missing.append(field_name)
+    for field_name in required["study_characteristics"]:
+        if getattr(record.study_characteristics, field_name) in ("", None, []):
+            missing.append(field_name)
+    for outcome in record.outcomes:
+        for field_name in required["outcome_common"]:
+            if getattr(outcome.data, field_name, "") in ("", None, []):
+                missing.append(field_name)
+    return missing

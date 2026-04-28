@@ -61,6 +61,7 @@ class QualityAssessment:
     reviewer_id: str
     notes: str
     created_at: str
+    domain_notes: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -138,4 +139,5 @@ def quality_assessment_from_dict(payload: dict[str, Any]) -> QualityAssessment:
         reviewer_id=str(payload.get("reviewer_id", "")),
         notes=str(payload.get("notes", "")),
         created_at=str(payload.get("created_at", "")),
+        domain_notes={str(key): str(value) for key, value in dict(payload.get("domain_notes", {})).items()},
     )

@@ -13,6 +13,7 @@ from app.meta_analysis.models.analysis_result import (
     now_utc,
 )
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
+from app.meta_analysis.services.statistical_applicability_service import StatisticalApplicabilityService, applicability_warnings_for_row
 from app.meta_analysis.stats.meta_effects import study_effect_from_row
 from app.meta_analysis.stats.meta_models import pool_effects
 from app.shared.data_center.service import DataCenter
@@ -30,6 +31,7 @@ class AnalysisRunService:
         self._dataset_service = dataset_service or AnalysisDatasetService()
         self._task_center = task_center
         self._data_center = data_center
+        self._applicability_service = StatisticalApplicabilityService()
 
     def run_meta_analysis(self, project_dir: Path, dataset_id: str, model: str) -> AnalysisResult:
         project_dir = project_dir.expanduser().resolve()
@@ -43,11 +45,16 @@ class AnalysisRunService:
             rows = [row for row in dataset.study_rows if row.analysis_status == "included"]
             if not rows:
                 raise ValueError("analysis_ready_dataset_has_no_included_studies")
+            applicability = self._applicability_service.evaluate_dataset_for_meta_analysis(dataset, model)
+            if applicability.errors:
+                raise ValueError(";".join(applicability.errors))
             effects = [study_effect_from_row(row) for row in rows]
             pooled = pool_effects(effects, effect_measure=dataset.effect_measure, model=model)
-            warnings = list(dataset.validation_warnings)
+            warnings = [*dataset.validation_warnings, *applicability.warnings]
             if len(effects) < 2:
                 warnings.append("insufficient_studies_warning")
+            for row in rows:
+                warnings.extend(applicability_warnings_for_row(row))
             study_results = [
                 StudyMetaAnalysisResult(
                     study_id=effect.study_id,

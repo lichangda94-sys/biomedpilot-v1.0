@@ -20,11 +20,13 @@ from app.meta_analysis.models.publication import (
     project_snapshot_to_dict,
 )
 from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder
+from app.meta_analysis.services.project_contract_service import MetaProjectContractService
+from app.meta_analysis.version import META_INTERNAL_BETA_VERSION, META_SOFTWARE_STATUS
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
 
-SOFTWARE_VERSION = "BioMedPilot Developer Preview / testing"
+SOFTWARE_VERSION = f"BioMedPilot {META_INTERNAL_BETA_VERSION} / {META_SOFTWARE_STATUS}"
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,7 @@ class PublicationExportService:
         )
         self._task_center = task_center
         self._data_center = data_center
+        self._contract_service = MetaProjectContractService(data_center=data_center, task_center=task_center)
 
     def export_html_report(self, project_dir: Path) -> PublicationExportResult:
         project_dir = project_dir.expanduser().resolve()
@@ -245,6 +248,7 @@ class PublicationExportService:
 
     def create_project_snapshot(self, project_dir: Path) -> ProjectSnapshot:
         project_dir = project_dir.expanduser().resolve()
+        self._contract_service.write_project_manifests(project_dir)
         return ProjectSnapshot(
             snapshot_id=new_snapshot_id(),
             project_id=project_dir.name,
@@ -291,6 +295,8 @@ class PublicationExportService:
 
     def export_reproducibility_package(self, project_dir: Path) -> PublicationExportResult:
         project_dir = project_dir.expanduser().resolve()
+        self._ensure_formal_markdown_report(project_dir)
+        self._contract_service.write_project_manifests(project_dir)
         task = self._start_task(
             project_id=project_dir.name,
             task_type=TaskType.REPRODUCIBILITY_PACKAGE_EXPORT,

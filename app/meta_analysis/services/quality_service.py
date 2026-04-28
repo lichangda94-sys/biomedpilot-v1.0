@@ -33,6 +33,7 @@ class QualityAssessmentService:
         overall_judgement: str,
         reviewer_id: str,
         notes: str = "",
+        domain_notes: dict[str, str] | None = None,
     ) -> QualityAssessment:
         if get_quality_tool(tool_name) is None:
             raise ValueError("unsupported_quality_tool")
@@ -47,6 +48,7 @@ class QualityAssessmentService:
             reviewer_id=reviewer_id,
             notes=notes,
             created_at=now_utc(),
+            domain_notes=dict(domain_notes or {}),
         )
 
     def save_quality_assessment(self, project_dir: Path, assessment: QualityAssessment) -> Path:
@@ -77,6 +79,43 @@ class QualityAssessmentService:
             by_tool[assessment.tool_name] = by_tool.get(assessment.tool_name, 0) + 1
             by_overall[assessment.overall_judgement] = by_overall.get(assessment.overall_judgement, 0) + 1
         return {"assessment_count": len(assessments), "by_tool": by_tool, "by_overall_judgement": by_overall}
+
+    def quality_form_metadata(self, tool_name: str) -> dict[str, object]:
+        tool = get_quality_tool(tool_name)
+        if tool is None:
+            raise ValueError("unsupported_quality_tool")
+        return {
+            "tool_name": tool.tool_name,
+            "domains": list(tool.domains),
+            "judgement_options": list(tool.judgement_options),
+            "domain_note_fields": [f"{domain}_note" for domain in tool.domains],
+            "recommended_profiles": list(tool.recommended_profiles),
+            "output_summary_fields": list(tool.output_summary_fields),
+        }
+
+    def suggest_overall_judgement(self, tool_name: str, domains: dict[str, str]) -> str:
+        if get_quality_tool(tool_name) is None:
+            raise ValueError("unsupported_quality_tool")
+        values = {str(value).lower() for value in domains.values()}
+        if any(value in {"high", "high risk", "very serious", "no"} for value in values):
+            return "high risk"
+        if any(value in {"moderate risk", "some concerns", "unclear", "serious"} for value in values):
+            return "some concerns"
+        if values and all(value in {"low", "low risk", "yes", "not serious"} for value in values):
+            return "low risk"
+        return "unclear"
+
+    def quality_completeness_summary(self, project_dir: Path, *, expected_study_ids: list[str] | None = None) -> dict[str, object]:
+        assessments = self.load_quality_assessments(project_dir)
+        expected = set(expected_study_ids or [assessment.study_id for assessment in assessments])
+        assessed = {assessment.study_id for assessment in assessments}
+        missing = sorted(expected - assessed)
+        return {
+            "expected_study_count": len(expected),
+            "assessed_study_count": len(assessed),
+            "missing_study_ids": missing,
+            "completeness_score": 1.0 if not expected else len(assessed & expected) / len(expected),
+        }
 
     def export_quality_table_csv(self, project_dir: Path) -> Path:
         project_dir = project_dir.expanduser().resolve()

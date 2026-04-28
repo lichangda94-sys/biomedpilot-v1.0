@@ -27,6 +27,7 @@ from app.meta_analysis.models.figures import FigureArtifact, figure_artifact_to_
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.figure_result_service import FigureResultService
+from app.meta_analysis.services.statistical_applicability_service import StatisticalApplicabilityService
 from app.meta_analysis.stats.meta_effects import StudyEffectEstimate, study_effect_from_row
 from app.meta_analysis.stats.meta_models import pool_effects
 from app.shared.data_center.service import DataCenter
@@ -51,6 +52,7 @@ class AdvancedAnalysisService:
         self._figure_service = figure_service or FigureResultService(analysis_run_service=self._analysis_run_service)
         self._task_center = task_center
         self._data_center = data_center
+        self._applicability_service = StatisticalApplicabilityService()
 
     def run_subgroup_analysis(
         self,
@@ -203,6 +205,7 @@ class AdvancedAnalysisService:
         warnings: list[str] = []
         if len(analysis_result.study_results) < 10:
             warnings.append(SMALL_STUDY_BIAS_WARNING)
+        warnings.extend(self._applicability_service.evaluate_advanced_method("publication_bias", len(analysis_result.study_results)).warnings)
         egger = _egger_test(analysis_result.study_results)
         begg = {
             "implemented": False,
@@ -269,6 +272,7 @@ class AdvancedAnalysisService:
                 "model": analysis_result.model,
                 "study_count": len(analysis_result.study_results),
                 "pooled_effect": analysis_result.pooled_effect,
+                "applicability_warnings": self._applicability_service.evaluate_advanced_method("funnel_plot", len(analysis_result.study_results)).warnings,
             },
         )
         self._figure_service.save_figure_artifact(project_dir, artifact)

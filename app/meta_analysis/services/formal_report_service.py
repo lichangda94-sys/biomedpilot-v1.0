@@ -10,6 +10,7 @@ from app.meta_analysis.models.prisma import (
     prisma_flow_summary_from_dict,
     prisma_flow_summary_to_dict,
 )
+from app.meta_analysis.services.report_manifest_service import ReportManifestService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
@@ -160,6 +161,7 @@ class FormalMarkdownReportBuilder:
         self._prisma_service = prisma_service or PRISMAService(task_center=task_center, data_center=data_center)
         self._task_center = task_center
         self._data_center = data_center
+        self._report_manifest_service = ReportManifestService()
 
     def build_formal_markdown_report(self, project_dir: Path) -> Path:
         project_dir = project_dir.expanduser().resolve()
@@ -173,6 +175,7 @@ class FormalMarkdownReportBuilder:
         output_path = project_dir / "reports" / "formal_meta_report.md"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(_formal_report_markdown(project_dir, summary, artifact_summary), encoding="utf-8")
+        self._report_manifest_service.save_report_manifest(project_dir)
         self._register_asset(
             project_id=project_dir.name,
             data_type="formal_meta_report",
@@ -410,6 +413,9 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
             "## Known limitations",
             "- This is a Markdown report draft; HTML/DOCX outputs are testing exports, and PDF production output is not implemented.",
             "- PRISMA full-text counts are incomplete until full-text workflow is implemented.",
+            "- Statistical limitations and applicability warnings must be reviewed before interpreting any testing pooled result.",
+            "- Diagnostic basic outputs are not bivariate diagnostic models or HSROC.",
+            "- Network meta-analysis is not implemented in this testing version.",
             "",
             "## Missing artifact warnings",
             *[f"- {item}: missing / not generated" for item in missing],

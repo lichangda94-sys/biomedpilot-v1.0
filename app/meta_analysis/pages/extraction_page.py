@@ -21,6 +21,13 @@ class ExtractionPageState:
     next_step: str
     warning_summary: str
     project_dir_placeholder: str
+    field_groups: dict[str, tuple[str, ...]]
+    required_fields: dict[str, tuple[str, ...]]
+    draft_status_fields: tuple[str, ...]
+    outcome_row_controls: tuple[str, ...]
+    field_error_targets: tuple[str, ...]
+    completeness_summary_fields: tuple[str, ...]
+    export_readiness_warning: str
     profile_options: tuple[str, ...]
     outcome_type_options: tuple[str, ...]
     study_characteristics_fields: tuple[str, ...]
@@ -46,6 +53,31 @@ def initial_extraction_state() -> ExtractionPageState:
         next_step="下一步：Analysis-ready dataset builder。",
         warning_summary="validation error 阻止保存；warning 允许保存但必须显示给用户。",
         project_dir_placeholder="project_dir，例如 /path/to/project",
+        field_groups={
+            "study_characteristics": (
+                "first_author",
+                "year",
+                "country",
+                "study_design",
+                "population",
+                "sample_size",
+                "intervention_or_exposure",
+                "comparator",
+                "follow_up",
+            ),
+            "outcomes": ("binary", "continuous", "generic_effect", "diagnostic_accuracy", "proportion", "correlation"),
+            "review_metadata": ("record_id", "study_id", "reviewer_id", "profile_type", "source_location", "notes"),
+        },
+        required_fields={
+            "record": ("record_id", "study_id", "reviewer_id", "profile_type"),
+            "study_characteristics": ("first_author", "year", "sample_size"),
+            "outcome_common": ("outcome_name", "effect_measure"),
+        },
+        draft_status_fields=("draft_id", "updated_at", "record_id", "reviewer_id"),
+        outcome_row_controls=("add_outcome_row", "remove_outcome_row", "duplicate_outcome_row"),
+        field_error_targets=("field_name", "message", "severity", "outcome_index"),
+        completeness_summary_fields=("completeness_score", "missing_required_fields", "ready_for_export"),
+        export_readiness_warning="导出前会检查 ExtractionRecord 完整性；不完整记录会生成 warning。",
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=(
             *tuple(item.value for item in OutcomeDataType),
