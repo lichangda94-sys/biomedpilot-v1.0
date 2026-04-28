@@ -47,3 +47,11 @@ def test_meta_workspace_includes_duplicate_review_step() -> None:
     assert duplicate_review
     assert duplicate_review[0].feature_name == "Duplicate Review"
     assert duplicate_review[0].status.value == "testing"
+
+
+def test_meta_workspace_includes_screening_step() -> None:
+    steps = meta_analysis_step_features()
+    screening = [step for step in steps if step.feature_id == "meta-screening"]
+    assert screening
+    assert screening[0].feature_name == "Screening"
+    assert screening[0].status.value == "testing"

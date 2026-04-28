@@ -22,6 +22,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     meta_import = get_feature("meta-literature-import")
     prepare = get_feature("meta-dedup-prep")
     duplicate_review = get_feature("meta-duplicate-review")
+    screening = get_feature("meta-screening")
     project_center = get_feature("shared-project-center")
     assert geo_import is not None
     assert geo_import.status is FeatureAvailabilityStatus.TESTING
@@ -31,6 +32,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert prepare.status is FeatureAvailabilityStatus.TESTING
     assert duplicate_review is not None
     assert duplicate_review.status is FeatureAvailabilityStatus.TESTING
+    assert screening is not None
+    assert screening.status is FeatureAvailabilityStatus.TESTING
+    assert "pending" in screening.description
     assert project_center is not None
     assert project_center.status is FeatureAvailabilityStatus.OPEN
     assert list_features("bioinformatics")
