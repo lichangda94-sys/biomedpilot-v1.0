@@ -44,3 +44,20 @@ def test_task_center_registers_prepare_screening_details(tmp_path) -> None:
     records = center.list_tasks()
     assert records == [task]
     assert records[0].task_type is TaskType.PREPARE_SCREENING
+
+
+def test_task_center_registers_duplicate_review_details(tmp_path) -> None:
+    center = TaskCenter(tmp_path / "tasks.json")
+    task = center.register_task(
+        "task-duplicate",
+        TaskType.DUPLICATE_REVIEW,
+        "meta_analysis",
+        "Duplicate Review",
+        project_id="meta-test",
+        status=TaskStatus.RUNNING,
+        started_at="2026-04-28T00:00:00+00:00",
+        summary="Reviewing duplicate candidates",
+    )
+    records = center.list_tasks()
+    assert records == [task]
+    assert records[0].task_type is TaskType.DUPLICATE_REVIEW

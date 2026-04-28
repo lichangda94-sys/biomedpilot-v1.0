@@ -22,6 +22,9 @@ class ScreeningReadyRecord:
     title_normalized: str
     doi_normalized: str
     pmid_normalized: str
+    authors_normalized: list[str]
+    journal_normalized: str
+    year_normalized: int | None
 
 
 class PrepareScreeningAdapter:
@@ -72,6 +75,9 @@ class PrepareScreeningAdapter:
                 title_normalized=record.title_normalized,
                 doi_normalized=record.doi_normalized,
                 pmid_normalized=record.pmid_normalized,
+                authors_normalized=list(record.authors_normalized),
+                journal_normalized=record.journal_normalized,
+                year_normalized=record.year_normalized,
             )
             for record in normalized_records
         ]

@@ -54,10 +54,13 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 9. Copy the Literature Import output path into `去重准备 / Prepare for Screening`.
 10. Click `准备筛选记录`.
 11. Confirm that the result summary shows total records, prepared records, and output path.
-12. Return to the Dashboard and click each recent project.
-13. Open `测试模式`.
-14. Generate a feedback template.
-15. Record anything confusing, broken, missing, or mislabeled.
+12. Copy the Prepare for Screening output path into `Duplicate Review`.
+13. Click `生成重复候选摘要`.
+14. Confirm that the summary shows total records, duplicate candidate groups, candidate record count, and output path.
+15. Return to the Dashboard and click each recent project.
+16. Open `测试模式`.
+17. Generate a feedback template.
+18. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -67,6 +70,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Workspace switching.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
+- Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 
@@ -79,7 +83,7 @@ Do not treat the following as completed workflows yet:
 - correlation analysis
 - survival analysis
 - complete Meta statistical analysis
-- Meta Duplicate Review, Screening, Extraction, Analysis, and Reporting as complete end-to-end workflows
+- Meta manual duplicate merge decisions, Screening, Extraction, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows
 - installer/package generation
 

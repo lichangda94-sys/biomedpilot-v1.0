@@ -22,6 +22,7 @@ class TaskType(StrEnum):
     IMPORT = "import"
     LITERATURE_IMPORT = "literature_import"
     PREPARE_SCREENING = "prepare_screening"
+    DUPLICATE_REVIEW = "duplicate_review"
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
     VISUALIZATION = "visualization"

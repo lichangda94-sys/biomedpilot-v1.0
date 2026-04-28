@@ -32,6 +32,7 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
     from app.meta_analysis.pages.literature_import_page import LiteratureImportPage
     from app.meta_analysis.pages.prepare_screening_page import PrepareScreeningPage
+    from app.meta_analysis.pages.duplicate_review_page import DuplicateReviewPage
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -58,8 +59,9 @@ if QWidget is not None:
             content_layout = QVBoxLayout(content)
             content_layout.addWidget(LiteratureImportPage())
             content_layout.addWidget(PrepareScreeningPage())
+            content_layout.addWidget(DuplicateReviewPage())
             for feature in meta_analysis_step_features():
-                if feature.feature_id in {"meta-literature-import", "meta-dedup-prep"}:
+                if feature.feature_id in {"meta-literature-import", "meta-dedup-prep", "meta-duplicate-review"}:
                     continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)
