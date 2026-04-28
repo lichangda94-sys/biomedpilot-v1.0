@@ -7,19 +7,24 @@
 python3 -m app.main --smoke-test
 ```
 
-3. Use the Stage M sample inputs from:
+3. Use the Stage M mock sample inputs from:
 
 ```text
 examples/meta_analysis_e2e_project/inputs/
 ```
 
-4. Follow the testing chain:
+4. Use the Stage W PubMed-derived realistic sample inputs from:
+
+```text
+examples/meta_analysis_realistic_project/inputs/
+```
+
+5. Follow the testing chain:
 
 ```text
 Import -> Prepare Screening -> Duplicate Review -> Screening -> Extraction -> Quality -> Analysis -> Reporting
 ```
 
-5. Review generated warnings and manifests before interpreting any result.
+6. Review generated warnings and manifests before interpreting any result.
 
 Do not treat testing reports, figures, or pooled estimates as production outputs.
-

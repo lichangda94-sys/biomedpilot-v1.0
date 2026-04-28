@@ -347,7 +347,7 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
             "",
             "## Project summary",
             f"- Project directory: {project_dir}",
-            "- Current software status: testing / developer preview",
+            "- Current software status: Developer Preview / testing (testing / developer preview)",
             "",
             "## Research question",
             "- Missing / not generated.",

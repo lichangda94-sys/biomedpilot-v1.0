@@ -34,10 +34,25 @@ from app.shared.task_center.service import TaskCenter
 
 
 EXAMPLE_INPUT = Path("examples/meta_analysis_e2e_project/inputs/mock_literature.csv")
+DEFAULT_OUTCOME_DATA = [
+    (10, 100, 20, 100, "A"),
+    (12, 110, 22, 115, "A"),
+    (16, 120, 24, 118, "B"),
+]
 
 
-def build_meta_analysis_e2e_project(tmp_path: Path) -> dict[str, Any]:
-    project_id = "meta-e2e-project"
+def build_meta_analysis_e2e_project(
+    tmp_path: Path,
+    *,
+    project_id: str = "meta-e2e-project",
+    input_path: Path = EXAMPLE_INPUT,
+    outcome_data: list[tuple[int, int, int, int, str]] | None = None,
+    intervention_or_exposure: str = "Statin exposure",
+    comparator: str = "Control",
+    outcome_name: str = "Mortality",
+    source_location: str = "mock source",
+    seeded_note: str = "Seeded by Stage M E2E validation.",
+) -> dict[str, Any]:
     project_dir = tmp_path / project_id
     project_dir.mkdir(parents=True)
     (project_dir / "project.json").write_text(
@@ -53,7 +68,7 @@ def build_meta_analysis_e2e_project(tmp_path: Path) -> dict[str, Any]:
     dedup_service = DedupDecisionService(task_center=task_center, data_center=data_center, storage_root=tmp_path)
     screening_service = ScreeningService(task_center=task_center, data_center=data_center, storage_root=tmp_path)
 
-    import_result = import_service.import_file(project_id=project_id, source_path=str(EXAMPLE_INPUT.resolve()))
+    import_result = import_service.import_file(project_id=project_id, source_path=str(input_path.resolve()))
     assert import_result.success, import_result.message
     copied_literature = _copy_to_project(Path(import_result.output_path), project_dir / "literature" / "literature_records.json")
 
@@ -83,7 +98,7 @@ def build_meta_analysis_e2e_project(tmp_path: Path) -> dict[str, Any]:
             decision=decision,
             exclusion_reason_text="wrong outcome" if decision == "excluded" else "",
             reviewer_id="reviewer-a",
-            notes="Seeded by Stage M E2E validation.",
+            notes=seeded_note,
         )
         assert update.success, update.message
     copied_screening = _copy_to_project(queue_path, project_dir / "screening" / "screening_decisions.json")
@@ -112,7 +127,16 @@ def build_meta_analysis_e2e_project(tmp_path: Path) -> dict[str, Any]:
     fulltext_service.export_full_text_exclusion_report(project_dir)
 
     extraction_storage = ExtractionRecordStorageService(task_center=task_center, data_center=data_center)
-    extraction_records = _extraction_records(project_id, included_records)
+    extraction_records = _extraction_records(
+        project_id,
+        included_records,
+        outcome_data=outcome_data or DEFAULT_OUTCOME_DATA,
+        intervention_or_exposure=intervention_or_exposure,
+        comparator=comparator,
+        outcome_name=outcome_name,
+        source_location=source_location,
+        seeded_note=seeded_note,
+    )
     extraction_storage.save_extraction_records(project_dir, extraction_records)
 
     quality_service = QualityAssessmentService(task_center=task_center, data_center=data_center)
@@ -216,6 +240,7 @@ def build_meta_analysis_e2e_project(tmp_path: Path) -> dict[str, Any]:
         "warnings": {
             "publication_bias": bias_result.warnings,
             "prisma": prisma_summary.notes,
+            "seeded_note": seeded_note,
         },
     }
 
@@ -230,12 +255,17 @@ def _screening_record_source_id(record: dict[str, Any]) -> str:
     return str(record.get("record_id") or record.get("normalized_record_id") or record.get("source_record_id") or record["screening_record_id"])
 
 
-def _extraction_records(project_id: str, included_records: list[dict[str, Any]]) -> list[ExtractionRecord]:
-    outcome_data = [
-        (10, 100, 20, 100, "A"),
-        (12, 110, 22, 115, "A"),
-        (16, 120, 24, 118, "B"),
-    ]
+def _extraction_records(
+    project_id: str,
+    included_records: list[dict[str, Any]],
+    *,
+    outcome_data: list[tuple[int, int, int, int, str]],
+    intervention_or_exposure: str,
+    comparator: str,
+    outcome_name: str,
+    source_location: str,
+    seeded_note: str,
+) -> list[ExtractionRecord]:
     records: list[ExtractionRecord] = []
     for index, (record, data) in enumerate(zip(included_records, outcome_data, strict=True), start=1):
         exp_events, exp_total, ctrl_events, ctrl_total, subgroup = data
@@ -257,17 +287,17 @@ def _extraction_records(project_id: str, included_records: list[dict[str, Any]])
                     study_design="randomized controlled trial",
                     population="Adults with eligible clinical outcome data",
                     sample_size=exp_total + ctrl_total,
-                    intervention_or_exposure="Statin exposure",
-                    comparator="Control",
+                    intervention_or_exposure=intervention_or_exposure,
+                    comparator=comparator,
                     follow_up="12 months",
-                    notes="Seeded by Stage M E2E validation.",
+                    notes=seeded_note,
                 ),
                 outcomes=[
                     ExtractedOutcome(
                         outcome_id=f"outcome-{index}",
                         outcome_data_type=OutcomeDataType.BINARY.value,
                         data=BinaryOutcomeData(
-                            outcome_name="Mortality",
+                            outcome_name=outcome_name,
                             effect_measure="OR",
                             experimental_events=exp_events,
                             experimental_total=exp_total,
@@ -275,12 +305,12 @@ def _extraction_records(project_id: str, included_records: list[dict[str, Any]])
                             control_total=ctrl_total,
                             timepoint="12 months",
                             subgroup=subgroup,
-                            notes="Seeded binary outcome.",
+                            notes=seeded_note,
                         ),
                     )
                 ],
-                notes="Seeded extraction record.",
-                source_location="mock source",
+                notes=seeded_note,
+                source_location=source_location,
                 validation_status=ExtractionValidationStatus.VALID.value,
                 created_at=now,
                 updated_at=now,

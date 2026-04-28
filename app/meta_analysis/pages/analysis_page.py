@@ -94,7 +94,7 @@ def initial_analysis_state() -> AnalysisPageState:
         title="Analysis / Meta 统计分析预检",
         description="读取 Extraction 输出并检查是否具备最小统计运行条件；可基于结构化 extraction_records 构建 testing analysis-ready dataset，并运行基础 testing pooled effect。新增 prevalence、correlation、diagnostic basic、subgroup、leave-one-out、publication bias basic 和 funnel plot 支持；network meta 显示 not implemented。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
-        input_summary="输入：extraction_pool 预检文件或 extraction_records / analysis_ready_dataset。",
+        input_summary="输入：extraction_pool preflight/预检文件或 extraction_records / analysis_ready_dataset。",
         output_summary="输出：analysis_preflight、analysis_ready_dataset、analysis_result、forest/funnel plot 和 result table。",
         next_step="下一步：Reporting / PRISMA / formal Markdown testing report。",
         empty_state="没有 extraction_records 或匹配 outcome 时显示明确错误，不运行正式统计。",
