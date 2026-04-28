@@ -46,10 +46,15 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 2. Create one Bioinformatics project.
 3. Return to the Dashboard.
 4. Create one Meta Analysis project.
-5. Return to the Dashboard and click each recent project.
-6. Open `测试模式`.
-7. Generate a feedback template.
-8. Record anything confusing, broken, missing, or mislabeled.
+5. In the Meta Analysis workspace, find `文献导入`.
+6. Paste or choose a `.nbib`, `.ris`, or `.csv` literature file.
+7. Click `导入`.
+8. Confirm that the result summary shows the source file, format, total records,
+   imported records, and output path.
+9. Return to the Dashboard and click each recent project.
+10. Open `测试模式`.
+11. Generate a feedback template.
+12. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -57,6 +62,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Project creation for both project types.
 - Recent project list.
 - Workspace switching.
+- Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 
@@ -69,6 +75,7 @@ Do not treat the following as completed workflows yet:
 - correlation analysis
 - survival analysis
 - complete Meta statistical analysis
+- Meta Duplicate Review, Screening, Extraction, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows
 - installer/package generation
 
@@ -88,4 +95,3 @@ Feedback templates are generated under:
 ```text
 project_storage/test_feedback/
 ```
-

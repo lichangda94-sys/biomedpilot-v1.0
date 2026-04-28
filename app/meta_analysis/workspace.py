@@ -30,6 +30,7 @@ except Exception:  # pragma: no cover
 
 
 if QWidget is not None:
+    from app.meta_analysis.pages.literature_import_page import LiteratureImportPage
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -54,7 +55,10 @@ if QWidget is not None:
             scroll.setWidgetResizable(True)
             content = QWidget()
             content_layout = QVBoxLayout(content)
+            content_layout.addWidget(LiteratureImportPage())
             for feature in meta_analysis_step_features():
+                if feature.feature_id == "meta-literature-import":
+                    continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)
             scroll.setWidget(content)

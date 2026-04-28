@@ -24,3 +24,10 @@ def test_meta_analysis_workspace_steps_are_visible() -> None:
         "Reporting",
     ]
     assert all(step.next_step for step in steps)
+
+
+def test_meta_workspace_includes_literature_import_step() -> None:
+    steps = meta_analysis_step_features()
+    literature_import = [step for step in steps if step.feature_id == "meta-literature-import"]
+    assert literature_import
+    assert literature_import[0].status.value == "testing"

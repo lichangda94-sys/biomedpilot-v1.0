@@ -21,11 +21,10 @@ Status meanings:
 | 生信分析 | 相关性分析 | 暂未开放 | 暂未开放。 | 定义输入数据契约。 |
 | 生信分析 | 生存分析 | 暂未开放 | 暂未开放。 | 定义临床数据契约。 |
 | 生信分析 | 报告导出 | 待接入 | 统一报告入口占位。 | 接入 Report Center。 |
-| Meta 分析 | 文献导入 | 测试中 | Literature Import 能力已保留。 | 增加文件选择和导入结果摘要。 |
+| Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。 | 继续接入 Prepare for Screening 和 Duplicate Review。 |
 | Meta 分析 | 去重准备 | 测试中 | 去重准备能力来自 legacy literature 服务。 | 接入导入后的文献集合。 |
 | Meta 分析 | Duplicate Review | 测试中 | Duplicate Review 能力已保留。 | 接入人工确认 UI。 |
 | Meta 分析 | Screening | 测试中 | Screening service 已保留。 | 接入标题摘要筛选队列。 |
 | Meta 分析 | Extraction | 测试中 | Extraction service 已保留。 | 接入提取表单和保存。 |
 | Meta 分析 | Analysis | 待接入 | 当前测试版暂未开放完整 Meta 统计执行。 | 接入分析计划和统计 runner。 |
 | Meta 分析 | Reporting | 测试中 | Reporting service 已保留。 | 接入报告导出按钮和历史记录。 |
-

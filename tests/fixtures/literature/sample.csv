@@ -1,0 +1,3 @@
+source_record_id,title,abstract,authors,journal,year,doi,pmid,keywords,language
+csv-001,CSV Sample Title,CSV abstract,"Alice;Bob",CSV Journal,2021,10.3000/csv.001,321654,"screening;analysis",en
+csv-002,Sparse CSV Record,,"Carol",,2020,,,,
