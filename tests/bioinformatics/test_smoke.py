@@ -14,7 +14,16 @@ def test_bioinformatics_feature_statuses_are_explicit() -> None:
 def test_bioinformatics_workspace_steps_are_visible() -> None:
     steps = bioinformatics_step_features()
     step_names = [step.feature_name for step in steps]
-    assert step_names == ["数据检索 / 导入", "数据下载", "数据资产识别", "数据清洗", "样本分组", "差异表达分析", "富集分析"]
+    assert step_names == [
+        "数据检索 / 导入",
+        "数据下载",
+        "数据资产识别",
+        "数据清洗",
+        "样本分组",
+        "差异表达分析",
+        "富集分析",
+        "相关性分析",
+    ]
     assert all(step.next_step for step in steps)
 
 
@@ -72,3 +81,11 @@ def test_bioinformatics_workspace_includes_enrichment_step() -> None:
     assert enrichment
     assert enrichment[0].status.value == "testing"
     assert "不下载数据库" in enrichment[0].description
+
+
+def test_bioinformatics_workspace_includes_correlation_step() -> None:
+    steps = bioinformatics_step_features()
+    correlation = [step for step in steps if step.feature_id == "bio-correlation"]
+    assert correlation
+    assert correlation[0].status.value == "testing"
+    assert "不计算相关系数" in correlation[0].description

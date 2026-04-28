@@ -50,6 +50,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 24. Copy the differential expression preflight output path into `富集分析`.
 25. Click `运行富集分析预检`.
 26. Confirm that the page checks whether DEG result files or gene lists are available. It should also say enrichment analysis and database download were not executed.
+27. Copy the cleaning plan output path into `相关性分析`.
+28. Click `运行相关性分析预检`.
+29. Confirm that the page checks expression matrix and sample annotation readiness. It should also say correlation coefficients and plots were not generated.
 
 ## 3. Create A Meta Analysis Project
 
@@ -112,6 +115,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Bioinformatics `样本分组` preflight plan from cleaning output, without automatic case/control inference.
 - Bioinformatics `差异表达分析` preflight from sample grouping output, without p-values, FDR, limma, DESeq2, or edgeR.
 - Bioinformatics `富集分析` preflight from differential expression preflight output, without database download or GO / KEGG / GSEA execution.
+- Bioinformatics `相关性分析` preflight from cleaning output, without correlation coefficient calculation or plot generation.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
@@ -130,7 +134,7 @@ Do not treat the following as completed workflows yet:
 - live GEO online search and GEO data download as complete workflows
 - automatic Bioinformatics sample group inference and manual group editing
 - enrichment analysis beyond readiness/preflight
-- correlation analysis
+- correlation analysis beyond readiness/preflight
 - survival analysis
 - complete Meta statistical analysis beyond the preflight readiness check
 - Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
