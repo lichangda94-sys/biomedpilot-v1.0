@@ -36,7 +36,7 @@ class FeatureAvailability:
 FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-study-question", "研究问题", FeatureAvailabilityStatus.PLACEHOLDER, "研究设计入口已预留。", "接入项目向导和研究目标记录。"),
     FeatureAvailability("bioinformatics", "bio-data-import", "数据检索 / 导入", FeatureAvailabilityStatus.TESTING, "支持生成 GEO 查询计划和 GSE accession 导入记录；当前不自动下载 NCBI 数据。", "接入受控在线检索、候选列表和下载步骤。", "app/bioinformatics/legacy/geo_tool"),
-    FeatureAvailability("bioinformatics", "bio-download", "数据下载", FeatureAvailabilityStatus.TESTING, "legacy GEO 下载流程已保留。", "增加受控下载按钮和结果目录登记。", "app/bioinformatics/legacy/geo_pipeline"),
+    FeatureAvailability("bioinformatics", "bio-download", "数据下载", FeatureAvailabilityStatus.TESTING, "读取 GEO 查询计划并生成下载计划；当前不实际下载 NCBI 数据。", "在用户确认后接入 legacy GEO 下载执行。", "app/bioinformatics/legacy/geo_pipeline"),
     FeatureAvailability("bioinformatics", "bio-asset-detection", "数据资产识别", FeatureAvailabilityStatus.TESTING, "geo_processing 资产识别能力已保留。", "接入统一 Data Center。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-cleaning", "数据清洗", FeatureAvailabilityStatus.TESTING, "legacy GEO/本地数据处理能力已保留。", "增加输入检查和标准化结果预览。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-sample-groups", "样本分组", FeatureAvailabilityStatus.PLACEHOLDER, "工作台占位，真实项目数据接入后开放。", "接入样本注释和分组编辑。"),

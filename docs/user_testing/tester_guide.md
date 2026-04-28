@@ -32,6 +32,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 6. In `数据检索 / 导入`, enter a GEO search term or GSE accession.
 7. Click `生成 GEO 查询计划`.
 8. Confirm that the output path is shown and that the page says online search was not executed.
+9. Copy the GEO query plan output path into `数据下载`.
+10. Click `生成下载计划`.
+11. Confirm that the download plan says actual download was not executed and requires user confirmation.
 
 ## 3. Create A Meta Analysis Project
 
@@ -88,6 +91,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Recent project list.
 - Workspace switching.
 - Bioinformatics `数据检索 / 导入` GEO query plan and GSE accession import record.
+- Bioinformatics `数据下载` GEO download plan generation without actual NCBI download.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.

@@ -24,3 +24,11 @@ def test_bioinformatics_workspace_includes_geo_import_step() -> None:
     assert geo_import
     assert geo_import[0].status.value == "testing"
     assert "GEO 查询计划" in geo_import[0].description
+
+
+def test_bioinformatics_workspace_includes_geo_download_step() -> None:
+    steps = bioinformatics_step_features()
+    download = [step for step in steps if step.feature_id == "bio-download"]
+    assert download
+    assert download[0].status.value == "testing"
+    assert "下载计划" in download[0].description

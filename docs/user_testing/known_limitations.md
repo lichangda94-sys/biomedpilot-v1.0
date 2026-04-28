@@ -3,6 +3,7 @@
 - This build is for first-round user experience testing, not final analysis work.
 - The Dashboard, project creation, recent projects, workspace switching, status labels, and Testing Mode are the main things to test.
 - Bioinformatics GEO import currently creates a query plan and accession import record only; it does not perform live NCBI search or download in this step.
+- Bioinformatics GEO download currently creates a download plan and target directories only; actual GEO downloading requires explicit user confirmation.
 - Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can generate duplicate candidate group summaries, but manual keep/merge decisions are not implemented yet.

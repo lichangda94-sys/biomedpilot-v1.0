@@ -19,6 +19,7 @@ def test_unavailable_features_are_not_marked_open() -> None:
 
 def test_feature_registry_exposes_key_statuses() -> None:
     geo_import = get_feature("bio-data-import")
+    geo_download = get_feature("bio-download")
     meta_import = get_feature("meta-literature-import")
     prepare = get_feature("meta-dedup-prep")
     duplicate_review = get_feature("meta-duplicate-review")
@@ -30,6 +31,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert geo_import is not None
     assert geo_import.status is FeatureAvailabilityStatus.TESTING
     assert "GEO 查询计划" in geo_import.description
+    assert geo_download is not None
+    assert geo_download.status is FeatureAvailabilityStatus.TESTING
+    assert "下载计划" in geo_download.description
     assert meta_import is not None
     assert meta_import.legacy_source
     assert prepare is not None
