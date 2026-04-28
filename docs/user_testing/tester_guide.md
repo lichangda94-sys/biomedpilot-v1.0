@@ -38,6 +38,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 12. Copy the GEO download plan output path into `数据资产识别`.
 13. Click `识别本地数据资产`.
 14. Confirm that the page says no network was used. If the local target folder is empty, it should report zero expression candidates clearly.
+15. Copy the asset detection output path into `数据清洗`.
+16. Click `生成清洗计划`.
+17. Confirm that the page reports whether each local dataset has expression matrix candidates. It should also say matrix standardization was not executed.
 
 ## 3. Create A Meta Analysis Project
 
@@ -96,6 +99,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Bioinformatics `数据检索 / 导入` GEO query plan and GSE accession import record.
 - Bioinformatics `数据下载` GEO download plan generation without actual NCBI download.
 - Bioinformatics `数据资产识别` local scan from a GEO download plan, without network use.
+- Bioinformatics `数据清洗` preflight plan from asset detection output, without running matrix standardization.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
