@@ -11,6 +11,11 @@ class PrepareScreeningPageState:
     title: str
     description: str
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    empty_state: str
+    warning_summary: str
     last_result: PrepareScreeningResult | None = None
 
 
@@ -20,6 +25,11 @@ def initial_prepare_screening_state() -> PrepareScreeningPageState:
         title="去重准备 / Prepare for Screening",
         description="读取 Literature Import 输出，生成标准化文献记录，用于后续 Duplicate Review 和 Screening。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：Literature Import 生成的 literature_records JSON。",
+        output_summary="输出：screening_ready_records 数据资产和 prepare_screening task。",
+        next_step="下一步：Duplicate Review。",
+        empty_state="没有导入结果时无法准备筛选记录，请先完成 Literature Import。",
+        warning_summary="输入路径不存在或格式不符时显示用户可读错误。",
     )
 
 
@@ -104,4 +114,3 @@ else:
 
     class PrepareScreeningPage:  # type: ignore[no-redef]
         pass
-

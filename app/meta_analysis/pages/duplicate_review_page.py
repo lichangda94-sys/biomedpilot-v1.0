@@ -13,6 +13,11 @@ class DuplicateReviewPageState:
     title: str
     description: str
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    empty_state: str
+    warning_summary: str
     original_record_count: int = 0
     duplicate_group_count: int = 0
     resolved_group_count: int = 0
@@ -31,6 +36,11 @@ def initial_duplicate_review_state() -> DuplicateReviewPageState:
         title="文献去重",
         description="读取 Prepare for Screening 输出，查看疑似重复组并保存最小人工去重决策。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：screening_ready_records JSON。",
+        output_summary="输出：duplicate_candidate_groups、deduplicated_literature 和 dedup decision task。",
+        next_step="下一步：Screening。",
+        empty_state="没有重复候选组时可直接生成去重后文献库并进入 Screening。",
+        warning_summary="未找到重复组、决策不合法或来源路径错误时显示用户可读错误。",
     )
 
 
@@ -46,6 +56,11 @@ def duplicate_review_state_from_groups(
         title="文献去重",
         description="读取 Prepare for Screening 输出，查看疑似重复组并保存最小人工去重决策。",
         status_label="测试中",
+        input_summary="输入：screening_ready_records JSON。",
+        output_summary="输出：duplicate_candidate_groups、deduplicated_literature 和 dedup decision task。",
+        next_step="下一步：Screening。",
+        empty_state="没有重复候选组时可直接生成去重后文献库并进入 Screening。",
+        warning_summary="未找到重复组、决策不合法或来源路径错误时显示用户可读错误。",
         original_record_count=original_record_count,
         duplicate_group_count=len(groups),
         resolved_group_count=resolved_count,

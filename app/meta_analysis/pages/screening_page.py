@@ -11,6 +11,11 @@ class ScreeningPageState:
     title: str
     description: str
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    empty_state: str
+    warning_summary: str
     last_result: ScreeningQueueResult | None = None
 
 
@@ -20,6 +25,11 @@ def initial_screening_state() -> ScreeningPageState:
         title="Screening / 标题摘要筛选",
         description="读取 Prepare for Screening 或 Duplicate Review 输出，生成待人工判读的标题摘要筛选队列。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：screening_ready_records 或 duplicate_candidate_groups JSON。",
+        output_summary="输出：screening_queue / screening_decisions 数据资产和 screening task。",
+        next_step="下一步：Extraction；也可继续 full-text status 和质量评价 testing 子流程。",
+        empty_state="没有筛选来源时无法生成队列；没有候选记录时页面应显示空队列摘要。",
+        warning_summary="excluded 决策必须填写排除原因；错误提示为用户可读 message。",
     )
 
 

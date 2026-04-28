@@ -1,0 +1,29 @@
+{
+  "project_name": "Meta Analysis E2E Example Project",
+  "software_status": "Developer Preview / testing",
+  "network_required": false,
+  "committed_artifacts": [
+    "inputs/mock_literature.csv",
+    "inputs/mock_literature.ris"
+  ],
+  "validation_chain": [
+    "Import",
+    "Deduplication",
+    "Screening",
+    "Full-text status",
+    "ExtractionRecord",
+    "Quality Assessment",
+    "Analysis-ready dataset",
+    "Meta-analysis run",
+    "Forest plot",
+    "Funnel plot",
+    "PRISMA summary",
+    "Formal report",
+    "Supplementary exports",
+    "Reproducibility package"
+  ],
+  "notes": [
+    "Generated outputs are intentionally excluded from git.",
+    "The example remains testing-only and is not a production analysis template."
+  ]
+}

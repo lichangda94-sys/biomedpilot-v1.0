@@ -12,6 +12,11 @@ class LiteratureImportPageState:
     description: str
     supported_formats: tuple[str, ...]
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    empty_state: str
+    warning_summary: str
     last_result: ImportResult | None = None
 
 
@@ -22,6 +27,11 @@ def initial_literature_import_state() -> LiteratureImportPageState:
         description="支持 NBIB / RIS / CSV 文件导入，用于后续去重和筛选。",
         supported_formats=("NBIB", "RIS", "CSV"),
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：本地 NBIB / RIS / CSV 文献文件路径。",
+        output_summary="输出：literature_records 数据资产和 literature_import task。",
+        next_step="下一步：Prepare Screening / 去重准备。",
+        empty_state="未选择文件时不会运行导入，请先选择本地文献文件。",
+        warning_summary="错误会显示为用户可读 message；详细解析错误保留在 details。",
     )
 
 
@@ -110,4 +120,3 @@ else:
 
     class LiteratureImportPage:  # type: ignore[no-redef]
         pass
-

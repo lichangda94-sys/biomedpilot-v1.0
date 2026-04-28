@@ -1,0 +1,155 @@
+{
+  "source_note": "Hand-calculated reference values from standard inverse-variance meta-analysis formulas; no R, network, or external API was used.",
+  "tolerance": {
+    "effect": 1e-9,
+    "pooling": 1e-9,
+    "egger": 1e-9
+  },
+  "binary": {
+    "OR": {
+      "experimental_events": 10,
+      "experimental_total": 100,
+      "control_events": 20,
+      "control_total": 100,
+      "theta": -0.8109302162163288,
+      "standard_error": 0.4166666666666667,
+      "effect": 0.4444444444444444,
+      "ci_lower": 0.1964009820375668,
+      "ci_upper": 1.0057529353888257
+    },
+    "RR": {
+      "experimental_events": 10,
+      "experimental_total": 100,
+      "control_events": 20,
+      "control_total": 100,
+      "theta": -0.6931471805599453,
+      "standard_error": 0.36055512754639896,
+      "effect": 0.5,
+      "ci_lower": 0.24663759893511883,
+      "ci_upper": 1.0136329622060816
+    },
+    "RD": {
+      "experimental_events": 10,
+      "experimental_total": 100,
+      "control_events": 20,
+      "control_total": 100,
+      "theta": -0.1,
+      "standard_error": 0.05,
+      "effect": -0.1,
+      "ci_lower": -0.198,
+      "ci_upper": -0.0020000000000000018
+    },
+    "zero_event_OR": {
+      "experimental_events": 0,
+      "experimental_total": 50,
+      "control_events": 5,
+      "control_total": 50,
+      "theta": -2.50215628312278,
+      "standard_error": 1.4911734251904518,
+      "effect": 0.08190819081908189,
+      "ci_lower": 0.004405699671306887,
+      "ci_upper": 1.5227891648967118,
+      "expected_warning": "zero_event_correction_applied"
+    }
+  },
+  "continuous": {
+    "MD": {
+      "experimental_mean": 4.1,
+      "experimental_sd": 1.2,
+      "experimental_total": 50,
+      "control_mean": 5.0,
+      "control_sd": 1.4,
+      "control_total": 50,
+      "theta": -0.9000000000000004,
+      "standard_error": 0.2607680962081059,
+      "effect": -0.9000000000000004,
+      "ci_lower": -1.411105468567888,
+      "ci_upper": -0.3888945314321127
+    },
+    "SMD": {
+      "experimental_mean": 4.1,
+      "experimental_sd": 1.2,
+      "experimental_total": 50,
+      "control_mean": 5.0,
+      "control_sd": 1.4,
+      "control_total": 50,
+      "theta": -0.6849723122902861,
+      "standard_error": 0.20589757544592832,
+      "effect": -0.6849723122902861,
+      "ci_lower": -1.0885315601643055,
+      "ci_upper": -0.2814130644162666
+    }
+  },
+  "generic_inverse_variance": {
+    "HR": {
+      "effect": 0.72,
+      "ci_lower": 0.55,
+      "ci_upper": 0.94,
+      "theta": -0.3285040669720361,
+      "standard_error": 0.13672489720345227
+    }
+  },
+  "pooling": {
+    "OR_three_study": {
+      "studies": [
+        {"experimental_events": 10, "experimental_total": 100, "control_events": 20, "control_total": 100},
+        {"experimental_events": 12, "experimental_total": 110, "control_events": 22, "control_total": 115},
+        {"experimental_events": 16, "experimental_total": 120, "control_events": 24, "control_total": 118}
+      ],
+      "fixed": {
+        "pooled_effect": 0.5263753104311413,
+        "ci_lower": 0.3413341553040861,
+        "ci_upper": 0.811729395157202,
+        "q_statistic": 0.31362605334247806,
+        "i_squared": 0.0,
+        "tau_squared": 0.0
+      },
+      "random": {
+        "pooled_effect": 0.5263753104311413,
+        "ci_lower": 0.3413341553040861,
+        "ci_upper": 0.811729395157202,
+        "q_statistic": 0.31362605334247806,
+        "i_squared": 0.0,
+        "tau_squared": 0.0
+      }
+    }
+  },
+  "advanced": {
+    "prevalence": {
+      "events": 30,
+      "total": 100,
+      "theta": -0.8472978603872036,
+      "standard_error": 0.21821789023599236,
+      "effect": 0.30000000000000004,
+      "ci_lower": 0.21840169534454124,
+      "ci_upper": 0.39661467331744893
+    },
+    "correlation": {
+      "r": 0.4,
+      "sample_size": 50,
+      "theta": 0.42364893019360184,
+      "standard_error": 0.14586499149789456,
+      "effect": 0.4,
+      "ci_lower": 0.13688877134747524,
+      "ci_upper": 0.6103910042477115
+    },
+    "diagnostic": {
+      "tp": 40,
+      "fp": 10,
+      "fn": 8,
+      "tn": 42,
+      "sensitivity": 0.8333333333333334,
+      "specificity": 0.8076923076923077,
+      "plr": 4.333333333333334,
+      "nlr": 0.2063492063492063,
+      "dor": 21.000000000000007,
+      "theta_dor": 3.0445224377234235,
+      "standard_error_dor": 0.5232681184722836
+    },
+    "egger": {
+      "intercept": -5.591653322029613,
+      "slope": 1.512212172925839,
+      "p_value": 0.0002073715314945268
+    }
+  }
+}

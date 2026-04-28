@@ -11,6 +11,10 @@ class AISuggestionsPageState:
     title: str
     description: str
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    warning_summary: str
     queue_columns: tuple[str, ...]
     target_type_options: tuple[str, ...]
     suggestion_type_options: tuple[str, ...]
@@ -25,6 +29,10 @@ def initial_ai_suggestions_state() -> AISuggestionsPageState:
         title="AI Suggestions Queue / AI 辅助建议队列",
         description="AI 仅生成候选建议；必须由人工 accept / reject / edit，并且 accepted 后还需要明确 apply。AI 不会直接覆盖 screening、extraction、analysis 或 report 正式数据。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：本地/mock suggestion provider 或受控 AI adapter 生成的候选建议。",
+        output_summary="输出：ai_suggestions 队列和人工审核 action task；不会直接改正式数据。",
+        next_step="下一步：人工 accept / reject / edit；accepted 后仍需明确 apply。",
+        warning_summary="pending、rejected、edited 或未 apply 的 suggestion 不能进入正式数据。",
         queue_columns=(
             "suggestion_id",
             "suggestion_type",

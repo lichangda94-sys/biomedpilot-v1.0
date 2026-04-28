@@ -1,0 +1,6 @@
+source_record_id,title,abstract,authors,journal,year,doi,pmid,keywords,language
+e2e-001,Statin trial mortality outcomes,Randomized trial reporting mortality after statin exposure,"Adams A;Baker B",Journal of Internal Testing,2021,10.5555/e2e.001,10000001,"statin;mortality;randomized",en
+e2e-002,Second statin trial mortality outcomes,Randomized controlled study reporting mortality in a comparable population,"Chen C;Diaz D",Clinical Testing Reports,2022,10.5555/e2e.002,10000002,"statin;mortality;trial",en
+e2e-003,Observational biomarker cohort for mortality,Prospective cohort with biomarker exposure and mortality outcome,"Evans E;Ford F",Biomarker Testing Journal,2020,10.5555/e2e.003,10000003,"biomarker;mortality;cohort",en
+e2e-004,Irrelevant imaging method study,Method paper without eligible clinical mortality outcomes,"Green G",Imaging Methods Preview,2019,10.5555/e2e.004,10000004,"imaging;method",en
+

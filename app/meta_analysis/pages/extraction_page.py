@@ -16,6 +16,10 @@ class ExtractionPageState:
     title: str
     description: str
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    warning_summary: str
     project_dir_placeholder: str
     profile_options: tuple[str, ...]
     outcome_type_options: tuple[str, ...]
@@ -37,6 +41,10 @@ def initial_extraction_state() -> ExtractionPageState:
         title="Extraction / 数据提取",
         description="读取 Screening 队列并为 included 文献生成数据提取池；结构化 ExtractionRecord 表单处于 testing 状态，并支持 prevalence、correlation、diagnostic basic 等 advanced method 数据结构。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：screening_queue / included records，或人工录入 record_id 与 study characteristics。",
+        output_summary="输出：extraction_pool、extraction_records 和 extraction_records.csv testing export。",
+        next_step="下一步：Analysis-ready dataset builder。",
+        warning_summary="validation error 阻止保存；warning 允许保存但必须显示给用户。",
         project_dir_placeholder="project_dir，例如 /path/to/project",
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=(

@@ -15,6 +15,11 @@ class ReportingPageState:
     title: str
     description: str
     status_label: str
+    input_summary: str
+    output_summary: str
+    next_step: str
+    empty_state: str
+    warning_summary: str
     last_result: ReportExportResult | None = None
     project_dir_placeholder: str = "选择或粘贴项目目录路径"
     prisma_summary_fields: tuple[str, ...] = (
@@ -47,6 +52,11 @@ def initial_reporting_state() -> ReportingPageState:
         title="Reporting / 报告导出",
         description="读取 Analysis 预检输出并保留测试版 Markdown 摘要；支持 testing PRISMA 数字摘要、formal Markdown/HTML/DOCX 报告雏形、supplementary exports、figure package、project snapshot 和复现包。PDF 正式报告仍未开放。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
+        input_summary="输入：analysis_preflight 或本地项目目录中的 PRISMA / extraction / analysis / figure artifacts。",
+        output_summary="输出：test summary、formal Markdown/HTML/DOCX testing report、supplementary exports、figure package、snapshot 和 reproducibility package。",
+        next_step="下一步：内部 beta 前审查缺失 artifact、PDF 策略和投稿模板差距。",
+        empty_state="缺失 artifact 时报告写明 missing / not generated，不崩溃。",
+        warning_summary="Reporting 区分 test summary、formal Markdown、HTML/DOCX testing report；PDF 正式报告仍未开放。",
     )
 
 
