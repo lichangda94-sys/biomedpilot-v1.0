@@ -67,10 +67,13 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 22. Copy the Screening output path into `Extraction / 数据提取`.
 23. Click `生成数据提取池`.
 24. Confirm that included records become extraction records, and that the app clearly reports zero records if no item was marked included.
-25. Return to the Dashboard and click each recent project.
-26. Open `测试模式`.
-27. Generate a feedback template.
-28. Record anything confusing, broken, missing, or mislabeled.
+25. Copy the Extraction output path into `Analysis / Meta 统计分析预检`.
+26. Click `运行 Analysis 预检`.
+27. Confirm that the result clearly says whether formal statistics can run. In this build it will usually report missing outcome data.
+28. Return to the Dashboard and click each recent project.
+29. Open `测试模式`.
+30. Generate a feedback template.
+31. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -83,6 +86,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
 - Meta Analysis `Screening / 标题摘要筛选` queue generation and minimal decision save using Prepare or Duplicate Review output JSON.
 - Meta Analysis `Extraction / 数据提取` pool generation from Screening output JSON, including clear handling when no records are marked included.
+- Meta Analysis `Analysis / Meta 统计分析预检` using Extraction output JSON. This checks readiness only and does not run pooled statistics.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 
@@ -94,7 +98,7 @@ Do not treat the following as completed workflows yet:
 - enrichment analysis
 - correlation analysis
 - survival analysis
-- complete Meta statistical analysis
+- complete Meta statistical analysis beyond the preflight readiness check
 - Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows
 - installer/package generation

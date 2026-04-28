@@ -24,6 +24,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     duplicate_review = get_feature("meta-duplicate-review")
     screening = get_feature("meta-screening")
     extraction = get_feature("meta-extraction")
+    analysis = get_feature("meta-analysis")
     project_center = get_feature("shared-project-center")
     assert geo_import is not None
     assert geo_import.status is FeatureAvailabilityStatus.TESTING
@@ -39,6 +40,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert extraction is not None
     assert extraction.status is FeatureAvailabilityStatus.TESTING
     assert "提取池" in extraction.description
+    assert analysis is not None
+    assert analysis.status is FeatureAvailabilityStatus.TESTING
+    assert "预检" in analysis.description
     assert project_center is not None
     assert project_center.status is FeatureAvailabilityStatus.OPEN
     assert list_features("bioinformatics")

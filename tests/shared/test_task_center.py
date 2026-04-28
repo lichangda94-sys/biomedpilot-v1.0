@@ -112,3 +112,20 @@ def test_task_center_registers_extraction_details(tmp_path) -> None:
     records = center.list_tasks()
     assert records == [task]
     assert records[0].task_type is TaskType.EXTRACTION
+
+
+def test_task_center_registers_analysis_details(tmp_path) -> None:
+    center = TaskCenter(tmp_path / "tasks.json")
+    task = center.register_task(
+        "task-analysis",
+        TaskType.ANALYSIS,
+        "meta_analysis",
+        "Analysis Preflight",
+        project_id="meta-test",
+        status=TaskStatus.RUNNING,
+        started_at="2026-04-28T00:00:00+00:00",
+        summary="Checking analysis readiness",
+    )
+    records = center.list_tasks()
+    assert records == [task]
+    assert records[0].task_type is TaskType.ANALYSIS
