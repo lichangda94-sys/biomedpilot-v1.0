@@ -70,7 +70,7 @@ def test_meta_page_states_are_testing_and_developer_preview_scoped() -> None:
     assert "预检" in initial_analysis_state().title
     assert "testing pooled effect" in initial_analysis_state().description
     assert "PRISMA 数字摘要" in initial_reporting_state().description
-    assert "不导出 Word/PDF 正式论文报告" in initial_reporting_state().description
+    assert "PDF 正式报告仍未开放" in initial_reporting_state().description
 
 
 def test_meta_feature_availability_matches_current_testing_scope() -> None:
@@ -110,7 +110,7 @@ def test_meta_analysis_and_reporting_are_not_formal_outputs() -> None:
     assert "testing pooled effect" in analysis.description
     assert "不是生产级正式 Meta 统计" in analysis.description
     assert "PRISMA 数字摘要" in reporting.description
-    assert "Word/PDF 正式报告尚未开放" in reporting.description
+    assert "PDF 正式报告仍未开放" in reporting.description
 
 
 def _module_source(module_name: str) -> str:

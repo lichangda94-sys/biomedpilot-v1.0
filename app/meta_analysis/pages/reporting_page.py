@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
+from app.meta_analysis.services.publication_export_service import PublicationExportService
 from app.meta_analysis.services.reporting_service import ReportExportResult, ReportingService
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
@@ -28,13 +29,23 @@ class ReportingPageState:
         "prisma_summary_path",
         "missing_artifact_warnings",
     )
+    publication_export_fields: tuple[str, ...] = (
+        "html_report_path",
+        "word_report_path",
+        "supplementary_exports_path",
+        "figure_package_path",
+        "project_snapshot_path",
+        "reproducibility_package_path",
+        "artifact_lock_warnings",
+        "pdf_placeholder_status",
+    )
 
 
 def initial_reporting_state() -> ReportingPageState:
     feature = get_feature("meta-reporting")
     return ReportingPageState(
         title="Reporting / 报告导出",
-        description="读取 Analysis 预检输出并保留测试版 Markdown 摘要；支持 testing PRISMA 数字摘要和正式 Markdown 报告雏形。本阶段不导出 Word/PDF 正式论文报告。",
+        description="读取 Analysis 预检输出并保留测试版 Markdown 摘要；支持 testing PRISMA 数字摘要、formal Markdown/HTML/DOCX 报告雏形、supplementary exports、figure package、project snapshot 和复现包。PDF 正式报告仍未开放。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
     )
 
@@ -55,12 +66,16 @@ if QWidget is not None:
             service: ReportingService | None = None,
             prisma_service: PRISMAService | None = None,
             formal_report_builder: FormalMarkdownReportBuilder | None = None,
+            publication_export_service: PublicationExportService | None = None,
         ) -> None:
             super().__init__()
             self._project_id = project_id
             self._service = service or ReportingService()
             self._prisma_service = prisma_service or PRISMAService()
             self._formal_report_builder = formal_report_builder or FormalMarkdownReportBuilder(prisma_service=self._prisma_service)
+            self._publication_export_service = publication_export_service or PublicationExportService(
+                formal_report_builder=self._formal_report_builder
+            )
             self._state = initial_reporting_state()
 
             root = QVBoxLayout(self)
@@ -97,6 +112,30 @@ if QWidget is not None:
             formal_button = QPushButton("生成 formal Markdown report")
             formal_button.clicked.connect(self._generate_formal_report)
             root.addWidget(formal_button)
+
+            html_button = QPushButton("导出 HTML testing report")
+            html_button.clicked.connect(self._export_html_report)
+            root.addWidget(html_button)
+
+            word_button = QPushButton("导出 Word testing report")
+            word_button.clicked.connect(self._export_word_report)
+            root.addWidget(word_button)
+
+            supplementary_button = QPushButton("导出 supplementary tables")
+            supplementary_button.clicked.connect(self._export_supplementary_exports)
+            root.addWidget(supplementary_button)
+
+            figure_package_button = QPushButton("导出 figure package")
+            figure_package_button.clicked.connect(self._export_figure_package)
+            root.addWidget(figure_package_button)
+
+            snapshot_button = QPushButton("创建 project snapshot")
+            snapshot_button.clicked.connect(self._create_project_snapshot)
+            root.addWidget(snapshot_button)
+
+            reproducibility_button = QPushButton("导出 reproducibility package")
+            reproducibility_button.clicked.connect(self._export_reproducibility_package)
+            root.addWidget(reproducibility_button)
 
             self._status_label = QLabel("报告状态：等待 Analysis 预检输出")
             self._status_label.setWordWrap(True)
@@ -158,7 +197,50 @@ if QWidget is not None:
             self._summary_label.setText(f"Formal Markdown report：{report_path}")
             self._error_label.setText("")
 
+        def _export_html_report(self) -> None:
+            result = self._publication_export_service.export_html_report(Path(self._project_dir_input.text()).expanduser())
+            self._status_label.setText("报告状态：HTML testing report 已导出")
+            self._summary_label.setText(_publication_result_text("HTML report", result.output_path, result.warnings))
+            self._error_label.setText("")
+
+        def _export_word_report(self) -> None:
+            result = self._publication_export_service.export_word_report(Path(self._project_dir_input.text()).expanduser())
+            self._status_label.setText("报告状态：Word testing report 已导出")
+            self._summary_label.setText(_publication_result_text("Word report", result.output_path, result.warnings))
+            self._error_label.setText("")
+
+        def _export_supplementary_exports(self) -> None:
+            result = self._publication_export_service.export_supplementary_exports(Path(self._project_dir_input.text()).expanduser())
+            self._status_label.setText("报告状态：Supplementary tables 已导出")
+            self._summary_label.setText(f"Supplementary exports：{result.output_path}")
+            self._error_label.setText("")
+
+        def _export_figure_package(self) -> None:
+            result = self._publication_export_service.export_figure_package(Path(self._project_dir_input.text()).expanduser())
+            self._status_label.setText("报告状态：Figure package 已导出")
+            self._summary_label.setText(_publication_result_text("Figure package", result.output_path, result.warnings))
+            self._error_label.setText("")
+
+        def _create_project_snapshot(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            snapshot = self._publication_export_service.create_project_snapshot(project_dir)
+            snapshot_path = self._publication_export_service.save_project_snapshot(project_dir, snapshot)
+            self._status_label.setText("报告状态：Project snapshot 已创建")
+            self._summary_label.setText(f"Project snapshot：{snapshot_path}")
+            self._error_label.setText("")
+
+        def _export_reproducibility_package(self) -> None:
+            result = self._publication_export_service.export_reproducibility_package(Path(self._project_dir_input.text()).expanduser())
+            self._status_label.setText("报告状态：Reproducibility package 已导出")
+            self._summary_label.setText(f"Reproducibility package：{result.output_path}")
+            self._error_label.setText("")
+
 else:
 
     class ReportingPage:  # type: ignore[no-redef]
         pass
+
+
+def _publication_result_text(label: str, output_path: str, warnings: list[str]) -> str:
+    warning_text = "\nWarnings：" + "\n".join(warnings) if warnings else ""
+    return f"{label}：{output_path}{warning_text}"
