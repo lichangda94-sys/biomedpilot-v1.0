@@ -32,3 +32,11 @@ def test_bioinformatics_workspace_includes_geo_download_step() -> None:
     assert download
     assert download[0].status.value == "testing"
     assert "下载计划" in download[0].description
+
+
+def test_bioinformatics_workspace_includes_geo_asset_detection_step() -> None:
+    steps = bioinformatics_step_features()
+    asset_detection = [step for step in steps if step.feature_id == "bio-asset-detection"]
+    assert asset_detection
+    assert asset_detection[0].status.value == "testing"
+    assert "不联网" in asset_detection[0].description

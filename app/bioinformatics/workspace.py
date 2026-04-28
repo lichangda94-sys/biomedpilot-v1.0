@@ -30,6 +30,7 @@ except Exception:  # pragma: no cover - non-GUI environments import feature regi
 if QWidget is not None:
     from app.bioinformatics.pages.geo_import_page import GeoImportPage
     from app.bioinformatics.pages.geo_download_page import GeoDownloadPage
+    from app.bioinformatics.pages.geo_asset_detection_page import GeoAssetDetectionPage
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -56,8 +57,9 @@ if QWidget is not None:
             content_layout = QVBoxLayout(content)
             content_layout.addWidget(GeoImportPage())
             content_layout.addWidget(GeoDownloadPage())
+            content_layout.addWidget(GeoAssetDetectionPage())
             for feature in bioinformatics_step_features():
-                if feature.feature_id in {"bio-data-import", "bio-download"}:
+                if feature.feature_id in {"bio-data-import", "bio-download", "bio-asset-detection"}:
                     continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)

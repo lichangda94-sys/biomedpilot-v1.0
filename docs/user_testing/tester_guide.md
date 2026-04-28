@@ -35,6 +35,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 9. Copy the GEO query plan output path into `数据下载`.
 10. Click `生成下载计划`.
 11. Confirm that the download plan says actual download was not executed and requires user confirmation.
+12. Copy the GEO download plan output path into `数据资产识别`.
+13. Click `识别本地数据资产`.
+14. Confirm that the page says no network was used. If the local target folder is empty, it should report zero expression candidates clearly.
 
 ## 3. Create A Meta Analysis Project
 
@@ -92,6 +95,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Workspace switching.
 - Bioinformatics `数据检索 / 导入` GEO query plan and GSE accession import record.
 - Bioinformatics `数据下载` GEO download plan generation without actual NCBI download.
+- Bioinformatics `数据资产识别` local scan from a GEO download plan, without network use.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
