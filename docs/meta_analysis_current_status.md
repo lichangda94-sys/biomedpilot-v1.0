@@ -15,7 +15,7 @@ The current testing chain is:
 3. Duplicate Review
 4. Screening
 5. Extraction Pool
-6. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis
+6. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
 7. Reporting Test Summary
 
 ## Implemented Testing Capabilities
@@ -25,12 +25,12 @@ The current testing chain is:
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, and CSV export.
-- Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, and supports basic testing pooled effects.
+- Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, and exports a basic forest plot PNG plus result table CSV.
 - Reporting exports a testing Markdown summary from Analysis preflight only; it is not a formal report.
 
 ## Not Implemented Yet
 
-- Forest plots, funnel plots, subgroup analysis, sensitivity analysis, and publication bias analysis.
+- Funnel plots, subgroup analysis, sensitivity analysis, and publication bias analysis.
 - Production-level statistical validation, advanced methods, and publication-ready result interpretation.
 - PRISMA formal report generation, Word/PDF reports, and publication-ready report packages.
 - Full-text PDF management and full-text screening.
@@ -42,10 +42,10 @@ The current testing chain is:
 
 - The current Analysis step has a basic testing statistics core, but it is not production-grade statistical software.
 - The current Reporting step exports a test summary only.
-- ExtractionRecord form integration, analysis-ready dataset builder, and basic pooled effects exist at testing level only.
+- ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
 - Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
 - Full-text, quality assessment, publication export, and formal reproducibility packages are not complete.
 
 ## Next Priority
 
-The next implementation priority is Figure & Result Table MVP. That phase should generate a basic forest plot and CSV result table from `analysis_result`.
+The next implementation priority is PRISMA & Formal Markdown Report MVP. That phase should collect PRISMA numbers and generate a structured formal Markdown report draft.

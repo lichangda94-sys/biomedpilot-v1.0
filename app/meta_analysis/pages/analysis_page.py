@@ -10,6 +10,7 @@ from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
+from app.meta_analysis.services.figure_result_service import FigureResultService
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
 
@@ -64,6 +65,12 @@ class AnalysisPageState:
         "i_squared",
         "tau_squared",
     )
+    figure_artifact_fields: tuple[str, ...] = (
+        "analysis_result_id",
+        "forest_plot_path",
+        "result_table_path",
+        "artifact_status",
+    )
 
 
 def initial_analysis_state() -> AnalysisPageState:
@@ -93,12 +100,14 @@ if QWidget is not None:
             service: AnalysisPreflightService | None = None,
             dataset_service: AnalysisDatasetService | None = None,
             run_service: AnalysisRunService | None = None,
+            figure_service: FigureResultService | None = None,
         ) -> None:
             super().__init__()
             self._project_id = project_id
             self._service = service or AnalysisPreflightService()
             self._dataset_service = dataset_service or AnalysisDatasetService()
             self._run_service = run_service or AnalysisRunService(dataset_service=self._dataset_service)
+            self._figure_service = figure_service or FigureResultService(analysis_run_service=self._run_service)
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -174,6 +183,26 @@ if QWidget is not None:
             self._analysis_result_label = QLabel("pooled result 摘要会显示在这里。")
             self._analysis_result_label.setWordWrap(True)
             root.addWidget(self._analysis_result_label)
+
+            figure_title = QLabel("Figures / Result Table（测试中）")
+            figure_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(figure_title)
+
+            self._analysis_result_id_input = QLineEdit()
+            self._analysis_result_id_input.setPlaceholderText("analysis_result ID")
+            root.addWidget(self._analysis_result_id_input)
+
+            forest_button = QPushButton("生成 forest plot PNG")
+            forest_button.clicked.connect(self._generate_forest_plot)
+            root.addWidget(forest_button)
+
+            table_button = QPushButton("导出 result table CSV")
+            table_button.clicked.connect(self._export_result_table)
+            root.addWidget(table_button)
+
+            self._artifact_label = QLabel("figure artifact 和 result table 路径会显示在这里。")
+            self._artifact_label.setWordWrap(True)
+            root.addWidget(self._artifact_label)
 
             self._status_label = QLabel("分析状态：等待 Extraction 输出")
             self._status_label.setWordWrap(True)
@@ -251,6 +280,7 @@ if QWidget is not None:
                     self._model_input.text().strip(),
                 )
                 output_path = self._run_service.save_analysis_result(project_dir, result)
+                self._analysis_result_id_input.setText(result.result_id)
                 self._analysis_result_label.setText(
                     f"Result ID：{result.result_id}\n"
                     f"Dataset ID：{result.dataset_id}\n"
@@ -268,6 +298,26 @@ if QWidget is not None:
             except Exception as exc:
                 self._analysis_result_label.setText("没有生成 pooled result。")
                 self._error_label.setText(f"Meta 分析运行失败：{exc}")
+
+        def _generate_forest_plot(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                artifact = self._figure_service.generate_forest_plot(project_dir, self._analysis_result_id_input.text().strip())
+                self._artifact_label.setText(f"Forest plot：{artifact.file_path}")
+                self._error_label.setText("")
+            except Exception as exc:
+                self._artifact_label.setText("没有生成 forest plot。")
+                self._error_label.setText(f"Forest plot 生成失败：{exc}")
+
+        def _export_result_table(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                output_path = self._figure_service.export_result_table_csv(project_dir, self._analysis_result_id_input.text().strip())
+                self._artifact_label.setText(f"Result table：{output_path}")
+                self._error_label.setText("")
+            except Exception as exc:
+                self._artifact_label.setText("没有导出 result table。")
+                self._error_label.setText(f"Result table 导出失败：{exc}")
 
 else:
 

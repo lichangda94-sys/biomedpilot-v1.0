@@ -34,6 +34,8 @@ class TaskType(StrEnum):
     ANALYSIS = "analysis"
     ANALYSIS_DATASET_BUILD = "analysis_dataset_build"
     META_ANALYSIS_RUN = "meta_analysis_run"
+    FOREST_PLOT_EXPORT = "forest_plot_export"
+    ANALYSIS_RESULT_TABLE_EXPORT = "analysis_result_table_export"
     VISUALIZATION = "visualization"
     REPORT_EXPORT = "report_export"
 
