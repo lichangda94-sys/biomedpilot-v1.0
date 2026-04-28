@@ -35,7 +35,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert duplicate_review.status is FeatureAvailabilityStatus.TESTING
     assert screening is not None
     assert screening.status is FeatureAvailabilityStatus.TESTING
-    assert "pending" in screening.description
+    assert "include/exclude/maybe" in screening.description
     assert extraction is not None
     assert extraction.status is FeatureAvailabilityStatus.TESTING
     assert "提取池" in extraction.description

@@ -141,6 +141,62 @@ def test_screening_queue_from_prepare_output(tmp_path) -> None:
     assert any(asset.data_type == "screening_queue" for asset in data_center.list_assets("meta-test"))
 
 
+def test_screening_decision_update_marks_record_included(tmp_path) -> None:
+    service, task_center, data_center = make_service(tmp_path)
+    source = write_prepare_output(tmp_path)
+    queue_result = service.create_queue(project_id="meta-test", source_path=str(source))
+    payload = json.loads(Path(queue_result.output_path).read_text(encoding="utf-8"))
+    record_id = payload["screening_records"][0]["screening_record_id"]
+    result = service.update_decision(
+        project_id="meta-test",
+        queue_path=queue_result.output_path,
+        screening_record_id=record_id,
+        decision="included",
+        notes="Eligible for extraction",
+    )
+    assert result.success
+    assert result.decision_counts["included"] == 1
+    updated_payload = json.loads(Path(queue_result.output_path).read_text(encoding="utf-8"))
+    updated_record = updated_payload["screening_records"][0]
+    assert updated_record["decision"] == "included"
+    assert updated_record["decided_at"]
+    assert updated_record["notes"] == "Eligible for extraction"
+    task = task_center.list_tasks()[0]
+    assert task.task_type is TaskType.SCREENING_DECISION
+    assert task.status is TaskStatus.COMPLETED
+    assert any(asset.data_type == "screening_decisions" for asset in data_center.list_assets("meta-test"))
+
+
+def test_screening_decision_update_requires_valid_decision(tmp_path) -> None:
+    service, task_center, _data_center = make_service(tmp_path)
+    source = write_prepare_output(tmp_path)
+    queue_result = service.create_queue(project_id="meta-test", source_path=str(source))
+    result = service.update_decision(
+        project_id="meta-test",
+        queue_path=queue_result.output_path,
+        screening_record_id="screen-unknown",
+        decision="yes",
+    )
+    assert not result.success
+    assert "pending、included、excluded" in result.message
+    assert task_center.list_tasks()[0].status is TaskStatus.FAILED
+
+
+def test_screening_decision_update_requires_exclusion_reason(tmp_path) -> None:
+    service, _task_center, _data_center = make_service(tmp_path)
+    source = write_prepare_output(tmp_path)
+    queue_result = service.create_queue(project_id="meta-test", source_path=str(source))
+    payload = json.loads(Path(queue_result.output_path).read_text(encoding="utf-8"))
+    result = service.update_decision(
+        project_id="meta-test",
+        queue_path=queue_result.output_path,
+        screening_record_id=payload["screening_records"][0]["screening_record_id"],
+        decision="excluded",
+    )
+    assert not result.success
+    assert "排除原因" in result.message
+
+
 def test_screening_queue_from_duplicate_output_filters_non_primary_duplicates(tmp_path) -> None:
     service, _task_center, _data_center = make_service(tmp_path)
     prepare_path = write_prepare_output(tmp_path)
@@ -159,7 +215,7 @@ def test_screening_feature_status_and_page_state() -> None:
     feature = get_feature("meta-screening")
     assert feature is not None
     assert feature.status is FeatureAvailabilityStatus.TESTING
-    assert "标题摘要筛选队列" in feature.description
+    assert "include/exclude/maybe" in feature.description
     state = initial_screening_state()
     assert state.title == "Screening / 标题摘要筛选"
     assert state.status_label == "测试中"

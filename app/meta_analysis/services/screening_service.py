@@ -26,6 +26,19 @@ class ScreeningQueueResult:
     details: dict[str, object] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class ScreeningDecisionUpdateResult:
+    success: bool
+    project_id: str
+    queue_path: str
+    screening_record_id: str
+    decision: str
+    decision_counts: dict[str, int]
+    message: str
+    error_count: int = 0
+    details: dict[str, object] = field(default_factory=dict)
+
+
 class ScreeningService:
     def __init__(
         self,
@@ -116,6 +129,100 @@ class ScreeningService:
             self._finish_task(task, result)
             return result
 
+    def update_decision(
+        self,
+        *,
+        project_id: str,
+        queue_path: str,
+        screening_record_id: str,
+        decision: str,
+        exclusion_reason_text: str = "",
+        reviewer_id: str = "",
+        notes: str = "",
+    ) -> ScreeningDecisionUpdateResult:
+        task = self._start_decision_task(
+            project_id=project_id,
+            queue_path=queue_path,
+            screening_record_id=screening_record_id,
+        )
+        validation_error = self._validate_decision_input(
+            queue_path=queue_path,
+            screening_record_id=screening_record_id,
+            decision=decision,
+            exclusion_reason_text=exclusion_reason_text,
+        )
+        if validation_error is not None:
+            result = ScreeningDecisionUpdateResult(
+                success=False,
+                project_id=project_id,
+                queue_path=queue_path,
+                screening_record_id=screening_record_id,
+                decision=decision,
+                decision_counts={},
+                message=validation_error,
+                error_count=1,
+            )
+            self._finish_decision_task(task, result)
+            return result
+
+        resolved_queue_path = Path(queue_path).expanduser().resolve()
+        normalized_decision = decision.strip().lower()
+        try:
+            payload = json.loads(resolved_queue_path.read_text(encoding="utf-8"))
+            records = list(payload.get("screening_records", []))
+            updated = False
+            for record in records:
+                if str(record.get("screening_record_id", "")) != screening_record_id:
+                    continue
+                record["decision"] = normalized_decision
+                record["exclusion_reason_text"] = exclusion_reason_text.strip() if normalized_decision == "excluded" else ""
+                record["reviewer_id"] = reviewer_id.strip() or None
+                record["notes"] = notes.strip()
+                record["decided_at"] = datetime.now(timezone.utc).isoformat() if normalized_decision != "pending" else None
+                updated = True
+                break
+            if not updated:
+                raise ValueError("Screening record not found.")
+
+            payload["screening_records"] = records
+            payload["decision_counts"] = self._decision_counts_from_dicts(records)
+            payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+            resolved_queue_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            result = ScreeningDecisionUpdateResult(
+                success=True,
+                project_id=project_id,
+                queue_path=str(resolved_queue_path),
+                screening_record_id=screening_record_id,
+                decision=normalized_decision,
+                decision_counts=dict(payload["decision_counts"]),
+                message=f"Screening 决策已保存：{screening_record_id} → {normalized_decision}。",
+                details={"updated_record_id": screening_record_id},
+            )
+            self._data_center.register_asset(
+                project_id=project_id,
+                module="meta_analysis",
+                data_type="screening_decisions",
+                source_path=str(resolved_queue_path),
+                output_path=str(resolved_queue_path),
+                status="available",
+            )
+            self._finish_decision_task(task, result)
+            return result
+        except Exception as exc:
+            result = ScreeningDecisionUpdateResult(
+                success=False,
+                project_id=project_id,
+                queue_path=str(resolved_queue_path),
+                screening_record_id=screening_record_id,
+                decision=normalized_decision,
+                decision_counts={},
+                message="Screening 决策保存失败，请确认记录 ID 来自当前 Screening 队列。",
+                error_count=1,
+                details={"error": str(exc)},
+            )
+            self._finish_decision_task(task, result)
+            return result
+
     def _validate(self, source_path: str) -> str | None:
         if not source_path.strip():
             return "请选择 Prepare for Screening 或 Duplicate Review 生成的 JSON 文件。"
@@ -124,6 +231,30 @@ class ScreeningService:
             return "筛选来源文件不存在，请检查路径。"
         if path.suffix.lower() != ".json":
             return "Screening 需要 Prepare for Screening 或 Duplicate Review 生成的 JSON 文件。"
+        return None
+
+    def _validate_decision_input(
+        self,
+        *,
+        queue_path: str,
+        screening_record_id: str,
+        decision: str,
+        exclusion_reason_text: str,
+    ) -> str | None:
+        if not queue_path.strip():
+            return "请选择 Screening 队列 JSON 文件。"
+        path = Path(queue_path).expanduser()
+        if not path.exists():
+            return "Screening 队列文件不存在，请检查路径。"
+        if path.suffix.lower() != ".json":
+            return "Screening 决策需要 JSON 队列文件。"
+        if not screening_record_id.strip():
+            return "请输入要更新的 screening_record_id。"
+        normalized_decision = decision.strip().lower()
+        if normalized_decision not in {"pending", "included", "excluded", "maybe"}:
+            return "决策值必须是 pending、included、excluded 或 maybe。"
+        if normalized_decision == "excluded" and not exclusion_reason_text.strip():
+            return "选择 excluded 时需要填写排除原因。"
         return None
 
     def _load_source(self, source_path: Path) -> tuple[list[dict[str, object]], list[dict[str, object]], str, Path]:
@@ -159,7 +290,39 @@ class ScreeningService:
             summary=f"Creating screening queue from {source_path}" if source_path else "Waiting for screening source",
         )
 
+    def _start_decision_task(self, *, project_id: str, queue_path: str, screening_record_id: str) -> TaskRecord:
+        now = datetime.now(timezone.utc).isoformat()
+        return self._task_center.register_task(
+            task_id=f"task-{uuid4().hex[:12]}",
+            task_type=TaskType.SCREENING_DECISION,
+            module="meta_analysis",
+            title="Screening Decision",
+            project_id=project_id,
+            status=TaskStatus.RUNNING,
+            started_at=now,
+            summary=f"Updating {screening_record_id} in {queue_path}" if queue_path else "Waiting for screening decision input",
+        )
+
     def _finish_task(self, task: TaskRecord, result: ScreeningQueueResult) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        self._task_center.save_task(
+            TaskRecord(
+                task_id=task.task_id,
+                task_type=task.task_type,
+                status=TaskStatus.COMPLETED if result.success else TaskStatus.FAILED,
+                module=task.module,
+                title=task.title,
+                created_at=task.created_at,
+                updated_at=now,
+                project_id=task.project_id,
+                started_at=task.started_at,
+                finished_at=now,
+                summary=result.message,
+                error_message="" if result.success else result.message,
+            )
+        )
+
+    def _finish_decision_task(self, task: TaskRecord, result: ScreeningDecisionUpdateResult) -> None:
         now = datetime.now(timezone.utc).isoformat()
         self._task_center.save_task(
             TaskRecord(
@@ -207,5 +370,13 @@ class ScreeningService:
         counts: dict[str, int] = {"pending": 0, "included": 0, "excluded": 0, "maybe": 0}
         for record in queue_records:
             counts[record.decision] = counts.get(record.decision, 0) + 1
+        counts["total"] = len(queue_records)
+        return counts
+
+    def _decision_counts_from_dicts(self, queue_records: list[dict[str, object]]) -> dict[str, int]:
+        counts: dict[str, int] = {"pending": 0, "included": 0, "excluded": 0, "maybe": 0}
+        for record in queue_records:
+            decision = str(record.get("decision", "pending")).lower()
+            counts[decision] = counts.get(decision, 0) + 1
         counts["total"] = len(queue_records)
         return counts

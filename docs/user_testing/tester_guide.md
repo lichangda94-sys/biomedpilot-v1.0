@@ -60,13 +60,17 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 15. Copy either the Duplicate Review output path or the Prepare for Screening output path into `Screening / 标题摘要筛选`.
 16. Click `生成标题摘要筛选队列`.
 17. Confirm that the summary shows total records, pending records, and output path.
-18. Copy the Screening output path into `Extraction / 数据提取`.
-19. Click `生成数据提取池`.
-20. Confirm that the summary is clear. In the normal first-round flow, the result may show zero extraction records because manual screening decisions are not open yet.
-21. Return to the Dashboard and click each recent project.
-22. Open `测试模式`.
-23. Generate a feedback template.
-24. Record anything confusing, broken, missing, or mislabeled.
+18. In the Screening section, copy one `screening_record_id` from the generated JSON output.
+19. Enter the Screening output path, the `screening_record_id`, and a decision such as `included`, `excluded`, `maybe`, or `pending`.
+20. Click `保存筛选决策`. If you use `excluded`, also enter an exclusion reason.
+21. Confirm that the decision counts update clearly.
+22. Copy the Screening output path into `Extraction / 数据提取`.
+23. Click `生成数据提取池`.
+24. Confirm that included records become extraction records, and that the app clearly reports zero records if no item was marked included.
+25. Return to the Dashboard and click each recent project.
+26. Open `测试模式`.
+27. Generate a feedback template.
+28. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -77,8 +81,8 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
-- Meta Analysis `Screening / 标题摘要筛选` queue generation using Prepare or Duplicate Review output JSON.
-- Meta Analysis `Extraction / 数据提取` pool generation from Screening output JSON, mainly to verify clear status and zero-record handling.
+- Meta Analysis `Screening / 标题摘要筛选` queue generation and minimal decision save using Prepare or Duplicate Review output JSON.
+- Meta Analysis `Extraction / 数据提取` pool generation from Screening output JSON, including clear handling when no records are marked included.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 
@@ -91,7 +95,7 @@ Do not treat the following as completed workflows yet:
 - correlation analysis
 - survival analysis
 - complete Meta statistical analysis
-- Meta manual duplicate merge decisions, manual Screening decisions, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
+- Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows
 - installer/package generation
 

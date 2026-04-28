@@ -60,6 +60,29 @@ if QWidget is not None:
             run_button.clicked.connect(self._create_queue)
             root.addWidget(run_button)
 
+            decision_card = QFrame()
+            decision_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            decision_layout = QVBoxLayout(decision_card)
+            decision_title = QLabel("最小人工判读")
+            decision_title.setStyleSheet("font-weight: 700;")
+            decision_layout.addWidget(decision_title)
+            self._record_id_input = QLineEdit()
+            self._record_id_input.setPlaceholderText("screening_record_id，例如 screen-xxxx")
+            self._decision_input = QLineEdit()
+            self._decision_input.setPlaceholderText("decision: included / excluded / maybe / pending")
+            self._reason_input = QLineEdit()
+            self._reason_input.setPlaceholderText("excluded 时填写排除原因")
+            self._notes_input = QLineEdit()
+            self._notes_input.setPlaceholderText("可选 notes")
+            decision_layout.addWidget(self._record_id_input)
+            decision_layout.addWidget(self._decision_input)
+            decision_layout.addWidget(self._reason_input)
+            decision_layout.addWidget(self._notes_input)
+            save_decision_button = QPushButton("保存筛选决策")
+            save_decision_button.clicked.connect(self._save_decision)
+            decision_layout.addWidget(save_decision_button)
+            root.addWidget(decision_card)
+
             self._status_label = QLabel("筛选状态：等待筛选来源")
             self._status_label.setWordWrap(True)
             root.addWidget(self._status_label)
@@ -99,6 +122,31 @@ if QWidget is not None:
             else:
                 self._status_label.setText("筛选状态：失败")
                 self._summary_label.setText("没有生成筛选队列。")
+                self._error_label.setText(result.message)
+
+        def _save_decision(self) -> None:
+            result = self._service.update_decision(
+                project_id=self._project_id,
+                queue_path=self._path_input.text(),
+                screening_record_id=self._record_id_input.text(),
+                decision=self._decision_input.text(),
+                exclusion_reason_text=self._reason_input.text(),
+                notes=self._notes_input.text(),
+            )
+            if result.success:
+                self._status_label.setText("筛选状态：决策已保存")
+                self._summary_label.setText(
+                    f"队列：{result.queue_path}\n"
+                    f"记录：{result.screening_record_id}\n"
+                    f"决策：{result.decision}\n"
+                    f"Included：{result.decision_counts.get('included', 0)}\n"
+                    f"Excluded：{result.decision_counts.get('excluded', 0)}\n"
+                    f"Maybe：{result.decision_counts.get('maybe', 0)}\n"
+                    f"Pending：{result.decision_counts.get('pending', 0)}"
+                )
+                self._error_label.setText("")
+            else:
+                self._status_label.setText("筛选状态：决策保存失败")
                 self._error_label.setText(result.message)
 
 else:
