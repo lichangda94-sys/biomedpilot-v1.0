@@ -41,7 +41,7 @@ FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-cleaning", "数据清洗", FeatureAvailabilityStatus.TESTING, "读取资产识别结果并生成清洗预检计划；当前不执行矩阵标准化。", "接入受控矩阵清洗、标准化结果预览和输出登记。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-sample-groups", "样本分组", FeatureAvailabilityStatus.TESTING, "读取数据清洗计划并生成样本分组预检；当前不自动推断病例/对照分组。", "接入样本注释表预览、分组编辑和保存。"),
     FeatureAvailability("bioinformatics", "bio-deg", "差异表达分析", FeatureAvailabilityStatus.TESTING, "读取样本分组计划并检查表达矩阵、样本注释和病例/对照分组；当前不运行正式差异统计。", "接入参数配置、统计引擎选择和受控 DEG runner。"),
-    FeatureAvailability("bioinformatics", "bio-enrichment", "富集分析", FeatureAvailabilityStatus.UNAVAILABLE, "暂未开放。", "等待差异分析结果接入。"),
+    FeatureAvailability("bioinformatics", "bio-enrichment", "富集分析", FeatureAvailabilityStatus.TESTING, "读取差异表达分析预检并检查 DEG 结果或基因列表；当前不下载数据库、不运行 GO / KEGG / GSEA。", "接入基因列表确认、数据库版本选择和受控富集 runner。"),
     FeatureAvailability("bioinformatics", "bio-correlation", "相关性分析", FeatureAvailabilityStatus.UNAVAILABLE, "暂未开放。", "定义输入数据契约。"),
     FeatureAvailability("bioinformatics", "bio-survival", "生存分析", FeatureAvailabilityStatus.UNAVAILABLE, "暂未开放。", "定义临床数据契约。"),
     FeatureAvailability("bioinformatics", "bio-reporting", "报告导出", FeatureAvailabilityStatus.PLACEHOLDER, "统一报告入口占位。", "接入 Report Center。"),

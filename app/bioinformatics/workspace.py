@@ -18,6 +18,7 @@ def bioinformatics_step_features() -> list[FeatureAvailability]:
         "bio-cleaning",
         "bio-sample-groups",
         "bio-deg",
+        "bio-enrichment",
     }
     return [feature for feature in list_features("bioinformatics") if feature.feature_id in step_ids]
 
@@ -35,6 +36,7 @@ if QWidget is not None:
     from app.bioinformatics.pages.geo_cleaning_page import GeoCleaningPage
     from app.bioinformatics.pages.sample_grouping_page import SampleGroupingPage
     from app.bioinformatics.pages.differential_expression_page import DifferentialExpressionPage
+    from app.bioinformatics.pages.enrichment_page import EnrichmentPage
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -65,6 +67,7 @@ if QWidget is not None:
             content_layout.addWidget(GeoCleaningPage())
             content_layout.addWidget(SampleGroupingPage())
             content_layout.addWidget(DifferentialExpressionPage())
+            content_layout.addWidget(EnrichmentPage())
             for feature in bioinformatics_step_features():
                 if feature.feature_id in {
                     "bio-data-import",
@@ -73,6 +76,7 @@ if QWidget is not None:
                     "bio-cleaning",
                     "bio-sample-groups",
                     "bio-deg",
+                    "bio-enrichment",
                 }:
                     continue
                 content_layout.addWidget(_feature_row(feature))

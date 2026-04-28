@@ -14,7 +14,7 @@ def test_unavailable_features_are_not_marked_open() -> None:
         for item in list_features()
         if item.status is FeatureAvailabilityStatus.UNAVAILABLE
     }
-    assert "富集分析" in unavailable_registry_names
+    assert "相关性分析" in unavailable_registry_names
 
 
 def test_feature_registry_exposes_key_statuses() -> None:
@@ -24,6 +24,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     geo_cleaning = get_feature("bio-cleaning")
     sample_grouping = get_feature("bio-sample-groups")
     deg = get_feature("bio-deg")
+    enrichment = get_feature("bio-enrichment")
     meta_import = get_feature("meta-literature-import")
     prepare = get_feature("meta-dedup-prep")
     duplicate_review = get_feature("meta-duplicate-review")
@@ -50,6 +51,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert deg is not None
     assert deg.status is FeatureAvailabilityStatus.TESTING
     assert "不运行正式差异统计" in deg.description
+    assert enrichment is not None
+    assert enrichment.status is FeatureAvailabilityStatus.TESTING
+    assert "不下载数据库" in enrichment.description
     assert meta_import is not None
     assert meta_import.legacy_source
     assert prepare is not None
