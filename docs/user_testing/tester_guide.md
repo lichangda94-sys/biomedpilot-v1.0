@@ -53,6 +53,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 27. Copy the cleaning plan output path into `相关性分析`.
 28. Click `运行相关性分析预检`.
 29. Confirm that the page checks expression matrix and sample annotation readiness. It should also say correlation coefficients and plots were not generated.
+30. Copy the cleaning plan output path into `生存分析`.
+31. Click `运行生存分析预检`.
+32. Confirm that the page checks for survival time and event/status fields. It should also say Kaplan-Meier, log-rank, and Cox models were not run.
 
 ## 3. Create A Meta Analysis Project
 
@@ -116,6 +119,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Bioinformatics `差异表达分析` preflight from sample grouping output, without p-values, FDR, limma, DESeq2, or edgeR.
 - Bioinformatics `富集分析` preflight from differential expression preflight output, without database download or GO / KEGG / GSEA execution.
 - Bioinformatics `相关性分析` preflight from cleaning output, without correlation coefficient calculation or plot generation.
+- Bioinformatics `生存分析` preflight from cleaning output, without Kaplan-Meier, log-rank, or Cox execution.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
@@ -135,7 +139,7 @@ Do not treat the following as completed workflows yet:
 - automatic Bioinformatics sample group inference and manual group editing
 - enrichment analysis beyond readiness/preflight
 - correlation analysis beyond readiness/preflight
-- survival analysis
+- survival analysis beyond readiness/preflight
 - complete Meta statistical analysis beyond the preflight readiness check
 - Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows beyond the test Markdown preflight summary

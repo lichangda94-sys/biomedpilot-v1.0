@@ -14,7 +14,12 @@ def test_unavailable_features_are_not_marked_open() -> None:
         for item in list_features()
         if item.status is FeatureAvailabilityStatus.UNAVAILABLE
     }
-    assert "生存分析" in unavailable_registry_names
+    open_registry_names = {
+        item.feature_name
+        for item in list_features()
+        if item.status is FeatureAvailabilityStatus.OPEN
+    }
+    assert unavailable_registry_names.isdisjoint(open_registry_names)
 
 
 def test_feature_registry_exposes_key_statuses() -> None:
@@ -26,6 +31,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     deg = get_feature("bio-deg")
     enrichment = get_feature("bio-enrichment")
     correlation = get_feature("bio-correlation")
+    survival = get_feature("bio-survival")
     meta_import = get_feature("meta-literature-import")
     prepare = get_feature("meta-dedup-prep")
     duplicate_review = get_feature("meta-duplicate-review")
@@ -58,6 +64,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert correlation is not None
     assert correlation.status is FeatureAvailabilityStatus.TESTING
     assert "不计算相关系数" in correlation.description
+    assert survival is not None
+    assert survival.status is FeatureAvailabilityStatus.TESTING
+    assert "不计算 Kaplan-Meier" in survival.description
     assert meta_import is not None
     assert meta_import.legacy_source
     assert prepare is not None

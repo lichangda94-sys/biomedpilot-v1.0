@@ -10,6 +10,7 @@
 - Bioinformatics differential expression currently creates a readiness preflight only. It does not compute p-values, adjusted p-values, formal logFC, limma, DESeq2, edgeR, volcano plots, or DEG tables.
 - Bioinformatics enrichment currently creates a readiness preflight only. It does not download GO/KEGG databases, run GSEA, calculate enrichment p-values, or create pathway plots.
 - Bioinformatics correlation currently creates a readiness preflight only. It does not calculate Pearson/Spearman coefficients, p-values, heatmaps, or scatter plots.
+- Bioinformatics survival currently creates a readiness preflight only. It does not run Kaplan-Meier curves, log-rank tests, Cox regression, or survival plots.
 - Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can generate duplicate candidate group summaries, but manual keep/merge decisions are not implemented yet.
