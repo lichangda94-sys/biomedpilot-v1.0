@@ -29,6 +29,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 4. The app should enter the Bioinformatics workspace.
 5. Check that the page lists data search/import, download, asset detection,
    cleaning, and sample grouping steps.
+6. In `数据检索 / 导入`, enter a GEO search term or GSE accession.
+7. Click `生成 GEO 查询计划`.
+8. Confirm that the output path is shown and that the page says online search was not executed.
 
 ## 3. Create A Meta Analysis Project
 
@@ -84,6 +87,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Project creation for both project types.
 - Recent project list.
 - Workspace switching.
+- Bioinformatics `数据检索 / 导入` GEO query plan and GSE accession import record.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
@@ -99,6 +103,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 Do not treat the following as completed workflows yet:
 
 - formal bioinformatics differential expression analysis
+- live GEO online search and GEO data download as complete workflows
 - enrichment analysis
 - correlation analysis
 - survival analysis

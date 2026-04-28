@@ -28,6 +28,7 @@ except Exception:  # pragma: no cover - non-GUI environments import feature regi
 
 
 if QWidget is not None:
+    from app.bioinformatics.pages.geo_import_page import GeoImportPage
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -52,7 +53,10 @@ if QWidget is not None:
             scroll.setWidgetResizable(True)
             content = QWidget()
             content_layout = QVBoxLayout(content)
+            content_layout.addWidget(GeoImportPage())
             for feature in bioinformatics_step_features():
+                if feature.feature_id == "bio-data-import":
+                    continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)
             scroll.setWidget(content)

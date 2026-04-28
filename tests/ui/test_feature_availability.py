@@ -29,6 +29,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     project_center = get_feature("shared-project-center")
     assert geo_import is not None
     assert geo_import.status is FeatureAvailabilityStatus.TESTING
+    assert "GEO 查询计划" in geo_import.description
     assert meta_import is not None
     assert meta_import.legacy_source
     assert prepare is not None
