@@ -55,3 +55,11 @@ def test_meta_workspace_includes_screening_step() -> None:
     assert screening
     assert screening[0].feature_name == "Screening"
     assert screening[0].status.value == "testing"
+
+
+def test_meta_workspace_includes_extraction_step() -> None:
+    steps = meta_analysis_step_features()
+    extraction = [step for step in steps if step.feature_id == "meta-extraction"]
+    assert extraction
+    assert extraction[0].feature_name == "Extraction"
+    assert extraction[0].status.value == "testing"

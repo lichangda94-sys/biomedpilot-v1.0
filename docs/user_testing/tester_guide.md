@@ -60,10 +60,13 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 15. Copy either the Duplicate Review output path or the Prepare for Screening output path into `Screening / 标题摘要筛选`.
 16. Click `生成标题摘要筛选队列`.
 17. Confirm that the summary shows total records, pending records, and output path.
-18. Return to the Dashboard and click each recent project.
-19. Open `测试模式`.
-20. Generate a feedback template.
-21. Record anything confusing, broken, missing, or mislabeled.
+18. Copy the Screening output path into `Extraction / 数据提取`.
+19. Click `生成数据提取池`.
+20. Confirm that the summary is clear. In the normal first-round flow, the result may show zero extraction records because manual screening decisions are not open yet.
+21. Return to the Dashboard and click each recent project.
+22. Open `测试模式`.
+23. Generate a feedback template.
+24. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -75,6 +78,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
 - Meta Analysis `Screening / 标题摘要筛选` queue generation using Prepare or Duplicate Review output JSON.
+- Meta Analysis `Extraction / 数据提取` pool generation from Screening output JSON, mainly to verify clear status and zero-record handling.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 
@@ -87,7 +91,7 @@ Do not treat the following as completed workflows yet:
 - correlation analysis
 - survival analysis
 - complete Meta statistical analysis
-- Meta manual duplicate merge decisions, manual Screening decisions, Extraction, Analysis, and Reporting as complete end-to-end workflows
+- Meta manual duplicate merge decisions, manual Screening decisions, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
 - final report export workflows
 - installer/package generation
 

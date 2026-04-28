@@ -34,6 +34,7 @@ if QWidget is not None:
     from app.meta_analysis.pages.prepare_screening_page import PrepareScreeningPage
     from app.meta_analysis.pages.duplicate_review_page import DuplicateReviewPage
     from app.meta_analysis.pages.screening_page import ScreeningPage
+    from app.meta_analysis.pages.extraction_page import ExtractionPage
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -62,8 +63,9 @@ if QWidget is not None:
             content_layout.addWidget(PrepareScreeningPage())
             content_layout.addWidget(DuplicateReviewPage())
             content_layout.addWidget(ScreeningPage())
+            content_layout.addWidget(ExtractionPage())
             for feature in meta_analysis_step_features():
-                if feature.feature_id in {"meta-literature-import", "meta-dedup-prep", "meta-duplicate-review", "meta-screening"}:
+                if feature.feature_id in {"meta-literature-import", "meta-dedup-prep", "meta-duplicate-review", "meta-screening", "meta-extraction"}:
                     continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)

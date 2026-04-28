@@ -6,10 +6,12 @@
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can generate duplicate candidate group summaries, but manual keep/merge decisions are not implemented yet.
 - Meta Screening can generate a title/abstract screening queue with all decisions set to `pending`; manual include/exclude/maybe decisions are not implemented yet.
+- Meta Extraction can generate an extraction pool from included Screening records, but the normal first-round queue has no included records until manual screening decisions are implemented.
+- Meta Extraction does not yet provide the full manual data extraction form for PICO fields, outcome data, source pages, or reviewer notes.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.
 - Formal differential expression, enrichment, correlation, survival, and complete Meta statistics are not exposed as real runs in this build.
 - Report export is not a complete end-to-end workflow yet.
-- Manual duplicate decisions, manual Screening decisions, Extraction, Analysis, and Reporting should not be treated as complete workflows yet.
+- Manual duplicate decisions, manual Screening decisions, manual Extraction forms, Analysis, and Reporting should not be treated as complete workflows yet.
 - Packaging/installer generation is still a placeholder.
 - Some automated GUI checks are intentionally non-window tests because Qt window creation may not work in every local test environment.

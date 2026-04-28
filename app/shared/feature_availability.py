@@ -50,7 +50,7 @@ FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("meta_analysis", "meta-dedup-prep", "去重准备", FeatureAvailabilityStatus.TESTING, "读取 Literature Import 输出并生成标准化筛选准备记录。", "继续接入 Duplicate Review。", "app/meta_analysis/legacy/literature"),
     FeatureAvailability("meta_analysis", "meta-duplicate-review", "Duplicate Review", FeatureAvailabilityStatus.TESTING, "读取筛选准备记录并生成重复候选组摘要，当前不执行人工合并。", "接入人工确认 UI 和合并决策保存。", "app/meta_analysis/legacy/literature"),
     FeatureAvailability("meta_analysis", "meta-screening", "Screening", FeatureAvailabilityStatus.TESTING, "读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，默认决策为 pending。", "接入 include/exclude/maybe 人工判读和排除理由保存。", "app/meta_analysis/legacy/literature"),
-    FeatureAvailability("meta_analysis", "meta-extraction", "Extraction", FeatureAvailabilityStatus.TESTING, "Extraction service 已保留。", "接入提取表单和保存。", "app/meta_analysis/legacy/extraction"),
+    FeatureAvailability("meta_analysis", "meta-extraction", "Extraction", FeatureAvailabilityStatus.TESTING, "读取 Screening 队列并为 included 文献生成数据提取池，正式人工提取表单尚未开放。", "接入 PICO 字段、结局数据和来源页码的人工提取表单。", "app/meta_analysis/legacy/extraction"),
     FeatureAvailability("meta_analysis", "meta-analysis", "Analysis", FeatureAvailabilityStatus.PLACEHOLDER, "当前测试版暂未开放完整 Meta 统计执行。", "接入分析计划和统计 runner。", "app/meta_analysis/legacy/analysis"),
     FeatureAvailability("meta_analysis", "meta-reporting", "Reporting", FeatureAvailabilityStatus.TESTING, "Reporting service 已保留。", "接入报告导出按钮和历史记录。", "app/meta_analysis/legacy/reporting"),
     FeatureAvailability("shared", "shared-project-center", "项目中心", FeatureAvailabilityStatus.OPEN, "支持 JSON 持久化项目记录和最近项目读取。", "增加项目搜索和归档。"),

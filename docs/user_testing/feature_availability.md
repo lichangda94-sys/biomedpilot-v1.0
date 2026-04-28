@@ -25,6 +25,6 @@ Status meanings:
 | Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
 | Meta 分析 | Duplicate Review | 测试中 | 读取筛选准备记录并生成重复候选组摘要，当前不执行人工合并。 | 接入人工确认 UI 和合并决策保存。 |
 | Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，默认决策为 pending。 | 接入 include/exclude/maybe 人工判读和排除理由保存。 |
-| Meta 分析 | Extraction | 测试中 | Extraction service 已保留。 | 接入提取表单和保存。 |
+| Meta 分析 | Extraction | 测试中 | 读取 Screening 队列并为 included 文献生成数据提取池，正式人工提取表单尚未开放。 | 接入 PICO 字段、结局数据和来源页码的人工提取表单。 |
 | Meta 分析 | Analysis | 待接入 | 当前测试版暂未开放完整 Meta 统计执行。 | 接入分析计划和统计 runner。 |
 | Meta 分析 | Reporting | 测试中 | Reporting service 已保留。 | 接入报告导出按钮和历史记录。 |

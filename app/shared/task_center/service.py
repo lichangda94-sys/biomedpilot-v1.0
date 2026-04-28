@@ -24,6 +24,7 @@ class TaskType(StrEnum):
     PREPARE_SCREENING = "prepare_screening"
     DUPLICATE_REVIEW = "duplicate_review"
     SCREENING = "screening"
+    EXTRACTION = "extraction"
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
     VISUALIZATION = "visualization"
