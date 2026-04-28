@@ -6,6 +6,7 @@
 - Bioinformatics GEO download currently creates a download plan and target directories only; actual GEO downloading requires explicit user confirmation.
 - Bioinformatics asset detection scans only local target folders referenced by the download plan. If no files were downloaded or placed there manually, it will report no usable expression payload.
 - Bioinformatics data cleaning currently creates a preflight plan only. It does not normalize expression matrices or write cleaned tables yet.
+- Bioinformatics sample grouping currently creates a preflight plan only. It checks for sample annotation candidates but does not infer case/control groups or provide the final group editing UI yet.
 - Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can generate duplicate candidate group summaries, but manual keep/merge decisions are not implemented yet.

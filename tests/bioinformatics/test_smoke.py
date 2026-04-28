@@ -48,3 +48,11 @@ def test_bioinformatics_workspace_includes_geo_cleaning_step() -> None:
     assert cleaning
     assert cleaning[0].status.value == "testing"
     assert "清洗预检计划" in cleaning[0].description
+
+
+def test_bioinformatics_workspace_includes_sample_grouping_step() -> None:
+    steps = bioinformatics_step_features()
+    grouping = [step for step in steps if step.feature_id == "bio-sample-groups"]
+    assert grouping
+    assert grouping[0].status.value == "testing"
+    assert "样本分组预检" in grouping[0].description

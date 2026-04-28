@@ -32,6 +32,7 @@ if QWidget is not None:
     from app.bioinformatics.pages.geo_download_page import GeoDownloadPage
     from app.bioinformatics.pages.geo_asset_detection_page import GeoAssetDetectionPage
     from app.bioinformatics.pages.geo_cleaning_page import GeoCleaningPage
+    from app.bioinformatics.pages.sample_grouping_page import SampleGroupingPage
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -60,8 +61,9 @@ if QWidget is not None:
             content_layout.addWidget(GeoDownloadPage())
             content_layout.addWidget(GeoAssetDetectionPage())
             content_layout.addWidget(GeoCleaningPage())
+            content_layout.addWidget(SampleGroupingPage())
             for feature in bioinformatics_step_features():
-                if feature.feature_id in {"bio-data-import", "bio-download", "bio-asset-detection", "bio-cleaning"}:
+                if feature.feature_id in {"bio-data-import", "bio-download", "bio-asset-detection", "bio-cleaning", "bio-sample-groups"}:
                     continue
                 content_layout.addWidget(_feature_row(feature))
             content_layout.addStretch(1)

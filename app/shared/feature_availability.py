@@ -39,7 +39,7 @@ FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-download", "数据下载", FeatureAvailabilityStatus.TESTING, "读取 GEO 查询计划并生成下载计划；当前不实际下载 NCBI 数据。", "在用户确认后接入 legacy GEO 下载执行。", "app/bioinformatics/legacy/geo_pipeline"),
     FeatureAvailability("bioinformatics", "bio-asset-detection", "数据资产识别", FeatureAvailabilityStatus.TESTING, "读取 GEO 下载计划并扫描本地目标目录，不联网、不下载。", "接入真实下载产物后的表达矩阵、样本注释和平台注释识别。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-cleaning", "数据清洗", FeatureAvailabilityStatus.TESTING, "读取资产识别结果并生成清洗预检计划；当前不执行矩阵标准化。", "接入受控矩阵清洗、标准化结果预览和输出登记。", "app/bioinformatics/legacy/geo_processing"),
-    FeatureAvailability("bioinformatics", "bio-sample-groups", "样本分组", FeatureAvailabilityStatus.PLACEHOLDER, "工作台占位，真实项目数据接入后开放。", "接入样本注释和分组编辑。"),
+    FeatureAvailability("bioinformatics", "bio-sample-groups", "样本分组", FeatureAvailabilityStatus.TESTING, "读取数据清洗计划并生成样本分组预检；当前不自动推断病例/对照分组。", "接入样本注释表预览、分组编辑和保存。"),
     FeatureAvailability("bioinformatics", "bio-deg", "差异表达分析", FeatureAvailabilityStatus.PLACEHOLDER, "当前测试版暂未开放正式统计执行。", "完成参数检查和 runner adapter。"),
     FeatureAvailability("bioinformatics", "bio-enrichment", "富集分析", FeatureAvailabilityStatus.UNAVAILABLE, "暂未开放。", "等待差异分析结果接入。"),
     FeatureAvailability("bioinformatics", "bio-correlation", "相关性分析", FeatureAvailabilityStatus.UNAVAILABLE, "暂未开放。", "定义输入数据契约。"),

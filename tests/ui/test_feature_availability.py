@@ -22,6 +22,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     geo_download = get_feature("bio-download")
     geo_asset_detection = get_feature("bio-asset-detection")
     geo_cleaning = get_feature("bio-cleaning")
+    sample_grouping = get_feature("bio-sample-groups")
     meta_import = get_feature("meta-literature-import")
     prepare = get_feature("meta-dedup-prep")
     duplicate_review = get_feature("meta-duplicate-review")
@@ -42,6 +43,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert geo_cleaning is not None
     assert geo_cleaning.status is FeatureAvailabilityStatus.TESTING
     assert "清洗预检计划" in geo_cleaning.description
+    assert sample_grouping is not None
+    assert sample_grouping.status is FeatureAvailabilityStatus.TESTING
+    assert "样本分组预检" in sample_grouping.description
     assert meta_import is not None
     assert meta_import.legacy_source
     assert prepare is not None

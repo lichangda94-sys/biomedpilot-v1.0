@@ -41,6 +41,9 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 15. Copy the asset detection output path into `数据清洗`.
 16. Click `生成清洗计划`.
 17. Confirm that the page reports whether each local dataset has expression matrix candidates. It should also say matrix standardization was not executed.
+18. Copy the cleaning plan output path into `样本分组`.
+19. Click `生成样本分组计划`.
+20. Confirm that the page reports whether sample annotation candidates exist. It should also say automatic group inference and differential analysis were not executed.
 
 ## 3. Create A Meta Analysis Project
 
@@ -100,6 +103,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Bioinformatics `数据下载` GEO download plan generation without actual NCBI download.
 - Bioinformatics `数据资产识别` local scan from a GEO download plan, without network use.
 - Bioinformatics `数据清洗` preflight plan from asset detection output, without running matrix standardization.
+- Bioinformatics `样本分组` preflight plan from cleaning output, without automatic case/control inference.
 - Meta Analysis `文献导入` for NBIB / RIS / CSV files.
 - Meta Analysis `去重准备 / Prepare for Screening` using the Literature Import output JSON.
 - Meta Analysis `Duplicate Review` summary using the Prepare for Screening output JSON.
@@ -116,6 +120,7 @@ Do not treat the following as completed workflows yet:
 
 - formal bioinformatics differential expression analysis
 - live GEO online search and GEO data download as complete workflows
+- automatic Bioinformatics sample group inference and manual group editing
 - enrichment analysis
 - correlation analysis
 - survival analysis
