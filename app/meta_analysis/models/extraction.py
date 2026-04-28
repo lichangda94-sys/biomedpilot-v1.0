@@ -11,6 +11,9 @@ class OutcomeDataType(StrEnum):
     BINARY = "binary"
     CONTINUOUS = "continuous"
     GENERIC_EFFECT = "generic_effect"
+    DIAGNOSTIC_ACCURACY = "diagnostic_accuracy"
+    PROPORTION = "proportion"
+    CORRELATION = "correlation"
 
 
 class ExtractionValidationStatus(StrEnum):
@@ -78,7 +81,56 @@ class GenericEffectOutcomeData:
     notes: str = ""
 
 
-ExtractionOutcomeData = BinaryOutcomeData | ContinuousOutcomeData | GenericEffectOutcomeData
+@dataclass(frozen=True)
+class DiagnosticAccuracyOutcomeData:
+    outcome_name: str
+    tp: int
+    fp: int
+    fn: int
+    tn: int
+    effect_measure: str = "DOR"
+    sensitivity: float | None = None
+    specificity: float | None = None
+    cutoff: str = ""
+    index_test: str = ""
+    reference_standard: str = ""
+    notes: str = ""
+
+
+@dataclass(frozen=True)
+class ProportionOutcomeData:
+    outcome_name: str
+    events: int
+    total: int
+    effect_measure: str = "PREVALENCE"
+    population_source: str = ""
+    diagnostic_criteria: str = ""
+    timepoint: str = ""
+    subgroup: str = ""
+    notes: str = ""
+
+
+@dataclass(frozen=True)
+class CorrelationOutcomeData:
+    outcome_name: str
+    r: float
+    sample_size: int
+    effect_measure: str = "CORRELATION"
+    correlation_type: str = ""
+    p_value: float | None = None
+    variable_x: str = ""
+    variable_y: str = ""
+    notes: str = ""
+
+
+ExtractionOutcomeData = (
+    BinaryOutcomeData
+    | ContinuousOutcomeData
+    | GenericEffectOutcomeData
+    | DiagnosticAccuracyOutcomeData
+    | ProportionOutcomeData
+    | CorrelationOutcomeData
+)
 
 
 @dataclass(frozen=True)
@@ -168,4 +220,10 @@ def _outcome_data_from_dict(outcome_data_type: str, payload: dict[str, Any]) -> 
         return ContinuousOutcomeData(**payload)
     if outcome_data_type == OutcomeDataType.GENERIC_EFFECT.value:
         return GenericEffectOutcomeData(**payload)
+    if outcome_data_type == OutcomeDataType.DIAGNOSTIC_ACCURACY.value:
+        return DiagnosticAccuracyOutcomeData(**payload)
+    if outcome_data_type == OutcomeDataType.PROPORTION.value:
+        return ProportionOutcomeData(**payload)
+    if outcome_data_type == OutcomeDataType.CORRELATION.value:
+        return CorrelationOutcomeData(**payload)
     raise ValueError(f"Unsupported outcome data type: {outcome_data_type}")

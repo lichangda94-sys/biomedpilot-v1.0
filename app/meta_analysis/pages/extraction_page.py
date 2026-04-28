@@ -23,6 +23,9 @@ class ExtractionPageState:
     binary_outcome_fields: tuple[str, ...]
     continuous_outcome_fields: tuple[str, ...]
     generic_effect_outcome_fields: tuple[str, ...]
+    diagnostic_accuracy_outcome_fields: tuple[str, ...]
+    proportion_outcome_fields: tuple[str, ...]
+    correlation_outcome_fields: tuple[str, ...]
     empty_state: str
     export_path: str
     last_result: ExtractionPoolResult | None = None
@@ -32,14 +35,12 @@ def initial_extraction_state() -> ExtractionPageState:
     feature = get_feature("meta-extraction")
     return ExtractionPageState(
         title="Extraction / 数据提取",
-        description="读取 Screening 队列并为 included 文献生成数据提取池；结构化 ExtractionRecord 表单处于 testing 状态。",
+        description="读取 Screening 队列并为 included 文献生成数据提取池；结构化 ExtractionRecord 表单处于 testing 状态，并支持 prevalence、correlation、diagnostic basic 等 advanced method 数据结构。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
         project_dir_placeholder="project_dir，例如 /path/to/project",
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=(
-            OutcomeDataType.BINARY.value,
-            OutcomeDataType.CONTINUOUS.value,
-            OutcomeDataType.GENERIC_EFFECT.value,
+            *tuple(item.value for item in OutcomeDataType),
         ),
         study_characteristics_fields=(
             "first_author",
@@ -90,6 +91,42 @@ def initial_extraction_state() -> ExtractionPageState:
             "covariates",
             "timepoint",
             "subgroup",
+            "outcome_notes",
+        ),
+        diagnostic_accuracy_outcome_fields=(
+            "outcome_name",
+            "effect_measure",
+            "tp",
+            "fp",
+            "fn",
+            "tn",
+            "sensitivity",
+            "specificity",
+            "cutoff",
+            "index_test",
+            "reference_standard",
+            "outcome_notes",
+        ),
+        proportion_outcome_fields=(
+            "outcome_name",
+            "effect_measure",
+            "events",
+            "total",
+            "population_source",
+            "diagnostic_criteria",
+            "timepoint",
+            "subgroup",
+            "outcome_notes",
+        ),
+        correlation_outcome_fields=(
+            "outcome_name",
+            "effect_measure",
+            "r",
+            "sample_size",
+            "correlation_type",
+            "p_value",
+            "variable_x",
+            "variable_y",
             "outcome_notes",
         ),
         empty_state="没有 extraction_pool 候选文献时，可以先生成提取池或手动输入 record_id / study_id。",
@@ -175,16 +212,25 @@ if QWidget is not None:
                 "notes",
                 *self._state.study_characteristics_fields,
                 *self._state.generic_effect_outcome_fields,
+                *self._state.diagnostic_accuracy_outcome_fields,
+                *self._state.proportion_outcome_fields,
+                *self._state.correlation_outcome_fields,
                 *[
                     field
                     for field in self._state.binary_outcome_fields + self._state.continuous_outcome_fields
-                    if field not in self._state.generic_effect_outcome_fields
+                    if field
+                    not in (
+                        self._state.generic_effect_outcome_fields
+                        + self._state.diagnostic_accuracy_outcome_fields
+                        + self._state.proportion_outcome_fields
+                        + self._state.correlation_outcome_fields
+                    )
                 ],
             ):
                 self._add_form_input(form_layout, field_name)
             self._form_inputs["profile_type"].setPlaceholderText(" / ".join(self._state.profile_options))
-            self._form_inputs["outcome_data_type"].setPlaceholderText("binary / continuous / generic_effect")
-            self._form_inputs["effect_measure"].setPlaceholderText("OR / RR / RD / MD / SMD / HR")
+            self._form_inputs["outcome_data_type"].setPlaceholderText("binary / continuous / generic_effect / proportion / correlation / diagnostic_accuracy")
+            self._form_inputs["effect_measure"].setPlaceholderText("OR / RR / RD / MD / SMD / HR / PREVALENCE / CORRELATION / DOR")
             save_record_button = QPushButton("保存 ExtractionRecord")
             save_record_button.clicked.connect(self._save_structured_record)
             form_layout.addWidget(save_record_button)

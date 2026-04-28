@@ -25,14 +25,14 @@ The current testing chain is:
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
 - Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
-- Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, and CSV export.
-- Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, and exports a basic forest plot PNG plus result table CSV.
-- Reporting exports the older testing Markdown summary, testing PRISMA flow numbers, a formal Markdown/HTML/DOCX report draft, supplementary CSV tables, a figure package ZIP, project snapshot metadata, and a reproducibility package ZIP; these are testing outputs, not production publication packages.
+- Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, CSV export, and advanced method outcome structures for prevalence, correlation, and diagnostic basic data.
+- Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, prevalence / incidence proportion effects, Fisher z correlation effects, diagnostic basic 2x2 metrics, and exports a basic forest plot PNG plus result table CSV.
+- Reporting exports the older testing Markdown summary, testing PRISMA flow numbers, a formal Markdown/HTML/DOCX report draft, advanced method summary, supplementary CSV tables, a figure package ZIP, project snapshot metadata, and a reproducibility package ZIP; these are testing outputs, not production publication packages.
 
 ## Not Implemented Yet
 
 - Funnel plots, subgroup analysis, sensitivity analysis, and publication bias analysis.
-- Production-level statistical validation, advanced methods, and publication-ready result interpretation.
+- Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, and publication-ready result interpretation.
 - PRISMA diagram generation, production Word/PDF reports, and publication-ready report packages.
 - OCR, PDF table extraction, and automated full-text data extraction.
 - Production risk of bias, GRADE, and related evidence-certainty workflow.
@@ -41,7 +41,7 @@ The current testing chain is:
 
 ## Why This Cannot Be Marked Production
 
-- The current Analysis step has a basic testing statistics core, but it is not production-grade statistical software.
+- The current Analysis step has a basic testing statistics core and several advanced method MVP calculations, but it is not production-grade statistical software.
 - The current Reporting step exports Markdown/HTML/DOCX testing drafts and ZIP packages; production Word/PDF reporting is not complete, and PDF remains a placeholder.
 - ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
 - Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
@@ -49,4 +49,4 @@ The current testing chain is:
 
 ## Next Priority
 
-The next implementation priority is Advanced Methods Expansion or Advanced Analysis Add-ons, depending on whether method coverage or common add-on analyses should come first.
+The next implementation priority is Advanced Analysis Add-ons: subgroup analysis, leave-one-out sensitivity analysis, publication-bias basic tests, and funnel plot.

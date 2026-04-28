@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 from app.meta_analysis.models.analysis_dataset import StudyAnalysisRow
 
 
-LOG_SCALE_EFFECT_MEASURES = {"OR", "RR", "HR"}
+LOG_SCALE_EFFECT_MEASURES = {"OR", "RR", "HR", "PLR", "NLR", "DOR"}
+LOGIT_SCALE_EFFECT_MEASURES = {"PREVALENCE", "INCIDENCE", "PROPORTION", "SINGLE_ARM", "SENSITIVITY", "SPECIFICITY"}
+CORRELATION_EFFECT_MEASURES = {"CORRELATION", "PEARSON_R", "SPEARMAN_R"}
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,12 @@ def study_effect_from_row(row: StudyAnalysisRow) -> StudyEffectEstimate:
         return continuous_study_effect(row)
     if row.outcome_data_type == "generic_effect":
         return generic_inverse_variance_effect(row)
+    if row.outcome_data_type == "proportion":
+        return proportion_study_effect(row)
+    if row.outcome_data_type == "correlation":
+        return correlation_study_effect(row)
+    if row.outcome_data_type == "diagnostic_accuracy":
+        return diagnostic_accuracy_study_effect(row)
     raise ValueError(f"Unsupported outcome data type: {row.outcome_data_type}")
 
 
@@ -148,6 +156,149 @@ def generic_inverse_variance_effect(row: StudyAnalysisRow) -> StudyEffectEstimat
     )
 
 
+def proportion_study_effect(row: StudyAnalysisRow) -> StudyEffectEstimate:
+    data = row.normalized_data
+    measure = str(data["effect_measure"])
+    events = float(data["events"])
+    total = float(data["total"])
+    warnings = list(row.warnings)
+    theta, variance, warnings = proportion_effect(events, total, measure=measure, warnings=warnings)
+    return _make_effect(row, measure, theta, variance, warnings=warnings)
+
+
+def correlation_study_effect(row: StudyAnalysisRow) -> StudyEffectEstimate:
+    data = row.normalized_data
+    measure = str(data["effect_measure"])
+    r = float(data["r"])
+    sample_size = float(data["sample_size"])
+    theta, variance = fisher_z_effect(r, sample_size)
+    return _make_effect(row, measure, theta, variance, warnings=list(row.warnings))
+
+
+def diagnostic_accuracy_study_effect(row: StudyAnalysisRow) -> StudyEffectEstimate:
+    data = row.normalized_data
+    metrics = diagnostic_accuracy_metrics(
+        tp=float(data["tp"]),
+        fp=float(data["fp"]),
+        fn=float(data["fn"]),
+        tn=float(data["tn"]),
+    )
+    measure = str(data["effect_measure"])
+    warnings = list(row.warnings)
+    if measure == "SENSITIVITY":
+        theta, variance, warnings = proportion_effect(float(data["tp"]), float(data["tp"]) + float(data["fn"]), measure=measure, warnings=warnings)
+    elif measure == "SPECIFICITY":
+        theta, variance, warnings = proportion_effect(float(data["tn"]), float(data["tn"]) + float(data["fp"]), measure=measure, warnings=warnings)
+    elif measure in {"PLR", "NLR", "DOR"}:
+        effect = getattr(metrics, measure.lower())
+        if effect <= 0:
+            raise ValueError(f"Diagnostic {measure} must be positive for record {row.record_id}.")
+        theta = math.log(effect)
+        variance = diagnostic_ratio_variance(
+            tp=float(data["tp"]),
+            fp=float(data["fp"]),
+            fn=float(data["fn"]),
+            tn=float(data["tn"]),
+            measure=measure,
+        )
+    else:
+        raise ValueError(f"Unsupported diagnostic effect measure: {measure}")
+    return _make_effect(row, measure, theta, variance, warnings=warnings)
+
+
+@dataclass(frozen=True)
+class DiagnosticAccuracyMetrics:
+    sensitivity: float
+    specificity: float
+    plr: float
+    nlr: float
+    dor: float
+
+
+def proportion_effect(events: float, total: float, *, measure: str = "PREVALENCE", warnings: list[str] | None = None) -> tuple[float, float, list[str]]:
+    warnings = list(warnings or [])
+    if total <= 0:
+        raise ValueError("Proportion total must be positive.")
+    if events < 0 or events > total:
+        raise ValueError("Proportion events must be between 0 and total.")
+    non_events = total - events
+    corrected_events = events
+    corrected_non_events = non_events
+    corrected_total = total
+    if events == 0 or non_events == 0:
+        corrected_events = events + 0.5
+        corrected_non_events = non_events + 0.5
+        corrected_total = total + 1.0
+        warnings.append("single_arm_continuity_correction_applied")
+    proportion = corrected_events / corrected_total
+    normalized_measure = measure.upper()
+    if normalized_measure in LOGIT_SCALE_EFFECT_MEASURES:
+        theta = math.log(proportion / (1 - proportion))
+        variance = (1 / corrected_events) + (1 / corrected_non_events)
+        return theta, variance, warnings
+    theta = events / total
+    variance = theta * (1 - theta) / total
+    if variance <= 0:
+        variance = 1 / (total + 1)
+        warnings.append("proportion_zero_variance_warning")
+    return theta, variance, warnings
+
+
+def fisher_z_transform(r: float) -> float:
+    if not -1 < r < 1:
+        raise ValueError("Correlation r must be between -1 and 1.")
+    return 0.5 * math.log((1 + r) / (1 - r))
+
+
+def fisher_z_back_transform(z_value: float) -> float:
+    numerator = math.exp(2 * z_value) - 1
+    denominator = math.exp(2 * z_value) + 1
+    return numerator / denominator
+
+
+def fisher_z_effect(r: float, sample_size: float) -> tuple[float, float]:
+    if sample_size <= 3:
+        raise ValueError("Correlation sample size must exceed 3.")
+    return fisher_z_transform(r), 1 / (sample_size - 3)
+
+
+def diagnostic_accuracy_metrics(*, tp: float, fp: float, fn: float, tn: float) -> DiagnosticAccuracyMetrics:
+    if min(tp, fp, fn, tn) < 0:
+        raise ValueError("Diagnostic counts cannot be negative.")
+    sensitivity_denominator = tp + fn
+    specificity_denominator = tn + fp
+    if sensitivity_denominator <= 0 or specificity_denominator <= 0:
+        raise ValueError("Diagnostic sensitivity and specificity denominators must be positive.")
+    sensitivity = tp / sensitivity_denominator
+    specificity = tn / specificity_denominator
+    if specificity >= 1 or specificity <= 0 or sensitivity >= 1 or sensitivity <= 0:
+        tp += 0.5
+        fp += 0.5
+        fn += 0.5
+        tn += 0.5
+        sensitivity = tp / (tp + fn)
+        specificity = tn / (tn + fp)
+    plr = sensitivity / (1 - specificity)
+    nlr = (1 - sensitivity) / specificity
+    dor = plr / nlr
+    return DiagnosticAccuracyMetrics(sensitivity=sensitivity, specificity=specificity, plr=plr, nlr=nlr, dor=dor)
+
+
+def diagnostic_ratio_variance(*, tp: float, fp: float, fn: float, tn: float, measure: str) -> float:
+    if min(tp, fp, fn, tn) == 0:
+        tp += 0.5
+        fp += 0.5
+        fn += 0.5
+        tn += 0.5
+    if measure == "DOR":
+        return (1 / tp) + (1 / fp) + (1 / fn) + (1 / tn)
+    if measure == "PLR":
+        return (1 / tp) - (1 / (tp + fn)) + (1 / fp) - (1 / (fp + tn))
+    if measure == "NLR":
+        return (1 / fn) - (1 / (tp + fn)) + (1 / tn) - (1 / (fp + tn))
+    raise ValueError(f"Unsupported diagnostic ratio measure: {measure}")
+
+
 def ci_to_standard_error(ci_lower: float, ci_upper: float, *, log_scale: bool) -> float:
     if ci_lower > ci_upper:
         raise ValueError("CI lower cannot exceed CI upper.")
@@ -163,6 +314,10 @@ def report_effect_values(effect_measure: str, theta: float, standard_error: floa
     ci_high_theta = theta + (1.96 * standard_error)
     if effect_measure in LOG_SCALE_EFFECT_MEASURES:
         return math.exp(theta), math.exp(ci_low_theta), math.exp(ci_high_theta)
+    if effect_measure in LOGIT_SCALE_EFFECT_MEASURES:
+        return _inverse_logit(theta), _inverse_logit(ci_low_theta), _inverse_logit(ci_high_theta)
+    if effect_measure in CORRELATION_EFFECT_MEASURES:
+        return fisher_z_back_transform(theta), fisher_z_back_transform(ci_low_theta), fisher_z_back_transform(ci_high_theta)
     return theta, ci_low_theta, ci_high_theta
 
 
@@ -198,3 +353,7 @@ def _optional_float(value: object) -> float | None:
     if value is None or value == "":
         return None
     return float(value)
+
+
+def _inverse_logit(value: float) -> float:
+    return 1 / (1 + math.exp(-value))

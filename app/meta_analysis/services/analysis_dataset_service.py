@@ -5,7 +5,7 @@ from dataclasses import asdict
 from pathlib import Path
 from uuid import uuid4
 
-from app.meta_analysis.extraction.schema_registry import get_extraction_schema_profile
+from app.meta_analysis.extraction.schema_registry import NETWORK_META_ANALYSIS, get_extraction_schema_profile
 from app.meta_analysis.models.analysis_dataset import (
     AnalysisDatasetValidationResult,
     AnalysisReadyDataset,
@@ -18,10 +18,13 @@ from app.meta_analysis.models.analysis_dataset import (
 from app.meta_analysis.models.extraction import (
     BinaryOutcomeData,
     ContinuousOutcomeData,
+    CorrelationOutcomeData,
+    DiagnosticAccuracyOutcomeData,
     ExtractedOutcome,
     ExtractionRecord,
     GenericEffectOutcomeData,
     OutcomeDataType,
+    ProportionOutcomeData,
 )
 from app.meta_analysis.services.extraction_record_storage_service import ExtractionRecordStorageService
 from app.shared.data_center.service import DataCenter
@@ -180,6 +183,8 @@ class AnalysisDatasetService:
             global_errors.append("extraction_records_empty")
         if get_extraction_schema_profile(profile_type) is None:
             global_errors.append("unsupported_profile_type")
+        if profile_type == NETWORK_META_ANALYSIS:
+            global_errors.append("network_meta_analysis_not_implemented")
 
         included_extraction_ids: list[str] = []
         excluded_extraction_ids: list[str] = []
@@ -257,6 +262,12 @@ class AnalysisDatasetService:
             return self._validate_continuous(outcome.data, errors, warnings)
         if outcome.outcome_data_type == OutcomeDataType.GENERIC_EFFECT.value and isinstance(outcome.data, GenericEffectOutcomeData):
             return self._validate_generic_effect(outcome.data, errors, warnings)
+        if outcome.outcome_data_type == OutcomeDataType.PROPORTION.value and isinstance(outcome.data, ProportionOutcomeData):
+            return self._validate_proportion(outcome.data, errors, warnings)
+        if outcome.outcome_data_type == OutcomeDataType.CORRELATION.value and isinstance(outcome.data, CorrelationOutcomeData):
+            return self._validate_correlation(outcome.data, errors, warnings)
+        if outcome.outcome_data_type == OutcomeDataType.DIAGNOSTIC_ACCURACY.value and isinstance(outcome.data, DiagnosticAccuracyOutcomeData):
+            return self._validate_diagnostic_accuracy(outcome.data, errors, warnings)
         return [*errors, "unsupported_outcome_data_type"], warnings, {}
 
     def _validate_binary(
@@ -345,6 +356,97 @@ class AnalysisDatasetService:
             "effect_measure": data.effect_measure,
             "timepoint": data.timepoint,
             "subgroup": data.subgroup,
+        }
+        return errors, warnings, normalized
+
+    def _validate_proportion(
+        self,
+        data: ProportionOutcomeData,
+        errors: list[str],
+        warnings: list[str],
+    ) -> tuple[list[str], list[str], dict[str, object]]:
+        if data.effect_measure not in {"PREVALENCE", "INCIDENCE", "PROPORTION", "SINGLE_ARM"}:
+            errors.append("proportion_effect_measure_not_analysis_supported")
+        if data.total <= 0:
+            errors.append("total_must_be_positive")
+        if data.events < 0:
+            errors.append("events_cannot_be_negative")
+        if data.events > data.total:
+            errors.append("events_cannot_exceed_total")
+        normalized = {
+            "events": data.events,
+            "non_events": data.total - data.events,
+            "total": data.total,
+            "proportion": data.events / data.total if data.total > 0 else None,
+            "effect_measure": data.effect_measure,
+            "population_source": data.population_source,
+            "diagnostic_criteria": data.diagnostic_criteria,
+            "timepoint": data.timepoint,
+            "subgroup": data.subgroup,
+        }
+        return errors, warnings, normalized
+
+    def _validate_correlation(
+        self,
+        data: CorrelationOutcomeData,
+        errors: list[str],
+        warnings: list[str],
+    ) -> tuple[list[str], list[str], dict[str, object]]:
+        if data.effect_measure not in {"CORRELATION", "PEARSON_R", "SPEARMAN_R"}:
+            errors.append("correlation_effect_measure_not_analysis_supported")
+        if not -1 < data.r < 1:
+            errors.append("correlation_must_be_between_minus_one_and_one")
+        if data.sample_size <= 3:
+            errors.append("sample_size_must_exceed_three")
+        if data.p_value is not None and not 0 <= data.p_value <= 1:
+            errors.append("p_value_must_be_between_zero_and_one")
+        normalized = {
+            "r": data.r,
+            "sample_size": data.sample_size,
+            "correlation_type": data.correlation_type,
+            "p_value": data.p_value,
+            "variable_x": data.variable_x,
+            "variable_y": data.variable_y,
+            "effect_measure": data.effect_measure,
+        }
+        return errors, warnings, normalized
+
+    def _validate_diagnostic_accuracy(
+        self,
+        data: DiagnosticAccuracyOutcomeData,
+        errors: list[str],
+        warnings: list[str],
+    ) -> tuple[list[str], list[str], dict[str, object]]:
+        if data.effect_measure not in {"SENSITIVITY", "SPECIFICITY", "PLR", "NLR", "DOR"}:
+            errors.append("diagnostic_effect_measure_not_analysis_supported")
+        for field_name in ("tp", "fp", "fn", "tn"):
+            if getattr(data, field_name) < 0:
+                errors.append(f"{field_name}_cannot_be_negative")
+        sensitivity_denominator = data.tp + data.fn
+        specificity_denominator = data.tn + data.fp
+        if sensitivity_denominator <= 0:
+            errors.append("sensitivity_denominator_must_be_positive")
+        if specificity_denominator <= 0:
+            errors.append("specificity_denominator_must_be_positive")
+        sensitivity = data.tp / sensitivity_denominator if sensitivity_denominator > 0 else None
+        specificity = data.tn / specificity_denominator if specificity_denominator > 0 else None
+        plr = sensitivity / (1 - specificity) if sensitivity is not None and specificity not in {None, 1} else None
+        nlr = (1 - sensitivity) / specificity if specificity not in {None, 0} and sensitivity is not None else None
+        dor = plr / nlr if plr is not None and nlr not in {None, 0} else None
+        normalized = {
+            "tp": data.tp,
+            "fp": data.fp,
+            "fn": data.fn,
+            "tn": data.tn,
+            "sensitivity": sensitivity,
+            "specificity": specificity,
+            "plr": plr,
+            "nlr": nlr,
+            "dor": dor,
+            "effect_measure": data.effect_measure,
+            "cutoff": data.cutoff,
+            "index_test": data.index_test,
+            "reference_standard": data.reference_standard,
         }
         return errors, warnings, normalized
 

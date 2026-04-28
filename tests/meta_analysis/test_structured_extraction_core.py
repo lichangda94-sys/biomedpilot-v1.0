@@ -4,6 +4,9 @@ from pathlib import Path
 
 from app.meta_analysis.extraction.schema_registry import (
     BIOMARKER_PREVALENCE_ASSOCIATION_META,
+    CORRELATION_META,
+    DIAGNOSTIC_ACCURACY_META,
+    PREVALENCE_INCIDENCE_META,
     PROGNOSTIC_FACTOR_META,
     TREATMENT_EFFECT_META,
     get_extraction_schema_profile,
@@ -116,11 +119,12 @@ def test_structured_extraction_models_can_be_created() -> None:
 
 def test_extraction_schema_registry_exposes_three_profiles() -> None:
     profiles = {profile.profile_type: profile for profile in list_extraction_schema_profiles()}
-    assert set(profiles) == {
+    assert {
         TREATMENT_EFFECT_META,
         BIOMARKER_PREVALENCE_ASSOCIATION_META,
         PROGNOSTIC_FACTOR_META,
-    }
+    } <= set(profiles)
+    assert {DIAGNOSTIC_ACCURACY_META, PREVALENCE_INCIDENCE_META, CORRELATION_META} <= set(profiles)
     assert OutcomeDataType.BINARY.value in profiles[TREATMENT_EFFECT_META].allowed_outcome_data_types
     assert "HR" in profiles[PROGNOSTIC_FACTOR_META].supported_effect_measures
     assert get_extraction_schema_profile("missing") is None

@@ -8,12 +8,15 @@ from app.meta_analysis.extraction.schema_registry import get_extraction_schema_p
 from app.meta_analysis.models.extraction import (
     BinaryOutcomeData,
     ContinuousOutcomeData,
+    CorrelationOutcomeData,
+    DiagnosticAccuracyOutcomeData,
     ExtractedOutcome,
     ExtractionRecord,
     ExtractionValidationResult,
     ExtractionValidationStatus,
     GenericEffectOutcomeData,
     OutcomeDataType,
+    ProportionOutcomeData,
     StudyCharacteristics,
 )
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -105,6 +108,71 @@ class ExtractionValidationService:
             errors.append("ratio_effect_must_be_positive")
         return _validation_result(errors, warnings)
 
+    def validate_diagnostic_accuracy_outcome(
+        self,
+        outcome: DiagnosticAccuracyOutcomeData,
+        *,
+        profile_type: str,
+    ) -> ExtractionValidationResult:
+        errors, warnings = self._validate_common_outcome(
+            outcome_name=outcome.outcome_name,
+            effect_measure=outcome.effect_measure,
+            profile_type=profile_type,
+            outcome_data_type=OutcomeDataType.DIAGNOSTIC_ACCURACY.value,
+        )
+        for field_name in ("tp", "fp", "fn", "tn"):
+            if getattr(outcome, field_name) < 0:
+                errors.append(f"{field_name}_cannot_be_negative")
+        if outcome.tp + outcome.fn <= 0:
+            errors.append("sensitivity_denominator_must_be_positive")
+        if outcome.tn + outcome.fp <= 0:
+            errors.append("specificity_denominator_must_be_positive")
+        for field_name in ("sensitivity", "specificity"):
+            value = getattr(outcome, field_name)
+            if value is not None and not 0 <= value <= 1:
+                errors.append(f"{field_name}_must_be_between_zero_and_one")
+        return _validation_result(errors, warnings)
+
+    def validate_proportion_outcome(
+        self,
+        outcome: ProportionOutcomeData,
+        *,
+        profile_type: str,
+    ) -> ExtractionValidationResult:
+        errors, warnings = self._validate_common_outcome(
+            outcome_name=outcome.outcome_name,
+            effect_measure=outcome.effect_measure,
+            profile_type=profile_type,
+            outcome_data_type=OutcomeDataType.PROPORTION.value,
+        )
+        if outcome.total <= 0:
+            errors.append("total_must_be_positive")
+        if outcome.events < 0:
+            errors.append("events_cannot_be_negative")
+        if outcome.events > outcome.total:
+            errors.append("events_cannot_exceed_total")
+        return _validation_result(errors, warnings)
+
+    def validate_correlation_outcome(
+        self,
+        outcome: CorrelationOutcomeData,
+        *,
+        profile_type: str,
+    ) -> ExtractionValidationResult:
+        errors, warnings = self._validate_common_outcome(
+            outcome_name=outcome.outcome_name,
+            effect_measure=outcome.effect_measure,
+            profile_type=profile_type,
+            outcome_data_type=OutcomeDataType.CORRELATION.value,
+        )
+        if not -1 < outcome.r < 1:
+            errors.append("correlation_must_be_between_minus_one_and_one")
+        if outcome.sample_size <= 3:
+            errors.append("sample_size_must_exceed_three")
+        if outcome.p_value is not None and not 0 <= outcome.p_value <= 1:
+            errors.append("p_value_must_be_between_zero_and_one")
+        return _validation_result(errors, warnings)
+
     def validate_extraction_record(self, record: ExtractionRecord) -> ExtractionValidationResult:
         profile = get_extraction_schema_profile(record.profile_type)
         errors: list[str] = []
@@ -145,6 +213,12 @@ class ExtractionValidationService:
             return self.validate_continuous_outcome(outcome.data, profile_type=profile_type)
         if outcome.outcome_data_type == OutcomeDataType.GENERIC_EFFECT.value and isinstance(outcome.data, GenericEffectOutcomeData):
             return self.validate_generic_effect_outcome(outcome.data, profile_type=profile_type)
+        if outcome.outcome_data_type == OutcomeDataType.DIAGNOSTIC_ACCURACY.value and isinstance(outcome.data, DiagnosticAccuracyOutcomeData):
+            return self.validate_diagnostic_accuracy_outcome(outcome.data, profile_type=profile_type)
+        if outcome.outcome_data_type == OutcomeDataType.PROPORTION.value and isinstance(outcome.data, ProportionOutcomeData):
+            return self.validate_proportion_outcome(outcome.data, profile_type=profile_type)
+        if outcome.outcome_data_type == OutcomeDataType.CORRELATION.value and isinstance(outcome.data, CorrelationOutcomeData):
+            return self.validate_correlation_outcome(outcome.data, profile_type=profile_type)
         return ExtractionValidationResult(status=ExtractionValidationStatus.INVALID.value, errors=["outcome_data_type_mismatch"])
 
     def _validate_common_outcome(

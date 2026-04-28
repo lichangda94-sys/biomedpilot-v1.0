@@ -11,11 +11,14 @@ from app.meta_analysis.extraction.schema_registry import TREATMENT_EFFECT_META, 
 from app.meta_analysis.models.extraction import (
     BinaryOutcomeData,
     ContinuousOutcomeData,
+    CorrelationOutcomeData,
+    DiagnosticAccuracyOutcomeData,
     ExtractedOutcome,
     ExtractionRecord,
     ExtractionValidationResult,
     GenericEffectOutcomeData,
     OutcomeDataType,
+    ProportionOutcomeData,
     StudyCharacteristics,
     new_extraction_id,
     now_utc,
@@ -225,7 +228,19 @@ class ExtractionFormService:
     def available_profile_types(self) -> tuple[str, ...]:
         return tuple(profile.profile_type for profile in list_extraction_schema_profiles())
 
-    def _outcome_data(self, *, outcome_type: str, form_data: dict[str, object]) -> BinaryOutcomeData | ContinuousOutcomeData | GenericEffectOutcomeData:
+    def _outcome_data(
+        self,
+        *,
+        outcome_type: str,
+        form_data: dict[str, object],
+    ) -> (
+        BinaryOutcomeData
+        | ContinuousOutcomeData
+        | GenericEffectOutcomeData
+        | DiagnosticAccuracyOutcomeData
+        | ProportionOutcomeData
+        | CorrelationOutcomeData
+    ):
         if outcome_type == OutcomeDataType.BINARY.value:
             return BinaryOutcomeData(
                 outcome_name=str(form_data.get("outcome_name", "")),
@@ -271,6 +286,45 @@ class ExtractionFormService:
                 covariates=covariates,
                 timepoint=str(form_data.get("timepoint", "")),
                 subgroup=str(form_data.get("subgroup", "")),
+                notes=str(form_data.get("outcome_notes", "")),
+            )
+        if outcome_type == OutcomeDataType.DIAGNOSTIC_ACCURACY.value:
+            return DiagnosticAccuracyOutcomeData(
+                outcome_name=str(form_data.get("outcome_name", "")),
+                effect_measure=str(form_data.get("effect_measure") or "DOR"),
+                tp=_required_int(form_data.get("tp"), "tp"),
+                fp=_required_int(form_data.get("fp"), "fp"),
+                fn=_required_int(form_data.get("fn"), "fn"),
+                tn=_required_int(form_data.get("tn"), "tn"),
+                sensitivity=_optional_float(form_data.get("sensitivity")),
+                specificity=_optional_float(form_data.get("specificity")),
+                cutoff=str(form_data.get("cutoff", "")),
+                index_test=str(form_data.get("index_test", "")),
+                reference_standard=str(form_data.get("reference_standard", "")),
+                notes=str(form_data.get("outcome_notes", "")),
+            )
+        if outcome_type == OutcomeDataType.PROPORTION.value:
+            return ProportionOutcomeData(
+                outcome_name=str(form_data.get("outcome_name", "")),
+                effect_measure=str(form_data.get("effect_measure") or "PREVALENCE"),
+                events=_required_int(form_data.get("events"), "events"),
+                total=_required_int(form_data.get("total"), "total"),
+                population_source=str(form_data.get("population_source", "")),
+                diagnostic_criteria=str(form_data.get("diagnostic_criteria", "")),
+                timepoint=str(form_data.get("timepoint", "")),
+                subgroup=str(form_data.get("subgroup", "")),
+                notes=str(form_data.get("outcome_notes", "")),
+            )
+        if outcome_type == OutcomeDataType.CORRELATION.value:
+            return CorrelationOutcomeData(
+                outcome_name=str(form_data.get("outcome_name", "")),
+                effect_measure=str(form_data.get("effect_measure") or "CORRELATION"),
+                r=_required_float(form_data.get("r"), "r"),
+                sample_size=_required_int(form_data.get("sample_size"), "sample_size"),
+                correlation_type=str(form_data.get("correlation_type", "")),
+                p_value=_optional_float(form_data.get("p_value")),
+                variable_x=str(form_data.get("variable_x", "")),
+                variable_y=str(form_data.get("variable_y", "")),
                 notes=str(form_data.get("outcome_notes", "")),
             )
         raise ValueError(f"unsupported_outcome_data_type:{outcome_type}")
