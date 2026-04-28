@@ -138,8 +138,7 @@ def test_duplicate_review_feature_status_and_page_state() -> None:
     feature = get_feature("meta-duplicate-review")
     assert feature is not None
     assert feature.status is FeatureAvailabilityStatus.TESTING
-    assert "重复候选组" in feature.description
+    assert "最小人工决策" in feature.description
     state = initial_duplicate_review_state()
-    assert state.title == "Duplicate Review / 重复候选检查"
+    assert state.title == "文献去重"
     assert state.status_label == "测试中"
-

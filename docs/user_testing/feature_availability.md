@@ -23,7 +23,7 @@ Status meanings:
 | 生信分析 | 报告导出 | 测试中 | 支持导出 Bioinformatics 测试摘要，汇总已有预检 JSON；当前不生成正式报告或图表包。 | 接入正式报告模板、图表包和 Report Center 历史。 |
 | Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。 | 继续接入 Prepare for Screening 和 Duplicate Review。 |
 | Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
-| Meta 分析 | Duplicate Review | 测试中 | 读取筛选准备记录并生成重复候选组摘要，当前不执行人工合并。 | 接入人工确认 UI 和合并决策保存。 |
+| Meta 分析 | Duplicate Review | 测试中 | 已支持疑似重复组查看和最小人工决策；尚未支持完整批量合并 UI、高级 fuzzy matching 和多人审核。 | 继续完善批量处理、冲突合并预览和审核记录。 |
 | Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，支持最小 include/exclude/maybe 决策保存。 | 扩展为逐条文献判读界面和排除理由字典。 |
 | Meta 分析 | Extraction | 测试中 | 读取 Screening 队列并为 included 文献生成数据提取池，正式人工提取表单尚未开放。 | 接入 PICO 字段、结局数据和来源页码的人工提取表单。 |
 | Meta 分析 | Analysis | 测试中 | 读取 Extraction 输出并执行 Analysis 预检；当前不运行正式 Meta 统计。 | 接入 outcome 提取表单、分析计划和统计 runner。 |

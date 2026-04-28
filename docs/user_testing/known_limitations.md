@@ -14,7 +14,7 @@
 - Bioinformatics report export currently creates a Markdown testing summary only. It does not generate a formal report, figure package, or publication-ready archive.
 - Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
-- Meta Duplicate Review can generate duplicate candidate group summaries, but manual keep/merge decisions are not implemented yet.
+- Meta Duplicate Review can show duplicate candidate groups and save minimal keep/merge/not-duplicate/skip decisions, but it does not yet provide complete batch merge UI, advanced fuzzy matching, or multi-reviewer adjudication.
 - Meta Screening can generate a title/abstract screening queue and save one record decision at a time, but it is not yet a full multi-reviewer screening workflow.
 - Meta Extraction can generate an extraction pool from included Screening records.
 - Meta Extraction does not yet provide the full manual data extraction form for PICO fields, outcome data, source pages, or reviewer notes.
@@ -24,6 +24,6 @@
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.
 - Formal differential expression, enrichment, correlation, survival, and complete Meta statistics are not exposed as real runs in this build.
 - Report export is not a complete end-to-end workflow yet.
-- Manual duplicate decisions, full Screening adjudication, manual Extraction forms, full Analysis, and Reporting should not be treated as complete workflows yet.
+- Dedup manual decisions are still testing-level; full Screening adjudication, manual Extraction forms, full Analysis, and Reporting should not be treated as complete workflows yet.
 - Packaging now creates a local macOS `.app` launcher, but not a fully standalone installer. The target machine still needs a Python environment with PySide6.
 - Some automated GUI checks are intentionally non-window tests because Qt window creation may not work in every local test environment.
