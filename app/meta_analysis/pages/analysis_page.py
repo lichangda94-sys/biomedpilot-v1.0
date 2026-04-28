@@ -71,13 +71,23 @@ class AnalysisPageState:
         "result_table_path",
         "artifact_status",
     )
+    advanced_analysis_fields: tuple[str, ...] = (
+        "subgroup_variable",
+        "subgroup_result_id",
+        "leave_one_out_result_id",
+        "publication_bias_result_id",
+        "egger_test",
+        "begg_test_placeholder",
+        "funnel_plot_path",
+        "small_study_warning",
+    )
 
 
 def initial_analysis_state() -> AnalysisPageState:
     feature = get_feature("meta-analysis")
     return AnalysisPageState(
         title="Analysis / Meta 统计分析预检",
-        description="读取 Extraction 输出并检查是否具备最小统计运行条件；可基于结构化 extraction_records 构建 testing analysis-ready dataset，并运行基础 testing pooled effect。新增 prevalence、correlation、diagnostic basic 支持；network meta 显示 not implemented。",
+        description="读取 Extraction 输出并检查是否具备最小统计运行条件；可基于结构化 extraction_records 构建 testing analysis-ready dataset，并运行基础 testing pooled effect。新增 prevalence、correlation、diagnostic basic、subgroup、leave-one-out、publication bias basic 和 funnel plot 支持；network meta 显示 not implemented。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=tuple(item.value for item in OutcomeDataType),
