@@ -68,7 +68,7 @@ def test_meta_page_states_are_testing_and_developer_preview_scoped() -> None:
     assert all(state.description for state in states)
     assert all(state.status_label == "测试中" for state in states)
     assert "预检" in initial_analysis_state().title
-    assert "不执行合并效应量" in initial_analysis_state().description
+    assert "testing pooled effect" in initial_analysis_state().description
     assert "测试版 Markdown 摘要" in initial_reporting_state().description
     assert "不导出正式论文报告" in initial_reporting_state().description
 
@@ -107,8 +107,8 @@ def test_meta_analysis_and_reporting_are_not_formal_outputs() -> None:
     reporting = get_feature("meta-reporting")
     assert analysis is not None
     assert reporting is not None
-    assert "预检" in analysis.description
-    assert "当前不运行正式 Meta 统计" in analysis.description
+    assert "testing pooled effect" in analysis.description
+    assert "不是生产级正式 Meta 统计" in analysis.description
     assert "测试版 Markdown 摘要" in reporting.description
     assert "正式报告和图表包尚未开放" in reporting.description
 

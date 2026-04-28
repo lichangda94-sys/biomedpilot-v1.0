@@ -5,8 +5,10 @@ from pathlib import Path
 
 from app.meta_analysis.extraction.schema_registry import list_extraction_schema_profiles
 from app.meta_analysis.models.analysis_dataset import AnalysisReadyDataset
+from app.meta_analysis.models.analysis_result import AnalysisResult
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
+from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
@@ -19,9 +21,11 @@ class AnalysisPageState:
     status_label: str
     last_result: AnalysisPreflightResult | None = None
     last_dataset: AnalysisReadyDataset | None = None
+    last_analysis_result: AnalysisResult | None = None
     project_dir_placeholder: str = "选择或粘贴项目目录路径"
     profile_options: tuple[str, ...] = ()
     outcome_type_options: tuple[str, ...] = ()
+    model_options: tuple[str, ...] = ("fixed", "random")
     available_outcome_columns: tuple[str, ...] = (
         "profile_type",
         "outcome_name",
@@ -48,13 +52,25 @@ class AnalysisPageState:
         "analysis_status",
         "exclusion_reason",
     )
+    result_summary_fields: tuple[str, ...] = (
+        "result_id",
+        "dataset_id",
+        "model",
+        "pooled_effect",
+        "ci_lower",
+        "ci_upper",
+        "p_value",
+        "q_statistic",
+        "i_squared",
+        "tau_squared",
+    )
 
 
 def initial_analysis_state() -> AnalysisPageState:
     feature = get_feature("meta-analysis")
     return AnalysisPageState(
         title="Analysis / Meta 统计分析预检",
-        description="读取 Extraction 输出并检查是否具备最小统计运行条件；可基于结构化 extraction_records 构建 testing analysis-ready dataset。本阶段不执行合并效应量、森林图或敏感性分析。",
+        description="读取 Extraction 输出并检查是否具备最小统计运行条件；可基于结构化 extraction_records 构建 testing analysis-ready dataset，并运行基础 testing pooled effect。当前不生成森林图或敏感性分析。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=tuple(item.value for item in OutcomeDataType),
@@ -76,11 +92,13 @@ if QWidget is not None:
             project_id: str = "manual-testing-project",
             service: AnalysisPreflightService | None = None,
             dataset_service: AnalysisDatasetService | None = None,
+            run_service: AnalysisRunService | None = None,
         ) -> None:
             super().__init__()
             self._project_id = project_id
             self._service = service or AnalysisPreflightService()
             self._dataset_service = dataset_service or AnalysisDatasetService()
+            self._run_service = run_service or AnalysisRunService(dataset_service=self._dataset_service)
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -136,6 +154,27 @@ if QWidget is not None:
             self._dataset_summary_label.setWordWrap(True)
             root.addWidget(self._dataset_summary_label)
 
+            run_title = QLabel("Meta Analysis Run（测试中）")
+            run_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(run_title)
+
+            self._dataset_id_input = QLineEdit()
+            self._dataset_id_input.setPlaceholderText("analysis_ready_dataset ID")
+            root.addWidget(self._dataset_id_input)
+
+            self._model_input = QLineEdit()
+            self._model_input.setPlaceholderText("fixed 或 random")
+            self._model_input.setText("fixed")
+            root.addWidget(self._model_input)
+
+            run_analysis_button = QPushButton("运行基础 Meta 分析")
+            run_analysis_button.clicked.connect(self._run_meta_analysis)
+            root.addWidget(run_analysis_button)
+
+            self._analysis_result_label = QLabel("pooled result 摘要会显示在这里。")
+            self._analysis_result_label.setWordWrap(True)
+            root.addWidget(self._analysis_result_label)
+
             self._status_label = QLabel("分析状态：等待 Extraction 输出")
             self._status_label.setWordWrap(True)
             root.addWidget(self._status_label)
@@ -189,6 +228,7 @@ if QWidget is not None:
                 self._effect_measure_input.text().strip(),
             )
             output_path = self._dataset_service.save_analysis_ready_dataset(project_dir, dataset)
+            self._dataset_id_input.setText(dataset.dataset_id)
             self._dataset_summary_label.setText(
                 f"Dataset ID：{dataset.dataset_id}\n"
                 f"Profile：{dataset.profile_type}\n"
@@ -201,6 +241,33 @@ if QWidget is not None:
                 f"Warnings：{', '.join(dataset.validation_warnings) or '无'}\n"
                 f"输出：{output_path}"
             )
+
+        def _run_meta_analysis(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                result = self._run_service.run_meta_analysis(
+                    project_dir,
+                    self._dataset_id_input.text().strip(),
+                    self._model_input.text().strip(),
+                )
+                output_path = self._run_service.save_analysis_result(project_dir, result)
+                self._analysis_result_label.setText(
+                    f"Result ID：{result.result_id}\n"
+                    f"Dataset ID：{result.dataset_id}\n"
+                    f"Model：{result.model}\n"
+                    f"Pooled effect：{result.pooled_effect:.6g}\n"
+                    f"95% CI：{result.ci_lower:.6g} - {result.ci_upper:.6g}\n"
+                    f"P value：{result.p_value:.6g}\n"
+                    f"Q：{result.q_statistic:.6g}\n"
+                    f"I²：{result.i_squared:.6g}\n"
+                    f"tau²：{result.tau_squared:.6g}\n"
+                    f"Warnings：{', '.join(result.warnings) or '无'}\n"
+                    f"输出：{output_path}"
+                )
+                self._error_label.setText("")
+            except Exception as exc:
+                self._analysis_result_label.setText("没有生成 pooled result。")
+                self._error_label.setText(f"Meta 分析运行失败：{exc}")
 
 else:
 

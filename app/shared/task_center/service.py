@@ -33,6 +33,7 @@ class TaskType(StrEnum):
     PREPROCESS = "preprocess"
     ANALYSIS = "analysis"
     ANALYSIS_DATASET_BUILD = "analysis_dataset_build"
+    META_ANALYSIS_RUN = "meta_analysis_run"
     VISUALIZATION = "visualization"
     REPORT_EXPORT = "report_export"
 
