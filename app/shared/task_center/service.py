@@ -56,6 +56,11 @@ class TaskType(StrEnum):
     FULLTEXT_EXCLUSION_EXPORT = "fulltext_exclusion_export"
     QUALITY_ASSESSMENT_SAVE = "quality_assessment_save"
     QUALITY_ASSESSMENT_EXPORT = "quality_assessment_export"
+    AI_SUGGESTION_CREATE = "ai_suggestion_create"
+    AI_SUGGESTION_ACCEPT = "ai_suggestion_accept"
+    AI_SUGGESTION_REJECT = "ai_suggestion_reject"
+    AI_SUGGESTION_EDIT = "ai_suggestion_edit"
+    AI_SUGGESTION_APPLY = "ai_suggestion_apply"
     REPORT_EXPORT = "report_export"
 
 
