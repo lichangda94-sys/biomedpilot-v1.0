@@ -71,3 +71,11 @@ def test_meta_workspace_includes_analysis_step() -> None:
     assert analysis
     assert analysis[0].feature_name == "Analysis"
     assert analysis[0].status.value == "testing"
+
+
+def test_meta_workspace_includes_reporting_step() -> None:
+    steps = meta_analysis_step_features()
+    reporting = [step for step in steps if step.feature_id == "meta-reporting"]
+    assert reporting
+    assert reporting[0].feature_name == "Reporting"
+    assert reporting[0].status.value == "testing"

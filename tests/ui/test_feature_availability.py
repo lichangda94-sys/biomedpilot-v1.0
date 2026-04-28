@@ -25,6 +25,7 @@ def test_feature_registry_exposes_key_statuses() -> None:
     screening = get_feature("meta-screening")
     extraction = get_feature("meta-extraction")
     analysis = get_feature("meta-analysis")
+    reporting = get_feature("meta-reporting")
     project_center = get_feature("shared-project-center")
     assert geo_import is not None
     assert geo_import.status is FeatureAvailabilityStatus.TESTING
@@ -43,6 +44,9 @@ def test_feature_registry_exposes_key_statuses() -> None:
     assert analysis is not None
     assert analysis.status is FeatureAvailabilityStatus.TESTING
     assert "预检" in analysis.description
+    assert reporting is not None
+    assert reporting.status is FeatureAvailabilityStatus.TESTING
+    assert "Markdown" in reporting.description
     assert project_center is not None
     assert project_center.status is FeatureAvailabilityStatus.OPEN
     assert list_features("bioinformatics")

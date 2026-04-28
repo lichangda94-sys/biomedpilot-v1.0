@@ -9,6 +9,7 @@
 - Meta Extraction can generate an extraction pool from included Screening records.
 - Meta Extraction does not yet provide the full manual data extraction form for PICO fields, outcome data, source pages, or reviewer notes.
 - Meta Analysis can run a readiness preflight from Extraction output, but it does not execute pooled effect estimates, forest plots, funnel plots, subgroup analysis, or sensitivity analysis yet.
+- Meta Reporting can export a testing Markdown summary from Analysis preflight output, but it does not generate formal PRISMA reports, forest plots, funnel plots, or publication-ready files yet.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.
 - Formal differential expression, enrichment, correlation, survival, and complete Meta statistics are not exposed as real runs in this build.

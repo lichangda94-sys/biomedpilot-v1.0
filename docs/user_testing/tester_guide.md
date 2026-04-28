@@ -70,10 +70,13 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 25. Copy the Extraction output path into `Analysis / Meta 统计分析预检`.
 26. Click `运行 Analysis 预检`.
 27. Confirm that the result clearly says whether formal statistics can run. In this build it will usually report missing outcome data.
-28. Return to the Dashboard and click each recent project.
-29. Open `测试模式`.
-30. Generate a feedback template.
-31. Record anything confusing, broken, missing, or mislabeled.
+28. Copy the Analysis preflight output path into `Reporting / 报告导出`.
+29. Click `导出测试报告摘要`.
+30. Confirm that a Markdown report path is shown and that the report says no pooled meta-analysis was executed.
+31. Return to the Dashboard and click each recent project.
+32. Open `测试模式`.
+33. Generate a feedback template.
+34. Record anything confusing, broken, missing, or mislabeled.
 
 ## 5. Features To Test Now
 
@@ -87,6 +90,7 @@ If the app opens correctly, you should see the BioMedPilot Dashboard with:
 - Meta Analysis `Screening / 标题摘要筛选` queue generation and minimal decision save using Prepare or Duplicate Review output JSON.
 - Meta Analysis `Extraction / 数据提取` pool generation from Screening output JSON, including clear handling when no records are marked included.
 - Meta Analysis `Analysis / Meta 统计分析预检` using Extraction output JSON. This checks readiness only and does not run pooled statistics.
+- Meta Analysis `Reporting / 报告导出` test Markdown summary from Analysis preflight output.
 - Feature status labels: `已开放`, `测试中`, `待接入`, `暂未开放`.
 - Testing Mode page and feedback template generation.
 
@@ -100,7 +104,7 @@ Do not treat the following as completed workflows yet:
 - survival analysis
 - complete Meta statistical analysis beyond the preflight readiness check
 - Meta manual duplicate merge decisions, full multi-reviewer Screening workflow, manual Extraction forms, Analysis, and Reporting as complete end-to-end workflows
-- final report export workflows
+- final report export workflows beyond the test Markdown preflight summary
 - installer/package generation
 
 ## 7. How To Record Errors
