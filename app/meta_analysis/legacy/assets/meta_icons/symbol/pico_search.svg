@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<style>
+.base{fill:none;stroke:#0F2742;stroke-width:10;stroke-linecap:round;stroke-linejoin:round}
+.accent{fill:none;stroke:#19B8B0;stroke-width:10;stroke-linecap:round;stroke-linejoin:round}
+.thin{fill:none;stroke:#7FA4BD;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.fillaccent{fill:#19B8B0;stroke:none}
+.fillnavy{fill:#0F2742;stroke:none}
+.success{fill:#16A34A;stroke:none}
+.warn{fill:#D97706;stroke:none}
+.danger{fill:#DC2626;stroke:none}
+</style>
+<circle class="base" cx="108" cy="108" r="52"/><path class="base" d="M146 146l48 48"/>
+<circle class="fillaccent" cx="82" cy="104" r="11"/><circle class="fillaccent" cx="108" cy="82" r="11"/><circle class="fillaccent" cx="134" cy="104" r="11"/><circle class="fillaccent" cx="108" cy="130" r="11"/>
+<path class="thin" d="M82 104l26-22 26 22-26 26z"/>
+</svg>

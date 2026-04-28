@@ -1,0 +1,46 @@
+alias_id,term_id,alias_en,alias_kind,priority
+alias.tcga_gdc_project_tcga_acc.acc,tcga_gdc.project.tcga_acc,ACC,abbreviation,10
+alias.tcga_gdc_project_tcga_blca.blca,tcga_gdc.project.tcga_blca,BLCA,abbreviation,20
+alias.tcga_gdc_project_tcga_brca.brca,tcga_gdc.project.tcga_brca,BRCA,abbreviation,30
+alias.tcga_gdc_project_tcga_cesc.cesc,tcga_gdc.project.tcga_cesc,CESC,abbreviation,40
+alias.tcga_gdc_project_tcga_chol.chol,tcga_gdc.project.tcga_chol,CHOL,abbreviation,50
+alias.tcga_gdc_project_tcga_coad.coad,tcga_gdc.project.tcga_coad,COAD,abbreviation,60
+alias.tcga_gdc_project_tcga_dlbc.dlbc,tcga_gdc.project.tcga_dlbc,DLBC,abbreviation,70
+alias.tcga_gdc_project_tcga_esca.esca,tcga_gdc.project.tcga_esca,ESCA,abbreviation,80
+alias.tcga_gdc_project_tcga_gbm.gbm,tcga_gdc.project.tcga_gbm,GBM,abbreviation,90
+alias.tcga_gdc_project_tcga_hnsc.hnsc,tcga_gdc.project.tcga_hnsc,HNSC,abbreviation,100
+alias.tcga_gdc_project_tcga_kich.kich,tcga_gdc.project.tcga_kich,KICH,abbreviation,110
+alias.tcga_gdc_project_tcga_kirc.kirc,tcga_gdc.project.tcga_kirc,KIRC,abbreviation,120
+alias.tcga_gdc_project_tcga_kirp.kirp,tcga_gdc.project.tcga_kirp,KIRP,abbreviation,130
+alias.tcga_gdc_project_tcga_laml.laml,tcga_gdc.project.tcga_laml,LAML,abbreviation,140
+alias.tcga_gdc_project_tcga_lgg.lgg,tcga_gdc.project.tcga_lgg,LGG,abbreviation,150
+alias.tcga_gdc_project_tcga_lihc.lihc,tcga_gdc.project.tcga_lihc,LIHC,abbreviation,160
+alias.tcga_gdc_project_tcga_luad.luad,tcga_gdc.project.tcga_luad,LUAD,abbreviation,170
+alias.tcga_gdc_project_tcga_lusc.lusc,tcga_gdc.project.tcga_lusc,LUSC,abbreviation,180
+alias.tcga_gdc_project_tcga_meso.meso,tcga_gdc.project.tcga_meso,MESO,abbreviation,190
+alias.tcga_gdc_project_tcga_ov.ov,tcga_gdc.project.tcga_ov,OV,abbreviation,200
+alias.tcga_gdc_project_tcga_paad.paad,tcga_gdc.project.tcga_paad,PAAD,abbreviation,210
+alias.tcga_gdc_project_tcga_pcpg.pcpg,tcga_gdc.project.tcga_pcpg,PCPG,abbreviation,220
+alias.tcga_gdc_project_tcga_prad.prad,tcga_gdc.project.tcga_prad,PRAD,abbreviation,230
+alias.tcga_gdc_project_tcga_read.read,tcga_gdc.project.tcga_read,READ,abbreviation,240
+alias.tcga_gdc_project_tcga_sarc.sarc,tcga_gdc.project.tcga_sarc,SARC,abbreviation,250
+alias.tcga_gdc_project_tcga_skcm.skcm,tcga_gdc.project.tcga_skcm,SKCM,abbreviation,260
+alias.tcga_gdc_project_tcga_stad.stad,tcga_gdc.project.tcga_stad,STAD,abbreviation,270
+alias.tcga_gdc_project_tcga_tgct.tgct,tcga_gdc.project.tcga_tgct,TGCT,abbreviation,280
+alias.tcga_gdc_project_tcga_thca.thca,tcga_gdc.project.tcga_thca,THCA,abbreviation,290
+alias.tcga_gdc_project_tcga_thym.thym,tcga_gdc.project.tcga_thym,THYM,abbreviation,300
+alias.tcga_gdc_project_tcga_ucec.ucec,tcga_gdc.project.tcga_ucec,UCEC,abbreviation,310
+alias.tcga_gdc_project_tcga_ucs.ucs,tcga_gdc.project.tcga_ucs,UCS,abbreviation,320
+alias.tcga_gdc_project_tcga_uvm.uvm,tcga_gdc.project.tcga_uvm,UVM,abbreviation,330
+alias.tcga_gdc_data_type_gene_expression_quantification.gene_expression,tcga_gdc.data_type.gene_expression_quantification,gene expression,synonym,340
+alias.gtex_entity_sample_attributes.sample_metadata,gtex.entity.sample_attributes,sample metadata,display_variant,350
+alias.gtex_resource_sample_attributes.sample_metadata,gtex.resource.sample_attributes,sample metadata,display_variant,360
+alias.gtex_entity_subject_phenotypes.subject_metadata,gtex.entity.subject_phenotypes,subject metadata,display_variant,370
+alias.gtex_resource_subject_phenotypes.subject_metadata,gtex.resource.subject_phenotypes,subject metadata,display_variant,380
+alias.tcga_gdc_sample_type_solid_tissue_normal.normal_tissue,tcga_gdc.sample_type.solid_tissue_normal,normal tissue,synonym,390
+alias.tcga_gdc_sample_type_primary_tumor.tumor,tcga_gdc.sample_type.primary_tumor,tumor,synonym,400
+alias.gtex_entity_eqtl.eqtl,gtex.entity.eqtl,eqtl,lowercase_variant,410
+alias.gtex_entity_sqtl.sqtl,gtex.entity.sqtl,sqtl,lowercase_variant,420
+alias.gtex_resource_eqtl.eqtl,gtex.resource.eqtl,eqtl,lowercase_variant,430
+alias.gtex_resource_sqtl.sqtl,gtex.resource.sqtl,sqtl,lowercase_variant,440
+alias.gtex_resource_tpm.tpm,gtex.resource.tpm,tpm,lowercase_variant,450

@@ -1,0 +1,12 @@
+{
+  "project_id": "MP-2024-0007",
+  "project_name": "糖皮质激素治疗重症肺炎的疗效",
+  "review_type": "Intervention systematic review",
+  "created_at": "2024-05-12 10:30",
+  "updated_at": "2026-04-27 19:51:49",
+  "progress_percent": 68,
+  "current_outcome": "死亡率（All-cause）",
+  "current_effect_size": "Odds Ratio",
+  "project_status": "Demo",
+  "app_version": "0.1.0"
+}

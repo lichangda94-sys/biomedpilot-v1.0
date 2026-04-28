@@ -1,0 +1,244 @@
+contract_version: "v1"
+status: frozen_for_refactor_preparation
+scope:
+  included:
+    - geo_standard_assets
+    - parsed_layer
+    - organized_layer
+    - comparison_config
+  excluded:
+    - deg_engine
+    - enrichment_engine
+    - survival_engine
+    - batch_correction_engine
+    - tcga_gtex_runtime_bundle
+
+compatibility:
+  raw_layer_name: raw_downloads
+  keep_existing_organized_buckets: true
+  keep_legacy_processed_outputs_temporarily: true
+
+path_contract:
+  dataset_root: "<run_root>/<source_accession>/"
+  raw:
+    root: "raw_downloads/"
+    children:
+      - "geo_downloads/"
+      - "metadata_records/"
+      - "supplementary/"
+      - "reports/"
+  parsed:
+    root: "parsed/"
+    children:
+      - "expression/"
+      - "metadata/"
+      - "annotations/"
+      - "reports/"
+    recommended_files:
+      expression_matrix: "parsed/expression/expression_matrix.tsv.gz"
+      sample_metadata: "parsed/metadata/sample_metadata.tsv"
+      feature_map: "parsed/annotations/feature_map.tsv"
+      parse_report: "parsed/reports/parse_report.json"
+  organized:
+    root: "organized/"
+    existing_source_buckets:
+      - "expression/"
+      - "sample_annotation/"
+      - "clinical/"
+      - "raw_data/"
+      - "platform_annotation/"
+      - "archives/"
+      - "other_supporting_files/"
+      - "reports/"
+    canonical_assets:
+      expression_gene: "organized/expression_gene.tsv.gz"
+      sample_annotation: "organized/sample_annotation.tsv"
+      feature_annotation: "organized/feature_annotation.tsv"
+      dataset_manifest: "organized/dataset_manifest.json"
+
+comparison_config:
+  path_template: "configs/comparisons/{dataset_id}.json"
+  format: json
+  fields:
+    required:
+      - contract_version
+      - dataset_id
+      - comparison_id
+      - comparison_label
+      - group_column
+      - case_values
+      - control_values
+    recommended:
+      - design_formula
+      - blocking_columns
+      - covariates
+      - min_samples_per_group
+      - method_hint
+      - value_semantic_required
+      - matrix_level_required
+      - notes
+
+enums:
+  source_db:
+    - GEO
+    - TCGA
+    - GTEx
+  technology_type:
+    - microarray
+    - bulk_rnaseq
+    - bulk_rnaseq_raw_linked
+    - single_cell
+    - spatial
+    - multiomics
+    - unknown
+  matrix_level:
+    - probe
+    - gene
+    - transcript
+    - peak
+    - diff_result
+    - unknown
+  value_semantic:
+    - raw_counts
+    - normalized_counts
+    - log2_expression
+    - intensity
+    - ratio
+    - unknown
+  build_status:
+    - success
+    - partial_success
+    - failed
+
+assets:
+  expression_gene:
+    path: "organized/expression_gene.tsv.gz"
+    format: "tsv.gz"
+    orientation: "row_feature_col_sample"
+    fixed_columns:
+      required:
+        - feature_id
+        - gene_symbol
+        - gene_name
+        - gene_id
+        - feature_source
+    dynamic_columns:
+      sample_columns_from: "organized/sample_annotation.tsv::sample_id"
+    constraints:
+      - "sample column order must equal dataset_manifest.sample_id_order"
+      - "expression semantics must be declared in dataset_manifest.expression_spec"
+      - "file must not be created as an empty placeholder"
+
+  sample_annotation:
+    path: "organized/sample_annotation.tsv"
+    format: "tsv"
+    primary_key: sample_id
+    fields:
+      required:
+        - sample_id
+        - source_sample_id
+        - subject_id
+        - sample_type
+        - group
+        - condition
+        - tissue
+        - disease
+        - organism
+        - platform_id
+        - batch_id
+        - source_dataset
+      recommended:
+        - group_display
+        - treatment
+        - timepoint
+        - replicate_id
+        - source_name
+        - raw_characteristics
+
+  feature_annotation:
+    path: "organized/feature_annotation.tsv"
+    format: "tsv"
+    primary_key: feature_id
+    fields:
+      required:
+        - feature_id
+        - gene_symbol
+        - gene_name
+        - gene_id
+        - feature_type
+        - platform_id
+        - annotation_source
+        - source_dataset
+      recommended:
+        - probe_id
+        - transcript_id
+        - ensembl_gene_id
+        - entrez_gene_id
+        - chromosome
+        - start
+        - end
+
+  dataset_manifest:
+    path: "organized/dataset_manifest.json"
+    format: json
+    fields:
+      required:
+        - contract_version
+        - dataset_id
+        - source_db
+        - source_accession
+        - dataset_root
+        - raw_root
+        - parsed_root
+        - organized_root
+        - technology_type
+        - matrix_level
+        - value_semantic
+        - is_log_scale
+        - expression_unit
+        - sample_count
+        - feature_count
+        - sample_id_order
+        - asset_paths
+        - build_status
+        - recommended_strategy
+      recommended:
+        - title
+        - organism
+        - platform_ids
+        - has_clinical_outcome
+        - has_feature_annotation
+        - has_comparison_config
+        - source_files
+        - provenance
+        - warnings
+    expression_spec_fields:
+      - matrix_level
+      - value_semantic
+      - is_log_scale
+      - expression_unit
+      - normalization_method
+
+refactor_mapping:
+  preserve_entrypoints:
+    - "geo_pipeline.download.download_core_geo_records"
+    - "geo_processing.download_validator.validate_downloaded_dataset"
+    - "geo_processing.detector.dataset_detector.detect_dataset"
+  convert_to_asset_writers:
+    - "geo_pipeline.process.process_from_gse_object"
+    - "geo_pipeline.process.process_from_local_family_soft"
+    - "geo_pipeline.process.run_processing_pipeline"
+    - "geo_tool.geo_workflow.run_download_and_process_workflow"
+  keep_as_internal_helpers:
+    - "geo_pipeline.process.build_phenotype_table"
+    - "geo_pipeline.process.infer_group_column"
+    - "geo_pipeline.process.summarize_groups"
+    - "geo_pipeline.process.build_expression_matrix"
+    - "geo_pipeline.process.basic_clean_expression"
+    - "geo_pipeline.process.annotate_expression_matrix"
+    - "geo_pipeline.process.aggregate_to_gene"
+  deprecate_duplicates:
+    - "process_geo_family_soft.py"
+    - "geo_tool/geo_pipeline/process.py"
+    - "geo_tool/geo_pipeline/download.py"
+    - "geo_tool/geo_pipeline/__init__.py"

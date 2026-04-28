@@ -1,0 +1,2 @@
+# Generated from pyproject.toml by scripts/export_requirements.py
+PySide6>=6.7,<7

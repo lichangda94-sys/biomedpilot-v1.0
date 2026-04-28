@@ -1,0 +1,59 @@
+name: Module9 Smoke
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r geo_tool/requirements.txt
+
+      - name: Repo Smoke
+        run: python3 -m unittest tests.test_repo_smoke
+
+      - name: Smoke Matrix
+        run: python3 scripts/run_smoke_tests.py
+
+      - name: Download Validator
+        run: python3 -m unittest tests.test_download_validator
+
+      - name: GEO Downloader
+        run: python3 -m unittest tests.test_geo_downloader
+
+      - name: Module1 Readers
+        run: python3 -m unittest tests.test_module1_readers
+
+      - name: Launcher Check
+        run: python3 geo_tool/run_geo_tool.py --check
+
+  windows-wrapper-smoke:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bootstrap Wrapper
+        shell: cmd
+        run: geo_tool\bootstrap_geo_tool.bat
+
+      - name: Run Wrapper Check
+        shell: cmd
+        run: geo_tool\run_geo_tool.bat --check

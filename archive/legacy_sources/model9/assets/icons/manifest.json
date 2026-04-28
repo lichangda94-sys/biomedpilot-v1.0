@@ -1,0 +1,348 @@
+{
+  "source": "/Users/changdali/Documents/model9-main-clean/biomedpilot_icon_assets",
+  "notes": "User-supplied BioMedPilot icon system integrated into IconFactory asset structure. Missing categories keep existing fallback/generated assets.",
+  "assets": [
+    {
+      "category": "app_icon",
+      "key": "app_icon",
+      "filename": "app_icon/app_icon.png",
+      "intended_display_size": "1024px source, app/window icon",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "app_icon/png/biomedpilot_app_icon_1024.png",
+      "generated_at": "2026-04-28T00:12:16.125008+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "home",
+      "filename": "sidebar_icons/home.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/home_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125270+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "data-search",
+      "filename": "sidebar_icons/data-search.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/data_sources_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125273+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "data-assets",
+      "filename": "sidebar_icons/data-assets.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/data_sources_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125274+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "sample-groups",
+      "filename": "sidebar_icons/sample-groups.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/workbench_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125275+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "deg",
+      "filename": "sidebar_icons/deg.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/differential_analysis_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125277+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "enrichment",
+      "filename": "sidebar_icons/enrichment.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/enrichment_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125278+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "correlation",
+      "filename": "sidebar_icons/correlation.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/correlation_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125279+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "survival",
+      "filename": "sidebar_icons/survival.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/survival_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125281+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "visualization",
+      "filename": "sidebar_icons/visualization.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/charts_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125282+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "reporting",
+      "filename": "sidebar_icons/reporting.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/reports_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125283+00:00"
+    },
+    {
+      "category": "sidebar_icons",
+      "key": "tasks",
+      "filename": "sidebar_icons/tasks.png",
+      "intended_display_size": "18x18",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/pipeline_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125284+00:00"
+    },
+    {
+      "category": "dashboard_icons",
+      "key": "data_sources",
+      "filename": "dashboard_icons/data_sources.png",
+      "intended_display_size": "32x32",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/data_sources_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125287+00:00"
+    },
+    {
+      "category": "dashboard_icons",
+      "key": "current_project",
+      "filename": "dashboard_icons/current_project.png",
+      "intended_display_size": "32x32",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "sidebar_icons/symbol_png/workbench_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125288+00:00"
+    },
+    {
+      "category": "dashboard_icons",
+      "key": "active_tasks",
+      "filename": "dashboard_icons/active_tasks.png",
+      "intended_display_size": "32x32",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/pipeline_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125289+00:00"
+    },
+    {
+      "category": "dashboard_icons",
+      "key": "sample_count",
+      "filename": "dashboard_icons/sample_count.png",
+      "intended_display_size": "32x32",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/results_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125290+00:00"
+    },
+    {
+      "category": "toolbar_icons",
+      "key": "import",
+      "filename": "toolbar_icons/import.png",
+      "intended_display_size": "16x16",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/import_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125292+00:00"
+    },
+    {
+      "category": "toolbar_icons",
+      "key": "pipeline",
+      "filename": "toolbar_icons/pipeline.png",
+      "intended_display_size": "16x16",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/pipeline_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125294+00:00"
+    },
+    {
+      "category": "toolbar_icons",
+      "key": "results",
+      "filename": "toolbar_icons/results.png",
+      "intended_display_size": "16x16",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/results_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125295+00:00"
+    },
+    {
+      "category": "toolbar_icons",
+      "key": "charts",
+      "filename": "toolbar_icons/charts.png",
+      "intended_display_size": "16x16",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/charts_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125296+00:00"
+    },
+    {
+      "category": "toolbar_icons",
+      "key": "export",
+      "filename": "toolbar_icons/export.png",
+      "intended_display_size": "16x16",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/export_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125298+00:00"
+    },
+    {
+      "category": "toolbar_icons",
+      "key": "notifications",
+      "filename": "toolbar_icons/notifications.png",
+      "intended_display_size": "16x16",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "toolbar_icons/symbol_png/notifications_symbol_256.png",
+      "generated_at": "2026-04-28T00:12:16.125299+00:00"
+    },
+    {
+      "category": "status_icons",
+      "key": "completed",
+      "filename": "status_icons/completed.png",
+      "intended_display_size": "12x12",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_status_icon",
+      "generated_at": "2026-04-28T00:12:16.125502+00:00"
+    },
+    {
+      "category": "status_icons",
+      "key": "locked",
+      "filename": "status_icons/locked.png",
+      "intended_display_size": "12x12",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_status_icon",
+      "generated_at": "2026-04-28T00:12:16.125508+00:00"
+    },
+    {
+      "category": "status_icons",
+      "key": "needs_attention",
+      "filename": "status_icons/needs_attention.png",
+      "intended_display_size": "12x12",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_status_icon",
+      "generated_at": "2026-04-28T00:12:16.125511+00:00"
+    },
+    {
+      "category": "status_icons",
+      "key": "not_started",
+      "filename": "status_icons/not_started.png",
+      "intended_display_size": "12x12",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_status_icon",
+      "generated_at": "2026-04-28T00:12:16.125515+00:00"
+    },
+    {
+      "category": "status_icons",
+      "key": "ready",
+      "filename": "status_icons/ready.png",
+      "intended_display_size": "12x12",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_status_icon",
+      "generated_at": "2026-04-28T00:12:16.125518+00:00"
+    },
+    {
+      "category": "status_icons",
+      "key": "running",
+      "filename": "status_icons/running.png",
+      "intended_display_size": "12x12",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_status_icon",
+      "generated_at": "2026-04-28T00:12:16.125520+00:00"
+    },
+    {
+      "category": "empty_state_illustrations",
+      "key": "no_data",
+      "filename": "empty_state_illustrations/no_data.png",
+      "intended_display_size": "64-96px",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_empty_state_illustration",
+      "generated_at": "2026-04-28T00:12:16.125585+00:00"
+    },
+    {
+      "category": "empty_state_illustrations",
+      "key": "no_project",
+      "filename": "empty_state_illustrations/no_project.png",
+      "intended_display_size": "64-96px",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_empty_state_illustration",
+      "generated_at": "2026-04-28T00:12:16.125588+00:00"
+    },
+    {
+      "category": "empty_state_illustrations",
+      "key": "no_report",
+      "filename": "empty_state_illustrations/no_report.png",
+      "intended_display_size": "64-96px",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_empty_state_illustration",
+      "generated_at": "2026-04-28T00:12:16.125591+00:00"
+    },
+    {
+      "category": "empty_state_illustrations",
+      "key": "no_task",
+      "filename": "empty_state_illustrations/no_task.png",
+      "intended_display_size": "64-96px",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "existing_generated_empty_state_illustration",
+      "generated_at": "2026-04-28T00:12:16.125594+00:00"
+    },
+    {
+      "category": "contact_sheets",
+      "key": "dashboard_icons_sheet",
+      "filename": "contact_sheets/dashboard_icons_sheet.png",
+      "intended_display_size": "review only",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "contact_sheet_or_user_overview",
+      "generated_at": "2026-04-28T00:12:16.125642+00:00"
+    },
+    {
+      "category": "contact_sheets",
+      "key": "empty_states_sheet",
+      "filename": "contact_sheets/empty_states_sheet.png",
+      "intended_display_size": "review only",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "contact_sheet_or_user_overview",
+      "generated_at": "2026-04-28T00:12:16.125645+00:00"
+    },
+    {
+      "category": "contact_sheets",
+      "key": "sidebar_icons_sheet",
+      "filename": "contact_sheets/sidebar_icons_sheet.png",
+      "intended_display_size": "review only",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "contact_sheet_or_user_overview",
+      "generated_at": "2026-04-28T00:12:16.125648+00:00"
+    },
+    {
+      "category": "contact_sheets",
+      "key": "status_icons_sheet",
+      "filename": "contact_sheets/status_icons_sheet.png",
+      "intended_display_size": "review only",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "contact_sheet_or_user_overview",
+      "generated_at": "2026-04-28T00:12:16.125650+00:00"
+    },
+    {
+      "category": "contact_sheets",
+      "key": "user_supplied_icon_system_overview",
+      "filename": "contact_sheets/user_supplied_icon_system_overview.png",
+      "intended_display_size": "review only",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "contact_sheet_or_user_overview",
+      "generated_at": "2026-04-28T00:12:16.125653+00:00"
+    },
+    {
+      "category": "contact_sheets",
+      "key": "toolbar_icons_sheet",
+      "filename": "contact_sheets/toolbar_icons_sheet.png",
+      "intended_display_size": "review only",
+      "source_prompt_label": "user_supplied_biomedpilot_icon_assets",
+      "source_asset": "generated_contact_sheet_from_integrated_assets",
+      "generated_at": "2026-04-28T00:14:26.693596+00:00"
+    }
+  ]
+}

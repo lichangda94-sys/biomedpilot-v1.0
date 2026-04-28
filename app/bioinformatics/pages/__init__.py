@@ -1,0 +1,2 @@
+"""Bioinformatics page namespace."""
+

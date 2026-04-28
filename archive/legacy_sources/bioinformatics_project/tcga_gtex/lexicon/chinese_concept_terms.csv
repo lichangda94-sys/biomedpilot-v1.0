@@ -1,0 +1,110 @@
+zh_term_id,concept_id,term_zh,category_zh,alias_type,priority,display_label_zh,notes,is_active
+zh.disease.thyroid_cancer.standard,disease.thyroid_cancer,甲状腺癌,疾病,standard,10,甲状腺癌,最小中文目录链路中的核心疾病词。,true
+zh.disease.thyroid_cancer.colloquial,disease.thyroid_cancer,甲癌,疾病,colloquial,20,甲状腺癌,常见中文口语简称。,true
+zh.disease.thyroid_cancer.mixed,disease.thyroid_cancer,甲状腺癌 THCA,疾病,mixed_variant,30,甲状腺癌,中英混合检索写法。,true
+zh.disease.thyroid_cancer.code,disease.thyroid_cancer,THCA,疾病,mixed_variant,40,甲状腺癌,项目代码常作为中文检索中的混合提示词。,true
+zh.disease.ptc.standard,disease.papillary_thyroid_carcinoma,甲状腺乳头状癌,疾病,standard,50,甲状腺乳头状癌,为后续 GEO subtype 扩展预留。,true
+zh.disease.breast_cancer.standard,disease.breast_cancer,乳腺癌,疾病,standard,55,乳腺癌,高频实体瘤中文入口。,true
+zh.disease.breast_cancer.mixed,disease.breast_cancer,乳腺癌 BRCA,疾病,mixed_variant,56,乳腺癌,中英混合写法。,true
+zh.disease.luad.standard,disease.lung_adenocarcinoma,肺腺癌,疾病,standard,57,肺腺癌,LUAD 的核心中文入口。,true
+zh.disease.luad.full,disease.lung_adenocarcinoma,肺腺癌 LUAD,疾病,mixed_variant,58,肺腺癌,中英混合写法。,true
+zh.disease.lusc.standard,disease.lung_squamous_cell_carcinoma,肺鳞癌,疾病,standard,59,肺鳞癌,LUSC 的核心中文入口。,true
+zh.tissue.thyroid.standard,tissue.thyroid,甲状腺组织,组织,standard,60,甲状腺组织,标准组织概念词。,true
+zh.disease.hcc.standard,disease.hepatocellular_carcinoma,肝细胞癌,疾病,standard,60,肝细胞癌,LIHC/HCC 的高频中文入口。,true
+zh.disease.hcc.mixed,disease.hepatocellular_carcinoma,肝细胞癌 HCC,疾病,mixed_variant,61,肝细胞癌,中英混合写法。,true
+zh.disease.crc.standard,disease.colorectal_cancer,结直肠癌,疾病,standard,62,结直肠癌,结直肠癌 umbrella concept 的中文入口。,true
+zh.disease.gastric.standard,disease.gastric_cancer,胃癌,疾病,standard,63,胃癌,胃癌 umbrella concept 的中文入口。,true
+zh.disease.prostate.standard,disease.prostate_cancer,前列腺癌,疾病,standard,64,前列腺癌,前列腺癌 umbrella concept 的中文入口。,true
+zh.disease.pancreatic.standard,disease.pancreatic_cancer,胰腺癌,疾病,standard,65,胰腺癌,胰腺癌 umbrella concept 的中文入口。,true
+zh.disease.ovarian.standard,disease.ovarian_cancer,卵巢癌,疾病,standard,66,卵巢癌,卵巢癌 umbrella concept 的中文入口。,true
+zh.disease.gbm.standard,disease.glioblastoma,胶质母细胞瘤,疾病,standard,67,胶质母细胞瘤,GBM 的核心中文入口。,true
+zh.disease.gbm.short,disease.glioblastoma,GBM,疾病,mixed_variant,68,胶质母细胞瘤,常见缩写。,true
+zh.disease.melanoma.standard,disease.melanoma,黑色素瘤,疾病,standard,69,黑色素瘤,SKCM 的常见中文入口。,true
+zh.tissue.thyroid.short,tissue.thyroid,甲状腺,组织,synonym,70,甲状腺组织,常见简写。,true
+zh.disease.leukemia.standard,disease.leukemia,白血病,疾病,standard,70,白血病,LAML 等血液肿瘤 umbrella 中文入口。,true
+zh.disease.lymphoma.standard,disease.lymphoma,淋巴瘤,疾病,standard,71,淋巴瘤,DLBC 等淋巴瘤 umbrella 中文入口。,true
+zh.disease.cervical.standard,disease.cervical_cancer,宫颈癌,疾病,standard,72,宫颈癌,CESC 的核心中文入口。,true
+zh.disease.endometrial.standard,disease.endometrial_cancer,子宫内膜癌,疾病,standard,73,子宫内膜癌,UCEC 的核心中文入口。,true
+zh.disease.bladder.standard,disease.bladder_cancer,膀胱癌,疾病,standard,74,膀胱癌,BLCA 的核心中文入口。,true
+zh.disease.kirc.standard,disease.kidney_renal_clear_cell_carcinoma,肾透明细胞癌,疾病,standard,75,肾透明细胞癌,KIRC 的核心中文入口。,true
+zh.disease.kirp.standard,disease.kidney_renal_papillary_cell_carcinoma,肾乳头状癌,疾病,standard,76,肾乳头状癌,KIRP 的核心中文入口。,true
+zh.disease.hnsc.standard,disease.head_and_neck_squamous_cell_carcinoma,头颈鳞癌,疾病,standard,77,头颈鳞癌,HNSC 的核心中文入口。,true
+zh.disease.esca.standard,disease.esophageal_carcinoma,食管癌,疾病,standard,78,食管癌,ESCA 的核心中文入口。,true
+zh.disease.chol.standard,disease.cholangiocarcinoma,胆管癌,疾病,standard,79,胆管癌,CHOL 的核心中文入口。,true
+zh.tissue.thyroid.normal,tissue.thyroid,正常甲状腺,组织,colloquial,80,甲状腺组织,口语化正常组织表达，会与 normal tissue 概念组合使用。,true
+zh.disease.meso.standard,disease.mesothelioma,间皮瘤,疾病,standard,80,间皮瘤,MESO 的核心中文入口。,true
+zh.tissue.breast.standard,tissue.breast,乳腺组织,组织,standard,81,乳腺组织,GTEx/TCGA 常见组织入口。,true
+zh.disease.thym.standard,disease.thymoma,胸腺瘤,疾病,standard,81,胸腺瘤,THYM 的核心中文入口。,true
+zh.tissue.breast.short,tissue.breast,乳腺,组织,synonym,82,乳腺组织,常见简写。,true
+zh.disease.tgct.standard,disease.testicular_germ_cell_tumors,睾丸生殖细胞肿瘤,疾病,standard,82,睾丸生殖细胞肿瘤,TGCT 的核心中文入口。,true
+zh.disease.sarc.standard,disease.sarcoma,肉瘤,疾病,standard,83,肉瘤,SARC 的核心中文入口。,true
+zh.tissue.lung.standard,tissue.lung,肺组织,组织,standard,83,肺组织,GTEx/TCGA 常见组织入口。,true
+zh.disease.lgg.standard,disease.lower_grade_glioma,低级别胶质瘤,疾病,standard,84,低级别胶质瘤,LGG 的核心中文入口。,true
+zh.tissue.lung.short,tissue.lung,肺,组织,synonym,84,肺组织,常见简写。,true
+zh.tissue.liver.standard,tissue.liver,肝组织,组织,standard,85,肝组织,GTEx/TCGA 常见组织入口。,true
+zh.disease.acc.standard,disease.adrenocortical_carcinoma,肾上腺皮质癌,疾病,standard,85,肾上腺皮质癌,ACC 的核心中文入口。,true
+zh.disease.pcpg.standard,disease.pheochromocytoma_and_paraganglioma,嗜铬细胞瘤,疾病,standard,86,嗜铬细胞瘤 / 副神经节瘤,PCPG 的常见中文入口。,true
+zh.tissue.liver.short,tissue.liver,肝,组织,synonym,86,肝组织,常见简写。,true
+zh.disease.pcpg.full,disease.pheochromocytoma_and_paraganglioma,嗜铬细胞瘤 / 副神经节瘤,疾病,synonym,87,嗜铬细胞瘤 / 副神经节瘤,PCPG 的全称中文入口。,true
+zh.tissue.brain.standard,tissue.brain,脑组织,组织,standard,87,脑组织,GTEx/TCGA 常见组织入口。,true
+zh.disease.lung_umbrella.standard,disease.lung_cancer,肺癌,疾病,standard,88,肺癌,上位肺癌概念。,true
+zh.tissue.brain.short,tissue.brain,脑,组织,synonym,88,脑组织,常见简写。,true
+zh.tissue.colorectal.standard,tissue.colorectal,结直肠组织,组织,standard,89,结直肠组织,结直肠 umbrella tissue 中文入口。,true
+zh.disease.kidney_umbrella.standard,disease.kidney_cancer,肾癌,疾病,standard,89,肾癌,上位肾癌概念。,true
+zh.tissue.colorectal.synonym,tissue.colorectal,结肠组织,组织,synonym,90,结直肠组织,常见中文变体。,true
+zh.disease.brain_umbrella.standard,disease.brain_tumor,脑肿瘤,疾病,standard,90,脑肿瘤,上位脑肿瘤概念。,true
+zh.disease.gyn_umbrella.standard,disease.gynecologic_cancer,妇科肿瘤,疾病,standard,91,妇科肿瘤,上位妇科肿瘤概念。,true
+zh.tissue.stomach.standard,tissue.stomach,胃组织,组织,standard,91,胃组织,GTEx/TCGA 常见组织入口。,true
+zh.tissue.prostate.standard,tissue.prostate,前列腺组织,组织,standard,92,前列腺组织,GTEx/TCGA 常见组织入口。,true
+zh.disease.gu_umbrella.standard,disease.genitourinary_cancer,泌尿系统肿瘤,疾病,standard,92,泌尿系统肿瘤,上位泌尿系统肿瘤概念。,true
+zh.disease.digestive_umbrella.standard,disease.digestive_system_tumor,消化系统肿瘤,疾病,standard,93,消化系统肿瘤,上位消化系统肿瘤概念。,true
+zh.tissue.pancreas.standard,tissue.pancreas,胰腺组织,组织,standard,93,胰腺组织,GTEx/TCGA 常见组织入口。,true
+zh.tissue.ovary.standard,tissue.ovary,卵巢组织,组织,standard,94,卵巢组织,GTEx/TCGA 常见组织入口。,true
+zh.disease.hn_umbrella.standard,disease.head_and_neck_tumor,头颈肿瘤,疾病,standard,94,头颈肿瘤,上位头颈肿瘤概念。,true
+zh.tissue.skin.standard,tissue.skin,皮肤,组织,standard,95,皮肤,GTEx/TCGA 常见组织入口。,true
+zh.disease.heme_umbrella.standard,disease.hematologic_malignancy,血液肿瘤,疾病,standard,95,血液肿瘤,上位血液肿瘤概念。,true
+zh.disease.endocrine_umbrella.standard,disease.endocrine_tumor,内分泌肿瘤,疾病,standard,96,内分泌肿瘤,上位内分泌肿瘤概念。,true
+zh.tissue.blood_bm.standard,tissue.blood_bone_marrow,血液/骨髓,组织,standard,96,血液/骨髓,血液与骨髓 umbrella tissue 中文入口。,true
+zh.disease.neuroendocrine_umbrella.standard,disease.neuroendocrine_tumor,神经内分泌肿瘤,疾病,standard,97,神经内分泌肿瘤,上位神经内分泌肿瘤概念。,true
+zh.tissue.blood_bm.synonym,tissue.blood_bone_marrow,骨髓,组织,synonym,97,血液/骨髓,常见中文变体。,true
+zh.tissue.blood_bm.short,tissue.blood_bone_marrow,血液,组织,synonym,98,血液/骨髓,常见中文变体。,true
+zh.tissue.lymphoid.standard,tissue.lymphoid_tissue,淋巴组织,组织,standard,99,淋巴组织,淋巴组织 umbrella tissue 中文入口。,true
+zh.tissue.lymphoid.node,tissue.lymphoid_tissue,淋巴结,组织,synonym,100,淋巴组织,常见中文变体。,true
+zh.tissue.kidney.standard,tissue.kidney,肾脏,组织,standard,101,肾脏,GTEx/TCGA 常见组织入口。,true
+zh.tissue.bladder.standard,tissue.bladder,膀胱,组织,standard,102,膀胱,GTEx/TCGA 常见组织入口。,true
+zh.tissue.cervix.standard,tissue.cervix_uteri,宫颈,组织,standard,103,宫颈,GTEx/TCGA 常见组织入口。,true
+zh.tissue.uterus.standard,tissue.uterus,子宫,组织,standard,104,子宫,GTEx/TCGA 常见组织入口。,true
+zh.tissue.esophagus.standard,tissue.esophagus,食管,组织,standard,105,食管,GTEx/TCGA 常见组织入口。,true
+zh.tissue.bile_duct.standard,tissue.bile_duct,胆管,组织,standard,106,胆管,TCGA 常见组织入口。,true
+zh.tissue.bile_duct.synonym,tissue.bile_duct,胆道,组织,synonym,107,胆管,常见中文变体。,true
+zh.tissue.small_intestine.standard,tissue.small_intestine,小肠,组织,standard,108,小肠,GTEx 常见组织入口。,true
+zh.tissue.salivary.standard,tissue.salivary_gland,唾液腺,组织,standard,109,唾液腺,GTEx 唾液腺入口。,true
+zh.sample.primary_tumor.standard,sample_type.primary_tumor,原发肿瘤,样本类型,standard,110,原发肿瘤,TCGA 样本类型的核心中文入口。,true
+zh.tissue.pituitary.standard,tissue.pituitary,垂体,组织,standard,110,垂体,GTEx 常见组织入口。,true
+zh.tissue.adrenal.standard,tissue.adrenal_gland,肾上腺,组织,standard,111,肾上腺,GTEx/TCGA 常见组织入口。,true
+zh.tissue.testis.standard,tissue.testis,睾丸,组织,standard,112,睾丸,GTEx/TCGA 常见组织入口。,true
+zh.tissue.fallopian.standard,tissue.fallopian_tube,输卵管,组织,standard,113,输卵管,GTEx 常见组织入口。,true
+zh.tissue.vagina.standard,tissue.vagina,阴道,组织,standard,114,阴道,GTEx 常见组织入口。,true
+zh.tissue.nerve.standard,tissue.nerve,神经,组织,standard,115,神经,GTEx 常见组织入口。,true
+zh.tissue.vessel.standard,tissue.blood_vessel,血管,组织,standard,116,血管,GTEx 常见组织入口。,true
+zh.tissue.heart.standard,tissue.heart,心脏,组织,standard,117,心脏,GTEx 常见组织入口。,true
+zh.tissue.muscle.standard,tissue.muscle,肌肉,组织,standard,118,肌肉,GTEx 常见组织入口。,true
+zh.sample.primary_tumor.synonym,sample_type.primary_tumor,肿瘤样本,样本类型,synonym,120,原发肿瘤,用户常见中文泛化写法。,true
+zh.sample.normal.standard,sample_type.normal,正常组织,样本类型,standard,130,正常组织,跨源 normal tissue 上层概念。,true
+zh.sample.normal.synonym,sample_type.normal,正常样本,样本类型,synonym,140,正常组织,中文检索常见变体。,true
+zh.sample.normal.thyroid,sample_type.normal,正常甲状腺,样本类型,colloquial,145,正常组织,让正常甲状腺可同时命中 normal sample 概念。,true
+zh.sample.solid_tissue_normal.standard,sample_type.solid_tissue_normal,实体正常组织,样本类型,standard,150,实体正常组织,对应 TCGA solid tissue normal。,true
+zh.sample.tumor_tissue.standard,sample_type.tumor_tissue,肿瘤组织,样本类型,standard,160,肿瘤组织,上层 tumor tissue 中文入口。,true
+zh.analysis.gene_expression.standard,analysis_resource.gene_expression,基因表达,数据类型,standard,170,基因表达,中文目录中的核心表达概念。,true
+zh.analysis.gene_expression.synonym,analysis_resource.gene_expression,表达矩阵,数据类型,synonym,180,基因表达,用户常见表达数据说法。,true
+zh.analysis.clinical.standard,analysis_resource.clinical,临床信息,数据类型,standard,190,临床信息,中文目录中的临床资源入口。,true
+zh.analysis.clinical.synonym,analysis_resource.clinical,临床数据,数据类型,synonym,200,临床信息,常见中文变体。,true
+zh.analysis.biospecimen.standard,analysis_resource.biospecimen,样本信息,数据类型,standard,210,样本信息,biospecimen 的中文入口。,true
+zh.analysis.read_count.standard,analysis_resource.read_count,读段计数,分析资源,standard,220,读段计数,GTEx/GEO 常见表达单位。,true
+zh.analysis.tpm.standard,analysis_resource.tpm,TPM,分析资源,standard,230,TPM,常见归一化表达单位。,true
+zh.analysis.sample_attributes.standard,analysis_resource.sample_attributes,样本属性,分析资源,standard,240,样本属性,GTEx sample attributes 的中文入口。,true
+zh.analysis.subject_phenotypes.standard,analysis_resource.subject_phenotypes,受试者表型,分析资源,standard,250,受试者表型,GTEx subject phenotypes 的中文入口。,true
+zh.access.open.standard,access.open,开放访问,访问级别,standard,260,开放访问,中文访问模式核心概念。,true
+zh.access.open.synonym,access.open,开放获取,访问级别,synonym,270,开放访问,常见中文同义表达。,true
+zh.access.controlled.standard,access.controlled,受控访问,访问级别,standard,280,受控访问,对应 controlled access。,true
+zh.access.protected.standard,access.protected,受保护访问,访问级别,standard,290,受保护访问,对应 protected access。,true

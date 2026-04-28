@@ -1,0 +1,2 @@
+"""Shared logging namespace."""
+

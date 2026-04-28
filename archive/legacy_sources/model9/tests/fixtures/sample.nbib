@@ -1,0 +1,17 @@
+PMID- 12345678
+TI  - NBIB Sample Title
+AB  - Example abstract
+      continued abstract line.
+FAU - Doe, Jane
+FAU - Roe, John
+JT  - Journal of Testing
+DP  - 2023 Jan
+AID - 10.2000/nbib.001 [doi]
+OT  - biomarker
+OT  - oncology
+LA  - eng
+
+PMID- 87654321
+TI  - Sparse NBIB Record
+FAU - Solo, Author
+DP  - 2022

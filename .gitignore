@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.venv-meta/
+dist/
+build/
+.DS_Store
+project_storage/**/*.json
+project_storage/projects/*
+project_storage/tasks/*
+project_storage/reports/*
+project_storage/data/*
+project_storage/test_feedback/*
+!project_storage/**/.gitkeep
