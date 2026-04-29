@@ -77,8 +77,8 @@ class LiteratureImportAdapter:
                     abstract=record.abstract,
                     authors=list(record.authors),
                     authors_text=record.authors_text or "; ".join(record.authors),
-                    creators=[creator.to_dict() for creator in record.creators],
-                    first_author=record.first_author or (record.authors[0] if record.authors else ""),
+                    creators=_creator_dicts(record),
+                    first_author=record.first_author or _first_author(record),
                     journal=record.journal,
                     publication_title=record.publication_title,
                     date=record.date,
@@ -95,6 +95,43 @@ class LiteratureImportAdapter:
                 for record in records
             ],
         )
+
+
+def _creator_dicts(record: object) -> list[dict[str, object]]:
+    creators = getattr(record, "creators", [])
+    if creators:
+        return [creator.to_dict() for creator in creators]
+    authors = list(getattr(record, "authors", []) or [])
+    return [_creator_from_author(author, index) for index, author in enumerate(authors, start=1) if str(author).strip()]
+
+
+def _creator_from_author(author: str, order: int) -> dict[str, object]:
+    raw = str(author).strip()
+    if "," in raw:
+        last_name, first_name = [part.strip() for part in raw.split(",", 1)]
+        full_name = " ".join(part for part in (first_name, last_name) if part)
+    else:
+        parts = raw.split()
+        first_name = " ".join(parts[:-1]) if len(parts) > 1 else ""
+        last_name = parts[-1] if parts else ""
+        full_name = raw
+    return {
+        "first_name": first_name,
+        "last_name": last_name,
+        "full_name": full_name,
+        "creator_type": "author",
+        "order": order,
+        "raw": raw,
+    }
+
+
+def _first_author(record: object) -> str:
+    creators = _creator_dicts(record)
+    for creator in creators:
+        if creator.get("creator_type") in {"author", "group_author", "corresponding_author"}:
+            return str(creator.get("full_name", "")).strip()
+    authors = list(getattr(record, "authors", []) or [])
+    return str(authors[0]).strip() if authors else ""
 
 
 @contextmanager

@@ -207,6 +207,7 @@ class LiteratureImportService:
                 record_payload["project_id"] = project_id
                 record_payload["batch_id"] = batch_id
                 record_payload["source"] = source_type
+                record_payload["first_author"] = payload.get("first_author", "")
                 serialized.append(record_payload)
                 self._audit_log.record_event(
                     project_dir,
