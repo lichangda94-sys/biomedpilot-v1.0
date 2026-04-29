@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.meta_analysis.models.dedup import DedupDecision, DedupResult, DuplicateGroup
+from app.meta_analysis.models.dedup import DedupDecision, DedupResult, DuplicateGroup, MergePreview
 from app.meta_analysis.services.dedup_decision_service import DedupDecisionService
 from app.meta_analysis.services.duplicate_review_service import DuplicateReviewResult, DuplicateReviewService
 from app.shared.feature_availability import get_feature
@@ -28,6 +28,10 @@ class DuplicateReviewPageState:
     last_result: DuplicateReviewResult | None = None
     last_decision: DedupDecision | None = None
     last_dedup_result: DedupResult | None = None
+    merge_preview: MergePreview | None = None
+    canonical_candidate_id: str = ""
+    match_reasons: tuple[str, ...] = ()
+    field_conflicts: tuple[str, ...] = ()
 
 
 def initial_duplicate_review_state() -> DuplicateReviewPageState:
@@ -49,23 +53,59 @@ def duplicate_review_state_from_groups(
     groups: list[DuplicateGroup],
     original_record_count: int = 0,
     current_index: int = 0,
+    merge_preview: MergePreview | None = None,
 ) -> DuplicateReviewPageState:
     resolved_count = len([group for group in groups if group.status == "resolved"])
     current_group = groups[current_index] if groups and 0 <= current_index < len(groups) else None
+    match_reasons = tuple(_split_match_reasons(current_group.match_reason if current_group else ""))
+    conflicts = tuple(_field_conflicts(current_group.records if current_group else []))
     return DuplicateReviewPageState(
         title="文献去重",
-        description="读取 Prepare for Screening 输出，查看疑似重复组并保存最小人工去重决策。",
+        description="读取 Prepare for Screening 输出，查看疑似重复组、match reasons 和 testing merge preview，并保存最小人工去重决策。",
         status_label="测试中",
         input_summary="输入：screening_ready_records JSON。",
-        output_summary="输出：duplicate_candidate_groups、deduplicated_literature 和 dedup decision task。",
+        output_summary="输出：duplicate_candidate_groups、merge preview、deduplicated_literature 和 dedup decision task。",
         next_step="下一步：Screening。",
         empty_state="没有重复候选组时可直接生成去重后文献库并进入 Screening。",
-        warning_summary="未找到重复组、决策不合法或来源路径错误时显示用户可读错误。",
+        warning_summary="显示 canonical candidate、match reasons、field conflicts；未找到重复组、决策不合法或来源路径错误时显示用户可读错误。",
         original_record_count=original_record_count,
         duplicate_group_count=len(groups),
         resolved_group_count=resolved_count,
         current_group=current_group,
+        current_group_fields=("title", "authors", "year", "journal", "doi", "pmid", "publication_type", "source"),
+        decision_options=("keep_first", "keep_second", "merge", "keep_both", "mark_not_duplicate", "exclude_duplicate", "set_master_record", "skip"),
+        merge_preview=merge_preview,
+        canonical_candidate_id=_canonical_candidate_id(merge_preview, current_group),
+        match_reasons=match_reasons,
+        field_conflicts=conflicts,
     )
+
+
+def _split_match_reasons(value: str) -> list[str]:
+    return [item.strip() for item in value.replace(";", ",").split(",") if item.strip()]
+
+
+def _field_conflicts(records: list[dict[str, object]]) -> list[str]:
+    conflicts: list[str] = []
+    for field_name in ("title", "abstract", "authors", "creators", "journal", "doi", "pmid", "publication_type"):
+        values = {_stable_value(record.get(field_name)) for record in records if record.get(field_name) not in ("", None, [])}
+        if len(values) > 1:
+            conflicts.append(field_name)
+    return conflicts
+
+
+def _stable_value(value: object) -> str:
+    if isinstance(value, list):
+        return "|".join(str(item) for item in value)
+    return str(value)
+
+
+def _canonical_candidate_id(preview: MergePreview | None, group: DuplicateGroup | None) -> str:
+    if preview and preview.field_sources:
+        return str(next(iter(preview.field_sources.values()), ""))
+    if group and group.records:
+        return str(group.records[0].get("record_id", ""))
+    return ""
 
 
 try:
@@ -239,12 +279,37 @@ if QWidget is not None:
                 self._group_label.setText("未发现重复候选组。")
                 return
             group = self._groups[self._current_group_index]
+            preview = None
+            try:
+                preview = self._dedup_service.preview_merge(duplicate_review_path=self._path_input.text(), group_id=group.group_id)
+            except Exception:
+                preview = None
+            self._state = duplicate_review_state_from_groups(
+                groups=self._groups,
+                original_record_count=len({str(record.get("record_id", "")) for item in self._groups for record in item.records}),
+                current_index=self._current_group_index,
+                merge_preview=preview,
+            )
             lines = [
                 f"当前重复组：{group.group_id}",
                 f"匹配原因：{group.match_reason}",
+                f"match reasons：{', '.join(self._state.match_reasons) or '无'}",
                 f"置信度：{group.confidence}",
                 f"状态：{group.status}",
+                f"canonical candidate：{self._state.canonical_candidate_id or '待确认'}",
+                f"field conflicts：{', '.join(self._state.field_conflicts) or '无'}",
             ]
+            if preview is not None:
+                lines.extend(
+                    [
+                        "",
+                        "Merge preview",
+                        f"merged_from：{', '.join(preview.merged_from_record_ids)}",
+                        f"field_sources：{preview.field_sources}",
+                        f"provenance_sources：{', '.join(preview.provenance_sources)}",
+                        f"warnings：{', '.join(preview.warnings) or '无'}",
+                    ]
+                )
             for index, record in enumerate(group.records[:2], start=1):
                 authors = record.get("authors", "")
                 authors_text = ", ".join(authors) if isinstance(authors, list) else str(authors)
