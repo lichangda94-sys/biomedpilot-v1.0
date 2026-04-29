@@ -99,6 +99,16 @@ class AttachmentService:
             for record in self.list_attachments(project_dir)
         ]
         self.save_attachment_registry(project_dir, refreshed)
+        self._audit_log.record_event(
+            project_dir,
+            event_type="record_saved",
+            project_id=project_dir.name,
+            target_type="attachment_registry",
+            target_id="attachment_registry",
+            output_path=str(self._registry_path(project_dir)),
+            summary="Attachment registry validated.",
+            details={"attachment_count": len(refreshed), "broken_path_count": len([record for record in refreshed if not record.file_exists])},
+        )
         self._finish_task(task, True, f"Validated {len(refreshed)} attachments")
         return refreshed
 
@@ -128,6 +138,17 @@ class AttachmentService:
             for record_id in record_ids:
                 writer.writerow({"record_id": record_id, "missing_fulltext": str(record_id not in attachment_by_record).lower()})
         self._register_asset(project_dir.name, "missing_fulltext_report", str(self._registry_path(project_dir)), str(output_path))
+        self._audit_log.record_event(
+            project_dir,
+            event_type="report_exported",
+            project_id=project_dir.name,
+            target_type="missing_fulltext_report",
+            target_id="missing_fulltext_report.csv",
+            source_path=str(self._registry_path(project_dir)),
+            output_path=str(output_path),
+            summary="Missing full-text report exported.",
+            details={"record_count": len(record_ids)},
+        )
         self._finish_task(task, True, f"Missing full-text report exported: {output_path}")
         return output_path
 

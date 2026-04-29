@@ -18,6 +18,7 @@ from app.meta_analysis.models.systematic_review import (
     new_fulltext_id,
     now_utc,
 )
+from app.meta_analysis.models.attachments import ATTACHMENT_MODES
 from app.meta_analysis.services.attachment_service import AttachmentService
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
@@ -39,6 +40,21 @@ class FullTextService:
         self._attachment_service = attachment_service or AttachmentService(task_center=task_center, data_center=data_center, audit_log=self._audit_log)
 
     def attach_fulltext(self, project_dir: Path, record_id: str, source_file_path: str, *, notes: str = "") -> FullTextFile:
+        return self.attach_pdf(project_dir, record_id, source_file_path, mode="copy_to_project_library", notes=notes)
+
+    def attach_pdf(
+        self,
+        project_dir: Path,
+        record_id: str,
+        source_file_path: str,
+        *,
+        mode: str = "copy_to_project_library",
+        notes: str = "",
+    ) -> FullTextFile:
+        if mode not in ATTACHMENT_MODES:
+            raise ValueError("unsupported_attachment_mode")
+        if mode == "ignore_attachments":
+            return self.update_fulltext_availability(project_dir, record_id, "not_required")
         project_dir = project_dir.expanduser().resolve()
         source = Path(source_file_path).expanduser().resolve()
         if not source.exists() or not source.is_file():
@@ -49,7 +65,7 @@ class FullTextService:
             record_id=record_id,
             source_file_path=str(source),
             attachment_type="pdf",
-            mode="copy_to_project_library",
+            mode=mode,
             notes=notes,
         )
         if attachment is None:
@@ -80,7 +96,7 @@ class FullTextService:
             source_path=str(source),
             output_path=str(self._registry_path(project_dir)),
             summary=f"Full-text attached for {record_id}",
-            details={"attachment_id": attachment.attachment_id},
+            details={"attachment_id": attachment.attachment_id, "mode": mode},
         )
         self._finish_task(task, success=True, summary=f"Full-text attached for {record_id}")
         return record

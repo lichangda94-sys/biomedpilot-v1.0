@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app.meta_analysis.models.attachments import ATTACHMENT_MODES
 from app.meta_analysis.services.attachment_service import AttachmentService
+from app.meta_analysis.services.fulltext_service import FullTextService
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,12 @@ class AttachmentFileRow:
     file_exists: bool
     storage_mode: str
     file_path: str
+
+
+@dataclass(frozen=True)
+class MissingFullTextRow:
+    record_id: str
+    missing_fulltext: bool
 
 
 @dataclass(frozen=True)
@@ -39,6 +46,11 @@ class AttachmentPageState:
     broken_path_count: int = 0
     missing_fulltext_report_status: str = "not_generated"
     missing_fulltext_count: int = 0
+    missing_fulltext_rows: tuple[MissingFullTextRow, ...] = ()
+    fulltext_registry_path: str = ""
+    fulltext_record_count: int = 0
+    attachment_validation_status: str = "not_run"
+    attachment_validation_message: str = "没有附件时显示空状态。"
     attachment_rows: tuple[AttachmentFileRow, ...] = ()
     file_status_summary: tuple[str, ...] = ()
 
@@ -63,6 +75,7 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
     project_dir = project_dir.expanduser().resolve()
     attachments = service.list_attachments(project_dir)
     registry_path = project_dir / "attachments" / "attachment_registry.json"
+    fulltext_registry_path = project_dir / "fulltext" / "fulltext_registry.json"
     missing_path = project_dir / "reports" / "missing_fulltext_report.csv"
     attachment_rows = tuple(
         AttachmentFileRow(
@@ -79,7 +92,8 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
         f"{row.record_id}:{row.attachment_type}:{'available' if row.file_exists else 'missing'}:{row.file_name}"
         for row in attachment_rows[:10]
     )
-    missing_report_status, missing_count = _missing_fulltext_report_status(missing_path)
+    missing_report_status, missing_rows = _missing_fulltext_report_rows(missing_path)
+    broken_path_count = len([row for row in attachment_rows if not row.file_exists])
     return AttachmentPageState(
         title=base.title,
         description=base.description,
@@ -97,9 +111,14 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
         link_attachment_count=len([row for row in attachment_rows if row.storage_mode == "link_existing_files"]),
         copy_attachment_count=len([row for row in attachment_rows if row.storage_mode == "copy_to_project_library"]),
         ignore_attachment_count=0,
-        broken_path_count=len([row for row in attachment_rows if not row.file_exists]),
+        broken_path_count=broken_path_count,
         missing_fulltext_report_status=missing_report_status,
-        missing_fulltext_count=missing_count,
+        missing_fulltext_count=len([row for row in missing_rows if row.missing_fulltext]),
+        missing_fulltext_rows=missing_rows,
+        fulltext_registry_path=str(fulltext_registry_path),
+        fulltext_record_count=_fulltext_record_count(fulltext_registry_path),
+        attachment_validation_status=_validation_status(len(attachment_rows), broken_path_count),
+        attachment_validation_message=_validation_message(len(attachment_rows), broken_path_count),
         attachment_rows=attachment_rows,
         file_status_summary=file_status,
     )
@@ -122,16 +141,50 @@ def _storage_mode(project_dir: Path, file_path: str) -> str:
         return "link_existing_files"
 
 
-def _missing_fulltext_report_status(missing_path: Path) -> tuple[str, int]:
+def _missing_fulltext_report_rows(missing_path: Path) -> tuple[str, tuple[MissingFullTextRow, ...]]:
     if not missing_path.exists():
-        return "not_generated", 0
+        return "not_generated", ()
     try:
         with missing_path.open(encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
     except (OSError, csv.Error, UnicodeDecodeError):
-        return "unreadable", 0
-    missing_count = sum(1 for row in rows if str(row.get("missing_fulltext", "")).strip().lower() == "true")
-    return "available", missing_count
+        return "unreadable", ()
+    return "available", tuple(
+        MissingFullTextRow(
+            record_id=str(row.get("record_id", "")),
+            missing_fulltext=str(row.get("missing_fulltext", "")).strip().lower() == "true",
+        )
+        for row in rows
+    )
+
+
+def _fulltext_record_count(fulltext_registry_path: Path) -> int:
+    if not fulltext_registry_path.exists():
+        return 0
+    try:
+        import json
+
+        payload = json.loads(fulltext_registry_path.read_text(encoding="utf-8"))
+    except Exception:
+        return 0
+    records = payload.get("fulltext_files")
+    return len(records) if isinstance(records, list) else 0
+
+
+def _validation_status(attachment_count: int, broken_path_count: int) -> str:
+    if attachment_count == 0:
+        return "empty"
+    if broken_path_count:
+        return "broken_paths_detected"
+    return "valid"
+
+
+def _validation_message(attachment_count: int, broken_path_count: int) -> str:
+    if attachment_count == 0:
+        return "没有附件登记；可手动 link/copy PDF 或导出 missing full-text report。"
+    if broken_path_count:
+        return f"发现 {broken_path_count} 个附件路径失效，请检查本地文件位置。"
+    return "附件路径验证通过。"
 
 
 try:
@@ -143,9 +196,10 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
 
     class AttachmentPage(QWidget):
-        def __init__(self, *, service: AttachmentService | None = None) -> None:
+        def __init__(self, *, service: AttachmentService | None = None, fulltext_service: FullTextService | None = None) -> None:
             super().__init__()
             self._service = service or AttachmentService()
+            self._fulltext_service = fulltext_service or FullTextService(attachment_service=self._service)
             self._state = initial_attachment_state()
 
             root = QVBoxLayout(self)
@@ -164,6 +218,10 @@ if QWidget is not None:
             self._record_id_input = QLineEdit()
             self._record_id_input.setPlaceholderText("record_id")
             root.addWidget(self._record_id_input)
+
+            self._missing_record_ids_input = QLineEdit()
+            self._missing_record_ids_input.setPlaceholderText("missing report record_ids，用逗号分隔；为空时使用已有附件记录")
+            root.addWidget(self._missing_record_ids_input)
 
             row = QHBoxLayout()
             self._file_input = QLineEdit()
@@ -185,6 +243,14 @@ if QWidget is not None:
             refresh.clicked.connect(self._refresh)
             root.addWidget(refresh)
 
+            validate = QPushButton("验证附件路径")
+            validate.clicked.connect(self._validate_attachments)
+            root.addWidget(validate)
+
+            export_missing = QPushButton("导出 missing_fulltext_report.csv")
+            export_missing.clicked.connect(self._export_missing_report)
+            root.addWidget(export_missing)
+
             card = QFrame()
             card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
             layout = QVBoxLayout(card)
@@ -200,14 +266,36 @@ if QWidget is not None:
                 self._file_input.setText(path)
 
         def _apply_mode(self, mode: str) -> None:
-            if mode != "ignore_attachments":
-                self._service.add_attachment(
+            if mode in {"link_existing_files", "copy_to_project_library"}:
+                self._fulltext_service.attach_pdf(
                     Path(self._project_dir_input.text()).expanduser(),
                     record_id=self._record_id_input.text(),
                     source_file_path=self._file_input.text(),
-                    attachment_type="pdf",
                     mode=mode,
                 )
+            elif mode == "ignore_attachments":
+                self._fulltext_service.attach_pdf(
+                    Path(self._project_dir_input.text()).expanduser(),
+                    record_id=self._record_id_input.text(),
+                    source_file_path=self._file_input.text(),
+                    mode=mode,
+                )
+            self._refresh()
+
+        def _validate_attachments(self) -> None:
+            self._service.validate_attachments(Path(self._project_dir_input.text()).expanduser())
+            self._refresh()
+
+        def _export_missing_report(self) -> None:
+            record_ids = [
+                item.strip()
+                for item in self._missing_record_ids_input.text().split(",")
+                if item.strip()
+            ]
+            self._service.export_missing_fulltext_report(
+                Path(self._project_dir_input.text()).expanduser(),
+                record_ids=record_ids or None,
+            )
             self._refresh()
 
         def _refresh(self) -> None:
@@ -218,9 +306,12 @@ if QWidget is not None:
             ) or "无"
             self._summary_label.setText(
                 f"attachment_registry：{state.attachment_registry_path}\n"
+                f"fulltext_registry：{state.fulltext_registry_path}\n"
                 f"missing_fulltext_report：{state.missing_fulltext_report_path}\n"
                 f"missing_fulltext_report_status：{state.missing_fulltext_report_status}\n"
+                f"attachment_validation：{state.attachment_validation_status} · {state.attachment_validation_message}\n"
                 f"附件数量：{state.attachment_count}\n"
+                f"Full-text 记录：{state.fulltext_record_count}\n"
                 f"PDF 附件：{state.pdf_attachment_count}\n"
                 f"link / copy / ignore：{state.link_attachment_count} / {state.copy_attachment_count} / {state.ignore_attachment_count}\n"
                 f"broken path：{state.broken_path_count}\n"
