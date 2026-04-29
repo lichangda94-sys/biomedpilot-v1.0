@@ -9,6 +9,33 @@ from app.shared.feature_availability import get_feature
 
 
 @dataclass(frozen=True)
+class DuplicateRecordSummary:
+    record_id: str
+    title: str
+    authors_text: str
+    year: str
+    journal: str
+    doi: str
+    pmid: str
+
+
+@dataclass(frozen=True)
+class DuplicateFieldDifference:
+    field_name: str
+    values_by_record_id: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class MergePreviewSummary:
+    available: bool
+    group_id: str = ""
+    merged_from_record_ids: tuple[str, ...] = ()
+    field_sources: tuple[tuple[str, str], ...] = ()
+    provenance_sources: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class DuplicateGroupSummary:
     group_id: str
     record_ids: tuple[str, ...]
@@ -48,6 +75,11 @@ class DuplicateReviewPageState:
     suspected_duplicate_group_count: int = 0
     group_summaries: tuple[DuplicateGroupSummary, ...] = ()
     duplicate_review_queue_export_path: str = ""
+    current_group_records: tuple[DuplicateRecordSummary, ...] = ()
+    field_differences: tuple[DuplicateFieldDifference, ...] = ()
+    merge_preview_summary: MergePreviewSummary = MergePreviewSummary(False)
+    interactive_decision_options: tuple[str, ...] = ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")
+    interaction_warning: str = "Merge 决策必须先生成 merge preview；当前不会执行批量合并。"
 
 
 def initial_duplicate_review_state() -> DuplicateReviewPageState:
@@ -75,7 +107,8 @@ def duplicate_review_state_from_groups(
     resolved_count = len([group for group in groups if group.status == "resolved"])
     current_group = groups[current_index] if groups and 0 <= current_index < len(groups) else None
     match_reasons = tuple(_split_match_reasons(current_group.match_reason if current_group else ""))
-    conflicts = tuple(_field_conflicts(current_group.records if current_group else []))
+    differences = tuple(_field_differences(current_group.records if current_group else []))
+    conflicts = tuple(item.field_name for item in differences)
     group_summaries = tuple(_group_summary(group) for group in groups)
     return DuplicateReviewPageState(
         title="文献去重",
@@ -100,6 +133,9 @@ def duplicate_review_state_from_groups(
         suspected_duplicate_group_count=len([item for item in group_summaries if item.duplicate_type == "suspected"]),
         group_summaries=group_summaries,
         duplicate_review_queue_export_path=duplicate_review_queue_export_path,
+        current_group_records=tuple(_record_summary(record) for record in (current_group.records if current_group else [])),
+        field_differences=differences,
+        merge_preview_summary=_merge_preview_summary(merge_preview),
     )
 
 
@@ -132,13 +168,47 @@ def _split_match_reasons(value: str) -> list[str]:
     return [item.strip() for item in value.replace(";", ",").split(",") if item.strip()]
 
 
-def _field_conflicts(records: list[dict[str, object]]) -> list[str]:
-    conflicts: list[str] = []
+def _field_differences(records: list[dict[str, object]]) -> list[DuplicateFieldDifference]:
+    differences: list[DuplicateFieldDifference] = []
     for field_name in ("title", "abstract", "authors", "creators", "journal", "doi", "pmid", "publication_type"):
-        values = {_stable_value(record.get(field_name)) for record in records if record.get(field_name) not in ("", None, [])}
+        values_by_record = tuple(
+            (str(record.get("record_id", "")), _stable_value(record.get(field_name)))
+            for record in records
+            if record.get(field_name) not in ("", None, [])
+        )
+        values = {value for _record_id, value in values_by_record}
         if len(values) > 1:
-            conflicts.append(field_name)
-    return conflicts
+            differences.append(DuplicateFieldDifference(field_name=field_name, values_by_record_id=values_by_record))
+    return differences
+
+
+def _record_summary(record: dict[str, object]) -> DuplicateRecordSummary:
+    authors = record.get("authors", "")
+    authors_text = record.get("authors_text", "")
+    if not authors_text:
+        authors_text = ", ".join(str(item) for item in authors) if isinstance(authors, list) else str(authors)
+    return DuplicateRecordSummary(
+        record_id=str(record.get("record_id", "")),
+        title=str(record.get("title", "")),
+        authors_text=str(authors_text),
+        year=str(record.get("year", "")),
+        journal=str(record.get("journal", "")),
+        doi=str(record.get("doi", "")),
+        pmid=str(record.get("pmid", "")),
+    )
+
+
+def _merge_preview_summary(preview: MergePreview | None) -> MergePreviewSummary:
+    if preview is None:
+        return MergePreviewSummary(False)
+    return MergePreviewSummary(
+        available=True,
+        group_id=preview.group_id,
+        merged_from_record_ids=tuple(preview.merged_from_record_ids),
+        field_sources=tuple(sorted((str(field), str(record_id)) for field, record_id in preview.field_sources.items())),
+        provenance_sources=tuple(preview.provenance_sources),
+        warnings=tuple(preview.warnings),
+    )
 
 
 def _stable_value(value: object) -> str:
@@ -226,14 +296,24 @@ if QWidget is not None:
             for label, decision in (
                 ("保留第一条", "keep_first"),
                 ("保留第二条", "keep_second"),
+                ("都保留", "keep_both"),
                 ("合并记录", "merge"),
                 ("不是重复", "mark_not_duplicate"),
+                ("排除重复", "exclude_duplicate"),
                 ("跳过", "skip"),
             ):
                 button = QPushButton(label)
                 button.clicked.connect(lambda _checked=False, value=decision: self._save_decision(value))
                 decision_row.addWidget(button)
             root.addLayout(decision_row)
+            navigation_row = QHBoxLayout()
+            previous_button = QPushButton("上一组")
+            previous_button.clicked.connect(lambda: self._move_group(-1))
+            next_group_button = QPushButton("下一组")
+            next_group_button.clicked.connect(lambda: self._move_group(1))
+            navigation_row.addWidget(previous_button)
+            navigation_row.addWidget(next_group_button)
+            root.addLayout(navigation_row)
             generate_button = QPushButton("生成去重后文献库")
             generate_button.clicked.connect(self._generate_deduplicated_literature)
             root.addWidget(generate_button)
@@ -286,7 +366,7 @@ if QWidget is not None:
                 return
             group = self._groups[self._current_group_index]
             try:
-                saved = self._dedup_service.save_decision(
+                saved = self._dedup_service.save_interactive_decision(
                     duplicate_review_path=self._path_input.text(),
                     group_id=group.group_id,
                     decision=decision,
@@ -303,6 +383,14 @@ if QWidget is not None:
                 self._error_label.setText("")
             except Exception as exc:
                 self._error_label.setText(str(exc))
+
+        def _move_group(self, step: int) -> None:
+            if not self._groups:
+                self._load_groups()
+            if not self._groups:
+                return
+            self._current_group_index = max(0, min(len(self._groups) - 1, self._current_group_index + step))
+            self._render_groups(duplicate_review_queue_export_path=self._state.duplicate_review_queue_export_path)
 
         def _generate_deduplicated_literature(self) -> None:
             result = self._dedup_service.generate_deduplicated_literature(
@@ -343,6 +431,11 @@ if QWidget is not None:
                 f"- {item.group_id}: {item.duplicate_type}, records={', '.join(item.record_ids)}, reason={item.reason}, confidence={item.confidence}, master={item.master_candidate_id or '待确认'}, merge_preview={'yes' if item.merge_preview_available else 'no'}"
                 for item in self._state.group_summaries
             ]
+            field_difference_rows = [
+                f"- {item.field_name}: "
+                + "; ".join(f"{record_id}={value}" for record_id, value in item.values_by_record_id)
+                for item in self._state.field_differences
+            ]
             lines = [
                 f"重复候选组总数：{self._state.duplicate_group_count}",
                 f"exact duplicate groups：{self._state.exact_duplicate_group_count}",
@@ -358,6 +451,8 @@ if QWidget is not None:
                 f"状态：{group.status}",
                 f"canonical candidate：{self._state.canonical_candidate_id or '待确认'}",
                 f"field conflicts：{', '.join(self._state.field_conflicts) or '无'}",
+                "字段差异：",
+                *(field_difference_rows or ["- 无"]),
             ]
             if preview is not None:
                 lines.extend(

@@ -39,6 +39,7 @@ class PRISMAService:
         )
         payloads = _load_project_json_payloads(project_dir)
         records_identified = _max_count(payloads, ("records", "literature_records", "imported_records"))
+        duplicates_removed = _duplicates_removed_from_decisions(payloads)
         records_after_deduplication = _max_count(payloads, ("deduplicated_records", "unique_records"))
         screening_records = _screening_records(payloads)
         decision_counts = _decision_counts(screening_records)
@@ -46,7 +47,7 @@ class PRISMAService:
         included_or_maybe = decision_counts.get("included", 0) + decision_counts.get("maybe", 0)
         studies_included = decision_counts.get("included", 0)
         if records_after_deduplication == 0:
-            records_after_deduplication = records_screened or records_identified
+            records_after_deduplication = max(records_identified - duplicates_removed, 0) if duplicates_removed else records_screened or records_identified
         if studies_included == 0:
             studies_included = _max_count(payloads, ("records",), path_contains="extraction_records")
         audit_sources = self._audit_source_refs(project_dir)
@@ -70,6 +71,7 @@ class PRISMAService:
             notes=["full-text workflow incomplete; full-text PRISMA counts are testing estimates.", "PRISMA sources include ImportBatch, DuplicateReviewDecision, ScreeningRecord, FulltextStatus, ExtractionRecord, and AnalysisInput when available."],
             created_at=now_utc(),
             source_references=source_references,
+            duplicates_removed=duplicates_removed,
         )
         self._finish_task(task, success=True, summary="PRISMA flow summary collected.")
         return summary
@@ -325,6 +327,33 @@ def _decision_counts(records: list[dict[str, object]]) -> dict[str, int]:
     return counts
 
 
+def _duplicates_removed_from_decisions(payloads: list[tuple[Path, dict[str, object]]]) -> int:
+    group_sizes: dict[str, int] = {}
+    for _path, payload in payloads:
+        for group in list(payload.get("duplicate_groups", [])):
+            if not isinstance(group, dict):
+                continue
+            group_id = str(group.get("group_id") or group.get("duplicate_group_id", ""))
+            record_ids = list(group.get("record_ids") or group.get("candidate_record_ids") or [])
+            if group_id:
+                group_sizes[group_id] = len(record_ids)
+
+    removed = 0
+    for _path, payload in payloads:
+        for decision in list(payload.get("decisions", [])):
+            if not isinstance(decision, dict):
+                continue
+            decision_type = str(decision.get("decision", "")).lower()
+            group_size = group_sizes.get(str(decision.get("group_id", "")), 0)
+            if group_size < 1:
+                continue
+            if decision_type in {"keep_first", "keep_second", "merge", "set_master_record"}:
+                removed += max(group_size - 1, 0)
+            elif decision_type == "exclude_duplicate":
+                removed += group_size
+    return removed
+
+
 def _prisma_source_references(project_dir: Path, payloads: list[tuple[Path, dict[str, object]]], audit_sources: list[str]) -> list[dict[str, str]]:
     refs: list[dict[str, str]] = []
     source_map = {
@@ -352,6 +381,7 @@ def _prisma_markdown(summary: PRISMAFlowSummary) -> str:
             "",
             f"- Records identified: {summary.records_identified}",
             f"- Records after deduplication: {summary.records_after_deduplication}",
+            f"- Duplicates removed: {summary.duplicates_removed}",
             f"- Records screened: {summary.records_screened}",
             f"- Records excluded title/abstract: {summary.records_excluded_title_abstract}",
             f"- Full-text reports sought: {summary.full_text_reports_sought}",
@@ -415,6 +445,7 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
             "",
             "## Deduplication summary",
             f"- Records after deduplication: {prisma.records_after_deduplication}",
+            f"- Duplicates removed: {prisma.duplicates_removed}",
             f"- Duplicate candidate artifact: {artifacts['duplicate_candidate_groups']}",
             f"- Deduplicated literature artifact: {artifacts['deduplicated_literature']}",
             "",

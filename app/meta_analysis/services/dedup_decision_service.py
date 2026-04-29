@@ -119,6 +119,28 @@ class DedupDecisionService:
                 )
         return str(target_path)
 
+    def save_interactive_decision(
+        self,
+        *,
+        duplicate_review_path: str,
+        group_id: str,
+        decision: str,
+        note: str = "",
+    ) -> DedupDecision:
+        normalized_decision = self._normalize_decision(decision)
+        merge_preview: MergePreview | None = None
+        if normalized_decision in {DedupDecisionType.MERGE, DedupDecisionType.SET_MASTER_RECORD}:
+            merge_preview = self.preview_merge(duplicate_review_path=duplicate_review_path, group_id=group_id)
+            if not merge_preview.merged_record:
+                raise ValueError("merge 决策需要先生成可读 merge preview。")
+        return self.save_decision(
+            duplicate_review_path=duplicate_review_path,
+            group_id=group_id,
+            decision=normalized_decision.value,
+            note=note,
+            merged_record=merge_preview.merged_record if merge_preview is not None else None,
+        )
+
     def save_decision(
         self,
         *,
