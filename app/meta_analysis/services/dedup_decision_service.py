@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -79,6 +80,44 @@ class DedupDecisionService:
         if group_id not in groups:
             raise ValueError("未找到指定的重复候选组。")
         return self._merge_preview(groups[group_id], master_record_id=master_record_id)
+
+    def export_duplicate_review_queue(self, *, duplicate_review_path: str, output_path: str = "") -> str:
+        review_path = self._resolve_review_path(duplicate_review_path)
+        groups = self.load_groups(duplicate_review_path=str(review_path))
+        target_path = Path(output_path).expanduser() if output_path else review_path.with_name(
+            review_path.name.replace("_duplicate_groups.json", "_duplicate_review_queue.csv")
+        )
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        with target_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=[
+                    "group_id",
+                    "duplicate_type",
+                    "record_ids",
+                    "reason",
+                    "confidence",
+                    "master_candidate_id",
+                    "merge_preview_available",
+                    "status",
+                ],
+            )
+            writer.writeheader()
+            for group in groups:
+                record_ids = group.record_ids or [str(record.get("record_id", "")) for record in group.records if record.get("record_id")]
+                writer.writerow(
+                    {
+                        "group_id": group.group_id,
+                        "duplicate_type": _duplicate_type(group.match_reason or group.reason),
+                        "record_ids": "|".join(record_ids),
+                        "reason": group.match_reason or group.reason,
+                        "confidence": group.confidence,
+                        "master_candidate_id": _master_candidate_id(group),
+                        "merge_preview_available": "yes" if len(record_ids) >= 2 or len(group.records) >= 2 else "no",
+                        "status": group.status,
+                    }
+                )
+        return str(target_path)
 
     def save_decision(
         self,
@@ -487,3 +526,21 @@ def _record_provenance(record: dict[str, object]) -> list[str]:
     if isinstance(source_trace, list):
         values.extend(str(item) for item in source_trace)
     return values
+
+
+def _duplicate_type(reason: str) -> str:
+    normalized = reason.lower().replace("-", "_")
+    exact_tokens = ("pmid_exact", "doi_exact", "clinicaltrials_exact", "clinical_trial_exact", "clinicaltrials id", "clinical trial id")
+    if any(token in normalized for token in exact_tokens):
+        return "exact"
+    if normalized.strip() in {"pmid", "doi", "clinicaltrials", "clinical_trial"}:
+        return "exact"
+    return "suspected"
+
+
+def _master_candidate_id(group: DuplicateGroup) -> str:
+    if group.records:
+        return str(group.records[0].get("record_id", ""))
+    if group.record_ids:
+        return str(group.record_ids[0])
+    return ""

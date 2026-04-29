@@ -9,6 +9,18 @@ from app.shared.feature_availability import get_feature
 
 
 @dataclass(frozen=True)
+class DuplicateGroupSummary:
+    group_id: str
+    record_ids: tuple[str, ...]
+    duplicate_type: str
+    reason: str
+    confidence: float
+    master_candidate_id: str
+    merge_preview_available: bool
+    status: str
+
+
+@dataclass(frozen=True)
 class DuplicateReviewPageState:
     title: str
     description: str
@@ -32,6 +44,10 @@ class DuplicateReviewPageState:
     canonical_candidate_id: str = ""
     match_reasons: tuple[str, ...] = ()
     field_conflicts: tuple[str, ...] = ()
+    exact_duplicate_group_count: int = 0
+    suspected_duplicate_group_count: int = 0
+    group_summaries: tuple[DuplicateGroupSummary, ...] = ()
+    duplicate_review_queue_export_path: str = ""
 
 
 def initial_duplicate_review_state() -> DuplicateReviewPageState:
@@ -54,11 +70,13 @@ def duplicate_review_state_from_groups(
     original_record_count: int = 0,
     current_index: int = 0,
     merge_preview: MergePreview | None = None,
+    duplicate_review_queue_export_path: str = "",
 ) -> DuplicateReviewPageState:
     resolved_count = len([group for group in groups if group.status == "resolved"])
     current_group = groups[current_index] if groups and 0 <= current_index < len(groups) else None
     match_reasons = tuple(_split_match_reasons(current_group.match_reason if current_group else ""))
     conflicts = tuple(_field_conflicts(current_group.records if current_group else []))
+    group_summaries = tuple(_group_summary(group) for group in groups)
     return DuplicateReviewPageState(
         title="文献去重",
         description="读取 Prepare for Screening 输出，查看疑似重复组、match reasons 和 testing merge preview，并保存最小人工去重决策。",
@@ -78,7 +96,36 @@ def duplicate_review_state_from_groups(
         canonical_candidate_id=_canonical_candidate_id(merge_preview, current_group),
         match_reasons=match_reasons,
         field_conflicts=conflicts,
+        exact_duplicate_group_count=len([item for item in group_summaries if item.duplicate_type == "exact"]),
+        suspected_duplicate_group_count=len([item for item in group_summaries if item.duplicate_type == "suspected"]),
+        group_summaries=group_summaries,
+        duplicate_review_queue_export_path=duplicate_review_queue_export_path,
     )
+
+
+def _group_summary(group: DuplicateGroup) -> DuplicateGroupSummary:
+    duplicate_type = _duplicate_type(group.match_reason or group.reason)
+    record_ids = tuple(group.record_ids or [str(record.get("record_id", "")) for record in group.records if record.get("record_id")])
+    return DuplicateGroupSummary(
+        group_id=group.group_id,
+        record_ids=record_ids,
+        duplicate_type=duplicate_type,
+        reason=group.match_reason or group.reason,
+        confidence=group.confidence,
+        master_candidate_id=_canonical_candidate_id(None, group),
+        merge_preview_available=len(record_ids) >= 2 or len(group.records) >= 2,
+        status=group.status,
+    )
+
+
+def _duplicate_type(reason: str) -> str:
+    normalized = reason.lower().replace("-", "_")
+    exact_tokens = ("pmid_exact", "doi_exact", "clinicaltrials_exact", "clinical_trial_exact", "clinicaltrials id", "clinical trial id")
+    if any(token in normalized for token in exact_tokens):
+        return "exact"
+    if normalized.strip() in {"pmid", "doi", "clinicaltrials", "clinical_trial"}:
+        return "exact"
+    return "suspected"
 
 
 def _split_match_reasons(value: str) -> list[str]:
@@ -225,8 +272,9 @@ if QWidget is not None:
         def _load_groups(self) -> None:
             try:
                 self._groups = self._dedup_service.load_groups(duplicate_review_path=self._path_input.text())
+                export_path = self._dedup_service.export_duplicate_review_queue(duplicate_review_path=self._path_input.text())
                 self._current_group_index = 0
-                self._render_groups()
+                self._render_groups(duplicate_review_queue_export_path=export_path)
                 self._error_label.setText("")
             except Exception as exc:
                 self._error_label.setText(str(exc))
@@ -274,7 +322,7 @@ if QWidget is not None:
             else:
                 self._error_label.setText(result.message)
 
-        def _render_groups(self) -> None:
+        def _render_groups(self, *, duplicate_review_queue_export_path: str = "") -> None:
             if not self._groups:
                 self._group_label.setText("未发现重复候选组。")
                 return
@@ -289,8 +337,20 @@ if QWidget is not None:
                 original_record_count=len({str(record.get("record_id", "")) for item in self._groups for record in item.records}),
                 current_index=self._current_group_index,
                 merge_preview=preview,
+                duplicate_review_queue_export_path=duplicate_review_queue_export_path,
             )
+            group_rows = [
+                f"- {item.group_id}: {item.duplicate_type}, records={', '.join(item.record_ids)}, reason={item.reason}, confidence={item.confidence}, master={item.master_candidate_id or '待确认'}, merge_preview={'yes' if item.merge_preview_available else 'no'}"
+                for item in self._state.group_summaries
+            ]
             lines = [
+                f"重复候选组总数：{self._state.duplicate_group_count}",
+                f"exact duplicate groups：{self._state.exact_duplicate_group_count}",
+                f"suspected duplicate groups：{self._state.suspected_duplicate_group_count}",
+                f"duplicate_review_queue：{self._state.duplicate_review_queue_export_path or '未导出'}",
+                "全部候选组：",
+                *(group_rows or ["- 无"]),
+                "",
                 f"当前重复组：{group.group_id}",
                 f"匹配原因：{group.match_reason}",
                 f"match reasons：{', '.join(self._state.match_reasons) or '无'}",
