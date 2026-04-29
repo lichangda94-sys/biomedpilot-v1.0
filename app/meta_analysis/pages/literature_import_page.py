@@ -14,6 +14,15 @@ from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classi
 from app.shared.feature_availability import get_feature
 
 
+WIZARD_STEPS = (
+    "source_selection",
+    "file_selection",
+    "import_preview",
+    "import_diagnostics",
+    "duplicate_review_handoff",
+)
+
+
 @dataclass(frozen=True)
 class ImportDiagnosticsCard:
     key: str
@@ -77,6 +86,55 @@ class LiteratureImportPageState:
     warning_severity_counts: dict[str, int] | None = None
 
 
+@dataclass(frozen=True)
+class LiteratureImportWizardFilePreview:
+    source_path: str
+    file_name: str
+    requested_format: str
+    detected_format: str
+    exists: bool
+    supported: bool
+    record_count_preview: int | None
+    status: str
+    message: str
+
+
+@dataclass(frozen=True)
+class LiteratureImportWizardState:
+    title: str
+    status_label: str
+    description: str
+    steps: tuple[str, ...]
+    current_step: str
+    source_options: tuple[str, ...]
+    format_options: tuple[str, ...]
+    dedup_mode_options: tuple[str, ...]
+    file_picker_first: bool
+    drag_drop_supported: bool
+    multi_file_ready: bool
+    input_summary: str
+    output_summary: str
+    next_step: str
+    empty_state: str
+    previews: tuple[LiteratureImportWizardFilePreview, ...] = ()
+    summaries: tuple[LiteratureBatchImportSummary, ...] = ()
+    diagnostics_cards: tuple[ImportDiagnosticsCard, ...] = ()
+    warning_table: tuple[ImportDiagnosticsWarningRow, ...] = ()
+    diagnostics_export_paths: tuple[str, ...] = ()
+    warnings_export_paths: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+    error_message: str = ""
+    testing_limitations: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class LiteratureImportWizardExecutionResult:
+    success: bool
+    state: LiteratureImportWizardState
+    summaries: tuple[LiteratureBatchImportSummary, ...]
+    message: str
+
+
 def initial_literature_import_state() -> LiteratureImportPageState:
     feature = get_feature("meta-literature-import")
     return LiteratureImportPageState(
@@ -100,6 +158,130 @@ def initial_literature_import_state() -> LiteratureImportPageState:
             "Diagnostics 是质量检查，不替代人工判断。",
         ),
     )
+
+
+def initial_literature_import_wizard_state() -> LiteratureImportWizardState:
+    feature = get_feature("meta-literature-import")
+    return LiteratureImportWizardState(
+        title="Literature Import Wizard",
+        status_label=feature.status.display_label() if feature is not None else "测试中",
+        description="Testing / Developer Preview 级文献导入向导：选择来源、选择文件、预览格式、执行导入、查看 diagnostics，然后进入 Duplicate Review。",
+        steps=WIZARD_STEPS,
+        current_step="source_selection",
+        source_options=("local_database_export", "zotero_export", "endnote_export", "pubmed_download", "csv_or_txt"),
+        format_options=("auto", "ris", "nbib", "csv"),
+        dedup_mode_options=("detect_only", "manual_review", "skip"),
+        file_picker_first=True,
+        drag_drop_supported=True,
+        multi_file_ready=True,
+        input_summary="输入：通过文件选择器选择本地 RIS / NBIB / CSV 文献导出文件，可多文件。",
+        output_summary="输出：ImportBatch summary、diagnostics JSON、warnings CSV 和 Review duplicates 下一步提示。",
+        next_step="导入成功后进入 Duplicate Review / Review duplicates。",
+        empty_state="尚未选择文件。请使用文件选择器添加 RIS / NBIB / CSV 文件。",
+        testing_limitations=(
+            "Developer Preview：该向导包装现有 parser 和 diagnostics，不是 production 导入系统。",
+            "多文件导入按路径排序逐个执行；不会自动合并、删除或修复原始文件。",
+            "拖拽是 page-state 支持能力，当前 PySide 页面仍以文件选择器为主。",
+        ),
+    )
+
+
+def preview_literature_import_files(
+    source_paths: list[str] | tuple[str, ...],
+    *,
+    import_format: str = "auto",
+) -> LiteratureImportWizardState:
+    base = initial_literature_import_wizard_state()
+    previews = tuple(_preview_file(path, requested_format=import_format) for path in _sorted_paths(source_paths))
+    warnings = tuple(preview.message for preview in previews if not preview.supported or not preview.exists)
+    current_step = "import_preview" if previews and not warnings else "file_selection"
+    return LiteratureImportWizardState(
+        **{
+            **base.__dict__,
+            "current_step": current_step,
+            "previews": previews,
+            "warnings": warnings,
+            "error_message": "; ".join(warnings),
+        }
+    )
+
+
+def execute_literature_import_wizard(
+    *,
+    project_id: str,
+    source_paths: list[str] | tuple[str, ...],
+    import_format: str = "auto",
+    source_database: str = "",
+    search_date: str = "",
+    search_strategy: str = "",
+    dedup_mode: str = "detect_only",
+    service: LiteratureBatchImportService | None = None,
+) -> LiteratureImportWizardExecutionResult:
+    service = service or LiteratureBatchImportService()
+    preview_state = preview_literature_import_files(source_paths, import_format=import_format)
+    if not source_paths:
+        state = LiteratureImportWizardState(
+            **{
+                **preview_state.__dict__,
+                "current_step": "file_selection",
+                "warnings": ("no_files_selected",),
+                "error_message": "请选择至少一个 RIS、NBIB 或 CSV 文件。",
+            }
+        )
+        return LiteratureImportWizardExecutionResult(success=False, state=state, summaries=(), message=state.error_message)
+    if preview_state.warnings:
+        return LiteratureImportWizardExecutionResult(
+            success=False,
+            state=preview_state,
+            summaries=(),
+            message=preview_state.error_message or "导入预览存在不支持或缺失文件。",
+        )
+
+    summaries: list[LiteratureBatchImportSummary] = []
+    for preview in preview_state.previews:
+        summary = service.execute_import(
+            LiteratureBatchImportRequest(
+                project_id=project_id,
+                source_path=preview.source_path,
+                import_format=import_format,
+                source_database=source_database,
+                search_date=search_date,
+                search_strategy=search_strategy,
+                dedup_mode=dedup_mode,
+            )
+        )
+        summaries.append(summary)
+        if not summary.success:
+            break
+    diagnostics_cards: list[ImportDiagnosticsCard] = []
+    warning_rows: list[ImportDiagnosticsWarningRow] = []
+    diagnostics_paths: list[str] = []
+    warnings_paths: list[str] = []
+    for summary in summaries:
+        if summary.diagnostics_path:
+            visual = import_diagnostics_visual_summary(summary.diagnostics_path, warnings_path=summary.warnings_path)
+            diagnostics_cards.extend(visual.summary_cards)
+            warning_rows.extend(visual.warning_rows)
+            diagnostics_paths.append(summary.diagnostics_path)
+            warnings_paths.append(summary.warnings_path)
+    success = bool(summaries) and all(summary.success for summary in summaries)
+    failed = [summary for summary in summaries if not summary.success]
+    state = LiteratureImportWizardState(
+        **{
+            **preview_state.__dict__,
+            "current_step": "duplicate_review_handoff" if success else "import_diagnostics",
+            "summaries": tuple(summaries),
+            "diagnostics_cards": tuple(diagnostics_cards),
+            "warning_table": tuple(warning_rows),
+            "diagnostics_export_paths": tuple(diagnostics_paths),
+            "warnings_export_paths": tuple(warnings_paths),
+            "warnings": tuple(summary.message for summary in failed),
+            "error_message": failed[0].error_message if failed else "",
+            "next_step": "Review duplicates" if success else "Fix import error and retry.",
+        }
+    )
+    message = f"Imported {len(summaries)} file(s). Next step: Review duplicates." if success else state.error_message or "Import failed."
+    return LiteratureImportWizardExecutionResult(success=success, state=state, summaries=tuple(summaries), message=message)
 
 
 def literature_import_state_from_batch_summary(
@@ -291,6 +473,62 @@ def _infer_warnings_csv_path(diagnostics_path: str) -> str:
     if diagnostics_path.endswith("_import_diagnostics.json"):
         return diagnostics_path.replace("_import_diagnostics.json", "_import_warnings.csv")
     return str(Path(diagnostics_path).with_name("import_warnings.csv"))
+
+
+def _preview_file(path_text: str, *, requested_format: str) -> LiteratureImportWizardFilePreview:
+    path = Path(path_text).expanduser()
+    detected = _detect_preview_format(path, requested_format)
+    exists = path.exists() and path.is_file()
+    supported = detected in {"ris", "nbib", "csv"} and exists
+    record_count_preview = _preview_record_count(path, detected) if supported else None
+    if not exists:
+        status = "missing"
+        message = "导入文件不存在，请检查路径。"
+    elif detected == "unknown":
+        status = "unsupported"
+        message = "无法识别导入格式，请选择 RIS、NBIB 或 CSV。"
+    else:
+        status = "ready"
+        message = "File is ready for testing import preview."
+    return LiteratureImportWizardFilePreview(
+        source_path=str(path.resolve()) if exists else str(path),
+        file_name=path.name,
+        requested_format=requested_format or "auto",
+        detected_format=detected,
+        exists=exists,
+        supported=supported,
+        record_count_preview=record_count_preview,
+        status=status,
+        message=message,
+    )
+
+
+def _detect_preview_format(path: Path, requested_format: str) -> str:
+    requested = (requested_format or "auto").strip().lower()
+    if requested in {"ris", "nbib", "csv"}:
+        return requested
+    if requested not in {"", "auto", "auto-detect", "autodetect"}:
+        return "unknown"
+    return {".ris": "ris", ".nbib": "nbib", ".csv": "csv"}.get(path.suffix.lower(), "unknown")
+
+
+def _preview_record_count(path: Path, detected_format: str) -> int:
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return 0
+    if detected_format == "ris":
+        return len([line for line in text.splitlines() if line.startswith("TY  -")]) or (1 if text.strip() else 0)
+    if detected_format == "nbib":
+        return len([line for line in text.splitlines() if line.startswith("PMID-")]) or (1 if text.strip() else 0)
+    if detected_format == "csv":
+        lines = [line for line in text.splitlines() if line.strip()]
+        return max(0, len(lines) - 1)
+    return 0
+
+
+def _sorted_paths(source_paths: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(sorted(str(path) for path in source_paths if str(path).strip()))
 
 
 def _int_value(value: object) -> int:
