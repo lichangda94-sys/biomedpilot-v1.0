@@ -219,6 +219,7 @@ if QWidget is not None:
     from app.meta_analysis.pages.reporting_page import ReportingPage
     from app.meta_analysis.pages.attachment_page import AttachmentPage
     from app.meta_analysis.pages.audit_log_page import AuditLogPage
+    from app.meta_analysis.pages.workflow_dashboard_page import WorkflowDashboardPage
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -238,6 +239,7 @@ if QWidget is not None:
             note = QLabel("业务代码边界：Meta legacy 项目保留在 app/meta_analysis/legacy/。当前页面提供步骤入口、状态说明和下一步提示。")
             note.setWordWrap(True)
             root.addWidget(note)
+            root.addWidget(WorkflowDashboardPage())
             root.addWidget(_import_quality_dashboard())
 
             scroll = QScrollArea()
