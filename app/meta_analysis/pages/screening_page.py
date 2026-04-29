@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +23,44 @@ class ScreeningPageState:
     last_result: ScreeningQueueResult | None = None
     criteria_summary_path: str = ""
     criteria_hints: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class TitleAbstractScreeningRecordView:
+    screening_record_id: str
+    record_id: str
+    title: str
+    abstract: str
+    authors: str
+    journal: str
+    year: str
+    doi: str
+    pmid: str
+    source_links: tuple[str, ...]
+    decision: str
+    exclusion_reason_text: str
+    notes: str
+
+
+@dataclass(frozen=True)
+class TitleAbstractScreeningUXState:
+    title: str
+    status_label: str
+    queue_path: str
+    current_index: int
+    current_record: TitleAbstractScreeningRecordView | None
+    previous_record_id: str
+    next_record_id: str
+    records: tuple[TitleAbstractScreeningRecordView, ...]
+    decision_options: tuple[str, ...]
+    exclusion_reason_options: tuple[str, ...]
+    criteria_hints: tuple[str, ...]
+    progress_summary: dict[str, int]
+    filter_views: tuple[str, ...]
+    output_paths: dict[str, str]
+    warnings: tuple[str, ...]
+    empty_state: str
+    testing_limitations: tuple[str, ...]
 
 
 def initial_screening_state() -> ScreeningPageState:
@@ -52,6 +92,147 @@ def screening_state_with_criteria(project_dir: Path, *, criteria_service: Criter
             + (" Criteria hints loaded from criteria_summary.md." if hints else " Criteria Builder 尚未生成；筛选仍可运行，但排除标准需人工记录。"),
         }
     )
+
+
+def title_abstract_screening_state_from_queue(
+    queue_path: Path,
+    *,
+    project_dir: Path | None = None,
+    current_index: int = 0,
+    criteria_service: CriteriaBuilderService | None = None,
+) -> TitleAbstractScreeningUXState:
+    queue_path = queue_path.expanduser().resolve()
+    project_dir = (project_dir or queue_path.parents[1] if len(queue_path.parents) > 1 else queue_path.parent).expanduser().resolve()
+    criteria_service = criteria_service or CriteriaBuilderService()
+    payload = _load_json(queue_path)
+    records = tuple(_record_view(item) for item in payload.get("screening_records", []) if isinstance(item, dict)) if isinstance(payload, dict) else ()
+    safe_index = max(0, min(current_index, len(records) - 1)) if records else 0
+    current = records[safe_index] if records else None
+    progress = _progress_summary(records)
+    warnings: list[str] = []
+    if not queue_path.exists():
+        warnings.append("missing_screening_queue")
+    if not records:
+        warnings.append("empty_screening_queue")
+    return TitleAbstractScreeningUXState(
+        title="Title / Abstract Screening",
+        status_label="Testing / Developer Preview",
+        queue_path=str(queue_path),
+        current_index=safe_index,
+        current_record=current,
+        previous_record_id=records[safe_index - 1].screening_record_id if records and safe_index > 0 else "",
+        next_record_id=records[safe_index + 1].screening_record_id if records and safe_index + 1 < len(records) else "",
+        records=records,
+        decision_options=("included", "excluded", "maybe", "needs_review", "pending"),
+        exclusion_reason_options=_exclusion_options(criteria_service.criteria_hints(project_dir, stage="title_abstract")),
+        criteria_hints=criteria_service.criteria_hints(project_dir, stage="title_abstract"),
+        progress_summary=progress,
+        filter_views=("all", "pending", "included", "excluded", "maybe", "needs_review"),
+        output_paths={
+            "title_abstract_decisions_json": str(project_dir / "screening" / "title_abstract_decisions.json"),
+            "title_abstract_decisions_csv": str(project_dir / "screening" / "title_abstract_decisions.csv"),
+            "screening_summary_json": str(project_dir / "screening" / "screening_summary.json"),
+        },
+        warnings=tuple(warnings),
+        empty_state="没有可筛选记录。请先生成 screening queue。" if not records else "",
+        testing_limitations=(
+            "needs_review 是 UI 视图标签；当前保存服务仍使用 pending/included/excluded/maybe 兼容旧格式。",
+            "本页面不删除文献；只辅助 reviewer 保存明确 screening decision。",
+        ),
+    )
+
+
+def export_title_abstract_screening_artifacts(queue_path: Path, project_dir: Path) -> dict[str, str]:
+    state = title_abstract_screening_state_from_queue(queue_path, project_dir=project_dir)
+    project_dir = project_dir.expanduser().resolve()
+    output_dir = project_dir / "screening"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    decisions_json = output_dir / "title_abstract_decisions.json"
+    decisions_csv = output_dir / "title_abstract_decisions.csv"
+    summary_json = output_dir / "screening_summary.json"
+    records_payload = [record.__dict__ for record in state.records]
+    decisions_json.write_text(json.dumps({"records": records_payload, "decision_counts": state.progress_summary}, ensure_ascii=False, indent=2), encoding="utf-8")
+    with decisions_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["screening_record_id", "record_id", "decision", "exclusion_reason_text", "notes", "title"])
+        writer.writeheader()
+        for record in state.records:
+            writer.writerow(
+                {
+                    "screening_record_id": record.screening_record_id,
+                    "record_id": record.record_id,
+                    "decision": record.decision,
+                    "exclusion_reason_text": record.exclusion_reason_text,
+                    "notes": record.notes,
+                    "title": record.title,
+                }
+            )
+    summary_json.write_text(json.dumps({"stage": "title_abstract_screening", "progress_summary": state.progress_summary, "warnings": list(state.warnings)}, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {
+        "title_abstract_decisions_json": str(decisions_json),
+        "title_abstract_decisions_csv": str(decisions_csv),
+        "screening_summary_json": str(summary_json),
+    }
+
+
+def _record_view(item: dict[str, object]) -> TitleAbstractScreeningRecordView:
+    doi = str(item.get("doi") or item.get("doi_normalized") or "")
+    pmid = str(item.get("pmid") or item.get("pmid_normalized") or "")
+    return TitleAbstractScreeningRecordView(
+        screening_record_id=str(item.get("screening_record_id", "")),
+        record_id=str(item.get("normalized_record_id") or item.get("record_id") or item.get("source_record_id") or ""),
+        title=str(item.get("title", "")),
+        abstract=str(item.get("abstract", "")),
+        authors=_join_text(item.get("authors") or item.get("authors_normalized") or item.get("authors_text")),
+        journal=str(item.get("journal") or item.get("journal_normalized") or ""),
+        year=str(item.get("year") or item.get("year_normalized") or ""),
+        doi=doi,
+        pmid=pmid,
+        source_links=tuple(link for link in (_doi_link(doi), _pmid_link(pmid)) if link),
+        decision=str(item.get("decision") or "pending"),
+        exclusion_reason_text=str(item.get("exclusion_reason_text") or ""),
+        notes=str(item.get("notes") or ""),
+    )
+
+
+def _progress_summary(records: tuple[TitleAbstractScreeningRecordView, ...]) -> dict[str, int]:
+    output = {"total": len(records), "pending": 0, "included": 0, "excluded": 0, "maybe": 0, "needs_review": 0, "screened": 0}
+    for record in records:
+        decision = record.decision if record.decision in output else "pending"
+        output[decision] += 1
+        if decision != "pending":
+            output["screened"] += 1
+    output["needs_review"] += output["maybe"]
+    return output
+
+
+def _exclusion_options(criteria_hints: tuple[str, ...]) -> tuple[str, ...]:
+    options = [hint.removeprefix("Exclude if: ").strip() for hint in criteria_hints if hint.startswith("Exclude if: ")]
+    defaults = ("wrong population", "wrong intervention or exposure", "wrong comparator", "wrong outcome", "insufficient data", "full text unavailable")
+    return tuple(dict.fromkeys([*options, *defaults]))
+
+
+def _doi_link(doi: str) -> str:
+    return f"https://doi.org/{doi}" if doi else ""
+
+
+def _pmid_link(pmid: str) -> str:
+    return f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else ""
+
+
+def _join_text(value: object) -> str:
+    if isinstance(value, list):
+        return "; ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def _load_json(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 try:
