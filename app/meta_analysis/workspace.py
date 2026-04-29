@@ -41,6 +41,7 @@ class ImportBatchQualitySummary:
     failed_record_count: int
     warning_count: int
     duplicate_candidate_count: int
+    linked_literature_record_count: int
     diagnostics_path: str
     diagnostics_summary: str = ""
 
@@ -59,6 +60,7 @@ def recent_import_batch_summaries(root_dir: Path | None = None, *, limit: int = 
     return [
         {
             "project_id": summary.project_id,
+            "batch_id": summary.batch_id,
             "source_database": summary.source_database,
             "format": summary.source_format,
             "source_format": summary.source_format,
@@ -70,6 +72,7 @@ def recent_import_batch_summaries(root_dir: Path | None = None, *, limit: int = 
             "failed_record_count": summary.failed_record_count,
             "warning_count": summary.warning_count,
             "duplicate_candidate_count": summary.duplicate_candidate_count,
+            "linked_literature_record_count": summary.linked_literature_record_count,
             "diagnostics_path": summary.diagnostics_path,
             "diagnostics_summary": summary.diagnostics_summary,
             "created_at": summary.created_at,
@@ -122,6 +125,7 @@ def _summary_from_unified_import(path: Path, payload: dict[str, object]) -> Impo
         failed_record_count=_int_from(diagnostics, "failed_record_count", 0),
         warning_count=_int_from(diagnostics, "warning_count", _int_from(payload, "warning_count", 0)),
         duplicate_candidate_count=_int_from(diagnostics, "duplicate_candidate_count", _int_from(payload, "duplicate_candidate_count", 0)),
+        linked_literature_record_count=len(records),
         diagnostics_path=diagnostics_path,
         diagnostics_summary=_diagnostics_summary_text(diagnostics),
     )
@@ -151,6 +155,7 @@ def _legacy_import_batch_summaries(root: Path) -> list[ImportBatchQualitySummary
                 failed_record_count=_int_from(item, "failed_records", _int_from(item, "failed_record_count", 0)),
                 warning_count=_int_from(item, "warning_count", _int_from(diagnostics, "warning_count", 0)),
                 duplicate_candidate_count=_int_from(item, "duplicate_candidate_count", _int_from(diagnostics, "duplicate_candidate_count", 0)),
+                linked_literature_record_count=_int_from(item, "normalized_record_count", _int_from(item, "imported_records", 0)),
                 diagnostics_path=str(diagnostics_path) if diagnostics_path.exists() else "",
                 diagnostics_summary=_diagnostics_summary_text(diagnostics),
             )
@@ -300,6 +305,7 @@ if QWidget is not None:
                         f"Source: {batch.source_database} / {batch.source_format} / {batch.status}",
                         f"Created: {batch.created_at}",
                         f"Counts: raw={batch.raw_record_count}, parsed={batch.parsed_record_count}, normalized={batch.normalized_record_count}, failed={batch.failed_record_count}, warnings={batch.warning_count}",
+                        f"Linked literature records: {batch.linked_literature_record_count}",
                         f"Duplicate candidates: {batch.duplicate_candidate_count}",
                         f"Diagnostics: {batch.diagnostics_path or 'not generated'}",
                         f"Summary: {batch.diagnostics_summary or 'no diagnostics warnings'}",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,12 +38,15 @@ class AttachmentPageState:
     warning_summary: str
     mode_options: tuple[str, ...]
     attachment_registry_path: str = ""
+    attachment_registry_missing: bool = False
+    attachment_registry_warning: str = ""
     missing_fulltext_report_path: str = ""
     attachment_count: int = 0
     pdf_attachment_count: int = 0
     link_attachment_count: int = 0
     copy_attachment_count: int = 0
     ignore_attachment_count: int = 0
+    missing_attachment_count: int = 0
     broken_path_count: int = 0
     missing_fulltext_report_status: str = "not_generated"
     missing_fulltext_count: int = 0
@@ -75,6 +79,7 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
     project_dir = project_dir.expanduser().resolve()
     attachments = service.list_attachments(project_dir)
     registry_path = project_dir / "attachments" / "attachment_registry.json"
+    raw_registry = _load_attachment_registry(registry_path)
     fulltext_registry_path = project_dir / "fulltext" / "fulltext_registry.json"
     missing_path = project_dir / "reports" / "missing_fulltext_report.csv"
     attachment_rows = tuple(
@@ -105,12 +110,15 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
         warning_summary=base.warning_summary,
         mode_options=base.mode_options,
         attachment_registry_path=str(registry_path),
+        attachment_registry_missing=not registry_path.exists(),
+        attachment_registry_warning="" if registry_path.exists() else "attachment_registry.json 尚未生成；当前仅显示空状态，不影响后续手动 link/copy 附件。",
         missing_fulltext_report_path=str(missing_path),
         attachment_count=len(attachments),
         pdf_attachment_count=len([row for row in attachment_rows if row.attachment_type == "pdf"]),
         link_attachment_count=len([row for row in attachment_rows if row.storage_mode == "link_existing_files"]),
         copy_attachment_count=len([row for row in attachment_rows if row.storage_mode == "copy_to_project_library"]),
-        ignore_attachment_count=0,
+        ignore_attachment_count=_ignored_attachment_count(raw_registry),
+        missing_attachment_count=len([row for row in attachment_rows if not row.file_exists]),
         broken_path_count=broken_path_count,
         missing_fulltext_report_status=missing_report_status,
         missing_fulltext_count=len([row for row in missing_rows if row.missing_fulltext]),
@@ -169,6 +177,33 @@ def _fulltext_record_count(fulltext_registry_path: Path) -> int:
         return 0
     records = payload.get("fulltext_files")
     return len(records) if isinstance(records, list) else 0
+
+
+def _load_attachment_registry(registry_path: Path) -> dict[str, object]:
+    if not registry_path.exists():
+        return {}
+    try:
+        payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _ignored_attachment_count(registry_payload: dict[str, object]) -> int:
+    ignored = registry_payload.get("ignored_attachments")
+    if isinstance(ignored, list):
+        return len(ignored)
+    attachments = registry_payload.get("attachments")
+    if not isinstance(attachments, list):
+        return 0
+    return len(
+        [
+            item
+            for item in attachments
+            if isinstance(item, dict)
+            and str(item.get("storage_mode") or item.get("mode") or "").strip() == "ignore_attachments"
+        ]
+    )
 
 
 def _validation_status(attachment_count: int, broken_path_count: int) -> str:
@@ -306,6 +341,7 @@ if QWidget is not None:
             ) or "无"
             self._summary_label.setText(
                 f"attachment_registry：{state.attachment_registry_path}\n"
+                f"attachment_registry_warning：{state.attachment_registry_warning or '无'}\n"
                 f"fulltext_registry：{state.fulltext_registry_path}\n"
                 f"missing_fulltext_report：{state.missing_fulltext_report_path}\n"
                 f"missing_fulltext_report_status：{state.missing_fulltext_report_status}\n"
@@ -313,7 +349,7 @@ if QWidget is not None:
                 f"附件数量：{state.attachment_count}\n"
                 f"Full-text 记录：{state.fulltext_record_count}\n"
                 f"PDF 附件：{state.pdf_attachment_count}\n"
-                f"link / copy / ignore：{state.link_attachment_count} / {state.copy_attachment_count} / {state.ignore_attachment_count}\n"
+                f"link / copy / ignore / missing：{state.link_attachment_count} / {state.copy_attachment_count} / {state.ignore_attachment_count} / {state.missing_attachment_count}\n"
                 f"broken path：{state.broken_path_count}\n"
                 f"缺失 full-text：{state.missing_fulltext_count}\n"
                 f"文件状态：\n" + attachment_rows

@@ -26,6 +26,13 @@ class DuplicateFieldDifference:
 
 
 @dataclass(frozen=True)
+class DuplicateFieldConflictSummary:
+    field_name: str
+    values_by_record_id: tuple[tuple[str, str], ...]
+    selected_record_id: str
+
+
+@dataclass(frozen=True)
 class MergePreviewSummary:
     available: bool
     group_id: str = ""
@@ -77,6 +84,7 @@ class DuplicateReviewPageState:
     duplicate_review_queue_export_path: str = ""
     current_group_records: tuple[DuplicateRecordSummary, ...] = ()
     field_differences: tuple[DuplicateFieldDifference, ...] = ()
+    field_conflict_summary: tuple[DuplicateFieldConflictSummary, ...] = ()
     merge_preview_summary: MergePreviewSummary = MergePreviewSummary(False)
     interactive_decision_options: tuple[str, ...] = ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")
     interaction_warning: str = "Merge 决策必须先生成 merge preview；当前不会执行批量合并。"
@@ -108,7 +116,8 @@ def duplicate_review_state_from_groups(
     current_group = groups[current_index] if groups and 0 <= current_index < len(groups) else None
     match_reasons = tuple(_split_match_reasons(current_group.match_reason if current_group else ""))
     differences = tuple(_field_differences(current_group.records if current_group else []))
-    conflicts = tuple(item.field_name for item in differences)
+    conflict_summary = tuple(_field_conflict_summary(differences, merge_preview))
+    conflicts = tuple(_compatible_conflict_names(conflict_summary))
     group_summaries = tuple(_group_summary(group) for group in groups)
     return DuplicateReviewPageState(
         title="文献去重",
@@ -135,6 +144,7 @@ def duplicate_review_state_from_groups(
         duplicate_review_queue_export_path=duplicate_review_queue_export_path,
         current_group_records=tuple(_record_summary(record) for record in (current_group.records if current_group else [])),
         field_differences=differences,
+        field_conflict_summary=conflict_summary,
         merge_preview_summary=_merge_preview_summary(merge_preview),
     )
 
@@ -170,16 +180,62 @@ def _split_match_reasons(value: str) -> list[str]:
 
 def _field_differences(records: list[dict[str, object]]) -> list[DuplicateFieldDifference]:
     differences: list[DuplicateFieldDifference] = []
-    for field_name in ("title", "abstract", "authors", "creators", "journal", "doi", "pmid", "publication_type"):
+    for field_name, aliases in (
+        ("title", ("title",)),
+        ("abstract", ("abstract",)),
+        ("authors", ("authors", "authors_text")),
+        ("creators", ("creators",)),
+        ("creators/authors", ("creators", "authors", "authors_text")),
+        ("year/date", ("year", "date")),
+        ("journal/publication_title", ("journal", "publication_title")),
+        ("doi", ("doi",)),
+        ("pmid", ("pmid",)),
+        ("clinical_trials_ids", ("clinical_trials_ids",)),
+    ):
         values_by_record = tuple(
-            (str(record.get("record_id", "")), _stable_value(record.get(field_name)))
+            (str(record.get("record_id", "")), _stable_value(_first_present_value(record, aliases)))
             for record in records
-            if record.get(field_name) not in ("", None, [])
+            if _first_present_value(record, aliases) not in ("", None, [])
         )
         values = {value for _record_id, value in values_by_record}
         if len(values) > 1:
             differences.append(DuplicateFieldDifference(field_name=field_name, values_by_record_id=values_by_record))
     return differences
+
+
+def _field_conflict_summary(
+    differences: tuple[DuplicateFieldDifference, ...],
+    preview: MergePreview | None,
+) -> list[DuplicateFieldConflictSummary]:
+    summaries: list[DuplicateFieldConflictSummary] = []
+    for item in differences:
+        selected = ""
+        if preview is not None:
+            selected = str(preview.field_sources.get(_source_field_for_conflict(item.field_name), ""))
+        summaries.append(
+            DuplicateFieldConflictSummary(
+                field_name=item.field_name,
+                values_by_record_id=item.values_by_record_id,
+                selected_record_id=selected,
+            )
+        )
+    return summaries
+
+
+def _compatible_conflict_names(conflicts: tuple[DuplicateFieldConflictSummary, ...]) -> list[str]:
+    names: list[str] = []
+    for item in conflicts:
+        names.append(item.field_name)
+        if item.field_name == "creators/authors":
+            names.append("authors")
+            names.append("creators")
+        if item.field_name == "year/date":
+            names.append("year")
+            names.append("date")
+        if item.field_name == "journal/publication_title":
+            names.append("journal")
+            names.append("publication_title")
+    return list(dict.fromkeys(names))
 
 
 def _record_summary(record: dict[str, object]) -> DuplicateRecordSummary:
@@ -215,6 +271,22 @@ def _stable_value(value: object) -> str:
     if isinstance(value, list):
         return "|".join(str(item) for item in value)
     return str(value)
+
+
+def _first_present_value(record: dict[str, object], aliases: tuple[str, ...]) -> object:
+    for alias in aliases:
+        value = record.get(alias)
+        if value not in ("", None, []):
+            return value
+    return ""
+
+
+def _source_field_for_conflict(field_name: str) -> str:
+    return {
+        "creators/authors": "creators",
+        "year/date": "year",
+        "journal/publication_title": "journal",
+    }.get(field_name, field_name)
 
 
 def _canonical_candidate_id(preview: MergePreview | None, group: DuplicateGroup | None) -> str:
@@ -436,6 +508,11 @@ if QWidget is not None:
                 + "; ".join(f"{record_id}={value}" for record_id, value in item.values_by_record_id)
                 for item in self._state.field_differences
             ]
+            field_conflict_rows = [
+                f"- {item.field_name}: selected={item.selected_record_id or '未指定'}; "
+                + "; ".join(f"{record_id}={value}" for record_id, value in item.values_by_record_id)
+                for item in self._state.field_conflict_summary
+            ]
             lines = [
                 f"重复候选组总数：{self._state.duplicate_group_count}",
                 f"exact duplicate groups：{self._state.exact_duplicate_group_count}",
@@ -451,6 +528,8 @@ if QWidget is not None:
                 f"状态：{group.status}",
                 f"canonical candidate：{self._state.canonical_candidate_id or '待确认'}",
                 f"field conflicts：{', '.join(self._state.field_conflicts) or '无'}",
+                "字段冲突摘要：",
+                *(field_conflict_rows or ["- 无"]),
                 "字段差异：",
                 *(field_difference_rows or ["- 无"]),
             ]
