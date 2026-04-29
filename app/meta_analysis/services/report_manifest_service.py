@@ -51,7 +51,7 @@ class ReportManifestService:
                     "quality/quality_summary.md",
                 ],
             ),
-            self._section(project_dir, "analysis", "Analysis summary", ["analysis/analysis_ready_datasets.json", "analysis/analysis_results.json"]),
+            self._analysis_section(project_dir),
             self._section(project_dir, "figures", "Figures and result tables", ["figures/figure_artifacts.json"], generated_outputs=_matching_outputs(project_dir, ("figures/forest_plot_*.png", "figures/funnel_plot_*.png", "exports/analysis_result_table_*.csv"))),
             self._section(project_dir, "prisma", "PRISMA summary", ["reports/prisma_flow_summary.json", "reports/prisma_flow_summary.md"]),
             self._section(project_dir, "exports", "Publication exports", ["reports/formal_meta_report.md", "reports/formal_meta_report.html", "reports/formal_meta_report.docx", "exports/supplementary/manifest.json"]),
@@ -97,6 +97,26 @@ class ReportManifestService:
             status=status,
             source_artifacts=source_artifacts,
             generated_outputs=generated_outputs or [],
+            warnings=warnings,
+        )
+
+    def _analysis_section(self, project_dir: Path) -> ReportSectionManifest:
+        required = ["analysis/analysis_ready_datasets.json", "analysis/analysis_results.json"]
+        optional = [
+            "analysis/analysis_plan.json",
+            "analysis/analysis_ready_dataset.json",
+            "analysis/analysis_result.json",
+            "analysis/applicability_warnings.json",
+        ]
+        missing_required = [artifact for artifact in required if not _artifact_exists(project_dir / artifact)]
+        missing_optional = [artifact for artifact in optional if not _artifact_exists(project_dir / artifact)]
+        warnings = [f"report_section_source_missing:analysis:{artifact}" for artifact in missing_required]
+        warnings.extend(f"report_section_optional_source_missing:analysis:{artifact}" for artifact in missing_optional)
+        return ReportSectionManifest(
+            section_id="analysis",
+            title="Analysis summary",
+            status="available" if not missing_required else "missing",
+            source_artifacts=[*required, *optional],
             warnings=warnings,
         )
 

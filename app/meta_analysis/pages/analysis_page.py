@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from app.meta_analysis.models.analysis_result import AnalysisResult
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_run_service import AnalysisRunService
+from app.meta_analysis.services.analysis_setup_service import BLOCKED_ADVANCED_METHODS, AnalysisSetupService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
 from app.meta_analysis.services.figure_result_service import FigureResultService
 from app.shared.feature_availability import get_feature
@@ -88,6 +90,30 @@ class AnalysisPageState:
     )
 
 
+@dataclass(frozen=True)
+class AnalysisSetupPageState:
+    title: str
+    status_label: str
+    description: str
+    setup_inputs: tuple[str, ...]
+    model_options: tuple[str, ...]
+    zero_event_correction_options: tuple[str, ...]
+    subgroup_options: tuple[str, ...]
+    available_outcomes: tuple[dict[str, object], ...]
+    selected_plan_path: str
+    analysis_ready_dataset_path: str
+    analysis_result_path: str
+    applicability_warnings_path: str
+    preflight_summary: dict[str, object]
+    run_result_summary: dict[str, object]
+    advanced_method_status: dict[str, str]
+    warnings: tuple[str, ...]
+    errors: tuple[str, ...]
+    empty_state: str
+    next_step: str
+    testing_limitations: tuple[str, ...]
+
+
 def initial_analysis_state() -> AnalysisPageState:
     feature = get_feature("meta-analysis")
     return AnalysisPageState(
@@ -102,6 +128,110 @@ def initial_analysis_state() -> AnalysisPageState:
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=tuple(item.value for item in OutcomeDataType),
     )
+
+
+def analysis_setup_state_from_project(
+    project_dir: Path,
+    *,
+    service: AnalysisSetupService | None = None,
+) -> AnalysisSetupPageState:
+    project_dir = project_dir.expanduser().resolve()
+    setup_service = service or AnalysisSetupService()
+    warnings: list[str] = ["analysis_setup_developer_preview"]
+    errors: list[str] = []
+    try:
+        available_outcomes = tuple(setup_service.list_available_outcomes(project_dir))
+    except Exception as exc:
+        available_outcomes = ()
+        warnings.append(f"available_outcomes_unavailable:{exc}")
+    plan_path = project_dir / "analysis" / "analysis_plan.json"
+    dataset_path = project_dir / "analysis" / "analysis_ready_dataset.json"
+    result_path = project_dir / "analysis" / "analysis_result.json"
+    warnings_path = project_dir / "analysis" / "applicability_warnings.json"
+    preflight_summary = _analysis_alias_summary(dataset_path, "dataset")
+    run_result_summary = _analysis_alias_summary(result_path, "result")
+    if not plan_path.exists():
+        warnings.append("analysis_plan_missing")
+    if not dataset_path.exists():
+        warnings.append("analysis_ready_dataset_alias_missing")
+    if not result_path.exists():
+        warnings.append("analysis_result_alias_missing")
+    if warnings_path.exists():
+        payload = _load_json(warnings_path)
+        warnings.extend(str(item) for item in payload.get("warnings", []) if item)
+        errors.extend(str(item) for item in payload.get("errors", []) if item)
+    return AnalysisSetupPageState(
+        title="Analysis Setup / 统计设置与适用性解释",
+        status_label="测试中 / Developer Preview",
+        description="用于把 Analysis-ready dataset、基础 Meta 统计运行和 applicability warnings 串成 setup → run → explain 流程。",
+        setup_inputs=("profile_type", "outcome_name", "effect_measure", "model", "zero_event_correction", "subgroup_variable"),
+        model_options=("fixed", "random"),
+        zero_event_correction_options=("continuity_0.5", "none"),
+        subgroup_options=_available_subgroup_options(available_outcomes),
+        available_outcomes=available_outcomes,
+        selected_plan_path=str(plan_path),
+        analysis_ready_dataset_path=str(dataset_path),
+        analysis_result_path=str(result_path),
+        applicability_warnings_path=str(warnings_path),
+        preflight_summary=preflight_summary,
+        run_result_summary=run_result_summary,
+        advanced_method_status={
+            "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
+            "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
+            "meta_regression": BLOCKED_ADVANCED_METHODS["meta_regression"],
+        },
+        warnings=tuple(_dedupe(warnings)),
+        errors=tuple(_dedupe(errors)),
+        empty_state="没有 extraction_records 或可匹配 outcome 时显示 warning，不静默运行统计。",
+        next_step="运行通过后进入 Figures / Tables；若存在 blocking errors，先回到 Extraction 或 Analysis Setup 修正。",
+        testing_limitations=(
+            "Network Meta not implemented.",
+            "Diagnostic HSROC not implemented.",
+            "Meta-regression not implemented.",
+            "Developer Preview 统计结果需要人工复核后才能用于正式研究。",
+        ),
+    )
+
+
+def _analysis_alias_summary(path: Path, payload_key: str) -> dict[str, object]:
+    if not path.exists():
+        return {"status": "missing", "path": str(path)}
+    payload = _load_json(path)
+    inner = payload.get(payload_key, {}) if isinstance(payload, dict) else {}
+    if not isinstance(inner, dict):
+        inner = {}
+    return {
+        "status": "available",
+        "path": str(path),
+        "id": str(inner.get("dataset_id") or inner.get("result_id") or ""),
+        "outcome_name": str(inner.get("outcome_name", "")),
+        "effect_measure": str(inner.get("effect_measure", "")),
+        "model": str(inner.get("model", "")),
+        "warnings": inner.get("warnings", []),
+        "errors": inner.get("validation_errors", []),
+    }
+
+
+def _available_subgroup_options(available_outcomes: tuple[dict[str, object], ...]) -> tuple[str, ...]:
+    if not available_outcomes:
+        return ("subgroup", "country", "study_design")
+    return ("subgroup", "country", "study_design", "none")
+
+
+def _load_json(path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    result: list[str] = []
+    for item in items:
+        if item and item not in result:
+            result.append(item)
+    return result
 
 
 try:

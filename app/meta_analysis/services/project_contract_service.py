@@ -49,8 +49,12 @@ CANONICAL_PROJECT_PATHS: dict[str, str] = {
     "quality_assessment_table": "exports/quality_assessment_table.csv",
     "quality_table": "quality/quality_table.csv",
     "quality_summary": "quality/quality_summary.md",
+    "analysis_plan": "analysis/analysis_plan.json",
     "analysis_ready_dataset": "analysis/analysis_ready_datasets.json",
+    "analysis_ready_dataset_alias": "analysis/analysis_ready_dataset.json",
     "analysis_result": "analysis/analysis_results.json",
+    "analysis_result_alias": "analysis/analysis_result.json",
+    "applicability_warnings": "analysis/applicability_warnings.json",
     "figure_artifacts": "figures/figure_artifacts.json",
     "formal_report": "reports/formal_meta_report.md",
     "report_manifest": "reports/report_manifest.json",
@@ -194,8 +198,12 @@ class MetaProjectContractService:
             _lineage_item("criteria_to_protocol", "criteria/criteria_summary.md", "protocol/review_protocol.json", available),
             _lineage_item("fulltext_eligibility_to_screening", "fulltext/fulltext_eligibility_decisions.json", "screening/title_abstract_decisions.json", available),
             _lineage_item("final_included_to_fulltext_eligibility", "fulltext/final_included_studies.json", "fulltext/fulltext_eligibility_decisions.json", available),
+            _lineage_item("analysis_plan_to_extraction_records", "analysis/analysis_plan.json", "extraction/extraction_records.json", available),
             _lineage_item("analysis_result_to_dataset", "analysis/analysis_results.json", "analysis/analysis_ready_datasets.json", available),
+            _lineage_item("analysis_result_alias_to_result_set", "analysis/analysis_result.json", "analysis/analysis_results.json", available),
             _lineage_item("analysis_ready_dataset_to_extraction_records", "analysis/analysis_ready_datasets.json", "extraction/extraction_records.json", available),
+            _lineage_item("analysis_ready_dataset_alias_to_dataset_set", "analysis/analysis_ready_dataset.json", "analysis/analysis_ready_datasets.json", available),
+            _lineage_item("applicability_warnings_to_analysis_plan", "analysis/applicability_warnings.json", "analysis/analysis_plan.json", available),
             _lineage_item("extraction_records_to_literature", "extraction/extraction_records.json", "screening/screening_decisions.json", available),
             _lineage_item("figure_to_analysis_result", "figures/figure_artifacts.json", "analysis/analysis_results.json", available),
             _lineage_item("report_to_artifacts", "reports/formal_meta_report.md", "reports/report_manifest.json", available),
@@ -233,6 +241,14 @@ def _artifact_type(path: Path) -> str:
         return "exclusion_criteria"
     if name == "criteria_summary.md":
         return "criteria_summary"
+    if name == "analysis_plan.json":
+        return "analysis_plan"
+    if name == "analysis_ready_dataset.json":
+        return "analysis_ready_dataset_alias"
+    if name == "analysis_result.json":
+        return "analysis_result_alias"
+    if name == "applicability_warnings.json":
+        return "applicability_warnings"
     if name == "report_manifest.json":
         return "report_manifest"
     if name.startswith("forest_plot_"):
@@ -260,8 +276,16 @@ def _source_reference(relative_path: Path) -> str:
         return "screening/title_abstract_decisions.json"
     if text.startswith("analysis/analysis_results"):
         return "analysis/analysis_ready_datasets.json"
+    if text.startswith("analysis/analysis_result.json"):
+        return "analysis/analysis_results.json"
     if text.startswith("analysis/analysis_ready_datasets"):
         return "extraction/extraction_records.json"
+    if text.startswith("analysis/analysis_ready_dataset.json"):
+        return "analysis/analysis_ready_datasets.json"
+    if text.startswith("analysis/analysis_plan"):
+        return "extraction/extraction_records.json"
+    if text.startswith("analysis/applicability_warnings"):
+        return "analysis/analysis_plan.json"
     if text.startswith("extraction/manual_edits_log"):
         return "extraction/extraction_records.json"
     if text.startswith("quality/quality_summary") or text.startswith("quality/quality_table") or text.startswith("quality/quality_assessment"):
