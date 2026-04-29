@@ -87,6 +87,19 @@ class LiteratureImportPageState:
 
 
 @dataclass(frozen=True)
+class LiteratureImportUIPanelState:
+    title: str
+    status_label: str
+    sections: tuple[str, ...]
+    primary_action: str
+    next_action: str
+    diagnostics_fields: tuple[str, ...]
+    recent_batch_fields: tuple[str, ...]
+    empty_state: str
+    testing_limitations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class LiteratureImportWizardFilePreview:
     source_path: str
     file_name: str
@@ -183,6 +196,41 @@ def initial_literature_import_wizard_state() -> LiteratureImportWizardState:
             "多文件导入按路径排序逐个执行；不会自动合并、删除或修复原始文件。",
             "拖拽是 page-state 支持能力，当前 PySide 页面仍以文件选择器为主。",
         ),
+    )
+
+
+def literature_import_ui_panel_state() -> LiteratureImportUIPanelState:
+    base = initial_literature_import_state()
+    return LiteratureImportUIPanelState(
+        title="Literature Import UI Panel",
+        status_label=base.status_label,
+        sections=(
+            "file_picker",
+            "import_metadata",
+            "import_result_summary",
+            "diagnostics_summary_cards",
+            "warning_table",
+            "failed_records_preview",
+            "recent_import_batches",
+            "next_step",
+        ),
+        primary_action="Import selected RIS / NBIB / CSV file",
+        next_action="Review duplicates",
+        diagnostics_fields=tuple(key for key, _label in _DIAGNOSTICS_CARD_FIELDS),
+        recent_batch_fields=(
+            "batch_id",
+            "source_database",
+            "source_format",
+            "raw_record_count",
+            "parsed_record_count",
+            "normalized_record_count",
+            "failed_record_count",
+            "warning_count",
+            "duplicate_candidate_count",
+            "diagnostics_path",
+        ),
+        empty_state=base.empty_state,
+        testing_limitations=base.testing_limitations,
     )
 
 
@@ -623,6 +671,34 @@ if QWidget is not None:
             summary_layout.addWidget(self._summary_label)
             root.addWidget(self._summary_card)
 
+            self._diagnostics_card = _panel_frame("Import diagnostics summary")
+            diagnostics_layout = self._diagnostics_card.layout()
+            self._diagnostics_label = QLabel("导入后显示 missing title / author / year / DOI / PMID、invalid DOI/year 等统计。")
+            self._diagnostics_label.setWordWrap(True)
+            diagnostics_layout.addWidget(self._diagnostics_label)
+            root.addWidget(self._diagnostics_card)
+
+            self._warning_card = _panel_frame("Warning table")
+            warning_layout = self._warning_card.layout()
+            self._warning_label = QLabel("导入后显示 warning severity 和需要人工复核的字段质量问题。")
+            self._warning_label.setWordWrap(True)
+            warning_layout.addWidget(self._warning_label)
+            root.addWidget(self._warning_card)
+
+            self._failed_card = _panel_frame("Failed records preview")
+            failed_layout = self._failed_card.layout()
+            self._failed_label = QLabel("导入后显示 failed record examples；缺 diagnostics 时显示 warning，不崩溃。")
+            self._failed_label.setWordWrap(True)
+            failed_layout.addWidget(self._failed_label)
+            root.addWidget(self._failed_card)
+
+            self._recent_card = _panel_frame("Recent Import Batches")
+            recent_layout = self._recent_card.layout()
+            self._recent_label = QLabel(_recent_batches_text())
+            self._recent_label.setWordWrap(True)
+            recent_layout.addWidget(self._recent_label)
+            root.addWidget(self._recent_card)
+
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
             self._error_label.setStyleSheet("color: #B42318;")
@@ -664,6 +740,7 @@ if QWidget is not None:
                     f"failed records preview：\n{failed}\n"
                     f"输出：{result.output_path}"
                 )
+                self._render_diagnostics_panels()
                 self._error_label.setText("")
             else:
                 self._status_label.setText("导入状态：失败")
@@ -705,13 +782,90 @@ if QWidget is not None:
                     f"Warning table：\n{warning_rows}\n"
                     f"下一步：{summary.next_step}"
                 )
+                self._render_diagnostics_panels()
                 self._error_label.setText("")
             else:
                 self._status_label.setText("导入状态：失败")
                 self._summary_label.setText("没有生成 ImportBatch。")
                 self._error_label.setText(summary.message if not summary.error_message else f"{summary.message}\n{summary.error_message}")
 
+
+        def _render_diagnostics_panels(self) -> None:
+            self._diagnostics_label.setText(_diagnostics_cards_text(self._state))
+            self._warning_label.setText(_warning_rows_text(self._state))
+            self._failed_label.setText(_failed_preview_text(self._state))
+            self._recent_label.setText(_recent_batches_text(self._state))
+
 else:
 
     class LiteratureImportPage:  # type: ignore[no-redef]
         pass
+
+
+def _panel_frame(title: str) -> QFrame:
+    frame = QFrame()
+    frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+    layout = QVBoxLayout(frame)
+    label = QLabel(title)
+    label.setStyleSheet("font-weight: 700;")
+    layout.addWidget(label)
+    return frame
+
+
+def _diagnostics_cards_text(state: LiteratureImportPageState) -> str:
+    if state.missing_diagnostics:
+        return f"Diagnostics missing: {state.diagnostics_export_path or 'not generated'}"
+    lines = [f"Total warnings: {state.total_warning_count}"]
+    lines.extend(f"{card.label}: {card.value}" for card in state.diagnostics_cards)
+    lines.append(f"Diagnostics path: {state.diagnostics_export_path or 'not generated'}")
+    lines.append(f"Warnings CSV: {state.warnings_export_path or 'not generated'}")
+    return "\n".join(lines)
+
+
+def _warning_rows_text(state: LiteratureImportPageState) -> str:
+    if not state.warning_table:
+        return "No import warning rows yet."
+    lines = []
+    for row in state.warning_table:
+        lines.append(f"[{row.severity}] {row.label}: {row.count} - {row.message}")
+    if state.warning_severity_counts:
+        counts = ", ".join(f"{key}={value}" for key, value in sorted(state.warning_severity_counts.items()))
+        lines.append(f"Severity counts: {counts}")
+    return "\n".join(lines)
+
+
+def _failed_preview_text(state: LiteratureImportPageState) -> str:
+    if not state.failed_records_preview and not state.warning_list:
+        return "No failed records or parse warning examples yet."
+    lines = []
+    if state.failed_records_preview:
+        lines.append("Failed records:")
+        lines.extend(f"- {item}" for item in state.failed_records_preview)
+    if state.warning_list:
+        lines.append("Parse warnings:")
+        lines.extend(f"- {item}" for item in state.warning_list)
+    return "\n".join(lines)
+
+
+def _recent_batches_text(state: LiteratureImportPageState | None = None) -> str:
+    batches = state.recent_import_batches if state is not None and state.recent_import_batches else ()
+    if not batches:
+        return "No recent import batches found. Import a RIS / NBIB / CSV file to populate this panel."
+    lines = []
+    for batch in batches[:5]:
+        lines.append(
+            " | ".join(
+                [
+                    f"batch={batch.get('batch_id', '')}",
+                    f"source={batch.get('source_database', '')}",
+                    f"format={batch.get('source_format') or batch.get('format', '')}",
+                    f"raw={batch.get('raw_record_count', 0)}",
+                    f"parsed={batch.get('parsed_record_count') or batch.get('parsed_count', 0)}",
+                    f"normalized={batch.get('normalized_record_count', 0)}",
+                    f"failed={batch.get('failed_record_count', 0)}",
+                    f"warnings={batch.get('warning_count', 0)}",
+                    f"duplicates={batch.get('duplicate_candidate_count', 0)}",
+                ]
+            )
+        )
+    return "\n".join(lines)
