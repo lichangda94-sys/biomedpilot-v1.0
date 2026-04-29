@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from app.meta_analysis.adapters.literature_import_adapter import LiteratureImportAdapter
+from app.meta_analysis.adapters.literature_import_adapter import LiteratureImportAdapter, _legacy_path
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -37,11 +38,13 @@ class LiteratureImportService:
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._adapter = adapter or LiteratureImportAdapter()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def import_file(self, *, project_id: str, source_path: str) -> ImportResult:
         validation_error = self._validate_source_path(source_path)
@@ -65,8 +68,18 @@ class LiteratureImportService:
 
         path = Path(source_path).expanduser().resolve()
         try:
+            project_dir = self._project_dir(project_id)
             adapter_result = self._adapter.parse_file(path, project_id, source_type)
-            output_path = self._write_output(project_id, adapter_result.batch_id, path, source_type, adapter_result.records)
+            self._audit_log.record_event(
+                project_dir,
+                event_type="import_batch_created",
+                project_id=project_id,
+                target_type="import_batch",
+                target_id=adapter_result.batch_id,
+                source_path=str(path),
+                summary=f"Import batch created for {source_type}",
+            )
+            output_path, diagnostics_paths, warning_count = self._write_output(project_id, adapter_result.batch_id, path, source_type, adapter_result.records)
             result = ImportResult(
                 success=True,
                 source_path=str(path),
@@ -80,6 +93,9 @@ class LiteratureImportService:
                 details={
                     "batch_id": adapter_result.batch_id,
                     "preview_titles": [record.title for record in adapter_result.records[:5]],
+                    "diagnostics_path": str(diagnostics_paths[0]),
+                    "warnings_path": str(diagnostics_paths[1]),
+                    "warning_count": warning_count,
                 },
             )
             self._data_center.register_asset(
@@ -91,6 +107,16 @@ class LiteratureImportService:
                 status="available",
             )
             self._finish_task(task, result)
+            self._audit_log.record_event(
+                project_dir,
+                event_type="record_saved",
+                project_id=project_id,
+                target_type="literature_records",
+                target_id=adapter_result.batch_id,
+                source_path=str(path),
+                output_path=str(output_path),
+                summary=f"Saved {len(adapter_result.records)} literature records.",
+            )
             return result
         except Exception as exc:
             result = ImportResult(
@@ -160,18 +186,85 @@ class LiteratureImportService:
         source_path: Path,
         source_type: str,
         records: list[object],
-    ) -> Path:
+    ) -> tuple[Path, tuple[Path, Path], int]:
         output_dir = self._storage_root / "projects" / project_id / "meta_analysis" / "literature_import"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"{batch_id}_records.json"
+        project_dir = self._project_dir(project_id)
+        serialized = []
+        removed_fields: list[str] = []
+        with _legacy_path():
+            from literature.field_sanitizer import LiteratureFieldSanitizer
+            from literature.import_diagnostics import build_import_diagnostics, write_import_diagnostics
+
+            sanitizer = LiteratureFieldSanitizer()
+            for record in records:
+                payload = asdict(record)
+                sanitized = sanitizer.sanitize_import_payload(payload)
+                removed_fields.extend(sanitized.removed_fields)
+                record_payload = dict(sanitized.sanitized)
+                record_payload["record_id"] = payload.get("record_id", "")
+                record_payload["project_id"] = project_id
+                record_payload["batch_id"] = batch_id
+                record_payload["source"] = source_type
+                serialized.append(record_payload)
+                self._audit_log.record_event(
+                    project_dir,
+                    event_type="record_parsed",
+                    project_id=project_id,
+                    target_type="literature_record",
+                    target_id=str(payload.get("record_id", "")),
+                    source_path=str(source_path),
+                    summary="Literature record parsed.",
+                )
+                if sanitized.removed_fields:
+                    self._audit_log.record_event(
+                        project_dir,
+                        event_type="field_sanitized",
+                        project_id=project_id,
+                        target_type="literature_record",
+                        target_id=str(payload.get("record_id", "")),
+                        source_path=str(source_path),
+                        summary="Import fields sanitized.",
+                        details={"removed_fields": sanitized.removed_fields},
+                    )
+                self._audit_log.record_event(
+                    project_dir,
+                    event_type="record_normalized",
+                    project_id=project_id,
+                    target_type="literature_record",
+                    target_id=str(payload.get("record_id", "")),
+                    source_path=str(source_path),
+                    summary="Literature record normalized.",
+                )
+            diagnostics = build_import_diagnostics(batch_id, serialized)
+            diagnostics_paths = write_import_diagnostics(project_dir, diagnostics)
         payload = {
             "project_id": project_id,
             "batch_id": batch_id,
             "source_path": str(source_path),
             "source_type": source_type,
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "records": [asdict(record) for record in records],
+            "diagnostics_path": str(diagnostics_paths[0]),
+            "warnings_path": str(diagnostics_paths[1]),
+            "warning_count": diagnostics.warning_count,
+            "duplicate_candidate_count": diagnostics.duplicate_candidate_count,
+            "removed_import_fields": sorted(set(removed_fields)),
+            "records": serialized,
         }
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        return output_path
+        self._audit_log.record_event(
+            project_dir,
+            event_type="diagnostics_generated",
+            project_id=project_id,
+            target_type="import_diagnostics",
+            target_id=batch_id,
+            source_path=str(source_path),
+            output_path=str(diagnostics_paths[0]),
+            summary="Import diagnostics generated.",
+            details={"warnings_path": str(diagnostics_paths[1])},
+        )
+        return output_path, diagnostics_paths, diagnostics.warning_count
 
+    def _project_dir(self, project_id: str) -> Path:
+        return self._storage_root / "projects" / project_id / "meta_analysis"

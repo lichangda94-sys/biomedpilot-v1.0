@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.meta_analysis.adapters.duplicate_review_adapter import DuplicateReviewAdapter
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -34,11 +35,13 @@ class DuplicateReviewService:
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._adapter = adapter or DuplicateReviewAdapter()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def review(self, *, project_id: str, screening_ready_path: str) -> DuplicateReviewResult:
         task = self._start_task(project_id=project_id, source_path=screening_ready_path)
@@ -65,6 +68,19 @@ class DuplicateReviewService:
             batch_id = str(payload.get("batch_id", f"batch-{uuid4().hex[:12]}"))
             groups = self._adapter.identify_duplicate_groups(project_id=project_id, records=records)
             output_path = self._write_output(project_id, batch_id, source_path, groups)
+            project_dir = self._project_dir(project_id)
+            for group in groups:
+                self._audit_log.record_event(
+                    project_dir,
+                    event_type="duplicate_detected",
+                    project_id=project_id,
+                    target_type="duplicate_candidate_group",
+                    target_id=group.duplicate_group_id,
+                    source_path=str(source_path),
+                    output_path=str(output_path),
+                    summary=f"Duplicate candidate detected: {group.match_reason}",
+                    details={"record_ids": group.candidate_record_ids, "confidence": group.confidence},
+                )
             candidate_record_ids = {
                 record_id
                 for group in groups
@@ -161,8 +177,19 @@ class DuplicateReviewService:
             "batch_id": batch_id,
             "source_path": str(source_path),
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "duplicate_groups": [asdict(group) for group in groups],
+            "duplicate_groups": [_group_payload(group) for group in groups],
         }
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return output_path
 
+    def _project_dir(self, project_id: str) -> Path:
+        return self._storage_root / "projects" / project_id / "meta_analysis"
+
+
+def _group_payload(group: object) -> dict[str, object]:
+    payload = asdict(group)
+    payload["group_id"] = payload.get("duplicate_group_id", "")
+    payload["record_ids"] = list(payload.get("candidate_record_ids", []))
+    payload["reason"] = payload.get("match_reason", "")
+    payload.setdefault("status", "pending")
+    return payload

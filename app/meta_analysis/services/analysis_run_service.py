@@ -13,6 +13,7 @@ from app.meta_analysis.models.analysis_result import (
     now_utc,
 )
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.statistical_applicability_service import StatisticalApplicabilityService, applicability_warnings_for_row
 from app.meta_analysis.stats.meta_effects import study_effect_from_row
 from app.meta_analysis.stats.meta_models import pool_effects
@@ -27,11 +28,13 @@ class AnalysisRunService:
         dataset_service: AnalysisDatasetService | None = None,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._dataset_service = dataset_service or AnalysisDatasetService()
         self._task_center = task_center
         self._data_center = data_center
         self._applicability_service = StatisticalApplicabilityService()
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def run_meta_analysis(self, project_dir: Path, dataset_id: str, model: str) -> AnalysisResult:
         project_dir = project_dir.expanduser().resolve()
@@ -94,6 +97,16 @@ class AnalysisRunService:
                 created_at=now_utc(),
             )
             self._finish_task(task, success=True, summary=f"Meta-analysis completed for {len(study_results)} studies.")
+            self._audit_log.record_event(
+                project_dir,
+                event_type="analysis_run_completed",
+                project_id=project_dir.name,
+                target_type="analysis_result",
+                target_id=result.result_id,
+                source_path=str(project_dir / "analysis" / "analysis_ready_datasets.json"),
+                summary=f"Meta-analysis completed for {len(study_results)} studies.",
+                details={"dataset_id": dataset_id, "model": model},
+            )
             return result
         except Exception:
             self._finish_task(task, success=False, summary="Meta-analysis run failed.")

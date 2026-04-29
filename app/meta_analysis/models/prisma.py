@@ -20,6 +20,7 @@ class PRISMAFlowSummary:
     data_sources: list[str]
     notes: list[str]
     created_at: str
+    source_references: list[dict[str, str]] = field(default_factory=list)
 
 
 def now_utc() -> str:
@@ -45,4 +46,5 @@ def prisma_flow_summary_from_dict(payload: dict[str, Any]) -> PRISMAFlowSummary:
         data_sources=[str(item) for item in payload.get("data_sources", [])],
         notes=[str(item) for item in payload.get("notes", [])],
         created_at=str(payload.get("created_at", "")),
+        source_references=[{str(key): str(value) for key, value in dict(item).items()} for item in payload.get("source_references", []) if isinstance(item, dict)],
     )

@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.meta_analysis.adapters.reporting_adapter import ReportingAdapter
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -32,11 +33,13 @@ class ReportingService:
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._adapter = adapter or ReportingAdapter()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def export_preflight_report(self, *, project_id: str, analysis_preflight_path: str) -> ReportExportResult:
         task = self._start_task(project_id=project_id, source_path=analysis_preflight_path)
@@ -84,6 +87,16 @@ class ReportingService:
                 status="available",
             )
             self._finish_task(task, result)
+            self._audit_log.record_event(
+                self._storage_root / "projects" / project_id / "meta_analysis",
+                event_type="report_exported",
+                project_id=project_id,
+                target_type="meta_analysis_report",
+                target_id=batch_id,
+                source_path=str(source_path),
+                output_path=str(report_path),
+                summary="Analysis preflight markdown report exported.",
+            )
             return result
         except Exception as exc:
             result = ReportExportResult(

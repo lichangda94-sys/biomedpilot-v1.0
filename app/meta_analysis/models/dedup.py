@@ -8,7 +8,10 @@ class DedupDecisionType(StrEnum):
     KEEP_FIRST = "keep_first"
     KEEP_SECOND = "keep_second"
     MERGE = "merge"
+    KEEP_BOTH = "keep_both"
     MARK_NOT_DUPLICATE = "mark_not_duplicate"
+    EXCLUDE_DUPLICATE = "exclude_duplicate"
+    SET_MASTER_RECORD = "set_master_record"
     SKIP = "skip"
 
 
@@ -25,6 +28,9 @@ class DuplicateGroup:
     match_reason: str
     confidence: float
     status: str = DuplicateGroupStatus.PENDING.value
+    reason: str = ""
+    record_ids: list[str] = field(default_factory=list)
+    created_at: str = ""
 
 
 @dataclass(frozen=True)
@@ -36,6 +42,16 @@ class DedupDecision:
     merged_record: dict[str, object] = field(default_factory=dict)
     note: str = ""
     created_at: str = ""
+
+
+@dataclass(frozen=True)
+class MergePreview:
+    group_id: str
+    merged_record: dict[str, object]
+    merged_from_record_ids: list[str]
+    field_sources: dict[str, str]
+    provenance_sources: list[str]
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

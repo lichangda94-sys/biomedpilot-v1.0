@@ -57,6 +57,37 @@ class ScreeningStage(StrEnum):
 
 
 @dataclass(slots=True)
+class Creator:
+    first_name: str = ""
+    last_name: str = ""
+    full_name: str = ""
+    creator_type: str = "author"
+    order: int = 0
+    raw: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": self.full_name,
+            "creator_type": self.creator_type,
+            "order": self.order,
+            "raw": self.raw,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "Creator":
+        return cls(
+            first_name=str(payload.get("first_name", "")),
+            last_name=str(payload.get("last_name", "")),
+            full_name=str(payload.get("full_name", "")),
+            creator_type=str(payload.get("creator_type", "unknown")),
+            order=int(payload.get("order", 0)),
+            raw=str(payload.get("raw", "")),
+        )
+
+
+@dataclass(slots=True)
 class LiteratureProject:
     project_id: str
     name: str
@@ -173,6 +204,11 @@ class ImportBatch:
     imported_records: int = 0
     failed_records: int = 0
     warning_count: int = 0
+    raw_record_count: int = 0
+    parsed_record_count: int = 0
+    normalized_record_count: int = 0
+    duplicate_candidate_count: int = 0
+    records_after_dedup_count: int = 0
     error_message: str = ""
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -195,6 +231,11 @@ class ImportBatch:
         imported_records: int,
         failed_records: int = 0,
         warning_count: int = 0,
+        raw_record_count: int | None = None,
+        parsed_record_count: int | None = None,
+        normalized_record_count: int | None = None,
+        duplicate_candidate_count: int = 0,
+        records_after_dedup_count: int | None = None,
     ) -> None:
         now = utc_now()
         self.status = ImportBatchStatus.COMPLETED
@@ -202,6 +243,11 @@ class ImportBatch:
         self.imported_records = imported_records
         self.failed_records = failed_records
         self.warning_count = warning_count
+        self.raw_record_count = total_records if raw_record_count is None else raw_record_count
+        self.parsed_record_count = imported_records if parsed_record_count is None else parsed_record_count
+        self.normalized_record_count = imported_records if normalized_record_count is None else normalized_record_count
+        self.duplicate_candidate_count = duplicate_candidate_count
+        self.records_after_dedup_count = imported_records if records_after_dedup_count is None else records_after_dedup_count
         self.error_message = ""
         self.finished_at = now
         self.updated_at = now
@@ -225,6 +271,11 @@ class ImportBatch:
             "imported_records": self.imported_records,
             "failed_records": self.failed_records,
             "warning_count": self.warning_count,
+            "raw_record_count": self.raw_record_count,
+            "parsed_record_count": self.parsed_record_count,
+            "normalized_record_count": self.normalized_record_count,
+            "duplicate_candidate_count": self.duplicate_candidate_count,
+            "records_after_dedup_count": self.records_after_dedup_count,
             "error_message": self.error_message,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "finished_at": self.finished_at.isoformat() if self.finished_at else None,
@@ -248,6 +299,11 @@ class ImportBatch:
             imported_records=int(payload.get("imported_records", 0)),
             failed_records=int(payload.get("failed_records", 0)),
             warning_count=int(payload.get("warning_count", 0)),
+            raw_record_count=int(payload.get("raw_record_count", payload.get("total_records", 0))),
+            parsed_record_count=int(payload.get("parsed_record_count", payload.get("imported_records", 0))),
+            normalized_record_count=int(payload.get("normalized_record_count", payload.get("imported_records", 0))),
+            duplicate_candidate_count=int(payload.get("duplicate_candidate_count", 0)),
+            records_after_dedup_count=int(payload.get("records_after_dedup_count", payload.get("imported_records", 0))),
             error_message=payload.get("error_message", ""),
             started_at=datetime.fromisoformat(started_at) if started_at else None,
             finished_at=datetime.fromisoformat(finished_at) if finished_at else None,
@@ -267,11 +323,19 @@ class ParsedLiteratureRecord:
     title: str = ""
     abstract: str = ""
     authors: list[str] = field(default_factory=list)
+    authors_text: str = ""
+    creators: list[Creator] = field(default_factory=list)
+    first_author: str = ""
     journal: str = ""
+    publication_title: str = ""
+    date: str = ""
     year: int | None = None
     doi: str = ""
     pmid: str = ""
     keywords: list[str] = field(default_factory=list)
+    publication_type: str = "unknown"
+    clinical_trials_ids: list[str] = field(default_factory=list)
+    external_key: str = ""
     language: str = ""
     raw_payload: dict[str, Any] = field(default_factory=dict)
 
@@ -285,11 +349,19 @@ class ParsedLiteratureRecord:
             "title": self.title,
             "abstract": self.abstract,
             "authors": list(self.authors),
+            "authors_text": self.authors_text,
+            "creators": [creator.to_dict() for creator in self.creators],
+            "first_author": self.first_author,
             "journal": self.journal,
+            "publication_title": self.publication_title,
+            "date": self.date,
             "year": self.year,
             "doi": self.doi,
             "pmid": self.pmid,
             "keywords": list(self.keywords),
+            "publication_type": self.publication_type,
+            "clinical_trials_ids": list(self.clinical_trials_ids),
+            "external_key": self.external_key,
             "language": self.language,
             "raw_payload": dict(self.raw_payload),
         }
@@ -305,11 +377,19 @@ class ParsedLiteratureRecord:
             title=payload.get("title", ""),
             abstract=payload.get("abstract", ""),
             authors=list(payload.get("authors", [])),
+            authors_text=payload.get("authors_text", ""),
+            creators=[Creator.from_dict(item) for item in payload.get("creators", [])],
+            first_author=payload.get("first_author", ""),
             journal=payload.get("journal", ""),
+            publication_title=payload.get("publication_title", ""),
+            date=payload.get("date", ""),
             year=payload.get("year"),
             doi=payload.get("doi", ""),
             pmid=payload.get("pmid", ""),
             keywords=list(payload.get("keywords", [])),
+            publication_type=payload.get("publication_type", "unknown"),
+            clinical_trials_ids=list(payload.get("clinical_trials_ids", [])),
+            external_key=payload.get("external_key", ""),
             language=payload.get("language", ""),
             raw_payload=dict(payload.get("raw_payload", {})),
         )
@@ -325,11 +405,19 @@ class NormalizedLiteratureRecord:
     title: str = ""
     abstract: str = ""
     authors: list[str] = field(default_factory=list)
+    authors_text: str = ""
+    creators: list[Creator] = field(default_factory=list)
+    first_author: str = ""
     journal: str = ""
+    publication_title: str = ""
+    date: str = ""
     year: int | None = None
     doi: str = ""
     pmid: str = ""
     keywords: list[str] = field(default_factory=list)
+    publication_type: str = "unknown"
+    clinical_trials_ids: list[str] = field(default_factory=list)
+    external_key: str = ""
     language: str = ""
     raw_payload: dict[str, Any] = field(default_factory=dict)
     title_normalized: str = ""
@@ -350,11 +438,19 @@ class NormalizedLiteratureRecord:
             "title": self.title,
             "abstract": self.abstract,
             "authors": list(self.authors),
+            "authors_text": self.authors_text,
+            "creators": [creator.to_dict() for creator in self.creators],
+            "first_author": self.first_author,
             "journal": self.journal,
+            "publication_title": self.publication_title,
+            "date": self.date,
             "year": self.year,
             "doi": self.doi,
             "pmid": self.pmid,
             "keywords": list(self.keywords),
+            "publication_type": self.publication_type,
+            "clinical_trials_ids": list(self.clinical_trials_ids),
+            "external_key": self.external_key,
             "language": self.language,
             "raw_payload": dict(self.raw_payload),
             "title_normalized": self.title_normalized,
@@ -377,11 +473,19 @@ class NormalizedLiteratureRecord:
             title=payload.get("title", ""),
             abstract=payload.get("abstract", ""),
             authors=list(payload.get("authors", [])),
+            authors_text=payload.get("authors_text", ""),
+            creators=[Creator.from_dict(item) for item in payload.get("creators", [])],
+            first_author=payload.get("first_author", ""),
             journal=payload.get("journal", ""),
+            publication_title=payload.get("publication_title", ""),
+            date=payload.get("date", ""),
             year=payload.get("year"),
             doi=payload.get("doi", ""),
             pmid=payload.get("pmid", ""),
             keywords=list(payload.get("keywords", [])),
+            publication_type=payload.get("publication_type", "unknown"),
+            clinical_trials_ids=list(payload.get("clinical_trials_ids", [])),
+            external_key=payload.get("external_key", ""),
             language=payload.get("language", ""),
             raw_payload=dict(payload.get("raw_payload", {})),
             title_normalized=payload.get("title_normalized", ""),
@@ -402,29 +506,35 @@ class DuplicateCandidateGroup:
     match_reason: str
     confidence: float
     suggested_primary_record_id: str
+    status: str = "pending"
     created_at: datetime = field(default_factory=utc_now)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "duplicate_group_id": self.duplicate_group_id,
+            "group_id": self.duplicate_group_id,
             "project_id": self.project_id,
             "candidate_record_ids": list(self.candidate_record_ids),
+            "record_ids": list(self.candidate_record_ids),
             "match_reason": self.match_reason,
+            "reason": self.match_reason,
             "confidence": self.confidence,
             "suggested_primary_record_id": self.suggested_primary_record_id,
+            "status": self.status,
             "created_at": self.created_at.isoformat(),
         }
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "DuplicateCandidateGroup":
         return cls(
-            duplicate_group_id=payload["duplicate_group_id"],
+            duplicate_group_id=payload.get("duplicate_group_id") or payload["group_id"],
             project_id=payload["project_id"],
-            candidate_record_ids=list(payload.get("candidate_record_ids", [])),
-            match_reason=payload.get("match_reason", ""),
+            candidate_record_ids=list(payload.get("candidate_record_ids") or payload.get("record_ids", [])),
+            match_reason=payload.get("match_reason") or payload.get("reason", ""),
             confidence=float(payload.get("confidence", 0.0)),
             suggested_primary_record_id=payload.get("suggested_primary_record_id", ""),
-            created_at=datetime.fromisoformat(payload["created_at"]),
+            status=payload.get("status", "pending"),
+            created_at=datetime.fromisoformat(payload["created_at"]) if payload.get("created_at") else utc_now(),
         )
 
 

@@ -12,7 +12,9 @@ from app.meta_analysis.models.dedup import (
     DedupResult,
     DuplicateGroup,
     DuplicateGroupStatus,
+    MergePreview,
 )
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -25,10 +27,12 @@ class DedupDecisionService:
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def load_groups(self, *, duplicate_review_path: str) -> list[DuplicateGroup]:
         review_path = self._resolve_review_path(duplicate_review_path)
@@ -42,7 +46,7 @@ class DedupDecisionService:
             group_id = str(raw_group.get("group_id") or raw_group.get("duplicate_group_id", ""))
             record_ids = [
                 str(record_id)
-                for record_id in list(raw_group.get("candidate_record_ids", []))
+                for record_id in list(raw_group.get("candidate_record_ids") or raw_group.get("record_ids", []))
             ]
             group_records = list(raw_group.get("records", []))
             if not group_records:
@@ -59,12 +63,22 @@ class DedupDecisionService:
                 DuplicateGroup(
                     group_id=group_id,
                     records=[dict(record) for record in group_records],
-                    match_reason=str(raw_group.get("match_reason", "")),
+                    match_reason=str(raw_group.get("match_reason") or raw_group.get("reason", "")),
                     confidence=float(raw_group.get("confidence", 0.0) or 0.0),
                     status=status,
+                    reason=str(raw_group.get("reason") or raw_group.get("match_reason", "")),
+                    record_ids=record_ids,
+                    created_at=str(raw_group.get("created_at", "")),
                 )
             )
         return groups
+
+    def preview_merge(self, *, duplicate_review_path: str, group_id: str, master_record_id: str = "") -> MergePreview:
+        review_path = self._resolve_review_path(duplicate_review_path)
+        groups = {group.group_id: group for group in self.load_groups(duplicate_review_path=str(review_path))}
+        if group_id not in groups:
+            raise ValueError("未找到指定的重复候选组。")
+        return self._merge_preview(groups[group_id], master_record_id=master_record_id)
 
     def save_decision(
         self,
@@ -85,7 +99,9 @@ class DedupDecisionService:
         selected_record_id = self._selected_record_id(group, normalized_decision)
         final_merged_record: dict[str, object] = {}
         if normalized_decision == DedupDecisionType.MERGE:
-            final_merged_record = dict(merged_record or self._merge_records(group))
+            final_merged_record = dict(merged_record or self._merge_preview(group).merged_record)
+        if normalized_decision == DedupDecisionType.SET_MASTER_RECORD:
+            final_merged_record = dict(merged_record or self._merge_preview(group, master_record_id=selected_record_id).merged_record)
 
         dedup_decision = DedupDecision(
             decision_id=f"dedup-decision-{uuid4().hex[:12]}",
@@ -97,6 +113,17 @@ class DedupDecisionService:
             created_at=datetime.now(timezone.utc).isoformat(),
         )
         self._write_decision(review_path, dedup_decision)
+        self._audit_log.record_event(
+            self._project_dir(review_path),
+            event_type="duplicate_decision",
+            project_id=self._project_id_from_review(review_path),
+            target_type="duplicate_group",
+            target_id=group_id,
+            source_path=str(review_path),
+            output_path=str(self._decisions_path(review_path)),
+            summary=f"Duplicate decision saved: {normalized_decision.value}",
+            details={"selected_record_id": selected_record_id},
+        )
         return dedup_decision
 
     def generate_deduplicated_literature(self, *, project_id: str, duplicate_review_path: str) -> DedupResult:
@@ -178,11 +205,15 @@ class DedupDecisionService:
             if decision is None or decision.decision == DedupDecisionType.SKIP.value:
                 unresolved_group_ids.append(group.group_id)
                 continue
-            if decision.decision == DedupDecisionType.MARK_NOT_DUPLICATE.value:
+            if decision.decision in {DedupDecisionType.MARK_NOT_DUPLICATE.value, DedupDecisionType.KEEP_BOTH.value}:
                 continue
-            if decision.decision == DedupDecisionType.MERGE.value:
+            if decision.decision in {DedupDecisionType.MERGE.value, DedupDecisionType.SET_MASTER_RECORD.value}:
                 removed_ids.update(group_ids)
-                replacement_records.append(dict(decision.merged_record or self._merge_records(group)))
+                replacement_records.append(dict(decision.merged_record or self._merge_preview(group, master_record_id=decision.selected_record_id).merged_record))
+                excluded_records.extend(self._excluded_records(group, kept_record_id=""))
+                continue
+            if decision.decision == DedupDecisionType.EXCLUDE_DUPLICATE.value:
+                removed_ids.update(group_ids)
                 excluded_records.extend(self._excluded_records(group, kept_record_id=""))
                 continue
 
@@ -211,10 +242,49 @@ class DedupDecisionService:
         return excluded
 
     def _merge_records(self, group: DuplicateGroup) -> dict[str, object]:
+        return self._merge_preview(group).merged_record
+
+    def _merge_preview(self, group: DuplicateGroup, *, master_record_id: str = "") -> MergePreview:
+        if not group.records:
+            return MergePreview(group.group_id, {}, [], {}, [], ["merge_preview_no_records"])
+        records = list(group.records)
+        if master_record_id:
+            records = sorted(records, key=lambda record: 0 if str(record.get("record_id", "")) == master_record_id else 1)
         merged: dict[str, object] = {"record_id": f"merged-{group.group_id}", "dedup_status": "deduplicated_merged"}
-        for record in group.records:
+        field_sources: dict[str, str] = {}
+        provenance: list[str] = []
+        warnings: list[str] = []
+        merged["pmid"] = _choose_pmid(records)
+        if merged["pmid"]:
+            field_sources["pmid"] = _source_for(records, "pmid", merged["pmid"])
+        merged["doi"] = _choose_non_empty(records, "doi")
+        if merged["doi"]:
+            field_sources["doi"] = _source_for(records, "doi", merged["doi"])
+        merged["title"] = _choose_longest(records, "title")
+        if merged["title"]:
+            field_sources["title"] = _source_for(records, "title", merged["title"])
+        merged["abstract"] = _choose_longest(records, "abstract")
+        if merged["abstract"]:
+            field_sources["abstract"] = _source_for(records, "abstract", merged["abstract"])
+        creators = _choose_longest_list(records, "creators")
+        authors = _choose_longest_list(records, "authors")
+        if creators:
+            merged["creators"] = creators
+            field_sources["creators"] = _source_for(records, "creators", creators)
+        if authors:
+            merged["authors"] = authors
+            field_sources["authors"] = _source_for(records, "authors", authors)
+        merged["journal"] = _choose_non_empty(records, "journal_normalized") or _choose_non_empty(records, "journal")
+        if merged["journal"]:
+            field_sources["journal"] = _source_for(records, "journal", merged["journal"]) or _source_for(records, "journal_normalized", merged["journal"])
+        publication_types = sorted({str(record.get("publication_type", "")) for record in records if record.get("publication_type")})
+        if publication_types:
+            merged["publication_type"] = publication_types[0] if len(publication_types) == 1 else publication_types
+        for record in records:
             for key, value in record.items():
                 if key == "record_id":
+                    continue
+                if key in merged and merged[key] not in ("", None, []):
                     continue
                 if isinstance(value, list):
                     existing = list(merged.get(key, [])) if isinstance(merged.get(key), list) else []
@@ -226,8 +296,20 @@ class DedupDecisionService:
                     continue
                 if key not in merged and value not in ("", None, []):
                     merged[key] = value
-        merged["merged_from_record_ids"] = [str(record.get("record_id", "")) for record in group.records]
-        return merged
+                    field_sources.setdefault(key, str(record.get("record_id", "")))
+            provenance.extend(_record_provenance(record))
+        merged["merged_from_record_ids"] = [str(record.get("record_id", "")) for record in records]
+        merged["provenance_sources"] = sorted(set(provenance))
+        if len(records) < 2:
+            warnings.append("merge_preview_requires_multiple_records")
+        return MergePreview(
+            group_id=group.group_id,
+            merged_record=merged,
+            merged_from_record_ids=list(merged["merged_from_record_ids"]),
+            field_sources=field_sources,
+            provenance_sources=list(merged["provenance_sources"]),
+            warnings=warnings,
+        )
 
     def _selected_record_id(self, group: DuplicateGroup, decision: DedupDecisionType) -> str:
         if decision == DedupDecisionType.KEEP_FIRST:
@@ -236,13 +318,15 @@ class DedupDecisionService:
             if len(group.records) < 2:
                 raise ValueError("keep_second 需要至少两条候选记录。")
             return str(group.records[1].get("record_id", ""))
+        if decision == DedupDecisionType.SET_MASTER_RECORD:
+            return str(group.records[0].get("record_id", "")) if group.records else ""
         return ""
 
     def _normalize_decision(self, decision: str) -> DedupDecisionType:
         try:
             return DedupDecisionType(decision.strip().lower())
         except ValueError as exc:
-            raise ValueError("去重决策必须是 keep_first、keep_second、merge、mark_not_duplicate 或 skip。") from exc
+            raise ValueError("去重决策必须是 keep_first、keep_second、merge、keep_both、mark_not_duplicate、exclude_duplicate、set_master_record 或 skip。") from exc
 
     def _resolve_review_path(self, duplicate_review_path: str) -> Path:
         if not duplicate_review_path.strip():
@@ -351,3 +435,55 @@ class DedupDecisionService:
                 error_message="" if result.success else result.message,
             )
         )
+
+    def _project_dir(self, review_path: Path) -> Path:
+        parts = review_path.parts
+        if "meta_analysis" in parts:
+            index = parts.index("meta_analysis")
+            return Path(*parts[: index + 1])
+        return review_path.parent
+
+    def _project_id_from_review(self, review_path: Path) -> str:
+        project_dir = self._project_dir(review_path)
+        return project_dir.parent.name if project_dir.name == "meta_analysis" else project_dir.name
+
+
+def _choose_pmid(records: list[dict[str, object]]) -> object:
+    pubmed = [record for record in records if str(record.get("source", "")).lower() in {"pubmed", "nbib"}]
+    return _choose_non_empty(pubmed or records, "pmid")
+
+
+def _choose_non_empty(records: list[dict[str, object]], key: str) -> object:
+    for record in records:
+        value = record.get(key)
+        if value not in ("", None, []):
+            return value
+    return ""
+
+
+def _choose_longest(records: list[dict[str, object]], key: str) -> str:
+    values = [str(record.get(key, "")).strip() for record in records if str(record.get(key, "")).strip()]
+    return max(values, key=len) if values else ""
+
+
+def _choose_longest_list(records: list[dict[str, object]], key: str) -> list[object]:
+    values = [list(record.get(key, [])) for record in records if isinstance(record.get(key), list) and record.get(key)]
+    return max(values, key=len) if values else []
+
+
+def _source_for(records: list[dict[str, object]], key: str, selected: object) -> str:
+    for record in records:
+        if record.get(key) == selected:
+            return str(record.get("record_id", ""))
+    return ""
+
+
+def _record_provenance(record: dict[str, object]) -> list[str]:
+    values = []
+    for key in ("source", "source_database", "source_file", "source_format"):
+        if record.get(key):
+            values.append(str(record[key]))
+    source_trace = record.get("source_trace")
+    if isinstance(source_trace, list):
+        values.extend(str(item) for item in source_trace)
+    return values

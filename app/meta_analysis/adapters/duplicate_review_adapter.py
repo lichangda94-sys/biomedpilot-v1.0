@@ -16,6 +16,7 @@ class DuplicateCandidateGroupResult:
     match_reason: str
     confidence: float
     suggested_primary_record_id: str
+    status: str = "pending"
 
 
 class DuplicateReviewAdapter:
@@ -34,11 +35,18 @@ class DuplicateReviewAdapter:
                     title=str(record.get("title", "")),
                     abstract=str(record.get("abstract", "")),
                     authors=list(record.get("authors", [])),
+                    authors_text=str(record.get("authors_text", "")),
+                    first_author=str(record.get("first_author", "")) or (str(list(record.get("authors", [""]))[0]) if record.get("authors") else ""),
                     journal=str(record.get("journal", "")),
+                    publication_title=str(record.get("publication_title", "")),
+                    date=str(record.get("date", "")),
                     year=record.get("year") if isinstance(record.get("year"), int) else None,
                     doi=str(record.get("doi", "")),
                     pmid=str(record.get("pmid", "")),
                     keywords=list(record.get("keywords", [])),
+                    publication_type=str(record.get("publication_type", "unknown")),
+                    clinical_trials_ids=[str(item) for item in list(record.get("clinical_trials_ids", []))],
+                    external_key=str(record.get("external_key", "")),
                     language=str(record.get("language", "")),
                     title_normalized=str(record.get("title_normalized", "")),
                     doi_normalized=str(record.get("doi_normalized", "")),
@@ -59,6 +67,7 @@ class DuplicateReviewAdapter:
                 match_reason=group.match_reason,
                 confidence=group.confidence,
                 suggested_primary_record_id=group.suggested_primary_record_id,
+                status=group.status,
             )
             for group in groups
         ]

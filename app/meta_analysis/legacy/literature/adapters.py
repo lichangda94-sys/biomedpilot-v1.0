@@ -16,6 +16,14 @@ YEAR_PATTERN = re.compile(r"\b(19|20)\d{2}\b")
 
 class BaseImportAdapter(LiteratureParser):
     supported_format: ImportFormatHint = ImportFormatHint.UNKNOWN
+    adapter_name: str = "base"
+    supported_formats: tuple[str, ...] = ("unknown",)
+
+    def detect(self, input_path: Path) -> bool:
+        return input_path.suffix.lower().lstrip(".") in self.supported_formats
+
+    def get_diagnostics(self) -> dict[str, object]:
+        return {"adapter_name": self.adapter_name, "supported_formats": list(self.supported_formats)}
 
     def parse(
         self,
@@ -46,10 +54,15 @@ class BaseImportAdapter(LiteratureParser):
         abstract: str = "",
         authors: list[str] | None = None,
         journal: str = "",
+        publication_title: str = "",
+        date: str = "",
         year: int | None = None,
         doi: str = "",
         pmid: str = "",
         keywords: list[str] | None = None,
+        publication_type: str = "unknown",
+        clinical_trials_ids: list[str] | None = None,
+        external_key: str = "",
         language: str = "",
     ) -> ParsedLiteratureRecord:
         return ParsedLiteratureRecord(
@@ -60,11 +73,17 @@ class BaseImportAdapter(LiteratureParser):
             title=title,
             abstract=abstract,
             authors=list(authors or []),
+            authors_text="; ".join(authors or []),
             journal=journal,
+            publication_title=publication_title or journal,
+            date=date,
             year=year,
             doi=doi,
             pmid=pmid,
             keywords=list(keywords or []),
+            publication_type=publication_type,
+            clinical_trials_ids=list(clinical_trials_ids or []),
+            external_key=external_key,
             language=language,
             raw_payload=raw_payload,
         )
@@ -72,6 +91,8 @@ class BaseImportAdapter(LiteratureParser):
 
 class RisImportAdapter(BaseImportAdapter):
     supported_format = ImportFormatHint.RIS
+    adapter_name = "ris"
+    supported_formats = ("ris",)
 
     def parse(
         self,
@@ -92,10 +113,15 @@ class RisImportAdapter(BaseImportAdapter):
                 abstract=_join_values(raw, "AB", "N2"),
                 authors=_all_values(raw, "AU", "A1", "A2"),
                 journal=_first_value(raw, "JO", "JF", "T2", "JA", "J1"),
+                publication_title=_first_value(raw, "JO", "JF", "T2", "JA", "J1"),
+                date=_first_value(raw, "PY", "Y1", "DA"),
                 year=_extract_year(_first_value(raw, "PY", "Y1", "DA")),
                 doi=_extract_doi(_first_value(raw, "DO", "M3")),
                 pmid=_first_value(raw, "PM"),
                 keywords=_all_values(raw, "KW"),
+                publication_type=_publication_type_from_ris(_first_value(raw, "TY")),
+                clinical_trials_ids=_clinical_trials_ids(_collapse_raw_payload(raw)),
+                external_key=_first_value(raw, "ID", "C7"),
                 language=_first_value(raw, "LA"),
                 raw_payload=_collapse_raw_payload(raw),
             )
@@ -105,6 +131,8 @@ class RisImportAdapter(BaseImportAdapter):
 
 class NbibImportAdapter(BaseImportAdapter):
     supported_format = ImportFormatHint.NBIB
+    adapter_name = "nbib"
+    supported_formats = ("nbib",)
 
     def parse(
         self,
@@ -127,10 +155,14 @@ class NbibImportAdapter(BaseImportAdapter):
                 abstract=_join_values(raw, "AB"),
                 authors=_all_values(raw, "FAU", "AU"),
                 journal=_first_value(raw, "JT", "TA"),
+                publication_title=_first_value(raw, "JT", "TA"),
+                date=_first_value(raw, "DP", "DEP", "EDAT"),
                 year=_extract_year(_first_value(raw, "DP", "DEP", "EDAT")),
                 doi=_extract_doi(_first_value(raw, "AID", "LID")),
                 pmid=_first_value(raw, "PMID"),
                 keywords=_all_values(raw, "OT", "MH"),
+                publication_type=_publication_type_from_nbib(_all_values(raw, "PT")),
+                clinical_trials_ids=_clinical_trials_ids(_collapse_raw_payload(raw)),
                 language=_first_value(raw, "LA"),
                 raw_payload=_collapse_raw_payload(raw),
             )
@@ -140,6 +172,8 @@ class NbibImportAdapter(BaseImportAdapter):
 
 class CsvImportAdapter(BaseImportAdapter):
     supported_format = ImportFormatHint.CSV
+    adapter_name = "csv"
+    supported_formats = ("csv",)
 
     _ALIASES = {
         "source_record_id": {"source_record_id", "record_id", "source_id", "id"},
@@ -147,10 +181,15 @@ class CsvImportAdapter(BaseImportAdapter):
         "abstract": {"abstract", "summary", "description"},
         "authors": {"authors", "author", "creators"},
         "journal": {"journal", "journal_title", "publication", "source"},
+        "publication_title": {"publication_title", "publicationtitle", "journal_title"},
         "year": {"year", "publication_year", "pub_year", "date"},
+        "date": {"date", "publication_date"},
         "doi": {"doi"},
         "pmid": {"pmid"},
         "keywords": {"keywords", "keyword", "tags", "mesh_terms"},
+        "publication_type": {"publication_type", "type", "item_type"},
+        "clinical_trials_ids": {"clinical_trials_ids", "clinicaltrials", "nct", "trial_id"},
+        "external_key": {"external_key", "citation_key", "better_bibtex_key"},
         "language": {"language", "lang"},
     }
 
@@ -203,10 +242,15 @@ class CsvImportAdapter(BaseImportAdapter):
                             abstract=self._get_value(cleaned_row, "abstract"),
                             authors=_split_multi_value(self._get_value(cleaned_row, "authors")),
                             journal=self._get_value(cleaned_row, "journal"),
+                            publication_title=self._get_value(cleaned_row, "publication_title"),
+                            date=self._get_value(cleaned_row, "date"),
                             year=_extract_year(self._get_value(cleaned_row, "year")),
                             doi=_extract_doi(doi),
                             pmid=pmid,
                             keywords=_split_multi_value(self._get_value(cleaned_row, "keywords")),
+                            publication_type=self._get_value(cleaned_row, "publication_type") or "unknown",
+                            clinical_trials_ids=_split_multi_value(self._get_value(cleaned_row, "clinical_trials_ids")),
+                            external_key=self._get_value(cleaned_row, "external_key"),
                             language=self._get_value(cleaned_row, "language"),
                             raw_payload=cleaned_row,
                         )
@@ -225,6 +269,8 @@ class CsvImportAdapter(BaseImportAdapter):
 
 class ManualImportAdapter(BaseImportAdapter):
     supported_format = ImportFormatHint.MANUAL
+    adapter_name = "manual"
+    supported_formats = ("manual",)
 
 
 def _parse_tagged_records(
@@ -319,6 +365,40 @@ def _collapse_raw_payload(raw: dict[str, list[str]]) -> dict[str, object]:
         else:
             payload[key] = list(values)
     return payload
+
+
+def _publication_type_from_ris(value: str) -> str:
+    normalized = value.strip().upper()
+    return {
+        "JOUR": "journal_article",
+        "CLIN": "clinical_trial",
+        "CONF": "conference_abstract",
+        "RPRT": "report",
+        "THES": "thesis",
+        "DATA": "dataset",
+    }.get(normalized, "unknown")
+
+
+def _publication_type_from_nbib(values: list[str]) -> str:
+    lowered = " ".join(values).lower()
+    if "randomized controlled trial" in lowered:
+        return "randomized_trial"
+    if "clinical trial" in lowered:
+        return "clinical_trial"
+    if "meta-analysis" in lowered:
+        return "meta_analysis"
+    if "systematic review" in lowered:
+        return "systematic_review"
+    if "review" in lowered:
+        return "review"
+    if "journal article" in lowered:
+        return "journal_article"
+    return "unknown"
+
+
+def _clinical_trials_ids(payload: dict[str, object]) -> list[str]:
+    joined = " ".join(str(value) for value in payload.values())
+    return sorted(set(re.findall(r"\bNCT\d{8}\b", joined, flags=re.IGNORECASE)))
 
 
 def _normalize_header(value: str) -> str:

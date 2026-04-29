@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from literature.adapters import CsvImportAdapter, ManualImportAdapter, NbibImportAdapter, RisImportAdapter
+from literature.import_diagnostics import build_import_diagnostics, write_import_diagnostics
 from literature.models import (
     ImportBatch,
     ImportBatchStatus,
@@ -82,11 +83,18 @@ class ImportBatchService:
                 for record in parsed_records
             ]
             self._store.replace_parsed_records(batch.batch_id, normalized_records)
+            diagnostics = build_import_diagnostics(batch.batch_id, [record.to_dict() for record in normalized_records])
+            write_import_diagnostics(self._store.module_dir.parent, diagnostics)
             batch.mark_completed(
                 total_records=len(normalized_records),
                 imported_records=len(normalized_records),
                 failed_records=0,
-                warning_count=0,
+                warning_count=diagnostics.warning_count,
+                raw_record_count=diagnostics.raw_record_count,
+                parsed_record_count=diagnostics.parsed_record_count,
+                normalized_record_count=diagnostics.normalized_record_count,
+                duplicate_candidate_count=diagnostics.duplicate_candidate_count,
+                records_after_dedup_count=diagnostics.records_after_dedup_count,
             )
             return self._store.save_import_batch(batch)
         except Exception as exc:
@@ -116,11 +124,19 @@ class ImportBatchService:
             title=record.title,
             abstract=record.abstract,
             authors=list(record.authors),
+            authors_text=record.authors_text,
+            creators=list(record.creators),
+            first_author=record.first_author,
             journal=record.journal,
+            publication_title=record.publication_title,
+            date=record.date,
             year=record.year,
             doi=record.doi,
             pmid=record.pmid,
             keywords=list(record.keywords),
+            publication_type=record.publication_type,
+            clinical_trials_ids=list(record.clinical_trials_ids),
+            external_key=record.external_key,
             language=record.language,
             raw_payload=dict(record.raw_payload),
         )

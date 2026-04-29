@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import json
-import shutil
 from pathlib import Path
 from uuid import uuid4
 
@@ -19,14 +18,25 @@ from app.meta_analysis.models.systematic_review import (
     new_fulltext_id,
     now_utc,
 )
+from app.meta_analysis.services.attachment_service import AttachmentService
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
 
 class FullTextService:
-    def __init__(self, *, task_center: TaskCenter | None = None, data_center: DataCenter | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        task_center: TaskCenter | None = None,
+        data_center: DataCenter | None = None,
+        attachment_service: AttachmentService | None = None,
+        audit_log: MetaAuditLogService | None = None,
+    ) -> None:
         self._task_center = task_center
         self._data_center = data_center
+        self._audit_log = audit_log or MetaAuditLogService()
+        self._attachment_service = attachment_service or AttachmentService(task_center=task_center, data_center=data_center, audit_log=self._audit_log)
 
     def attach_fulltext(self, project_dir: Path, record_id: str, source_file_path: str, *, notes: str = "") -> FullTextFile:
         project_dir = project_dir.expanduser().resolve()
@@ -34,10 +44,19 @@ class FullTextService:
         if not source.exists() or not source.is_file():
             raise ValueError("fulltext_source_file_missing")
         task = self._start_task(project_id=project_dir.name, task_type=TaskType.FULLTEXT_ATTACH, title="Full-text Attach")
+        attachment = self._attachment_service.add_attachment(
+            project_dir,
+            record_id=record_id,
+            source_file_path=str(source),
+            attachment_type="pdf",
+            mode="copy_to_project_library",
+            notes=notes,
+        )
+        if attachment is None:
+            raise ValueError("fulltext_attachment_not_created")
+        target = Path(attachment.file_path)
         output_dir = project_dir / "fulltext"
         output_dir.mkdir(parents=True, exist_ok=True)
-        target = output_dir / f"{record_id}_{source.name}"
-        shutil.copy2(source, target)
         record = FullTextFile(
             fulltext_id=new_fulltext_id(),
             project_id=project_dir.name,
@@ -52,6 +71,17 @@ class FullTextService:
         records.append(record)
         self.save_fulltext_registry(project_dir, records)
         self._register_asset(project_id=project_dir.name, data_type="fulltext_registry", source_path=str(source), output_path=str(self._registry_path(project_dir)))
+        self._audit_log.record_event(
+            project_dir,
+            event_type="fulltext_status_changed",
+            project_id=project_dir.name,
+            target_type="fulltext",
+            target_id=record.fulltext_id,
+            source_path=str(source),
+            output_path=str(self._registry_path(project_dir)),
+            summary=f"Full-text attached for {record_id}",
+            details={"attachment_id": attachment.attachment_id},
+        )
         self._finish_task(task, success=True, summary=f"Full-text attached for {record_id}")
         return record
 
@@ -101,6 +131,15 @@ class FullTextService:
             )
             replacement.append(updated)
         self.save_fulltext_registry(project_dir, replacement)
+        self._audit_log.record_event(
+            project_dir,
+            event_type="fulltext_status_changed",
+            project_id=project_dir.name,
+            target_type="fulltext",
+            target_id=updated.fulltext_id,
+            output_path=str(self._registry_path(project_dir)),
+            summary=f"Full-text status changed to {status} for {record_id}",
+        )
         return updated
 
     def save_fulltext_registry(self, project_dir: Path, records: list[FullTextFile]) -> Path:

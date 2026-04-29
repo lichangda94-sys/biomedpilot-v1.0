@@ -9,8 +9,10 @@ from literature.models import DuplicateCandidateGroup, NormalizedLiteratureRecor
 REASON_CONFIDENCE = {
     "doi_exact": 0.99,
     "pmid_exact": 0.98,
+    "clinical_trials_id_exact": 0.98,
     "title_same_first_author": 0.9,
     "title_similar_year_close": 0.82,
+    "title_author_year_journal_suspected": 0.86,
 }
 
 
@@ -66,6 +68,14 @@ class DuplicateDetectionService:
             records,
             key_fn=lambda record: record.pmid_normalized,
             reason="pmid_exact",
+            state=group_state,
+            by_id=by_id,
+        )
+        self._register_exact_key_groups(
+            project_id,
+            records,
+            key_fn=lambda record: "|".join(sorted(record.clinical_trials_ids)),
+            reason="clinical_trials_id_exact",
             state=group_state,
             by_id=by_id,
         )
@@ -144,9 +154,14 @@ class DuplicateDetectionService:
                     left.title_normalized,
                     right.title_normalized,
                 ).ratio()
+                journal_similarity = SequenceMatcher(None, left.journal_normalized, right.journal_normalized).ratio() if left.journal_normalized and right.journal_normalized else 0.0
+                first_author_same = bool(left.first_author and right.first_author and left.first_author.lower() == right.first_author.lower())
                 if similarity >= 0.92:
                     candidate_ids = frozenset({left.record_id, right.record_id})
                     self._add_group(candidate_ids, "title_similar_year_close", state)
+                elif similarity >= 0.86 and first_author_same and journal_similarity >= 0.8:
+                    candidate_ids = frozenset({left.record_id, right.record_id})
+                    self._add_group(candidate_ids, "title_author_year_journal_suspected", state)
 
     def _title_author_key(self, record: NormalizedLiteratureRecord) -> str:
         if not record.title_normalized or not record.authors_normalized:

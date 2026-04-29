@@ -10,6 +10,7 @@ from app.meta_analysis.models.extraction import (
     extraction_record_from_dict,
     extraction_record_to_dict,
 )
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
@@ -20,9 +21,11 @@ class ExtractionRecordStorageService:
         *,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._task_center = task_center
         self._data_center = data_center
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def save_extraction_records(self, project_dir: Path, records: list[ExtractionRecord]) -> Path:
         project_dir = project_dir.expanduser().resolve()
@@ -39,6 +42,17 @@ class ExtractionRecordStorageService:
         }
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         self._register_asset(project_id=project_id, source_path=str(project_dir), output_path=str(output_path))
+        for record in records:
+            self._audit_log.record_event(
+                project_dir,
+                event_type="extraction_updated",
+                project_id=project_id,
+                target_type="extraction_record",
+                target_id=record.extraction_id,
+                source_path=str(project_dir),
+                output_path=str(output_path),
+                summary=f"Extraction record saved for {record.record_id}",
+            )
         self._finish_task(task, success=True, summary=f"Saved {len(records)} extraction records")
         return output_path
 

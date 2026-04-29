@@ -10,6 +10,7 @@ from app.meta_analysis.models.prisma import (
     prisma_flow_summary_from_dict,
     prisma_flow_summary_to_dict,
 )
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.report_manifest_service import ReportManifestService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -21,9 +22,11 @@ class PRISMAService:
         *,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._task_center = task_center
         self._data_center = data_center
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def collect_prisma_numbers(self, project_dir: Path) -> PRISMAFlowSummary:
         project_dir = project_dir.expanduser().resolve()
@@ -46,6 +49,12 @@ class PRISMAService:
             records_after_deduplication = records_screened or records_identified
         if studies_included == 0:
             studies_included = _max_count(payloads, ("records",), path_contains="extraction_records")
+        audit_sources = self._audit_source_refs(project_dir)
+        data_sources = [str(path.relative_to(project_dir)) for path, _payload in payloads]
+        for source in audit_sources:
+            if source not in data_sources:
+                data_sources.append(source)
+        source_references = _prisma_source_references(project_dir, payloads, audit_sources)
         summary = PRISMAFlowSummary(
             records_identified=records_identified,
             records_after_deduplication=records_after_deduplication,
@@ -57,12 +66,28 @@ class PRISMAService:
             full_text_exclusion_reasons={},
             studies_included=studies_included,
             reports_included=studies_included,
-            data_sources=[str(path.relative_to(project_dir)) for path, _payload in payloads],
-            notes=["full-text workflow incomplete; full-text PRISMA counts are testing estimates."],
+            data_sources=data_sources,
+            notes=["full-text workflow incomplete; full-text PRISMA counts are testing estimates.", "PRISMA sources include ImportBatch, DuplicateReviewDecision, ScreeningRecord, FulltextStatus, ExtractionRecord, and AnalysisInput when available."],
             created_at=now_utc(),
+            source_references=source_references,
         )
         self._finish_task(task, success=True, summary="PRISMA flow summary collected.")
         return summary
+
+    def _audit_source_refs(self, project_dir: Path) -> list[str]:
+        refs: list[str] = []
+        for event in self._audit_log.list_events(project_dir):
+            source_type = {
+                "import_batch_created": "ImportBatch",
+                "duplicate_decision": "DuplicateReviewDecision",
+                "screening_decision": "ScreeningRecord",
+                "fulltext_status_changed": "FulltextStatus",
+                "extraction_updated": "ExtractionRecord",
+                "analysis_run_completed": "AnalysisInput",
+            }.get(event.event_type)
+            if source_type:
+                refs.append(f"audit:{source_type}:{event.target_id}")
+        return refs
 
     def save_prisma_flow_summary(self, project_dir: Path, summary: PRISMAFlowSummary) -> Path:
         project_dir = project_dir.expanduser().resolve()
@@ -157,8 +182,10 @@ class FormalMarkdownReportBuilder:
         prisma_service: PRISMAService | None = None,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
-        self._prisma_service = prisma_service or PRISMAService(task_center=task_center, data_center=data_center)
+        self._audit_log = audit_log or MetaAuditLogService()
+        self._prisma_service = prisma_service or PRISMAService(task_center=task_center, data_center=data_center, audit_log=self._audit_log)
         self._task_center = task_center
         self._data_center = data_center
         self._report_manifest_service = ReportManifestService()
@@ -181,6 +208,16 @@ class FormalMarkdownReportBuilder:
             data_type="formal_meta_report",
             source_path=str(project_dir),
             output_path=str(output_path),
+        )
+        self._audit_log.record_event(
+            project_dir,
+            event_type="report_exported",
+            project_id=project_dir.name,
+            target_type="formal_meta_report",
+            target_id="formal_meta_report.md",
+            source_path=str(project_dir),
+            output_path=str(output_path),
+            summary="Formal markdown report exported.",
         )
         self._finish_task(task, success=True, summary=f"Formal markdown report exported: {output_path}")
         return output_path
@@ -286,6 +323,26 @@ def _decision_counts(records: list[dict[str, object]]) -> dict[str, int]:
         decision = str(record.get("decision", "pending")).lower()
         counts[decision] = counts.get(decision, 0) + 1
     return counts
+
+
+def _prisma_source_references(project_dir: Path, payloads: list[tuple[Path, dict[str, object]]], audit_sources: list[str]) -> list[dict[str, str]]:
+    refs: list[dict[str, str]] = []
+    source_map = {
+        "ImportBatch": ("batch_id", "literature"),
+        "DuplicateReviewDecision": ("decisions", "dedup"),
+        "ScreeningRecord": ("screening_records", "screening"),
+        "FulltextStatus": ("fulltext_files", "fulltext"),
+        "ExtractionRecord": ("records", "extraction_records"),
+        "AnalysisInput": ("datasets", "analysis_ready"),
+    }
+    for source_type, (_key, name_hint) in source_map.items():
+        match = next((path for path, _payload in payloads if name_hint in path.name or name_hint in str(path.relative_to(project_dir))), None)
+        if match is not None:
+            refs.append({"source_type": source_type, "path": str(match.relative_to(project_dir)), "status": "available"})
+        else:
+            refs.append({"source_type": source_type, "path": "", "status": "missing"})
+    refs.extend({"source_type": source.split(":")[1], "path": source, "status": "audit"} for source in audit_sources if source.startswith("audit:"))
+    return refs
 
 
 def _prisma_markdown(summary: PRISMAFlowSummary) -> str:

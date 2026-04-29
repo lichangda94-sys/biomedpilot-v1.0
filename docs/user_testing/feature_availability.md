@@ -22,10 +22,10 @@ Status meanings:
 | 生信分析 | 相关性分析 | 测试中 | 读取数据清洗计划并检查表达矩阵与样本注释；当前不计算相关系数、不生成相关性图。 | 接入目标基因/表型选择、相关方法设置和图表输出。 |
 | 生信分析 | 生存分析 | 测试中 | 读取数据清洗计划并检查临床/生存字段；当前不计算 Kaplan-Meier、log-rank 或 Cox 模型。 | 接入生存字段映射、分组策略和受控生存分析 runner。 |
 | 生信分析 | 报告导出 | 测试中 | 支持导出 Bioinformatics 测试摘要，汇总已有预检 JSON；当前不生成正式报告或图表包。 | 接入正式报告模板、图表包和 Report Center 历史。 |
-| Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产。 | 继续接入 Prepare for Screening 和 Duplicate Review。 |
+| Meta 分析 | 文献导入 | 测试中 | 支持 NBIB / RIS / CSV 文件导入，并登记任务与数据资产；新增 testing 文献字段 registry、creator / publication type 标准化、导入 diagnostics、字段 sanitizer 和 audit log。 | 继续完善真实导入 profile 覆盖和批量质量摘要 UI。 |
 | Meta 分析 | 去重准备 | 测试中 | 读取 Literature Import 输出并生成标准化筛选准备记录。 | 继续接入 Duplicate Review。 |
-| Meta 分析 | Duplicate Review | 测试中 | 已支持疑似重复组查看和最小人工决策；尚未支持完整批量合并 UI、高级 fuzzy matching 和多人审核。 | 继续完善批量处理、冲突合并预览和审核记录。 |
-| Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，支持最小 include/exclude/maybe 决策保存，并新增 testing full-text registry、全文筛选排除报告和基础质量评价输出。 | 接入 publication export 和复现包。 |
+| Meta 分析 | Duplicate Review | 测试中 | 已支持疑似重复组查看、分层 duplicate detection、merge preview 和最小人工决策；尚未支持完整批量合并 UI 和多人审核。 | 继续完善批量处理、冲突合并 UI 和审核记录。 |
+| Meta 分析 | Screening | 测试中 | 读取 Prepare/Duplicate 输出并生成标题摘要筛选队列，支持最小 include/exclude/maybe 决策保存，并新增 testing full-text registry、Attachment registry、全文缺失/排除报告和基础质量评价输出。 | 接入更完整的附件 UI、publication export 和复现包。 |
 | Meta 分析 | Extraction | 测试中 | 读取 Screening 队列并为 included 文献生成数据提取池；支持 testing 结构化 ExtractionRecord 表单保存、校验和 CSV 导出，并新增 prevalence、correlation、diagnostic basic outcome 数据结构。 | 继续完善 advanced method 表单体验和质量控制。 |
 | Meta 分析 | Analysis | 测试中 | 读取 Extraction 输出并执行 Analysis 预检，可构建 analysis-ready dataset，支持基础 testing pooled effect、prevalence/correlation/diagnostic basic 统计、subgroup、leave-one-out、publication bias basic、forest/funnel plot PNG 和 result table CSV；当前不是生产级正式 Meta 统计，network meta 仅为 not implemented placeholder。 | 继续完善 advanced analysis UI、统计校验和正式报告解释。 |
 | Meta 分析 | Reporting | 测试中 | 保留 Analysis 预检测试版 Markdown 摘要，支持 testing PRISMA 数字摘要、formal Markdown/HTML/DOCX report 雏形、advanced method summary、supplementary exports、figure package、project snapshot 和复现包；PDF 正式报告仍未开放。 | 继续完善 publication export、PDF 策略和投稿级模板。 |

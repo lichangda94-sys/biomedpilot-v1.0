@@ -13,16 +13,25 @@ LEGACY_ROOT = Path(__file__).resolve().parents[1] / "legacy"
 @dataclass(frozen=True)
 class LegacyParsedRecord:
     record_id: str
-    title: str
-    source_record_id: str
-    abstract: str
-    authors: list[str]
-    journal: str
-    doi: str
-    pmid: str
-    year: int | None
-    keywords: list[str]
-    language: str
+    title: str = ""
+    source_record_id: str = ""
+    abstract: str = ""
+    authors: list[str] | None = None
+    authors_text: str = ""
+    creators: list[dict[str, object]] | None = None
+    first_author: str = ""
+    journal: str = ""
+    publication_title: str = ""
+    date: str = ""
+    doi: str = ""
+    pmid: str = ""
+    year: int | None = None
+    keywords: list[str] | None = None
+    publication_type: str = "unknown"
+    clinical_trials_ids: list[str] | None = None
+    external_key: str = ""
+    language: str = ""
+    raw_payload: dict[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -67,12 +76,21 @@ class LiteratureImportAdapter:
                     source_record_id=record.source_record_id,
                     abstract=record.abstract,
                     authors=list(record.authors),
+                    authors_text=record.authors_text or "; ".join(record.authors),
+                    creators=[creator.to_dict() for creator in record.creators],
+                    first_author=record.first_author or (record.authors[0] if record.authors else ""),
                     journal=record.journal,
+                    publication_title=record.publication_title,
+                    date=record.date,
                     doi=record.doi,
                     pmid=record.pmid,
                     year=record.year,
                     keywords=list(record.keywords),
+                    publication_type=record.publication_type,
+                    clinical_trials_ids=list(record.clinical_trials_ids),
+                    external_key=record.external_key,
                     language=record.language,
+                    raw_payload=dict(record.raw_payload),
                 )
                 for record in records
             ],

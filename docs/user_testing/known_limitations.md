@@ -13,11 +13,11 @@
 - Bioinformatics correlation currently creates a readiness preflight only. It does not calculate Pearson/Spearman coefficients, p-values, heatmaps, or scatter plots.
 - Bioinformatics survival currently creates a readiness preflight only. It does not run Kaplan-Meier curves, log-rank tests, Cox regression, or survival plots.
 - Bioinformatics report export currently creates a Markdown testing summary only. It does not generate a formal report, figure package, or publication-ready archive.
-- Meta Literature Import is connected for NBIB / RIS / CSV smoke testing.
+- Meta Literature Import is connected for NBIB / RIS / CSV smoke testing and now records testing diagnostics, sanitizer warnings, and audit events, but this is not yet a polished production import wizard.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
-- Meta Duplicate Review can show duplicate candidate groups and save minimal keep/merge/not-duplicate/skip decisions, but it does not yet provide complete batch merge UI, advanced fuzzy matching, or multi-reviewer adjudication.
+- Meta Duplicate Review can show duplicate candidate groups, layered duplicate reasons, merge preview, and minimal decisions, but it does not yet provide complete batch merge UI or multi-reviewer adjudication.
 - Meta Screening can generate a title/abstract screening queue and save one record decision at a time, but it is not yet a full multi-reviewer screening workflow.
-- Meta Full-text and Quality workflows can save testing registries, exclusion reports, and quality tables, but they do not include OCR, PDF table extraction, AI full-text extraction, or full dual-reviewer adjudication.
+- Meta Full-text, Attachment, and Quality workflows can save testing registries, missing full-text / exclusion reports, and quality tables, but they do not include automatic PDF download, OCR, PDF table extraction, AI full-text extraction, or full dual-reviewer adjudication.
 - Meta Extraction can generate an extraction pool from included Screening records and supports testing-level structured ExtractionRecord save, validation, and CSV export.
 - Meta Extraction does not yet provide a polished production extraction form, analysis-ready dataset builder, or formal statistics handoff.
 - Meta Analysis can run a readiness preflight, build testing-level analysis-ready datasets, execute basic testing pooled effects, prevalence / correlation / diagnostic basic calculations, subgroup analysis, leave-one-out sensitivity analysis, basic Egger publication-bias testing, and export forest/funnel plot PNG plus result table CSV, but it does not generate diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, or production statistical reports yet.

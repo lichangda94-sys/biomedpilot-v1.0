@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.meta_analysis.adapters.screening_adapter import ScreeningAdapter, ScreeningQueueRecord
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -47,11 +48,13 @@ class ScreeningService:
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
+        audit_log: MetaAuditLogService | None = None,
     ) -> None:
         self._adapter = adapter or ScreeningAdapter()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
+        self._audit_log = audit_log or MetaAuditLogService()
 
     def create_queue(self, *, project_id: str, source_path: str) -> ScreeningQueueResult:
         task = self._start_task(project_id=project_id, source_path=source_path)
@@ -207,6 +210,17 @@ class ScreeningService:
                 status="available",
             )
             self._finish_decision_task(task, result)
+            self._audit_log.record_event(
+                self._project_dir(project_id),
+                event_type="screening_decision",
+                project_id=project_id,
+                target_type="screening_record",
+                target_id=screening_record_id,
+                source_path=str(resolved_queue_path),
+                output_path=str(resolved_queue_path),
+                summary=f"Screening decision saved: {normalized_decision}",
+                details={"reviewer_id": reviewer_id, "exclusion_reason_text": exclusion_reason_text},
+            )
             return result
         except Exception as exc:
             result = ScreeningDecisionUpdateResult(
@@ -340,6 +354,9 @@ class ScreeningService:
                 error_message="" if result.success else result.message,
             )
         )
+
+    def _project_dir(self, project_id: str) -> Path:
+        return self._storage_root / "projects" / project_id / "meta_analysis"
 
     def _write_output(
         self,

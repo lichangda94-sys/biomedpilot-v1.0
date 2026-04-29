@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import json
+from pathlib import Path
 
 from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
+from app.shared.storage import default_storage_root
 
 
 def meta_analysis_features() -> list[FeatureItem]:
@@ -21,6 +24,32 @@ def meta_analysis_step_features() -> list[FeatureAvailability]:
         "meta-reporting",
     }
     return [feature for feature in list_features("meta_analysis") if feature.feature_id in step_ids]
+
+
+def recent_import_batch_summaries(root_dir: Path | None = None, *, limit: int = 5) -> list[dict[str, object]]:
+    root = root_dir or default_storage_root()
+    projects_root = root / "projects"
+    summaries: list[dict[str, object]] = []
+    if not projects_root.exists():
+        return []
+    for path in projects_root.glob("*/meta_analysis/literature_import/*_records.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        summaries.append(
+            {
+                "project_id": payload.get("project_id", path.parents[2].name),
+                "source_database": payload.get("source_type", ""),
+                "format": payload.get("source_type", ""),
+                "status": "completed",
+                "parsed_count": len(payload.get("records", [])),
+                "warning_count": payload.get("warning_count", 0),
+                "duplicate_candidate_count": payload.get("duplicate_candidate_count", 0),
+                "created_at": payload.get("created_at", ""),
+            }
+        )
+    return sorted(summaries, key=lambda item: str(item.get("created_at", "")), reverse=True)[:limit]
 
 
 try:

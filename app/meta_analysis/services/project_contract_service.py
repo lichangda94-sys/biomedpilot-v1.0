@@ -28,6 +28,9 @@ CANONICAL_PROJECT_PATHS: dict[str, str] = {
     "fulltext_registry": "fulltext/fulltext_registry.json",
     "fulltext_screening_decisions": "fulltext/fulltext_screening_decisions.json",
     "full_text_exclusion_report": "reports/full_text_exclusion_report.csv",
+    "attachment_registry": "attachments/attachment_registry.json",
+    "missing_fulltext_report": "reports/missing_fulltext_report.csv",
+    "audit_log": "audit/audit_log.jsonl",
     "extraction_records": "extraction/extraction_records.json",
     "extraction_drafts": "extraction/drafts/",
     "quality_assessments": "quality/quality_assessments.json",
@@ -64,6 +67,8 @@ class MetaProjectContractService:
             project_dir / "deduplication",
             project_dir / "screening",
             project_dir / "fulltext",
+            project_dir / "attachments",
+            project_dir / "audit",
             project_dir / "extraction" / "drafts",
             project_dir / "quality",
             project_dir / "analysis",
@@ -237,4 +242,3 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
