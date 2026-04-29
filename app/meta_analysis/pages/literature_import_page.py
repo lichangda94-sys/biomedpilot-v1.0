@@ -4,6 +4,11 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.meta_analysis.services.literature_batch_import_service import (
+    LiteratureBatchImportRequest,
+    LiteratureBatchImportService,
+    LiteratureBatchImportSummary,
+)
 from app.meta_analysis.services.literature_import_service import ImportResult, LiteratureImportService
 from app.shared.feature_availability import get_feature
 
@@ -57,6 +62,13 @@ class LiteratureImportPageState:
     diagnostics_export_path: str = ""
     warnings_export_path: str = ""
     recent_import_batches: tuple[dict[str, object], ...] = ()
+    import_format_options: tuple[str, ...] = ("auto", "ris", "nbib", "csv")
+    dedup_mode_options: tuple[str, ...] = ("detect_only", "manual_review", "skip")
+    source_database: str = ""
+    search_date: str = ""
+    search_strategy: str = ""
+    dedup_mode: str = "detect_only"
+    last_batch_summary: LiteratureBatchImportSummary | None = None
 
 
 def initial_literature_import_state() -> LiteratureImportPageState:
@@ -71,6 +83,42 @@ def initial_literature_import_state() -> LiteratureImportPageState:
         next_step="下一步：Prepare Screening / 去重准备。",
         empty_state="未选择文件时不会运行导入，请先选择本地文献文件。",
         warning_summary="错误会显示为用户可读 message；详细解析错误保留在 details。",
+    )
+
+
+def literature_import_state_from_batch_summary(
+    summary: LiteratureBatchImportSummary,
+    *,
+    recent_import_batches: list[dict[str, object]] | None = None,
+) -> LiteratureImportPageState:
+    base = initial_literature_import_state()
+    diagnostics = _load_diagnostics_summary(summary.diagnostics_path)
+    visual_summary = import_diagnostics_visual_summary(summary.diagnostics_path, warnings_path=summary.warnings_path)
+    return LiteratureImportPageState(
+        title=base.title,
+        description="Developer Preview / testing 文献导入入口：选择文件、设置来源信息并执行 legacy batch import。",
+        supported_formats=base.supported_formats,
+        status_label=base.status_label,
+        input_summary="输入：本地 RIS / NBIB / CSV 文件、source_database、search_date、search_strategy 和 dedup_mode。",
+        output_summary="输出：legacy ImportBatch、parsed records、import diagnostics 和下一步 Duplicate Review 提示。",
+        next_step="下一步：Review duplicates。",
+        empty_state=base.empty_state,
+        warning_summary="导入失败会显示用户可读错误；diagnostics 展示缺字段和 warning，不自动修复。",
+        diagnostics_summary=diagnostics,
+        diagnostics_cards=visual_summary.summary_cards,
+        warning_table=visual_summary.warning_rows,
+        missing_diagnostics=visual_summary.missing_diagnostics,
+        total_warning_count=visual_summary.total_warning_count,
+        warning_list=visual_summary.warning_examples,
+        failed_records_preview=visual_summary.failed_record_examples,
+        diagnostics_export_path=summary.diagnostics_path,
+        warnings_export_path=summary.warnings_path,
+        recent_import_batches=tuple(recent_import_batches or ()),
+        source_database=summary.source_database,
+        search_date=summary.search_date,
+        search_strategy=summary.search_strategy,
+        dedup_mode=summary.dedup_mode,
+        last_batch_summary=summary,
     )
 
 
@@ -238,10 +286,17 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
 
     class LiteratureImportPage(QWidget):
-        def __init__(self, *, project_id: str = "manual-testing-project", service: LiteratureImportService | None = None) -> None:
+        def __init__(
+            self,
+            *,
+            project_id: str = "manual-testing-project",
+            service: LiteratureImportService | None = None,
+            batch_service: LiteratureBatchImportService | None = None,
+        ) -> None:
             super().__init__()
             self._project_id = project_id
             self._service = service or LiteratureImportService()
+            self._batch_service = batch_service or LiteratureBatchImportService()
             self._state = initial_literature_import_state()
 
             root = QVBoxLayout(self)
@@ -264,8 +319,30 @@ if QWidget is not None:
             row.addWidget(choose_button)
             root.addLayout(row)
 
+            self._format_input = QLineEdit()
+            self._format_input.setPlaceholderText("格式：auto / ris / nbib / csv")
+            self._format_input.setText("auto")
+            root.addWidget(self._format_input)
+
+            self._source_database_input = QLineEdit()
+            self._source_database_input.setPlaceholderText("source_database，例如 PubMed / Embase / Zotero / EndNote")
+            root.addWidget(self._source_database_input)
+
+            self._search_date_input = QLineEdit()
+            self._search_date_input.setPlaceholderText("search_date，例如 2026-04-29")
+            root.addWidget(self._search_date_input)
+
+            self._search_strategy_input = QLineEdit()
+            self._search_strategy_input.setPlaceholderText("search_strategy，记录检索式或导入说明")
+            root.addWidget(self._search_strategy_input)
+
+            self._dedup_mode_input = QLineEdit()
+            self._dedup_mode_input.setPlaceholderText("dedup_mode：detect_only / manual_review / skip")
+            self._dedup_mode_input.setText("detect_only")
+            root.addWidget(self._dedup_mode_input)
+
             import_button = QPushButton("导入")
-            import_button.clicked.connect(self._run_import)
+            import_button.clicked.connect(self._run_batch_import)
             root.addWidget(import_button)
 
             self._status_label = QLabel("导入状态：等待文件")
@@ -325,6 +402,47 @@ if QWidget is not None:
                 self._status_label.setText("导入状态：失败")
                 self._summary_label.setText("没有生成导入结果。")
                 self._error_label.setText(result.message)
+
+        def _run_batch_import(self) -> None:
+            summary = self._batch_service.execute_import(
+                LiteratureBatchImportRequest(
+                    project_id=self._project_id,
+                    source_path=self._path_input.text(),
+                    import_format=self._format_input.text() or "auto",
+                    source_database=self._source_database_input.text(),
+                    search_date=self._search_date_input.text(),
+                    search_strategy=self._search_strategy_input.text(),
+                    dedup_mode=self._dedup_mode_input.text() or "detect_only",
+                )
+            )
+            if summary.success:
+                self._state = literature_import_state_from_batch_summary(summary)
+                cards = "\n".join(f"- {card.label}: {card.value}" for card in self._state.diagnostics_cards) or "无"
+                warning_rows = "\n".join(f"- {row.label}: {row.count} ({row.message})" for row in self._state.warning_table) or "无"
+                self._status_label.setText("导入状态：batch import 完成")
+                self._summary_label.setText(
+                    f"ImportBatch：{summary.batch_id}\n"
+                    f"状态：{summary.status}\n"
+                    f"source_database：{summary.source_database or '未填写'}\n"
+                    f"search_date：{summary.search_date or '未填写'}\n"
+                    f"search_strategy：{summary.search_strategy or '未填写'}\n"
+                    f"格式：{summary.import_format}\n"
+                    f"dedup_mode：{summary.dedup_mode}\n"
+                    f"raw / parsed / normalized：{summary.raw_record_count} / {summary.parsed_record_count} / {summary.normalized_record_count}\n"
+                    f"failed / warnings：{summary.failed_record_count} / {summary.warning_count}\n"
+                    f"duplicate candidates：{summary.duplicate_candidate_count}\n"
+                    f"records_after_dedup：{summary.records_after_dedup_count}\n"
+                    f"diagnostics：{summary.diagnostics_path}\n"
+                    f"warnings CSV：{summary.warnings_path}\n"
+                    f"Diagnostics summary cards：\n{cards}\n"
+                    f"Warning table：\n{warning_rows}\n"
+                    f"下一步：{summary.next_step}"
+                )
+                self._error_label.setText("")
+            else:
+                self._status_label.setText("导入状态：失败")
+                self._summary_label.setText("没有生成 ImportBatch。")
+                self._error_label.setText(summary.message if not summary.error_message else f"{summary.message}\n{summary.error_message}")
 
 else:
 
