@@ -58,6 +58,9 @@ CANONICAL_PROJECT_PATHS: dict[str, str] = {
     "figure_artifacts": "figures/figure_artifacts.json",
     "formal_report": "reports/formal_meta_report.md",
     "report_manifest": "reports/report_manifest.json",
+    "prisma_summary": "reports/prisma_summary.json",
+    "prisma_flow_markdown": "reports/prisma_flow.md",
+    "prisma_flow_svg": "reports/prisma_flow.svg",
     "supplementary_exports": "exports/supplementary/",
     "figure_package": "exports/figures_package.zip",
     "artifact_locks": "locks/artifact_locks.json",
@@ -208,6 +211,7 @@ class MetaProjectContractService:
             _lineage_item("figure_to_analysis_result", "figures/figure_artifacts.json", "analysis/analysis_results.json", available),
             _lineage_item("report_to_artifacts", "reports/formal_meta_report.md", "reports/report_manifest.json", available),
             _lineage_item("prisma_to_sources", "reports/prisma_flow_summary.json", "screening/screening_decisions.json", available),
+            _lineage_item("simplified_prisma_svg_to_summary", "reports/prisma_flow.svg", "reports/prisma_summary.json", available),
         ]
         return {
             "project_id": project_dir.name,
@@ -251,6 +255,12 @@ def _artifact_type(path: Path) -> str:
         return "applicability_warnings"
     if name == "report_manifest.json":
         return "report_manifest"
+    if name == "prisma_summary.json":
+        return "prisma_summary"
+    if name == "prisma_flow.md":
+        return "prisma_flow_markdown"
+    if name == "prisma_flow.svg":
+        return "prisma_flow_svg"
     if name.startswith("forest_plot_"):
         return "forest_plot"
     if name.startswith("funnel_plot_"):
@@ -294,6 +304,8 @@ def _source_reference(relative_path: Path) -> str:
         return "analysis/analysis_results.json"
     if text.startswith("reports/formal_meta_report"):
         return "reports/report_manifest.json"
+    if text.startswith("reports/prisma_flow.svg") or text.startswith("reports/prisma_flow.md"):
+        return "reports/prisma_summary.json"
     if text.startswith("exports/reproducibility_package"):
         return "project manifest set"
     return ""

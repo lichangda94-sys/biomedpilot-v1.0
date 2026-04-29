@@ -31,6 +31,7 @@ class ReportingPageState:
         "records_screened",
         "studies_included",
         "full_text_workflow_incomplete",
+        "simplified_prisma_flow_svg",
     )
     formal_report_fields: tuple[str, ...] = (
         "formal_report_path",
@@ -92,7 +93,7 @@ def initial_reporting_state() -> ReportingPageState:
             "下一步建议：先补齐 blocker/major source warning，再把报告交给测试人员阅读。",
         ),
         testing_limitations=(
-            "Developer Preview / testing：不生成正式 PRISMA diagram。",
+            "Developer Preview / testing：仅生成简化 PRISMA SVG，不是正式 PRISMA 2020 diagram。",
             "正式 PDF report 未开放；当前仅保留 Markdown/HTML/DOCX testing 输出。",
         ),
     )

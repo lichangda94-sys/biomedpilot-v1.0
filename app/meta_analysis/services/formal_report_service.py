@@ -117,6 +117,30 @@ class PRISMAService:
         output_path.write_text(_prisma_markdown(summary), encoding="utf-8")
         return output_path
 
+    def export_simplified_prisma_flow(self, project_dir: Path, summary: PRISMAFlowSummary) -> dict[str, Path]:
+        project_dir = project_dir.expanduser().resolve()
+        reports_dir = project_dir / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        summary_json = reports_dir / "prisma_summary.json"
+        flow_markdown = reports_dir / "prisma_flow.md"
+        flow_svg = reports_dir / "prisma_flow.svg"
+        summary_json.write_text(json.dumps(prisma_flow_summary_to_dict(summary), ensure_ascii=False, indent=2), encoding="utf-8")
+        flow_markdown.write_text(_simplified_prisma_flow_markdown(summary), encoding="utf-8")
+        flow_svg.write_text(_simplified_prisma_flow_svg(summary), encoding="utf-8")
+        self._register_asset(
+            project_id=project_dir.name,
+            data_type="prisma_summary",
+            source_path=str(project_dir),
+            output_path=str(summary_json),
+        )
+        self._register_asset(
+            project_id=project_dir.name,
+            data_type="simplified_prisma_flow",
+            source_path=str(summary_json),
+            output_path=str(flow_svg),
+        )
+        return {"summary_json": summary_json, "flow_markdown": flow_markdown, "flow_svg": flow_svg}
+
     def _register_asset(self, *, project_id: str, data_type: str, source_path: str, output_path: str) -> None:
         if self._data_center is None:
             return
@@ -200,6 +224,8 @@ class FormalMarkdownReportBuilder:
             summary = self._prisma_service.collect_prisma_numbers(project_dir)
             self._prisma_service.save_prisma_flow_summary(project_dir, summary)
             self._prisma_service.export_prisma_flow_markdown(project_dir, summary)
+        if not (project_dir / "reports" / "prisma_flow.svg").exists():
+            self._prisma_service.export_simplified_prisma_flow(project_dir, summary)
         artifact_summary = _artifact_summary(project_dir)
         output_path = project_dir / "reports" / "formal_meta_report.md"
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -403,6 +429,72 @@ def _prisma_markdown(summary: PRISMAFlowSummary) -> str:
     )
 
 
+def _simplified_prisma_flow_markdown(summary: PRISMAFlowSummary) -> str:
+    return "\n".join(
+        [
+            "# Simplified PRISMA Flow (Testing)",
+            "",
+            "> Developer Preview: this is a simplified testing diagram, not a formal PRISMA 2020 figure.",
+            "",
+            f"- Records identified: {summary.records_identified}",
+            f"- Duplicates removed: {summary.duplicates_removed}",
+            f"- Records after deduplication: {summary.records_after_deduplication}",
+            f"- Records screened: {summary.records_screened}",
+            f"- Title/abstract exclusions: {summary.records_excluded_title_abstract}",
+            f"- Full-text reports sought: {summary.full_text_reports_sought}",
+            f"- Full-text reports assessed: {summary.full_text_reports_assessed}",
+            f"- Full-text reports excluded: {summary.full_text_reports_excluded}",
+            f"- Studies included: {summary.studies_included}",
+            "",
+            "## Source References",
+            *[f"- {item.get('source_type', '')}: {item.get('path', '')} ({item.get('status', '')})" for item in summary.source_references],
+            "",
+            "## Notes",
+            *[f"- {note}" for note in summary.notes],
+            "",
+        ]
+    )
+
+
+def _simplified_prisma_flow_svg(summary: PRISMAFlowSummary) -> str:
+    boxes = [
+        ("Records identified", summary.records_identified, 30, 30),
+        ("Duplicates removed", summary.duplicates_removed, 360, 30),
+        ("Records after deduplication", summary.records_after_deduplication, 30, 145),
+        ("Records screened", summary.records_screened, 30, 260),
+        ("Title/abstract excluded", summary.records_excluded_title_abstract, 360, 260),
+        ("Full-text sought", summary.full_text_reports_sought, 30, 375),
+        ("Full-text excluded", summary.full_text_reports_excluded, 360, 375),
+        ("Studies included", summary.studies_included, 30, 490),
+    ]
+    lines = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="700" height="650" viewBox="0 0 700 650" role="img" aria-label="Simplified testing PRISMA flow">',
+        '<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L8,3 z" fill="#475569"/></marker></defs>',
+        '<rect width="700" height="650" fill="#ffffff"/>',
+        '<text x="30" y="625" font-family="Arial, sans-serif" font-size="13" fill="#7a4a00">Developer Preview: simplified testing flow, not formal PRISMA 2020.</text>',
+    ]
+    for label, value, x, y in boxes:
+        lines.append(f'<rect x="{x}" y="{y}" width="270" height="70" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>')
+        lines.append(f'<text x="{x + 18}" y="{y + 30}" font-family="Arial, sans-serif" font-size="15" fill="#0f172a">{_svg_escape(label)}</text>')
+        lines.append(f'<text x="{x + 18}" y="{y + 55}" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#0f172a">{value}</text>')
+    for x1, y1, x2, y2 in (
+        (165, 100, 165, 145),
+        (165, 215, 165, 260),
+        (165, 330, 165, 375),
+        (165, 445, 165, 490),
+        (300, 65, 360, 65),
+        (300, 295, 360, 295),
+        (300, 410, 360, 410),
+    ):
+        lines.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>')
+    lines.append("</svg>")
+    return "\n".join(lines) + "\n"
+
+
+def _svg_escape(value: object) -> str:
+    return str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def _artifact_summary(project_dir: Path) -> dict[str, str]:
     checks = {
         "literature_records": "literature",
@@ -423,6 +515,7 @@ def _artifact_summary(project_dir: Path) -> dict[str, str]:
         "full_text_exclusion_report": "full_text_exclusion_report.csv",
         "quality_assessments": "quality_assessments.json",
         "quality_assessment_table": "quality_assessment_table.csv",
+        "prisma_flow_svg": "prisma_flow.svg",
     }
     paths = [path for path in project_dir.rglob("*") if path.is_file()] if project_dir.exists() else []
     summary: dict[str, str] = {}
