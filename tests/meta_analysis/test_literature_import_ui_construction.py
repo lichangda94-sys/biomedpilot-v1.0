@@ -4,6 +4,9 @@ from app.meta_analysis.pages.literature_import_page import (
     ImportDiagnosticsCard,
     ImportDiagnosticsWarningRow,
     LiteratureImportPageState,
+    _RESULT_CARD_STYLE,
+    _RESULT_TEXT_STYLE,
+    _RESULT_TITLE_STYLE,
     _diagnostics_cards_text,
     _failed_preview_text,
     _recent_batches_text,
@@ -88,3 +91,9 @@ def test_literature_import_recent_batches_text_handles_empty_and_populated() -> 
     assert "batch=batch-1" in populated
     assert "source=PubMed" in populated
     assert "duplicates=1" in populated
+
+
+def test_literature_import_result_cards_use_readable_contrast_styles() -> None:
+    assert "background: #F8FAFC" in _RESULT_CARD_STYLE
+    assert "color: #111827" in _RESULT_TEXT_STYLE
+    assert "color: #111827" in _RESULT_TITLE_STYLE

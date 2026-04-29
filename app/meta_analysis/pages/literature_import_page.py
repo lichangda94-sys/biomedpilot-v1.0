@@ -14,6 +14,12 @@ from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classi
 from app.shared.feature_availability import get_feature
 
 
+_RESULT_CARD_STYLE = (
+    "QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #F8FAFC; }"
+)
+_RESULT_TEXT_STYLE = "color: #111827; font-size: 12px;"
+_RESULT_TITLE_STYLE = "color: #111827; font-weight: 700;"
+
 WIZARD_STEPS = (
     "source_selection",
     "file_selection",
@@ -664,10 +670,11 @@ if QWidget is not None:
             self._status_label.setWordWrap(True)
             root.addWidget(self._status_label)
             self._summary_card = QFrame()
-            self._summary_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            self._summary_card.setStyleSheet(_RESULT_CARD_STYLE)
             summary_layout = QVBoxLayout(self._summary_card)
             self._summary_label = QLabel("导入结果摘要会显示在这里。")
             self._summary_label.setWordWrap(True)
+            self._summary_label.setStyleSheet(_RESULT_TEXT_STYLE)
             summary_layout.addWidget(self._summary_label)
             root.addWidget(self._summary_card)
 
@@ -675,6 +682,7 @@ if QWidget is not None:
             diagnostics_layout = self._diagnostics_card.layout()
             self._diagnostics_label = QLabel("导入后显示 missing title / author / year / DOI / PMID、invalid DOI/year 等统计。")
             self._diagnostics_label.setWordWrap(True)
+            self._diagnostics_label.setStyleSheet(_RESULT_TEXT_STYLE)
             diagnostics_layout.addWidget(self._diagnostics_label)
             root.addWidget(self._diagnostics_card)
 
@@ -682,6 +690,7 @@ if QWidget is not None:
             warning_layout = self._warning_card.layout()
             self._warning_label = QLabel("导入后显示 warning severity 和需要人工复核的字段质量问题。")
             self._warning_label.setWordWrap(True)
+            self._warning_label.setStyleSheet(_RESULT_TEXT_STYLE)
             warning_layout.addWidget(self._warning_label)
             root.addWidget(self._warning_card)
 
@@ -689,6 +698,7 @@ if QWidget is not None:
             failed_layout = self._failed_card.layout()
             self._failed_label = QLabel("导入后显示 failed record examples；缺 diagnostics 时显示 warning，不崩溃。")
             self._failed_label.setWordWrap(True)
+            self._failed_label.setStyleSheet(_RESULT_TEXT_STYLE)
             failed_layout.addWidget(self._failed_label)
             root.addWidget(self._failed_card)
 
@@ -696,6 +706,7 @@ if QWidget is not None:
             recent_layout = self._recent_card.layout()
             self._recent_label = QLabel(_recent_batches_text())
             self._recent_label.setWordWrap(True)
+            self._recent_label.setStyleSheet(_RESULT_TEXT_STYLE)
             recent_layout.addWidget(self._recent_label)
             root.addWidget(self._recent_card)
 
@@ -804,10 +815,10 @@ else:
 
 def _panel_frame(title: str) -> QFrame:
     frame = QFrame()
-    frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+    frame.setStyleSheet(_RESULT_CARD_STYLE)
     layout = QVBoxLayout(frame)
     label = QLabel(title)
-    label.setStyleSheet("font-weight: 700;")
+    label.setStyleSheet(_RESULT_TITLE_STYLE)
     layout.addWidget(label)
     return frame
 
