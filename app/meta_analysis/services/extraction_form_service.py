@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -25,6 +25,8 @@ from app.meta_analysis.models.extraction import (
 )
 from app.meta_analysis.services.extraction_record_storage_service import ExtractionRecordStorageService
 from app.meta_analysis.services.extraction_validation_service import ExtractionValidationService
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
+from app.meta_analysis.services.project_contract_service import MetaProjectContractService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
@@ -77,6 +79,22 @@ class FieldValidationSummary:
     missing_required_fields: list[str]
 
 
+@dataclass(frozen=True)
+class ManualExtractionEdit:
+    edit_id: str
+    project_id: str
+    extraction_id: str
+    record_id: str
+    field_name: str
+    before_value: str
+    after_value: str
+    reviewer_id: str
+    note: str
+    source_location: str
+    used_for_formal_analysis: bool
+    created_at: str
+
+
 class ExtractionFormService:
     def __init__(
         self,
@@ -85,9 +103,13 @@ class ExtractionFormService:
         validation_service: ExtractionValidationService | None = None,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
+        audit_log: MetaAuditLogService | None = None,
+        project_contract: MetaProjectContractService | None = None,
     ) -> None:
         self._task_center = task_center
         self._data_center = data_center
+        self._audit_log = audit_log or MetaAuditLogService()
+        self._project_contract = project_contract
         self._storage_service = storage_service or ExtractionRecordStorageService(
             task_center=task_center,
             data_center=data_center,
@@ -212,6 +234,9 @@ class ExtractionFormService:
             drafts.append(ExtractionDraft(**payload))
         return drafts
 
+    def load_extraction_records(self, project_dir: Path) -> list[ExtractionRecord]:
+        return self._storage_service.load_extraction_records(project_dir)
+
     def delete_draft(self, project_dir: Path, draft_id: str) -> bool:
         path = project_dir.expanduser().resolve() / "extraction" / "drafts" / f"{draft_id}.json"
         if not path.exists():
@@ -279,6 +304,95 @@ class ExtractionFormService:
             "ready_for_export": not incomplete,
             "warnings": [f"extraction_record_incomplete:{item['extraction_id']}" for item in incomplete],
         }
+
+    def record_manual_edit(
+        self,
+        project_dir: Path,
+        *,
+        extraction_id: str,
+        record_id: str,
+        field_name: str,
+        before_value: object,
+        after_value: object,
+        reviewer_id: str = "",
+        note: str = "",
+        source_location: str = "",
+        used_for_formal_analysis: bool = False,
+    ) -> Path:
+        project_dir = project_dir.expanduser().resolve()
+        path = project_dir / "extraction" / "manual_edits_log.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        edit = ManualExtractionEdit(
+            edit_id=f"edit-{uuid4().hex[:12]}",
+            project_id=project_dir.name,
+            extraction_id=extraction_id,
+            record_id=record_id,
+            field_name=field_name,
+            before_value=str(before_value),
+            after_value=str(after_value),
+            reviewer_id=reviewer_id,
+            note=note,
+            source_location=source_location,
+            used_for_formal_analysis=used_for_formal_analysis,
+            created_at=now_utc(),
+        )
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(asdict(edit), ensure_ascii=False, sort_keys=True) + "\n")
+        if self._data_center is not None:
+            self._data_center.register_asset(
+                project_id=project_dir.name,
+                module="meta_analysis",
+                data_type="extraction_manual_edits_log",
+                source_path=str(project_dir / "extraction" / "extraction_records.json"),
+                output_path=str(path),
+                status="testing",
+            )
+        self._audit_log.record_event(
+            project_dir,
+            event_type="extraction_updated",
+            project_id=project_dir.name,
+            target_type="manual_extraction_edit",
+            target_id=edit.edit_id,
+            source_path=source_location,
+            output_path=str(path),
+            summary=f"Manual extraction edit recorded for {field_name}.",
+            details={
+                "extraction_id": extraction_id,
+                "record_id": record_id,
+                "field_name": field_name,
+                "used_for_formal_analysis": used_for_formal_analysis,
+            },
+        )
+        if self._project_contract is not None:
+            self._project_contract.write_project_manifests(project_dir)
+        return path
+
+    def load_manual_edits(self, project_dir: Path) -> list[ManualExtractionEdit]:
+        path = project_dir.expanduser().resolve() / "extraction" / "manual_edits_log.jsonl"
+        if not path.exists():
+            return []
+        edits: list[ManualExtractionEdit] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            edits.append(
+                ManualExtractionEdit(
+                    edit_id=str(payload.get("edit_id", "")),
+                    project_id=str(payload.get("project_id", "")),
+                    extraction_id=str(payload.get("extraction_id", "")),
+                    record_id=str(payload.get("record_id", "")),
+                    field_name=str(payload.get("field_name", "")),
+                    before_value=str(payload.get("before_value", "")),
+                    after_value=str(payload.get("after_value", "")),
+                    reviewer_id=str(payload.get("reviewer_id", "")),
+                    note=str(payload.get("note", "")),
+                    source_location=str(payload.get("source_location", "")),
+                    used_for_formal_analysis=bool(payload.get("used_for_formal_analysis", False)),
+                    created_at=str(payload.get("created_at", "")),
+                )
+            )
+        return edits
 
     def save_extraction_record(self, *, project_dir: Path, record: ExtractionRecord) -> ExtractionRecordSaveResult:
         validation = self._validation_service.validate_extraction_record(record)

@@ -43,6 +43,7 @@ CANONICAL_PROJECT_PATHS: dict[str, str] = {
     "audit_log": "audit/audit_log.jsonl",
     "extraction_records": "extraction/extraction_records.json",
     "extraction_drafts": "extraction/drafts/",
+    "extraction_manual_edits_log": "extraction/manual_edits_log.jsonl",
     "quality_assessments": "quality/quality_assessments.json",
     "quality_assessment_table": "exports/quality_assessment_table.csv",
     "analysis_ready_dataset": "analysis/analysis_ready_datasets.json",
@@ -241,6 +242,8 @@ def _artifact_type(path: Path) -> str:
         return "reproducibility_package"
     if name.endswith("_records.json"):
         return name.removesuffix(".json")
+    if name == "manual_edits_log.jsonl":
+        return "extraction_manual_edits_log"
     return path.parent.name
 
 
@@ -255,6 +258,8 @@ def _source_reference(relative_path: Path) -> str:
     if text.startswith("analysis/analysis_results"):
         return "analysis/analysis_ready_datasets.json"
     if text.startswith("analysis/analysis_ready_datasets"):
+        return "extraction/extraction_records.json"
+    if text.startswith("extraction/manual_edits_log"):
         return "extraction/extraction_records.json"
     if text.startswith("figures/"):
         return "analysis/analysis_results.json"

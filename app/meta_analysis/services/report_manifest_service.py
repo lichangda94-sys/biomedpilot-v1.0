@@ -38,7 +38,7 @@ class ReportManifestService:
                     "reports/full_text_exclusion_report.csv",
                 ],
             ),
-            self._section(project_dir, "extraction", "Extraction summary", ["extraction/extraction_records.json"]),
+            self._section(project_dir, "extraction", "Extraction summary", ["extraction/extraction_records.json", "extraction/manual_edits_log.jsonl"]),
             self._section(project_dir, "quality", "Quality assessment summary", ["quality/quality_assessments.json", "exports/quality_assessment_table.csv"]),
             self._section(project_dir, "analysis", "Analysis summary", ["analysis/analysis_ready_datasets.json", "analysis/analysis_results.json"]),
             self._section(project_dir, "figures", "Figures and result tables", ["figures/figure_artifacts.json"], generated_outputs=_matching_outputs(project_dir, ("figures/forest_plot_*.png", "figures/funnel_plot_*.png", "exports/analysis_result_table_*.csv"))),

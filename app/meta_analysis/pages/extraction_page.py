@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +41,49 @@ class ExtractionPageState:
     empty_state: str
     export_path: str
     last_result: ExtractionPoolResult | None = None
+
+
+@dataclass(frozen=True)
+class ExtractionStudyTableRow:
+    record_id: str
+    study_id: str
+    title: str
+    first_author: str
+    year: str
+    status: str
+    completeness_score: float | None = None
+    missing_required_fields: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ExtractionOutcomeRowTemplate:
+    outcome_data_type: str
+    fields: tuple[str, ...]
+    required_fields: tuple[str, ...]
+    help_text: str
+
+
+@dataclass(frozen=True)
+class SimplifiedExtractionPageState:
+    title: str
+    status_label: str
+    description: str
+    project_dir: str
+    study_rows: tuple[ExtractionStudyTableRow, ...]
+    outcome_row_templates: tuple[ExtractionOutcomeRowTemplate, ...]
+    field_help_text: dict[str, str]
+    required_field_markers: dict[str, bool]
+    draft_count: int
+    saved_record_count: int
+    manual_edits_log_path: str
+    extraction_records_path: str
+    extraction_records_csv_path: str
+    validation_report_path: str
+    copy_previous_available: bool
+    completeness_summary: dict[str, object]
+    export_ready: bool
+    warnings: tuple[str, ...]
+    testing_limitations: tuple[str, ...]
 
 
 def initial_extraction_state() -> ExtractionPageState:
@@ -172,6 +216,124 @@ def initial_extraction_state() -> ExtractionPageState:
         empty_state="没有 extraction_pool 候选文献时，可以先生成提取池或手动输入 record_id / study_id。",
         export_path="project_dir/exports/extraction_records.csv",
     )
+
+
+def simplified_extraction_state_from_project(
+    project_dir: Path,
+    *,
+    service: ExtractionFormService | None = None,
+) -> SimplifiedExtractionPageState:
+    project_dir = project_dir.expanduser().resolve()
+    service = service or ExtractionFormService()
+    base = initial_extraction_state()
+    records = service.load_extraction_records(project_dir)
+    drafts = service.load_drafts(project_dir)
+    completeness = service.pre_export_completeness_check(project_dir)
+    final_included_rows = _final_included_rows(project_dir)
+    rows = _study_rows_from_records(records, service)
+    if not rows:
+        rows = _study_rows_from_final_included(final_included_rows)
+    warnings: list[str] = []
+    if not rows:
+        warnings.append("no_included_studies_for_extraction")
+    if completeness.get("warnings"):
+        warnings.extend(str(item) for item in completeness.get("warnings", []))
+    if not (project_dir / "fulltext" / "final_included_studies.json").exists():
+        warnings.append("missing_final_included_studies")
+    return SimplifiedExtractionPageState(
+        title="Simplified Extraction Workspace",
+        status_label="Testing / Developer Preview",
+        description="简化的人工数据提取 page-state：按 study characteristics 表格和 outcome rows 组织字段，复用现有 ExtractionRecord core、draft、validation 和 completeness score。",
+        project_dir=str(project_dir),
+        study_rows=tuple(rows),
+        outcome_row_templates=_outcome_templates(base),
+        field_help_text=_field_help_text(),
+        required_field_markers={field_name: True for group in base.required_fields.values() for field_name in group},
+        draft_count=len(drafts),
+        saved_record_count=len(records),
+        manual_edits_log_path=str(project_dir / "extraction" / "manual_edits_log.jsonl"),
+        extraction_records_path=str(project_dir / "extraction" / "extraction_records.json"),
+        extraction_records_csv_path=str(project_dir / "exports" / "extraction_records.csv"),
+        validation_report_path=str(project_dir / "extraction" / "extraction_validation_report.json"),
+        copy_previous_available=bool(records),
+        completeness_summary=completeness,
+        export_ready=bool(completeness.get("ready_for_export", False)),
+        warnings=tuple(warnings),
+        testing_limitations=(
+            "Developer Preview：该视图不改变 extraction schema，只整理人工录入体验。",
+            "人工补充必须写入 manual_edits_log.jsonl；不能静默覆盖正式分析数据。",
+            "缺失 required fields 会阻止或提示保存，取决于 validation service 的 error/warning 级别。",
+        ),
+    )
+
+
+def _outcome_templates(base: ExtractionPageState) -> tuple[ExtractionOutcomeRowTemplate, ...]:
+    required = tuple(base.required_fields["outcome_common"])
+    return (
+        ExtractionOutcomeRowTemplate("binary", base.binary_outcome_fields, required, "二分类结局：事件数和总人数用于 OR/RR/RD。"),
+        ExtractionOutcomeRowTemplate("continuous", base.continuous_outcome_fields, required, "连续变量结局：均值、SD 和样本量用于 MD/SMD。"),
+        ExtractionOutcomeRowTemplate("generic_effect", base.generic_effect_outcome_fields, required, "已报告效应量：effect + CI 或 SE，用于 HR/OR/RR inverse variance。"),
+        ExtractionOutcomeRowTemplate("diagnostic_accuracy", base.diagnostic_accuracy_outcome_fields, ("outcome_name", "tp", "fp", "fn", "tn"), "诊断基础表：当前不是 bivariate/HSROC。"),
+        ExtractionOutcomeRowTemplate("proportion", base.proportion_outcome_fields, ("outcome_name", "events", "total"), "单臂比例或患病率：记录 transformation 方法供 Analysis 解释。"),
+        ExtractionOutcomeRowTemplate("correlation", base.correlation_outcome_fields, ("outcome_name", "r", "sample_size"), "相关性 Meta：r 会转换为 Fisher z。"),
+    )
+
+
+def _field_help_text() -> dict[str, str]:
+    return {
+        "record_id": "来自 literature/screening/fulltext 的文献记录 ID。",
+        "study_id": "稳定 study 标识；同一研究多篇报告应使用一致 study_id。",
+        "source_location": "记录页码、表格编号或补充材料位置。",
+        "sample_size": "研究总样本量；必须大于 0。",
+        "outcome_name": "结局名称，必须与后续 Analysis 选择一致。",
+        "effect_measure": "OR/RR/RD/MD/SMD/HR/PREVALENCE/CORRELATION/DOR 等。",
+        "manual_supplement": "人工补充必须记录 before/after、source location、note 和是否用于正式分析。",
+    }
+
+
+def _final_included_rows(project_dir: Path) -> list[dict[str, object]]:
+    path = project_dir / "fulltext" / "final_included_studies.json"
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    rows = payload.get("included_studies", [])
+    return [dict(item) for item in rows if isinstance(item, dict)] if isinstance(rows, list) else []
+
+
+def _study_rows_from_records(records: list[object], service: ExtractionFormService) -> list[ExtractionStudyTableRow]:
+    rows: list[ExtractionStudyTableRow] = []
+    for record in records:
+        summary = service.field_validation_summary(record)
+        rows.append(
+            ExtractionStudyTableRow(
+                record_id=record.record_id,
+                study_id=record.study_id,
+                title="",
+                first_author=record.study_characteristics.first_author,
+                year=str(record.study_characteristics.year or ""),
+                status=record.validation_status,
+                completeness_score=summary.completeness_score,
+                missing_required_fields=tuple(summary.missing_required_fields),
+            )
+        )
+    return rows
+
+
+def _study_rows_from_final_included(rows: list[dict[str, object]]) -> list[ExtractionStudyTableRow]:
+    return [
+        ExtractionStudyTableRow(
+            record_id=str(item.get("record_id", "")),
+            study_id=str(item.get("study_id") or item.get("record_id", "")),
+            title=str(item.get("title", "")),
+            first_author=str(item.get("first_author", "")),
+            year=str(item.get("year", "")),
+            status="needs_extraction",
+        )
+        for item in rows
+    ]
 
 
 try:
