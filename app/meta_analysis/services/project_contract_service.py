@@ -45,7 +45,10 @@ CANONICAL_PROJECT_PATHS: dict[str, str] = {
     "extraction_drafts": "extraction/drafts/",
     "extraction_manual_edits_log": "extraction/manual_edits_log.jsonl",
     "quality_assessments": "quality/quality_assessments.json",
+    "quality_assessment": "quality/quality_assessment.json",
     "quality_assessment_table": "exports/quality_assessment_table.csv",
+    "quality_table": "quality/quality_table.csv",
+    "quality_summary": "quality/quality_summary.md",
     "analysis_ready_dataset": "analysis/analysis_ready_datasets.json",
     "analysis_result": "analysis/analysis_results.json",
     "figure_artifacts": "figures/figure_artifacts.json",
@@ -261,6 +264,8 @@ def _source_reference(relative_path: Path) -> str:
         return "extraction/extraction_records.json"
     if text.startswith("extraction/manual_edits_log"):
         return "extraction/extraction_records.json"
+    if text.startswith("quality/quality_summary") or text.startswith("quality/quality_table") or text.startswith("quality/quality_assessment"):
+        return "quality/quality_assessments.json"
     if text.startswith("figures/"):
         return "analysis/analysis_results.json"
     if text.startswith("reports/formal_meta_report"):
