@@ -22,6 +22,7 @@ class ReportManifestService:
         project_dir = project_dir.expanduser().resolve()
         sections = [
             self._section(project_dir, "project_summary", "Project summary", ["project.json"]),
+            self._section(project_dir, "protocol", "Protocol and research question", ["protocol/review_protocol.json", "protocol/search_strategy_preview.md", "criteria/criteria_summary.md"]),
             self._section(project_dir, "search_import", "Search and import summary", ["literature/literature_records.json"]),
             self._section(project_dir, "deduplication", "Deduplication summary", ["deduplication/duplicate_candidate_groups.json", "deduplication/deduplicated_literature.json"]),
             self._section(project_dir, "screening", "Screening summary", ["screening/screening_decisions.json"]),
@@ -52,6 +53,7 @@ class ReportManifestService:
                 ],
             ),
             self._analysis_section(project_dir),
+            self._section(project_dir, "applicability", "Applicability warnings", ["analysis/applicability_warnings.json"]),
             self._section(project_dir, "figures", "Figures and result tables", ["figures/figure_artifacts.json"], generated_outputs=_matching_outputs(project_dir, ("figures/forest_plot_*.png", "figures/funnel_plot_*.png", "exports/analysis_result_table_*.csv"))),
             self._prisma_section(project_dir),
             self._section(project_dir, "exports", "Publication exports", ["reports/formal_meta_report.md", "reports/formal_meta_report.html", "reports/formal_meta_report.docx", "exports/supplementary/manifest.json"]),

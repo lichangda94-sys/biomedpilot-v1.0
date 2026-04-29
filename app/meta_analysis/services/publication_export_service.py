@@ -119,7 +119,7 @@ class PublicationExportService:
         output_path = project_dir / "reports" / "formal_meta_report_pdf_placeholder.txt"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
-            "PDF export is not implemented in this testing build because no lightweight PDF renderer is configured.\n",
+            "pdf_export_not_implemented: PDF export is not implemented in this testing build because no lightweight PDF renderer is configured.\n",
             encoding="utf-8",
         )
         self._finish_task(task, success=False, summary="PDF report export is not implemented in this testing build.")
