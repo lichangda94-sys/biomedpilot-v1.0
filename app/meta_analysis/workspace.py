@@ -220,6 +220,7 @@ if QWidget is not None:
     from app.meta_analysis.pages.analysis_page import AnalysisPage
     from app.meta_analysis.pages.reporting_page import ReportingPage
     from app.meta_analysis.pages.attachment_page import AttachmentPage
+    from app.meta_analysis.pages.fulltext_eligibility_page import FullTextEligibilityPage
     from app.meta_analysis.pages.audit_log_page import AuditLogPage
     from app.meta_analysis.pages.protocol_page import ProtocolPage
     from app.meta_analysis.pages.workflow_dashboard_page import WorkflowDashboardPage
@@ -257,6 +258,7 @@ if QWidget is not None:
             content_layout.addWidget(CriteriaPage())
             content_layout.addWidget(ScreeningPage())
             content_layout.addWidget(AttachmentPage())
+            content_layout.addWidget(FullTextEligibilityPage())
             content_layout.addWidget(ExtractionPage())
             content_layout.addWidget(AnalysisPage())
             content_layout.addWidget(ReportingPage())

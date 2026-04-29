@@ -215,14 +215,15 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, object], ...] = (
     {
         "step_id": "fulltext_attachment",
         "title": "Full-text / Attachment",
-        "required_artifacts": ("fulltext/fulltext_registry.json", "attachments/attachment_registry.json"),
-        "prerequisites": ("screening/screening_decisions.json",),
-        "task_types": ("fulltext_attach", "attachment_link", "attachment_copy", "missing_fulltext_report_export"),
+        "required_artifacts": ("fulltext/fulltext_eligibility_decisions.json", "fulltext/final_included_studies.json"),
+        "fallback_globs": ("fulltext/fulltext_registry.json", "attachments/attachment_registry.json"),
+        "prerequisites": ("screening/screening_decisions.json", "screening/title_abstract_decisions.json"),
+        "task_types": ("fulltext_attach", "fulltext_screening_decision", "fulltext_exclusion_export", "attachment_link", "attachment_copy", "missing_fulltext_report_export"),
         "audit_events": ("fulltext_status_changed",),
-        "data_types": ("fulltext_registry", "attachment_registry", "missing_fulltext_report"),
-        "entrypoint_page": "Full-text / Attachment page",
+        "data_types": ("fulltext_registry", "attachment_registry", "missing_fulltext_report", "fulltext_eligibility_decisions", "final_included_studies"),
+        "entrypoint_page": "Full-text / Attachment / Eligibility page",
         "input_summary": "included / maybe records 和本地 PDF 路径。",
-        "output_summary": "fulltext_registry、attachment_registry、missing_fulltext_report。",
+        "output_summary": "fulltext_eligibility_decisions、fulltext_exclusion_report、final_included_studies，并保留 fulltext_registry / attachment_registry。",
         "next_step": "Extraction。",
     },
     {
@@ -522,6 +523,20 @@ def _fulltext_warnings(project_dir: Path) -> list[str]:
         broken = len([item for item in attachments if isinstance(item, dict) and not Path(str(item.get("file_path", ""))).exists()])
         if broken:
             warnings.append(f"broken_attachment_paths:{broken}")
+    eligibility = _load_json(project_dir / "fulltext" / "fulltext_eligibility_decisions.json")
+    decisions = eligibility.get("decisions", [])
+    if isinstance(decisions, list):
+        blocked = len(
+            [
+                item
+                for item in decisions
+                if isinstance(item, dict) and item.get("eligibility_status") in {"missing_full_text", "failed_to_access", "excluded_after_full_text_review"}
+            ]
+        )
+        if blocked:
+            warnings.append(f"fulltext_excluded_or_missing:{blocked}")
+    if (project_dir / "fulltext" / "fulltext_eligibility_decisions.json").exists() and not (project_dir / "fulltext" / "final_included_studies.json").exists():
+        warnings.append("missing_final_included_studies")
     return warnings
 
 

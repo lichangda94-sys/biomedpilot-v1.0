@@ -25,7 +25,19 @@ class ReportManifestService:
             self._section(project_dir, "search_import", "Search and import summary", ["literature/literature_records.json"]),
             self._section(project_dir, "deduplication", "Deduplication summary", ["deduplication/duplicate_candidate_groups.json", "deduplication/deduplicated_literature.json"]),
             self._section(project_dir, "screening", "Screening summary", ["screening/screening_decisions.json"]),
-            self._section(project_dir, "fulltext", "Full-text screening summary", ["fulltext/fulltext_registry.json", "fulltext/fulltext_screening_decisions.json", "reports/full_text_exclusion_report.csv"]),
+            self._section(
+                project_dir,
+                "fulltext",
+                "Full-text screening summary",
+                [
+                    "fulltext/fulltext_registry.json",
+                    "fulltext/fulltext_screening_decisions.json",
+                    "fulltext/fulltext_eligibility_decisions.json",
+                    "fulltext/fulltext_exclusion_report.csv",
+                    "fulltext/final_included_studies.json",
+                    "reports/full_text_exclusion_report.csv",
+                ],
+            ),
             self._section(project_dir, "extraction", "Extraction summary", ["extraction/extraction_records.json"]),
             self._section(project_dir, "quality", "Quality assessment summary", ["quality/quality_assessments.json", "exports/quality_assessment_table.csv"]),
             self._section(project_dir, "analysis", "Analysis summary", ["analysis/analysis_ready_datasets.json", "analysis/analysis_results.json"]),
@@ -89,4 +101,3 @@ def _matching_outputs(project_dir: Path, patterns: tuple[str, ...]) -> list[str]
     for pattern in patterns:
         outputs.extend(str(path.relative_to(project_dir)) for path in sorted(project_dir.glob(pattern)))
     return outputs
-

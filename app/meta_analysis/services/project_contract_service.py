@@ -34,6 +34,9 @@ CANONICAL_PROJECT_PATHS: dict[str, str] = {
     "screening_decisions": "screening/screening_decisions.json",
     "fulltext_registry": "fulltext/fulltext_registry.json",
     "fulltext_screening_decisions": "fulltext/fulltext_screening_decisions.json",
+    "fulltext_eligibility_decisions": "fulltext/fulltext_eligibility_decisions.json",
+    "fulltext_eligibility_exclusion_report": "fulltext/fulltext_exclusion_report.csv",
+    "final_included_studies": "fulltext/final_included_studies.json",
     "full_text_exclusion_report": "reports/full_text_exclusion_report.csv",
     "attachment_registry": "attachments/attachment_registry.json",
     "missing_fulltext_report": "reports/missing_fulltext_report.csv",
@@ -185,6 +188,8 @@ class MetaProjectContractService:
         lineage = [
             _lineage_item("protocol_strategy_to_protocol", "protocol/search_strategy_preview.md", "protocol/review_protocol.json", available),
             _lineage_item("criteria_to_protocol", "criteria/criteria_summary.md", "protocol/review_protocol.json", available),
+            _lineage_item("fulltext_eligibility_to_screening", "fulltext/fulltext_eligibility_decisions.json", "screening/title_abstract_decisions.json", available),
+            _lineage_item("final_included_to_fulltext_eligibility", "fulltext/final_included_studies.json", "fulltext/fulltext_eligibility_decisions.json", available),
             _lineage_item("analysis_result_to_dataset", "analysis/analysis_results.json", "analysis/analysis_ready_datasets.json", available),
             _lineage_item("analysis_ready_dataset_to_extraction_records", "analysis/analysis_ready_datasets.json", "extraction/extraction_records.json", available),
             _lineage_item("extraction_records_to_literature", "extraction/extraction_records.json", "screening/screening_decisions.json", available),
@@ -245,6 +250,8 @@ def _source_reference(relative_path: Path) -> str:
         return "protocol/review_protocol.json"
     if text.startswith("criteria/"):
         return "protocol/review_protocol.json"
+    if text.startswith("fulltext/fulltext_eligibility") or text.startswith("fulltext/final_included"):
+        return "screening/title_abstract_decisions.json"
     if text.startswith("analysis/analysis_results"):
         return "analysis/analysis_ready_datasets.json"
     if text.startswith("analysis/analysis_ready_datasets"):
