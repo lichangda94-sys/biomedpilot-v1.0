@@ -12,6 +12,9 @@ From the project folder, run:
 python3 scripts/run_app.py
 ```
 
+This source entry always opens the current `/Users/changdali/Documents/BioMedPilot`
+checkout and is the preferred entry during active development.
+
 If you are given the local macOS app bundle, open:
 
 ```text
@@ -20,6 +23,10 @@ dist/BioMedPilot.app
 
 This first app bundle is a local launcher package. It still requires a Python
 environment with PySide6 and is not the final standalone installer.
+If the app bundle UI looks older than the source UI, ask the developer to rebuild
+it with `python3 scripts/package_app.py --smoke-test`. The smoke output and
+`dist/BioMedPilot.app/Contents/Resources/app/BUILD_INFO.json` show the app
+version, launch mode, and git commit used by the bundle.
 
 If the app opens correctly, you should see the BioMedPilot Dashboard with:
 

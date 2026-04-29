@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import plistlib
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime, UTC
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
+
 DEFAULT_APP_NAME = "BioMedPilot"
 COPY_DIRS = ("app", "assets", "docs", "examples", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
@@ -36,8 +43,11 @@ class PackagingResult:
     app_path: Path
     launcher_path: Path
     resource_root: Path
+    build_info_path: Path
     mode: str
     python_executable: str
+    app_version: str
+    git_head: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
@@ -68,15 +78,21 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
             shutil.copy2(source, resource_root / filename)
 
     _create_project_storage(resource_root / "project_storage")
-    _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name)
+    git_head = _git_head(repo_root) or "unknown"
+    build_info_path = resource_root / BUILD_INFO_FILENAME
+    _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
+    _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
 
     return PackagingResult(
         app_path=app_path,
         launcher_path=launcher_path,
         resource_root=resource_root,
+        build_info_path=build_info_path,
         mode="local-python-launcher",
         python_executable=options.python_executable,
+        app_version=APP_VERSION,
+        git_head=git_head,
     )
 
 
@@ -102,8 +118,11 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     print(f"app_path={result.app_path}")
+    print(f"app_version={result.app_version}")
+    print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
     print(f"python={result.python_executable}")
+    print(f"build_info={result.build_info_path}")
     print("standalone=false")
     print("network_downloads=false")
 
@@ -139,17 +158,34 @@ def _create_project_storage(storage_root: Path) -> None:
         (target / ".gitkeep").write_text("", encoding="utf-8")
 
 
-def _write_info_plist(path: Path, *, app_name: str) -> None:
+def _write_build_info(path: Path, *, repo_root: Path, git_head: str) -> None:
+    payload = {
+        "app_name": DEFAULT_APP_NAME,
+        "version": APP_VERSION,
+        "bundle_version": APP_BUNDLE_VERSION,
+        "channel": APP_CHANNEL,
+        "launch_mode": "packaged-local-python",
+        "source_root": str(repo_root),
+        "git_head": git_head,
+        "built_at": datetime.now(UTC).isoformat(),
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
     payload = {
         "CFBundleName": app_name,
         "CFBundleDisplayName": "BioMedPilot / 医研智析",
         "CFBundleIdentifier": "local.biomedpilot.desktop",
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": APP_BUNDLE_VERSION,
+        "CFBundleShortVersionString": APP_BUNDLE_VERSION,
         "CFBundlePackageType": "APPL",
         "CFBundleExecutable": app_name,
         "LSMinimumSystemVersion": "12.0",
         "NSHighResolutionCapable": True,
+        "BioMedPilotVersion": APP_VERSION,
+        "BioMedPilotChannel": APP_CHANNEL,
+        "BioMedPilotGitHead": git_head,
     }
     with path.open("wb") as handle:
         plistlib.dump(payload, handle)
@@ -161,6 +197,7 @@ set -eu
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
+export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
@@ -176,6 +213,20 @@ exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _git_head(repo_root: Path) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=repo_root,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    return completed.stdout.strip()
 
 
 if __name__ == "__main__":

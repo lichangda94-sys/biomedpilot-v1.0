@@ -16,6 +16,17 @@ Output:
 dist/BioMedPilot.app
 ```
 
+The launcher bundle now writes a build marker at:
+
+```text
+dist/BioMedPilot.app/Contents/Resources/app/BUILD_INFO.json
+```
+
+The smoke test prints `app_version`, `launch_mode`, `app_root`, and `git_head`.
+Use these fields to confirm whether you are testing the current source checkout
+or a packaged app bundle. If the UI looks stale, rebuild the bundle with the
+command above before opening `dist/BioMedPilot.app`.
+
 This package mode:
 
 - uses no network downloads
@@ -23,6 +34,7 @@ This package mode:
 - copies the active BioMedPilot project files into the app bundle
 - creates a macOS launcher under `Contents/MacOS`
 - runs `python -m app.main`
+- records version/source metadata in `BUILD_INFO.json`
 - stores runtime JSON under the copied `project_storage` directory inside the bundle
 
 ## Limitations

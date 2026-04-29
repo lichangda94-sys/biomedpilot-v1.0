@@ -7,6 +7,7 @@ from app.meta_analysis.workspace import meta_analysis_features
 from app.shared.environment.checks import EnvironmentStatus, check_local_environment
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.task_center.service import TaskCenter, TaskRecord
+from app.version import APP_CHANNEL, APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,10 @@ def build_dashboard_model(
     task_center = task_center or TaskCenter.default()
     return DashboardModel(
         product_name="BioMedPilot / 医研智析",
-        product_subtitle="统一入口，独立工作台：Bioinformatics Analysis 与 Meta Analysis",
+        product_subtitle=(
+            "统一入口，独立工作台：Bioinformatics Analysis 与 Meta Analysis · "
+            f"{APP_VERSION} · {APP_CHANNEL}"
+        ),
         bioinformatics_features=tuple(item.name for item in bioinformatics_features()),
         meta_analysis_features=tuple(item.name for item in meta_analysis_features()),
         recent_projects=tuple(project_center.list_projects(limit=5)),
@@ -37,4 +41,3 @@ def build_dashboard_model(
         environment=check_local_environment(),
         test_mode_label="测试模式：UI 会标注已开放、测试中、待接入和暂未开放功能。",
     )
-

@@ -5,6 +5,7 @@ import argparse
 
 from app.shell.dashboard import build_dashboard_model
 from app.shared.environment.checks import check_local_environment
+from app.version import app_version_summary
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -18,7 +19,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.smoke_test:
         dashboard = build_dashboard_model()
         environment = check_local_environment()
+        version = app_version_summary()
         print(dashboard.product_name)
+        print(f"app_version={version.version}")
+        print(f"app_channel={version.channel}")
+        print(f"launch_mode={version.launch_mode}")
+        print(f"app_root={version.app_root}")
+        print(f"git_head={version.git_head}")
         print(f"workspace_entries=2")
         print(f"bioinformatics_features={len(dashboard.bioinformatics_features)}")
         print(f"meta_analysis_features={len(dashboard.meta_analysis_features)}")
