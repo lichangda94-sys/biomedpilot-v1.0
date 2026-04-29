@@ -9,6 +9,33 @@ from app.shared.feature_availability import get_feature
 
 
 @dataclass(frozen=True)
+class ImportDiagnosticsCard:
+    key: str
+    label: str
+    value: int
+
+
+@dataclass(frozen=True)
+class ImportDiagnosticsWarningRow:
+    key: str
+    label: str
+    count: int
+    message: str
+
+
+@dataclass(frozen=True)
+class ImportDiagnosticsVisualSummary:
+    diagnostics_path: str
+    warnings_csv_path: str
+    missing_diagnostics: bool
+    total_warning_count: int
+    summary_cards: tuple[ImportDiagnosticsCard, ...]
+    warning_rows: tuple[ImportDiagnosticsWarningRow, ...]
+    failed_record_examples: tuple[str, ...]
+    warning_examples: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class LiteratureImportPageState:
     title: str
     description: str
@@ -21,6 +48,10 @@ class LiteratureImportPageState:
     warning_summary: str
     last_result: ImportResult | None = None
     diagnostics_summary: dict[str, object] | None = None
+    diagnostics_cards: tuple[ImportDiagnosticsCard, ...] = ()
+    warning_table: tuple[ImportDiagnosticsWarningRow, ...] = ()
+    missing_diagnostics: bool = False
+    total_warning_count: int = 0
     warning_list: tuple[str, ...] = ()
     failed_records_preview: tuple[str, ...] = ()
     diagnostics_export_path: str = ""
@@ -52,8 +83,7 @@ def literature_import_state_from_result(
     diagnostics_path = str(result.details.get("diagnostics_path", "")) if result.details else ""
     warnings_path = str(result.details.get("warnings_path", "")) if result.details else ""
     diagnostics = _load_diagnostics_summary(diagnostics_path)
-    warnings = tuple(diagnostics.get("parse_warning_examples", [])[:10]) if diagnostics else ()
-    failed_preview = tuple(diagnostics.get("failed_record_examples", [])[:5]) if diagnostics else ()
+    visual_summary = import_diagnostics_visual_summary(diagnostics_path, warnings_path=warnings_path)
     return LiteratureImportPageState(
         title=base.title,
         description=base.description,
@@ -66,40 +96,137 @@ def literature_import_state_from_result(
         warning_summary="显示 diagnostics summary、warning list、failed records preview；详细解析错误保留在 details。",
         last_result=result,
         diagnostics_summary=diagnostics,
-        warning_list=warnings,
-        failed_records_preview=failed_preview,
+        diagnostics_cards=visual_summary.summary_cards,
+        warning_table=visual_summary.warning_rows,
+        missing_diagnostics=visual_summary.missing_diagnostics,
+        total_warning_count=visual_summary.total_warning_count,
+        warning_list=visual_summary.warning_examples,
+        failed_records_preview=visual_summary.failed_record_examples,
         diagnostics_export_path=diagnostics_path,
-        warnings_export_path=warnings_path,
+        warnings_export_path=visual_summary.warnings_csv_path,
         recent_import_batches=tuple(recent_import_batches or ()),
+    )
+
+
+def import_diagnostics_visual_summary(diagnostics_path: str, *, warnings_path: str = "") -> ImportDiagnosticsVisualSummary:
+    diagnostics = _load_diagnostics_summary(diagnostics_path)
+    missing_diagnostics = bool(diagnostics_path and diagnostics.get("warning") == "diagnostics_file_missing")
+    normalized_path = str(Path(diagnostics_path).expanduser()) if diagnostics_path else ""
+    warnings_csv_path = warnings_path or _infer_warnings_csv_path(normalized_path)
+    cards = tuple(
+        ImportDiagnosticsCard(key=key, label=label, value=_int_value(diagnostics.get(key, 0)))
+        for key, label in _DIAGNOSTICS_CARD_FIELDS
+    )
+    warning_rows = _diagnostics_warning_rows(diagnostics)
+    failed_examples = _string_tuple(diagnostics.get("failed_record_examples", ()), limit=5)
+    warning_examples = _string_tuple(diagnostics.get("parse_warning_examples", ()), limit=10)
+    total_warning_count = _int_value(diagnostics.get("warning_count", 0))
+    if total_warning_count == 0:
+        total_warning_count = sum(row.count for row in warning_rows)
+    return ImportDiagnosticsVisualSummary(
+        diagnostics_path=normalized_path,
+        warnings_csv_path=warnings_csv_path,
+        missing_diagnostics=missing_diagnostics,
+        total_warning_count=total_warning_count,
+        summary_cards=cards,
+        warning_rows=warning_rows,
+        failed_record_examples=failed_examples,
+        warning_examples=warning_examples,
     )
 
 
 def _load_diagnostics_summary(diagnostics_path: str) -> dict[str, object]:
     if not diagnostics_path:
-        return {}
+        return {key: [] if key.endswith("examples") else 0 for key in _DIAGNOSTICS_SUMMARY_KEYS}
     path = Path(diagnostics_path).expanduser()
     if not path.exists():
-        return {"warning": "diagnostics_file_missing", "path": str(path)}
+        payload: dict[str, object] = {key: [] if key.endswith("examples") else 0 for key in _DIAGNOSTICS_SUMMARY_KEYS}
+        payload.update({"warning": "diagnostics_file_missing", "path": str(path)})
+        return payload
     payload = json.loads(path.read_text(encoding="utf-8"))
-    keys = (
-        "raw_record_count",
-        "parsed_record_count",
-        "normalized_record_count",
-        "failed_record_count",
-        "warning_count",
-        "missing_title_count",
-        "missing_author_count",
-        "missing_year_count",
-        "missing_doi_count",
-        "missing_pmid_count",
-        "empty_abstract_count",
-        "invalid_year_count",
-        "invalid_doi_count",
-        "duplicate_identifier_count",
-        "parse_warning_examples",
-        "failed_record_examples",
-    )
-    return {key: payload.get(key, [] if key.endswith("examples") else 0) for key in keys}
+    return {key: payload.get(key, [] if key.endswith("examples") else 0) for key in _DIAGNOSTICS_SUMMARY_KEYS}
+
+
+_DIAGNOSTICS_SUMMARY_KEYS = (
+    "raw_record_count",
+    "parsed_record_count",
+    "normalized_record_count",
+    "failed_record_count",
+    "warning_count",
+    "missing_title_count",
+    "missing_author_count",
+    "missing_year_count",
+    "missing_doi_count",
+    "missing_pmid_count",
+    "empty_abstract_count",
+    "invalid_year_count",
+    "invalid_doi_count",
+    "duplicate_identifier_count",
+    "parse_warning_examples",
+    "failed_record_examples",
+)
+
+_DIAGNOSTICS_CARD_FIELDS = (
+    ("missing_title_count", "Missing title"),
+    ("missing_author_count", "Missing author"),
+    ("missing_year_count", "Missing year"),
+    ("missing_doi_count", "Missing DOI"),
+    ("missing_pmid_count", "Missing PMID"),
+    ("empty_abstract_count", "Empty abstract"),
+    ("invalid_doi_count", "Invalid DOI"),
+    ("invalid_year_count", "Invalid year"),
+)
+
+_WARNING_MESSAGES = {
+    "missing_title_count": "Records without a title need review before screening.",
+    "missing_author_count": "Author metadata is missing for some records.",
+    "missing_year_count": "Publication year is missing for some records.",
+    "missing_doi_count": "DOI is missing; import continues but matching may be weaker.",
+    "missing_pmid_count": "PMID is missing; import continues but PubMed matching may be weaker.",
+    "empty_abstract_count": "Abstract text is empty for some records.",
+    "invalid_doi_count": "Some DOI values could not be normalized.",
+    "invalid_year_count": "Some year values could not be parsed.",
+    "duplicate_identifier_count": "Repeated DOI/PMID identifiers were detected in the import batch.",
+    "failed_record_count": "Some records failed parsing or validation.",
+}
+
+
+def _diagnostics_warning_rows(diagnostics: dict[str, object]) -> tuple[ImportDiagnosticsWarningRow, ...]:
+    rows: list[ImportDiagnosticsWarningRow] = []
+    for key, label in (*_DIAGNOSTICS_CARD_FIELDS, ("duplicate_identifier_count", "Duplicate identifier"), ("failed_record_count", "Failed record")):
+        count = _int_value(diagnostics.get(key, 0))
+        if count <= 0:
+            continue
+        rows.append(
+            ImportDiagnosticsWarningRow(
+                key=key,
+                label=label,
+                count=count,
+                message=_WARNING_MESSAGES.get(key, "Import diagnostics warning needs review."),
+            )
+        )
+    return tuple(rows)
+
+
+def _infer_warnings_csv_path(diagnostics_path: str) -> str:
+    if not diagnostics_path:
+        return ""
+    if diagnostics_path.endswith("_import_diagnostics.json"):
+        return diagnostics_path.replace("_import_diagnostics.json", "_import_warnings.csv")
+    return str(Path(diagnostics_path).with_name("import_warnings.csv"))
+
+
+def _int_value(value: object) -> int:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0
+
+
+def _string_tuple(value: object, *, limit: int) -> tuple[str, ...]:
+    if not isinstance(value, list | tuple):
+        return ()
+    return tuple(str(item) for item in value[:limit])
 
 
 try:
@@ -172,6 +299,10 @@ if QWidget is not None:
                 self._state = literature_import_state_from_result(result)
                 self._status_label.setText("导入状态：完成")
                 diagnostics = self._state.diagnostics_summary or {}
+                cards = "\n".join(f"- {card.label}: {card.value}" for card in self._state.diagnostics_cards) or "无"
+                warning_rows = (
+                    "\n".join(f"- {row.label}: {row.count} ({row.message})" for row in self._state.warning_table) or "无"
+                )
                 warnings = "\n".join(f"- {item}" for item in self._state.warning_list) or "无"
                 failed = "\n".join(f"- {item}" for item in self._state.failed_records_preview) or "无"
                 self._summary_label.setText(
@@ -179,8 +310,10 @@ if QWidget is not None:
                     f"格式：{result.source_type.upper()}\n"
                     f"总记录：{result.total_records}\n"
                     f"成功导入：{result.imported_records}\n"
-                    f"warning_count：{diagnostics.get('warning_count', result.details.get('warning_count', 0))}\n"
+                    f"warning_count：{self._state.total_warning_count or diagnostics.get('warning_count', result.details.get('warning_count', 0))}\n"
                     f"failed_record_count：{diagnostics.get('failed_record_count', 0)}\n"
+                    f"Diagnostics summary cards：\n{cards}\n"
+                    f"Warning table：\n{warning_rows}\n"
                     f"diagnostics：{self._state.diagnostics_export_path}\n"
                     f"warnings CSV：{self._state.warnings_export_path}\n"
                     f"warning list：\n{warnings}\n"
