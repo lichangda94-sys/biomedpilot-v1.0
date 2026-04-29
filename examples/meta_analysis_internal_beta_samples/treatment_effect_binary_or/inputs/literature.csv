@@ -1,0 +1,4 @@
+record_id,title,authors,journal,year,doi,pmid,abstract,keywords
+rec-or-1,Trial A of treatment versus placebo,Smith J;Wang L,Journal of Testing Medicine,2021,10.1000/test.or1,10000001,Randomized placebo controlled trial with binary outcome.,treatment;placebo;binary
+rec-or-2,Trial B of treatment versus placebo,Garcia M;Lee K,Clinical Testing Reports,2022,10.1000/test.or2,10000002,Randomized placebo controlled trial with binary outcome.,treatment;placebo;binary
+rec-or-3,Trial A of treatment versus placebo duplicate,Smith J;Wang L,Journal of Testing Medicine,2021,10.1000/test.or1,10000001,Duplicate metadata row for dedup validation.,treatment;placebo;duplicate

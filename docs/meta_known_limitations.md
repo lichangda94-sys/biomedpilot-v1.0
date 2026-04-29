@@ -10,4 +10,6 @@ Current status: Developer Preview / testing.
 - Extraction and quality assessment still require human data entry and review.
 - AI suggestions cannot directly overwrite formal screening, extraction, analysis, or report data.
 - Stage W realistic sample uses PubMed-derived metadata, but binary extraction values are manually seeded validation data.
+- AB13 internal beta sample projects commit source inputs and expected manifests only; generated reports, figures, and ZIP packages must be produced in temporary project directories.
+- The treatment-effect and biomarker sample extraction values are validation seeds, not clinically curated datasets.
 - The Mac app bundle smoke target is suitable for internal beta checks only; it is not a standalone production installer.
