@@ -393,6 +393,12 @@ def _prisma_markdown(summary: PRISMAFlowSummary) -> str:
             "## Notes",
             *[f"- {note}" for note in summary.notes],
             "",
+            "## Source References",
+            *[
+                f"- {ref.get('source_type', '')}: {ref.get('status', '')} {ref.get('path', '')}".rstrip()
+                for ref in summary.source_references
+            ],
+            "",
         ]
     )
 

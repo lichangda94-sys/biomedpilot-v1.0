@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.meta_analysis.models.prisma import PRISMAFlowSummary
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
 from app.meta_analysis.services.publication_export_service import PublicationExportService
 from app.meta_analysis.services.reporting_service import ReportExportResult, ReportingService
@@ -44,6 +46,26 @@ class ReportingPageState:
         "artifact_lock_warnings",
         "pdf_placeholder_status",
     )
+    prisma_trace_state: "PRISMATraceState | None" = None
+
+
+@dataclass(frozen=True)
+class PRISMATraceReferenceRow:
+    source_type: str
+    path: str
+    status: str
+
+
+@dataclass(frozen=True)
+class PRISMATraceState:
+    summary: PRISMAFlowSummary | None
+    source_references: tuple[PRISMATraceReferenceRow, ...]
+    source_reference_warnings: tuple[str, ...]
+    audit_reference_warnings: tuple[str, ...]
+    workflow_event_counts: dict[str, int]
+    review_log_jsonl_path: str
+    review_log_csv_path: str
+    message: str
 
 
 def initial_reporting_state() -> ReportingPageState:
@@ -58,6 +80,64 @@ def initial_reporting_state() -> ReportingPageState:
         empty_state="缺失 artifact 时报告写明 missing / not generated，不崩溃。",
         warning_summary="Reporting 区分 test summary、formal Markdown、HTML/DOCX testing report；PDF 正式报告仍未开放。",
     )
+
+
+def reporting_prisma_trace_state_from_project(
+    project_dir: Path,
+    *,
+    prisma_service: PRISMAService | None = None,
+    audit_log: MetaAuditLogService | None = None,
+) -> PRISMATraceState:
+    project_dir = project_dir.expanduser().resolve()
+    prisma_service = prisma_service or PRISMAService(audit_log=audit_log)
+    audit_log = audit_log or MetaAuditLogService()
+    summary = prisma_service.collect_prisma_numbers(project_dir)
+    rows = tuple(
+        PRISMATraceReferenceRow(
+            source_type=str(item.get("source_type", "")),
+            path=str(item.get("path", "")),
+            status=str(item.get("status", "")),
+        )
+        for item in summary.source_references
+    )
+    source_warnings = tuple(
+        f"Missing source reference: {row.source_type}"
+        for row in rows
+        if row.status == "missing"
+    )
+    events = audit_log.list_events(project_dir)
+    event_type_counts: dict[str, int] = {}
+    for event in events:
+        event_type_counts[event.event_type] = event_type_counts.get(event.event_type, 0) + 1
+    workflow_counts = _workflow_event_counts(event_type_counts)
+    audit_warnings = tuple(
+        f"Missing audit events for {name}"
+        for name, count in workflow_counts.items()
+        if count == 0
+    )
+    return PRISMATraceState(
+        summary=summary,
+        source_references=rows,
+        source_reference_warnings=source_warnings,
+        audit_reference_warnings=audit_warnings,
+        workflow_event_counts=workflow_counts,
+        review_log_jsonl_path=str(project_dir / "reports" / "review_log.jsonl"),
+        review_log_csv_path=str(project_dir / "reports" / "review_log.csv"),
+        message="PRISMA source trace collected. Missing source or audit references are warnings in Developer Preview.",
+    )
+
+
+def _workflow_event_counts(event_type_counts: dict[str, int]) -> dict[str, int]:
+    groups = {
+        "import": ("import_batch_created", "record_parsed", "field_sanitized", "record_normalized", "record_saved", "diagnostics_generated"),
+        "dedup": ("duplicate_detected", "duplicate_decision"),
+        "screening": ("screening_decision",),
+        "fulltext": ("fulltext_status_changed",),
+        "extraction": ("extraction_updated",),
+        "analysis": ("analysis_run_completed",),
+        "report": ("report_exported",),
+    }
+    return {name: sum(event_type_counts.get(event_type, 0) for event_type in event_types) for name, event_types in groups.items()}
 
 
 try:
@@ -189,12 +269,25 @@ if QWidget is not None:
             summary = self._prisma_service.collect_prisma_numbers(project_dir)
             json_path = self._prisma_service.save_prisma_flow_summary(project_dir, summary)
             md_path = self._prisma_service.export_prisma_flow_markdown(project_dir, summary)
+            trace = reporting_prisma_trace_state_from_project(project_dir, prisma_service=self._prisma_service)
+            source_refs = "\n".join(f"- {row.source_type}: {row.status} {row.path}" for row in trace.source_references) or "无"
+            source_warnings = "\n".join(f"- {item}" for item in trace.source_reference_warnings) or "无"
+            audit_warnings = "\n".join(f"- {item}" for item in trace.audit_reference_warnings) or "无"
+            event_counts = "\n".join(f"- {key}: {value}" for key, value in sorted(trace.workflow_event_counts.items())) or "无"
             self._status_label.setText("报告状态：PRISMA summary 已生成")
             self._summary_label.setText(
                 f"Records identified：{summary.records_identified}\n"
+                f"Records after deduplication：{summary.records_after_deduplication}\n"
+                f"Duplicates removed：{summary.duplicates_removed}\n"
                 f"Records screened：{summary.records_screened}\n"
                 f"Studies included：{summary.studies_included}\n"
                 f"Full-text workflow incomplete：是\n"
+                f"Source references：\n{source_refs}\n"
+                f"Source reference warnings：\n{source_warnings}\n"
+                f"Audit reference warnings：\n{audit_warnings}\n"
+                f"Workflow event counts：\n{event_counts}\n"
+                f"review_log.jsonl：{trace.review_log_jsonl_path}\n"
+                f"review_log.csv：{trace.review_log_csv_path}\n"
                 f"JSON：{json_path}\n"
                 f"Markdown：{md_path}"
             )

@@ -19,7 +19,10 @@ class AuditLogPageState:
     audit_log_path: str = ""
     event_count: int = 0
     event_type_counts: dict[str, int] | None = None
+    workflow_event_counts: dict[str, int] | None = None
     recent_events: tuple[str, ...] = ()
+    review_log_jsonl_path: str = ""
+    review_log_csv_path: str = ""
 
 
 def initial_audit_log_state() -> AuditLogPageState:
@@ -45,6 +48,7 @@ def audit_log_state_from_project(project_dir: Path, *, service: MetaAuditLogServ
     for event in events:
         counts[event.event_type] = counts.get(event.event_type, 0) + 1
     recent = tuple(f"{event.created_at} | {event.event_type} | {event.target_type}:{event.target_id} | {event.summary}" for event in events[-10:])
+    workflow_counts = _workflow_event_counts(counts)
     return AuditLogPageState(
         title=base.title,
         description=base.description,
@@ -57,8 +61,24 @@ def audit_log_state_from_project(project_dir: Path, *, service: MetaAuditLogServ
         audit_log_path=str(service.audit_path(project_dir)),
         event_count=len(events),
         event_type_counts=counts,
+        workflow_event_counts=workflow_counts,
         recent_events=recent,
+        review_log_jsonl_path=str(project_dir / "reports" / "review_log.jsonl"),
+        review_log_csv_path=str(project_dir / "reports" / "review_log.csv"),
     )
+
+
+def _workflow_event_counts(event_type_counts: dict[str, int]) -> dict[str, int]:
+    groups = {
+        "import": ("import_batch_created", "record_parsed", "field_sanitized", "record_normalized", "record_saved", "diagnostics_generated"),
+        "dedup": ("duplicate_detected", "duplicate_decision"),
+        "screening": ("screening_decision",),
+        "fulltext": ("fulltext_status_changed",),
+        "extraction": ("extraction_updated",),
+        "analysis": ("analysis_run_completed",),
+        "report": ("report_exported",),
+    }
+    return {name: sum(event_type_counts.get(event_type, 0) for event_type in event_types) for name, event_types in groups.items()}
 
 
 try:
@@ -90,6 +110,12 @@ if QWidget is not None:
             refresh = QPushButton("刷新 audit log 摘要")
             refresh.clicked.connect(self._refresh)
             root.addWidget(refresh)
+            export_jsonl = QPushButton("导出 review_log.jsonl")
+            export_jsonl.clicked.connect(self._export_jsonl)
+            root.addWidget(export_jsonl)
+            export_csv = QPushButton("导出 review_log.csv")
+            export_csv.clicked.connect(self._export_csv)
+            root.addWidget(export_csv)
 
             card = QFrame()
             card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
@@ -103,16 +129,29 @@ if QWidget is not None:
         def _refresh(self) -> None:
             state = audit_log_state_from_project(Path(self._project_dir_input.text()).expanduser(), service=self._service)
             counts = "\n".join(f"- {key}: {value}" for key, value in sorted((state.event_type_counts or {}).items())) or "无"
+            workflow_counts = "\n".join(f"- {key}: {value}" for key, value in sorted((state.workflow_event_counts or {}).items())) or "无"
             recent = "\n".join(state.recent_events) or "无"
             self._summary_label.setText(
                 f"audit_log：{state.audit_log_path}\n"
                 f"event_count：{state.event_count}\n"
+                f"workflow_event_counts：\n{workflow_counts}\n"
                 f"event_type_counts：\n{counts}\n"
+                f"review_log_jsonl：{state.review_log_jsonl_path}\n"
+                f"review_log_csv：{state.review_log_csv_path}\n"
                 f"recent_events：\n{recent}"
             )
+
+        def _export_jsonl(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            self._service.export_review_log_jsonl(project_dir)
+            self._refresh()
+
+        def _export_csv(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            self._service.export_review_log_csv(project_dir)
+            self._refresh()
 
 else:
 
     class AuditLogPage:  # type: ignore[no-redef]
         pass
-

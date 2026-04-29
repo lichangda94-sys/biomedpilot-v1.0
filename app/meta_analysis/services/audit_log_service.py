@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -106,3 +107,48 @@ class MetaAuditLogService:
             )
         return events
 
+    def export_review_log_jsonl(self, project_dir: Path, output_path: Path | None = None) -> Path:
+        project_dir = project_dir.expanduser().resolve()
+        target = output_path.expanduser().resolve() if output_path is not None else project_dir / "reports" / "review_log.jsonl"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = self.audit_path(project_dir)
+        target.write_text(source.read_text(encoding="utf-8") if source.exists() else "", encoding="utf-8")
+        return target
+
+    def export_review_log_csv(self, project_dir: Path, output_path: Path | None = None) -> Path:
+        project_dir = project_dir.expanduser().resolve()
+        target = output_path.expanduser().resolve() if output_path is not None else project_dir / "reports" / "review_log.csv"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=[
+                    "event_id",
+                    "event_type",
+                    "project_id",
+                    "actor",
+                    "target_type",
+                    "target_id",
+                    "source_path",
+                    "output_path",
+                    "summary",
+                    "created_at",
+                ],
+            )
+            writer.writeheader()
+            for event in self.list_events(project_dir):
+                writer.writerow(
+                    {
+                        "event_id": event.event_id,
+                        "event_type": event.event_type,
+                        "project_id": event.project_id,
+                        "actor": event.actor,
+                        "target_type": event.target_type,
+                        "target_id": event.target_id,
+                        "source_path": event.source_path,
+                        "output_path": event.output_path,
+                        "summary": event.summary,
+                        "created_at": event.created_at,
+                    }
+                )
+        return target
