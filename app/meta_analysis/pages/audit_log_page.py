@@ -23,6 +23,8 @@ class AuditLogPageState:
     recent_events: tuple[str, ...] = ()
     review_log_jsonl_path: str = ""
     review_log_csv_path: str = ""
+    panel_help: tuple[str, ...] = ()
+    testing_limitations: tuple[str, ...] = ()
 
 
 def initial_audit_log_state() -> AuditLogPageState:
@@ -36,6 +38,16 @@ def initial_audit_log_state() -> AuditLogPageState:
         empty_state="没有 audit log 时显示空状态，不阻塞本地流程。",
         warning_summary="缺少 audit log 或缺少某类事件时只显示 warning，不崩溃。",
         event_type_counts={},
+        panel_help=(
+            "当前面板显示 Meta 项目的 audit/audit_log.jsonl 只读摘要和 workflow event counts。",
+            "输入来自项目目录；输出可导出 review_log.jsonl 和 review_log.csv。",
+            "warning 表示某类流程事件尚未记录，不代表测试流程崩溃。",
+            "下一步建议：将 review log 与 PRISMA source references 一起提交给测试记录。",
+        ),
+        testing_limitations=(
+            "Developer Preview / testing：Audit Log 不替代 Task Center。",
+            "缺 audit log 时只显示 warning，不阻塞本地流程。",
+        ),
     )
 
 
@@ -65,6 +77,8 @@ def audit_log_state_from_project(project_dir: Path, *, service: MetaAuditLogServ
         recent_events=recent,
         review_log_jsonl_path=str(project_dir / "reports" / "review_log.jsonl"),
         review_log_csv_path=str(project_dir / "reports" / "review_log.csv"),
+        panel_help=base.panel_help,
+        testing_limitations=base.testing_limitations,
     )
 
 

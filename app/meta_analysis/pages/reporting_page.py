@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.models.prisma import PRISMAFlowSummary
+from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
 from app.meta_analysis.services.publication_export_service import PublicationExportService
@@ -47,6 +48,8 @@ class ReportingPageState:
         "pdf_placeholder_status",
     )
     prisma_trace_state: "PRISMATraceState | None" = None
+    panel_help: tuple[str, ...] = ()
+    testing_limitations: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -66,6 +69,8 @@ class PRISMATraceState:
     review_log_jsonl_path: str
     review_log_csv_path: str
     message: str
+    warning_severity_items: tuple[WarningSeverityItem, ...] = ()
+    warning_severity_counts: dict[str, int] | None = None
 
 
 def initial_reporting_state() -> ReportingPageState:
@@ -79,6 +84,17 @@ def initial_reporting_state() -> ReportingPageState:
         next_step="下一步：内部 beta 前审查缺失 artifact、PDF 策略和投稿模板差距。",
         empty_state="缺失 artifact 时报告写明 missing / not generated，不崩溃。",
         warning_summary="Reporting 区分 test summary、formal Markdown、HTML/DOCX testing report；PDF 正式报告仍未开放。",
+        panel_help=(
+            "当前面板显示 test summary、PRISMA source trace、formal Markdown/HTML/DOCX testing report 和导出路径。",
+            "输入来自项目目录中的 import、dedup、screening、full-text、extraction、analysis、figure artifacts。",
+            "输出写入 reports、exports、figures、snapshots 和 reproducibility package。",
+            "warning 表示 source reference、audit reference 或 artifact 缺失，报告会继续生成并标记 missing。",
+            "下一步建议：先补齐 blocker/major source warning，再把报告交给测试人员阅读。",
+        ),
+        testing_limitations=(
+            "Developer Preview / testing：不生成正式 PRISMA diagram。",
+            "正式 PDF report 未开放；当前仅保留 Markdown/HTML/DOCX testing 输出。",
+        ),
     )
 
 
@@ -115,6 +131,22 @@ def reporting_prisma_trace_state_from_project(
         for name, count in workflow_counts.items()
         if count == 0
     )
+    severity_items = [
+        WarningSeverityItem(
+            key="missing_source_reference",
+            severity=classify_warning_severity(context="prisma_trace", key="missing_source_reference"),
+            message=warning,
+        )
+        for warning in source_warnings
+    ]
+    severity_items.extend(
+        WarningSeverityItem(
+            key="missing_audit_events",
+            severity=classify_warning_severity(context="prisma_trace", key="missing_audit_events"),
+            message=warning,
+        )
+        for warning in audit_warnings
+    )
     return PRISMATraceState(
         summary=summary,
         source_references=rows,
@@ -124,6 +156,8 @@ def reporting_prisma_trace_state_from_project(
         review_log_jsonl_path=str(project_dir / "reports" / "review_log.jsonl"),
         review_log_csv_path=str(project_dir / "reports" / "review_log.csv"),
         message="PRISMA source trace collected. Missing source or audit references are warnings in Developer Preview.",
+        warning_severity_items=tuple(severity_items),
+        warning_severity_counts=warning_severity_counts(tuple(severity_items)),
     )
 
 

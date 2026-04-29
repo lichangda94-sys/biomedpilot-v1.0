@@ -14,14 +14,18 @@
 - Bioinformatics survival currently creates a readiness preflight only. It does not run Kaplan-Meier curves, log-rank tests, Cox regression, or survival plots.
 - Bioinformatics report export currently creates a Markdown testing summary only. It does not generate a formal report, figure package, or publication-ready archive.
 - Meta Literature Import is connected for NBIB / RIS / CSV smoke testing and now records testing diagnostics, sanitizer warnings, and audit events, but this is not yet a polished production import wizard.
+- Meta Literature diagnostics panels are testing-level quality checks. They expose missing/invalid fields and warning severity to testers, but they do not automatically repair imported RIS / NBIB / CSV files.
 - Meta Prepare for Screening is connected for imported JSON output, but it does not perform manual duplicate decisions yet.
 - Meta Duplicate Review can show duplicate candidate groups, layered duplicate reasons, merge preview, and minimal decisions, but it does not yet provide complete batch merge UI or multi-reviewer adjudication.
+- Meta Duplicate Review merge preview is an aid for reviewer inspection only. It does not replace human duplicate decisions and should not be treated as an automatic merge authority.
 - Meta Screening can generate a title/abstract screening queue and save one record decision at a time, but it is not yet a full multi-reviewer screening workflow.
 - Meta Full-text, Attachment, and Quality workflows can save testing registries, missing full-text / exclusion reports, and quality tables, but they do not include automatic PDF download, OCR, PDF table extraction, AI full-text extraction, or full dual-reviewer adjudication.
+- Meta Attachment registry supports manual link/copy/ignore status checks only. It does not download PDFs, perform OCR, access institutional full text, bypass paywalls, or synchronize bidirectionally with Zotero.
 - Meta Extraction can generate an extraction pool from included Screening records and supports testing-level structured ExtractionRecord save, validation, and CSV export.
 - Meta Extraction does not yet provide a polished production extraction form, analysis-ready dataset builder, or formal statistics handoff.
 - Meta Analysis can run a readiness preflight, build testing-level analysis-ready datasets, execute basic testing pooled effects, prevalence / correlation / diagnostic basic calculations, subgroup analysis, leave-one-out sensitivity analysis, basic Egger publication-bias testing, and export forest/funnel plot PNG plus result table CSV, but it does not generate diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, or production statistical reports yet.
 - Meta Reporting can export the older testing Markdown summary, testing PRISMA number summary, formal Markdown/HTML/DOCX report drafts, supplementary CSV tables, a figure package ZIP, project snapshot metadata, and a reproducibility package ZIP, but it does not generate production PDF reports, PRISMA diagrams, GRADE summaries, or publication-ready files yet.
+- Meta PRISMA source trace is testing-level provenance display. A formal PRISMA diagram is not implemented in this build.
 - Meta AI-assisted Review is a testing suggestion queue only. AI suggestions remain pending by default, require human accept / reject / edit, require explicit apply after acceptance, and do not directly overwrite formal screening, extraction, analysis, or report artifacts.
 - Bioinformatics and Meta Analysis legacy code is preserved, but not all legacy screens are embedded in the unified shell yet.
 - Features marked `待接入` or `暂未开放` should not be tested as completed workflows.

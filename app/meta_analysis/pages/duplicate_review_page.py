@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.meta_analysis.models.dedup import DedupDecision, DedupResult, DuplicateGroup, MergePreview
+from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.services.dedup_decision_service import DedupDecisionService
 from app.meta_analysis.services.duplicate_review_service import DuplicateReviewResult, DuplicateReviewService
 from app.shared.feature_availability import get_feature
@@ -88,6 +89,10 @@ class DuplicateReviewPageState:
     merge_preview_summary: MergePreviewSummary = MergePreviewSummary(False)
     interactive_decision_options: tuple[str, ...] = ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")
     interaction_warning: str = "Merge 决策必须先生成 merge preview；当前不会执行批量合并。"
+    panel_help: tuple[str, ...] = ()
+    testing_limitations: tuple[str, ...] = ()
+    warning_severity_items: tuple[WarningSeverityItem, ...] = ()
+    warning_severity_counts: dict[str, int] | None = None
 
 
 def initial_duplicate_review_state() -> DuplicateReviewPageState:
@@ -101,6 +106,17 @@ def initial_duplicate_review_state() -> DuplicateReviewPageState:
         next_step="下一步：Screening。",
         empty_state="没有重复候选组时可直接生成去重后文献库并进入 Screening。",
         warning_summary="未找到重复组、决策不合法或来源路径错误时显示用户可读错误。",
+        panel_help=(
+            "当前面板显示 duplicate candidate groups、match reasons、canonical candidate 和 merge preview。",
+            "输入来自 Prepare Screening / Duplicate Review 生成的 duplicate_groups JSON。",
+            "输出为人工 dedup decision、duplicate_review_queue.csv 和后续 deduplicated_literature。",
+            "warning 表示字段冲突、低置信度或 merge preview 不完整，需要 reviewer 复核。",
+            "下一步建议：先查看 merge preview，再选择 keep_both、mark_not_duplicate、exclude_duplicate 或单组合并。",
+        ),
+        testing_limitations=(
+            "Developer Preview / testing：merge preview 是辅助，不替代 reviewer 判断。",
+            "当前不执行复杂批量合并 UI，也不自动删除记录。",
+        ),
     )
 
 
@@ -119,6 +135,11 @@ def duplicate_review_state_from_groups(
     conflict_summary = tuple(_field_conflict_summary(differences, merge_preview))
     conflicts = tuple(_compatible_conflict_names(conflict_summary))
     group_summaries = tuple(_group_summary(group) for group in groups)
+    severity_items = _merge_preview_warning_severity_items(
+        field_conflict_count=len(conflict_summary),
+        merge_preview=merge_preview,
+        current_group=current_group,
+    )
     return DuplicateReviewPageState(
         title="文献去重",
         description="读取 Prepare for Screening 输出，查看疑似重复组、match reasons 和 testing merge preview，并保存最小人工去重决策。",
@@ -146,6 +167,10 @@ def duplicate_review_state_from_groups(
         field_differences=differences,
         field_conflict_summary=conflict_summary,
         merge_preview_summary=_merge_preview_summary(merge_preview),
+        panel_help=initial_duplicate_review_state().panel_help,
+        testing_limitations=initial_duplicate_review_state().testing_limitations,
+        warning_severity_items=severity_items,
+        warning_severity_counts=warning_severity_counts(severity_items),
     )
 
 
@@ -236,6 +261,49 @@ def _compatible_conflict_names(conflicts: tuple[DuplicateFieldConflictSummary, .
             names.append("journal")
             names.append("publication_title")
     return list(dict.fromkeys(names))
+
+
+def _merge_preview_warning_severity_items(
+    *,
+    field_conflict_count: int,
+    merge_preview: MergePreview | None,
+    current_group: DuplicateGroup | None,
+) -> tuple[WarningSeverityItem, ...]:
+    items: list[WarningSeverityItem] = []
+    if current_group is not None and merge_preview is None:
+        items.append(
+            WarningSeverityItem(
+                key="merge_preview_missing",
+                severity=classify_warning_severity(context="merge_preview", key="merge_preview_missing"),
+                message="当前重复组没有可读 merge preview。",
+            )
+        )
+    if field_conflict_count:
+        items.append(
+            WarningSeverityItem(
+                key="field_conflict",
+                severity=classify_warning_severity(context="merge_preview", key="field_conflict", count=field_conflict_count),
+                message=f"{field_conflict_count} 个关键字段存在冲突。",
+            )
+        )
+    if current_group is not None and current_group.confidence < 0.85:
+        items.append(
+            WarningSeverityItem(
+                key="low_confidence",
+                severity=classify_warning_severity(context="merge_preview", key="low_confidence"),
+                message="重复候选置信度较低，需要人工确认。",
+            )
+        )
+    if merge_preview is not None:
+        for warning in merge_preview.warnings:
+            items.append(
+                WarningSeverityItem(
+                    key=warning,
+                    severity=classify_warning_severity(context="merge_preview", key=warning),
+                    message=warning,
+                )
+            )
+    return tuple(items)
 
 
 def _record_summary(record: dict[str, object]) -> DuplicateRecordSummary:

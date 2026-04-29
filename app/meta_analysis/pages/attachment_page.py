@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.models.attachments import ATTACHMENT_MODES
+from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.services.attachment_service import AttachmentService
 from app.meta_analysis.services.fulltext_service import FullTextService
 
@@ -57,6 +58,10 @@ class AttachmentPageState:
     attachment_validation_message: str = "没有附件时显示空状态。"
     attachment_rows: tuple[AttachmentFileRow, ...] = ()
     file_status_summary: tuple[str, ...] = ()
+    panel_help: tuple[str, ...] = ()
+    testing_limitations: tuple[str, ...] = ()
+    warning_severity_items: tuple[WarningSeverityItem, ...] = ()
+    warning_severity_counts: dict[str, int] | None = None
 
 
 def initial_attachment_state() -> AttachmentPageState:
@@ -70,6 +75,16 @@ def initial_attachment_state() -> AttachmentPageState:
         empty_state="没有附件时显示空状态，可继续手动记录 full-text availability。",
         warning_summary="路径失效、缺少 full-text 或 unsupported attachment mode 会显示用户可读 warning；不执行自动 PDF 下载。",
         mode_options=ATTACHMENT_MODES,
+        panel_help=(
+            "当前面板显示 attachment_registry.json、missing_fulltext_report.csv 和附件路径验证状态。",
+            "输入来自项目目录和用户手动 link/copy 的本地文件；输出写入 attachments、fulltext 和 reports 目录。",
+            "warning 表示附件缺失、路径失效或 full-text 尚未绑定。",
+            "下一步建议：导出 missing full-text report，并在 Full-text screening / Quality 前补齐必要 PDF。",
+        ),
+        testing_limitations=(
+            "Developer Preview / testing：不自动下载 PDF。",
+            "不执行 OCR、网页抓取、机构代理登录或版权受限下载。",
+        ),
     )
 
 
@@ -99,6 +114,11 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
     )
     missing_report_status, missing_rows = _missing_fulltext_report_rows(missing_path)
     broken_path_count = len([row for row in attachment_rows if not row.file_exists])
+    severity_items = _attachment_warning_severity_items(
+        registry_missing=not registry_path.exists(),
+        broken_path_count=broken_path_count,
+        missing_fulltext_count=len([row for row in missing_rows if row.missing_fulltext]),
+    )
     return AttachmentPageState(
         title=base.title,
         description=base.description,
@@ -129,6 +149,10 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
         attachment_validation_message=_validation_message(len(attachment_rows), broken_path_count),
         attachment_rows=attachment_rows,
         file_status_summary=file_status,
+        panel_help=base.panel_help,
+        testing_limitations=base.testing_limitations,
+        warning_severity_items=severity_items,
+        warning_severity_counts=warning_severity_counts(severity_items),
     )
 
 
@@ -220,6 +244,40 @@ def _validation_message(attachment_count: int, broken_path_count: int) -> str:
     if broken_path_count:
         return f"发现 {broken_path_count} 个附件路径失效，请检查本地文件位置。"
     return "附件路径验证通过。"
+
+
+def _attachment_warning_severity_items(
+    *,
+    registry_missing: bool,
+    broken_path_count: int,
+    missing_fulltext_count: int,
+) -> tuple[WarningSeverityItem, ...]:
+    items: list[WarningSeverityItem] = []
+    if registry_missing:
+        items.append(
+            WarningSeverityItem(
+                key="attachment_registry_missing",
+                severity=classify_warning_severity(context="attachment", key="attachment_registry_missing"),
+                message="attachment_registry.json 尚未生成。",
+            )
+        )
+    if broken_path_count:
+        items.append(
+            WarningSeverityItem(
+                key="broken_path_count",
+                severity=classify_warning_severity(context="attachment", key="broken_path_count", count=broken_path_count),
+                message=f"{broken_path_count} 个附件路径失效。",
+            )
+        )
+    if missing_fulltext_count:
+        items.append(
+            WarningSeverityItem(
+                key="missing_fulltext_count",
+                severity=classify_warning_severity(context="attachment", key="missing_fulltext_count", count=missing_fulltext_count),
+                message=f"{missing_fulltext_count} 条记录缺少 full-text PDF。",
+            )
+        )
+    return tuple(items)
 
 
 try:

@@ -10,6 +10,7 @@ from app.meta_analysis.services.literature_batch_import_service import (
     LiteratureBatchImportSummary,
 )
 from app.meta_analysis.services.literature_import_service import ImportResult, LiteratureImportService
+from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.shared.feature_availability import get_feature
 
 
@@ -26,6 +27,7 @@ class ImportDiagnosticsWarningRow:
     label: str
     count: int
     message: str
+    severity: str = "info"
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,7 @@ class ImportDiagnosticsVisualSummary:
     warning_rows: tuple[ImportDiagnosticsWarningRow, ...]
     failed_record_examples: tuple[str, ...]
     warning_examples: tuple[str, ...]
+    warning_severity_counts: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +72,9 @@ class LiteratureImportPageState:
     search_strategy: str = ""
     dedup_mode: str = "detect_only"
     last_batch_summary: LiteratureBatchImportSummary | None = None
+    panel_help: tuple[str, ...] = ()
+    testing_limitations: tuple[str, ...] = ()
+    warning_severity_counts: dict[str, int] | None = None
 
 
 def initial_literature_import_state() -> LiteratureImportPageState:
@@ -83,6 +89,16 @@ def initial_literature_import_state() -> LiteratureImportPageState:
         next_step="下一步：Prepare Screening / 去重准备。",
         empty_state="未选择文件时不会运行导入，请先选择本地文献文件。",
         warning_summary="错误会显示为用户可读 message；详细解析错误保留在 details。",
+        panel_help=(
+            "当前面板显示本地 RIS / NBIB / CSV 导入后的解析质量和 diagnostics 路径。",
+            "输入来自用户选择的文献导出文件；输出写入 literature_records、import diagnostics 和 warnings CSV。",
+            "warning 表示需要测试人员复核的字段质量问题，不会自动修复原始文件。",
+            "下一步建议：检查 failed records 和 major/blocker warning 后进入 Duplicate Review。",
+        ),
+        testing_limitations=(
+            "Developer Preview / testing：不是 production 导入向导。",
+            "Diagnostics 是质量检查，不替代人工判断。",
+        ),
     )
 
 
@@ -119,6 +135,9 @@ def literature_import_state_from_batch_summary(
         search_strategy=summary.search_strategy,
         dedup_mode=summary.dedup_mode,
         last_batch_summary=summary,
+        panel_help=base.panel_help,
+        testing_limitations=base.testing_limitations,
+        warning_severity_counts=visual_summary.warning_severity_counts,
     )
 
 
@@ -153,6 +172,9 @@ def literature_import_state_from_result(
         diagnostics_export_path=diagnostics_path,
         warnings_export_path=visual_summary.warnings_csv_path,
         recent_import_batches=tuple(recent_import_batches or ()),
+        panel_help=base.panel_help,
+        testing_limitations=base.testing_limitations,
+        warning_severity_counts=visual_summary.warning_severity_counts,
     )
 
 
@@ -180,6 +202,12 @@ def import_diagnostics_visual_summary(diagnostics_path: str, *, warnings_path: s
         warning_rows=warning_rows,
         failed_record_examples=failed_examples,
         warning_examples=warning_examples,
+        warning_severity_counts=warning_severity_counts(
+            [
+                WarningSeverityItem(key=row.key, severity=row.severity, message=row.message)  # type: ignore[arg-type]
+                for row in warning_rows
+            ]
+        ),
     )
 
 
@@ -251,6 +279,7 @@ def _diagnostics_warning_rows(diagnostics: dict[str, object]) -> tuple[ImportDia
                 label=label,
                 count=count,
                 message=_WARNING_MESSAGES.get(key, "Import diagnostics warning needs review."),
+                severity=classify_warning_severity(context="import_diagnostics", key=key, count=count),
             )
         )
     return tuple(rows)
