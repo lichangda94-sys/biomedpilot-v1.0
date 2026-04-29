@@ -138,8 +138,9 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, object], ...] = (
         "required_artifacts": ("protocol/review_protocol.json",),
         "prerequisites": ("project.json",),
         "task_types": (),
-        "audit_events": (),
-        "entrypoint_page": "Protocol page (planned AB2)",
+        "audit_events": ("record_saved",),
+        "data_types": ("review_protocol", "search_terms_draft", "search_strategy_preview", "protocol_summary"),
+        "entrypoint_page": "Protocol / Research Question page",
         "input_summary": "研究标题、PICO/PICOS、目标分析类型和数据库计划。",
         "output_summary": "review_protocol.json、search_terms_draft.json、search_strategy_preview.md。",
         "next_step": "Literature Import。",
@@ -388,6 +389,8 @@ def _infer_step_status(
 ) -> str:
     if running_tasks:
         return WORKFLOW_STATUS_IN_PROGRESS
+    if step_id == "protocol":
+        return _protocol_status(project_dir)
     if _step_complete(step_id, required, existing):
         return WORKFLOW_STATUS_NEEDS_REVIEW if warnings else WORKFLOW_STATUS_COMPLETED
     if any(_artifact_exists(project_dir, item) for item in prerequisites):
@@ -424,6 +427,8 @@ def _step_warnings(step_id: str, project_dir: Path, existing: tuple[str, ...], m
     warnings: list[str] = []
     if step_id == "project_setup":
         warnings.extend(_manifest_warnings(project_dir))
+    if step_id == "protocol":
+        warnings.extend(_protocol_warnings(project_dir))
     if step_id == "import_diagnostics":
         warnings.extend(_diagnostics_warnings(project_dir))
     if step_id == "duplicate_review":
@@ -439,6 +444,39 @@ def _step_warnings(step_id: str, project_dir: Path, existing: tuple[str, ...], m
     if not existing and missing:
         warnings.append(f"missing_required_artifacts:{','.join(missing)}")
     return warnings
+
+
+def _protocol_status(project_dir: Path) -> str:
+    protocol_path = project_dir / "protocol" / "review_protocol.json"
+    if not protocol_path.exists():
+        return WORKFLOW_STATUS_NOT_STARTED
+    payload = _load_json(protocol_path)
+    readiness = str(payload.get("readiness_status", ""))
+    confirmed = bool(payload.get("confirmed", False))
+    strategy_path = project_dir / "protocol" / "search_strategy_preview.md"
+    warnings = payload.get("warnings", [])
+    has_warnings = bool(warnings) if isinstance(warnings, list) else False
+    if confirmed or readiness == "completed":
+        return WORKFLOW_STATUS_COMPLETED
+    if strategy_path.exists() and has_warnings:
+        return WORKFLOW_STATUS_NEEDS_REVIEW
+    if strategy_path.exists() and readiness in {"ready", "completed"}:
+        return WORKFLOW_STATUS_READY
+    return WORKFLOW_STATUS_IN_PROGRESS
+
+
+def _protocol_warnings(project_dir: Path) -> list[str]:
+    protocol_path = project_dir / "protocol" / "review_protocol.json"
+    if not protocol_path.exists():
+        return []
+    payload = _load_json(protocol_path)
+    warnings = payload.get("warnings", [])
+    output = [str(item) for item in warnings if str(item).strip()] if isinstance(warnings, list) else []
+    if not (project_dir / "protocol" / "search_terms_draft.json").exists():
+        output.append("missing_search_terms_draft")
+    if not (project_dir / "protocol" / "search_strategy_preview.md").exists():
+        output.append("missing_search_strategy_preview")
+    return output
 
 
 def _manifest_warnings(project_dir: Path) -> list[str]:

@@ -219,6 +219,7 @@ if QWidget is not None:
     from app.meta_analysis.pages.reporting_page import ReportingPage
     from app.meta_analysis.pages.attachment_page import AttachmentPage
     from app.meta_analysis.pages.audit_log_page import AuditLogPage
+    from app.meta_analysis.pages.protocol_page import ProtocolPage
     from app.meta_analysis.pages.workflow_dashboard_page import WorkflowDashboardPage
 
     class MetaAnalysisWorkspaceWidget(QWidget):
@@ -246,6 +247,7 @@ if QWidget is not None:
             scroll.setWidgetResizable(True)
             content = QWidget()
             content_layout = QVBoxLayout(content)
+            content_layout.addWidget(ProtocolPage())
             content_layout.addWidget(LiteratureImportPage())
             content_layout.addWidget(PrepareScreeningPage())
             content_layout.addWidget(DuplicateReviewPage())

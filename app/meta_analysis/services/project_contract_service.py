@@ -20,6 +20,10 @@ MANIFEST_FILES = (
 
 
 CANONICAL_PROJECT_PATHS: dict[str, str] = {
+    "review_protocol": "protocol/review_protocol.json",
+    "search_terms_draft": "protocol/search_terms_draft.json",
+    "search_strategy_preview": "protocol/search_strategy_preview.md",
+    "protocol_summary": "protocol/protocol_summary.md",
     "literature_records": "literature/literature_records.json",
     "screening_ready_records": "screening/screening_ready_records.json",
     "duplicate_candidate_groups": "deduplication/duplicate_candidate_groups.json",
@@ -63,6 +67,7 @@ class MetaProjectContractService:
     def ensure_project_structure(self, project_dir: Path) -> list[Path]:
         project_dir = project_dir.expanduser().resolve()
         directories = [
+            project_dir / "protocol",
             project_dir / "literature",
             project_dir / "deduplication",
             project_dir / "screening",
@@ -174,6 +179,7 @@ class MetaProjectContractService:
         artifacts = artifact_manifest.get("artifacts", [])
         available = {str(item.get("relative_path")) for item in artifacts if isinstance(item, dict)}
         lineage = [
+            _lineage_item("protocol_strategy_to_protocol", "protocol/search_strategy_preview.md", "protocol/review_protocol.json", available),
             _lineage_item("analysis_result_to_dataset", "analysis/analysis_results.json", "analysis/analysis_ready_datasets.json", available),
             _lineage_item("analysis_ready_dataset_to_extraction_records", "analysis/analysis_ready_datasets.json", "extraction/extraction_records.json", available),
             _lineage_item("extraction_records_to_literature", "extraction/extraction_records.json", "screening/screening_decisions.json", available),
@@ -199,6 +205,14 @@ def _artifact_type(path: Path) -> str:
     name = path.name
     if name in MANIFEST_FILES:
         return name.removesuffix(".json")
+    if name == "review_protocol.json":
+        return "review_protocol"
+    if name == "search_terms_draft.json":
+        return "search_terms_draft"
+    if name == "search_strategy_preview.md":
+        return "search_strategy_preview"
+    if name == "protocol_summary.md":
+        return "protocol_summary"
     if name == "report_manifest.json":
         return "report_manifest"
     if name.startswith("forest_plot_"):
@@ -216,6 +230,8 @@ def _artifact_type(path: Path) -> str:
 
 def _source_reference(relative_path: Path) -> str:
     text = str(relative_path)
+    if text.startswith("protocol/search_terms_draft") or text.startswith("protocol/search_strategy_preview") or text.startswith("protocol/protocol_summary"):
+        return "protocol/review_protocol.json"
     if text.startswith("analysis/analysis_results"):
         return "analysis/analysis_ready_datasets.json"
     if text.startswith("analysis/analysis_ready_datasets"):
