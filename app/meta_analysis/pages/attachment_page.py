@@ -8,6 +8,7 @@ from pathlib import Path
 from app.meta_analysis.models.attachments import ATTACHMENT_MODES
 from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.services.attachment_service import AttachmentService
+from app.meta_analysis.services.criteria_service import CriteriaBuilderService
 from app.meta_analysis.services.fulltext_service import FullTextService
 
 
@@ -62,6 +63,8 @@ class AttachmentPageState:
     testing_limitations: tuple[str, ...] = ()
     warning_severity_items: tuple[WarningSeverityItem, ...] = ()
     warning_severity_counts: dict[str, int] | None = None
+    criteria_summary_path: str = ""
+    criteria_hints: tuple[str, ...] = ()
 
 
 def initial_attachment_state() -> AttachmentPageState:
@@ -88,8 +91,14 @@ def initial_attachment_state() -> AttachmentPageState:
     )
 
 
-def attachment_state_from_project(project_dir: Path, *, service: AttachmentService | None = None) -> AttachmentPageState:
+def attachment_state_from_project(
+    project_dir: Path,
+    *,
+    service: AttachmentService | None = None,
+    criteria_service: CriteriaBuilderService | None = None,
+) -> AttachmentPageState:
     service = service or AttachmentService()
+    criteria_service = criteria_service or CriteriaBuilderService()
     base = initial_attachment_state()
     project_dir = project_dir.expanduser().resolve()
     attachments = service.list_attachments(project_dir)
@@ -153,6 +162,8 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
         testing_limitations=base.testing_limitations,
         warning_severity_items=severity_items,
         warning_severity_counts=warning_severity_counts(severity_items),
+        criteria_summary_path=str(project_dir / "criteria" / "criteria_summary.md"),
+        criteria_hints=criteria_service.criteria_hints(project_dir, stage="full_text"),
     )
 
 

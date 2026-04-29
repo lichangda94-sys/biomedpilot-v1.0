@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
+from app.meta_analysis.services.criteria_service import CriteriaBuilderService
 from app.meta_analysis.services.screening_service import ScreeningQueueResult, ScreeningService
 from app.shared.feature_availability import get_feature
 
@@ -17,6 +19,8 @@ class ScreeningPageState:
     empty_state: str
     warning_summary: str
     last_result: ScreeningQueueResult | None = None
+    criteria_summary_path: str = ""
+    criteria_hints: tuple[str, ...] = ()
 
 
 def initial_screening_state() -> ScreeningPageState:
@@ -30,6 +34,23 @@ def initial_screening_state() -> ScreeningPageState:
         next_step="下一步：Extraction；也可继续 full-text status 和质量评价 testing 子流程。",
         empty_state="没有筛选来源时无法生成队列；没有候选记录时页面应显示空队列摘要。",
         warning_summary="excluded 决策必须填写排除原因；错误提示为用户可读 message。",
+    )
+
+
+def screening_state_with_criteria(project_dir: Path, *, criteria_service: CriteriaBuilderService | None = None) -> ScreeningPageState:
+    base = initial_screening_state()
+    criteria_service = criteria_service or CriteriaBuilderService()
+    project_dir = project_dir.expanduser().resolve()
+    criteria_summary = project_dir / "criteria" / "criteria_summary.md"
+    hints = criteria_service.criteria_hints(project_dir, stage="title_abstract")
+    return ScreeningPageState(
+        **{
+            **base.__dict__,
+            "criteria_summary_path": str(criteria_summary),
+            "criteria_hints": hints,
+            "warning_summary": base.warning_summary
+            + (" Criteria hints loaded from criteria_summary.md." if hints else " Criteria Builder 尚未生成；筛选仍可运行，但排除标准需人工记录。"),
+        }
     )
 
 

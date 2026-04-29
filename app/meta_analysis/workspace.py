@@ -212,6 +212,7 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
     from app.meta_analysis.pages.literature_import_page import LiteratureImportPage
     from app.meta_analysis.pages.literature_library_page import LiteratureLibraryPage
+    from app.meta_analysis.pages.criteria_page import CriteriaPage
     from app.meta_analysis.pages.prepare_screening_page import PrepareScreeningPage
     from app.meta_analysis.pages.duplicate_review_page import DuplicateReviewPage
     from app.meta_analysis.pages.screening_page import ScreeningPage
@@ -253,6 +254,7 @@ if QWidget is not None:
             content_layout.addWidget(LiteratureLibraryPage())
             content_layout.addWidget(PrepareScreeningPage())
             content_layout.addWidget(DuplicateReviewPage())
+            content_layout.addWidget(CriteriaPage())
             content_layout.addWidget(ScreeningPage())
             content_layout.addWidget(AttachmentPage())
             content_layout.addWidget(ExtractionPage())
