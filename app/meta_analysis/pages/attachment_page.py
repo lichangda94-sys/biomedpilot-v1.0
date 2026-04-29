@@ -1,10 +1,21 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.models.attachments import ATTACHMENT_MODES
 from app.meta_analysis.services.attachment_service import AttachmentService
+
+
+@dataclass(frozen=True)
+class AttachmentFileRow:
+    record_id: str
+    file_name: str
+    attachment_type: str
+    file_exists: bool
+    storage_mode: str
+    file_path: str
 
 
 @dataclass(frozen=True)
@@ -21,7 +32,14 @@ class AttachmentPageState:
     attachment_registry_path: str = ""
     missing_fulltext_report_path: str = ""
     attachment_count: int = 0
+    pdf_attachment_count: int = 0
+    link_attachment_count: int = 0
+    copy_attachment_count: int = 0
+    ignore_attachment_count: int = 0
+    broken_path_count: int = 0
+    missing_fulltext_report_status: str = "not_generated"
     missing_fulltext_count: int = 0
+    attachment_rows: tuple[AttachmentFileRow, ...] = ()
     file_status_summary: tuple[str, ...] = ()
 
 
@@ -46,13 +64,22 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
     attachments = service.list_attachments(project_dir)
     registry_path = project_dir / "attachments" / "attachment_registry.json"
     missing_path = project_dir / "reports" / "missing_fulltext_report.csv"
-    file_status = tuple(
-        f"{record.record_id}:{record.attachment_type}:{'available' if record.file_exists else 'missing'}:{record.file_name}"
-        for record in attachments[:10]
+    attachment_rows = tuple(
+        AttachmentFileRow(
+            record_id=record.record_id,
+            file_name=record.file_name,
+            attachment_type=record.attachment_type,
+            file_exists=_file_exists(record.file_path),
+            storage_mode=_storage_mode(project_dir, record.file_path),
+            file_path=record.file_path,
+        )
+        for record in attachments
     )
-    missing_count = 0
-    if missing_path.exists():
-        missing_count = sum(1 for line in missing_path.read_text(encoding="utf-8").splitlines()[1:] if line.endswith(",true"))
+    file_status = tuple(
+        f"{row.record_id}:{row.attachment_type}:{'available' if row.file_exists else 'missing'}:{row.file_name}"
+        for row in attachment_rows[:10]
+    )
+    missing_report_status, missing_count = _missing_fulltext_report_status(missing_path)
     return AttachmentPageState(
         title=base.title,
         description=base.description,
@@ -66,9 +93,45 @@ def attachment_state_from_project(project_dir: Path, *, service: AttachmentServi
         attachment_registry_path=str(registry_path),
         missing_fulltext_report_path=str(missing_path),
         attachment_count=len(attachments),
+        pdf_attachment_count=len([row for row in attachment_rows if row.attachment_type == "pdf"]),
+        link_attachment_count=len([row for row in attachment_rows if row.storage_mode == "link_existing_files"]),
+        copy_attachment_count=len([row for row in attachment_rows if row.storage_mode == "copy_to_project_library"]),
+        ignore_attachment_count=0,
+        broken_path_count=len([row for row in attachment_rows if not row.file_exists]),
+        missing_fulltext_report_status=missing_report_status,
         missing_fulltext_count=missing_count,
+        attachment_rows=attachment_rows,
         file_status_summary=file_status,
     )
+
+
+def _file_exists(file_path: str) -> bool:
+    try:
+        path = Path(file_path).expanduser()
+        return path.exists() and path.is_file()
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
+def _storage_mode(project_dir: Path, file_path: str) -> str:
+    try:
+        path = Path(file_path).expanduser().resolve()
+        path.relative_to(project_dir)
+        return "copy_to_project_library"
+    except (OSError, RuntimeError, ValueError):
+        return "link_existing_files"
+
+
+def _missing_fulltext_report_status(missing_path: Path) -> tuple[str, int]:
+    if not missing_path.exists():
+        return "not_generated", 0
+    try:
+        with missing_path.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+    except (OSError, csv.Error, UnicodeDecodeError):
+        return "unreadable", 0
+    missing_count = sum(1 for row in rows if str(row.get("missing_fulltext", "")).strip().lower() == "true")
+    return "available", missing_count
 
 
 try:
@@ -149,16 +212,23 @@ if QWidget is not None:
 
         def _refresh(self) -> None:
             state = attachment_state_from_project(Path(self._project_dir_input.text()).expanduser(), service=self._service)
+            attachment_rows = "\n".join(
+                f"- {row.record_id}: {row.file_name} · {row.attachment_type} · {'exists' if row.file_exists else 'missing'} · {row.storage_mode}"
+                for row in state.attachment_rows[:20]
+            ) or "无"
             self._summary_label.setText(
                 f"attachment_registry：{state.attachment_registry_path}\n"
                 f"missing_fulltext_report：{state.missing_fulltext_report_path}\n"
+                f"missing_fulltext_report_status：{state.missing_fulltext_report_status}\n"
                 f"附件数量：{state.attachment_count}\n"
+                f"PDF 附件：{state.pdf_attachment_count}\n"
+                f"link / copy / ignore：{state.link_attachment_count} / {state.copy_attachment_count} / {state.ignore_attachment_count}\n"
+                f"broken path：{state.broken_path_count}\n"
                 f"缺失 full-text：{state.missing_fulltext_count}\n"
-                f"文件状态：\n" + "\n".join(state.file_status_summary)
+                f"文件状态：\n" + attachment_rows
             )
 
 else:
 
     class AttachmentPage:  # type: ignore[no-redef]
         pass
-
