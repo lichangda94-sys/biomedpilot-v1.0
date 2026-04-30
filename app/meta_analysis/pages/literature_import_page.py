@@ -11,7 +11,19 @@ from app.meta_analysis.services.literature_batch_import_service import (
 )
 from app.meta_analysis.services.literature_import_service import ImportResult, LiteratureImportService
 from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
+from app.meta_analysis.ui_text import (
+    DEDUP_MODE_ZH,
+    DEVELOPER_INFO_TITLE_ZH,
+    DIAGNOSTICS_FIELD_ZH,
+    DIAGNOSTICS_WARNING_MESSAGE_ZH,
+    IMPORT_SOURCE_OPTION_ZH,
+    IMPORT_WIZARD_DESCRIPTION_ZH,
+    IMPORT_WIZARD_STEP_ZH,
+    IMPORT_WIZARD_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
 from app.shared.feature_availability import get_feature
+from app.version import APP_VERSION
 
 
 _RESULT_CARD_STYLE = (
@@ -34,6 +46,7 @@ class ImportDiagnosticsCard:
     key: str
     label: str
     value: int
+    label_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -43,6 +56,8 @@ class ImportDiagnosticsWarningRow:
     count: int
     message: str
     severity: str = "info"
+    label_zh: str = ""
+    message_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -90,6 +105,13 @@ class LiteratureImportPageState:
     panel_help: tuple[str, ...] = ()
     testing_limitations: tuple[str, ...] = ()
     warning_severity_counts: dict[str, int] | None = None
+    title_zh: str = "文献导入"
+    status_label_zh: str = "内部测试"
+    description_zh: str = "导入本地 RIS / NBIB / CSV 文献文件，并查看导入诊断。"
+    input_summary_zh: str = "输入：本地文献导出文件、来源数据库、检索日期、检索式和去重模式。"
+    output_summary_zh: str = "输出：文献记录、导入批次摘要、诊断文件和 warnings CSV。"
+    next_step_zh: str = "下一步：进入去重审核。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -103,6 +125,9 @@ class LiteratureImportUIPanelState:
     recent_batch_fields: tuple[str, ...]
     empty_state: str
     testing_limitations: tuple[str, ...]
+    title_zh: str = "文献导入面板"
+    primary_action_zh: str = "导入所选 RIS / NBIB / CSV 文件"
+    next_action_zh: str = "进入去重审核"
 
 
 @dataclass(frozen=True)
@@ -144,6 +169,17 @@ class LiteratureImportWizardState:
     warnings: tuple[str, ...] = ()
     error_message: str = ""
     testing_limitations: tuple[str, ...] = ()
+    title_zh: str = IMPORT_WIZARD_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = IMPORT_WIZARD_DESCRIPTION_ZH
+    current_step_zh: str = ""
+    step_labels_zh: tuple[str, ...] = ()
+    source_option_labels_zh: tuple[str, ...] = ()
+    dedup_mode_labels_zh: tuple[str, ...] = ()
+    input_summary_zh: str = "输入：通过文件选择器选择本地 RIS / NBIB / CSV 文献导出文件。"
+    output_summary_zh: str = "输出：导入批次、诊断摘要、warnings CSV 和去重审核入口。"
+    next_step_zh: str = "导入成功后进入去重审核。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -176,6 +212,7 @@ def initial_literature_import_state() -> LiteratureImportPageState:
             "Developer Preview / testing：不是 production 导入向导。",
             "Diagnostics 是质量检查，不替代人工判断。",
         ),
+        status_label_zh="内部测试",
     )
 
 
@@ -202,6 +239,13 @@ def initial_literature_import_wizard_state() -> LiteratureImportWizardState:
             "多文件导入按路径排序逐个执行；不会自动合并、删除或修复原始文件。",
             "拖拽是 page-state 支持能力，当前 PySide 页面仍以文件选择器为主。",
         ),
+        title_zh=IMPORT_WIZARD_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=IMPORT_WIZARD_DESCRIPTION_ZH,
+        current_step_zh=IMPORT_WIZARD_STEP_ZH["source_selection"],
+        step_labels_zh=tuple(IMPORT_WIZARD_STEP_ZH[key] for key in WIZARD_STEPS),
+        source_option_labels_zh=tuple(IMPORT_SOURCE_OPTION_ZH[key] for key in ("local_database_export", "zotero_export", "endnote_export", "pubmed_download", "csv_or_txt")),
+        dedup_mode_labels_zh=tuple(DEDUP_MODE_ZH[key] for key in ("detect_only", "manual_review", "skip")),
     )
 
 
@@ -237,6 +281,7 @@ def literature_import_ui_panel_state() -> LiteratureImportUIPanelState:
         ),
         empty_state=base.empty_state,
         testing_limitations=base.testing_limitations,
+        title_zh="文献导入面板",
     )
 
 
@@ -249,15 +294,7 @@ def preview_literature_import_files(
     previews = tuple(_preview_file(path, requested_format=import_format) for path in _sorted_paths(source_paths))
     warnings = tuple(preview.message for preview in previews if not preview.supported or not preview.exists)
     current_step = "import_preview" if previews and not warnings else "file_selection"
-    return LiteratureImportWizardState(
-        **{
-            **base.__dict__,
-            "current_step": current_step,
-            "previews": previews,
-            "warnings": warnings,
-            "error_message": "; ".join(warnings),
-        }
-    )
+    return _wizard_state(base, current_step=current_step, previews=previews, warnings=warnings, error_message="; ".join(warnings))
 
 
 def execute_literature_import_wizard(
@@ -275,12 +312,12 @@ def execute_literature_import_wizard(
     preview_state = preview_literature_import_files(source_paths, import_format=import_format)
     if not source_paths:
         state = LiteratureImportWizardState(
-            **{
-                **preview_state.__dict__,
-                "current_step": "file_selection",
-                "warnings": ("no_files_selected",),
-                "error_message": "请选择至少一个 RIS、NBIB 或 CSV 文件。",
-            }
+            **_wizard_state_dict(
+                preview_state,
+                current_step="file_selection",
+                warnings=("no_files_selected",),
+                error_message="请选择至少一个 RIS、NBIB 或 CSV 文件。",
+            )
         )
         return LiteratureImportWizardExecutionResult(success=False, state=state, summaries=(), message=state.error_message)
     if preview_state.warnings:
@@ -321,18 +358,19 @@ def execute_literature_import_wizard(
     success = bool(summaries) and all(summary.success for summary in summaries)
     failed = [summary for summary in summaries if not summary.success]
     state = LiteratureImportWizardState(
-        **{
-            **preview_state.__dict__,
-            "current_step": "duplicate_review_handoff" if success else "import_diagnostics",
-            "summaries": tuple(summaries),
-            "diagnostics_cards": tuple(diagnostics_cards),
-            "warning_table": tuple(warning_rows),
-            "diagnostics_export_paths": tuple(diagnostics_paths),
-            "warnings_export_paths": tuple(warnings_paths),
-            "warnings": tuple(summary.message for summary in failed),
-            "error_message": failed[0].error_message if failed else "",
-            "next_step": "Review duplicates" if success else "Fix import error and retry.",
-        }
+        **_wizard_state_dict(
+            preview_state,
+            current_step="duplicate_review_handoff" if success else "import_diagnostics",
+            summaries=tuple(summaries),
+            diagnostics_cards=tuple(diagnostics_cards),
+            warning_table=tuple(warning_rows),
+            diagnostics_export_paths=tuple(diagnostics_paths),
+            warnings_export_paths=tuple(warnings_paths),
+            warnings=tuple(summary.message for summary in failed),
+            error_message=failed[0].error_message if failed else "",
+            next_step="Review duplicates" if success else "Fix import error and retry.",
+            next_step_zh="导入成功，请进入去重审核。" if success else "请修正导入错误后重试。",
+        )
     )
     message = f"Imported {len(summaries)} file(s). Next step: Review duplicates." if success else state.error_message or "Import failed."
     return LiteratureImportWizardExecutionResult(success=success, state=state, summaries=tuple(summaries), message=message)
@@ -374,6 +412,7 @@ def literature_import_state_from_batch_summary(
         panel_help=base.panel_help,
         testing_limitations=base.testing_limitations,
         warning_severity_counts=visual_summary.warning_severity_counts,
+        description_zh="选择文件、设置来源信息并执行文献导入；导入后请查看诊断摘要。",
     )
 
 
@@ -411,6 +450,7 @@ def literature_import_state_from_result(
         panel_help=base.panel_help,
         testing_limitations=base.testing_limitations,
         warning_severity_counts=visual_summary.warning_severity_counts,
+        description_zh="导入完成后显示诊断摘要、warning 列表和失败记录预览。",
     )
 
 
@@ -420,7 +460,7 @@ def import_diagnostics_visual_summary(diagnostics_path: str, *, warnings_path: s
     normalized_path = str(Path(diagnostics_path).expanduser()) if diagnostics_path else ""
     warnings_csv_path = warnings_path or _infer_warnings_csv_path(normalized_path)
     cards = tuple(
-        ImportDiagnosticsCard(key=key, label=label, value=_int_value(diagnostics.get(key, 0)))
+        ImportDiagnosticsCard(key=key, label=label, value=_int_value(diagnostics.get(key, 0)), label_zh=DIAGNOSTICS_FIELD_ZH.get(key, label))
         for key, label in _DIAGNOSTICS_CARD_FIELDS
     )
     warning_rows = _diagnostics_warning_rows(diagnostics)
@@ -516,9 +556,25 @@ def _diagnostics_warning_rows(diagnostics: dict[str, object]) -> tuple[ImportDia
                 count=count,
                 message=_WARNING_MESSAGES.get(key, "Import diagnostics warning needs review."),
                 severity=classify_warning_severity(context="import_diagnostics", key=key, count=count),
+                label_zh=DIAGNOSTICS_FIELD_ZH.get(key, label),
+                message_zh=DIAGNOSTICS_WARNING_MESSAGE_ZH.get(key, "导入诊断 warning 需要人工复核。"),
             )
         )
     return tuple(rows)
+
+
+def _wizard_state(base: LiteratureImportWizardState, **overrides: object) -> LiteratureImportWizardState:
+    return LiteratureImportWizardState(**_wizard_state_dict(base, **overrides))
+
+
+def _wizard_state_dict(base: LiteratureImportWizardState, **overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {**base.__dict__, **overrides}
+    current_step = str(payload.get("current_step", ""))
+    payload["current_step_zh"] = IMPORT_WIZARD_STEP_ZH.get(current_step, current_step)
+    if "next_step_zh" not in overrides:
+        next_step = str(payload.get("next_step", ""))
+        payload["next_step_zh"] = "导入成功后进入去重审核。" if "Review duplicates" in next_step else "请根据提示继续。"
+    return payload
 
 
 def _infer_warnings_csv_path(diagnostics_path: str) -> str:
@@ -621,13 +677,13 @@ if QWidget is not None:
             self._state = initial_literature_import_state()
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            status = QLabel(f"功能状态：{self._state.status_label}")
+            status = QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}")
             status.setStyleSheet("font-weight: 700;")
             root.addWidget(status)
 
@@ -678,31 +734,31 @@ if QWidget is not None:
             summary_layout.addWidget(self._summary_label)
             root.addWidget(self._summary_card)
 
-            self._diagnostics_card = _panel_frame("Import diagnostics summary")
+            self._diagnostics_card = _panel_frame("导入诊断摘要 Import diagnostics")
             diagnostics_layout = self._diagnostics_card.layout()
-            self._diagnostics_label = QLabel("导入后显示 missing title / author / year / DOI / PMID、invalid DOI/year 等统计。")
+            self._diagnostics_label = QLabel("导入后显示缺标题、缺作者、缺年份、缺 DOI / PMID、DOI/年份异常等统计。")
             self._diagnostics_label.setWordWrap(True)
             self._diagnostics_label.setStyleSheet(_RESULT_TEXT_STYLE)
             diagnostics_layout.addWidget(self._diagnostics_label)
             root.addWidget(self._diagnostics_card)
 
-            self._warning_card = _panel_frame("Warning table")
+            self._warning_card = _panel_frame("问题列表 Warning table")
             warning_layout = self._warning_card.layout()
-            self._warning_label = QLabel("导入后显示 warning severity 和需要人工复核的字段质量问题。")
+            self._warning_label = QLabel("导入后显示问题级别和需要人工复核的字段质量问题。")
             self._warning_label.setWordWrap(True)
             self._warning_label.setStyleSheet(_RESULT_TEXT_STYLE)
             warning_layout.addWidget(self._warning_label)
             root.addWidget(self._warning_card)
 
-            self._failed_card = _panel_frame("Failed records preview")
+            self._failed_card = _panel_frame("失败记录预览 Failed records")
             failed_layout = self._failed_card.layout()
-            self._failed_label = QLabel("导入后显示 failed record examples；缺 diagnostics 时显示 warning，不崩溃。")
+            self._failed_label = QLabel("导入后显示失败记录示例；缺少 diagnostics 时显示中文 warning，不崩溃。")
             self._failed_label.setWordWrap(True)
             self._failed_label.setStyleSheet(_RESULT_TEXT_STYLE)
             failed_layout.addWidget(self._failed_label)
             root.addWidget(self._failed_card)
 
-            self._recent_card = _panel_frame("Recent Import Batches")
+            self._recent_card = _panel_frame("最近导入批次 Recent Import Batches")
             recent_layout = self._recent_card.layout()
             self._recent_label = QLabel(_recent_batches_text())
             self._recent_label.setWordWrap(True)

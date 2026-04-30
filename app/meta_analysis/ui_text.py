@@ -21,6 +21,85 @@ WORKFLOW_STATUS_ZH: dict[str, str] = {
     "Developer Preview": DEVELOPER_PREVIEW_ZH,
 }
 
+IMPORT_WIZARD_TITLE_ZH = "文献导入向导"
+IMPORT_WIZARD_DESCRIPTION_ZH = "按步骤选择来源、选择文件、预览格式、执行导入并查看诊断结果。"
+IMPORT_WIZARD_STEP_ZH: dict[str, str] = {
+    "source_selection": "选择来源",
+    "file_selection": "选择文件",
+    "import_preview": "导入预览",
+    "import_diagnostics": "导入诊断",
+    "duplicate_review_handoff": "进入去重审核",
+}
+IMPORT_SOURCE_OPTION_ZH: dict[str, str] = {
+    "local_database_export": "本地数据库导出文件",
+    "zotero_export": "Zotero 导出文件",
+    "endnote_export": "EndNote 导出文件",
+    "pubmed_download": "PubMed 下载文件",
+    "csv_or_txt": "CSV / TXT 文件",
+}
+DEDUP_MODE_ZH: dict[str, str] = {
+    "detect_only": "仅检测重复",
+    "manual_review": "导入后人工审核",
+    "skip": "暂不去重",
+}
+DIAGNOSTICS_FIELD_ZH: dict[str, str] = {
+    "missing_title_count": "缺标题",
+    "missing_author_count": "缺作者",
+    "missing_year_count": "缺年份",
+    "missing_doi_count": "缺 DOI",
+    "missing_pmid_count": "缺 PMID",
+    "empty_abstract_count": "摘要为空",
+    "invalid_doi_count": "DOI 格式异常",
+    "invalid_year_count": "年份格式异常",
+    "duplicate_identifier_count": "重复标识符",
+    "failed_record_count": "解析失败记录",
+}
+DIAGNOSTICS_WARNING_MESSAGE_ZH: dict[str, str] = {
+    "missing_title_count": "缺少标题的记录需要在筛选前复核。",
+    "missing_author_count": "部分记录缺少作者信息。",
+    "missing_year_count": "部分记录缺少发表年份。",
+    "missing_doi_count": "缺少 DOI 不会阻止导入，但会降低去重匹配能力。",
+    "missing_pmid_count": "缺少 PMID 不会阻止导入，但会降低 PubMed 匹配能力。",
+    "empty_abstract_count": "部分记录没有摘要，标题摘要筛选时需要人工判断。",
+    "invalid_doi_count": "部分 DOI 无法标准化，需要复核来源文件。",
+    "invalid_year_count": "部分年份无法解析，需要复核来源文件。",
+    "duplicate_identifier_count": "导入批次中发现重复 DOI/PMID 标识符。",
+    "failed_record_count": "部分记录解析或校验失败。",
+}
+LITERATURE_LIBRARY_TITLE_ZH = "文献库表格"
+LITERATURE_TABLE_COLUMN_ZH: dict[str, str] = {
+    "record_id": "内部记录 ID",
+    "title": "题名",
+    "authors": "作者",
+    "first_author": "第一作者",
+    "corresponding_author": "通讯作者",
+    "journal": "期刊",
+    "year_or_date": "年份 / 日期",
+    "doi": "DOI",
+    "pmid": "PMID",
+    "publication_type": "文献类型",
+    "abstract": "摘要",
+    "source_database": "来源数据库",
+    "source_file": "来源文件",
+    "import_batch": "导入批次",
+    "duplicate_risk": "重复风险",
+    "screening_status": "筛选状态",
+    "fulltext_status": "全文状态",
+    "extraction_status": "提取状态",
+}
+DUPLICATE_RISK_LABEL_ZH: dict[str, str] = {
+    "high_duplicate_risk": "高重复风险",
+    "probable_duplicate": "可能重复 / 标识符冲突",
+    "possible_duplicate": "疑似重复",
+    "no_obvious_duplicate_risk": "未发现明显重复风险",
+}
+DUPLICATE_RISK_COLOR_ZH: dict[str, str] = {
+    "red": "红色",
+    "yellow": "黄色",
+    "gray": "灰色",
+    "green": "绿色",
+}
+
 
 @dataclass(frozen=True)
 class WorkflowStepText:

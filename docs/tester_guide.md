@@ -43,3 +43,22 @@ This is not production clinical, statistical, or publication software.
 ```
 
 如果某一步显示“需要复核”，请记录页面、步骤名称、warning 数量和你预期的下一步。
+
+## Meta 文献导入与文献库中文页面
+
+在 `Meta 分析模块` 左侧导航中：
+
+1. 打开 `文献导入 Literature Import`。
+2. 选择或粘贴 RIS / NBIB / CSV 文件路径。
+3. 填写来源数据库、检索日期、检索式说明和去重模式。
+4. 点击导入后查看中文导入诊断摘要、warning 列表和失败记录预览。
+5. 下一步进入 `文献库 Literature Library` 或 `去重审核 Duplicate Review`。
+
+在 `文献库 Literature Library` 中：
+
+- 红色表示高重复风险。
+- 黄色表示可能重复或标识符冲突。
+- 灰色表示疑似重复。
+- 绿色只表示“未发现明显重复风险”，不代表文献质量高或可信。
+
+当前文献库仍是只读 testing 页面，不会自动删除、合并或排除文献。
