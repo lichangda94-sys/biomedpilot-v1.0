@@ -162,6 +162,26 @@ AB14 verification run before commit:
 
 After the AB14 commit, the package should be refreshed once so packaged `git_head` points at the AB14 commit rather than the pre-AB14 launcher commit.
 
+AB14 follow-up acceptance audit after package refresh:
+
+| Check | Result |
+| --- | --- |
+| Current branch | `codex/biomedpilot-root` |
+| Current HEAD | `de1e328 test(meta): add internal beta packaged acceptance audit` |
+| Source smoke | Passed; `app_version=0.1.0-internal-beta`, `app_channel=Developer Preview / testing`, `launch_mode=source`, `git_head=de1e328` |
+| Desktop packaged smoke | Passed; `app_version=0.1.0-internal-beta`, `app_channel=Developer Preview / testing`, `launch_mode=packaged-local-python`, `git_head=de1e328` |
+| Desktop `BUILD_INFO.json` | Version `0.1.0-internal-beta`, bundle version `0.1.0`, channel `Developer Preview / testing`, git head `de1e328` |
+| Desktop `Info.plist` | `BioMedPilotVersion=0.1.0-internal-beta`, `BioMedPilotChannel=Developer Preview / testing`, `BioMedPilotGitHead=de1e328`, `CFBundleShortVersionString=0.1.0` |
+| AB14 focused tests | `6 passed` |
+
+Current unified desktop entry:
+
+```text
+/Users/changdali/Desktop/BioMedPilot.app
+```
+
+The desktop entry now opens the refreshed internal beta bundle built from `de1e328`.
+
 ## Internal Beta Candidate Judgment
 
 AB14 is intended to qualify the current build as an internal beta candidate for tester-facing trials, subject to the final full test run and packaged desktop smoke result.
