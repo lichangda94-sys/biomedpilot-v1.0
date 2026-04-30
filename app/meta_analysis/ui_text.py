@@ -173,6 +173,70 @@ SCREENING_PROGRESS_ZH: dict[str, str] = {
     "screened": "已筛选",
 }
 
+ATTACHMENT_TITLE_ZH = "全文 / 附件管理"
+ATTACHMENT_DESCRIPTION_ZH = "查看全文状态、附件登记、缺失全文报告和 link/copy/ignore 文件处理状态；不自动下载 PDF。"
+ATTACHMENT_MODE_ZH: dict[str, str] = {
+    "ignore_attachments": "忽略附件",
+    "link_existing_files": "链接现有文件",
+    "copy_to_project_library": "复制到项目库",
+}
+ATTACHMENT_STATUS_ZH: dict[str, str] = {
+    "not_generated": "未生成",
+    "available": "已生成",
+    "unreadable": "无法读取",
+    "empty": "无附件",
+    "broken_paths_detected": "发现失效路径",
+    "valid": "路径验证通过",
+    "not_run": "未验证",
+}
+
+FULLTEXT_ELIGIBILITY_TITLE_ZH = "全文筛选"
+FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH = "根据标题摘要纳入或可能纳入记录，人工记录全文状态、全文排除原因和最终纳入研究。"
+FULLTEXT_STATUS_ZH: dict[str, str] = {
+    "not_checked": "未检查",
+    "available_online": "在线可获得",
+    "local_pdf_linked": "已链接本地 PDF",
+    "local_pdf_copied": "已复制本地 PDF",
+    "missing_full_text": "缺失全文",
+    "failed_to_access": "访问失败",
+    "manual_review_required": "需要人工复核",
+    "excluded_after_full_text_review": "全文后排除",
+    "included_for_extraction": "纳入数据提取",
+}
+
+EXTRACTION_TITLE_ZH = "数据提取"
+EXTRACTION_DESCRIPTION_ZH = "以研究为单位填写 study characteristics 和 outcome rows，显示草稿、完整性评分、必填字段和人工补充记录。"
+EXTRACTION_FIELD_ZH: dict[str, str] = {
+    "record_id": "文献记录 ID",
+    "study_id": "研究 ID",
+    "reviewer_id": "提取人",
+    "profile_type": "Meta 类型",
+    "first_author": "第一作者",
+    "year": "年份",
+    "country": "国家/地区",
+    "study_design": "研究设计",
+    "population": "研究人群",
+    "sample_size": "样本量",
+    "intervention_or_exposure": "干预 / 暴露",
+    "comparator": "对照",
+    "follow_up": "随访",
+    "outcome_name": "结局名称",
+    "effect_measure": "效应量",
+    "source_location": "数据来源位置",
+    "manual_supplement": "人工补充",
+}
+
+QUALITY_TITLE_ZH = "质量评价"
+QUALITY_DESCRIPTION_ZH = "根据研究设计推荐 NOS / QUADAS-2 / RoB2 simplified，逐 domain 填写 judgement 和 notes，overall judgement 只作建议。"
+QUALITY_FIELD_ZH: dict[str, str] = {
+    "study_selector": "选择研究",
+    "tool_selector": "选择评价工具",
+    "domain_judgements": "领域判断",
+    "domain_notes": "领域备注",
+    "overall_judgement": "总体判断",
+    "reviewer_notes": "评价人备注",
+}
+
 
 @dataclass(frozen=True)
 class WorkflowStepText:

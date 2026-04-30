@@ -81,3 +81,22 @@ This is not production clinical, statistical, or publication software.
 - 排除记录是否填写了人能看懂的排除原因。
 
 当前这些页面仍为 Developer Preview / testing，不会自动删除文献、自动排除文献或自动完成 reviewer 判断。
+
+## Meta 全文、数据提取与质量评价中文页面
+
+标题摘要筛选后，按顺序检查：
+
+1. 打开 `全文 / 附件管理 Full-text`，查看 attachment registry、missing full-text report、link/copy/ignore 状态。
+2. 打开 `全文筛选 Full-text Screening`，确认 included / maybe 文献是否有全文状态和全文排除原因。
+3. 打开 `数据提取 Data Extraction`，检查 study characteristics、outcome rows、必填字段、完整性评分和 manual edits log 路径。
+4. 打开 `质量评价 Quality Assessment`，确认推荐工具、domain judgement、domain notes、overall judgement suggestion 和 completeness summary。
+
+测试时请特别记录：
+
+- 附件路径失效时 warning 是否清楚。
+- missing full-text report 是否可读。
+- 数据提取字段中文名是否足够理解。
+- manual supplement / manual edits 是否能追溯来源位置。
+- 质量评价的 overall judgement 是否清楚标记为建议，而不是强制结论。
+
+当前这些页面仍为 Developer Preview / testing，不会自动下载 PDF、不做 OCR、不访问机构全文系统，也不会替代人工提取或质量评价。

@@ -10,6 +10,15 @@ from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classi
 from app.meta_analysis.services.attachment_service import AttachmentService
 from app.meta_analysis.services.criteria_service import CriteriaBuilderService
 from app.meta_analysis.services.fulltext_service import FullTextService
+from app.meta_analysis.ui_text import (
+    ATTACHMENT_DESCRIPTION_ZH,
+    ATTACHMENT_MODE_ZH,
+    ATTACHMENT_STATUS_ZH,
+    ATTACHMENT_TITLE_ZH,
+    DEVELOPER_INFO_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -20,6 +29,9 @@ class AttachmentFileRow:
     file_exists: bool
     storage_mode: str
     file_path: str
+    attachment_type_zh: str = ""
+    storage_mode_zh: str = ""
+    file_exists_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -65,6 +77,18 @@ class AttachmentPageState:
     warning_severity_counts: dict[str, int] | None = None
     criteria_summary_path: str = ""
     criteria_hints: tuple[str, ...] = ()
+    title_zh: str = ATTACHMENT_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = ATTACHMENT_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：项目目录、本地 PDF/附件文件、record_id 和全文候选记录。"
+    output_summary_zh: str = "输出：attachment_registry、fulltext_registry 和 missing_fulltext_report。"
+    next_step_zh: str = "下一步：完成全文筛选后进入数据提取。"
+    empty_state_zh: str = "没有附件时显示空状态，可手动记录全文状态或导出缺失全文报告。"
+    warning_summary_zh: str = "附件路径失效、缺失全文或未生成 registry 时需要人工处理。"
+    mode_option_labels_zh: tuple[str, ...] = ()
+    missing_fulltext_report_status_zh: str = ""
+    attachment_validation_status_zh: str = ""
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_attachment_state() -> AttachmentPageState:
@@ -88,6 +112,10 @@ def initial_attachment_state() -> AttachmentPageState:
             "Developer Preview / testing：不自动下载 PDF。",
             "不执行 OCR、网页抓取、机构代理登录或版权受限下载。",
         ),
+        title_zh=ATTACHMENT_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=ATTACHMENT_DESCRIPTION_ZH,
+        mode_option_labels_zh=tuple(ATTACHMENT_MODE_ZH[item] for item in ATTACHMENT_MODES),
     )
 
 
@@ -114,6 +142,9 @@ def attachment_state_from_project(
             file_exists=_file_exists(record.file_path),
             storage_mode=_storage_mode(project_dir, record.file_path),
             file_path=record.file_path,
+            attachment_type_zh="PDF" if record.attachment_type == "pdf" else record.attachment_type,
+            storage_mode_zh=ATTACHMENT_MODE_ZH.get(_storage_mode(project_dir, record.file_path), _storage_mode(project_dir, record.file_path)),
+            file_exists_zh="存在" if _file_exists(record.file_path) else "缺失",
         )
         for record in attachments
     )
@@ -164,6 +195,12 @@ def attachment_state_from_project(
         warning_severity_counts=warning_severity_counts(severity_items),
         criteria_summary_path=str(project_dir / "criteria" / "criteria_summary.md"),
         criteria_hints=criteria_service.criteria_hints(project_dir, stage="full_text"),
+        title_zh=ATTACHMENT_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=ATTACHMENT_DESCRIPTION_ZH,
+        mode_option_labels_zh=tuple(ATTACHMENT_MODE_ZH[item] for item in base.mode_options),
+        missing_fulltext_report_status_zh=ATTACHMENT_STATUS_ZH.get(missing_report_status, missing_report_status),
+        attachment_validation_status_zh=ATTACHMENT_STATUS_ZH.get(_validation_status(len(attachment_rows), broken_path_count), _validation_status(len(attachment_rows), broken_path_count)),
     )
 
 
@@ -307,13 +344,13 @@ if QWidget is not None:
             self._state = initial_attachment_state()
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
 
             self._project_dir_input = QLineEdit()
             self._project_dir_input.setPlaceholderText("选择或粘贴项目目录路径")

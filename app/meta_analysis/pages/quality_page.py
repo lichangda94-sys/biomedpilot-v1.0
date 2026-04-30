@@ -5,6 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.services.quality_service import QualityAssessmentService
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+    QUALITY_DESCRIPTION_ZH,
+    QUALITY_FIELD_ZH,
+    QUALITY_TITLE_ZH,
+)
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -20,6 +28,13 @@ class QualityPageState:
     output_summary: str
     next_step: str
     empty_state: str
+    title_zh: str = QUALITY_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = QUALITY_DESCRIPTION_ZH
+    form_section_labels_zh: tuple[str, ...] = ()
+    next_step_zh: str = "下一步：完成质量评价后进入统计分析或报告。"
+    empty_state_zh: str = "没有纳入研究时显示空状态，不需要编辑 JSON。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -51,6 +66,18 @@ class QualityFormFlowState:
     output_paths: dict[str, str]
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    title_zh: str = QUALITY_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = QUALITY_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：最终纳入研究、研究设计和 reviewer 的 domain judgement。"
+    output_summary_zh: str = "输出：quality_assessment、quality_table、quality_summary 和 report manifest source。"
+    next_step_zh: str = "下一步：检查 analysis-ready dataset，并在报告中引用质量评价摘要。"
+    empty_state_zh: str = "没有纳入研究时，请先完成全文筛选或数据提取。"
+    tool_label_zh: str = "质量评价工具"
+    domain_note_label_zh: str = "领域备注"
+    overall_suggestion_label_zh: str = "总体判断建议"
+    completeness_label_zh: str = "质量评价完整性"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_quality_state(service: QualityAssessmentService | None = None) -> QualityPageState:
@@ -67,6 +94,10 @@ def initial_quality_state(service: QualityAssessmentService | None = None) -> Qu
         output_summary="输出：quality_assessments、quality_assessment_table，并进入 report manifest。",
         next_step="下一步：Analysis 或 Reporting。",
         empty_state="没有 included studies 时显示空状态，不要求编辑 JSON。",
+        title_zh=QUALITY_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=QUALITY_DESCRIPTION_ZH,
+        form_section_labels_zh=tuple(QUALITY_FIELD_ZH.get(item, item) for item in ("study_selector", "tool_selector", "domain_judgements", "domain_notes", "overall_judgement", "reviewer_notes")),
     )
 
 
@@ -134,6 +165,9 @@ def quality_state_from_project(
             "overall judgement suggestion 只作为建议，用户必须人工确认。",
             "GRADE placeholder 不是正式 GRADE evidence profile。",
         ),
+        title_zh=QUALITY_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=QUALITY_DESCRIPTION_ZH,
     )
 
 

@@ -10,6 +10,14 @@ from app.meta_analysis.services.fulltext_eligibility_service import (
     FullTextEligibilityCandidate,
     FullTextEligibilityService,
 )
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH,
+    FULLTEXT_ELIGIBILITY_TITLE_ZH,
+    FULLTEXT_STATUS_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -32,6 +40,17 @@ class FullTextEligibilityPageState:
     criteria_hints: tuple[str, ...]
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    title_zh: str = FULLTEXT_ELIGIBILITY_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：标题摘要筛选 include / maybe 记录、附件登记和全文状态。"
+    output_summary_zh: str = "输出：全文筛选决策、全文排除报告和最终纳入研究。"
+    next_step_zh: str = "下一步：included_for_extraction 记录进入数据提取。"
+    empty_state_zh: str = "没有全文候选记录。请先完成标题摘要筛选。"
+    warning_summary_zh: str = "缺失全文、访问失败或全文后排除必须记录可读原因。"
+    status_option_labels_zh: tuple[str, ...] = ()
+    decision_count_labels_zh: dict[str, str] | None = None
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_fulltext_eligibility_state(project_dir: Path | None = None) -> FullTextEligibilityPageState:
@@ -59,6 +78,11 @@ def initial_fulltext_eligibility_state(project_dir: Path | None = None) -> FullT
             "Full-text eligibility 是人工 workflow；不会自动删除文献。",
             "Developer Preview：final included studies 用于后续 extraction 测试链路，不代表投稿级最终纳入清单。",
         ),
+        title_zh=FULLTEXT_ELIGIBILITY_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH,
+        status_option_labels_zh=tuple(FULLTEXT_STATUS_ZH.get(item, item) for item in FULLTEXT_ELIGIBILITY_STATUSES),
+        decision_count_labels_zh={"total": "总数"},
     )
 
 
@@ -101,6 +125,11 @@ def fulltext_eligibility_state_from_project(
         criteria_hints=criteria_service.criteria_hints(project_dir, stage="full_text"),
         warnings=tuple(warnings),
         testing_limitations=base.testing_limitations,
+        title_zh=FULLTEXT_ELIGIBILITY_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH,
+        status_option_labels_zh=tuple(FULLTEXT_STATUS_ZH.get(item, item) for item in base.status_options),
+        decision_count_labels_zh={key: FULLTEXT_STATUS_ZH.get(key, "总数" if key == "total" else key) for key in decision_counts},
     )
 
 
@@ -136,13 +165,13 @@ if QWidget is not None:
             super().__init__()
             self._state = initial_fulltext_eligibility_state()
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
             help_text = QLabel(
                 "\n".join(
                     [

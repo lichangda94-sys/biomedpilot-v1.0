@@ -8,8 +8,16 @@ from app.meta_analysis.extraction.schema_registry import list_extraction_schema_
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.extraction_form_service import ExtractionFormService
 from app.meta_analysis.services.extraction_service import ExtractionPoolResult, ExtractionService
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    EXTRACTION_DESCRIPTION_ZH,
+    EXTRACTION_FIELD_ZH,
+    EXTRACTION_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -41,6 +49,14 @@ class ExtractionPageState:
     empty_state: str
     export_path: str
     last_result: ExtractionPoolResult | None = None
+    title_zh: str = EXTRACTION_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = EXTRACTION_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：最终纳入研究、提取 schema、人工录入字段和来源位置。"
+    output_summary_zh: str = "输出：extraction_records、CSV、validation report 和 manual edits log。"
+    next_step_zh: str = "下一步：完成数据提取后进入质量评价或分析数据集检查。"
+    warning_summary_zh: str = "缺失必填字段、无来源位置或完整性不足时需要 reviewer 复核。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -84,6 +100,17 @@ class SimplifiedExtractionPageState:
     export_ready: bool
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    title_zh: str = EXTRACTION_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = EXTRACTION_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：final_included_studies、drafts 和结构化 extraction 表单。"
+    output_summary_zh: str = "输出：extraction_records.json、extraction_records.csv、validation report 和 manual_edits_log。"
+    next_step_zh: str = "下一步：完成质量评价，然后构建 analysis-ready dataset。"
+    empty_state_zh: str = "没有最终纳入研究时，请先完成全文筛选。"
+    field_labels_zh: dict[str, str] | None = None
+    outcome_type_labels_zh: dict[str, str] | None = None
+    export_ready_zh: str = ""
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_extraction_state() -> ExtractionPageState:
@@ -215,6 +242,9 @@ def initial_extraction_state() -> ExtractionPageState:
         ),
         empty_state="没有 extraction_pool 候选文献时，可以先生成提取池或手动输入 record_id / study_id。",
         export_path="project_dir/exports/extraction_records.csv",
+        title_zh=EXTRACTION_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=EXTRACTION_DESCRIPTION_ZH,
     )
 
 
@@ -264,6 +294,19 @@ def simplified_extraction_state_from_project(
             "人工补充必须写入 manual_edits_log.jsonl；不能静默覆盖正式分析数据。",
             "缺失 required fields 会阻止或提示保存，取决于 validation service 的 error/warning 级别。",
         ),
+        title_zh=EXTRACTION_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=EXTRACTION_DESCRIPTION_ZH,
+        field_labels_zh={field: EXTRACTION_FIELD_ZH.get(field, field) for field in _all_extraction_fields(base)},
+        outcome_type_labels_zh={
+            "binary": "二分类结局",
+            "continuous": "连续变量结局",
+            "generic_effect": "已报告效应量",
+            "diagnostic_accuracy": "诊断准确性基础数据",
+            "proportion": "单臂比例 / 患病率",
+            "correlation": "相关性结局",
+        },
+        export_ready_zh="可以导出" if bool(completeness.get("ready_for_export", False)) else "需要补齐后再导出",
     )
 
 
@@ -289,6 +332,22 @@ def _field_help_text() -> dict[str, str]:
         "effect_measure": "OR/RR/RD/MD/SMD/HR/PREVALENCE/CORRELATION/DOR 等。",
         "manual_supplement": "人工补充必须记录 before/after、source location、note 和是否用于正式分析。",
     }
+
+
+def _all_extraction_fields(base: ExtractionPageState) -> tuple[str, ...]:
+    fields: list[str] = []
+    for group in (
+        base.study_characteristics_fields,
+        base.binary_outcome_fields,
+        base.continuous_outcome_fields,
+        base.generic_effect_outcome_fields,
+        base.diagnostic_accuracy_outcome_fields,
+        base.proportion_outcome_fields,
+        base.correlation_outcome_fields,
+        ("record_id", "study_id", "reviewer_id", "profile_type", "source_location", "manual_supplement"),
+    ):
+        fields.extend(group)
+    return tuple(dict.fromkeys(fields))
 
 
 def _final_included_rows(project_dir: Path) -> list[dict[str, object]]:
@@ -360,13 +419,13 @@ if QWidget is not None:
             self._form_inputs: dict[str, QLineEdit] = {}
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
 
             row = QHBoxLayout()
             self._path_input = QLineEdit()
