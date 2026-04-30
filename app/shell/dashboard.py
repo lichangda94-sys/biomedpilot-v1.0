@@ -32,7 +32,7 @@ def build_dashboard_model(
         product_name="BioMedPilot / 医研智析",
         product_subtitle=(
             "统一入口，独立工作台：Bioinformatics Analysis 与 Meta Analysis · "
-            f"{APP_VERSION} · {APP_CHANNEL}"
+            f"{APP_VERSION} · 内部测试版 / {APP_CHANNEL}"
         ),
         bioinformatics_features=tuple(item.name for item in bioinformatics_features()),
         meta_analysis_features=tuple(item.name for item in meta_analysis_features()),

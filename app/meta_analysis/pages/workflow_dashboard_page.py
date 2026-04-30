@@ -7,6 +7,16 @@ from pathlib import Path
 
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.project_contract_service import CANONICAL_PROJECT_PATHS, MANIFEST_FILES
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    WORKFLOW_DASHBOARD_DESCRIPTION_ZH,
+    WORKFLOW_DASHBOARD_TITLE_ZH,
+    WORKFLOW_EMPTY_STATE_ZH,
+    release_status_zh,
+    warning_summary_zh,
+    workflow_status_zh,
+    workflow_step_text,
+)
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskStatus
 
@@ -37,6 +47,15 @@ class WorkflowDashboardStep:
     data_asset_count: int = 0
     warnings: tuple[str, ...] = ()
     testing_limitations: tuple[str, ...] = ()
+    display_title_zh: str = ""
+    subtitle_en: str = ""
+    workflow_status_zh: str = ""
+    release_status_zh: str = ""
+    input_summary_zh: str = ""
+    output_summary_zh: str = ""
+    next_step_zh: str = ""
+    entrypoint_label_zh: str = ""
+    warning_summary_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -58,6 +77,13 @@ class WorkflowDashboardState:
     data_asset_count: int
     task_count: int
     steps: tuple[WorkflowDashboardStep, ...]
+    display_title_zh: str = WORKFLOW_DASHBOARD_TITLE_ZH
+    description_zh: str = WORKFLOW_DASHBOARD_DESCRIPTION_ZH
+    status_label_zh: str = ""
+    empty_state_zh: str = WORKFLOW_EMPTY_STATE_ZH
+    overall_status_zh: str = ""
+    manifest_status_zh: str = ""
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_workflow_dashboard_state(project_dir: Path | None = None) -> WorkflowDashboardState:
@@ -79,6 +105,9 @@ def initial_workflow_dashboard_state(project_dir: Path | None = None) -> Workflo
         data_asset_count=0,
         task_count=0,
         steps=(),
+        status_label_zh=release_status_zh(RELEASE_STATUS_DEVELOPER_PREVIEW),
+        overall_status_zh=workflow_status_zh(WORKFLOW_STATUS_NOT_STARTED),
+        manifest_status_zh="未检查",
     )
 
 
@@ -116,6 +145,9 @@ def workflow_dashboard_state_from_project(
         data_asset_count=len(data_assets),
         task_count=len(tasks),
         steps=steps,
+        status_label_zh=release_status_zh(RELEASE_STATUS_DEVELOPER_PREVIEW),
+        overall_status_zh=workflow_status_zh(overall),
+        manifest_status_zh=workflow_status_zh(WORKFLOW_STATUS_COMPLETED if not manifest_warnings else WORKFLOW_STATUS_NEEDS_REVIEW),
     )
 
 
@@ -356,6 +388,7 @@ def _build_step(
         warnings=warnings,
         step_id=str(definition["step_id"]),
     )
+    step_text = workflow_step_text(str(definition["step_id"]))
     return WorkflowDashboardStep(
         step_id=str(definition["step_id"]),
         title=str(definition["title"]),
@@ -376,6 +409,15 @@ def _build_step(
             "Developer Preview / testing：状态来自本地 artifacts、tasks、data assets 和 audit log。",
             "缺失 artifact 会显示 warning，不会阻塞其他页面打开。",
         ),
+        display_title_zh=step_text.title_zh,
+        subtitle_en=step_text.subtitle_en,
+        workflow_status_zh=workflow_status_zh(status),
+        release_status_zh=release_status_zh(RELEASE_STATUS_DEVELOPER_PREVIEW),
+        input_summary_zh=step_text.input_summary_zh,
+        output_summary_zh=step_text.output_summary_zh,
+        next_step_zh=step_text.next_step_zh,
+        entrypoint_label_zh=step_text.entrypoint_zh,
+        warning_summary_zh=warning_summary_zh(warnings),
     )
 
 
@@ -625,17 +667,17 @@ if QWidget is not None:
             super().__init__()
             self._state = initial_workflow_dashboard_state()
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(self._state.display_title_zh)
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
             self._project_dir_input = QLineEdit()
             self._project_dir_input.setPlaceholderText("选择或粘贴 Meta 项目目录路径")
             root.addWidget(self._project_dir_input)
-            refresh = QPushButton("刷新 workflow 状态")
+            refresh = QPushButton("刷新流程状态")
             refresh.clicked.connect(self._refresh)
             root.addWidget(refresh)
             card = QFrame()
@@ -650,18 +692,17 @@ if QWidget is not None:
         def _refresh(self) -> None:
             state = workflow_dashboard_state_from_project(Path(self._project_dir_input.text()).expanduser())
             step_lines = [
-                f"- {step.title}: {step.workflow_status} / {step.release_status}; next={step.next_step}; warnings={len(step.warnings)}"
+                f"- {step.display_title_zh} {step.subtitle_en}: {step.workflow_status_zh} / {step.release_status_zh}; "
+                f"下一步：{step.next_step_zh}; 问题：{len(step.warnings)}；进入：{step.entrypoint_label_zh}"
                 for step in state.steps
             ]
             self._summary_label.setText(
-                f"project_dir：{state.project_dir}\n"
-                f"overall_status：{state.overall_status}\n"
-                f"completed / ready / needs_review / in_progress / not_started："
+                f"项目目录：{state.project_dir}\n"
+                f"总体状态：{state.overall_status_zh} / {state.overall_status}\n"
+                f"已完成 / 已就绪 / 需要复核 / 进行中 / 未开始："
                 f"{state.completed_count} / {state.ready_count} / {state.needs_review_count} / {state.in_progress_count} / {state.not_started_count}\n"
-                f"manifest_status：{state.manifest_status}\n"
-                f"audit_log：{state.audit_log_path}\n"
-                f"data_asset_count：{state.data_asset_count}\n"
-                f"task_count：{state.task_count}\n"
+                f"项目文件状态：{state.manifest_status_zh}\n"
+                f"{state.developer_info_title_zh}：audit_log={state.audit_log_path}; data_assets={state.data_asset_count}; tasks={state.task_count}\n"
                 + "\n".join(step_lines)
             )
 

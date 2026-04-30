@@ -24,7 +24,7 @@ It should not be presented as production-ready clinical, statistical, or publica
 
 | Area | Gap | Severity | Notes |
 | --- | --- | --- | --- |
-| UI workflow | Many Meta capabilities are implemented as page-state/service flows, but the desktop UI still needs a simpler step-by-step usable workflow | Major | Next stage should be UI Phase 1: Meta Analysis Usable Workflow UI |
+| UI workflow | UI Phase 1A adds a Chinese workflow dashboard foundation, but the detailed workflow pages still need usable Chinese panels | Major | Next stage should be UI Phase 1B: Literature Import Wizard + Zotero-style Literature Table Chinese UI |
 | Extraction | Sample extraction values are validation seeds; real projects still require careful manual extraction and review | Major | Must remain clearly marked and auditable |
 | Quality assessment | Quality assessment forms exist, but real reviewer ergonomics need more desktop UI polish | Major | Users should not need to inspect JSON |
 | Report interpretation | Reports are internal beta Markdown/HTML/DOCX testing outputs, not journal-ready reports | Major | Formal PDF is not implemented |
@@ -37,6 +37,7 @@ It should not be presented as production-ready clinical, statistical, or publica
 
 | Area | Gap | Severity | Notes |
 | --- | --- | --- | --- |
+| Workflow dashboard | Chinese status and step labels are now available, but layout has not been visually polished beyond the internal beta baseline | Minor | Keep macOS-like simple layout; avoid a global theme rewrite |
 | Protocol/search | Search strategies are draft/copyable text, not validated final search strategies | Minor | PubMed/WOS/CNKI/WanFang automation remains outside current internal beta scope |
 | Literature import | RIS/NBIB/CSV import has diagnostics but still needs more real-world database export fixtures | Minor | Continue expanding fixtures from tester files |
 | Duplicate review | Merge preview supports auditability, but high-throughput manual review UI needs polish | Minor | No automatic destructive merge should be added |
@@ -57,8 +58,8 @@ Proceed to UI Phase 1: Meta Analysis Usable Workflow UI.
 
 Priority should be usability and clarity, not new statistical features:
 
-1. Make the Meta workflow dashboard the user's main route through the process.
-2. Convert service/page-state capabilities into understandable desktop panels.
+1. Use the Chinese Meta workflow dashboard as the user's main route through the process.
+2. Build UI Phase 1B around literature import and the Zotero-style literature table.
 3. Keep every unfinished capability visibly labeled Developer Preview / testing.
 4. Preserve all manifest, audit, lineage, and artifact references.
 5. Do not add production claims or automatic full-text/AI/statistical shortcuts.
