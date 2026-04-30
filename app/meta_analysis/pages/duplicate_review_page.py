@@ -6,7 +6,17 @@ from app.meta_analysis.models.dedup import DedupDecision, DedupResult, Duplicate
 from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.services.dedup_decision_service import DedupDecisionService
 from app.meta_analysis.services.duplicate_review_service import DuplicateReviewResult, DuplicateReviewService
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    DUPLICATE_DECISION_ZH,
+    DUPLICATE_FIELD_ZH,
+    DUPLICATE_GROUP_TYPE_ZH,
+    DUPLICATE_REVIEW_DESCRIPTION_ZH,
+    DUPLICATE_REVIEW_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
 from app.shared.feature_availability import get_feature
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -24,6 +34,7 @@ class DuplicateRecordSummary:
 class DuplicateFieldDifference:
     field_name: str
     values_by_record_id: tuple[tuple[str, str], ...]
+    field_name_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -31,6 +42,7 @@ class DuplicateFieldConflictSummary:
     field_name: str
     values_by_record_id: tuple[tuple[str, str], ...]
     selected_record_id: str
+    field_name_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -48,6 +60,7 @@ class DuplicateGroupSummary:
     group_id: str
     record_ids: tuple[str, ...]
     duplicate_type: str
+    duplicate_type_zh: str
     reason: str
     confidence: float
     master_candidate_id: str
@@ -93,6 +106,16 @@ class DuplicateReviewPageState:
     testing_limitations: tuple[str, ...] = ()
     warning_severity_items: tuple[WarningSeverityItem, ...] = ()
     warning_severity_counts: dict[str, int] | None = None
+    title_zh: str = DUPLICATE_REVIEW_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = DUPLICATE_REVIEW_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：筛选准备记录或重复候选组 JSON。"
+    output_summary_zh: str = "输出：重复候选摘要、合并预览、人工去重决策和审计记录。"
+    next_step_zh: str = "下一步：确认重复文献后进入纳入与排除标准。"
+    empty_state_zh: str = "没有重复候选组时，可进入纳入与排除标准和标题摘要筛选。"
+    warning_summary_zh: str = "字段冲突、低置信度或缺少合并预览时需要 reviewer 人工复核。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
+    decision_option_labels_zh: tuple[str, ...] = ()
 
 
 def initial_duplicate_review_state() -> DuplicateReviewPageState:
@@ -117,6 +140,10 @@ def initial_duplicate_review_state() -> DuplicateReviewPageState:
             "Developer Preview / testing：merge preview 是辅助，不替代 reviewer 判断。",
             "当前不执行复杂批量合并 UI，也不自动删除记录。",
         ),
+        title_zh=DUPLICATE_REVIEW_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=DUPLICATE_REVIEW_DESCRIPTION_ZH,
+        decision_option_labels_zh=tuple(DUPLICATE_DECISION_ZH[item] for item in ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")),
     )
 
 
@@ -171,6 +198,10 @@ def duplicate_review_state_from_groups(
         testing_limitations=initial_duplicate_review_state().testing_limitations,
         warning_severity_items=severity_items,
         warning_severity_counts=warning_severity_counts(severity_items),
+        title_zh=DUPLICATE_REVIEW_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=DUPLICATE_REVIEW_DESCRIPTION_ZH,
+        decision_option_labels_zh=tuple(DUPLICATE_DECISION_ZH.get(item, item) for item in ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")),
     )
 
 
@@ -181,6 +212,7 @@ def _group_summary(group: DuplicateGroup) -> DuplicateGroupSummary:
         group_id=group.group_id,
         record_ids=record_ids,
         duplicate_type=duplicate_type,
+        duplicate_type_zh=DUPLICATE_GROUP_TYPE_ZH.get(duplicate_type, duplicate_type),
         reason=group.match_reason or group.reason,
         confidence=group.confidence,
         master_candidate_id=_canonical_candidate_id(None, group),
@@ -224,7 +256,7 @@ def _field_differences(records: list[dict[str, object]]) -> list[DuplicateFieldD
         )
         values = {value for _record_id, value in values_by_record}
         if len(values) > 1:
-            differences.append(DuplicateFieldDifference(field_name=field_name, values_by_record_id=values_by_record))
+            differences.append(DuplicateFieldDifference(field_name=field_name, values_by_record_id=values_by_record, field_name_zh=DUPLICATE_FIELD_ZH.get(field_name, field_name)))
     return differences
 
 
@@ -242,6 +274,7 @@ def _field_conflict_summary(
                 field_name=item.field_name,
                 values_by_record_id=item.values_by_record_id,
                 selected_record_id=selected,
+                field_name_zh=DUPLICATE_FIELD_ZH.get(item.field_name, item.field_name),
             )
         )
     return summaries
@@ -390,13 +423,13 @@ if QWidget is not None:
             self._current_group_index = 0
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
 
             row = QHBoxLayout()
             self._path_input = QLineEdit()
@@ -568,16 +601,16 @@ if QWidget is not None:
                 duplicate_review_queue_export_path=duplicate_review_queue_export_path,
             )
             group_rows = [
-                f"- {item.group_id}: {item.duplicate_type}, records={', '.join(item.record_ids)}, reason={item.reason}, confidence={item.confidence}, master={item.master_candidate_id or '待确认'}, merge_preview={'yes' if item.merge_preview_available else 'no'}"
+                f"- {item.group_id}: {item.duplicate_type_zh} ({item.duplicate_type}), records={', '.join(item.record_ids)}, reason={item.reason}, confidence={item.confidence}, master={item.master_candidate_id or '待确认'}, merge_preview={'yes' if item.merge_preview_available else 'no'}"
                 for item in self._state.group_summaries
             ]
             field_difference_rows = [
-                f"- {item.field_name}: "
+                f"- {item.field_name_zh} ({item.field_name}): "
                 + "; ".join(f"{record_id}={value}" for record_id, value in item.values_by_record_id)
                 for item in self._state.field_differences
             ]
             field_conflict_rows = [
-                f"- {item.field_name}: selected={item.selected_record_id or '未指定'}; "
+                f"- {item.field_name_zh} ({item.field_name}): selected={item.selected_record_id or '未指定'}; "
                 + "; ".join(f"{record_id}={value}" for record_id, value in item.values_by_record_id)
                 for item in self._state.field_conflict_summary
             ]

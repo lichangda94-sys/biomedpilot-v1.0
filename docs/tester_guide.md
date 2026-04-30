@@ -62,3 +62,22 @@ This is not production clinical, statistical, or publication software.
 - 绿色只表示“未发现明显重复风险”，不代表文献质量高或可信。
 
 当前文献库仍是只读 testing 页面，不会自动删除、合并或排除文献。
+
+## Meta 去重、标准与标题摘要筛选中文页面
+
+完成文献导入后，按顺序检查：
+
+1. 打开 `去重审核 Duplicate Review`，查看重复候选组、匹配原因、canonical candidate 和字段冲突。
+2. 只有在看到 merge preview 后，才记录 merge 决策；不要批量自动合并。
+3. 打开 `纳入与排除标准 Criteria`，确认纳入标准、排除标准和 readiness status。
+4. 打开 `标题摘要筛选 Screening`，逐篇查看题名、摘要、作者、期刊、年份、DOI / PMID 链接。
+5. 使用 `纳入`、`排除`、`可能纳入`、`需要复核` 或 `待筛选` 标签记录测试问题。
+
+测试时请特别记录：
+
+- 去重字段冲突是否能用中文理解。
+- 排除标准是否能帮助 reviewer 决策。
+- `needs_review` 是否清楚表示“需要复核”，不是正式排除。
+- 排除记录是否填写了人能看懂的排除原因。
+
+当前这些页面仍为 Developer Preview / testing，不会自动删除文献、自动排除文献或自动完成 reviewer 判断。

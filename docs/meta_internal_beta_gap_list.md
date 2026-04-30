@@ -24,7 +24,7 @@ It should not be presented as production-ready clinical, statistical, or publica
 
 | Area | Gap | Severity | Notes |
 | --- | --- | --- | --- |
-| UI workflow | UI Phase 1A adds a Chinese workflow dashboard foundation, and UI Phase 1B adds Chinese page-state copy for literature import and literature library; downstream review pages still need usable Chinese panels | Major | Next stage should be UI Phase 1C: Duplicate Review + Criteria + Screening Chinese UI |
+| UI workflow | UI Phase 1A adds a Chinese workflow dashboard foundation, UI Phase 1B adds Chinese literature import/library copy, and UI Phase 1C adds Chinese duplicate review, criteria, and title/abstract screening page-state copy; downstream full-text/extraction/quality/analysis/report pages still need usable Chinese panels | Major | Next stage should be UI Phase 1D: Full-text + Extraction + Quality Chinese UI |
 | Extraction | Sample extraction values are validation seeds; real projects still require careful manual extraction and review | Major | Must remain clearly marked and auditable |
 | Quality assessment | Quality assessment forms exist, but real reviewer ergonomics need more desktop UI polish | Major | Users should not need to inspect JSON |
 | Report interpretation | Reports are internal beta Markdown/HTML/DOCX testing outputs, not journal-ready reports | Major | Formal PDF is not implemented |
@@ -41,7 +41,8 @@ It should not be presented as production-ready clinical, statistical, or publica
 | Protocol/search | Search strategies are draft/copyable text, not validated final search strategies | Minor | PubMed/WOS/CNKI/WanFang automation remains outside current internal beta scope |
 | Literature import | Chinese import wizard page-state is available, but real-world database export fixtures should continue expanding | Minor | Keep parser behavior stable; do not add online retrieval in UI Phase 1B |
 | Literature table | Chinese duplicate-risk labels are available, but table filtering, column preferences, batch tags, and batch actions are not implemented | Minor | Keep read-only behavior until reviewer workflows are clearer |
-| Duplicate review | Merge preview supports auditability, but high-throughput manual review UI still needs Chinese interaction polish | Minor | No automatic destructive merge should be added |
+| Duplicate review | Merge preview and core decisions now have Chinese page-state labels, but high-throughput manual review still needs a denser comparison table | Minor | No automatic destructive merge should be added |
+| Criteria / screening | Criteria and title/abstract screening now expose Chinese labels and progress copy, but real reviewer speed still needs richer desktop controls | Minor | Keep `needs_review` as a UI label unless the save service is deliberately extended |
 | Figures | Forest/funnel outputs are testing artifacts, not publication-styled figures | Minor | Good enough for internal validation, not final manuscripts |
 | Sample projects | Sample projects are compact validation fixtures rather than clinically curated example reviews | Minor | Keep this explicit in walkthroughs |
 
@@ -60,7 +61,7 @@ Proceed to UI Phase 1: Meta Analysis Usable Workflow UI.
 Priority should be usability and clarity, not new statistical features:
 
 1. Use the Chinese Meta workflow dashboard as the user's main route through the process.
-2. Build UI Phase 1C around duplicate review, inclusion/exclusion criteria, and title/abstract screening.
+2. Build UI Phase 1D around full-text status, data extraction, and quality assessment.
 3. Keep every unfinished capability visibly labeled Developer Preview / testing.
 4. Preserve all manifest, audit, lineage, and artifact references.
 5. Do not add production claims or automatic full-text/AI/statistical shortcuts.

@@ -5,6 +5,15 @@ from pathlib import Path
 
 from app.meta_analysis.models.criteria import CriteriaSet
 from app.meta_analysis.services.criteria_service import CRITERIA_PATHS, CriteriaBuilderService
+from app.meta_analysis.ui_text import (
+    CRITERIA_DESCRIPTION_ZH,
+    CRITERIA_READINESS_STATUS_ZH,
+    CRITERIA_SECTION_ZH,
+    CRITERIA_TITLE_ZH,
+    DEVELOPER_INFO_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -26,6 +35,17 @@ class CriteriaPageState:
     screening_hints: tuple[str, ...]
     fulltext_hints: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    title_zh: str = CRITERIA_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = CRITERIA_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：Protocol / PICO-PICOS、默认标准和 reviewer 自定义标准。"
+    output_summary_zh: str = "输出：纳入标准、排除标准和 criteria summary。"
+    next_step_zh: str = "下一步：使用标准开展标题摘要筛选。"
+    empty_state_zh: str = "尚未生成纳入与排除标准。请先确认研究问题，再保存 criteria draft。"
+    readiness_status_zh: str = "未开始"
+    inclusion_title_zh: str = CRITERIA_SECTION_ZH["inclusion"]
+    exclusion_title_zh: str = CRITERIA_SECTION_ZH["exclusion"]
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_criteria_page_state(project_dir: Path | None = None) -> CriteriaPageState:
@@ -51,6 +71,10 @@ def initial_criteria_page_state(project_dir: Path | None = None) -> CriteriaPage
             "Criteria 只作为 reviewer 决策提示，不自动纳入或排除文献。",
             "Developer Preview：PRISMA reason counts 仍依赖后续 screening/full-text decisions。",
         ),
+        title_zh=CRITERIA_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=CRITERIA_DESCRIPTION_ZH,
+        readiness_status_zh=CRITERIA_READINESS_STATUS_ZH["not_started"],
     )
 
 
@@ -82,6 +106,10 @@ def criteria_page_state_from_project(project_dir: Path, *, service: CriteriaBuil
             "Criteria 不会自动修改 screening_decisions 或 fulltext decisions。",
             "如 criteria 与 protocol 不一致，必须由 reviewer 人工修订。",
         ),
+        title_zh=CRITERIA_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=CRITERIA_DESCRIPTION_ZH,
+        readiness_status_zh=CRITERIA_READINESS_STATUS_ZH.get(criteria.readiness_status, criteria.readiness_status),
     )
 
 
@@ -102,13 +130,13 @@ if QWidget is not None:
             super().__init__()
             state = initial_criteria_page_state()
             root = QVBoxLayout(self)
-            title = QLabel(f"{state.title} · {state.status_label}")
+            title = QLabel(f"{state.title_zh} · {state.status_label_zh}")
             title.setStyleSheet("font-size: 18px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(state.description)
+            description = QLabel(state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            note = QLabel(state.empty_state)
+            note = QLabel(f"{state.empty_state_zh}\n下一步：{state.next_step_zh}")
             note.setWordWrap(True)
             root.addWidget(note)
 

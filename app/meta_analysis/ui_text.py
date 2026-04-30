@@ -100,6 +100,79 @@ DUPLICATE_RISK_COLOR_ZH: dict[str, str] = {
     "green": "绿色",
 }
 
+DUPLICATE_REVIEW_TITLE_ZH = "去重审核"
+DUPLICATE_REVIEW_DESCRIPTION_ZH = "查看重复候选组、匹配原因、字段冲突和合并预览；所有决策都需要人工确认。"
+DUPLICATE_GROUP_TYPE_ZH: dict[str, str] = {
+    "exact": "精确重复",
+    "suspected": "疑似重复",
+}
+DUPLICATE_DECISION_ZH: dict[str, str] = {
+    "keep_first": "保留第一条",
+    "keep_second": "保留第二条",
+    "keep_both": "都保留",
+    "merge": "合并记录",
+    "mark_not_duplicate": "标记为非重复",
+    "exclude_duplicate": "排除重复记录",
+    "set_master_record": "设置主记录",
+    "skip": "暂不处理",
+}
+DUPLICATE_FIELD_ZH: dict[str, str] = {
+    "title": "题名",
+    "abstract": "摘要",
+    "authors": "作者",
+    "creators": "作者结构",
+    "creators/authors": "作者 / 作者结构",
+    "year": "年份",
+    "date": "日期",
+    "year/date": "年份 / 日期",
+    "journal": "期刊",
+    "publication_title": "出版物名称",
+    "journal/publication_title": "期刊 / 出版物名称",
+    "doi": "DOI",
+    "pmid": "PMID",
+    "clinical_trials_ids": "临床试验注册号",
+}
+
+CRITERIA_TITLE_ZH = "纳入与排除标准"
+CRITERIA_DESCRIPTION_ZH = "维护纳入标准和排除标准，供标题摘要筛选、全文筛选和 PRISMA 排除原因统计参考。"
+CRITERIA_READINESS_STATUS_ZH: dict[str, str] = {
+    "not_started": "未开始",
+    "needs_review": "需要复核",
+    "ready": "已就绪",
+    "completed": "已完成",
+}
+CRITERIA_SECTION_ZH: dict[str, str] = {
+    "inclusion": "纳入标准",
+    "exclusion": "排除标准",
+}
+
+SCREENING_TITLE_ZH = "标题摘要筛选"
+SCREENING_DESCRIPTION_ZH = "逐篇查看题名、摘要和来源链接，按纳入/排除标准记录 include、exclude、maybe 或 needs review。"
+SCREENING_DECISION_ZH: dict[str, str] = {
+    "included": "纳入",
+    "excluded": "排除",
+    "maybe": "可能纳入",
+    "needs_review": "需要复核",
+    "pending": "待筛选",
+}
+SCREENING_FILTER_ZH: dict[str, str] = {
+    "all": "全部",
+    "pending": "待筛选",
+    "included": "纳入",
+    "excluded": "排除",
+    "maybe": "可能纳入",
+    "needs_review": "需要复核",
+}
+SCREENING_PROGRESS_ZH: dict[str, str] = {
+    "total": "总数",
+    "pending": "待筛选",
+    "included": "纳入",
+    "excluded": "排除",
+    "maybe": "可能纳入",
+    "needs_review": "需要复核",
+    "screened": "已筛选",
+}
+
 
 @dataclass(frozen=True)
 class WorkflowStepText:

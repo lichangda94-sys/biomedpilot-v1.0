@@ -7,7 +7,17 @@ from pathlib import Path
 
 from app.meta_analysis.services.criteria_service import CriteriaBuilderService
 from app.meta_analysis.services.screening_service import ScreeningQueueResult, ScreeningService
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+    SCREENING_DECISION_ZH,
+    SCREENING_DESCRIPTION_ZH,
+    SCREENING_FILTER_ZH,
+    SCREENING_PROGRESS_ZH,
+    SCREENING_TITLE_ZH,
+)
 from app.shared.feature_availability import get_feature
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -23,6 +33,15 @@ class ScreeningPageState:
     last_result: ScreeningQueueResult | None = None
     criteria_summary_path: str = ""
     criteria_hints: tuple[str, ...] = ()
+    title_zh: str = SCREENING_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = SCREENING_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：去重后的文献、筛选队列和纳入/排除标准。"
+    output_summary_zh: str = "输出：标题摘要筛选决策、进度摘要和排除原因。"
+    next_step_zh: str = "下一步：对纳入或可能纳入的文献进行全文筛选。"
+    empty_state_zh: str = "没有筛选来源时无法生成队列；请先完成文献导入和去重审核。"
+    warning_summary_zh: str = "排除记录必须填写排除原因；maybe 和 needs review 需要 reviewer 复核。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -37,7 +56,9 @@ class TitleAbstractScreeningRecordView:
     doi: str
     pmid: str
     source_links: tuple[str, ...]
+    source_link_labels_zh: tuple[str, ...]
     decision: str
+    decision_zh: str
     exclusion_reason_text: str
     notes: str
 
@@ -57,10 +78,22 @@ class TitleAbstractScreeningUXState:
     criteria_hints: tuple[str, ...]
     progress_summary: dict[str, int]
     filter_views: tuple[str, ...]
+    decision_option_labels_zh: tuple[str, ...]
+    filter_view_labels_zh: tuple[str, ...]
+    progress_labels_zh: dict[str, str]
     output_paths: dict[str, str]
     warnings: tuple[str, ...]
     empty_state: str
     testing_limitations: tuple[str, ...]
+    title_zh: str = SCREENING_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = SCREENING_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：screening queue、纳入/排除标准和文献来源链接。"
+    output_summary_zh: str = "输出：title_abstract_decisions.json/csv 和 screening_summary.json。"
+    next_step_zh: str = "下一步：筛选 include / maybe 记录进入全文筛选。"
+    empty_state_zh: str = "没有可筛选记录。请先生成 screening queue。"
+    warning_summary_zh: str = "缺少 queue、空 queue 或排除原因缺失时需要人工处理。"
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_screening_state() -> ScreeningPageState:
@@ -74,6 +107,9 @@ def initial_screening_state() -> ScreeningPageState:
         next_step="下一步：Extraction；也可继续 full-text status 和质量评价 testing 子流程。",
         empty_state="没有筛选来源时无法生成队列；没有候选记录时页面应显示空队列摘要。",
         warning_summary="excluded 决策必须填写排除原因；错误提示为用户可读 message。",
+        title_zh=SCREENING_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=SCREENING_DESCRIPTION_ZH,
     )
 
 
@@ -128,6 +164,9 @@ def title_abstract_screening_state_from_queue(
         criteria_hints=criteria_service.criteria_hints(project_dir, stage="title_abstract"),
         progress_summary=progress,
         filter_views=("all", "pending", "included", "excluded", "maybe", "needs_review"),
+        decision_option_labels_zh=tuple(SCREENING_DECISION_ZH[item] for item in ("included", "excluded", "maybe", "needs_review", "pending")),
+        filter_view_labels_zh=tuple(SCREENING_FILTER_ZH[item] for item in ("all", "pending", "included", "excluded", "maybe", "needs_review")),
+        progress_labels_zh={key: SCREENING_PROGRESS_ZH[key] for key in progress},
         output_paths={
             "title_abstract_decisions_json": str(project_dir / "screening" / "title_abstract_decisions.json"),
             "title_abstract_decisions_csv": str(project_dir / "screening" / "title_abstract_decisions.csv"),
@@ -139,6 +178,10 @@ def title_abstract_screening_state_from_queue(
             "needs_review 是 UI 视图标签；当前保存服务仍使用 pending/included/excluded/maybe 兼容旧格式。",
             "本页面不删除文献；只辅助 reviewer 保存明确 screening decision。",
         ),
+        title_zh=SCREENING_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=SCREENING_DESCRIPTION_ZH,
+        empty_state_zh="没有可筛选记录。请先生成 screening queue。" if not records else "",
     )
 
 
@@ -188,7 +231,9 @@ def _record_view(item: dict[str, object]) -> TitleAbstractScreeningRecordView:
         doi=doi,
         pmid=pmid,
         source_links=tuple(link for link in (_doi_link(doi), _pmid_link(pmid)) if link),
+        source_link_labels_zh=tuple(label for label, link in (("打开 DOI", _doi_link(doi)), ("打开 PubMed", _pmid_link(pmid))) if link),
         decision=str(item.get("decision") or "pending"),
+        decision_zh=SCREENING_DECISION_ZH.get(str(item.get("decision") or "pending"), str(item.get("decision") or "pending")),
         exclusion_reason_text=str(item.get("exclusion_reason_text") or ""),
         notes=str(item.get("notes") or ""),
     )
@@ -251,13 +296,13 @@ if QWidget is not None:
             self._state = initial_screening_state()
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
 
             row = QHBoxLayout()
             self._path_input = QLineEdit()
