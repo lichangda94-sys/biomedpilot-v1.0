@@ -18,15 +18,27 @@ checkout and is the preferred entry during active development.
 If you are given the local macOS app bundle, open:
 
 ```text
-dist/BioMedPilot.app
+/Users/changdali/Desktop/BioMedPilot.app
 ```
 
 This first app bundle is a local launcher package. It still requires a Python
 environment with PySide6 and is not the final standalone installer.
 If the app bundle UI looks older than the source UI, ask the developer to rebuild
 it with `python3 scripts/package_app.py --smoke-test`. The smoke output and
-`dist/BioMedPilot.app/Contents/Resources/app/BUILD_INFO.json` show the app
+`BioMedPilot.app/Contents/Resources/app/BUILD_INFO.json` show the app
 version, launch mode, and git commit used by the bundle.
+
+For the current internal beta, the Dashboard header and smoke test should show:
+
+```text
+0.1.0-internal-beta · Developer Preview / testing
+```
+
+You can check the desktop entry without opening the full UI:
+
+```bash
+/Users/changdali/Desktop/BioMedPilot.app/Contents/MacOS/BioMedPilot --smoke-test
+```
 
 If the app opens correctly, you should see the BioMedPilot Dashboard with:
 

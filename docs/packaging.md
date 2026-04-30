@@ -10,6 +10,12 @@ Command:
 python3 scripts/package_app.py --smoke-test
 ```
 
+For internal beta acceptance, keep the existing build directory and run:
+
+```bash
+python3 scripts/package_app.py --no-clean --smoke-test
+```
+
 Output:
 
 ```text
@@ -27,6 +33,23 @@ Use these fields to confirm whether you are testing the current source checkout
 or a packaged app bundle. If the UI looks stale, rebuild the bundle with the
 command above before opening `dist/BioMedPilot.app`.
 
+The unified desktop testing entry on this machine is:
+
+```text
+/Users/changdali/Desktop/BioMedPilot.app
+```
+
+After rebuilding `dist/BioMedPilot.app`, refresh the desktop entry from the new
+bundle and rerun:
+
+```bash
+/Users/changdali/Desktop/BioMedPilot.app/Contents/MacOS/BioMedPilot --smoke-test
+```
+
+The source smoke test should report `launch_mode=source`; the desktop bundle
+should report `launch_mode=packaged-local-python`. Both should report the same
+`app_version`, `app_channel`, and expected `git_head`.
+
 This package mode:
 
 - uses no network downloads
@@ -35,6 +58,7 @@ This package mode:
 - creates a macOS launcher under `Contents/MacOS`
 - runs `python -m app.main`
 - records version/source metadata in `BUILD_INFO.json`
+- records version/channel/git metadata in `Info.plist`
 - stores runtime JSON under the copied `project_storage` directory inside the bundle
 
 ## Limitations

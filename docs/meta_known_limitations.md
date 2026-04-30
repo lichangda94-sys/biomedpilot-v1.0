@@ -13,3 +13,5 @@ Current status: Developer Preview / testing.
 - AB13 internal beta sample projects commit source inputs and expected manifests only; generated reports, figures, and ZIP packages must be produced in temporary project directories.
 - The treatment-effect and biomarker sample extraction values are validation seeds, not clinically curated datasets.
 - The Mac app bundle smoke target is suitable for internal beta checks only; it is not a standalone production installer.
+- AB14 internal beta acceptance verifies source/package metadata and sample-project artifact generation, but it does not convert any Meta capability to production status.
+- `/Users/changdali/Desktop/BioMedPilot.app` is the unified desktop testing entry on this machine; if it is rebuilt from a newer commit, rerun packaged smoke before giving it to testers.
