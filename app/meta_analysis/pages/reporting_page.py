@@ -9,8 +9,17 @@ from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
 from app.meta_analysis.services.publication_export_service import PublicationExportService
 from app.meta_analysis.services.reporting_service import ReportExportResult, ReportingService
+from app.meta_analysis.ui_text import (
+    DEVELOPER_INFO_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+    PRISMA_TRACE_ZH,
+    REPORT_SECTION_ZH,
+    REPORTING_DESCRIPTION_ZH,
+    REPORTING_TITLE_ZH,
+)
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -51,6 +60,16 @@ class ReportingPageState:
     prisma_trace_state: "PRISMATraceState | None" = None
     panel_help: tuple[str, ...] = ()
     testing_limitations: tuple[str, ...] = ()
+    title_zh: str = REPORTING_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = REPORTING_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：PRISMA 来源、analysis result、figures、quality、extraction 和 report manifest。"
+    output_summary_zh: str = "输出：PRISMA、Markdown/HTML/DOCX testing 报告、补充材料、图表包、快照和复现包。"
+    next_step_zh: str = "下一步：检查 missing/placeholder/testing 状态，再进行内部 beta 测试。"
+    empty_state_zh: str = "缺失 artifact 时报告会标记 missing，不会崩溃。"
+    warning_summary_zh: str = "正式 PDF 未开放；PRISMA 图为简化 testing SVG；所有报告需要人工复核。"
+    section_labels_zh: dict[str, str] | None = None
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -58,6 +77,7 @@ class PRISMATraceReferenceRow:
     source_type: str
     path: str
     status: str
+    status_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -72,6 +92,12 @@ class PRISMATraceState:
     message: str
     warning_severity_items: tuple[WarningSeverityItem, ...] = ()
     warning_severity_counts: dict[str, int] | None = None
+    title_zh: str = "PRISMA 来源追溯"
+    source_references_label_zh: str = PRISMA_TRACE_ZH["source_references"]
+    source_reference_warnings_label_zh: str = PRISMA_TRACE_ZH["source_reference_warnings"]
+    audit_reference_warnings_label_zh: str = PRISMA_TRACE_ZH["audit_reference_warnings"]
+    workflow_event_counts_label_zh: str = PRISMA_TRACE_ZH["workflow_event_counts"]
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_reporting_state() -> ReportingPageState:
@@ -96,6 +122,10 @@ def initial_reporting_state() -> ReportingPageState:
             "Developer Preview / testing：仅生成简化 PRISMA SVG，不是正式 PRISMA 2020 diagram。",
             "正式 PDF report 未开放；当前仅保留 Markdown/HTML/DOCX testing 输出。",
         ),
+        title_zh=REPORTING_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=REPORTING_DESCRIPTION_ZH,
+        section_labels_zh=REPORT_SECTION_ZH,
     )
 
 
@@ -114,6 +144,7 @@ def reporting_prisma_trace_state_from_project(
             source_type=str(item.get("source_type", "")),
             path=str(item.get("path", "")),
             status=str(item.get("status", "")),
+            status_zh="可用" if str(item.get("status", "")) == "available" else "缺失" if str(item.get("status", "")) == "missing" else str(item.get("status", "")),
         )
         for item in summary.source_references
     )
@@ -159,6 +190,7 @@ def reporting_prisma_trace_state_from_project(
         message="PRISMA source trace collected. Missing source or audit references are warnings in Developer Preview.",
         warning_severity_items=tuple(severity_items),
         warning_severity_counts=warning_severity_counts(tuple(severity_items)),
+        title_zh="PRISMA 来源追溯",
     )
 
 
@@ -204,13 +236,13 @@ if QWidget is not None:
             self._state = initial_reporting_state()
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
 
             row = QHBoxLayout()
             self._path_input = QLineEdit()

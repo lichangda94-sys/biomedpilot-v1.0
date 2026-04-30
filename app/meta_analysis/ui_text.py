@@ -237,6 +237,49 @@ QUALITY_FIELD_ZH: dict[str, str] = {
     "reviewer_notes": "评价人备注",
 }
 
+ANALYSIS_TITLE_ZH = "统计分析"
+ANALYSIS_DESCRIPTION_ZH = "区分预检、分析数据集、运行结果、高级分析和适用性 warning；testing 统计结果必须人工复核。"
+ANALYSIS_SECTION_ZH: dict[str, str] = {
+    "preflight": "分析预检",
+    "dataset": "分析数据集",
+    "run_result": "Meta 分析结果",
+    "figures_tables": "图表与结果表",
+    "advanced_analysis": "高级分析",
+    "applicability": "适用性 warning",
+}
+ANALYSIS_MODEL_ZH: dict[str, str] = {
+    "fixed": "固定效应",
+    "random": "随机效应",
+}
+ANALYSIS_BLOCKED_METHOD_ZH: dict[str, str] = {
+    "network_meta": "Network Meta 未实现",
+    "hsroc": "诊断 HSROC 未实现",
+    "meta_regression": "Meta 回归未实现",
+}
+
+REPORTING_TITLE_ZH = "PRISMA / 报告导出"
+REPORTING_DESCRIPTION_ZH = "生成 PRISMA 摘要、简化 PRISMA 图、Markdown/HTML/DOCX testing 报告、导出包和复现包；正式 PDF 未开放。"
+REPORT_SECTION_ZH: dict[str, str] = {
+    "test_summary": "测试摘要",
+    "prisma": "PRISMA 摘要",
+    "formal_markdown": "正式报告雏形 Markdown",
+    "html_report": "HTML testing 报告",
+    "word_report": "DOCX testing 报告",
+    "pdf_placeholder": "PDF placeholder",
+    "supplementary_exports": "补充材料导出",
+    "figure_package": "图表包",
+    "project_snapshot": "项目快照",
+    "reproducibility_package": "复现包",
+}
+PRISMA_TRACE_ZH: dict[str, str] = {
+    "source_references": "来源引用",
+    "source_reference_warnings": "来源 warning",
+    "audit_reference_warnings": "审计 warning",
+    "workflow_event_counts": "流程事件数量",
+    "review_log_jsonl": "review_log.jsonl",
+    "review_log_csv": "review_log.csv",
+}
+
 
 @dataclass(frozen=True)
 class WorkflowStepText:

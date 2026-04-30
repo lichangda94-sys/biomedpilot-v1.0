@@ -24,7 +24,7 @@ It should not be presented as production-ready clinical, statistical, or publica
 
 | Area | Gap | Severity | Notes |
 | --- | --- | --- | --- |
-| UI workflow | UI Phase 1A adds a Chinese workflow dashboard foundation, UI Phase 1B adds Chinese literature import/library copy, UI Phase 1C adds Chinese duplicate review/criteria/screening copy, and UI Phase 1D adds Chinese full-text/extraction/quality page-state copy; analysis/report pages still need usable Chinese panels | Major | Next stage should be UI Phase 1E: Analysis + PRISMA + Report Chinese UI |
+| UI workflow | UI Phase 1A-1E now cover the main Meta workflow page states with Chinese copy, but detailed desktop controls still need usability testing and visual refinement | Major | Next stage should be internal UI acceptance testing with a small sample project |
 | Extraction | Sample extraction values are validation seeds; real projects still require careful manual extraction and review; UI1D adds Chinese field labels but not a full grid editor | Major | Must remain clearly marked and auditable |
 | Quality assessment | Quality assessment forms exist and UI1D adds Chinese labels, but real reviewer ergonomics need more desktop UI polish | Major | Users should not need to inspect JSON |
 | Report interpretation | Reports are internal beta Markdown/HTML/DOCX testing outputs, not journal-ready reports | Major | Formal PDF is not implemented |
@@ -44,6 +44,7 @@ It should not be presented as production-ready clinical, statistical, or publica
 | Duplicate review | Merge preview and core decisions now have Chinese page-state labels, but high-throughput manual review still needs a denser comparison table | Minor | No automatic destructive merge should be added |
 | Criteria / screening | Criteria and title/abstract screening now expose Chinese labels and progress copy, but real reviewer speed still needs richer desktop controls | Minor | Keep `needs_review` as a UI label unless the save service is deliberately extended |
 | Full-text / extraction / quality | UI1D adds Chinese page-state labels, but full reviewer workflow still needs richer desktop controls | Minor | No automatic PDF download, OCR, or forced quality judgement |
+| Analysis / reporting | UI1E adds Chinese page-state labels for analysis, PRISMA trace, and reports, but result selection and report preview need desktop usability testing | Minor | Formal PDF remains intentionally unimplemented |
 | Figures | Forest/funnel outputs are testing artifacts, not publication-styled figures | Minor | Good enough for internal validation, not final manuscripts |
 | Sample projects | Sample projects are compact validation fixtures rather than clinically curated example reviews | Minor | Keep this explicit in walkthroughs |
 
@@ -62,7 +63,7 @@ Proceed to UI Phase 1: Meta Analysis Usable Workflow UI.
 Priority should be usability and clarity, not new statistical features:
 
 1. Use the Chinese Meta workflow dashboard as the user's main route through the process.
-2. Build UI Phase 1E around analysis setup, PRISMA/reporting, figures/tables, and reproducibility export.
+2. Run an internal UI acceptance walkthrough across UI Phase 1A-1E using a small sample project.
 3. Keep every unfinished capability visibly labeled Developer Preview / testing.
 4. Preserve all manifest, audit, lineage, and artifact references.
 5. Do not add production claims or automatic full-text/AI/statistical shortcuts.

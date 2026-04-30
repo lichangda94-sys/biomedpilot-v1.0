@@ -13,8 +13,18 @@ from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.analysis_setup_service import BLOCKED_ADVANCED_METHODS, AnalysisSetupService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
 from app.meta_analysis.services.figure_result_service import FigureResultService
+from app.meta_analysis.ui_text import (
+    ANALYSIS_BLOCKED_METHOD_ZH,
+    ANALYSIS_DESCRIPTION_ZH,
+    ANALYSIS_MODEL_ZH,
+    ANALYSIS_SECTION_ZH,
+    ANALYSIS_TITLE_ZH,
+    DEVELOPER_INFO_TITLE_ZH,
+    INTERNAL_BETA_STATUS_ZH,
+)
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
+from app.version import APP_VERSION
 
 
 @dataclass(frozen=True)
@@ -88,6 +98,17 @@ class AnalysisPageState:
         "funnel_plot_path",
         "small_study_warning",
     )
+    title_zh: str = ANALYSIS_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = ANALYSIS_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：extraction_records、analysis-ready dataset、模型设置和适用性规则。"
+    output_summary_zh: str = "输出：analysis_plan、analysis_ready_dataset、analysis_result、applicability_warnings、图表和结果表。"
+    next_step_zh: str = "下一步：生成图表、PRISMA 和 testing 报告。"
+    empty_state_zh: str = "没有 extraction_records 或匹配 outcome 时显示 warning，不静默运行统计。"
+    warning_summary_zh: str = "不满足适用条件时显示 warning 或 blocking error；Network Meta / HSROC / Meta 回归保持未实现。"
+    section_labels_zh: dict[str, str] | None = None
+    model_option_labels_zh: tuple[str, ...] = ()
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 @dataclass(frozen=True)
@@ -112,6 +133,17 @@ class AnalysisSetupPageState:
     empty_state: str
     next_step: str
     testing_limitations: tuple[str, ...]
+    title_zh: str = ANALYSIS_TITLE_ZH
+    status_label_zh: str = "内部测试"
+    description_zh: str = ANALYSIS_DESCRIPTION_ZH
+    input_summary_zh: str = "输入：profile、outcome、effect measure、模型、零事件校正和 subgroup。"
+    output_summary_zh: str = "输出：analysis_plan、analysis_ready_dataset、analysis_result 和 applicability_warnings。"
+    next_step_zh: str = "下一步：无 blocking error 时生成图表与结果表。"
+    empty_state_zh: str = "没有可用 outcome 时，请回到数据提取检查。"
+    section_labels_zh: dict[str, str] | None = None
+    model_option_labels_zh: tuple[str, ...] = ()
+    advanced_method_status_zh: dict[str, str] | None = None
+    developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
 def initial_analysis_state() -> AnalysisPageState:
@@ -127,6 +159,11 @@ def initial_analysis_state() -> AnalysisPageState:
         warning_summary="区分 preflight、dataset、run result 和 advanced analysis；network meta 明确 not implemented。",
         profile_options=tuple(profile.profile_type for profile in list_extraction_schema_profiles()),
         outcome_type_options=tuple(item.value for item in OutcomeDataType),
+        title_zh=ANALYSIS_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=ANALYSIS_DESCRIPTION_ZH,
+        section_labels_zh=ANALYSIS_SECTION_ZH,
+        model_option_labels_zh=tuple(ANALYSIS_MODEL_ZH[item] for item in ("fixed", "random")),
     )
 
 
@@ -190,6 +227,16 @@ def analysis_setup_state_from_project(
             "Meta-regression not implemented.",
             "Developer Preview 统计结果需要人工复核后才能用于正式研究。",
         ),
+        title_zh=ANALYSIS_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh=ANALYSIS_DESCRIPTION_ZH,
+        section_labels_zh=ANALYSIS_SECTION_ZH,
+        model_option_labels_zh=tuple(ANALYSIS_MODEL_ZH[item] for item in ("fixed", "random")),
+        advanced_method_status_zh={key: ANALYSIS_BLOCKED_METHOD_ZH.get(key, value) for key, value in {
+            "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
+            "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
+            "meta_regression": BLOCKED_ADVANCED_METHODS["meta_regression"],
+        }.items()},
     )
 
 
@@ -261,13 +308,13 @@ if QWidget is not None:
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
-            title = QLabel(self._state.title)
+            title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
             root.addWidget(title)
-            description = QLabel(self._state.description)
+            description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            root.addWidget(QLabel(f"功能状态：{self._state.status_label_zh} / {self._state.status_label}"))
 
             row = QHBoxLayout()
             self._path_input = QLineEdit()

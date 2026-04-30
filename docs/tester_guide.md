@@ -100,3 +100,23 @@ This is not production clinical, statistical, or publication software.
 - 质量评价的 overall judgement 是否清楚标记为建议，而不是强制结论。
 
 当前这些页面仍为 Developer Preview / testing，不会自动下载 PDF、不做 OCR、不访问机构全文系统，也不会替代人工提取或质量评价。
+
+## Meta 统计分析、PRISMA 与报告中文页面
+
+完成数据提取和质量评价后，按顺序检查：
+
+1. 打开 `统计分析 Meta-analysis`，确认页面能区分分析预检、分析数据集、Meta 分析结果、图表与结果表、高级分析和适用性 warning。
+2. 检查模型标签：固定效应、随机效应。
+3. 确认 Network Meta、诊断 HSROC、Meta 回归显示为未实现，不应被误认为可运行。
+4. 打开 `结果报告 Reporting`，检查 PRISMA 摘要、简化 PRISMA 图、Markdown / HTML / DOCX testing 报告、补充材料导出、图表包、项目快照和复现包。
+5. 检查 PDF 状态：当前只允许 placeholder，不应显示正式 PDF 已实现。
+
+测试时请特别记录：
+
+- applicability warnings 是否清楚。
+- PRISMA 来源引用和 audit warning 是否能理解。
+- 报告中 missing / placeholder / testing 状态是否明显。
+- DOCX / HTML / Markdown 内容是否一致。
+- 复现包路径是否能找到。
+
+当前这些页面仍为 Developer Preview / testing，统计结果和报告都需要人工复核，不能作为投稿级最终结论。
