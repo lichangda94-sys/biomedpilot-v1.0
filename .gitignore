@@ -6,6 +6,7 @@ __pycache__/
 dist/
 build/
 .DS_Store
+test_inputs/
 project_storage/**/*.json
 project_storage/projects/*
 project_storage/tasks/*
