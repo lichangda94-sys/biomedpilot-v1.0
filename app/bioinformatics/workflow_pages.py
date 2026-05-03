@@ -80,6 +80,7 @@ class SelectedSourceSummary:
 @dataclass(frozen=True)
 class RegisteredSourceRow:
     acquisition_id: str
+    source_type_key: str
     source_type: str
     source_label: str
     location: str
@@ -116,6 +117,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._source_summaries: dict[str, SelectedSourceSummary] = {}
         self._source_summary_labels: dict[str, QLabel] = {}
         self._source_action_buttons: dict[str, tuple[QPushButton, QPushButton]] = {}
+        self._source_detail_edits: dict[str, QPlainTextEdit] = {}
+        self._source_detail_buttons: dict[str, QPushButton] = {}
         self._gse_preview: GseDatasetPreview | None = None
         self.setObjectName("bioinformaticsDataSourcePage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
@@ -277,7 +280,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         summary_card.setObjectName("registeredSourceSummaryCard")
         self._registered_empty_label = _muted("尚未登记数据源。")
         summary_layout.addWidget(self._registered_empty_label)
-        self._registered_sources_table = _table(["来源类型", "名称/编号", "路径/数据库", "登记状态", "操作"])
+        self._registered_sources_table = _table(["来源类型", "名称/编号", "状态", "操作"])
         self._registered_sources_table.setObjectName("registeredSourceSummaryTable")
         self._registered_sources_table.setMinimumHeight(150)
         summary_layout.addWidget(self._registered_sources_table)
@@ -310,7 +313,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         select_button = _button("选择本地数据", "primaryButton", self._choose_local_data)
         select_button.setMinimumHeight(44)
         layout.addWidget(select_button, alignment=Qt.AlignLeft)
-        layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地文件或文件夹。"))
+        layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地数据。", detail_button_text="查看登记详情"))
         return card
 
     def _gse_card(self) -> QFrame:
@@ -331,24 +334,28 @@ class BioinformaticsDataSourceWidget(QWidget):
         gse_actions.addWidget(self._register_gse_button)
         gse_actions.addStretch(1)
         layout.addLayout(gse_actions)
-        self._gse_status_label = _status_label("尚未检索。")
+        self._gse_status_label = _status_label("尚未检索 GSE 数据集。")
         layout.addWidget(self._gse_status_label)
         self._gse_summary_table = _table(["GSE 编号", "数据集标题", "平台", "样本数量", "登记状态"])
         self._gse_summary_table.setObjectName("gseDatasetSummaryTable")
         self._gse_summary_table.setMaximumHeight(120)
         self._gse_summary_table.setVisible(False)
         layout.addWidget(self._gse_summary_table)
-        layout.addWidget(self._source_summary_frame("geo_gse", "尚未登记 GSE 编号。"))
+        self._gse_search_details = _text_preview(120)
+        self._gse_search_details.setVisible(False)
+        self._gse_search_detail_button = _button("查看检索详情", "secondaryButton", lambda: _toggle_details(self._gse_search_details))
+        self._gse_search_detail_button.setVisible(False)
+        layout.addWidget(self._gse_search_detail_button, alignment=Qt.AlignLeft)
+        layout.addWidget(self._gse_search_details)
+        layout.addWidget(self._source_summary_frame("geo_gse", "尚未检索 GSE 数据集。", detail_button_text="查看登记详情"))
         return card
 
     def _research_card(self) -> QFrame:
         card, layout = _card("中文研究问题检索")
         card.setObjectName("chineseResearchSearchEntryCard")
         layout.addWidget(_muted("输入中文研究方向，生成英文检索词并推荐 GEO、TCGA、GTEx 候选数据集。"))
-        self._chinese_search_status_label = _status_label("尚未检索")
+        self._chinese_search_status_label = _status_label("尚未进行中文检索。")
         layout.addWidget(self._chinese_search_status_label)
-        self._chinese_search_summary_label = _muted("最近检索主题：暂无")
-        layout.addWidget(self._chinese_search_summary_label)
         button = _button("进入中文检索", "primaryButton", self.open_chinese_search)
         button.setMinimumHeight(44)
         layout.addWidget(button, alignment=Qt.AlignLeft)
@@ -406,8 +413,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         )
         self._source_summaries[key] = selected_summary
         self._update_source_summary_label(key, selected_summary)
-        top_text = _global_source_summary_text(selected_summary)
-        self._set_status(top_text)
+        self._set_status("先登记数据来源，下一步进入数据识别。")
         self._technical_details.setPlainText(_selected_source_technical_details(selected_summary))
 
     def source_summary_text(self, key: str) -> str:
@@ -438,7 +444,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._set_status(f"已请求打开来源位置：{_compact_path(str(target))}")
         return True
 
-    def _source_summary_frame(self, key: str, empty_text: str) -> QFrame:
+    def _source_summary_frame(self, key: str, empty_text: str, *, detail_button_text: str) -> QFrame:
         frame = QFrame()
         frame.setObjectName("selectedSourceSummary")
         layout = QVBoxLayout(frame)
@@ -457,33 +463,59 @@ class BioinformaticsDataSourceWidget(QWidget):
         copy_button.setEnabled(False)
         open_button.setVisible(False)
         copy_button.setVisible(False)
+        details_button = _button(detail_button_text, "secondaryButton", lambda checked=False, k=key: self._toggle_source_detail(k))
+        details_button.setVisible(False)
         actions.addWidget(open_button)
         actions.addWidget(copy_button)
+        actions.addWidget(details_button)
         actions.addStretch(1)
         layout.addLayout(actions)
+        detail_edit = _text_preview(120)
+        detail_edit.setVisible(False)
+        layout.addWidget(detail_edit)
         self._source_summary_labels[key] = label
         self._source_action_buttons[key] = (open_button, copy_button)
+        self._source_detail_buttons[key] = details_button
+        self._source_detail_edits[key] = detail_edit
         return frame
 
     def _update_source_summary_label(self, key: str, summary: SelectedSourceSummary) -> None:
         label = self._source_summary_labels.get(key)
         if label is not None:
-            label.setText(_selected_source_summary_text(summary, compact=True))
+            label.setText(_source_card_status_text(summary))
             label.setToolTip(_selected_source_summary_text(summary, compact=False))
+        detail = self._source_detail_edits.get(key)
+        if detail is not None:
+            detail.setPlainText(_selected_source_summary_text(summary, compact=False))
+        details_button = self._source_detail_buttons.get(key)
+        if details_button is not None:
+            details_button.setVisible(True)
         buttons = self._source_action_buttons.get(key)
         if buttons is not None:
             has_path = bool(summary.absolute_path)
             for button in buttons:
                 button.setEnabled(has_path)
-                button.setVisible(has_path)
+                button.setVisible(False)
 
     def _render_gse_preview(self, preview: GseDatasetPreview) -> None:
-        self._gse_status_label.setText("已登记。" if preview.status == "已登记" else "检索成功，请确认后登记。")
-        self._gse_summary_table.setVisible(True)
+        self._gse_status_label.setText(f"已登记 GSE 数据集：{preview.gse_id}" if preview.status == "已登记" else f"已检索到：{preview.gse_id}")
+        self._gse_summary_table.setVisible(False)
         _fill_table(
             self._gse_summary_table,
             [[preview.gse_id, preview.title, preview.platform, preview.sample_count, preview.status]],
         )
+        self._gse_search_details.setPlainText(
+            _json(
+                {
+                    "GSE 编号": preview.gse_id,
+                    "数据集标题": preview.title,
+                    "平台": preview.platform,
+                    "样本数量": preview.sample_count,
+                    "登记状态": preview.status,
+                }
+            )
+        )
+        self._gse_search_detail_button.setVisible(True)
         self._register_gse_button.setVisible(preview.status != "已登记")
         self._register_gse_button.setEnabled(preview.status != "已登记")
 
@@ -492,22 +524,23 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._registered_empty_label.setVisible(not rows)
         _fill_table(
             self._registered_sources_table,
-            [[row.source_type, row.source_label, row.location, row.status, "查看"] for row in rows],
+            [[row.source_type, row.source_label, row.status, "查看"] for row in rows],
         )
         count = len(rows)
         self._registered_count_label.setText(f"已登记数据源：{count} 个")
         self._next_button.setEnabled(count > 0 and self._project_root is not None)
-        if rows:
-            latest = rows[-1]
-            self._summary_label_text = f"{latest.source_type} · {latest.source_label}"
-        else:
-            self._summary_label_text = ""
+        self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
 
     def _registered_source_count(self) -> int:
         return len(_registered_source_rows(self._project_root))
 
+    def _toggle_source_detail(self, key: str) -> None:
+        detail = self._source_detail_edits.get(key)
+        if detail is not None:
+            _toggle_details(detail)
+
     def _set_status(self, text: str, *, error: bool = False) -> None:
-        self._status_label.setText(text)
+        self._status_label.setText(text if error else "先登记数据来源，下一步进入数据识别。")
         self._status_label.setProperty("status", "error" if error else "ok")
         _refresh_style(self._status_label)
 
@@ -2018,6 +2051,7 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
         rows.append(
             RegisteredSourceRow(
                 acquisition_id=acquisition_id,
+                source_type_key=source_type,
                 source_type=_source_type_label(source_type),
                 source_label=source_label,
                 location=_registered_source_location(payload, metadata),  # type: ignore[arg-type]
@@ -2188,6 +2222,23 @@ def _selected_source_summary_text(summary: SelectedSourceSummary, *, compact: bo
     if summary.warnings:
         lines.append(f"warning：{'；'.join(summary.warnings)}")
     return "\n".join(lines)
+
+
+def _source_card_status_text(summary: SelectedSourceSummary) -> str:
+    if summary.source_type == "geo_gse" or summary.selected_kind == "accession":
+        return f"已登记 GSE 数据集：{summary.display_name}"
+    if summary.source_type == "local_import":
+        return f"已登记本地数据：{_compact_path(summary.display_name, max_chars=58)}"
+    if summary.storage_policy == "plan_only":
+        return f"{summary.source_label}待登记确认。"
+    return f"已登记本地数据：{_compact_path(summary.display_name, max_chars=58)}"
+
+
+def _chinese_search_entry_status(rows: list[RegisteredSourceRow]) -> str:
+    chinese_rows = [row for row in rows if row.source_type_key.startswith("chinese_")]
+    if not chinese_rows:
+        return "尚未进行中文检索。"
+    return f"最近中文检索：已登记 {len(chinese_rows)} 个数据源。"
 
 
 def _legacy_geo_tool_paths() -> None:

@@ -145,10 +145,14 @@ def test_data_source_shows_local_file_source_summary_and_copy_open(qt_app, proje
 
     text = widget.source_summary_text("local_import")
     assert summary is not None
-    assert "expression_matrix.csv" in text
-    assert str(source.resolve()) in widget.source_summary_tooltip("local_import")
-    assert "引用原始位置" in text
-    assert "数据登记记录：已生成" in text
+    assert text == "已登记本地数据：expression_matrix.csv"
+    assert str(source.resolve()) not in text
+    assert "数据获取计划" not in text
+    assert "数据登记记录" not in text
+    detail = widget.source_summary_tooltip("local_import")
+    assert str(source.resolve()) in detail
+    assert "引用原始位置" in detail
+    assert "数据登记记录：已生成" in detail
     assert widget.copy_selected_source_path("local_import") is True
     assert QApplication.clipboard().text() == str(source.resolve())
     assert widget.open_selected_source_location("local_import") is True
@@ -163,7 +167,8 @@ def test_data_source_copy_strategy_displays_chinese_policy(qt_app, project_summa
 
     widget.register_local_paths([source], strategy="copy", selected_kind="file", summary_key="local_import")
 
-    assert "已复制到项目文件夹" in widget.source_summary_text("local_import")
+    assert widget.source_summary_text("local_import") == "已登记本地数据：copy_expression.csv"
+    assert "已复制到项目文件夹" in widget.source_summary_tooltip("local_import")
 
 
 def test_data_source_shows_local_folder_source_summary(qt_app, project_summary, tmp_path: Path) -> None:
@@ -175,7 +180,7 @@ def test_data_source_shows_local_folder_source_summary(qt_app, project_summary, 
     widget.register_local_paths([folder], strategy="reference", selected_kind="folder", summary_key="local_import")
 
     text = widget.source_summary_text("local_import")
-    assert "已选择文件夹：local_matrix_folder" in text
+    assert text == "已登记本地数据：local_matrix_folder"
     assert str(folder.resolve()) in widget.source_summary_tooltip("local_import")
 
 
@@ -192,19 +197,23 @@ def test_data_source_infers_local_data_types_in_single_import_card(qt_app, proje
     widget.refresh_project(project_summary)
 
     widget.register_local_paths([series], strategy="reference", selected_kind="file", summary_key="local_import")
-    assert "GEO Series Matrix" in widget.source_summary_text("local_import")
+    assert widget.source_summary_text("local_import") == "已登记本地数据：GSE60024_series_matrix.txt"
+    assert "GEO Series Matrix" in widget.source_summary_tooltip("local_import")
     assert str(series.resolve()) in widget.source_summary_tooltip("local_import")
 
     widget.register_local_paths([tcga], strategy="reference", selected_kind="folder", summary_key="local_import")
-    assert "TCGA 本地数据" in widget.source_summary_text("local_import")
+    assert widget.source_summary_text("local_import") == "已登记本地数据：TCGA_GDC_folder"
+    assert "TCGA 本地数据" in widget.source_summary_tooltip("local_import")
     assert str(tcga.resolve()) in widget.source_summary_tooltip("local_import")
 
     widget.register_local_paths([gtex], strategy="reference", selected_kind="folder", summary_key="local_import")
-    assert "GTEx 本地数据" in widget.source_summary_text("local_import")
+    assert widget.source_summary_text("local_import") == "已登记本地数据：GTEx_folder"
+    assert "GTEx 本地数据" in widget.source_summary_tooltip("local_import")
     assert str(gtex.resolve()) in widget.source_summary_tooltip("local_import")
 
     widget.register_local_paths([expression], strategy="reference", selected_kind="file", summary_key="local_import")
-    assert "本地表达矩阵" in widget.source_summary_text("local_import")
+    assert widget.source_summary_text("local_import") == "已登记本地数据：expression_matrix.csv"
+    assert "本地表达矩阵" in widget.source_summary_tooltip("local_import")
     assert str(expression.resolve()) in widget.source_summary_tooltip("local_import")
 
 
@@ -221,14 +230,17 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
 
     text = widget.source_summary_text("geo_gse")
     assert summary is not None
-    assert "GSE60024" in text
-    assert "已登记编号，等待数据获取" in text
-    assert "数据获取计划：已生成" in text
-    assert "数据登记记录：已生成" in text
-    assert "下一步交接清单：已生成" in text
+    assert text == "已登记 GSE 数据集：GSE60024"
+    assert "数据获取计划" not in text
+    assert "数据登记记录" not in text
+    assert widget._gse_status_label.text() == "已登记 GSE 数据集：GSE60024"
+    assert "已登记编号，等待数据获取" in widget.source_summary_tooltip("geo_gse")
+    assert "数据获取计划：已生成" in widget.source_summary_tooltip("geo_gse")
+    assert "数据登记记录：已生成" in widget.source_summary_tooltip("geo_gse")
+    assert "下一步交接清单：已生成" in widget.source_summary_tooltip("geo_gse")
     assert str(summary.plan_path) in widget._technical_details.toPlainText()
     assert widget._technical_details.isHidden()
-    assert "已登记为数据源" in widget.status_message()
+    assert widget.status_message() == "先登记数据来源，下一步进入数据识别。"
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
     assert widget._next_button.isEnabled()
@@ -283,6 +295,7 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     widget.register_local_paths([source], strategy="reference", selected_kind="file", summary_key="local_import")
 
     assert widget._registered_sources_table.rowCount() == 1
+    assert widget._registered_sources_table.columnCount() == 4
     assert widget._registered_sources_table.item(0, 0).text() == "本地数据导入"
     assert "expression_matrix.tsv" in widget._registered_sources_table.item(0, 1).text()
     assert widget._next_button.isEnabled()
