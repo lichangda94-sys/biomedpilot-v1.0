@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.bioinformatics.adapters.legacy_geo import LegacyGeoAdapter
+from app.bioinformatics.retrieval import GeoDatasetResult, GeoSearchService, build_bioinformatics_query_strategy
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -24,6 +25,15 @@ class GeoImportPlanResult:
     message: str
     error_count: int = 0
     details: dict[str, object] = field(default_factory=dict)
+    recognized_diseases_zh: list[str] = field(default_factory=list)
+    disease_terms_en: list[str] = field(default_factory=list)
+    confirmed_geo_queries: list[str] = field(default_factory=list)
+    supplemental_geo_queries: list[str] = field(default_factory=list)
+    broad_query_guard_triggered: bool = False
+    tcga_project_candidates: list[dict[str, str]] = field(default_factory=list)
+    gtex_tissue_candidates: list[dict[str, str]] = field(default_factory=list)
+    geo_results: list[dict[str, object]] = field(default_factory=list)
+    search_status: str = "draft_only"
 
 
 class GeoImportService:
@@ -31,11 +41,13 @@ class GeoImportService:
         self,
         *,
         adapter: LegacyGeoAdapter | None = None,
+        geo_search_service: GeoSearchService | None = None,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
     ) -> None:
         self._adapter = adapter or LegacyGeoAdapter()
+        self._geo_search_service = geo_search_service or GeoSearchService()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
@@ -47,6 +59,8 @@ class GeoImportService:
         query_text: str,
         accession_text: str = "",
         max_results: int = 20,
+        execute_online: bool = False,
+        include_supplemental: bool = False,
     ) -> GeoImportPlanResult:
         task = self._start_task(project_id=project_id, query_text=query_text)
         validation_error = self._validate(query_text=query_text, accession_text=accession_text, max_results=max_results)
@@ -66,22 +80,52 @@ class GeoImportService:
             return result
 
         try:
+            strategy = build_bioinformatics_query_strategy(query_text)
+            geo_response = None
+            if execute_online:
+                geo_response = self._geo_search_service.search(
+                    query_text,
+                    max_results=max_results,
+                    include_supplemental=include_supplemental,
+                )
             plan = self._adapter.build_query_plan(
-                query_text=query_text,
+                query_text=strategy.confirmed_geo_queries[0] if strategy.confirmed_geo_queries else query_text,
                 accession_text=accession_text,
                 max_results=max_results,
             )
-            output_path = self._write_output(project_id, plan)
+            output_path = self._write_output(
+                project_id,
+                plan,
+                strategy=strategy,
+                geo_results=geo_response.results if geo_response else (),
+                execute_online=execute_online,
+            )
+            search_accessions = [item.accession for item in geo_response.results] if geo_response else []
             result = GeoImportPlanResult(
                 success=True,
                 project_id=project_id,
-                query_text=plan.query_text,
+                query_text=query_text.strip(),
                 full_geo_query=plan.full_geo_query,
-                accessions=list(plan.accessions),
+                accessions=list(dict.fromkeys([*plan.accessions, *search_accessions])),
                 max_results=plan.max_results,
                 output_path=str(output_path),
-                message=f"GEO 查询计划已生成：{len(plan.accessions)} 个 accession，最多检索 {plan.max_results} 条。",
-                details={"legacy_source": plan.legacy_source, "online_search_executed": False},
+                message=_success_message(plan_accessions=plan.accessions, geo_results=geo_response.results if geo_response else (), max_results=plan.max_results, execute_online=execute_online),
+                details={
+                    "legacy_source": plan.legacy_source,
+                    "online_search_executed": execute_online,
+                    "executed_queries": list(geo_response.executed_queries) if geo_response else [],
+                    "warnings": list(geo_response.warnings) if geo_response else list(strategy.warnings),
+                    "error_message": geo_response.error_message if geo_response else "",
+                },
+                recognized_diseases_zh=list(strategy.recognized_diseases_zh),
+                disease_terms_en=list(strategy.disease_terms),
+                confirmed_geo_queries=list(strategy.confirmed_geo_queries),
+                supplemental_geo_queries=list(strategy.supplemental_geo_queries),
+                broad_query_guard_triggered=strategy.broad_query_guard_triggered,
+                tcga_project_candidates=[asdict(item) for item in strategy.tcga_project_candidates],
+                gtex_tissue_candidates=[asdict(item) for item in strategy.gtex_tissue_candidates],
+                geo_results=[asdict(item) for item in geo_response.results] if geo_response else [],
+                search_status=geo_response.search_status if geo_response else "draft_only",
             )
             self._data_center.register_asset(
                 project_id=project_id,
@@ -148,7 +192,34 @@ class GeoImportService:
             )
         )
 
-    def _write_output(self, project_id: str, plan: object) -> Path:
+    def register_geo_result_as_source(self, *, project_id: str, result: GeoDatasetResult | dict[str, object]) -> Path:
+        payload = asdict(result) if isinstance(result, GeoDatasetResult) else dict(result)
+        accession = str(payload.get("accession") or "GSE")
+        output_dir = self._storage_root / "projects" / project_id / "bioinformatics" / "acquisition_sources"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"geo_source_{accession}_{uuid4().hex[:8]}.json"
+        source_record = {
+            "project_id": project_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "source": "GEO",
+            "accession": accession,
+            "status": "registered_for_recognition",
+            "analysis_ready": "unknown",
+            "note": "已登记为数据来源；后续仍需资产识别和标准化判断是否可分析。",
+            "geo_result": payload,
+        }
+        output_path.write_text(json.dumps(source_record, ensure_ascii=False, indent=2), encoding="utf-8")
+        self._data_center.register_asset(
+            project_id=project_id,
+            module="bioinformatics",
+            data_type="geo_dataset_source",
+            source_path=accession,
+            output_path=str(output_path),
+            status="registered_for_recognition",
+        )
+        return output_path
+
+    def _write_output(self, project_id: str, plan: object, *, strategy: object, geo_results: object, execute_online: bool) -> Path:
         output_dir = self._storage_root / "projects" / project_id / "bioinformatics" / "geo_import"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"geo_query_plan_{uuid4().hex[:12]}.json"
@@ -157,8 +228,23 @@ class GeoImportService:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "source": "geo",
             "status": "ready_for_download_step",
-            "online_search_executed": False,
+            "online_search_executed": execute_online,
             "plan": asdict(plan),
+            "recognized_diseases_zh": list(getattr(strategy, "recognized_diseases_zh", ())),
+            "disease_terms_en": list(getattr(strategy, "disease_terms", ())),
+            "confirmed_geo_queries": list(getattr(strategy, "confirmed_geo_queries", ())),
+            "supplemental_geo_queries": list(getattr(strategy, "supplemental_geo_queries", ())),
+            "broad_query_guard_triggered": bool(getattr(strategy, "broad_query_guard_triggered", False)),
+            "tcga_project_candidates": [asdict(item) for item in getattr(strategy, "tcga_project_candidates", ())],
+            "gtex_tissue_candidates": [asdict(item) for item in getattr(strategy, "gtex_tissue_candidates", ())],
+            "geo_results": [asdict(item) for item in geo_results],  # type: ignore[union-attr]
         }
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return output_path
+
+
+def _success_message(*, plan_accessions: list[str], geo_results: object, max_results: int, execute_online: bool) -> str:
+    result_count = len(list(geo_results))  # type: ignore[arg-type]
+    if execute_online:
+        return f"GEO/GSE 检索完成：返回 {result_count} 条结果，最多 {max_results} 条。"
+    return f"GEO 查询草稿已生成：{len(plan_accessions)} 个手动 accession，最多检索 {max_results} 条。"

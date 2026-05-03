@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from app.bioinformatics.adapters.legacy_geo import LegacyGeoAdapter
+from app.bioinformatics.retrieval import GeoDatasetResult
 from app.bioinformatics.pages.geo_import_page import initial_geo_import_state
 from app.bioinformatics.services.geo_import_service import GeoImportService
 from app.shared.data_center.service import DataCenter
@@ -67,6 +68,29 @@ def test_geo_import_creates_query_plan(tmp_path) -> None:
     assert task.status is TaskStatus.COMPLETED
     assert task.task_type is TaskType.IMPORT
     assert any(asset.data_type == "geo_query_plan" for asset in data_center.list_assets("bio-test"))
+    assert result.confirmed_geo_queries
+    assert result.tcga_project_candidates
+    assert result.gtex_tissue_candidates
+
+
+def test_geo_import_registers_geo_result_as_data_source(tmp_path) -> None:
+    service, _task_center, data_center = make_service(tmp_path)
+    output_path = service.register_geo_result_as_source(
+        project_id="bio-test",
+        result=GeoDatasetResult(
+            accession="GSE12345",
+            title="Glioma dataset",
+            summary="Glioma expression profiling",
+            query_used="glioma AND expression profiling",
+            rank_score=5.0,
+            disease_relevance_reason="标题/摘要匹配疾病词：glioma",
+        ),
+    )
+
+    payload = json.loads(Path(output_path).read_text(encoding="utf-8"))
+    assert payload["status"] == "registered_for_recognition"
+    assert payload["analysis_ready"] == "unknown"
+    assert any(asset.data_type == "geo_dataset_source" for asset in data_center.list_assets("bio-test"))
 
 
 def test_geo_import_feature_status_and_page_state() -> None:
