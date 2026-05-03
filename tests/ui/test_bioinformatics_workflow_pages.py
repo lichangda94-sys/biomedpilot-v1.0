@@ -305,6 +305,9 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     widget = BioinformaticsChineseDatasetSearchWidget()
 
     assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
+    assert not widget._search_candidates_button.isEnabled()
+    assert not widget._continue_button.isEnabled()
+    assert widget._registered_count_label.text() == "已登记数据源：0 个"
     assert widget._geo_query_box.toPlainText() == "暂无 GEO 检索词"
     assert widget._tcga_query_box.toPlainText() == "暂无 TCGA 检索词"
     assert widget._gtex_query_box.toPlainText() == "暂无 GTEx 检索词"
@@ -320,9 +323,44 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "thyroid cancer" in widget._geo_query_box.toPlainText()
     assert "TCGA-THCA" in widget._tcga_query_box.toPlainText()
     assert "Thyroid" in widget._gtex_query_box.toPlainText()
+    assert widget._search_candidates_button.isEnabled()
+    assert not widget._continue_button.isEnabled()
     assert widget._tcga_table.rowCount() >= 1
     assert widget._gtex_table.rowCount() >= 1
+    tcga_buttons = widget._tcga_table.cellWidget(0, widget._tcga_table.columnCount() - 1).findChildren(QPushButton)
+    gtex_buttons = widget._gtex_table.cellWidget(0, widget._gtex_table.columnCount() - 1).findChildren(QPushButton)
+    assert "登记为数据源" in [button.text() for button in tcga_buttons]
+    assert "登记为数据源" in [button.text() for button in gtex_buttons]
     assert widget._mapping_log.isHidden()
+
+
+def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    candidate = workflow_pages.UnifiedDatasetCandidate(
+        source="geo",
+        accession_or_project="GSE33630",
+        display_title="Thyroid carcinoma expression profile",
+        organism="Homo sapiens",
+        disease="thyroid cancer",
+        tissue="thyroid",
+        data_modality="expression profiling",
+        sample_count=45,
+        has_expression_matrix=True,
+        has_sample_metadata=True,
+        has_clinical_metadata=False,
+        has_platform_annotation=True,
+        recommended_analyses=("data_recognition",),
+        download_plan_available=True,
+        score=80,
+        warnings=(),
+        source_specific_metadata={"match_reason": "标题匹配疾病词"},
+    )
+
+    widget._fill_geo_candidates([candidate])
+
+    assert not widget._geo_table.isHidden()
+    buttons = widget._geo_table.cellWidget(0, widget._geo_table.columnCount() - 1).findChildren(QPushButton)
+    assert [button.text() for button in buttons][:2] == ["登记为数据源", "查看详情"]
 
 
 def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt_app, project_summary) -> None:
@@ -337,12 +375,36 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert summary.source_type == "chinese_tcga_gdc_project"
     assert widget._registered_table.rowCount() == 1
     assert widget._registered_table.item(0, 0).text() == "TCGA/GDC 项目"
+    assert widget._registered_count_label.text() == "已登记数据源：1 个"
+    assert widget._continue_button.isEnabled()
+    registered_button = widget._tcga_table.cellWidget(0, widget._tcga_table.columnCount() - 1).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
+    assert registered_button.text() == "已登记"
+    assert not registered_button.isEnabled()
+    duplicate = widget.register_candidate("tcga_gdc", "TCGA-THCA")
+    assert duplicate is None
+    assert widget._registered_table.rowCount() == 1
 
     recognition = BioinformaticsRecognitionWidget()
     recognition.refresh_project(project_summary)
     table = recognition.findChild(QTableWidget, "preRecognitionInputList")
     assert table.rowCount() == 1
     assert table.item(0, 0).text() == "TCGA/GDC 项目"
+    assert table.item(0, 1).text() == "TCGA-THCA"
+
+
+def test_chinese_dataset_search_continue_enters_recognition(qt_app, project_summary) -> None:
+    widget = BioinformaticsWorkspaceWidget()
+
+    widget.show_chinese_search(project_summary)
+    assert widget.current_page_object_name() == "bioinformaticsChineseDatasetSearchPage"
+    widget._chinese_search_page.set_query_text("甲状腺癌")
+    widget._chinese_search_page.generate_terms()
+    widget._chinese_search_page.register_candidate("tcga_gdc", "TCGA-THCA")
+    widget._chinese_search_page.continue_to_recognition()
+
+    assert widget.current_page_object_name() == "bioinformaticsRecognitionPage"
+    table = widget._recognition_page.findChild(QTableWidget, "preRecognitionInputList")
+    assert table.rowCount() == 1
     assert table.item(0, 1).text() == "TCGA-THCA"
 
 

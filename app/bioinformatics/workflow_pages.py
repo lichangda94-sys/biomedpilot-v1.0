@@ -547,12 +547,14 @@ class BioinformaticsDataSourceWidget(QWidget):
 
 class BioinformaticsChineseDatasetSearchWidget(QWidget):
     back_requested = Signal()
+    continue_requested = Signal(object)
     source_registered = Signal(object)
 
     def __init__(
         self,
         *,
         on_back: Callable[[], None] | None = None,
+        on_continue: Callable[[Path], None] | None = None,
         on_source_registered: Callable[[object], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
@@ -560,11 +562,14 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._project_root: Path | None = None
         self._last_result: BioinformaticsSearchCenterResult | None = None
         self._candidates: dict[tuple[str, str], UnifiedDatasetCandidate] = {}
+        self._candidate_register_buttons: dict[tuple[str, str], QPushButton] = {}
         self.setObjectName("bioinformaticsChineseDatasetSearchPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
         if on_back is not None:
             self.back_requested.connect(on_back)
+        if on_continue is not None:
+            self.continue_requested.connect(on_continue)
         if on_source_registered is not None:
             self.source_registered.connect(on_source_registered)
 
@@ -572,6 +577,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._project_root = _project_root(summary)
         self._project_label.setText(_project_header_text(summary))
         self._refresh_registered_sources()
+        self._refresh_candidate_registration_buttons()
 
     def set_query_text(self, text: str) -> None:
         self._query_input.setText(text)
@@ -588,6 +594,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._last_result = result
         self._render_result(result, searched=False)
         self._set_status("已生成检索词")
+        self._search_candidates_button.setEnabled(True)
         return result
 
     def search_candidates(self, *, online_enabled: bool = False) -> BioinformaticsSearchCenterResult | None:
@@ -610,6 +617,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if candidate is None:
             self._set_status("候选结果不存在。", error=True)
             return None
+        if self._is_candidate_registered(source, accession_or_project):
+            self._set_status(f"已登记数据源：{accession_or_project}")
+            self._refresh_candidate_registration_buttons()
+            return None
         summary = register_acquisition(
             self._project_root,
             source_type=_candidate_source_type(candidate),
@@ -627,9 +638,19 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             },
         )
         self._refresh_registered_sources()
+        self._refresh_candidate_registration_buttons()
         self.source_registered.emit(summary)
-        self._set_status(f"{candidate.accession_or_project} 已登记为数据源。")
+        self._set_status(f"已登记数据源：{candidate.accession_or_project}")
         return summary
+
+    def continue_to_recognition(self) -> None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return
+        if self._registered_source_count() == 0:
+            self._set_status("请先登记至少一个数据源。", error=True)
+            return
+        self.continue_requested.emit(self._project_root)
 
     def copy_query(self, source: str) -> bool:
         edit = {"geo": self._geo_query_box, "tcga": self._tcga_query_box, "gtex": self._gtex_query_box}.get(source)
@@ -651,9 +672,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         input_layout.addWidget(self._query_input)
         action_row = QHBoxLayout()
         action_row.addWidget(_button("生成检索词", "primaryButton", self.generate_terms))
-        action_row.addWidget(_button("检索候选数据集", "secondaryButton", lambda checked=False: self.search_candidates(online_enabled=True)))
+        self._search_candidates_button = _button("检索候选数据集", "secondaryButton", lambda checked=False: self.search_candidates(online_enabled=True))
+        self._search_candidates_button.setEnabled(False)
+        action_row.addWidget(self._search_candidates_button)
         action_row.addStretch(1)
         input_layout.addLayout(action_row)
+        input_layout.addWidget(_muted("选择候选数据集并登记后，可进入数据识别。"))
         self._status_label = _status_label("未生成检索词")
         input_layout.addWidget(self._status_label)
         root.addWidget(input_card)
@@ -702,6 +726,19 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         log_layout.addWidget(self._mapping_log)
         root.addWidget(log_card)
 
+        bottom_frame = QFrame()
+        bottom_frame.setObjectName("chineseDatasetSearchBottomActionBar")
+        bottom_layout = QHBoxLayout(bottom_frame)
+        bottom_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
+        self._registered_count_label = _status_label("已登记数据源：0 个")
+        self._continue_button = _button("下一步：数据识别", "primaryButton", self.continue_to_recognition)
+        self._continue_button.setEnabled(False)
+        bottom_layout.addWidget(self._registered_count_label)
+        bottom_layout.addStretch(1)
+        bottom_layout.addWidget(_button("返回数据来源页", "secondaryButton", self.back_requested.emit))
+        bottom_layout.addWidget(self._continue_button)
+        root.addWidget(bottom_frame)
+
     def _query_draft_box(self, text: str) -> QPlainTextEdit:
         box = _text_preview(72)
         box.setPlainText(text)
@@ -726,7 +763,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._tcga_query_box.setPlainText(", ".join(query.tcga_project_ids) if query.tcga_project_ids else "暂无 TCGA 检索词")
         self._gtex_query_box.setPlainText(", ".join(query.gtex_tissues) if query.gtex_tissues else "暂无 GTEx 检索词")
         self._candidates = {(candidate.source, candidate.accession_or_project): candidate for candidate in result.candidates}
+        self._candidate_register_buttons.clear()
         self._render_candidate_tables(result)
+        self._refresh_candidate_registration_buttons()
         self._mapping_log.setPlainText(_mapping_log_text(result))
 
     def _render_candidate_tables(self, result: BioinformaticsSearchCenterResult) -> None:
@@ -740,6 +779,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _fill_geo_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
         self._geo_empty_label.setVisible(not candidates)
+        self._geo_table.setVisible(bool(candidates))
         _fill_table(
             self._geo_table,
             [
@@ -751,14 +791,16 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.sample_count,
                     _candidate_match_reason(item),
                     _candidate_recommendation(item),
-                    "查看详情 / 登记为数据源 / 复制编号",
+                    "",
                 ]
                 for item in candidates
             ],
         )
+        self._install_candidate_action_buttons(self._geo_table, candidates)
 
     def _fill_tcga_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
         self._tcga_empty_label.setVisible(not candidates)
+        self._tcga_table.setVisible(bool(candidates))
         _fill_table(
             self._tcga_table,
             [
@@ -768,14 +810,16 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.tissue or "未记录",
                     item.sample_count,
                     _candidate_match_reason(item),
-                    "查看详情 / 登记为数据源 / 复制编号",
+                    "",
                 ]
                 for item in candidates
             ],
         )
+        self._install_candidate_action_buttons(self._tcga_table, candidates)
 
     def _fill_gtex_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
         self._gtex_empty_label.setVisible(not candidates)
+        self._gtex_table.setVisible(bool(candidates))
         _fill_table(
             self._gtex_table,
             [
@@ -784,16 +828,82 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.source_specific_metadata.get("tissue_system", "normal reference"),
                     item.sample_count,
                     _candidate_match_reason(item),
-                    "查看详情 / 登记为数据源 / 复制编号",
+                    "",
                 ]
                 for item in candidates
             ],
         )
+        self._install_candidate_action_buttons(self._gtex_table, candidates)
 
     def _refresh_registered_sources(self) -> None:
-        rows = [row for row in _registered_source_rows(self._project_root) if row.source_type in {"GSE 编号检索", "TCGA/GDC 项目", "GTEx 正常组织参考"}]
+        rows = self._registered_chinese_rows()
         self._registered_empty_label.setVisible(not rows)
-        _fill_table(self._registered_table, [[row.source_type, row.source_label, row.location, row.status, "查看"] for row in rows])
+        _fill_table(self._registered_table, [[row.source_type, row.source_label, row.location, row.status, ""] for row in rows])
+        for row_index, row in enumerate(rows):
+            self._registered_table.setCellWidget(row_index, 4, _registered_source_action_widget(row))
+        count = len(rows)
+        self._registered_count_label.setText(f"已登记数据源：{count} 个")
+        self._continue_button.setEnabled(count > 0 and self._project_root is not None)
+
+    def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
+        action_col = table.columnCount() - 1
+        for row_index, candidate in enumerate(candidates):
+            key = (candidate.source, candidate.accession_or_project)
+            action_widget = QWidget()
+            layout = QHBoxLayout(action_widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            register_button = QPushButton("登记为数据源")
+            register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
+            detail_button = QPushButton("查看详情")
+            detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
+            detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
+            layout.addWidget(register_button)
+            layout.addWidget(detail_button)
+            layout.addStretch(1)
+            table.setCellWidget(row_index, action_col, action_widget)
+            self._candidate_register_buttons[key] = register_button
+        self._refresh_candidate_registration_buttons()
+
+    def _show_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._mapping_log.setPlainText(_json(candidate.to_dict()))
+        self._mapping_log.setVisible(True)
+        self._set_status(f"正在查看：{candidate.accession_or_project}")
+
+    def _refresh_candidate_registration_buttons(self) -> None:
+        for (source, accession), button in self._candidate_register_buttons.items():
+            registered = self._is_candidate_registered(source, accession)
+            button.setText("已登记" if registered else "登记为数据源")
+            button.setEnabled(not registered)
+
+    def _is_candidate_registered(self, source: str, accession_or_project: str) -> bool:
+        return (source, accession_or_project) in self._registered_candidate_keys()
+
+    def _registered_candidate_keys(self) -> set[tuple[str, str]]:
+        keys: set[tuple[str, str]] = set()
+        if self._project_root is None:
+            return keys
+        records_dir = self._project_root / "acquisition" / "records"
+        if not records_dir.exists():
+            return keys
+        for path in records_dir.glob("*.json"):
+            if path.name == LATEST_RECORD:
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            metadata = payload.get("metadata")
+            if not isinstance(metadata, dict) or metadata.get("ui_source") != "chinese_research_question_search":
+                continue
+            keys.add((str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or "")))
+        return keys
+
+    def _registered_chinese_rows(self) -> list[RegisteredSourceRow]:
+        return [row for row in _registered_source_rows(self._project_root) if row.source_type_key.startswith("chinese_")]
+
+    def _registered_source_count(self) -> int:
+        return len(self._registered_chinese_rows())
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
         self._status_label.setText(text)
@@ -1983,12 +2093,28 @@ def _table(headers: list[str]) -> QTableWidget:
 
 
 def _fill_table(table: QTableWidget, rows: list[list[object]]) -> None:
+    table.clearContents()
     table.setRowCount(len(rows))
     for row_index, row in enumerate(rows):
         for col_index, value in enumerate(row):
             item = QTableWidgetItem(str(value))
             table.setItem(row_index, col_index, item)
     table.resizeColumnsToContents()
+
+
+def _registered_source_action_widget(row: RegisteredSourceRow) -> QWidget:
+    widget = QWidget()
+    layout = QHBoxLayout(widget)
+    layout.setContentsMargins(0, 0, 0, 0)
+    view_button = QPushButton("查看")
+    view_button.setObjectName(f"registeredSourceViewButton_{row.acquisition_id}")
+    remove_button = QPushButton("移除")
+    remove_button.setObjectName(f"registeredSourceRemoveButton_{row.acquisition_id}")
+    remove_button.setEnabled(False)
+    layout.addWidget(view_button)
+    layout.addWidget(remove_button)
+    layout.addStretch(1)
+    return widget
 
 
 def _project_root(summary: BioinformaticsProjectSummary | Path | str | None) -> Path | None:
