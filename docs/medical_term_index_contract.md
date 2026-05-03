@@ -1,10 +1,10 @@
 # Medical Term Index Contract
 
-## Stage 2 / 2.1 Goal
+## Stage 2 / 2.2 Goal
 
 Stage 2 establishes a small but extensible shared medical term index for BioMedPilot. The immediate goal is to stop fixing one disease at a time and instead route Chinese disease terms through a stable lookup layer that can be consumed by both Bioinformatics and Meta Analysis with context-specific filtering.
 
-Stage 2.1 expands the default built-in mini coverage so common Meta Analysis and Bioinformatics topics still resolve when the optional full sqlite index is absent.
+Stage 2.2 expands the default built-in mini coverage systematically by medical category, Meta retrieval category, and Bioinformatics data-source mapping category so common topics still resolve when the optional full sqlite index is absent.
 
 ## Planned Vocabulary Sources
 
@@ -26,10 +26,12 @@ Development builds may download or read local MONDO/DOID/NCIt/MeSH/EFO source fi
 
 The mini coverage includes:
 
-- Oncology: glioma/GBM/LGG, thyroid cancer/PTC/PDTC/ATC, esophageal cancer/ESCC, lung cancer/NSCLC/LUAD/LUSC, gastric cancer, colorectal cancer, HCC, pancreatic cancer, breast cancer, prostate cancer, ovarian cancer, cervical cancer, endometrial cancer, kidney cancer, bladder cancer, and melanoma.
-- Common non-oncology diseases: diabetes mellitus, type 2 diabetes, obesity, hypertension, coronary artery disease, chronic kidney disease, Alzheimer disease, Parkinson disease, rheumatoid arthritis, and inflammatory bowel disease.
-- Modifiers and outcomes: differentiation grade, metastasis, recurrence, prognosis, survival, and disease risk.
-- Data modalities: expression profiling, transcriptome, RNA-seq, single-cell RNA-seq, microarray, DNA methylation, miRNA, lncRNA, and proteomics.
+- Oncology: glioma/GBM/LGG, meningioma, pituitary adenoma, thyroid cancer/PTC/PDTC/ATC, esophageal cancer/ESCC, head and neck tumors, lung cancer/NSCLC/SCLC/LUAD/LUSC, gastric/colon/rectal/colorectal cancers, HCC, cholangiocarcinoma, pancreatic cancer/PDAC, breast cancer/TNBC, prostate/ovarian/cervical/endometrial cancers, kidney cancer/KIRC/KIRP, bladder cancer, melanoma, leukemia/AML, lymphoma, and multiple myeloma.
+- Common non-oncology diseases: type 1 and type 2 diabetes, insulin resistance, metabolic syndrome, obesity/overweight, hyperlipidemia, hypercholesterolemia, hypertension, coronary artery disease, heart failure, atherosclerosis, chronic kidney disease, glomerulonephritis, Alzheimer disease, Parkinson disease, stroke, multiple sclerosis, rheumatoid arthritis, systemic lupus erythematosus, inflammatory bowel disease, Crohn disease, ulcerative colitis, fatty liver disease/NAFLD, COPD, and asthma.
+- Tissues and organs: brain, thyroid, esophagus, lung, stomach, colon, rectum, liver, pancreas, breast, prostate, ovary, cervix, endometrium, kidney, bladder, skin, blood, bone marrow, lymph node, adipose tissue, muscle, and heart.
+- Modifiers and outcomes: differentiation grade, metastasis, recurrence, prognosis, survival, disease risk, OS/PFS/DFS/RFS, mortality, incidence, prevalence, OR/RR/HR, sensitivity, specificity, diagnostic accuracy, and AUC.
+- Study designs and publication filters: RCT, cohort, case-control, cross-sectional, diagnostic accuracy, prognostic, observational, review, meta-analysis, editorial, letter, comment, case report, conference abstract, animal study, and cell experiment.
+- Data modalities: gene expression profiling, transcriptome, RNA-seq, single-cell RNA-seq/scRNA-seq, spatial transcriptomics, microarray, methylation profiling, miRNA, lncRNA, circRNA, proteomics, metabolomics, ATAC-seq, ChIP-seq, WGS, and WES.
 
 Key built-in mappings include `脑胶质瘤 -> glioma / glioblastoma / TCGA-GBM / TCGA-LGG / GTEx Brain`, `食管鳞癌 -> ESCC / esophageal squamous cell carcinoma`, `乳头状甲状腺癌 -> PTC / TCGA-THCA`, `肺腺癌 -> LUAD / TCGA-LUAD`, and `肝细胞癌 -> HCC / TCGA-LIHC`.
 

@@ -12,7 +12,7 @@
     {
       "vocabulary_name": "zh_term_overrides",
       "source_url": "project-local-curated",
-      "version": "stage2.2-mini-coverage-v1-2026-05-03",
+      "version": "stage2.2-systematic-v2-2026-05-03",
       "license": "project-local-curated",
       "downloaded_at": null,
       "processed_at": "2026-05-03",
@@ -21,7 +21,7 @@
     {
       "vocabulary_name": "mini_medical_terms_index",
       "source_url": "project-local-curated",
-      "version": "stage2.2-mini-coverage-v1-2026-05-03",
+      "version": "stage2.2-systematic-v2-2026-05-03",
       "license": "project-local-curated",
       "downloaded_at": null,
       "processed_at": "2026-05-03",

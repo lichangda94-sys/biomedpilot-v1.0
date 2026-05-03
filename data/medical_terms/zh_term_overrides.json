@@ -708,10 +708,13 @@
     "disease_terms_en": [
       "gastric cancer",
       "stomach cancer",
-      "gastric carcinoma"
+      "gastric carcinoma",
+      "gastric adenocarcinoma"
     ],
     "synonyms_en": [
-      "stomach neoplasm"
+      "stomach cancer",
+      "gastric carcinoma",
+      "gastric adenocarcinoma"
     ],
     "abbreviations": [
       "STAD"
@@ -729,7 +732,7 @@
       "Stomach"
     ],
     "concept_type": "disease",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
     "source": "zh_override",
     "data_modality_terms": [
@@ -851,9 +854,12 @@
     "disease_terms_en": [
       "pancreatic cancer",
       "pancreatic carcinoma",
-      "pancreatic ductal adenocarcinoma"
+      "pancreatic ductal adenocarcinoma",
+      "pancreatic neoplasm"
     ],
     "synonyms_en": [
+      "pancreatic carcinoma",
+      "pancreatic ductal adenocarcinoma",
       "pancreatic neoplasm"
     ],
     "abbreviations": [
@@ -873,7 +879,7 @@
       "Pancreas"
     ],
     "concept_type": "disease",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
     "source": "zh_override",
     "data_modality_terms": [
@@ -1118,11 +1124,11 @@
     "disease_terms_en": [
       "kidney cancer",
       "renal cell carcinoma",
-      "renal carcinoma"
+      "renal carcinoma",
+      "clear cell renal cell carcinoma"
     ],
     "synonyms_en": [
-      "kidney renal clear cell carcinoma",
-      "kidney renal papillary cell carcinoma"
+      "papillary renal cell carcinoma"
     ],
     "abbreviations": [
       "RCC",
@@ -1146,7 +1152,7 @@
       "Kidney"
     ],
     "concept_type": "disease",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
     "source": "zh_override",
     "data_modality_terms": [
@@ -1768,14 +1774,14 @@
   },
   {
     "zh_term": "表达谱",
-    "preferred_label_en": "expression profiling",
+    "preferred_label_en": "gene expression profiling",
     "data_modality_terms": [
-      "expression profiling",
-      "gene expression profiling"
+      "gene expression profiling",
+      "expression profiling"
     ],
     "abbreviations": [],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1788,7 +1794,7 @@
     ],
     "abbreviations": [],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1803,7 +1809,7 @@
       "RNA-seq"
     ],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1834,7 +1840,7 @@
       "scRNA-seq"
     ],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1847,28 +1853,29 @@
     ],
     "abbreviations": [],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
   {
     "zh_term": "甲基化",
-    "preferred_label_en": "DNA methylation",
+    "preferred_label_en": "methylation profiling",
     "data_modality_terms": [
-      "DNA methylation",
       "methylation profiling",
+      "DNA methylation",
       "methylation array"
     ],
     "abbreviations": [],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
   {
     "zh_term": "miRNA",
-    "preferred_label_en": "miRNA",
+    "preferred_label_en": "miRNA profiling",
     "data_modality_terms": [
+      "miRNA profiling",
       "miRNA",
       "microRNA",
       "miRNA expression profiling"
@@ -1877,7 +1884,7 @@
       "miRNA"
     ],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1893,7 +1900,7 @@
       "lncRNA"
     ],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1907,7 +1914,7 @@
     ],
     "abbreviations": [],
     "concept_type": "data_modality",
-    "term_source": "stage2_1_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1964,7 +1971,7 @@
       "circRNA"
     ],
     "concept_type": "data_modality",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1978,7 +1985,7 @@
     ],
     "abbreviations": [],
     "concept_type": "data_modality",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -1998,7 +2005,7 @@
       "Survival Rate"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2018,7 +2025,7 @@
       "Survival Rate"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2038,7 +2045,7 @@
       "Survival Rate"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2052,26 +2059,30 @@
       "mortality",
       "death rate"
     ],
+    "abbreviations": [],
     "mesh_terms": [
       "Mortality"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
   {
     "zh_term": "复发率",
-    "preferred_label_en": "recurrence rate",
+    "preferred_label_en": "recurrence",
     "mapped_concept_ids": [
       "mini:meta_outcomes_core"
     ],
     "outcome_terms": [
+      "recurrence",
       "recurrence rate",
       "relapse rate"
     ],
+    "abbreviations": [],
+    "mesh_terms": [],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2084,11 +2095,12 @@
     "outcome_terms": [
       "incidence"
     ],
+    "abbreviations": [],
     "mesh_terms": [
       "Incidence"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2101,11 +2113,12 @@
     "outcome_terms": [
       "prevalence"
     ],
+    "abbreviations": [],
     "mesh_terms": [
       "Prevalence"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2118,9 +2131,11 @@
     "outcome_terms": [
       "risk"
     ],
+    "abbreviations": [],
+    "mesh_terms": [],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
-    "confidence": 0.88,
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
     "source": "zh_override"
   },
   {
@@ -2132,11 +2147,12 @@
     "outcome_terms": [
       "diagnostic accuracy"
     ],
+    "abbreviations": [],
     "mesh_terms": [
       "Sensitivity and Specificity"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2149,11 +2165,12 @@
     "outcome_terms": [
       "sensitivity"
     ],
+    "abbreviations": [],
     "mesh_terms": [
       "Sensitivity and Specificity"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   },
@@ -2166,11 +2183,2706 @@
     "outcome_terms": [
       "specificity"
     ],
+    "abbreviations": [],
     "mesh_terms": [
       "Sensitivity and Specificity"
     ],
     "concept_type": "outcome",
-    "term_source": "stage2_2_curated_zh_override",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "脑膜瘤",
+    "zh_terms": [
+      "脑膜瘤"
+    ],
+    "preferred_label_en": "meningioma",
+    "mapped_concept_ids": [
+      "mini:meningioma"
+    ],
+    "disease_terms_en": [
+      "meningioma",
+      "intracranial meningioma",
+      "meningeal neoplasm"
+    ],
+    "synonyms_en": [
+      "intracranial meningioma",
+      "meningeal neoplasm"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Meningioma",
+      "Meningeal Neoplasms"
+    ],
+    "tissue_terms": [
+      "brain",
+      "meninges"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Brain"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "垂体腺瘤",
+    "zh_terms": [
+      "垂体腺瘤",
+      "垂体瘤"
+    ],
+    "preferred_label_en": "pituitary adenoma",
+    "mapped_concept_ids": [
+      "mini:pituitary_adenoma"
+    ],
+    "disease_terms_en": [
+      "pituitary adenoma",
+      "pituitary neuroendocrine tumor",
+      "pituitary neoplasm"
+    ],
+    "synonyms_en": [
+      "pituitary neuroendocrine tumor",
+      "pituitary neoplasm"
+    ],
+    "abbreviations": [
+      "PitNET"
+    ],
+    "mesh_terms": [
+      "Pituitary Neoplasms",
+      "Adenoma"
+    ],
+    "tissue_terms": [
+      "pituitary",
+      "brain"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Brain"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "鼻咽癌",
+    "zh_terms": [
+      "鼻咽癌",
+      "鼻咽部癌"
+    ],
+    "preferred_label_en": "nasopharyngeal carcinoma",
+    "mapped_concept_ids": [
+      "mini:nasopharyngeal_carcinoma"
+    ],
+    "disease_terms_en": [
+      "nasopharyngeal carcinoma",
+      "nasopharyngeal cancer",
+      "NPC"
+    ],
+    "synonyms_en": [
+      "nasopharyngeal cancer",
+      "NPC"
+    ],
+    "abbreviations": [
+      "NPC"
+    ],
+    "mesh_terms": [
+      "Nasopharyngeal Neoplasms"
+    ],
+    "tissue_terms": [
+      "nasopharynx"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-HNSC"
+    ],
+    "gtex_tissue_candidates": [],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "头颈鳞癌",
+    "zh_terms": [
+      "头颈鳞癌",
+      "头颈部鳞状细胞癌"
+    ],
+    "preferred_label_en": "head and neck squamous cell carcinoma",
+    "mapped_concept_ids": [
+      "mini:head_and_neck_squamous_cell_carcinoma"
+    ],
+    "disease_terms_en": [
+      "head and neck squamous cell carcinoma",
+      "head and neck cancer",
+      "squamous cell carcinoma of head and neck"
+    ],
+    "synonyms_en": [
+      "head and neck cancer",
+      "squamous cell carcinoma of head and neck"
+    ],
+    "abbreviations": [
+      "HNSCC",
+      "HNSC"
+    ],
+    "mesh_terms": [
+      "Head and Neck Neoplasms",
+      "Carcinoma, Squamous Cell"
+    ],
+    "tissue_terms": [
+      "head and neck"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-HNSC"
+    ],
+    "gtex_tissue_candidates": [],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "口腔鳞癌",
+    "zh_terms": [
+      "口腔鳞癌",
+      "口腔鳞状细胞癌"
+    ],
+    "preferred_label_en": "oral squamous cell carcinoma",
+    "mapped_concept_ids": [
+      "mini:oral_squamous_cell_carcinoma"
+    ],
+    "disease_terms_en": [
+      "oral squamous cell carcinoma",
+      "oral cavity squamous cell carcinoma",
+      "mouth squamous cell carcinoma"
+    ],
+    "synonyms_en": [
+      "oral cavity squamous cell carcinoma",
+      "mouth squamous cell carcinoma"
+    ],
+    "abbreviations": [
+      "OSCC"
+    ],
+    "mesh_terms": [
+      "Mouth Neoplasms",
+      "Carcinoma, Squamous Cell"
+    ],
+    "tissue_terms": [
+      "oral cavity"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-HNSC"
+    ],
+    "gtex_tissue_candidates": [],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "喉癌",
+    "zh_terms": [
+      "喉癌",
+      "喉肿瘤"
+    ],
+    "preferred_label_en": "laryngeal cancer",
+    "mapped_concept_ids": [
+      "mini:laryngeal_cancer"
+    ],
+    "disease_terms_en": [
+      "laryngeal cancer",
+      "laryngeal carcinoma",
+      "larynx cancer",
+      "laryngeal squamous cell carcinoma"
+    ],
+    "synonyms_en": [
+      "laryngeal carcinoma",
+      "larynx cancer",
+      "laryngeal squamous cell carcinoma"
+    ],
+    "abbreviations": [
+      "LSCC"
+    ],
+    "mesh_terms": [
+      "Laryngeal Neoplasms"
+    ],
+    "tissue_terms": [
+      "larynx"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-HNSC"
+    ],
+    "gtex_tissue_candidates": [],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "小细胞肺癌",
+    "zh_terms": [
+      "小细胞肺癌"
+    ],
+    "preferred_label_en": "small cell lung cancer",
+    "mapped_concept_ids": [
+      "mini:small_cell_lung_cancer"
+    ],
+    "disease_terms_en": [
+      "small cell lung cancer",
+      "small-cell lung carcinoma",
+      "oat cell lung cancer",
+      "lung cancer"
+    ],
+    "synonyms_en": [
+      "small-cell lung carcinoma",
+      "oat cell lung cancer",
+      "lung cancer"
+    ],
+    "abbreviations": [
+      "SCLC"
+    ],
+    "mesh_terms": [
+      "Small Cell Lung Carcinoma",
+      "Lung Neoplasms"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Lung"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "胃腺癌",
+    "zh_terms": [
+      "胃腺癌"
+    ],
+    "preferred_label_en": "gastric adenocarcinoma",
+    "mapped_concept_ids": [
+      "mini:gastric_adenocarcinoma"
+    ],
+    "disease_terms_en": [
+      "gastric adenocarcinoma",
+      "stomach adenocarcinoma",
+      "gastric cancer",
+      "stomach cancer"
+    ],
+    "synonyms_en": [
+      "stomach adenocarcinoma",
+      "gastric cancer",
+      "stomach cancer"
+    ],
+    "abbreviations": [
+      "STAD"
+    ],
+    "mesh_terms": [
+      "Stomach Neoplasms",
+      "Adenocarcinoma"
+    ],
+    "tissue_terms": [
+      "stomach"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-STAD"
+    ],
+    "gtex_tissue_candidates": [
+      "Stomach"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "结肠癌",
+    "zh_terms": [
+      "结肠癌"
+    ],
+    "preferred_label_en": "colon cancer",
+    "mapped_concept_ids": [
+      "mini:colon_cancer"
+    ],
+    "disease_terms_en": [
+      "colon cancer",
+      "colon adenocarcinoma",
+      "colonic neoplasm",
+      "colorectal cancer"
+    ],
+    "synonyms_en": [
+      "colon adenocarcinoma",
+      "colonic neoplasm",
+      "colorectal cancer"
+    ],
+    "abbreviations": [
+      "COAD"
+    ],
+    "mesh_terms": [
+      "Colonic Neoplasms"
+    ],
+    "tissue_terms": [
+      "colon"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-COAD"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "直肠癌",
+    "zh_terms": [
+      "直肠癌"
+    ],
+    "preferred_label_en": "rectal cancer",
+    "mapped_concept_ids": [
+      "mini:rectal_cancer"
+    ],
+    "disease_terms_en": [
+      "rectal cancer",
+      "rectum adenocarcinoma",
+      "rectal neoplasm",
+      "colorectal cancer"
+    ],
+    "synonyms_en": [
+      "rectum adenocarcinoma",
+      "rectal neoplasm",
+      "colorectal cancer"
+    ],
+    "abbreviations": [
+      "READ"
+    ],
+    "mesh_terms": [
+      "Rectal Neoplasms"
+    ],
+    "tissue_terms": [
+      "rectum"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-READ"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "胆管癌",
+    "zh_terms": [
+      "胆管癌",
+      "胆管细胞癌"
+    ],
+    "preferred_label_en": "cholangiocarcinoma",
+    "mapped_concept_ids": [
+      "mini:cholangiocarcinoma"
+    ],
+    "disease_terms_en": [
+      "cholangiocarcinoma",
+      "bile duct cancer",
+      "biliary tract cancer",
+      "bile duct carcinoma"
+    ],
+    "synonyms_en": [
+      "bile duct cancer",
+      "biliary tract cancer",
+      "bile duct carcinoma"
+    ],
+    "abbreviations": [
+      "CHOL"
+    ],
+    "mesh_terms": [
+      "Cholangiocarcinoma",
+      "Bile Duct Neoplasms"
+    ],
+    "tissue_terms": [
+      "bile duct",
+      "liver"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-CHOL"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "胰腺导管腺癌",
+    "zh_terms": [
+      "胰腺导管腺癌"
+    ],
+    "preferred_label_en": "pancreatic ductal adenocarcinoma",
+    "mapped_concept_ids": [
+      "mini:pancreatic_ductal_adenocarcinoma"
+    ],
+    "disease_terms_en": [
+      "pancreatic ductal adenocarcinoma",
+      "pancreatic adenocarcinoma",
+      "pancreatic cancer"
+    ],
+    "synonyms_en": [
+      "pancreatic adenocarcinoma",
+      "pancreatic cancer"
+    ],
+    "abbreviations": [
+      "PDAC",
+      "PAAD"
+    ],
+    "mesh_terms": [
+      "Pancreatic Neoplasms",
+      "Adenocarcinoma"
+    ],
+    "tissue_terms": [
+      "pancreas"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-PAAD"
+    ],
+    "gtex_tissue_candidates": [
+      "Pancreas"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "三阴性乳腺癌",
+    "zh_terms": [
+      "三阴性乳腺癌",
+      "三阴乳腺癌"
+    ],
+    "preferred_label_en": "triple-negative breast cancer",
+    "mapped_concept_ids": [
+      "mini:triple_negative_breast_cancer"
+    ],
+    "disease_terms_en": [
+      "triple-negative breast cancer",
+      "triple negative breast cancer",
+      "basal-like breast cancer",
+      "breast cancer"
+    ],
+    "synonyms_en": [
+      "triple negative breast cancer",
+      "basal-like breast cancer",
+      "breast cancer"
+    ],
+    "abbreviations": [
+      "TNBC",
+      "BRCA"
+    ],
+    "mesh_terms": [
+      "Breast Neoplasms"
+    ],
+    "tissue_terms": [
+      "breast"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-BRCA"
+    ],
+    "gtex_tissue_candidates": [
+      "Breast"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "肾透明细胞癌",
+    "zh_terms": [
+      "肾透明细胞癌",
+      "透明细胞肾细胞癌"
+    ],
+    "preferred_label_en": "kidney clear cell carcinoma",
+    "mapped_concept_ids": [
+      "mini:kidney_clear_cell_carcinoma"
+    ],
+    "disease_terms_en": [
+      "kidney clear cell carcinoma",
+      "clear cell renal cell carcinoma",
+      "kidney renal clear cell carcinoma"
+    ],
+    "synonyms_en": [
+      "clear cell renal cell carcinoma",
+      "kidney renal clear cell carcinoma"
+    ],
+    "abbreviations": [
+      "ccRCC",
+      "KIRC"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-KIRC"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "肾乳头状细胞癌",
+    "zh_terms": [
+      "肾乳头状细胞癌",
+      "乳头状肾细胞癌"
+    ],
+    "preferred_label_en": "kidney papillary cell carcinoma",
+    "mapped_concept_ids": [
+      "mini:kidney_papillary_cell_carcinoma"
+    ],
+    "disease_terms_en": [
+      "kidney papillary cell carcinoma",
+      "papillary renal cell carcinoma",
+      "kidney renal papillary cell carcinoma"
+    ],
+    "synonyms_en": [
+      "papillary renal cell carcinoma",
+      "kidney renal papillary cell carcinoma"
+    ],
+    "abbreviations": [
+      "pRCC",
+      "KIRP"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-KIRP"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "白血病",
+    "zh_terms": [
+      "白血病"
+    ],
+    "preferred_label_en": "leukemia",
+    "mapped_concept_ids": [
+      "mini:leukemia"
+    ],
+    "disease_terms_en": [
+      "leukemia",
+      "leukaemia",
+      "hematologic malignancy"
+    ],
+    "synonyms_en": [
+      "leukaemia",
+      "hematologic malignancy"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Leukemia"
+    ],
+    "tissue_terms": [
+      "blood",
+      "bone marrow"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-LAML"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "急性髓系白血病",
+    "zh_terms": [
+      "急性髓系白血病",
+      "急性髓性白血病"
+    ],
+    "preferred_label_en": "acute myeloid leukemia",
+    "mapped_concept_ids": [
+      "mini:acute_myeloid_leukemia"
+    ],
+    "disease_terms_en": [
+      "acute myeloid leukemia",
+      "acute myelogenous leukemia",
+      "acute nonlymphocytic leukemia"
+    ],
+    "synonyms_en": [
+      "acute myelogenous leukemia",
+      "acute nonlymphocytic leukemia"
+    ],
+    "abbreviations": [
+      "AML",
+      "LAML"
+    ],
+    "mesh_terms": [
+      "Leukemia, Myeloid, Acute"
+    ],
+    "tissue_terms": [
+      "blood",
+      "bone marrow"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-LAML"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "淋巴瘤",
+    "zh_terms": [
+      "淋巴瘤"
+    ],
+    "preferred_label_en": "lymphoma",
+    "mapped_concept_ids": [
+      "mini:lymphoma"
+    ],
+    "disease_terms_en": [
+      "lymphoma",
+      "malignant lymphoma",
+      "non-Hodgkin lymphoma",
+      "Hodgkin lymphoma"
+    ],
+    "synonyms_en": [
+      "malignant lymphoma",
+      "non-Hodgkin lymphoma",
+      "Hodgkin lymphoma"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Lymphoma"
+    ],
+    "tissue_terms": [
+      "lymph node",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "多发性骨髓瘤",
+    "zh_terms": [
+      "多发性骨髓瘤"
+    ],
+    "preferred_label_en": "multiple myeloma",
+    "mapped_concept_ids": [
+      "mini:multiple_myeloma"
+    ],
+    "disease_terms_en": [
+      "multiple myeloma",
+      "plasma cell myeloma",
+      "myeloma"
+    ],
+    "synonyms_en": [
+      "plasma cell myeloma",
+      "myeloma"
+    ],
+    "abbreviations": [
+      "MM"
+    ],
+    "mesh_terms": [
+      "Multiple Myeloma"
+    ],
+    "tissue_terms": [
+      "bone marrow",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "1型糖尿病",
+    "zh_terms": [
+      "1型糖尿病",
+      "一型糖尿病",
+      "I型糖尿病"
+    ],
+    "preferred_label_en": "Type 1 Diabetes Mellitus",
+    "mapped_concept_ids": [
+      "mini:type_1_diabetes_mellitus"
+    ],
+    "disease_terms_en": [
+      "Type 1 Diabetes Mellitus",
+      "type 1 diabetes",
+      "insulin-dependent diabetes mellitus",
+      "autoimmune diabetes"
+    ],
+    "synonyms_en": [
+      "type 1 diabetes",
+      "insulin-dependent diabetes mellitus",
+      "autoimmune diabetes"
+    ],
+    "abbreviations": [
+      "T1D",
+      "T1DM"
+    ],
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 1",
+      "Diabetes Mellitus"
+    ],
+    "tissue_terms": [
+      "pancreas",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Pancreas"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "胰岛素抵抗",
+    "zh_terms": [
+      "胰岛素抵抗"
+    ],
+    "preferred_label_en": "insulin resistance",
+    "mapped_concept_ids": [
+      "mini:insulin_resistance"
+    ],
+    "disease_terms_en": [
+      "insulin resistance",
+      "insulin sensitivity",
+      "impaired insulin action"
+    ],
+    "synonyms_en": [
+      "insulin sensitivity",
+      "impaired insulin action"
+    ],
+    "abbreviations": [
+      "IR"
+    ],
+    "mesh_terms": [
+      "Insulin Resistance"
+    ],
+    "tissue_terms": [
+      "adipose tissue",
+      "muscle",
+      "liver"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Adipose Tissue",
+      "Muscle",
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "代谢综合征",
+    "zh_terms": [
+      "代谢综合征"
+    ],
+    "preferred_label_en": "metabolic syndrome",
+    "mapped_concept_ids": [
+      "mini:metabolic_syndrome"
+    ],
+    "disease_terms_en": [
+      "metabolic syndrome",
+      "metabolic syndrome X",
+      "insulin resistance syndrome"
+    ],
+    "synonyms_en": [
+      "metabolic syndrome X",
+      "insulin resistance syndrome"
+    ],
+    "abbreviations": [
+      "MetS"
+    ],
+    "mesh_terms": [
+      "Metabolic Syndrome"
+    ],
+    "tissue_terms": [
+      "adipose tissue",
+      "liver",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Adipose Tissue",
+      "Liver",
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "超重",
+    "zh_terms": [
+      "超重"
+    ],
+    "preferred_label_en": "overweight",
+    "mapped_concept_ids": [
+      "mini:overweight"
+    ],
+    "disease_terms_en": [
+      "overweight",
+      "high body mass index",
+      "increased BMI"
+    ],
+    "synonyms_en": [
+      "high body mass index",
+      "increased BMI"
+    ],
+    "abbreviations": [
+      "BMI"
+    ],
+    "mesh_terms": [
+      "Overweight",
+      "Body Mass Index"
+    ],
+    "tissue_terms": [
+      "adipose tissue"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Adipose Tissue"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "高脂血症",
+    "zh_terms": [
+      "高脂血症",
+      "血脂异常"
+    ],
+    "preferred_label_en": "hyperlipidemia",
+    "mapped_concept_ids": [
+      "mini:hyperlipidemia"
+    ],
+    "disease_terms_en": [
+      "hyperlipidemia",
+      "dyslipidemia",
+      "hyperlipidaemia"
+    ],
+    "synonyms_en": [
+      "dyslipidemia",
+      "hyperlipidaemia"
+    ],
+    "abbreviations": [
+      "HLD"
+    ],
+    "mesh_terms": [
+      "Hyperlipidemias"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "高胆固醇血症",
+    "zh_terms": [
+      "高胆固醇血症"
+    ],
+    "preferred_label_en": "hypercholesterolemia",
+    "mapped_concept_ids": [
+      "mini:hypercholesterolemia"
+    ],
+    "disease_terms_en": [
+      "hypercholesterolemia",
+      "high cholesterol",
+      "hypercholesterolaemia"
+    ],
+    "synonyms_en": [
+      "high cholesterol",
+      "hypercholesterolaemia"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Hypercholesterolemia"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "心力衰竭",
+    "zh_terms": [
+      "心力衰竭",
+      "心衰"
+    ],
+    "preferred_label_en": "heart failure",
+    "mapped_concept_ids": [
+      "mini:heart_failure"
+    ],
+    "disease_terms_en": [
+      "heart failure",
+      "cardiac failure",
+      "congestive heart failure"
+    ],
+    "synonyms_en": [
+      "cardiac failure",
+      "congestive heart failure"
+    ],
+    "abbreviations": [
+      "HF",
+      "CHF"
+    ],
+    "mesh_terms": [
+      "Heart Failure"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Heart"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "动脉粥样硬化",
+    "zh_terms": [
+      "动脉粥样硬化"
+    ],
+    "preferred_label_en": "atherosclerosis",
+    "mapped_concept_ids": [
+      "mini:atherosclerosis"
+    ],
+    "disease_terms_en": [
+      "atherosclerosis",
+      "arteriosclerosis",
+      "atherosclerotic disease"
+    ],
+    "synonyms_en": [
+      "arteriosclerosis",
+      "atherosclerotic disease"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Atherosclerosis"
+    ],
+    "tissue_terms": [
+      "artery",
+      "heart"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Artery",
+      "Heart"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "肾小球肾炎",
+    "zh_terms": [
+      "肾小球肾炎"
+    ],
+    "preferred_label_en": "glomerulonephritis",
+    "mapped_concept_ids": [
+      "mini:glomerulonephritis"
+    ],
+    "disease_terms_en": [
+      "glomerulonephritis",
+      "glomerular nephritis",
+      "nephritis"
+    ],
+    "synonyms_en": [
+      "glomerular nephritis",
+      "nephritis"
+    ],
+    "abbreviations": [
+      "GN"
+    ],
+    "mesh_terms": [
+      "Glomerulonephritis"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "脑卒中",
+    "zh_terms": [
+      "脑卒中",
+      "中风"
+    ],
+    "preferred_label_en": "stroke",
+    "mapped_concept_ids": [
+      "mini:stroke"
+    ],
+    "disease_terms_en": [
+      "stroke",
+      "cerebrovascular accident",
+      "ischemic stroke",
+      "hemorrhagic stroke"
+    ],
+    "synonyms_en": [
+      "cerebrovascular accident",
+      "ischemic stroke",
+      "hemorrhagic stroke"
+    ],
+    "abbreviations": [
+      "CVA"
+    ],
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "多发性硬化",
+    "zh_terms": [
+      "多发性硬化",
+      "多发性硬化症"
+    ],
+    "preferred_label_en": "multiple sclerosis",
+    "mapped_concept_ids": [
+      "mini:multiple_sclerosis"
+    ],
+    "disease_terms_en": [
+      "multiple sclerosis",
+      "disseminated sclerosis"
+    ],
+    "synonyms_en": [
+      "disseminated sclerosis"
+    ],
+    "abbreviations": [
+      "MS"
+    ],
+    "mesh_terms": [
+      "Multiple Sclerosis"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "系统性红斑狼疮",
+    "zh_terms": [
+      "系统性红斑狼疮"
+    ],
+    "preferred_label_en": "systemic lupus erythematosus",
+    "mapped_concept_ids": [
+      "mini:systemic_lupus_erythematosus"
+    ],
+    "disease_terms_en": [
+      "systemic lupus erythematosus",
+      "lupus",
+      "SLE"
+    ],
+    "synonyms_en": [
+      "lupus",
+      "SLE"
+    ],
+    "abbreviations": [
+      "SLE"
+    ],
+    "mesh_terms": [
+      "Lupus Erythematosus, Systemic"
+    ],
+    "tissue_terms": [
+      "blood",
+      "skin",
+      "kidney"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Skin",
+      "Kidney"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "克罗恩病",
+    "zh_terms": [
+      "克罗恩病"
+    ],
+    "preferred_label_en": "Crohn Disease",
+    "mapped_concept_ids": [
+      "mini:crohn_disease"
+    ],
+    "disease_terms_en": [
+      "Crohn Disease",
+      "Crohn's disease",
+      "inflammatory bowel disease"
+    ],
+    "synonyms_en": [
+      "Crohn disease",
+      "Crohn's disease",
+      "inflammatory bowel disease"
+    ],
+    "abbreviations": [
+      "CD"
+    ],
+    "mesh_terms": [
+      "Crohn Disease"
+    ],
+    "tissue_terms": [
+      "intestine",
+      "colon"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Colon",
+      "Small Intestine"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "溃疡性结肠炎",
+    "zh_terms": [
+      "溃疡性结肠炎"
+    ],
+    "preferred_label_en": "Ulcerative Colitis",
+    "mapped_concept_ids": [
+      "mini:ulcerative_colitis"
+    ],
+    "disease_terms_en": [
+      "Ulcerative Colitis",
+      "inflammatory bowel disease"
+    ],
+    "synonyms_en": [
+      "ulcerative colitis",
+      "inflammatory bowel disease"
+    ],
+    "abbreviations": [
+      "UC"
+    ],
+    "mesh_terms": [
+      "Colitis, Ulcerative"
+    ],
+    "tissue_terms": [
+      "colon"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Colon"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "慢性阻塞性肺疾病",
+    "zh_terms": [
+      "慢性阻塞性肺疾病",
+      "慢阻肺"
+    ],
+    "preferred_label_en": "chronic obstructive pulmonary disease",
+    "mapped_concept_ids": [
+      "mini:chronic_obstructive_pulmonary_disease"
+    ],
+    "disease_terms_en": [
+      "chronic obstructive pulmonary disease",
+      "COPD",
+      "chronic obstructive lung disease"
+    ],
+    "synonyms_en": [
+      "COPD",
+      "chronic obstructive lung disease"
+    ],
+    "abbreviations": [
+      "COPD"
+    ],
+    "mesh_terms": [
+      "Pulmonary Disease, Chronic Obstructive"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Lung"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "哮喘",
+    "zh_terms": [
+      "哮喘"
+    ],
+    "preferred_label_en": "asthma",
+    "mapped_concept_ids": [
+      "mini:asthma"
+    ],
+    "disease_terms_en": [
+      "asthma",
+      "bronchial asthma",
+      "allergic asthma"
+    ],
+    "synonyms_en": [
+      "bronchial asthma",
+      "allergic asthma"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Asthma"
+    ],
+    "tissue_terms": [
+      "lung",
+      "blood"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "透明细胞肾细胞癌",
+    "zh_terms": [
+      "肾透明细胞癌",
+      "透明细胞肾细胞癌"
+    ],
+    "preferred_label_en": "kidney clear cell carcinoma",
+    "mapped_concept_ids": [
+      "mini:kidney_clear_cell_carcinoma"
+    ],
+    "disease_terms_en": [
+      "kidney clear cell carcinoma",
+      "clear cell renal cell carcinoma",
+      "kidney renal clear cell carcinoma"
+    ],
+    "synonyms_en": [
+      "clear cell renal cell carcinoma",
+      "kidney renal clear cell carcinoma"
+    ],
+    "abbreviations": [
+      "ccRCC",
+      "KIRC"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-KIRC"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "乳头状肾细胞癌",
+    "zh_terms": [
+      "肾乳头状细胞癌",
+      "乳头状肾细胞癌"
+    ],
+    "preferred_label_en": "kidney papillary cell carcinoma",
+    "mapped_concept_ids": [
+      "mini:kidney_papillary_cell_carcinoma"
+    ],
+    "disease_terms_en": [
+      "kidney papillary cell carcinoma",
+      "papillary renal cell carcinoma",
+      "kidney renal papillary cell carcinoma"
+    ],
+    "synonyms_en": [
+      "papillary renal cell carcinoma",
+      "kidney renal papillary cell carcinoma"
+    ],
+    "abbreviations": [
+      "pRCC",
+      "KIRP"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-KIRP"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "急性髓性白血病",
+    "zh_terms": [
+      "急性髓系白血病",
+      "急性髓性白血病"
+    ],
+    "preferred_label_en": "acute myeloid leukemia",
+    "mapped_concept_ids": [
+      "mini:acute_myeloid_leukemia"
+    ],
+    "disease_terms_en": [
+      "acute myeloid leukemia",
+      "acute myelogenous leukemia",
+      "acute nonlymphocytic leukemia"
+    ],
+    "synonyms_en": [
+      "acute myelogenous leukemia",
+      "acute nonlymphocytic leukemia"
+    ],
+    "abbreviations": [
+      "AML",
+      "LAML"
+    ],
+    "mesh_terms": [
+      "Leukemia, Myeloid, Acute"
+    ],
+    "tissue_terms": [
+      "blood",
+      "bone marrow"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-LAML"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "非酒精性脂肪性肝病",
+    "zh_terms": [
+      "脂肪肝",
+      "脂肪性肝病",
+      "非酒精性脂肪性肝病"
+    ],
+    "preferred_label_en": "Fatty Liver Disease",
+    "mapped_concept_ids": [
+      "mini:fatty_liver_disease"
+    ],
+    "disease_terms_en": [
+      "Fatty Liver Disease",
+      "fatty liver",
+      "hepatic steatosis",
+      "nonalcoholic fatty liver disease"
+    ],
+    "synonyms_en": [
+      "metabolic dysfunction-associated steatotic liver disease"
+    ],
+    "abbreviations": [
+      "NAFLD",
+      "MASLD"
+    ],
+    "mesh_terms": [
+      "Fatty Liver",
+      "Non-alcoholic Fatty Liver Disease"
+    ],
+    "tissue_terms": [
+      "liver"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "脂肪性肝病",
+    "zh_terms": [
+      "脂肪肝",
+      "脂肪性肝病",
+      "非酒精性脂肪性肝病"
+    ],
+    "preferred_label_en": "Fatty Liver Disease",
+    "mapped_concept_ids": [
+      "mini:fatty_liver_disease"
+    ],
+    "disease_terms_en": [
+      "Fatty Liver Disease",
+      "fatty liver",
+      "hepatic steatosis",
+      "nonalcoholic fatty liver disease"
+    ],
+    "synonyms_en": [
+      "metabolic dysfunction-associated steatotic liver disease"
+    ],
+    "abbreviations": [
+      "NAFLD",
+      "MASLD"
+    ],
+    "mesh_terms": [
+      "Fatty Liver",
+      "Non-alcoholic Fatty Liver Disease"
+    ],
+    "tissue_terms": [
+      "liver"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": []
+  },
+  {
+    "zh_term": "脑",
+    "zh_terms": [
+      "脑"
+    ],
+    "preferred_label_en": "brain",
+    "mapped_concept_ids": [
+      "mini:brain_tissue"
+    ],
+    "tissue_terms": [
+      "brain",
+      "brain tissue"
+    ],
+    "mesh_terms": [
+      "Brain"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "甲状腺",
+    "zh_terms": [
+      "甲状腺"
+    ],
+    "preferred_label_en": "thyroid",
+    "mapped_concept_ids": [
+      "mini:thyroid_tissue"
+    ],
+    "tissue_terms": [
+      "thyroid",
+      "thyroid gland"
+    ],
+    "mesh_terms": [
+      "Thyroid Gland"
+    ],
+    "gtex_tissue_candidates": [
+      "Thyroid"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "食管",
+    "zh_terms": [
+      "食管",
+      "食道"
+    ],
+    "preferred_label_en": "esophagus",
+    "mapped_concept_ids": [
+      "mini:esophagus_tissue"
+    ],
+    "tissue_terms": [
+      "esophagus",
+      "esophageal tissue"
+    ],
+    "mesh_terms": [
+      "Esophagus"
+    ],
+    "gtex_tissue_candidates": [
+      "Esophagus"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "食道",
+    "zh_terms": [
+      "食道",
+      "食管"
+    ],
+    "preferred_label_en": "esophagus",
+    "mapped_concept_ids": [
+      "mini:esophagus_tissue"
+    ],
+    "tissue_terms": [
+      "esophagus",
+      "esophageal tissue"
+    ],
+    "mesh_terms": [
+      "Esophagus"
+    ],
+    "gtex_tissue_candidates": [
+      "Esophagus"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "肺",
+    "zh_terms": [
+      "肺"
+    ],
+    "preferred_label_en": "lung",
+    "mapped_concept_ids": [
+      "mini:lung_tissue"
+    ],
+    "tissue_terms": [
+      "lung",
+      "lung tissue"
+    ],
+    "mesh_terms": [
+      "Lung"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "胃",
+    "zh_terms": [
+      "胃"
+    ],
+    "preferred_label_en": "stomach",
+    "mapped_concept_ids": [
+      "mini:stomach_tissue"
+    ],
+    "tissue_terms": [
+      "stomach",
+      "gastric tissue"
+    ],
+    "mesh_terms": [
+      "Stomach"
+    ],
+    "gtex_tissue_candidates": [
+      "Stomach"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "结肠",
+    "zh_terms": [
+      "结肠"
+    ],
+    "preferred_label_en": "colon",
+    "mapped_concept_ids": [
+      "mini:colon_tissue"
+    ],
+    "tissue_terms": [
+      "colon",
+      "colonic tissue"
+    ],
+    "mesh_terms": [
+      "Colon"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "直肠",
+    "zh_terms": [
+      "直肠"
+    ],
+    "preferred_label_en": "rectum",
+    "mapped_concept_ids": [
+      "mini:rectum_tissue"
+    ],
+    "tissue_terms": [
+      "rectum",
+      "rectal tissue"
+    ],
+    "mesh_terms": [
+      "Rectum"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "肝",
+    "zh_terms": [
+      "肝"
+    ],
+    "preferred_label_en": "liver",
+    "mapped_concept_ids": [
+      "mini:liver_tissue"
+    ],
+    "tissue_terms": [
+      "liver",
+      "hepatic tissue"
+    ],
+    "mesh_terms": [
+      "Liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "胰腺",
+    "zh_terms": [
+      "胰腺"
+    ],
+    "preferred_label_en": "pancreas",
+    "mapped_concept_ids": [
+      "mini:pancreas_tissue"
+    ],
+    "tissue_terms": [
+      "pancreas",
+      "pancreatic tissue"
+    ],
+    "mesh_terms": [
+      "Pancreas"
+    ],
+    "gtex_tissue_candidates": [
+      "Pancreas"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "乳腺",
+    "zh_terms": [
+      "乳腺"
+    ],
+    "preferred_label_en": "breast",
+    "mapped_concept_ids": [
+      "mini:breast_tissue"
+    ],
+    "tissue_terms": [
+      "breast",
+      "mammary tissue"
+    ],
+    "mesh_terms": [
+      "Breast"
+    ],
+    "gtex_tissue_candidates": [
+      "Breast"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "前列腺",
+    "zh_terms": [
+      "前列腺"
+    ],
+    "preferred_label_en": "prostate",
+    "mapped_concept_ids": [
+      "mini:prostate_tissue"
+    ],
+    "tissue_terms": [
+      "prostate",
+      "prostatic tissue"
+    ],
+    "mesh_terms": [
+      "Prostate"
+    ],
+    "gtex_tissue_candidates": [
+      "Prostate"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "卵巢",
+    "zh_terms": [
+      "卵巢"
+    ],
+    "preferred_label_en": "ovary",
+    "mapped_concept_ids": [
+      "mini:ovary_tissue"
+    ],
+    "tissue_terms": [
+      "ovary",
+      "ovarian tissue"
+    ],
+    "mesh_terms": [
+      "Ovary"
+    ],
+    "gtex_tissue_candidates": [
+      "Ovary"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "宫颈",
+    "zh_terms": [
+      "宫颈"
+    ],
+    "preferred_label_en": "cervix",
+    "mapped_concept_ids": [
+      "mini:cervix_tissue"
+    ],
+    "tissue_terms": [
+      "cervix",
+      "uterine cervix"
+    ],
+    "mesh_terms": [
+      "Uterine Cervix"
+    ],
+    "gtex_tissue_candidates": [
+      "Uterus"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "子宫内膜",
+    "zh_terms": [
+      "子宫内膜"
+    ],
+    "preferred_label_en": "endometrium",
+    "mapped_concept_ids": [
+      "mini:endometrium_tissue"
+    ],
+    "tissue_terms": [
+      "endometrium",
+      "uterine endometrium"
+    ],
+    "mesh_terms": [
+      "Endometrium"
+    ],
+    "gtex_tissue_candidates": [
+      "Uterus"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "肾",
+    "zh_terms": [
+      "肾"
+    ],
+    "preferred_label_en": "kidney",
+    "mapped_concept_ids": [
+      "mini:kidney_tissue"
+    ],
+    "tissue_terms": [
+      "kidney",
+      "renal tissue"
+    ],
+    "mesh_terms": [
+      "Kidney"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "膀胱",
+    "zh_terms": [
+      "膀胱"
+    ],
+    "preferred_label_en": "bladder",
+    "mapped_concept_ids": [
+      "mini:bladder_tissue"
+    ],
+    "tissue_terms": [
+      "bladder",
+      "urinary bladder"
+    ],
+    "mesh_terms": [
+      "Urinary Bladder"
+    ],
+    "gtex_tissue_candidates": [
+      "Bladder"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "皮肤",
+    "zh_terms": [
+      "皮肤"
+    ],
+    "preferred_label_en": "skin",
+    "mapped_concept_ids": [
+      "mini:skin_tissue"
+    ],
+    "tissue_terms": [
+      "skin",
+      "cutaneous tissue"
+    ],
+    "mesh_terms": [
+      "Skin"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "血液",
+    "zh_terms": [
+      "血液"
+    ],
+    "preferred_label_en": "blood",
+    "mapped_concept_ids": [
+      "mini:blood_tissue"
+    ],
+    "tissue_terms": [
+      "blood",
+      "whole blood"
+    ],
+    "mesh_terms": [
+      "Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "骨髓",
+    "zh_terms": [
+      "骨髓"
+    ],
+    "preferred_label_en": "bone marrow",
+    "mapped_concept_ids": [
+      "mini:bone_marrow_tissue"
+    ],
+    "tissue_terms": [
+      "bone marrow",
+      "marrow"
+    ],
+    "mesh_terms": [
+      "Bone Marrow"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "淋巴结",
+    "zh_terms": [
+      "淋巴结"
+    ],
+    "preferred_label_en": "lymph node",
+    "mapped_concept_ids": [
+      "mini:lymph_node_tissue"
+    ],
+    "tissue_terms": [
+      "lymph node",
+      "lymphatic tissue"
+    ],
+    "mesh_terms": [
+      "Lymph Nodes"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "脂肪组织",
+    "zh_terms": [
+      "脂肪组织"
+    ],
+    "preferred_label_en": "adipose tissue",
+    "mapped_concept_ids": [
+      "mini:adipose_tissue"
+    ],
+    "tissue_terms": [
+      "adipose tissue",
+      "fat tissue"
+    ],
+    "mesh_terms": [
+      "Adipose Tissue"
+    ],
+    "gtex_tissue_candidates": [
+      "Adipose Tissue"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "肌肉",
+    "zh_terms": [
+      "肌肉"
+    ],
+    "preferred_label_en": "muscle",
+    "mapped_concept_ids": [
+      "mini:muscle_tissue"
+    ],
+    "tissue_terms": [
+      "muscle",
+      "skeletal muscle"
+    ],
+    "mesh_terms": [
+      "Muscle, Skeletal"
+    ],
+    "gtex_tissue_candidates": [
+      "Muscle"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "心脏",
+    "zh_terms": [
+      "心脏"
+    ],
+    "preferred_label_en": "heart",
+    "mapped_concept_ids": [
+      "mini:heart_tissue"
+    ],
+    "tissue_terms": [
+      "heart",
+      "cardiac tissue",
+      "myocardium"
+    ],
+    "mesh_terms": [
+      "Heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "代谢组",
+    "preferred_label_en": "metabolomics",
+    "data_modality_terms": [
+      "metabolomics",
+      "metabolome profiling"
+    ],
+    "abbreviations": [],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "ATAC测序",
+    "preferred_label_en": "ATAC-seq",
+    "data_modality_terms": [
+      "ATAC-seq",
+      "assay for transposase-accessible chromatin sequencing"
+    ],
+    "abbreviations": [
+      "ATAC-seq"
+    ],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "ChIP测序",
+    "preferred_label_en": "ChIP-seq",
+    "data_modality_terms": [
+      "ChIP-seq",
+      "chromatin immunoprecipitation sequencing"
+    ],
+    "abbreviations": [
+      "ChIP-seq"
+    ],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "全基因组测序",
+    "preferred_label_en": "WGS",
+    "data_modality_terms": [
+      "whole genome sequencing",
+      "WGS"
+    ],
+    "abbreviations": [
+      "WGS"
+    ],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "外显子测序",
+    "preferred_label_en": "WES",
+    "data_modality_terms": [
+      "whole exome sequencing",
+      "WES"
+    ],
+    "abbreviations": [
+      "WES"
+    ],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "无复发生存",
+    "preferred_label_en": "recurrence-free survival",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "recurrence-free survival"
+    ],
+    "abbreviations": [
+      "RFS"
+    ],
+    "mesh_terms": [
+      "Survival Rate"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "优势比",
+    "preferred_label_en": "odds ratio",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "odds ratio"
+    ],
+    "abbreviations": [
+      "OR"
+    ],
+    "mesh_terms": [],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "相对危险度",
+    "preferred_label_en": "relative risk",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "relative risk"
+    ],
+    "abbreviations": [
+      "RR"
+    ],
+    "mesh_terms": [],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "风险比",
+    "preferred_label_en": "hazard ratio",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "hazard ratio"
+    ],
+    "abbreviations": [
+      "HR"
+    ],
+    "mesh_terms": [],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "曲线下面积",
+    "preferred_label_en": "area under the curve",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "area under the curve",
+      "AUC"
+    ],
+    "abbreviations": [
+      "AUC"
+    ],
+    "mesh_terms": [],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "随机对照试验",
+    "preferred_label_en": "randomized controlled trial",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "randomized controlled trial",
+      "randomised controlled trial"
+    ],
+    "abbreviations": [
+      "RCT"
+    ],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "队列研究",
+    "preferred_label_en": "cohort study",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "cohort study"
+    ],
+    "abbreviations": [],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "病例对照研究",
+    "preferred_label_en": "case-control study",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "case-control study",
+      "case control study"
+    ],
+    "abbreviations": [],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "横断面研究",
+    "preferred_label_en": "cross-sectional study",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "cross-sectional study",
+      "cross sectional study"
+    ],
+    "abbreviations": [],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "诊断准确性研究",
+    "preferred_label_en": "diagnostic accuracy study",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "diagnostic accuracy study"
+    ],
+    "abbreviations": [],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "预后研究",
+    "preferred_label_en": "prognostic study",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "prognostic study"
+    ],
+    "abbreviations": [],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "观察性研究",
+    "preferred_label_en": "observational study",
+    "mapped_concept_ids": [
+      "mini:study_design_core"
+    ],
+    "study_design_terms": [
+      "observational study"
+    ],
+    "abbreviations": [],
+    "concept_type": "study_design",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "综述",
+    "preferred_label_en": "review",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "review"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "Meta分析",
+    "preferred_label_en": "meta-analysis",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "meta-analysis",
+      "systematic review"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "编辑部文章",
+    "preferred_label_en": "editorial",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "editorial"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "信件",
+    "preferred_label_en": "letter",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "letter"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "评论",
+    "preferred_label_en": "comment",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "comment"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "病例报告",
+    "preferred_label_en": "case report",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "case report"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "会议摘要",
+    "preferred_label_en": "conference abstract",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "conference abstract"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "动物实验",
+    "preferred_label_en": "animal study",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "animal study",
+      "animal experiment"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "细胞实验",
+    "preferred_label_en": "cell experiment",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_core"
+    ],
+    "publication_type_terms": [
+      "cell experiment",
+      "in vitro study"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
   }

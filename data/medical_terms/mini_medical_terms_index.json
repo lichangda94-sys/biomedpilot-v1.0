@@ -833,9 +833,9 @@
       "胃肿瘤"
     ],
     "synonyms_en": [
-      "stomach neoplasm",
       "stomach cancer",
-      "gastric carcinoma"
+      "gastric carcinoma",
+      "gastric adenocarcinoma"
     ],
     "exact_synonyms_en": [
       "gastric cancer"
@@ -871,14 +871,14 @@
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
     "confidence": 0.93,
     "normalized_terms": [
       "gastric cancer",
       "stomach cancer",
       "gastric carcinoma",
-      "stomach neoplasm",
+      "gastric adenocarcinoma",
       "STAD",
       "胃癌",
       "胃肿瘤"
@@ -1033,9 +1033,9 @@
       "胰腺肿瘤"
     ],
     "synonyms_en": [
-      "pancreatic neoplasm",
       "pancreatic carcinoma",
-      "pancreatic ductal adenocarcinoma"
+      "pancreatic ductal adenocarcinoma",
+      "pancreatic neoplasm"
     ],
     "exact_synonyms_en": [
       "pancreatic cancer"
@@ -1072,8 +1072,8 @@
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
     "confidence": 0.93,
     "normalized_terms": [
       "pancreatic cancer",
@@ -1403,10 +1403,10 @@
       "肾肿瘤"
     ],
     "synonyms_en": [
-      "kidney renal clear cell carcinoma",
-      "kidney renal papillary cell carcinoma",
       "renal cell carcinoma",
-      "renal carcinoma"
+      "renal carcinoma",
+      "clear cell renal cell carcinoma",
+      "papillary renal cell carcinoma"
     ],
     "exact_synonyms_en": [
       "kidney cancer"
@@ -1432,10 +1432,10 @@
       "microarray"
     ],
     "modifier_terms_en": [],
-    "disease_group": "genitourinary tumor",
+    "disease_group": "urinary system tumor",
     "concept_type": "disease",
     "parent_terms": [
-      "genitourinary tumor"
+      "urinary system tumor"
     ],
     "cross_refs": {
       "tcga": [
@@ -1448,15 +1448,15 @@
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
     "confidence": 0.93,
     "normalized_terms": [
       "kidney cancer",
       "renal cell carcinoma",
       "renal carcinoma",
-      "kidney renal clear cell carcinoma",
-      "kidney renal papillary cell carcinoma",
+      "clear cell renal cell carcinoma",
+      "papillary renal cell carcinoma",
       "RCC",
       "KIRC",
       "KIRP",
@@ -1464,7 +1464,10 @@
       "肾癌",
       "肾细胞癌",
       "肾肿瘤"
-    ]
+    ],
+    "gtex_mapping_status": {
+      "Kidney": "approximate_candidate"
+    }
   },
   {
     "concept_id": "mini:bladder_cancer",
@@ -2198,42 +2201,55 @@
       "总生存",
       "无进展生存",
       "无病生存",
+      "无复发生存",
       "死亡率",
       "复发率",
       "发生率",
       "患病率",
       "风险",
-      "诊断准确性",
+      "优势比",
+      "相对危险度",
+      "风险比",
       "敏感性",
-      "特异性"
+      "特异性",
+      "诊断准确性",
+      "曲线下面积"
     ],
     "synonyms_en": [
       "overall survival",
       "progression-free survival",
       "disease-free survival",
+      "recurrence-free survival",
       "mortality",
+      "death rate",
+      "recurrence",
       "recurrence rate",
+      "relapse rate",
       "incidence",
       "prevalence",
       "risk",
-      "diagnostic accuracy",
+      "odds ratio",
+      "relative risk",
+      "hazard ratio",
       "sensitivity",
-      "specificity"
+      "specificity",
+      "diagnostic accuracy",
+      "area under the curve",
+      "AUC"
     ],
     "exact_synonyms_en": [
       "overall survival"
     ],
-    "related_synonyms_en": [
-      "OS",
-      "PFS",
-      "DFS",
-      "death rate",
-      "relapse rate"
-    ],
+    "related_synonyms_en": [],
     "abbreviations": [
       "OS",
       "PFS",
-      "DFS"
+      "DFS",
+      "RFS",
+      "OR",
+      "RR",
+      "HR",
+      "AUC"
     ],
     "mesh_terms": [
       "Survival Rate",
@@ -2246,45 +2262,64 @@
     "concept_type": "outcome",
     "parent_terms": [
       "clinical outcome",
+      "effect size",
       "diagnostic outcome"
     ],
     "cross_refs": {},
     "license": "project-local-curated",
-    "version": "stage2.2-mini-coverage-v1-2026-05-03",
-    "term_source": "stage2_2_curated_mini_index",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
     "confidence": 0.9,
     "normalized_terms": [
+      "overall survival",
+      "progression-free survival",
+      "disease-free survival",
+      "recurrence-free survival",
+      "mortality",
+      "death rate",
+      "recurrence",
+      "recurrence rate",
+      "relapse rate",
+      "incidence",
+      "prevalence",
+      "risk",
+      "odds ratio",
+      "relative risk",
+      "hazard ratio",
+      "sensitivity",
+      "specificity",
+      "diagnostic accuracy",
+      "area under the curve",
+      "AUC",
+      "OS",
+      "PFS",
+      "DFS",
+      "RFS",
+      "OR",
+      "RR",
+      "HR",
       "总生存",
       "无进展生存",
       "无病生存",
+      "无复发生存",
       "死亡率",
       "复发率",
       "发生率",
       "患病率",
       "风险",
-      "诊断准确性",
+      "优势比",
+      "相对危险度",
+      "风险比",
       "敏感性",
       "特异性",
-      "overall survival",
-      "progression-free survival",
-      "disease-free survival",
-      "mortality",
-      "recurrence rate",
-      "incidence",
-      "prevalence",
-      "risk",
-      "diagnostic accuracy",
-      "sensitivity",
-      "specificity",
-      "OS",
-      "PFS",
-      "DFS"
+      "诊断准确性",
+      "曲线下面积"
     ]
   },
   {
     "concept_id": "mini:brain_tissue",
     "source_vocabulary": "mini",
-    "source_id": "brain",
+    "source_id": "brain_tissue",
     "preferred_label_en": "brain",
     "zh_terms": [
       "脑"
@@ -2302,18 +2337,21 @@
     ],
     "disease_group": "",
     "concept_type": "tissue",
-    "parent_terms": [],
+    "parent_terms": [
+      "tissue"
+    ],
     "cross_refs": {
       "gtex": [
         "Brain"
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
     "confidence": 0.9,
     "normalized_terms": [
       "brain",
+      "brain tissue",
       "脑"
     ]
   },
@@ -2321,36 +2359,44 @@
     "concept_id": "mini:data_modality_core",
     "source_vocabulary": "mini",
     "source_id": "data_modality_core",
-    "preferred_label_en": "expression profiling",
+    "preferred_label_en": "gene expression profiling",
     "zh_terms": [
       "表达谱",
       "转录组",
       "RNA测序",
-      "RNA-seq",
-      "单细胞",
       "芯片",
+      "单细胞",
+      "空间转录组",
       "甲基化",
       "miRNA",
       "lncRNA",
       "circRNA",
       "蛋白质组",
-      "空间转录组"
+      "代谢组",
+      "ATAC测序",
+      "ChIP测序",
+      "全基因组测序",
+      "外显子测序"
     ],
     "synonyms_en": [
-      "expression profiling",
       "gene expression profiling",
+      "expression profiling",
       "transcriptome",
       "transcriptomics",
       "RNA-seq",
       "RNA sequencing",
+      "microarray",
+      "gene expression microarray",
       "single-cell RNA-seq",
       "single cell RNA sequencing",
       "scRNA-seq",
-      "microarray",
-      "gene expression microarray",
-      "DNA methylation",
+      "spatial transcriptomics",
+      "spatial transcriptome",
+      "spatially resolved transcriptomics",
       "methylation profiling",
+      "DNA methylation",
       "methylation array",
+      "miRNA profiling",
       "miRNA",
       "microRNA",
       "miRNA expression profiling",
@@ -2363,67 +2409,74 @@
       "proteomics",
       "protein expression profiling",
       "proteome",
-      "spatial transcriptomics",
-      "spatial transcriptome"
+      "metabolomics",
+      "metabolome profiling",
+      "ATAC-seq",
+      "assay for transposase-accessible chromatin sequencing",
+      "ChIP-seq",
+      "chromatin immunoprecipitation sequencing",
+      "whole genome sequencing",
+      "WGS",
+      "whole exome sequencing",
+      "WES"
     ],
     "exact_synonyms_en": [
-      "expression profiling"
+      "gene expression profiling"
     ],
-    "related_synonyms_en": [
-      "gene expression profiling",
-      "methylation profiling",
-      "long non-coding RNA",
-      "proteome"
-    ],
+    "related_synonyms_en": [],
     "abbreviations": [
       "RNA-seq",
       "scRNA-seq",
       "miRNA",
       "lncRNA",
-      "circRNA"
+      "circRNA",
+      "ATAC-seq",
+      "ChIP-seq",
+      "WGS",
+      "WES"
     ],
     "mesh_terms": [
       "Gene Expression Profiling",
       "Sequence Analysis, RNA",
       "Proteomics",
-      "Transcriptome"
+      "Metabolomics",
+      "DNA Methylation",
+      "Chromatin Immunoprecipitation Sequencing",
+      "Whole Genome Sequencing"
     ],
     "disease_group": "",
     "concept_type": "data_modality",
-    "parent_terms": [],
+    "parent_terms": [
+      "bioinformatics data modality"
+    ],
     "cross_refs": {},
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
     "confidence": 0.9,
     "normalized_terms": [
-      "表达谱",
-      "转录组",
-      "RNA测序",
-      "RNA-seq",
-      "单细胞",
-      "芯片",
-      "甲基化",
-      "miRNA",
-      "lncRNA",
-      "circRNA",
-      "蛋白质组",
-      "空间转录组",
-      "expression profiling",
       "gene expression profiling",
+      "expression profiling",
       "transcriptome",
       "transcriptomics",
+      "RNA-seq",
       "RNA sequencing",
+      "microarray",
+      "gene expression microarray",
       "single-cell RNA-seq",
       "single cell RNA sequencing",
       "scRNA-seq",
-      "microarray",
-      "gene expression microarray",
-      "DNA methylation",
+      "spatial transcriptomics",
+      "spatial transcriptome",
+      "spatially resolved transcriptomics",
       "methylation profiling",
+      "DNA methylation",
       "methylation array",
+      "miRNA profiling",
+      "miRNA",
       "microRNA",
       "miRNA expression profiling",
+      "lncRNA",
       "long non-coding RNA",
       "long noncoding RNA",
       "circRNA",
@@ -2432,8 +2485,3021 @@
       "proteomics",
       "protein expression profiling",
       "proteome",
-      "spatial transcriptomics",
-      "spatial transcriptome"
+      "metabolomics",
+      "metabolome profiling",
+      "ATAC-seq",
+      "assay for transposase-accessible chromatin sequencing",
+      "ChIP-seq",
+      "chromatin immunoprecipitation sequencing",
+      "whole genome sequencing",
+      "WGS",
+      "whole exome sequencing",
+      "WES",
+      "表达谱",
+      "转录组",
+      "RNA测序",
+      "芯片",
+      "单细胞",
+      "空间转录组",
+      "甲基化",
+      "蛋白质组",
+      "代谢组",
+      "ATAC测序",
+      "ChIP测序",
+      "全基因组测序",
+      "外显子测序"
+    ]
+  },
+  {
+    "concept_id": "mini:meningioma",
+    "source_vocabulary": "mini",
+    "source_id": "meningioma",
+    "preferred_label_en": "meningioma",
+    "zh_terms": [
+      "脑膜瘤"
+    ],
+    "synonyms_en": [
+      "intracranial meningioma",
+      "meningeal neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "meningioma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Meningioma",
+      "Meningeal Neoplasms"
+    ],
+    "tissue_terms": [
+      "brain",
+      "meninges"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "central nervous system tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "central nervous system tumor"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "meningioma",
+      "intracranial meningioma",
+      "meningeal neoplasm",
+      "脑膜瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:pituitary_adenoma",
+    "source_vocabulary": "mini",
+    "source_id": "pituitary_adenoma",
+    "preferred_label_en": "pituitary adenoma",
+    "zh_terms": [
+      "垂体腺瘤",
+      "垂体瘤"
+    ],
+    "synonyms_en": [
+      "pituitary neuroendocrine tumor",
+      "pituitary neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "pituitary adenoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PitNET"
+    ],
+    "mesh_terms": [
+      "Pituitary Neoplasms",
+      "Adenoma"
+    ],
+    "tissue_terms": [
+      "pituitary",
+      "brain"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "endocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "endocrine tumor"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "pituitary adenoma",
+      "pituitary neuroendocrine tumor",
+      "pituitary neoplasm",
+      "PitNET",
+      "垂体腺瘤",
+      "垂体瘤"
+    ],
+    "gtex_mapping_status": {
+      "Brain": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:nasopharyngeal_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "nasopharyngeal_carcinoma",
+    "preferred_label_en": "nasopharyngeal carcinoma",
+    "zh_terms": [
+      "鼻咽癌",
+      "鼻咽部癌"
+    ],
+    "synonyms_en": [
+      "nasopharyngeal cancer",
+      "NPC"
+    ],
+    "exact_synonyms_en": [
+      "nasopharyngeal carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "NPC"
+    ],
+    "mesh_terms": [
+      "Nasopharyngeal Neoplasms"
+    ],
+    "tissue_terms": [
+      "nasopharynx"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "head and neck tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "head and neck tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-HNSC"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "nasopharyngeal carcinoma",
+      "nasopharyngeal cancer",
+      "NPC",
+      "鼻咽癌",
+      "鼻咽部癌"
+    ]
+  },
+  {
+    "concept_id": "mini:head_and_neck_squamous_cell_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "head_and_neck_squamous_cell_carcinoma",
+    "preferred_label_en": "head and neck squamous cell carcinoma",
+    "zh_terms": [
+      "头颈鳞癌",
+      "头颈部鳞状细胞癌"
+    ],
+    "synonyms_en": [
+      "head and neck cancer",
+      "squamous cell carcinoma of head and neck"
+    ],
+    "exact_synonyms_en": [
+      "head and neck squamous cell carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HNSCC",
+      "HNSC"
+    ],
+    "mesh_terms": [
+      "Head and Neck Neoplasms",
+      "Carcinoma, Squamous Cell"
+    ],
+    "tissue_terms": [
+      "head and neck"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "head and neck tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "head and neck tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-HNSC"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "head and neck squamous cell carcinoma",
+      "head and neck cancer",
+      "squamous cell carcinoma of head and neck",
+      "HNSCC",
+      "HNSC",
+      "头颈鳞癌",
+      "头颈部鳞状细胞癌"
+    ]
+  },
+  {
+    "concept_id": "mini:oral_squamous_cell_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "oral_squamous_cell_carcinoma",
+    "preferred_label_en": "oral squamous cell carcinoma",
+    "zh_terms": [
+      "口腔鳞癌",
+      "口腔鳞状细胞癌"
+    ],
+    "synonyms_en": [
+      "oral cavity squamous cell carcinoma",
+      "mouth squamous cell carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "oral squamous cell carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "OSCC"
+    ],
+    "mesh_terms": [
+      "Mouth Neoplasms",
+      "Carcinoma, Squamous Cell"
+    ],
+    "tissue_terms": [
+      "oral cavity"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "head and neck tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "head and neck tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-HNSC"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "oral squamous cell carcinoma",
+      "oral cavity squamous cell carcinoma",
+      "mouth squamous cell carcinoma",
+      "OSCC",
+      "口腔鳞癌",
+      "口腔鳞状细胞癌"
+    ]
+  },
+  {
+    "concept_id": "mini:laryngeal_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "laryngeal_cancer",
+    "preferred_label_en": "laryngeal cancer",
+    "zh_terms": [
+      "喉癌",
+      "喉肿瘤"
+    ],
+    "synonyms_en": [
+      "laryngeal carcinoma",
+      "larynx cancer",
+      "laryngeal squamous cell carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "laryngeal cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LSCC"
+    ],
+    "mesh_terms": [
+      "Laryngeal Neoplasms"
+    ],
+    "tissue_terms": [
+      "larynx"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "head and neck tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "head and neck tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-HNSC"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "laryngeal cancer",
+      "laryngeal carcinoma",
+      "larynx cancer",
+      "laryngeal squamous cell carcinoma",
+      "LSCC",
+      "喉癌",
+      "喉肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:small_cell_lung_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "small_cell_lung_cancer",
+    "preferred_label_en": "small cell lung cancer",
+    "zh_terms": [
+      "小细胞肺癌"
+    ],
+    "synonyms_en": [
+      "small-cell lung carcinoma",
+      "oat cell lung cancer",
+      "lung cancer"
+    ],
+    "exact_synonyms_en": [
+      "small cell lung cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SCLC"
+    ],
+    "mesh_terms": [
+      "Small Cell Lung Carcinoma",
+      "Lung Neoplasms"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "small cell lung cancer",
+      "small-cell lung carcinoma",
+      "oat cell lung cancer",
+      "lung cancer",
+      "SCLC",
+      "小细胞肺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:gastric_adenocarcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "gastric_adenocarcinoma",
+    "preferred_label_en": "gastric adenocarcinoma",
+    "zh_terms": [
+      "胃腺癌"
+    ],
+    "synonyms_en": [
+      "stomach adenocarcinoma",
+      "gastric cancer",
+      "stomach cancer"
+    ],
+    "exact_synonyms_en": [
+      "gastric adenocarcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "STAD"
+    ],
+    "mesh_terms": [
+      "Stomach Neoplasms",
+      "Adenocarcinoma"
+    ],
+    "tissue_terms": [
+      "stomach"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-STAD"
+      ],
+      "gtex": [
+        "Stomach"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "gastric adenocarcinoma",
+      "stomach adenocarcinoma",
+      "gastric cancer",
+      "stomach cancer",
+      "STAD",
+      "胃腺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:colon_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "colon_cancer",
+    "preferred_label_en": "colon cancer",
+    "zh_terms": [
+      "结肠癌"
+    ],
+    "synonyms_en": [
+      "colon adenocarcinoma",
+      "colonic neoplasm",
+      "colorectal cancer"
+    ],
+    "exact_synonyms_en": [
+      "colon cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "COAD"
+    ],
+    "mesh_terms": [
+      "Colonic Neoplasms"
+    ],
+    "tissue_terms": [
+      "colon"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-COAD"
+      ],
+      "gtex": [
+        "Colon"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "colon cancer",
+      "colon adenocarcinoma",
+      "colonic neoplasm",
+      "colorectal cancer",
+      "COAD",
+      "结肠癌"
+    ]
+  },
+  {
+    "concept_id": "mini:rectal_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "rectal_cancer",
+    "preferred_label_en": "rectal cancer",
+    "zh_terms": [
+      "直肠癌"
+    ],
+    "synonyms_en": [
+      "rectum adenocarcinoma",
+      "rectal neoplasm",
+      "colorectal cancer"
+    ],
+    "exact_synonyms_en": [
+      "rectal cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "READ"
+    ],
+    "mesh_terms": [
+      "Rectal Neoplasms"
+    ],
+    "tissue_terms": [
+      "rectum"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-READ"
+      ],
+      "gtex": [
+        "Colon"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "rectal cancer",
+      "rectum adenocarcinoma",
+      "rectal neoplasm",
+      "colorectal cancer",
+      "READ",
+      "直肠癌"
+    ],
+    "gtex_mapping_status": {
+      "Colon": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:cholangiocarcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "cholangiocarcinoma",
+    "preferred_label_en": "cholangiocarcinoma",
+    "zh_terms": [
+      "胆管癌",
+      "胆管细胞癌"
+    ],
+    "synonyms_en": [
+      "bile duct cancer",
+      "biliary tract cancer",
+      "bile duct carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "cholangiocarcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CHOL"
+    ],
+    "mesh_terms": [
+      "Cholangiocarcinoma",
+      "Bile Duct Neoplasms"
+    ],
+    "tissue_terms": [
+      "bile duct",
+      "liver"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-CHOL"
+      ],
+      "gtex": [
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "cholangiocarcinoma",
+      "bile duct cancer",
+      "biliary tract cancer",
+      "bile duct carcinoma",
+      "CHOL",
+      "胆管癌",
+      "胆管细胞癌"
+    ],
+    "gtex_mapping_status": {
+      "Liver": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:pancreatic_ductal_adenocarcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "pancreatic_ductal_adenocarcinoma",
+    "preferred_label_en": "pancreatic ductal adenocarcinoma",
+    "zh_terms": [
+      "胰腺导管腺癌"
+    ],
+    "synonyms_en": [
+      "pancreatic adenocarcinoma",
+      "pancreatic cancer"
+    ],
+    "exact_synonyms_en": [
+      "pancreatic ductal adenocarcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PDAC",
+      "PAAD"
+    ],
+    "mesh_terms": [
+      "Pancreatic Neoplasms",
+      "Adenocarcinoma"
+    ],
+    "tissue_terms": [
+      "pancreas"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-PAAD"
+      ],
+      "gtex": [
+        "Pancreas"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "pancreatic ductal adenocarcinoma",
+      "pancreatic adenocarcinoma",
+      "pancreatic cancer",
+      "PDAC",
+      "PAAD",
+      "胰腺导管腺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:triple_negative_breast_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "triple_negative_breast_cancer",
+    "preferred_label_en": "triple-negative breast cancer",
+    "zh_terms": [
+      "三阴性乳腺癌",
+      "三阴乳腺癌"
+    ],
+    "synonyms_en": [
+      "triple negative breast cancer",
+      "basal-like breast cancer",
+      "breast cancer"
+    ],
+    "exact_synonyms_en": [
+      "triple-negative breast cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TNBC",
+      "BRCA"
+    ],
+    "mesh_terms": [
+      "Breast Neoplasms"
+    ],
+    "tissue_terms": [
+      "breast"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "breast tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "breast tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-BRCA"
+      ],
+      "gtex": [
+        "Breast"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "triple-negative breast cancer",
+      "triple negative breast cancer",
+      "basal-like breast cancer",
+      "breast cancer",
+      "TNBC",
+      "BRCA",
+      "三阴性乳腺癌",
+      "三阴乳腺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:kidney_clear_cell_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "kidney_clear_cell_carcinoma",
+    "preferred_label_en": "kidney clear cell carcinoma",
+    "zh_terms": [
+      "肾透明细胞癌",
+      "透明细胞肾细胞癌"
+    ],
+    "synonyms_en": [
+      "clear cell renal cell carcinoma",
+      "kidney renal clear cell carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "kidney clear cell carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ccRCC",
+      "KIRC"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "urinary system tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "urinary system tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-KIRC"
+      ],
+      "gtex": [
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "kidney clear cell carcinoma",
+      "clear cell renal cell carcinoma",
+      "kidney renal clear cell carcinoma",
+      "ccRCC",
+      "KIRC",
+      "肾透明细胞癌",
+      "透明细胞肾细胞癌"
+    ],
+    "gtex_mapping_status": {
+      "Kidney": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:kidney_papillary_cell_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "kidney_papillary_cell_carcinoma",
+    "preferred_label_en": "kidney papillary cell carcinoma",
+    "zh_terms": [
+      "肾乳头状细胞癌",
+      "乳头状肾细胞癌"
+    ],
+    "synonyms_en": [
+      "papillary renal cell carcinoma",
+      "kidney renal papillary cell carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "kidney papillary cell carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "pRCC",
+      "KIRP"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "urinary system tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "urinary system tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-KIRP"
+      ],
+      "gtex": [
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "kidney papillary cell carcinoma",
+      "papillary renal cell carcinoma",
+      "kidney renal papillary cell carcinoma",
+      "pRCC",
+      "KIRP",
+      "肾乳头状细胞癌",
+      "乳头状肾细胞癌"
+    ],
+    "gtex_mapping_status": {
+      "Kidney": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:leukemia",
+    "source_vocabulary": "mini",
+    "source_id": "leukemia",
+    "preferred_label_en": "leukemia",
+    "zh_terms": [
+      "白血病"
+    ],
+    "synonyms_en": [
+      "leukaemia",
+      "hematologic malignancy"
+    ],
+    "exact_synonyms_en": [
+      "leukemia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Leukemia"
+    ],
+    "tissue_terms": [
+      "blood",
+      "bone marrow"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "hematologic malignancy",
+    "concept_type": "disease",
+    "parent_terms": [
+      "hematologic malignancy"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LAML"
+      ],
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "leukemia",
+      "leukaemia",
+      "hematologic malignancy",
+      "白血病"
+    ],
+    "gtex_mapping_status": {
+      "Whole Blood": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:acute_myeloid_leukemia",
+    "source_vocabulary": "mini",
+    "source_id": "acute_myeloid_leukemia",
+    "preferred_label_en": "acute myeloid leukemia",
+    "zh_terms": [
+      "急性髓系白血病",
+      "急性髓性白血病"
+    ],
+    "synonyms_en": [
+      "acute myelogenous leukemia",
+      "acute nonlymphocytic leukemia"
+    ],
+    "exact_synonyms_en": [
+      "acute myeloid leukemia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AML",
+      "LAML"
+    ],
+    "mesh_terms": [
+      "Leukemia, Myeloid, Acute"
+    ],
+    "tissue_terms": [
+      "blood",
+      "bone marrow"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "hematologic malignancy",
+    "concept_type": "disease",
+    "parent_terms": [
+      "hematologic malignancy"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LAML"
+      ],
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "acute myeloid leukemia",
+      "acute myelogenous leukemia",
+      "acute nonlymphocytic leukemia",
+      "AML",
+      "LAML",
+      "急性髓系白血病",
+      "急性髓性白血病"
+    ],
+    "gtex_mapping_status": {
+      "Whole Blood": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:lymphoma",
+    "source_vocabulary": "mini",
+    "source_id": "lymphoma",
+    "preferred_label_en": "lymphoma",
+    "zh_terms": [
+      "淋巴瘤"
+    ],
+    "synonyms_en": [
+      "malignant lymphoma",
+      "non-Hodgkin lymphoma",
+      "Hodgkin lymphoma"
+    ],
+    "exact_synonyms_en": [
+      "lymphoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Lymphoma"
+    ],
+    "tissue_terms": [
+      "lymph node",
+      "blood"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "hematologic malignancy",
+    "concept_type": "disease",
+    "parent_terms": [
+      "hematologic malignancy"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "lymphoma",
+      "malignant lymphoma",
+      "non-Hodgkin lymphoma",
+      "Hodgkin lymphoma",
+      "淋巴瘤"
+    ],
+    "gtex_mapping_status": {
+      "Whole Blood": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:multiple_myeloma",
+    "source_vocabulary": "mini",
+    "source_id": "multiple_myeloma",
+    "preferred_label_en": "multiple myeloma",
+    "zh_terms": [
+      "多发性骨髓瘤"
+    ],
+    "synonyms_en": [
+      "plasma cell myeloma",
+      "myeloma"
+    ],
+    "exact_synonyms_en": [
+      "multiple myeloma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MM"
+    ],
+    "mesh_terms": [
+      "Multiple Myeloma"
+    ],
+    "tissue_terms": [
+      "bone marrow",
+      "blood"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "hematologic malignancy",
+    "concept_type": "disease",
+    "parent_terms": [
+      "hematologic malignancy"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "multiple myeloma",
+      "plasma cell myeloma",
+      "myeloma",
+      "MM",
+      "多发性骨髓瘤"
+    ],
+    "gtex_mapping_status": {
+      "Whole Blood": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:type_1_diabetes_mellitus",
+    "source_vocabulary": "mini",
+    "source_id": "type_1_diabetes_mellitus",
+    "preferred_label_en": "Type 1 Diabetes Mellitus",
+    "zh_terms": [
+      "1型糖尿病",
+      "一型糖尿病",
+      "I型糖尿病"
+    ],
+    "synonyms_en": [
+      "type 1 diabetes",
+      "insulin-dependent diabetes mellitus",
+      "autoimmune diabetes"
+    ],
+    "exact_synonyms_en": [
+      "Type 1 Diabetes Mellitus"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "T1D",
+      "T1DM"
+    ],
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 1",
+      "Diabetes Mellitus"
+    ],
+    "tissue_terms": [
+      "pancreas",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Pancreas"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Type 1 Diabetes Mellitus",
+      "type 1 diabetes",
+      "insulin-dependent diabetes mellitus",
+      "autoimmune diabetes",
+      "T1D",
+      "T1DM",
+      "1型糖尿病",
+      "一型糖尿病",
+      "I型糖尿病"
+    ]
+  },
+  {
+    "concept_id": "mini:insulin_resistance",
+    "source_vocabulary": "mini",
+    "source_id": "insulin_resistance",
+    "preferred_label_en": "insulin resistance",
+    "zh_terms": [
+      "胰岛素抵抗"
+    ],
+    "synonyms_en": [
+      "insulin sensitivity",
+      "impaired insulin action"
+    ],
+    "exact_synonyms_en": [
+      "insulin resistance"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IR"
+    ],
+    "mesh_terms": [
+      "Insulin Resistance"
+    ],
+    "tissue_terms": [
+      "adipose tissue",
+      "muscle",
+      "liver"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Adipose Tissue",
+        "Muscle",
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "insulin resistance",
+      "insulin sensitivity",
+      "impaired insulin action",
+      "IR",
+      "胰岛素抵抗"
+    ]
+  },
+  {
+    "concept_id": "mini:metabolic_syndrome",
+    "source_vocabulary": "mini",
+    "source_id": "metabolic_syndrome",
+    "preferred_label_en": "metabolic syndrome",
+    "zh_terms": [
+      "代谢综合征"
+    ],
+    "synonyms_en": [
+      "metabolic syndrome X",
+      "insulin resistance syndrome"
+    ],
+    "exact_synonyms_en": [
+      "metabolic syndrome"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MetS"
+    ],
+    "mesh_terms": [
+      "Metabolic Syndrome"
+    ],
+    "tissue_terms": [
+      "adipose tissue",
+      "liver",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Adipose Tissue",
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "metabolic syndrome",
+      "metabolic syndrome X",
+      "insulin resistance syndrome",
+      "MetS",
+      "代谢综合征"
+    ]
+  },
+  {
+    "concept_id": "mini:overweight",
+    "source_vocabulary": "mini",
+    "source_id": "overweight",
+    "preferred_label_en": "overweight",
+    "zh_terms": [
+      "超重"
+    ],
+    "synonyms_en": [
+      "high body mass index",
+      "increased BMI"
+    ],
+    "exact_synonyms_en": [
+      "overweight"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "BMI"
+    ],
+    "mesh_terms": [
+      "Overweight",
+      "Body Mass Index"
+    ],
+    "tissue_terms": [
+      "adipose tissue"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Adipose Tissue"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "overweight",
+      "high body mass index",
+      "increased BMI",
+      "BMI",
+      "超重"
+    ]
+  },
+  {
+    "concept_id": "mini:hyperlipidemia",
+    "source_vocabulary": "mini",
+    "source_id": "hyperlipidemia",
+    "preferred_label_en": "hyperlipidemia",
+    "zh_terms": [
+      "高脂血症",
+      "血脂异常"
+    ],
+    "synonyms_en": [
+      "dyslipidemia",
+      "hyperlipidaemia"
+    ],
+    "exact_synonyms_en": [
+      "hyperlipidemia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HLD"
+    ],
+    "mesh_terms": [
+      "Hyperlipidemias"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "hyperlipidemia",
+      "dyslipidemia",
+      "hyperlipidaemia",
+      "HLD",
+      "高脂血症",
+      "血脂异常"
+    ]
+  },
+  {
+    "concept_id": "mini:hypercholesterolemia",
+    "source_vocabulary": "mini",
+    "source_id": "hypercholesterolemia",
+    "preferred_label_en": "hypercholesterolemia",
+    "zh_terms": [
+      "高胆固醇血症"
+    ],
+    "synonyms_en": [
+      "high cholesterol",
+      "hypercholesterolaemia"
+    ],
+    "exact_synonyms_en": [
+      "hypercholesterolemia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Hypercholesterolemia"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "hypercholesterolemia",
+      "high cholesterol",
+      "hypercholesterolaemia",
+      "高胆固醇血症"
+    ]
+  },
+  {
+    "concept_id": "mini:heart_failure",
+    "source_vocabulary": "mini",
+    "source_id": "heart_failure",
+    "preferred_label_en": "heart failure",
+    "zh_terms": [
+      "心力衰竭",
+      "心衰"
+    ],
+    "synonyms_en": [
+      "cardiac failure",
+      "congestive heart failure"
+    ],
+    "exact_synonyms_en": [
+      "heart failure"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HF",
+      "CHF"
+    ],
+    "mesh_terms": [
+      "Heart Failure"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "heart failure",
+      "cardiac failure",
+      "congestive heart failure",
+      "HF",
+      "CHF",
+      "心力衰竭",
+      "心衰"
+    ]
+  },
+  {
+    "concept_id": "mini:atherosclerosis",
+    "source_vocabulary": "mini",
+    "source_id": "atherosclerosis",
+    "preferred_label_en": "atherosclerosis",
+    "zh_terms": [
+      "动脉粥样硬化"
+    ],
+    "synonyms_en": [
+      "arteriosclerosis",
+      "atherosclerotic disease"
+    ],
+    "exact_synonyms_en": [
+      "atherosclerosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Atherosclerosis"
+    ],
+    "tissue_terms": [
+      "artery",
+      "heart"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery",
+        "Heart"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "atherosclerosis",
+      "arteriosclerosis",
+      "atherosclerotic disease",
+      "动脉粥样硬化"
+    ]
+  },
+  {
+    "concept_id": "mini:glomerulonephritis",
+    "source_vocabulary": "mini",
+    "source_id": "glomerulonephritis",
+    "preferred_label_en": "glomerulonephritis",
+    "zh_terms": [
+      "肾小球肾炎"
+    ],
+    "synonyms_en": [
+      "glomerular nephritis",
+      "nephritis"
+    ],
+    "exact_synonyms_en": [
+      "glomerulonephritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "GN"
+    ],
+    "mesh_terms": [
+      "Glomerulonephritis"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "kidney disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "kidney disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "glomerulonephritis",
+      "glomerular nephritis",
+      "nephritis",
+      "GN",
+      "肾小球肾炎"
+    ],
+    "gtex_mapping_status": {
+      "Kidney": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:stroke",
+    "source_vocabulary": "mini",
+    "source_id": "stroke",
+    "preferred_label_en": "stroke",
+    "zh_terms": [
+      "脑卒中",
+      "中风"
+    ],
+    "synonyms_en": [
+      "cerebrovascular accident",
+      "ischemic stroke",
+      "hemorrhagic stroke"
+    ],
+    "exact_synonyms_en": [
+      "stroke"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CVA"
+    ],
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "neurologic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "neurologic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "stroke",
+      "cerebrovascular accident",
+      "ischemic stroke",
+      "hemorrhagic stroke",
+      "CVA",
+      "脑卒中",
+      "中风"
+    ]
+  },
+  {
+    "concept_id": "mini:multiple_sclerosis",
+    "source_vocabulary": "mini",
+    "source_id": "multiple_sclerosis",
+    "preferred_label_en": "multiple sclerosis",
+    "zh_terms": [
+      "多发性硬化",
+      "多发性硬化症"
+    ],
+    "synonyms_en": [
+      "disseminated sclerosis"
+    ],
+    "exact_synonyms_en": [
+      "multiple sclerosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MS"
+    ],
+    "mesh_terms": [
+      "Multiple Sclerosis"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "neurologic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "neurologic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "multiple sclerosis",
+      "disseminated sclerosis",
+      "MS",
+      "多发性硬化",
+      "多发性硬化症"
+    ]
+  },
+  {
+    "concept_id": "mini:systemic_lupus_erythematosus",
+    "source_vocabulary": "mini",
+    "source_id": "systemic_lupus_erythematosus",
+    "preferred_label_en": "systemic lupus erythematosus",
+    "zh_terms": [
+      "系统性红斑狼疮"
+    ],
+    "synonyms_en": [
+      "lupus",
+      "SLE"
+    ],
+    "exact_synonyms_en": [
+      "systemic lupus erythematosus"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SLE"
+    ],
+    "mesh_terms": [
+      "Lupus Erythematosus, Systemic"
+    ],
+    "tissue_terms": [
+      "blood",
+      "skin",
+      "kidney"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "immune mediated disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "immune mediated disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Skin",
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "systemic lupus erythematosus",
+      "lupus",
+      "SLE",
+      "系统性红斑狼疮"
+    ]
+  },
+  {
+    "concept_id": "mini:crohn_disease",
+    "source_vocabulary": "mini",
+    "source_id": "crohn_disease",
+    "preferred_label_en": "Crohn Disease",
+    "zh_terms": [
+      "克罗恩病"
+    ],
+    "synonyms_en": [
+      "Crohn disease",
+      "Crohn's disease",
+      "inflammatory bowel disease"
+    ],
+    "exact_synonyms_en": [
+      "Crohn Disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CD"
+    ],
+    "mesh_terms": [
+      "Crohn Disease"
+    ],
+    "tissue_terms": [
+      "intestine",
+      "colon"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "immune mediated disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "immune mediated disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Colon",
+        "Small Intestine"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Crohn Disease",
+      "Crohn's disease",
+      "inflammatory bowel disease",
+      "CD",
+      "克罗恩病"
+    ]
+  },
+  {
+    "concept_id": "mini:ulcerative_colitis",
+    "source_vocabulary": "mini",
+    "source_id": "ulcerative_colitis",
+    "preferred_label_en": "Ulcerative Colitis",
+    "zh_terms": [
+      "溃疡性结肠炎"
+    ],
+    "synonyms_en": [
+      "ulcerative colitis",
+      "inflammatory bowel disease"
+    ],
+    "exact_synonyms_en": [
+      "Ulcerative Colitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "UC"
+    ],
+    "mesh_terms": [
+      "Colitis, Ulcerative"
+    ],
+    "tissue_terms": [
+      "colon"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "immune mediated disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "immune mediated disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Colon"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Ulcerative Colitis",
+      "inflammatory bowel disease",
+      "UC",
+      "溃疡性结肠炎"
+    ]
+  },
+  {
+    "concept_id": "mini:chronic_obstructive_pulmonary_disease",
+    "source_vocabulary": "mini",
+    "source_id": "chronic_obstructive_pulmonary_disease",
+    "preferred_label_en": "chronic obstructive pulmonary disease",
+    "zh_terms": [
+      "慢性阻塞性肺疾病",
+      "慢阻肺"
+    ],
+    "synonyms_en": [
+      "COPD",
+      "chronic obstructive lung disease"
+    ],
+    "exact_synonyms_en": [
+      "chronic obstructive pulmonary disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "COPD"
+    ],
+    "mesh_terms": [
+      "Pulmonary Disease, Chronic Obstructive"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "respiratory disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "respiratory disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "chronic obstructive pulmonary disease",
+      "COPD",
+      "chronic obstructive lung disease",
+      "慢性阻塞性肺疾病",
+      "慢阻肺"
+    ]
+  },
+  {
+    "concept_id": "mini:asthma",
+    "source_vocabulary": "mini",
+    "source_id": "asthma",
+    "preferred_label_en": "asthma",
+    "zh_terms": [
+      "哮喘"
+    ],
+    "synonyms_en": [
+      "bronchial asthma",
+      "allergic asthma"
+    ],
+    "exact_synonyms_en": [
+      "asthma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Asthma"
+    ],
+    "tissue_terms": [
+      "lung",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "respiratory disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "respiratory disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "asthma",
+      "bronchial asthma",
+      "allergic asthma",
+      "哮喘"
+    ]
+  },
+  {
+    "concept_id": "mini:thyroid_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "thyroid_tissue",
+    "preferred_label_en": "thyroid",
+    "zh_terms": [
+      "甲状腺"
+    ],
+    "synonyms_en": [
+      "thyroid gland"
+    ],
+    "exact_synonyms_en": [
+      "thyroid"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Thyroid Gland"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Thyroid"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "thyroid",
+      "thyroid gland",
+      "甲状腺"
+    ]
+  },
+  {
+    "concept_id": "mini:esophagus_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "esophagus_tissue",
+    "preferred_label_en": "esophagus",
+    "zh_terms": [
+      "食管",
+      "食道"
+    ],
+    "synonyms_en": [
+      "esophageal tissue"
+    ],
+    "exact_synonyms_en": [
+      "esophagus"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Esophagus"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Esophagus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "esophagus",
+      "esophageal tissue",
+      "食管",
+      "食道"
+    ]
+  },
+  {
+    "concept_id": "mini:lung_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "lung_tissue",
+    "preferred_label_en": "lung",
+    "zh_terms": [
+      "肺"
+    ],
+    "synonyms_en": [
+      "lung tissue"
+    ],
+    "exact_synonyms_en": [
+      "lung"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Lung"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "lung",
+      "lung tissue",
+      "肺"
+    ]
+  },
+  {
+    "concept_id": "mini:stomach_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "stomach_tissue",
+    "preferred_label_en": "stomach",
+    "zh_terms": [
+      "胃"
+    ],
+    "synonyms_en": [
+      "gastric tissue"
+    ],
+    "exact_synonyms_en": [
+      "stomach"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Stomach"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Stomach"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "stomach",
+      "gastric tissue",
+      "胃"
+    ]
+  },
+  {
+    "concept_id": "mini:colon_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "colon_tissue",
+    "preferred_label_en": "colon",
+    "zh_terms": [
+      "结肠"
+    ],
+    "synonyms_en": [
+      "colonic tissue"
+    ],
+    "exact_synonyms_en": [
+      "colon"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Colon"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Colon"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "colon",
+      "colonic tissue",
+      "结肠"
+    ]
+  },
+  {
+    "concept_id": "mini:rectum_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "rectum_tissue",
+    "preferred_label_en": "rectum",
+    "zh_terms": [
+      "直肠"
+    ],
+    "synonyms_en": [
+      "rectal tissue"
+    ],
+    "exact_synonyms_en": [
+      "rectum"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Rectum"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Colon"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "rectum",
+      "rectal tissue",
+      "直肠"
+    ],
+    "gtex_mapping_status": {
+      "Colon": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:liver_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "liver_tissue",
+    "preferred_label_en": "liver",
+    "zh_terms": [
+      "肝"
+    ],
+    "synonyms_en": [
+      "hepatic tissue"
+    ],
+    "exact_synonyms_en": [
+      "liver"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Liver"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "liver",
+      "hepatic tissue",
+      "肝"
+    ]
+  },
+  {
+    "concept_id": "mini:pancreas_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "pancreas_tissue",
+    "preferred_label_en": "pancreas",
+    "zh_terms": [
+      "胰腺"
+    ],
+    "synonyms_en": [
+      "pancreatic tissue"
+    ],
+    "exact_synonyms_en": [
+      "pancreas"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Pancreas"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Pancreas"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "pancreas",
+      "pancreatic tissue",
+      "胰腺"
+    ]
+  },
+  {
+    "concept_id": "mini:breast_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "breast_tissue",
+    "preferred_label_en": "breast",
+    "zh_terms": [
+      "乳腺"
+    ],
+    "synonyms_en": [
+      "mammary tissue"
+    ],
+    "exact_synonyms_en": [
+      "breast"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Breast"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Breast"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "breast",
+      "mammary tissue",
+      "乳腺"
+    ]
+  },
+  {
+    "concept_id": "mini:prostate_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "prostate_tissue",
+    "preferred_label_en": "prostate",
+    "zh_terms": [
+      "前列腺"
+    ],
+    "synonyms_en": [
+      "prostatic tissue"
+    ],
+    "exact_synonyms_en": [
+      "prostate"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Prostate"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Prostate"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "prostate",
+      "prostatic tissue",
+      "前列腺"
+    ]
+  },
+  {
+    "concept_id": "mini:ovary_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "ovary_tissue",
+    "preferred_label_en": "ovary",
+    "zh_terms": [
+      "卵巢"
+    ],
+    "synonyms_en": [
+      "ovarian tissue"
+    ],
+    "exact_synonyms_en": [
+      "ovary"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Ovary"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Ovary"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "ovary",
+      "ovarian tissue",
+      "卵巢"
+    ]
+  },
+  {
+    "concept_id": "mini:cervix_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "cervix_tissue",
+    "preferred_label_en": "cervix",
+    "zh_terms": [
+      "宫颈"
+    ],
+    "synonyms_en": [
+      "uterine cervix"
+    ],
+    "exact_synonyms_en": [
+      "cervix"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Uterine Cervix"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Uterus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "cervix",
+      "uterine cervix",
+      "宫颈"
+    ],
+    "gtex_mapping_status": {
+      "Uterus": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:endometrium_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "endometrium_tissue",
+    "preferred_label_en": "endometrium",
+    "zh_terms": [
+      "子宫内膜"
+    ],
+    "synonyms_en": [
+      "uterine endometrium"
+    ],
+    "exact_synonyms_en": [
+      "endometrium"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Endometrium"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Uterus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "endometrium",
+      "uterine endometrium",
+      "子宫内膜"
+    ],
+    "gtex_mapping_status": {
+      "Uterus": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:kidney_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "kidney_tissue",
+    "preferred_label_en": "kidney",
+    "zh_terms": [
+      "肾"
+    ],
+    "synonyms_en": [
+      "renal tissue"
+    ],
+    "exact_synonyms_en": [
+      "kidney"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Kidney"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "kidney",
+      "renal tissue",
+      "肾"
+    ],
+    "gtex_mapping_status": {
+      "Kidney": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:bladder_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "bladder_tissue",
+    "preferred_label_en": "bladder",
+    "zh_terms": [
+      "膀胱"
+    ],
+    "synonyms_en": [
+      "urinary bladder"
+    ],
+    "exact_synonyms_en": [
+      "bladder"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Urinary Bladder"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Bladder"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "bladder",
+      "urinary bladder",
+      "膀胱"
+    ],
+    "gtex_mapping_status": {
+      "Bladder": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:skin_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "skin_tissue",
+    "preferred_label_en": "skin",
+    "zh_terms": [
+      "皮肤"
+    ],
+    "synonyms_en": [
+      "cutaneous tissue"
+    ],
+    "exact_synonyms_en": [
+      "skin"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Skin"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Skin"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "skin",
+      "cutaneous tissue",
+      "皮肤"
+    ]
+  },
+  {
+    "concept_id": "mini:blood_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "blood_tissue",
+    "preferred_label_en": "blood",
+    "zh_terms": [
+      "血液"
+    ],
+    "synonyms_en": [
+      "whole blood"
+    ],
+    "exact_synonyms_en": [
+      "blood"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Blood"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "blood",
+      "whole blood",
+      "血液"
+    ]
+  },
+  {
+    "concept_id": "mini:bone_marrow_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "bone_marrow_tissue",
+    "preferred_label_en": "bone marrow",
+    "zh_terms": [
+      "骨髓"
+    ],
+    "synonyms_en": [
+      "marrow"
+    ],
+    "exact_synonyms_en": [
+      "bone marrow"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Bone Marrow"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "bone marrow",
+      "marrow",
+      "骨髓"
+    ],
+    "gtex_mapping_status": {
+      "Whole Blood": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:lymph_node_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "lymph_node_tissue",
+    "preferred_label_en": "lymph node",
+    "zh_terms": [
+      "淋巴结"
+    ],
+    "synonyms_en": [
+      "lymphatic tissue"
+    ],
+    "exact_synonyms_en": [
+      "lymph node"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Lymph Nodes"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "lymph node",
+      "lymphatic tissue",
+      "淋巴结"
+    ],
+    "gtex_mapping_status": {
+      "Whole Blood": "approximate_candidate"
+    }
+  },
+  {
+    "concept_id": "mini:adipose_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "adipose_tissue",
+    "preferred_label_en": "adipose tissue",
+    "zh_terms": [
+      "脂肪组织"
+    ],
+    "synonyms_en": [
+      "fat tissue"
+    ],
+    "exact_synonyms_en": [
+      "adipose tissue"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Adipose Tissue"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Adipose Tissue"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "adipose tissue",
+      "fat tissue",
+      "脂肪组织"
+    ]
+  },
+  {
+    "concept_id": "mini:muscle_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "muscle_tissue",
+    "preferred_label_en": "muscle",
+    "zh_terms": [
+      "肌肉"
+    ],
+    "synonyms_en": [
+      "skeletal muscle"
+    ],
+    "exact_synonyms_en": [
+      "muscle"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Muscle, Skeletal"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Muscle"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "muscle",
+      "skeletal muscle",
+      "肌肉"
+    ]
+  },
+  {
+    "concept_id": "mini:heart_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "heart_tissue",
+    "preferred_label_en": "heart",
+    "zh_terms": [
+      "心脏"
+    ],
+    "synonyms_en": [
+      "cardiac tissue",
+      "myocardium"
+    ],
+    "exact_synonyms_en": [
+      "heart"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Heart"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "tissue"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "heart",
+      "cardiac tissue",
+      "myocardium",
+      "心脏"
+    ]
+  },
+  {
+    "concept_id": "mini:study_design_core",
+    "source_vocabulary": "mini",
+    "source_id": "study_design_core",
+    "preferred_label_en": "randomized controlled trial",
+    "zh_terms": [
+      "随机对照试验",
+      "队列研究",
+      "病例对照研究",
+      "横断面研究",
+      "诊断准确性研究",
+      "预后研究",
+      "观察性研究"
+    ],
+    "synonyms_en": [
+      "randomized controlled trial",
+      "randomised controlled trial",
+      "cohort study",
+      "case-control study",
+      "case control study",
+      "cross-sectional study",
+      "cross sectional study",
+      "diagnostic accuracy study",
+      "prognostic study",
+      "observational study"
+    ],
+    "exact_synonyms_en": [
+      "randomized controlled trial"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RCT"
+    ],
+    "mesh_terms": [
+      "Randomized Controlled Trial",
+      "Cohort Studies",
+      "Case-Control Studies",
+      "Cross-Sectional Studies"
+    ],
+    "disease_group": "",
+    "concept_type": "study_design",
+    "parent_terms": [
+      "study design"
+    ],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "randomized controlled trial",
+      "randomised controlled trial",
+      "cohort study",
+      "case-control study",
+      "case control study",
+      "cross-sectional study",
+      "cross sectional study",
+      "diagnostic accuracy study",
+      "prognostic study",
+      "observational study",
+      "RCT",
+      "随机对照试验",
+      "队列研究",
+      "病例对照研究",
+      "横断面研究",
+      "诊断准确性研究",
+      "预后研究",
+      "观察性研究"
+    ]
+  },
+  {
+    "concept_id": "mini:publication_exclusion_core",
+    "source_vocabulary": "mini",
+    "source_id": "publication_exclusion_core",
+    "preferred_label_en": "review",
+    "zh_terms": [
+      "综述",
+      "Meta分析",
+      "编辑部文章",
+      "信件",
+      "评论",
+      "病例报告",
+      "会议摘要",
+      "动物实验",
+      "细胞实验"
+    ],
+    "synonyms_en": [
+      "review",
+      "meta-analysis",
+      "systematic review",
+      "editorial",
+      "letter",
+      "comment",
+      "case report",
+      "conference abstract",
+      "animal study",
+      "animal experiment",
+      "cell experiment",
+      "in vitro study"
+    ],
+    "exact_synonyms_en": [
+      "review"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Review",
+      "Editorial",
+      "Letter",
+      "Case Reports",
+      "Animals"
+    ],
+    "disease_group": "",
+    "concept_type": "publication_type",
+    "parent_terms": [
+      "meta analysis exclusion publication type"
+    ],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.2-systematic-v2-2026-05-03",
+    "term_source": "stage2_2_systematic_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "review",
+      "meta-analysis",
+      "systematic review",
+      "editorial",
+      "letter",
+      "comment",
+      "case report",
+      "conference abstract",
+      "animal study",
+      "animal experiment",
+      "cell experiment",
+      "in vitro study",
+      "综述",
+      "Meta分析",
+      "编辑部文章",
+      "信件",
+      "评论",
+      "病例报告",
+      "会议摘要",
+      "动物实验",
+      "细胞实验"
     ]
   }
 ]
