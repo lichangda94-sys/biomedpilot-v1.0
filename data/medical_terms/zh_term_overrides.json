@@ -1910,5 +1910,268 @@
     "term_source": "stage2_1_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
+  },
+  {
+    "zh_term": "脂肪肝",
+    "zh_terms": [
+      "脂肪肝",
+      "脂肪性肝病",
+      "非酒精性脂肪性肝病"
+    ],
+    "preferred_label_en": "Fatty Liver Disease",
+    "mapped_concept_ids": [
+      "mini:fatty_liver_disease"
+    ],
+    "disease_terms_en": [
+      "Fatty Liver Disease",
+      "fatty liver",
+      "hepatic steatosis",
+      "nonalcoholic fatty liver disease"
+    ],
+    "synonyms_en": [
+      "non-alcoholic fatty liver disease",
+      "metabolic dysfunction-associated steatotic liver disease"
+    ],
+    "abbreviations": [
+      "NAFLD",
+      "MASLD"
+    ],
+    "mesh_terms": [
+      "Fatty Liver",
+      "Non-alcoholic Fatty Liver Disease"
+    ],
+    "tissue_terms": [
+      "liver"
+    ],
+    "tcga_project_candidates": [],
+    "gtex_tissue_candidates": [
+      "Liver"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.94,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "circRNA",
+    "preferred_label_en": "circRNA",
+    "data_modality_terms": [
+      "circRNA",
+      "circular RNA",
+      "circRNA expression profiling"
+    ],
+    "abbreviations": [
+      "circRNA"
+    ],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "空间转录组",
+    "preferred_label_en": "spatial transcriptomics",
+    "data_modality_terms": [
+      "spatial transcriptomics",
+      "spatial transcriptome",
+      "spatially resolved transcriptomics"
+    ],
+    "abbreviations": [],
+    "concept_type": "data_modality",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "总生存",
+    "preferred_label_en": "overall survival",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "overall survival"
+    ],
+    "abbreviations": [
+      "OS"
+    ],
+    "mesh_terms": [
+      "Survival Rate"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "无进展生存",
+    "preferred_label_en": "progression-free survival",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "progression-free survival"
+    ],
+    "abbreviations": [
+      "PFS"
+    ],
+    "mesh_terms": [
+      "Survival Rate"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "无病生存",
+    "preferred_label_en": "disease-free survival",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "disease-free survival"
+    ],
+    "abbreviations": [
+      "DFS"
+    ],
+    "mesh_terms": [
+      "Survival Rate"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "死亡率",
+    "preferred_label_en": "mortality",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "mortality",
+      "death rate"
+    ],
+    "mesh_terms": [
+      "Mortality"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "复发率",
+    "preferred_label_en": "recurrence rate",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "recurrence rate",
+      "relapse rate"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "发生率",
+    "preferred_label_en": "incidence",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "incidence"
+    ],
+    "mesh_terms": [
+      "Incidence"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "患病率",
+    "preferred_label_en": "prevalence",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "prevalence"
+    ],
+    "mesh_terms": [
+      "Prevalence"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "风险",
+    "preferred_label_en": "risk",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "risk"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.88,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "诊断准确性",
+    "preferred_label_en": "diagnostic accuracy",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "diagnostic accuracy"
+    ],
+    "mesh_terms": [
+      "Sensitivity and Specificity"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "敏感性",
+    "preferred_label_en": "sensitivity",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "sensitivity"
+    ],
+    "mesh_terms": [
+      "Sensitivity and Specificity"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
+  },
+  {
+    "zh_term": "特异性",
+    "preferred_label_en": "specificity",
+    "mapped_concept_ids": [
+      "mini:meta_outcomes_core"
+    ],
+    "outcome_terms": [
+      "specificity"
+    ],
+    "mesh_terms": [
+      "Sensitivity and Specificity"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_2_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   }
 ]

@@ -2125,6 +2125,163 @@
     ]
   },
   {
+    "concept_id": "mini:fatty_liver_disease",
+    "source_vocabulary": "mini",
+    "source_id": "fatty_liver_disease",
+    "preferred_label_en": "Fatty Liver Disease",
+    "zh_terms": [
+      "脂肪肝",
+      "脂肪性肝病",
+      "非酒精性脂肪性肝病"
+    ],
+    "synonyms_en": [
+      "fatty liver",
+      "hepatic steatosis",
+      "nonalcoholic fatty liver disease",
+      "metabolic dysfunction-associated steatotic liver disease"
+    ],
+    "exact_synonyms_en": [
+      "Fatty Liver Disease"
+    ],
+    "related_synonyms_en": [
+      "liver steatosis",
+      "non-alcoholic fatty liver disease"
+    ],
+    "abbreviations": [
+      "NAFLD",
+      "MASLD"
+    ],
+    "mesh_terms": [
+      "Fatty Liver",
+      "Non-alcoholic Fatty Liver Disease"
+    ],
+    "tissue_terms": [
+      "liver"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic liver disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease",
+      "liver disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.2-mini-coverage-v1-2026-05-03",
+    "term_source": "stage2_2_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Fatty Liver Disease",
+      "fatty liver",
+      "hepatic steatosis",
+      "nonalcoholic fatty liver disease",
+      "non-alcoholic fatty liver disease",
+      "metabolic dysfunction-associated steatotic liver disease",
+      "NAFLD",
+      "MASLD",
+      "脂肪肝",
+      "脂肪性肝病",
+      "非酒精性脂肪性肝病"
+    ]
+  },
+  {
+    "concept_id": "mini:meta_outcomes_core",
+    "source_vocabulary": "mini",
+    "source_id": "meta_outcomes_core",
+    "preferred_label_en": "overall survival",
+    "zh_terms": [
+      "总生存",
+      "无进展生存",
+      "无病生存",
+      "死亡率",
+      "复发率",
+      "发生率",
+      "患病率",
+      "风险",
+      "诊断准确性",
+      "敏感性",
+      "特异性"
+    ],
+    "synonyms_en": [
+      "overall survival",
+      "progression-free survival",
+      "disease-free survival",
+      "mortality",
+      "recurrence rate",
+      "incidence",
+      "prevalence",
+      "risk",
+      "diagnostic accuracy",
+      "sensitivity",
+      "specificity"
+    ],
+    "exact_synonyms_en": [
+      "overall survival"
+    ],
+    "related_synonyms_en": [
+      "OS",
+      "PFS",
+      "DFS",
+      "death rate",
+      "relapse rate"
+    ],
+    "abbreviations": [
+      "OS",
+      "PFS",
+      "DFS"
+    ],
+    "mesh_terms": [
+      "Survival Rate",
+      "Mortality",
+      "Incidence",
+      "Prevalence",
+      "Sensitivity and Specificity"
+    ],
+    "disease_group": "",
+    "concept_type": "outcome",
+    "parent_terms": [
+      "clinical outcome",
+      "diagnostic outcome"
+    ],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.2-mini-coverage-v1-2026-05-03",
+    "term_source": "stage2_2_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "总生存",
+      "无进展生存",
+      "无病生存",
+      "死亡率",
+      "复发率",
+      "发生率",
+      "患病率",
+      "风险",
+      "诊断准确性",
+      "敏感性",
+      "特异性",
+      "overall survival",
+      "progression-free survival",
+      "disease-free survival",
+      "mortality",
+      "recurrence rate",
+      "incidence",
+      "prevalence",
+      "risk",
+      "diagnostic accuracy",
+      "sensitivity",
+      "specificity",
+      "OS",
+      "PFS",
+      "DFS"
+    ]
+  },
+  {
     "concept_id": "mini:brain_tissue",
     "source_vocabulary": "mini",
     "source_id": "brain",
@@ -2175,7 +2332,9 @@
       "甲基化",
       "miRNA",
       "lncRNA",
-      "蛋白质组"
+      "circRNA",
+      "蛋白质组",
+      "空间转录组"
     ],
     "synonyms_en": [
       "expression profiling",
@@ -2198,9 +2357,14 @@
       "lncRNA",
       "long non-coding RNA",
       "long noncoding RNA",
+      "circRNA",
+      "circular RNA",
+      "circRNA expression profiling",
       "proteomics",
       "protein expression profiling",
-      "proteome"
+      "proteome",
+      "spatial transcriptomics",
+      "spatial transcriptome"
     ],
     "exact_synonyms_en": [
       "expression profiling"
@@ -2215,12 +2379,14 @@
       "RNA-seq",
       "scRNA-seq",
       "miRNA",
-      "lncRNA"
+      "lncRNA",
+      "circRNA"
     ],
     "mesh_terms": [
       "Gene Expression Profiling",
       "Sequence Analysis, RNA",
-      "Proteomics"
+      "Proteomics",
+      "Transcriptome"
     ],
     "disease_group": "",
     "concept_type": "data_modality",
@@ -2240,7 +2406,9 @@
       "甲基化",
       "miRNA",
       "lncRNA",
+      "circRNA",
       "蛋白质组",
+      "空间转录组",
       "expression profiling",
       "gene expression profiling",
       "transcriptome",
@@ -2258,9 +2426,14 @@
       "miRNA expression profiling",
       "long non-coding RNA",
       "long noncoding RNA",
+      "circRNA",
+      "circular RNA",
+      "circRNA expression profiling",
       "proteomics",
       "protein expression profiling",
-      "proteome"
+      "proteome",
+      "spatial transcriptomics",
+      "spatial transcriptome"
     ]
   }
 ]

@@ -76,9 +76,40 @@ def test_diabetes_and_obesity_meta_terms_are_available() -> None:
     assert "body mass index" in obesity_text.lower()
 
 
+def test_fatty_liver_mini_vocabulary_terms_are_available() -> None:
+    result = lookup_medical_terms("脂肪肝", target_context="meta_analysis")
+    text = " ".join([*result.disease_terms_en, *result.synonyms_en, *result.abbreviations, *result.mesh_terms])
+
+    assert "Fatty Liver Disease" in text
+    assert "hepatic steatosis" in text
+    assert "NAFLD" in result.abbreviations
+    assert "Fatty Liver" in result.mesh_terms
+    assert result.tcga_project_candidates == []
+    assert result.gtex_tissue_candidates == []
+
+
 def test_data_type_terms_enter_search_translation_draft() -> None:
-    draft = build_search_translation_draft("肺腺癌单细胞甲基化蛋白质组")
+    draft = build_search_translation_draft("肺腺癌单细胞甲基化蛋白质组circRNA空间转录组")
 
     assert "single-cell RNA-seq" in draft.data_type_terms_en
     assert "DNA methylation" in draft.data_type_terms_en
     assert "proteomics" in draft.data_type_terms_en
+    assert "circRNA" in draft.data_type_terms_en
+    assert "spatial transcriptomics" in draft.data_type_terms_en
+
+
+def test_meta_outcome_terms_enter_search_translation_draft() -> None:
+    draft = build_search_translation_draft(
+        "肝细胞癌总生存无进展生存诊断准确性敏感性特异性 Meta 分析",
+        target_context="meta_analysis",
+        target_database="pubmed",
+    )
+    text = " ".join([*draft.outcome_terms_en, *draft.mesh_terms, *draft.pubmed_query_candidates])
+
+    assert "overall survival" in text
+    assert "progression-free survival" in text
+    assert "diagnostic accuracy" in text
+    assert "sensitivity" in text
+    assert "specificity" in text
+    assert "TCGA-LIHC" not in text
+    assert draft.geo_query_candidates == []

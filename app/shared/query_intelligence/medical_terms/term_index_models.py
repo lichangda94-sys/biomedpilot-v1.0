@@ -15,6 +15,9 @@ class TermConcept:
     related_synonyms_en: list[str] = field(default_factory=list)
     abbreviations: list[str] = field(default_factory=list)
     mesh_terms: list[str] = field(default_factory=list)
+    tissue_terms: list[str] = field(default_factory=list)
+    data_modality_terms: list[str] = field(default_factory=list)
+    modifier_terms_en: list[str] = field(default_factory=list)
     disease_group: str = ""
     concept_type: str = ""
     parent_terms: list[str] = field(default_factory=list)
@@ -35,6 +38,9 @@ class TermConcept:
             related_synonyms_en=_list(payload.get("related_synonyms_en")),
             abbreviations=_list(payload.get("abbreviations")),
             mesh_terms=_list(payload.get("mesh_terms")),
+            tissue_terms=_list(payload.get("tissue_terms")),
+            data_modality_terms=_list(payload.get("data_modality_terms")),
+            modifier_terms_en=_list(payload.get("modifier_terms_en")),
             disease_group=str(payload.get("disease_group", "")),
             concept_type=str(payload.get("concept_type", "")),
             parent_terms=_list(payload.get("parent_terms")),

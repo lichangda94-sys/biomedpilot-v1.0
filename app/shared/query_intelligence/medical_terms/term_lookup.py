@@ -84,6 +84,9 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         elif concept.concept_type == "data_modality":
             _append_unique(data_modalities, concept.preferred_label_en)
             _extend_unique(data_modalities, concept.synonyms_en)
+        _extend_unique(tissue_terms, concept.tissue_terms)
+        _extend_unique(data_modalities, concept.data_modality_terms)
+        _extend_unique(modifier_terms, concept.modifier_terms_en)
         _extend_unique(abbreviations, concept.abbreviations)
         _extend_unique(mesh_terms, concept.mesh_terms)
         _extend_unique(tcga_projects, concept.cross_refs.get("tcga", ()))
@@ -112,6 +115,9 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
 
     if not disease_terms and tissue_terms:
         warnings.append("仅识别到组织词，未识别到明确疾病词。")
+    if target_context == "meta_analysis":
+        tcga_projects = []
+        gtex_tissues = []
 
     return TermLookupResult(
         original_term=query,

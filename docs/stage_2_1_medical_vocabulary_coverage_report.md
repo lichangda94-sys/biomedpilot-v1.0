@@ -8,7 +8,7 @@ Stage 2.1 expands the shared medical vocabulary mini coverage for BioMedPilot. T
 
 - `data/medical_terms/zh_term_overrides.json` now contains curated Chinese entry points for oncology diseases, common non-oncology diseases, pathology/clinical modifiers, outcomes, and bioinformatics data modalities.
 - `data/medical_terms/mini_medical_terms_index.json` now contains the same core concepts as a built-in fallback index, with English labels, synonyms, abbreviations, MeSH terms, and TCGA/GTEx cross references where applicable.
-- `data/medical_terms/source_metadata.json` records the Stage 2.1 mini coverage version.
+- `data/medical_terms/source_metadata.json` records the Stage 2.2 mini coverage version for the package-local curated vocabulary.
 
 ## Acceptance Coverage
 
@@ -19,7 +19,9 @@ Stage 2.1 expands the shared medical vocabulary mini coverage for BioMedPilot. T
 - `肝细胞癌`: hepatocellular carcinoma, HCC, TCGA-LIHC.
 - `糖尿病`: Diabetes Mellitus, diabetes, diabetic, MeSH Diabetes Mellitus.
 - `肥胖`: Obesity, BMI, body mass index, MeSH Obesity.
-- Data modality terms enter `data_type_terms_en` through lookup-backed search translation drafts.
+- `脂肪肝`: Fatty Liver Disease, hepatic steatosis, NAFLD, MeSH Fatty Liver.
+- Data modality terms enter `data_type_terms_en` through lookup-backed search translation drafts, including `circRNA` and `空间转录组`.
+- Meta outcome terms include overall survival, progression-free survival, disease-free survival, mortality, recurrence rate, incidence, prevalence, diagnostic accuracy, sensitivity, and specificity.
 
 ## Notes
 
