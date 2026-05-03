@@ -18,6 +18,7 @@ try:
     from app.bioinformatics.workflow_pages import (
         BioinformaticsAcquisitionStatusWidget,
         BioinformaticsAnalysisTaskCenterWidget,
+        BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
@@ -52,6 +53,7 @@ def project_summary(tmp_path: Path):
 def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
     pages = [
         BioinformaticsDataSourceWidget(),
+        BioinformaticsChineseDatasetSearchWidget(),
         BioinformaticsAcquisitionStatusWidget(),
         BioinformaticsRecognitionWidget(),
         BioinformaticsReadinessDashboardWidget(),
@@ -65,6 +67,7 @@ def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
 
     assert [page.objectName() for page in pages] == [
         "bioinformaticsDataSourcePage",
+        "bioinformaticsChineseDatasetSearchPage",
         "bioinformaticsAcquisitionStatusPage",
         "bioinformaticsRecognitionPage",
         "bioinformaticsReadinessDashboardPage",
@@ -104,13 +107,15 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
 
     assert "本地数据导入" in card_titles
     assert "GSE 编号检索" in card_titles
-    assert "中文研究主题检索" in card_titles
+    assert "中文研究问题检索" in card_titles
     assert "GEO Series Matrix 文件" not in card_titles
     assert "TCGA 本地数据" not in card_titles
     assert "GTEx 本地数据" not in card_titles
     assert "TCGA + GTEx 联合数据" not in card_titles
     assert "本地 AI 检索助手" not in card_titles
+    assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究问题检索"]
     assert "选择本地数据" in button_texts
+    assert "进入中文检索" in button_texts
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
 
@@ -209,7 +214,10 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     widget.refresh_project(project_summary)
     widget.set_gse_input("gse60024")
 
-    summary = widget.search_gse_dataset()
+    preview = widget.search_gse_dataset()
+    assert preview is not None
+    assert not widget._register_gse_button.isHidden()
+    summary = widget.register_gse_dataset()
 
     text = widget.source_summary_text("geo_gse")
     assert summary is not None
@@ -220,23 +228,23 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert "下一步交接清单：已生成" in text
     assert str(summary.plan_path) in widget._technical_details.toPlainText()
     assert widget._technical_details.isHidden()
-    assert "最近登记的数据来源：GSE 编号检索" in widget.status_message()
+    assert "已登记为数据源" in widget.status_message()
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
+    assert widget._next_button.isEnabled()
 
 
-def test_data_source_research_topic_uses_rule_fallback_without_ai_card(qt_app, monkeypatch) -> None:
-    monkeypatch.setattr(workflow_pages, "_geo_fetcher_class", lambda: None)
+def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
+    events: list[str] = []
     widget = BioinformaticsDataSourceWidget()
-    widget._research_goal_input.setText("甲状腺癌淋巴结转移")
+    widget.chinese_search_requested.connect(lambda: events.append("open"))
 
     result = widget.search_research_topic()
     card_titles = [label.text() for label in widget.findChildren(QLabel, "bioProjectCardTitle")]
 
-    assert "thyroid cancer" in result
-    assert "lymph node metastasis" in result
-    assert "当前为检索词生成模式" in result
-    assert "不参与统计分析" in result
+    assert result == "中文研究问题检索已移动到独立页面。"
+    assert events == ["open"]
+    assert "GEO 检索关键词" not in " ".join(label.text() for label in widget.findChildren(QLabel))
     assert "本地 AI 检索助手" not in card_titles
 
 
@@ -258,6 +266,71 @@ def test_data_source_technical_details_are_folded_by_default(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
 
     assert widget._technical_details.isHidden()
+
+
+def test_data_source_registered_summary_and_next_button_states(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "expression_matrix.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    assert widget._registered_sources_table.rowCount() == 0
+    assert not widget._registered_empty_label.isHidden()
+    assert not widget._next_button.isEnabled()
+    assert not widget.findChild(QPushButton, "local_importOpenSourceButton").isVisible()
+    assert not widget.findChild(QPushButton, "local_importCopyPathButton").isVisible()
+
+    widget.register_local_paths([source], strategy="reference", selected_kind="file", summary_key="local_import")
+
+    assert widget._registered_sources_table.rowCount() == 1
+    assert widget._registered_sources_table.item(0, 0).text() == "本地数据导入"
+    assert "expression_matrix.tsv" in widget._registered_sources_table.item(0, 1).text()
+    assert widget._next_button.isEnabled()
+
+
+def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+
+    assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
+    assert widget._geo_query_box.toPlainText() == "暂无 GEO 检索词"
+    assert widget._tcga_query_box.toPlainText() == "暂无 TCGA 检索词"
+    assert widget._gtex_query_box.toPlainText() == "暂无 GTEx 检索词"
+    assert not widget._geo_empty_label.isHidden()
+    assert not widget._tcga_empty_label.isHidden()
+    assert not widget._gtex_empty_label.isHidden()
+    assert widget._mapping_log.isHidden()
+
+    widget.set_query_text("甲状腺癌")
+    result = widget.generate_terms()
+
+    assert result is not None
+    assert "thyroid cancer" in widget._geo_query_box.toPlainText()
+    assert "TCGA-THCA" in widget._tcga_query_box.toPlainText()
+    assert "Thyroid" in widget._gtex_query_box.toPlainText()
+    assert widget._tcga_table.rowCount() >= 1
+    assert widget._gtex_table.rowCount() >= 1
+    assert widget._mapping_log.isHidden()
+
+
+def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    widget.set_query_text("甲状腺癌")
+    widget.generate_terms()
+
+    summary = widget.register_candidate("tcga_gdc", "TCGA-THCA")
+
+    assert summary is not None
+    assert summary.source_type == "chinese_tcga_gdc_project"
+    assert widget._registered_table.rowCount() == 1
+    assert widget._registered_table.item(0, 0).text() == "TCGA/GDC 项目"
+
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    table = recognition.findChild(QTableWidget, "preRecognitionInputList")
+    assert table.rowCount() == 1
+    assert table.item(0, 0).text() == "TCGA/GDC 项目"
+    assert table.item(0, 1).text() == "TCGA-THCA"
 
 
 def test_acquisition_status_empty_and_continue_signal(qt_app, project_summary) -> None:

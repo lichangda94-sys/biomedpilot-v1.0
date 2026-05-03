@@ -31,6 +31,7 @@ try:
     from app.bioinformatics.workflow_pages import (
         BioinformaticsAcquisitionStatusWidget,
         BioinformaticsAnalysisTaskCenterWidget,
+        BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
@@ -61,6 +62,11 @@ if QWidget is not None:
             self._data_source_page = BioinformaticsDataSourceWidget(
                 on_continue=self.show_recognition,
                 on_back=self.show_project_home,
+            )
+            self._data_source_page.chinese_search_requested.connect(self.show_chinese_search)
+            self._chinese_search_page = BioinformaticsChineseDatasetSearchWidget(
+                on_back=self.show_data_source,
+                on_source_registered=lambda summary: self._data_source_page.refresh_project(self._current_project),
             )
             self._acquisition_status_page = BioinformaticsAcquisitionStatusWidget(
                 on_continue=self.show_recognition,
@@ -99,6 +105,7 @@ if QWidget is not None:
             for page in (
                 self._project_home_page,
                 self._data_source_page,
+                self._chinese_search_page,
                 self._acquisition_status_page,
                 self._recognition_page,
                 self._readiness_page,
@@ -124,6 +131,11 @@ if QWidget is not None:
             self._set_current_project(summary)
             self._acquisition_status_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._acquisition_status_page)
+
+        def show_chinese_search(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._chinese_search_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._chinese_search_page)
 
         def show_recognition(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

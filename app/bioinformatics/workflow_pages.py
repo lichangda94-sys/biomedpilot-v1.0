@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -47,6 +48,7 @@ from app.bioinformatics.project_workspace import BioinformaticsProjectSummary
 from app.bioinformatics.project_workspace_binding import (
     AcquisitionStrategy,
     AcquisitionSummary,
+    LATEST_RECORD,
     generate_gse_acquisition_plan,
     load_latest_acquisition_summary,
     read_acquisition_artifacts,
@@ -55,6 +57,7 @@ from app.bioinformatics.project_workspace_binding import (
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import load_result_index
+from app.bioinformatics.search_center import BioinformaticsSourceRouter, BioinformaticsSearchCenterResult, UnifiedDatasetCandidate
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
 
@@ -74,9 +77,30 @@ class SelectedSourceSummary:
     warnings: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class RegisteredSourceRow:
+    acquisition_id: str
+    source_type: str
+    source_label: str
+    location: str
+    status: str
+    created_at: str
+    strategy: str
+
+
+@dataclass(frozen=True)
+class GseDatasetPreview:
+    gse_id: str
+    title: str = "未记录"
+    platform: str = "未记录"
+    sample_count: str = "未记录"
+    status: str = "尚未登记"
+
+
 class BioinformaticsDataSourceWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
+    chinese_search_requested = Signal()
 
     def __init__(
         self,
@@ -92,6 +116,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._source_summaries: dict[str, SelectedSourceSummary] = {}
         self._source_summary_labels: dict[str, QLabel] = {}
         self._source_action_buttons: dict[str, tuple[QPushButton, QPushButton]] = {}
+        self._gse_preview: GseDatasetPreview | None = None
         self.setObjectName("bioinformaticsDataSourcePage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -108,7 +133,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
         else:
-            self._set_status("请选择数据来源。选择后软件会登记到当前项目，并准备交给下一步的数据识别模块。")
+            self._set_status("先登记数据来源，下一步进入数据识别。")
+        self._refresh_registered_sources()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -120,28 +146,52 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_input.setText(value)
 
     def generate_gse_plan(self) -> AcquisitionSummary | None:
-        return self.search_gse_dataset()
-
-    def search_gse_dataset(self) -> AcquisitionSummary | None:
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
+        if self.search_gse_dataset() is None:
+            return None
+        return self.register_gse_dataset()
+
+    def search_gse_dataset(self) -> GseDatasetPreview | None:
         gse_id = _normalize_gse_id(self._gse_input.text())
         if not gse_id:
+            self._gse_status_label.setText("请输入 GSE 编号。")
             self._set_status("请输入 GSE 编号。", error=True)
             return None
         self._gse_input.setText(gse_id)
-        summary = generate_gse_acquisition_plan(self._project_root, gse_id)
         metadata_text = _fetch_geo_accession_metadata(gse_id)
+        self._gse_preview = _gse_preview_from_metadata(gse_id, metadata_text)
+        self._render_gse_preview(self._gse_preview)
+        self._set_status("GSE 数据集摘要已生成，请确认后登记为数据源。")
+        return self._gse_preview
+
+    def register_gse_dataset(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        preview = self._gse_preview or self.search_gse_dataset()
+        if preview is None:
+            return None
+        summary = generate_gse_acquisition_plan(self._project_root, preview.gse_id)
         self._render_acquisition_summary(
             summary,
             summary_key="geo_gse",
             selected_kind="accession",
-            display_name=summary.source_label,
+            display_name=preview.gse_id,
             absolute_path="",
             data_type_label="GSE 编号检索",
         )
-        self._gse_result_preview.setPlainText(metadata_text)
+        self._gse_preview = GseDatasetPreview(
+            gse_id=preview.gse_id,
+            title=preview.title,
+            platform=preview.platform,
+            sample_count=preview.sample_count,
+            status="已登记",
+        )
+        self._render_gse_preview(self._gse_preview)
+        self._refresh_registered_sources()
+        self._set_status(f"{preview.gse_id} 已登记为数据源。")
         return summary
 
     def register_local_paths(
@@ -177,20 +227,18 @@ class BioinformaticsDataSourceWidget(QWidget):
             selected_kind=inferred_kind,
             data_type_label=data_type_label or _infer_local_data_type(normalized_paths, source_type=source_type),
         )
+        self._refresh_registered_sources()
         return summary
 
     def generate_research_terms(self) -> str:
         return self.search_research_topic()
 
     def search_research_topic(self) -> str:
-        text = self._research_goal_input.text().strip()
-        if not text:
-            self._topic_preview.setPlainText("请输入中文研究主题。")
-            return ""
-        result = _research_topic_search_text(text)
-        self._topic_preview.setPlainText(result)
-        self._set_status("中文研究主题已生成检索词建议；当前不生成统计结论，不写入正式分析结果。")
-        return result
+        self.open_chinese_search()
+        return "中文研究问题检索已移动到独立页面。"
+
+    def open_chinese_search(self) -> None:
+        self.chinese_search_requested.emit()
 
     def continue_to_recognition(self) -> None:
         if self._project_root is None:
@@ -198,7 +246,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             return
         if self._latest_summary is None:
             self._latest_summary = load_latest_acquisition_summary(self._project_root)
-        if self._latest_summary is None:
+        if self._registered_source_count() == 0:
             self._set_status("请先生成或登记一个数据来源。", error=True)
             return
         self.continue_requested.emit(self._project_root)
@@ -207,76 +255,103 @@ class BioinformaticsDataSourceWidget(QWidget):
         self.continue_to_recognition()
 
     def _build_ui(self) -> None:
-        root = _scroll_root(self)
+        root = _scroll_root(self, max_width=1040)
         root.addWidget(
             _header(
                 "数据来源与登记",
-                "Data Source & Registration · 选择数据来源后，软件会将其登记到当前项目，并准备交给下一步的数据识别模块。",
+                "先登记数据来源，下一步进入数据识别。",
                 back_text="返回项目首页",
                 back_signal=self.back_requested,
             )
         )
         self._project_label = _status_label("请先创建或打开生信分析项目。")
         root.addWidget(self._project_label)
-        self._status_label = _status_label("请选择数据来源。")
+        self._status_label = _status_label("先登记数据来源，下一步进入数据识别。")
         root.addWidget(self._status_label)
-        grid = QGridLayout()
-        grid.setSpacing(SPACING["lg"])
-        grid.addWidget(self._local_import_card(), 0, 0, 2, 1)
-        grid.addWidget(self._gse_card(), 0, 1)
-        grid.addWidget(self._research_card(), 1, 1)
-        root.addLayout(grid)
-        self._summary_label = _status_label("当前已选数据来源 / 登记状态：尚未登记数据来源。")
-        root.addWidget(self._summary_label)
-        self._technical_details = _text_preview(160)
+
+        root.addWidget(self._local_import_card())
+        root.addWidget(self._gse_card())
+        root.addWidget(self._research_card())
+
+        summary_card, summary_layout = _card("当前已登记数据源")
+        summary_card.setObjectName("registeredSourceSummaryCard")
+        self._registered_empty_label = _muted("尚未登记数据源。")
+        summary_layout.addWidget(self._registered_empty_label)
+        self._registered_sources_table = _table(["来源类型", "名称/编号", "路径/数据库", "登记状态", "操作"])
+        self._registered_sources_table.setObjectName("registeredSourceSummaryTable")
+        self._registered_sources_table.setMinimumHeight(150)
+        summary_layout.addWidget(self._registered_sources_table)
+        root.addWidget(summary_card)
+
+        self._technical_details = _text_preview(120)
         self._technical_details.setVisible(False)
-        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._technical_details)), alignment=Qt.AlignLeft)
         root.addWidget(self._technical_details)
-        actions = QHBoxLayout()
-        button = _button("继续：数据识别", "primaryButton", self.continue_to_recognition)
-        actions.addWidget(button)
+
+        actions_frame = QFrame()
+        actions_frame.setObjectName("dataSourceBottomActionBar")
+        actions = QHBoxLayout(actions_frame)
+        actions.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
+        self._registered_count_label = _status_label("已登记数据源：0 个")
+        self._next_button = _button("下一步：数据识别", "primaryButton", self.continue_to_recognition)
+        self._next_button.setEnabled(False)
+        actions.addWidget(self._registered_count_label)
         actions.addStretch(1)
-        root.addLayout(actions)
+        actions.addWidget(self._next_button)
+        root.addWidget(actions_frame)
 
     def _local_import_card(self) -> QFrame:
         card, layout = _card("本地数据导入")
-        layout.addWidget(
-            _muted(
-                "适用于已经保存在电脑或移动硬盘中的 GEO Series Matrix、TCGA、GTEx、本地表达矩阵、"
-                "样本注释、临床表、基因注释或分组配置文件。"
-            )
-        )
+        card.setObjectName("localImportEntryCard")
+        layout.addWidget(_muted("导入本地表达矩阵、GEO Series Matrix、样本信息、临床表或注释文件。"))
         self._local_strategy_combo = QComboBox()
-        self._local_strategy_combo.addItems(["复制到项目", "引用原始路径"])
+        self._local_strategy_combo.setObjectName("localImportStrategyCombo")
+        self._local_strategy_combo.addItems(["复制到项目（推荐）", "保留原位置，仅记录路径"])
         layout.addWidget(self._local_strategy_combo)
         select_button = _button("选择本地数据", "primaryButton", self._choose_local_data)
+        select_button.setMinimumHeight(44)
         layout.addWidget(select_button, alignment=Qt.AlignLeft)
         layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地文件或文件夹。"))
         return card
 
     def _gse_card(self) -> QFrame:
         card, layout = _card("GSE 编号检索")
-        layout.addWidget(_muted("适用于已经知道 GEO 数据集编号的情况，例如 GSE33630、GSE60542、GSE171483、GSE261830。"))
+        card.setObjectName("gseSearchEntryCard")
+        layout.addWidget(_muted("已知 GEO 数据集编号时使用，例如 GSE33630。"))
         self._gse_input = QLineEdit()
         self._gse_input.setPlaceholderText("请输入 GSE 编号，例如 GSE33630")
+        self._gse_input.setMinimumHeight(44)
         layout.addWidget(self._gse_input)
-        layout.addWidget(_button("检索数据集", "primaryButton", self.search_gse_dataset), alignment=Qt.AlignLeft)
-        self._gse_result_preview = _text_preview(120)
-        self._gse_result_preview.setPlainText("尚未检索。")
-        layout.addWidget(self._gse_result_preview)
+        gse_actions = QHBoxLayout()
+        search_button = _button("检索数据集", "primaryButton", self.search_gse_dataset)
+        search_button.setMinimumHeight(44)
+        self._register_gse_button = _button("登记为数据源", "secondaryButton", self.register_gse_dataset)
+        self._register_gse_button.setEnabled(False)
+        self._register_gse_button.setVisible(False)
+        gse_actions.addWidget(search_button)
+        gse_actions.addWidget(self._register_gse_button)
+        gse_actions.addStretch(1)
+        layout.addLayout(gse_actions)
+        self._gse_status_label = _status_label("尚未检索。")
+        layout.addWidget(self._gse_status_label)
+        self._gse_summary_table = _table(["GSE 编号", "数据集标题", "平台", "样本数量", "登记状态"])
+        self._gse_summary_table.setObjectName("gseDatasetSummaryTable")
+        self._gse_summary_table.setMaximumHeight(120)
+        self._gse_summary_table.setVisible(False)
+        layout.addWidget(self._gse_summary_table)
         layout.addWidget(self._source_summary_frame("geo_gse", "尚未登记 GSE 编号。"))
         return card
 
     def _research_card(self) -> QFrame:
-        card, layout = _card("中文研究主题检索")
-        layout.addWidget(_muted("适用于不知道数据集编号，但知道研究方向的情况。软件会根据中文主题生成英文医学检索词和 GEO 检索关键词。"))
-        self._research_goal_input = QLineEdit()
-        self._research_goal_input.setPlaceholderText("例如 低分化甲状腺癌、甲状腺癌淋巴结转移、AdipoRon 与甲状腺癌、胆固醇代谢与 PTC")
-        layout.addWidget(self._research_goal_input)
-        layout.addWidget(_button("检索相关数据集", "primaryButton", self.search_research_topic), alignment=Qt.AlignLeft)
-        self._topic_preview = _text_preview(150)
-        self._topic_preview.setPlainText("当前为检索词生成模式，尚未接入真实数据集在线检索结果。")
-        layout.addWidget(self._topic_preview)
+        card, layout = _card("中文研究问题检索")
+        card.setObjectName("chineseResearchSearchEntryCard")
+        layout.addWidget(_muted("输入中文研究方向，生成英文检索词并推荐 GEO、TCGA、GTEx 候选数据集。"))
+        self._chinese_search_status_label = _status_label("尚未检索")
+        layout.addWidget(self._chinese_search_status_label)
+        self._chinese_search_summary_label = _muted("最近检索主题：暂无")
+        layout.addWidget(self._chinese_search_summary_label)
+        button = _button("进入中文检索", "primaryButton", self.open_chinese_search)
+        button.setMinimumHeight(44)
+        layout.addWidget(button, alignment=Qt.AlignLeft)
         return card
 
     def _choose_local_data(self) -> None:
@@ -333,7 +408,6 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._update_source_summary_label(key, selected_summary)
         top_text = _global_source_summary_text(selected_summary)
         self._set_status(top_text)
-        self._summary_label.setText(_selected_source_summary_text(selected_summary, compact=False))
         self._technical_details.setPlainText(_selected_source_technical_details(selected_summary))
 
     def source_summary_text(self, key: str) -> str:
@@ -381,6 +455,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         copy_button.setObjectName(f"{key}CopyPathButton")
         open_button.setEnabled(False)
         copy_button.setEnabled(False)
+        open_button.setVisible(False)
+        copy_button.setVisible(False)
         actions.addWidget(open_button)
         actions.addWidget(copy_button)
         actions.addStretch(1)
@@ -399,6 +475,292 @@ class BioinformaticsDataSourceWidget(QWidget):
             has_path = bool(summary.absolute_path)
             for button in buttons:
                 button.setEnabled(has_path)
+                button.setVisible(has_path)
+
+    def _render_gse_preview(self, preview: GseDatasetPreview) -> None:
+        self._gse_status_label.setText("已登记。" if preview.status == "已登记" else "检索成功，请确认后登记。")
+        self._gse_summary_table.setVisible(True)
+        _fill_table(
+            self._gse_summary_table,
+            [[preview.gse_id, preview.title, preview.platform, preview.sample_count, preview.status]],
+        )
+        self._register_gse_button.setVisible(preview.status != "已登记")
+        self._register_gse_button.setEnabled(preview.status != "已登记")
+
+    def _refresh_registered_sources(self) -> None:
+        rows = _registered_source_rows(self._project_root)
+        self._registered_empty_label.setVisible(not rows)
+        _fill_table(
+            self._registered_sources_table,
+            [[row.source_type, row.source_label, row.location, row.status, "查看"] for row in rows],
+        )
+        count = len(rows)
+        self._registered_count_label.setText(f"已登记数据源：{count} 个")
+        self._next_button.setEnabled(count > 0 and self._project_root is not None)
+        if rows:
+            latest = rows[-1]
+            self._summary_label_text = f"{latest.source_type} · {latest.source_label}"
+        else:
+            self._summary_label_text = ""
+
+    def _registered_source_count(self) -> int:
+        return len(_registered_source_rows(self._project_root))
+
+    def _set_status(self, text: str, *, error: bool = False) -> None:
+        self._status_label.setText(text)
+        self._status_label.setProperty("status", "error" if error else "ok")
+        _refresh_style(self._status_label)
+
+
+class BioinformaticsChineseDatasetSearchWidget(QWidget):
+    back_requested = Signal()
+    source_registered = Signal(object)
+
+    def __init__(
+        self,
+        *,
+        on_back: Callable[[], None] | None = None,
+        on_source_registered: Callable[[object], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self._last_result: BioinformaticsSearchCenterResult | None = None
+        self._candidates: dict[tuple[str, str], UnifiedDatasetCandidate] = {}
+        self.setObjectName("bioinformaticsChineseDatasetSearchPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+        if on_source_registered is not None:
+            self.source_registered.connect(on_source_registered)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self._project_label.setText(_project_header_text(summary))
+        self._refresh_registered_sources()
+
+    def set_query_text(self, text: str) -> None:
+        self._query_input.setText(text)
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def generate_terms(self) -> BioinformaticsSearchCenterResult | None:
+        query = self._query_input.text().strip()
+        if not query:
+            self._set_status("请输入中文研究主题。", error=True)
+            return None
+        result = BioinformaticsSourceRouter().search(query, online_enabled=False, limit=20)
+        self._last_result = result
+        self._render_result(result, searched=False)
+        self._set_status("已生成检索词")
+        return result
+
+    def search_candidates(self, *, online_enabled: bool = False) -> BioinformaticsSearchCenterResult | None:
+        query = self._query_input.text().strip()
+        if not query:
+            self._set_status("请输入中文研究主题。", error=True)
+            return None
+        self._set_status("检索中")
+        result = BioinformaticsSourceRouter().search(query, online_enabled=online_enabled, limit=20)
+        self._last_result = result
+        self._render_result(result, searched=True)
+        self._set_status("检索完成" if not result.warnings else f"检索完成：{result.warnings[0]}")
+        return result
+
+    def register_candidate(self, source: str, accession_or_project: str) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        candidate = self._candidates.get((source, accession_or_project))
+        if candidate is None:
+            self._set_status("候选结果不存在。", error=True)
+            return None
+        summary = register_acquisition(
+            self._project_root,
+            source_type=_candidate_source_type(candidate),
+            source_label=candidate.accession_or_project,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "ui_source": "chinese_research_question_search",
+                "source": candidate.source,
+                "accession_or_project": candidate.accession_or_project,
+                "display_title": candidate.display_title,
+                "query": self._query_input.text().strip(),
+                "source_specific_metadata": candidate.source_specific_metadata,
+                "warnings": list(candidate.warnings),
+            },
+        )
+        self._refresh_registered_sources()
+        self.source_registered.emit(summary)
+        self._set_status(f"{candidate.accession_or_project} 已登记为数据源。")
+        return summary
+
+    def copy_query(self, source: str) -> bool:
+        edit = {"geo": self._geo_query_box, "tcga": self._tcga_query_box, "gtex": self._gtex_query_box}.get(source)
+        if edit is None:
+            return False
+        QApplication.clipboard().setText(edit.toPlainText())
+        self._set_status("已复制检索词。")
+        return True
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self, max_width=1080)
+        root.addWidget(_header("中文研究问题检索", "中文研究主题到 GEO、TCGA、GTEx 数据源候选。", back_text="返回数据来源", back_signal=self.back_requested))
+        self._project_label = _status_label("请先创建或打开生信分析项目。")
+        root.addWidget(self._project_label)
+        input_card, input_layout = _card("中文研究问题检索")
+        self._query_input = QLineEdit()
+        self._query_input.setPlaceholderText("例如：甲状腺癌、乳腺癌转移、肺癌免疫治疗耐药")
+        self._query_input.setMinimumHeight(44)
+        input_layout.addWidget(self._query_input)
+        action_row = QHBoxLayout()
+        action_row.addWidget(_button("生成检索词", "primaryButton", self.generate_terms))
+        action_row.addWidget(_button("检索候选数据集", "secondaryButton", lambda checked=False: self.search_candidates(online_enabled=True)))
+        action_row.addStretch(1)
+        input_layout.addLayout(action_row)
+        self._status_label = _status_label("未生成检索词")
+        input_layout.addWidget(self._status_label)
+        root.addWidget(input_card)
+
+        drafts_card, drafts_layout = _card("检索词草稿")
+        self._geo_query_box = self._query_draft_box("暂无 GEO 检索词")
+        self._tcga_query_box = self._query_draft_box("暂无 TCGA 检索词")
+        self._gtex_query_box = self._query_draft_box("暂无 GTEx 检索词")
+        for title, source, box in (
+            ("GEO 检索词", "geo", self._geo_query_box),
+            ("TCGA 检索词", "tcga", self._tcga_query_box),
+            ("GTEx 检索词", "gtex", self._gtex_query_box),
+        ):
+            row = QHBoxLayout()
+            row.addWidget(_muted(title))
+            row.addStretch(1)
+            row.addWidget(_button("复制", "secondaryButton", lambda checked=False, s=source: self.copy_query(s)))
+            drafts_layout.addLayout(row)
+            drafts_layout.addWidget(box)
+        root.addWidget(drafts_card)
+
+        result_card, result_layout = _card("数据库候选结果")
+        self._tabs = QTabWidget()
+        self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["GSE 编号", "标题", "疾病/组织", "平台/数据类型", "样本数", "匹配原因", "推荐等级", "操作"])
+        self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["项目编号", "癌种名称", "样本类型", "样本数", "匹配原因", "操作"])
+        self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["组织名称", "组织系统", "样本数", "匹配原因", "操作"])
+        self._tabs.addTab(self._geo_tab_page, "GEO / GSE 候选数据集")
+        self._tabs.addTab(self._tcga_tab_page, "TCGA 项目候选")
+        self._tabs.addTab(self._gtex_tab_page, "GTEx 组织候选")
+        result_layout.addWidget(self._tabs)
+        root.addWidget(result_card)
+
+        registered_card, registered_layout = _card("已选择/已登记数据源")
+        self._registered_empty_label = _muted("尚未从中文检索结果登记数据源。")
+        registered_layout.addWidget(self._registered_empty_label)
+        self._registered_table = _table(["来源数据库", "编号/项目/组织", "名称", "登记状态", "操作"])
+        self._registered_table.setObjectName("chineseRegisteredSourceTable")
+        registered_layout.addWidget(self._registered_table)
+        root.addWidget(registered_card)
+
+        log_card, log_layout = _card("映射日志")
+        self._mapping_log = _text_preview(180)
+        self._mapping_log.setObjectName("chineseMappingLog")
+        self._mapping_log.setVisible(False)
+        log_layout.addWidget(_button("查看映射日志", "secondaryButton", lambda: _toggle_details(self._mapping_log)), alignment=Qt.AlignLeft)
+        log_layout.addWidget(self._mapping_log)
+        root.addWidget(log_card)
+
+    def _query_draft_box(self, text: str) -> QPlainTextEdit:
+        box = _text_preview(72)
+        box.setPlainText(text)
+        box.setMinimumHeight(64)
+        box.setMaximumHeight(92)
+        return box
+
+    def _candidate_tab(self, headers: list[str]) -> tuple[QWidget, QLabel, QTableWidget]:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        empty = _muted("暂无候选结果。")
+        table = _table(headers)
+        table.setMinimumHeight(220)
+        layout.addWidget(empty)
+        layout.addWidget(table)
+        return page, empty, table
+
+    def _render_result(self, result: BioinformaticsSearchCenterResult, *, searched: bool) -> None:
+        query = result.query
+        geo_queries = tuple(query.geo_query_candidates)
+        self._geo_query_box.setPlainText("\n".join(geo_queries) if geo_queries else "暂无 GEO 检索词")
+        self._tcga_query_box.setPlainText(", ".join(query.tcga_project_ids) if query.tcga_project_ids else "暂无 TCGA 检索词")
+        self._gtex_query_box.setPlainText(", ".join(query.gtex_tissues) if query.gtex_tissues else "暂无 GTEx 检索词")
+        self._candidates = {(candidate.source, candidate.accession_or_project): candidate for candidate in result.candidates}
+        self._render_candidate_tables(result)
+        self._mapping_log.setPlainText(_mapping_log_text(result))
+
+    def _render_candidate_tables(self, result: BioinformaticsSearchCenterResult) -> None:
+        grouped: dict[str, list[UnifiedDatasetCandidate]] = {"geo": [], "tcga_gdc": [], "gtex": []}
+        for candidate in result.candidates:
+            if candidate.source in grouped:
+                grouped[candidate.source].append(candidate)
+        self._fill_geo_candidates(grouped["geo"])
+        self._fill_tcga_candidates(grouped["tcga_gdc"])
+        self._fill_gtex_candidates(grouped["gtex"])
+
+    def _fill_geo_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
+        self._geo_empty_label.setVisible(not candidates)
+        _fill_table(
+            self._geo_table,
+            [
+                [
+                    item.accession_or_project,
+                    item.display_title,
+                    item.disease or item.tissue,
+                    item.data_modality,
+                    item.sample_count,
+                    _candidate_match_reason(item),
+                    _candidate_recommendation(item),
+                    "查看详情 / 登记为数据源 / 复制编号",
+                ]
+                for item in candidates
+            ],
+        )
+
+    def _fill_tcga_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
+        self._tcga_empty_label.setVisible(not candidates)
+        _fill_table(
+            self._tcga_table,
+            [
+                [
+                    item.accession_or_project,
+                    item.display_title,
+                    item.tissue or "未记录",
+                    item.sample_count,
+                    _candidate_match_reason(item),
+                    "查看详情 / 登记为数据源 / 复制编号",
+                ]
+                for item in candidates
+            ],
+        )
+
+    def _fill_gtex_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
+        self._gtex_empty_label.setVisible(not candidates)
+        _fill_table(
+            self._gtex_table,
+            [
+                [
+                    item.tissue or item.accession_or_project,
+                    item.source_specific_metadata.get("tissue_system", "normal reference"),
+                    item.sample_count,
+                    _candidate_match_reason(item),
+                    "查看详情 / 登记为数据源 / 复制编号",
+                ]
+                for item in candidates
+            ],
+        )
+
+    def _refresh_registered_sources(self) -> None:
+        rows = [row for row in _registered_source_rows(self._project_root) if row.source_type in {"GSE 编号检索", "TCGA/GDC 项目", "GTEx 正常组织参考"}]
+        self._registered_empty_label.setVisible(not rows)
+        _fill_table(self._registered_table, [[row.source_type, row.source_label, row.location, row.status, "查看"] for row in rows])
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
         self._status_label.setText(text)
@@ -519,6 +881,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。")
             return
+        self._render_pre_recognition_inputs()
         report = load_recognition_report(self._project_root)
         if report is None:
             self._set_status("尚未生成数据识别报告。")
@@ -570,6 +933,14 @@ class BioinformaticsRecognitionWidget(QWidget):
     def _build_ui(self) -> None:
         root = _scroll_root(self)
         root.addWidget(_header("数据识别", "Developer Preview / 本地测试版", back_text="返回数据来源与登记", back_signal=self.back_requested))
+        pre_card, pre_layout = _card("待识别数据源")
+        self._pre_recognition_empty_label = _muted("尚未登记数据源。")
+        pre_layout.addWidget(self._pre_recognition_empty_label)
+        self._pre_recognition_table = _table(["来源类型", "名称/编号", "路径/数据库", "登记状态"])
+        self._pre_recognition_table.setObjectName("preRecognitionInputList")
+        self._pre_recognition_table.setMinimumHeight(130)
+        pre_layout.addWidget(self._pre_recognition_table)
+        root.addWidget(pre_card)
         actions = QHBoxLayout()
         actions.addWidget(_button("开始数据识别", "primaryButton", self.run_recognition))
         actions.addWidget(_button("重新识别", "secondaryButton", self.run_recognition))
@@ -608,6 +979,7 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def _render_report(self, report: dict[str, object]) -> None:
         self._last_report = report
+        self._render_pre_recognition_inputs()
         annotated = _annotated_recognition_files(report, self._project_root)
         files = _filter_recognition_files(annotated, self._duplicate_filter.currentText())
         warnings = [str(item) for item in report.get("warnings", []) or []]
@@ -629,6 +1001,14 @@ class BioinformaticsRecognitionWidget(QWidget):
     def _rerender_last_report(self) -> None:
         if self._last_report is not None:
             self._render_report(self._last_report)
+
+    def _render_pre_recognition_inputs(self) -> None:
+        rows = _registered_source_rows(self._project_root)
+        self._pre_recognition_empty_label.setVisible(not rows)
+        _fill_table(
+            self._pre_recognition_table,
+            [[row.source_type, row.source_label, row.location, row.status] for row in rows],
+        )
 
     def _fill_recognition_table(self, files: list[dict[str, object]]) -> None:
         self._table.setRowCount(len(files))
@@ -1475,15 +1855,18 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         root.addWidget(ai_card)
 
 
-def _scroll_root(page: QWidget) -> QVBoxLayout:
+def _scroll_root(page: QWidget, *, max_width: int | None = None) -> QVBoxLayout:
     outer = QVBoxLayout(page)
     outer.setContentsMargins(0, 0, 0, 0)
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
+    scroll.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
     content = QWidget()
     content.setObjectName("bioWorkflowScrollContent")
+    if max_width is not None:
+        content.setMaximumWidth(max_width)
     layout = QVBoxLayout(content)
-    layout.setContentsMargins(20, 18, 20, 18)
+    layout.setContentsMargins(32, 24, 32, 40)
     layout.setSpacing(SPACING["md"])
     scroll.setWidget(content)
     outer.addWidget(scroll)
@@ -1610,6 +1993,73 @@ def _summary_to_dict(summary: AcquisitionSummary | None) -> dict[str, object] | 
     }
 
 
+def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceRow]:
+    if project_root is None:
+        return []
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return []
+    rows: list[RegisteredSourceRow] = []
+    seen: set[str] = set()
+    for path in sorted(records_dir.glob("*.json")):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        acquisition_id = str(payload.get("acquisition_id") or path.stem)
+        if acquisition_id in seen:
+            continue
+        seen.add(acquisition_id)
+        source_type = str(payload.get("source_type") or "unknown")
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        source_label = _registered_source_display_name(payload, metadata)  # type: ignore[arg-type]
+        rows.append(
+            RegisteredSourceRow(
+                acquisition_id=acquisition_id,
+                source_type=_source_type_label(source_type),
+                source_label=source_label,
+                location=_registered_source_location(payload, metadata),  # type: ignore[arg-type]
+                status=_registered_status_text(payload),
+                created_at=str(payload.get("created_at") or ""),
+                strategy=str(payload.get("strategy") or ""),
+            )
+        )
+    return sorted(rows, key=lambda row: row.created_at)
+
+
+def _registered_source_display_name(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    source_type = str(payload.get("source_type") or "")
+    if source_type == "local_import":
+        values = payload.get("registered_files") or payload.get("referenced_paths") or payload.get("copied_files")
+        if isinstance(values, list) and values:
+            return Path(str(values[0])).name
+    return str(payload.get("source_label") or metadata.get("accession_or_project") or "未知数据源")
+
+
+def _registered_source_location(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    for key in ("registered_files", "referenced_paths", "copied_files"):
+        values = payload.get(key)
+        if isinstance(values, list) and values:
+            return _compact_path(str(values[0]))
+    source = str(metadata.get("source") or "")
+    if source == "geo" or payload.get("source_type") == "geo_gse":
+        return "GEO"
+    if source == "tcga_gdc" or "tcga" in str(payload.get("source_type") or ""):
+        return "GDC / TCGA"
+    if source == "gtex" or "gtex" in str(payload.get("source_type") or ""):
+        return "GTEx"
+    return "项目登记记录"
+
+
+def _registered_status_text(payload: dict[str, object]) -> str:
+    warnings = payload.get("warnings")
+    if isinstance(warnings, list) and warnings:
+        return "已登记，需确认"
+    return "已登记"
+
+
 def _source_type_label(source_type: str) -> str:
     return {
         "local_import": "本地数据导入",
@@ -1619,6 +2069,9 @@ def _source_type_label(source_type: str) -> str:
         "tcga_gtex_tcga_folder": "TCGA + GTEx / TCGA 来源",
         "tcga_gtex_gtex_folder": "TCGA + GTEx / GTEx 来源",
         "geo_gse": "GSE 编号检索",
+        "chinese_geo_gse": "GSE 编号检索",
+        "chinese_tcga_gdc_project": "TCGA/GDC 项目",
+        "chinese_gtex_tissue": "GTEx 正常组织参考",
     }.get(source_type, source_type)
 
 
@@ -1795,6 +2248,22 @@ def _fetch_geo_accession_metadata(gse_id: str) -> str:
     )
 
 
+def _gse_preview_from_metadata(gse_id: str, metadata_text: str) -> GseDatasetPreview:
+    values: dict[str, str] = {}
+    for line in metadata_text.splitlines():
+        if "：" not in line:
+            continue
+        key, value = line.split("：", 1)
+        values[key.strip()] = value.strip() or "未记录"
+    return GseDatasetPreview(
+        gse_id=values.get("当前 GSE 编号", gse_id),
+        title=values.get("数据集标题", "未记录"),
+        platform=values.get("平台信息", "未记录"),
+        sample_count=values.get("样本数", "未记录"),
+        status="尚未登记",
+    )
+
+
 def _research_topic_search_text(text: str) -> str:
     english_terms, geo_query = _rule_based_research_keywords(text)
     base_lines = [
@@ -1859,6 +2328,57 @@ def _rule_based_research_keywords(text: str) -> tuple[str, str]:
     english_terms = "; ".join(terms)
     geo_query = f"({' AND '.join(terms)}) AND expression profiling"
     return english_terms, geo_query
+
+
+def _candidate_source_type(candidate: UnifiedDatasetCandidate) -> str:
+    if candidate.source == "geo":
+        return "chinese_geo_gse"
+    if candidate.source == "tcga_gdc":
+        return "chinese_tcga_gdc_project"
+    if candidate.source == "gtex":
+        return "chinese_gtex_tissue"
+    return f"chinese_{candidate.source}"
+
+
+def _candidate_match_reason(candidate: UnifiedDatasetCandidate) -> str:
+    metadata = candidate.source_specific_metadata
+    for key in ("match_reason", "mapping_status", "recommended_usage"):
+        value = metadata.get(key)
+        if value:
+            return str(value)
+    if candidate.source == "tcga_gdc":
+        return "疾病词映射到 TCGA/GDC 项目"
+    if candidate.source == "gtex":
+        return "组织词映射到 GTEx 正常组织参考"
+    return "与当前检索词匹配"
+
+
+def _candidate_recommendation(candidate: UnifiedDatasetCandidate) -> str:
+    if candidate.score >= 80:
+        return "高"
+    if candidate.score >= 55:
+        return "中"
+    return "低"
+
+
+def _mapping_log_text(result: BioinformaticsSearchCenterResult) -> str:
+    query = result.query
+    return _json(
+        {
+            "中文概念识别": list(query.disease_terms_zh),
+            "英文医学术语映射": list(query.disease_terms_en),
+            "同义词扩展": list(query.synonyms),
+            "词库命中": query.metadata.get("search_translation_draft"),
+            "GEO query 构建过程": list(query.geo_query_candidates),
+            "TCGA query 构建过程": list(query.tcga_project_ids),
+            "GTEx query 构建过程": list(query.gtex_tissues),
+            "本地模型输出": {
+                "local_model_status": query.metadata.get("local_model_status"),
+                "local_model_used": query.metadata.get("local_model_used"),
+            },
+            "错误和警告": list(result.warnings),
+        }
+    )
 
 
 def _global_source_summary_text(summary: SelectedSourceSummary) -> str:
