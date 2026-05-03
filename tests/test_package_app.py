@@ -30,6 +30,8 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert result.build_info_path.exists()
     assert os.access(result.launcher_path, os.X_OK)
     assert (result.resource_root / "app" / "main.py").exists()
+    assert (result.resource_root / "config" / "bioinformatics" / "analysis_defaults.yaml").exists()
+    assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
     assert not (result.resource_root / ".git").exists()
 

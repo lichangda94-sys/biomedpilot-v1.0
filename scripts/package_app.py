@@ -19,7 +19,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
 
 DEFAULT_APP_NAME = "BioMedPilot"
-COPY_DIRS = ("app", "assets", "docs", "examples", "scripts")
+COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
 STORAGE_DIRS = ("projects", "data", "tasks", "reports", "test_feedback")
 IGNORE_NAMES = {
