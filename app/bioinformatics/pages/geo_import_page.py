@@ -87,6 +87,9 @@ if QWidget is not None:
             self._geo_result_table = QTableWidget(0, 6)
             self._geo_result_table.setHorizontalHeaderLabels(["GSE", "标题", "query_used", "相关性", "原因", "操作"])
             root.addWidget(self._geo_result_table)
+            self._source_candidate_table = QTableWidget(0, 7)
+            self._source_candidate_table.setHorizontalHeaderLabels(["来源", "ID", "标题", "数据类型", "样本数", "可登记/下载", "提示"])
+            root.addWidget(self._source_candidate_table)
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
             self._error_label.setStyleSheet("color: #B42318;")
@@ -144,6 +147,7 @@ if QWidget is not None:
                 self._fill_tcga_table(result)
                 self._fill_gtex_table(result)
                 self._fill_geo_result_table(result)
+                self._fill_source_candidate_table(result)
                 self._register_first_button.setEnabled(bool(result.geo_results))
                 self._error_label.setText("")
             else:
@@ -183,8 +187,31 @@ if QWidget is not None:
                 self._geo_result_table.setItem(row, 4, QTableWidgetItem(str(item.get("disease_relevance_reason", ""))))
                 self._geo_result_table.setItem(row, 5, QTableWidgetItem("可登记"))
 
+        def _fill_source_candidate_table(self, result: GeoImportPlanResult) -> None:
+            self._source_candidate_table.setRowCount(len(result.unified_dataset_candidates))
+            for row, item in enumerate(result.unified_dataset_candidates):
+                warnings = item.get("warnings", ())
+                if isinstance(warnings, (list, tuple)):
+                    warning_text = "；".join(str(value) for value in warnings[:2])
+                else:
+                    warning_text = str(warnings)
+                available = "可下载" if item.get("download_plan_available") else "候选"
+                if item.get("source") == "geo":
+                    available = "可登记" if item.get("accession_or_project") else "候选"
+                values = [
+                    item.get("source", ""),
+                    item.get("accession_or_project", ""),
+                    item.get("display_title", ""),
+                    item.get("data_modality", ""),
+                    item.get("sample_count", ""),
+                    available,
+                    warning_text,
+                ]
+                for col, value in enumerate(values):
+                    self._source_candidate_table.setItem(row, col, QTableWidgetItem(str(value)))
+
         def _clear_tables(self) -> None:
-            for table in (self._geo_query_table, self._tcga_table, self._gtex_table, self._geo_result_table):
+            for table in (self._geo_query_table, self._tcga_table, self._gtex_table, self._geo_result_table, self._source_candidate_table):
                 table.setRowCount(0)
 
         def _register_first_result(self) -> None:

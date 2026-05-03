@@ -34,6 +34,7 @@ def test_geo_import_page_shows_disease_aware_tables(qt_app) -> None:
     assert page._geo_query_table.rowCount() > 0
     assert page._tcga_table.rowCount() >= 2
     assert page._gtex_table.rowCount() >= 1
+    assert page._source_candidate_table.rowCount() >= 3
     assert page._tcga_table.item(0, 0).text() != "TCGA"
     page_text = " ".join(
         [

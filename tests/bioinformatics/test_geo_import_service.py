@@ -71,6 +71,10 @@ def test_geo_import_creates_query_plan(tmp_path) -> None:
     assert result.confirmed_geo_queries
     assert result.tcga_project_candidates
     assert result.gtex_tissue_candidates
+    assert result.unified_dataset_candidates
+    assert {"tcga_gdc", "gtex"} <= {str(item["source"]) for item in result.unified_dataset_candidates}
+    assert {"geo", "tcga_gdc", "gtex"} <= set(result.source_search_results)
+    assert payload["bioinformatics_search_center"]["query"]["allowed_sources"] == ["geo", "tcga_gdc", "gtex"]
 
 
 def test_geo_import_registers_geo_result_as_data_source(tmp_path) -> None:

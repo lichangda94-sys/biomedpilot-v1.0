@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from app.bioinformatics.adapters.legacy_geo import LegacyGeoAdapter
 from app.bioinformatics.retrieval import GeoDatasetResult, GeoSearchService, build_bioinformatics_query_strategy
+from app.bioinformatics.search_center import BioinformaticsSearchCenterResult, BioinformaticsSourceRouter
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -33,6 +34,8 @@ class GeoImportPlanResult:
     tcga_project_candidates: list[dict[str, str]] = field(default_factory=list)
     gtex_tissue_candidates: list[dict[str, str]] = field(default_factory=list)
     geo_results: list[dict[str, object]] = field(default_factory=list)
+    unified_dataset_candidates: list[dict[str, object]] = field(default_factory=list)
+    source_search_results: dict[str, dict[str, object]] = field(default_factory=dict)
     search_status: str = "draft_only"
 
 
@@ -42,12 +45,14 @@ class GeoImportService:
         *,
         adapter: LegacyGeoAdapter | None = None,
         geo_search_service: GeoSearchService | None = None,
+        source_router: BioinformaticsSourceRouter | None = None,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
     ) -> None:
         self._adapter = adapter or LegacyGeoAdapter()
         self._geo_search_service = geo_search_service or GeoSearchService()
+        self._source_router = source_router or BioinformaticsSourceRouter()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
@@ -81,6 +86,12 @@ class GeoImportService:
 
         try:
             strategy = build_bioinformatics_query_strategy(query_text)
+            source_center_result = self._build_source_center_result(
+                query_text,
+                max_results=max_results,
+                confirmed_geo_queries=strategy.confirmed_geo_queries,
+                allow_broad_geo_query=include_supplemental,
+            )
             geo_response = None
             if execute_online:
                 geo_response = self._geo_search_service.search(
@@ -97,6 +108,7 @@ class GeoImportService:
                 project_id,
                 plan,
                 strategy=strategy,
+                source_center_result=source_center_result,
                 geo_results=geo_response.results if geo_response else (),
                 execute_online=execute_online,
             )
@@ -125,6 +137,8 @@ class GeoImportService:
                 tcga_project_candidates=[asdict(item) for item in strategy.tcga_project_candidates],
                 gtex_tissue_candidates=[asdict(item) for item in strategy.gtex_tissue_candidates],
                 geo_results=[asdict(item) for item in geo_response.results] if geo_response else [],
+                unified_dataset_candidates=_source_candidates(source_center_result),
+                source_search_results=_source_results(source_center_result),
                 search_status=geo_response.search_status if geo_response else "draft_only",
             )
             self._data_center.register_asset(
@@ -219,7 +233,37 @@ class GeoImportService:
         )
         return output_path
 
-    def _write_output(self, project_id: str, plan: object, *, strategy: object, geo_results: object, execute_online: bool) -> Path:
+    def _build_source_center_result(
+        self,
+        query_text: str,
+        *,
+        max_results: int,
+        confirmed_geo_queries: tuple[str, ...],
+        allow_broad_geo_query: bool,
+    ) -> BioinformaticsSearchCenterResult | None:
+        if not query_text.strip():
+            return None
+        try:
+            return self._source_router.search(
+                query_text,
+                online_enabled=False,
+                limit=max_results,
+                confirmed_geo_queries=confirmed_geo_queries,
+                allow_broad_geo_query=allow_broad_geo_query,
+            )
+        except Exception:
+            return None
+
+    def _write_output(
+        self,
+        project_id: str,
+        plan: object,
+        *,
+        strategy: object,
+        source_center_result: BioinformaticsSearchCenterResult | None,
+        geo_results: object,
+        execute_online: bool,
+    ) -> Path:
         output_dir = self._storage_root / "projects" / project_id / "bioinformatics" / "geo_import"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"geo_query_plan_{uuid4().hex[:12]}.json"
@@ -238,6 +282,8 @@ class GeoImportService:
             "tcga_project_candidates": [asdict(item) for item in getattr(strategy, "tcga_project_candidates", ())],
             "gtex_tissue_candidates": [asdict(item) for item in getattr(strategy, "gtex_tissue_candidates", ())],
             "geo_results": [asdict(item) for item in geo_results],  # type: ignore[union-attr]
+            "bioinformatics_search_center": source_center_result.to_dict() if source_center_result is not None else None,
+            "unified_dataset_candidates": _source_candidates(source_center_result),
         }
         output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return output_path
@@ -248,3 +294,15 @@ def _success_message(*, plan_accessions: list[str], geo_results: object, max_res
     if execute_online:
         return f"GEO/GSE 检索完成：返回 {result_count} 条结果，最多 {max_results} 条。"
     return f"GEO 查询草稿已生成：{len(plan_accessions)} 个手动 accession，最多检索 {max_results} 条。"
+
+
+def _source_candidates(result: BioinformaticsSearchCenterResult | None) -> list[dict[str, object]]:
+    if result is None:
+        return []
+    return [candidate.to_dict() for candidate in result.candidates]
+
+
+def _source_results(result: BioinformaticsSearchCenterResult | None) -> dict[str, dict[str, object]]:
+    if result is None:
+        return {}
+    return {source: source_result.to_dict() for source, source_result in result.source_results.items()}

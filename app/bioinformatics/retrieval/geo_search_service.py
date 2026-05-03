@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import ssl
 from dataclasses import dataclass
+from pathlib import Path
+import sys
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -34,6 +36,46 @@ class GeoSearchResponse:
     search_status: str
     warnings: tuple[str, ...] = ()
     error_message: str = ""
+
+
+@dataclass(frozen=True)
+class GeoDatasetSearchItem:
+    accession: str
+    title: str
+    summary: str
+    organism: str
+    sample_count: int | str
+    platform_accessions: tuple[str, ...]
+    platform_titles: tuple[str, ...]
+    publication_date: str
+    update_date: str
+    geo_url: str
+    data_type: str
+    tissue_disease_keywords: tuple[str, ...]
+    match_reason: str
+    relevance_score: int
+    can_register: bool = True
+    can_download: bool = False
+    query_used: str = ""
+    has_series_matrix: bool = False
+    has_supplementary_files: bool = False
+    has_sample_metadata: bool = False
+    has_group_hint: bool = False
+    recommended_analyses: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class GeoDatasetSearchResponse:
+    search_status: str
+    executed_query: str
+    total_found: int | None
+    results: tuple[GeoDatasetSearchItem, ...]
+    warnings: tuple[str, ...]
+    error_message: str
+    start: int
+    next_start: int | None
+    fetched_all: bool
 
 
 class GeoSearchService:
@@ -219,3 +261,283 @@ def _unique(values: object) -> list[str]:
             seen.add(key)
             items.append(text)
     return items
+
+
+def search_geo_datasets(
+    query: str,
+    *,
+    max_results: int = 20,
+    organism: str | None = None,
+    platform_type: str | None = None,
+    timeout: int = 8,
+    offline_mode: bool = False,
+    start: int = 0,
+    fetcher_cls: type[Any] | None | object = ...,
+) -> GeoDatasetSearchResponse:
+    cleaned_query = _with_optional_filters(query.strip(), organism=organism, platform_type=platform_type)
+    normalized_start = max(0, int(start or 0))
+    normalized_max = max(1, min(int(max_results or 20), 100))
+    if offline_mode:
+        return GeoDatasetSearchResponse(
+            search_status="offline",
+            executed_query=cleaned_query,
+            total_found=None,
+            results=(),
+            warnings=("当前仅生成检索词，尚未执行 GEO 在线检索。",),
+            error_message="",
+            start=normalized_start,
+            next_start=None,
+            fetched_all=True,
+        )
+
+    resolved_fetcher_cls = _geo_fetcher_class() if fetcher_cls is ... else fetcher_cls
+    if resolved_fetcher_cls is None:
+        return GeoDatasetSearchResponse(
+            search_status="search_failed",
+            executed_query=cleaned_query,
+            total_found=None,
+            results=(),
+            warnings=("当前没有可用的 GEO 在线检索服务。",),
+            error_message="GEO search service is unavailable",
+            start=normalized_start,
+            next_start=None,
+            fetched_all=True,
+        )
+
+    try:
+        response = resolved_fetcher_cls(timeout=timeout).search_series(
+            cleaned_query,
+            max_results=normalized_max,
+            page_size=normalized_max,
+            start=normalized_start,
+        )
+    except Exception as exc:
+        return GeoDatasetSearchResponse(
+            search_status="search_failed",
+            executed_query=cleaned_query,
+            total_found=None,
+            results=(),
+            warnings=("GEO 在线检索失败，请检查网络或稍后重试。已保留可复制检索式。",),
+            error_message=str(exc),
+            start=normalized_start,
+            next_start=None,
+            fetched_all=True,
+        )
+
+    terms = _query_terms(cleaned_query)
+    items = tuple(_item_from_geo_series(item, terms) for item in getattr(response, "results", []) or [])
+    next_start = int(getattr(response, "next_start", normalized_start) or normalized_start)
+    fetched_all = bool(getattr(response, "fetched_all", True))
+    total_found = int(getattr(response, "total_count", len(items)) or 0)
+    return GeoDatasetSearchResponse(
+        search_status="completed",
+        executed_query=str(getattr(response, "query", cleaned_query) or cleaned_query),
+        total_found=total_found,
+        results=items,
+        warnings=() if items else ("未检索到匹配数据集，可尝试减少限定词或改用英文关键词。",),
+        error_message="",
+        start=normalized_start,
+        next_start=next_start if not fetched_all else None,
+        fetched_all=fetched_all,
+    )
+
+
+def search_geo_datasets_for_queries(
+    queries: list[str] | tuple[str, ...],
+    *,
+    max_results_per_query: int = 20,
+    timeout: int = 8,
+    start: int = 0,
+    fetcher_cls: type[Any] | None | object = ...,
+) -> GeoDatasetSearchResponse:
+    cleaned_queries = tuple(dict.fromkeys(query.strip() for query in queries if query.strip()))
+    if not cleaned_queries:
+        return GeoDatasetSearchResponse(
+            search_status="search_failed",
+            executed_query="",
+            total_found=None,
+            results=(),
+            warnings=("请先勾选至少一个 GEO query 草稿。",),
+            error_message="No GEO queries selected",
+            start=max(0, int(start or 0)),
+            next_start=None,
+            fetched_all=True,
+        )
+    warnings: list[str] = []
+    errors: list[str] = []
+    by_accession: dict[str, GeoDatasetSearchItem] = {}
+    total_found = 0
+    completed_count = 0
+    next_values: list[int] = []
+    fetched_all = True
+    for query in cleaned_queries:
+        response = search_geo_datasets(
+            query,
+            max_results=max_results_per_query,
+            timeout=timeout,
+            start=start,
+            fetcher_cls=fetcher_cls,
+        )
+        if response.total_found is not None:
+            total_found += response.total_found
+        warnings.extend(response.warnings)
+        if response.error_message:
+            errors.append(response.error_message)
+        if response.search_status == "completed":
+            completed_count += 1
+        if response.next_start is not None:
+            next_values.append(response.next_start)
+            fetched_all = False
+        for item in response.results:
+            key = item.accession.strip().upper()
+            if not key:
+                continue
+            scored = GeoDatasetSearchItem(
+                accession=item.accession,
+                title=item.title,
+                summary=item.summary,
+                organism=item.organism,
+                sample_count=item.sample_count,
+                platform_accessions=item.platform_accessions,
+                platform_titles=item.platform_titles,
+                publication_date=item.publication_date,
+                update_date=item.update_date,
+                geo_url=item.geo_url,
+                data_type=item.data_type,
+                tissue_disease_keywords=item.tissue_disease_keywords,
+                match_reason=item.match_reason,
+                relevance_score=item.relevance_score,
+                can_register=item.can_register,
+                can_download=item.can_download,
+                query_used=response.executed_query or query,
+                has_series_matrix=item.has_series_matrix,
+                has_supplementary_files=item.has_supplementary_files,
+                has_sample_metadata=item.has_sample_metadata,
+                has_group_hint=item.has_group_hint,
+                recommended_analyses=item.recommended_analyses,
+                warnings=item.warnings,
+            )
+            existing = by_accession.get(key)
+            if existing is None or scored.relevance_score > existing.relevance_score:
+                by_accession[key] = scored
+    status = "completed" if completed_count else "search_failed"
+    return GeoDatasetSearchResponse(
+        search_status=status,
+        executed_query=" | ".join(cleaned_queries),
+        total_found=total_found if completed_count else None,
+        results=tuple(by_accession.values()),
+        warnings=tuple(dict.fromkeys(warnings)),
+        error_message="；".join(dict.fromkeys(errors)),
+        start=max(0, int(start or 0)),
+        next_start=min(next_values) if next_values else None,
+        fetched_all=fetched_all,
+    )
+
+
+def _item_from_geo_series(item: Any, query_terms: tuple[str, ...]) -> GeoDatasetSearchItem:
+    accession = str(getattr(item, "gse_id", "") or "")
+    title = str(getattr(item, "title_en", "") or getattr(item, "title", "") or "未记录标题")
+    summary = str(getattr(item, "summary_en", "") or getattr(item, "summary", "") or "")
+    organism = str(getattr(item, "organism", "") or "未记录")
+    platform = str(getattr(item, "platform", "") or "")
+    experiment_type = str(getattr(item, "experiment_type", "") or _infer_data_type(title, summary, platform))
+    text = " ".join([title, summary, organism, platform, experiment_type]).lower()
+    matched = tuple(dict.fromkeys(term for term in query_terms if term.lower() in text))
+    score = _relevance_score(text, matched)
+    has_sample_metadata = bool(getattr(item, "sample_count", 0))
+    has_group_hint = any(token in text for token in ("normal", "tumor", "control", "case", "metastasis"))
+    return GeoDatasetSearchItem(
+        accession=accession,
+        title=title,
+        summary=summary,
+        organism=organism,
+        sample_count=getattr(item, "sample_count", 0) or "未记录",
+        platform_accessions=_split_platforms(platform),
+        platform_titles=(),
+        publication_date=str(getattr(item, "publication_date", "") or ""),
+        update_date=str(getattr(item, "update_date", "") or ""),
+        geo_url=str(getattr(item, "geo_url", "") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={accession}"),
+        data_type=experiment_type or "未记录",
+        tissue_disease_keywords=matched[:8],
+        match_reason="、".join(matched[:5]) if matched else "与当前 GEO 查询返回结果匹配",
+        relevance_score=score,
+        can_register=bool(accession),
+        can_download=False,
+        query_used="",
+        has_series_matrix=bool(accession),
+        has_supplementary_files=bool(getattr(item, "has_supplementary_files", False)),
+        has_sample_metadata=has_sample_metadata,
+        has_group_hint=has_group_hint,
+        recommended_analyses=_recommended_analyses(experiment_type, has_group_hint),
+        warnings=_geo_candidate_warnings(accession, has_group_hint),
+    )
+
+
+def _with_optional_filters(query: str, *, organism: str | None, platform_type: str | None) -> str:
+    parts = [query] if query else []
+    if organism and "[Organism]" not in query:
+        parts.append(f"{organism}[Organism]")
+    if platform_type:
+        parts.append(platform_type)
+    return " AND ".join(part for part in parts if part)
+
+
+def _query_terms(query: str) -> tuple[str, ...]:
+    cleaned = query.replace("(", " ").replace(")", " ").replace('"', " ")
+    for splitter in (" AND ", " OR "):
+        cleaned = cleaned.replace(splitter, "|")
+    tokens = [part.strip() for part in cleaned.split("|") if part.strip() and "[" not in part and len(part.strip()) > 2]
+    return tuple(dict.fromkeys(tokens))
+
+
+def _split_platforms(platform: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in platform.replace(";", ",").split(",") if part.strip())
+
+
+def _infer_data_type(title: str, summary: str, platform: str) -> str:
+    text = " ".join([title, summary, platform]).lower()
+    if "rna-seq" in text or "rna seq" in text or "transcriptome" in text:
+        return "RNA-seq / transcriptome"
+    if "microarray" in text or "gpl" in text:
+        return "microarray / expression profiling"
+    if "expression" in text:
+        return "expression profiling"
+    return "未记录"
+
+
+def _relevance_score(text: str, matched: tuple[str, ...]) -> int:
+    base = 20 if matched else 10
+    weighted = sum(18 if term in text[:300] else 10 for term in matched[:6])
+    return min(100, base + weighted)
+
+
+def _recommended_analyses(data_type: str, has_group_hint: bool) -> tuple[str, ...]:
+    values = ["data_recognition"]
+    if any(token in data_type.lower() for token in ("expression", "rna", "microarray", "transcriptome")):
+        values.append("differential_expression")
+    if has_group_hint:
+        values.append("group_comparison")
+    return tuple(values)
+
+
+def _geo_candidate_warnings(accession: str, has_group_hint: bool) -> tuple[str, ...]:
+    warnings: list[str] = []
+    if not accession:
+        warnings.append("缺少 GSE accession，无法登记。")
+    if not has_group_hint:
+        warnings.append("未识别到明确分组线索，需人工确认样本分组。")
+    return tuple(warnings)
+
+
+def _geo_fetcher_class() -> type[Any] | None:
+    try:
+        legacy_root = Path(__file__).resolve().parents[1] / "legacy"
+        for path in (legacy_root, legacy_root / "geo_tool"):
+            text = str(path)
+            if text not in sys.path:
+                sys.path.insert(0, text)
+        from app.bioinformatics.legacy.geo_tool.geo_info_fetcher import GeoInfoFetcher
+
+        return GeoInfoFetcher
+    except Exception:
+        return None
