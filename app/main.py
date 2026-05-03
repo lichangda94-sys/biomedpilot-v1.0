@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         from PySide6.QtWidgets import QApplication
 
         from app.shell.main_window import MainWindow
+        from app.ui_theme import apply_light_app_theme
     except Exception as exc:
         dashboard = build_dashboard_model()
         environment = check_local_environment()
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     qt_app = QApplication(sys.argv)
+    apply_light_app_theme(qt_app)
     window = MainWindow()
     window.show()
     return qt_app.exec()
