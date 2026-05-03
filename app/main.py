@@ -35,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         from PySide6.QtWidgets import QApplication
 
+        from app.app_identity import apply_app_identity
         from app.shell.main_window import MainWindow
         from app.ui_theme import apply_light_app_theme
     except Exception as exc:
@@ -50,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
 
     qt_app = QApplication(sys.argv)
     apply_light_app_theme(qt_app)
+    apply_app_identity(qt_app)
     window = MainWindow()
     window.show()
     return qt_app.exec()

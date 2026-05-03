@@ -16,9 +16,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.app_identity import APP_NAME, icon_asset_statuses, icon_asset_summary, load_app_icon
 from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
+from app.shell.login import BioMedPilotLoginWidget, LocalSession
+from app.shell.module_selection import ModuleSelectionWidget
 from app.shell.sidebar import SidebarWidget
 from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
@@ -31,8 +34,17 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._project_center = ProjectCenter.default()
         self._dashboard = dashboard or build_dashboard_model()
-        self.setWindowTitle("BioMedPilot / 医研智析")
-        self.resize(1180, 760)
+        self._session: LocalSession | None = None
+        self.setWindowTitle(APP_NAME)
+        icon = load_app_icon()
+        if not icon.isNull():
+            self.setWindowIcon(icon)
+        self.resize(1120, 720)
+        self.setMinimumSize(860, 560)
+
+        self._root_stack = QStackedWidget()
+        self._login_page = BioMedPilotLoginWidget(on_login=self._complete_login)
+        self._root_stack.addWidget(self._login_page)
 
         self._stack = QStackedWidget()
         self._dashboard_page = self._build_dashboard_page()
@@ -46,8 +58,8 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(self._settings_page)
         self._stack.addWidget(self._testing_page)
 
-        shell = QWidget()
-        shell_layout = QHBoxLayout(shell)
+        self._shell_page = QWidget()
+        shell_layout = QHBoxLayout(self._shell_page)
         shell_layout.setContentsMargins(0, 0, 0, 0)
         shell_layout.setSpacing(0)
         shell_layout.addWidget(
@@ -60,12 +72,28 @@ class MainWindow(QMainWindow):
             )
         )
         shell_layout.addWidget(self._stack, 1)
-        self.setCentralWidget(shell)
+        self._root_stack.addWidget(self._shell_page)
+        self._root_stack.setCurrentWidget(self._login_page)
+        self.setCentralWidget(self._root_stack)
+
+    def current_session(self) -> LocalSession | None:
+        return self._session
+
+    def _complete_login(self, session: LocalSession) -> None:
+        self._session = session
+        self.show_dashboard()
+        self._root_stack.setCurrentWidget(self._shell_page)
+
+    def logout(self) -> None:
+        self._session = None
+        self._login_page.reset_session()
+        self._root_stack.setCurrentWidget(self._login_page)
+        self.setWindowTitle(APP_NAME)
 
     def show_dashboard(self) -> None:
         self._refresh_dashboard_page()
         self._stack.setCurrentWidget(self._dashboard_page)
-        self.setWindowTitle("BioMedPilot / 医研智析")
+        self.setWindowTitle(APP_NAME)
 
     def show_bioinformatics(self) -> None:
         self._stack.setCurrentWidget(self._bioinformatics_page)
@@ -96,6 +124,8 @@ class MainWindow(QMainWindow):
             self.show_meta_analysis()
 
     def current_workspace_key(self) -> str:
+        if hasattr(self, "_root_stack") and self._root_stack.currentWidget() is self._login_page:
+            return "login"
         current = self._stack.currentWidget()
         if current is self._bioinformatics_page:
             return "bioinformatics"
@@ -108,40 +138,13 @@ class MainWindow(QMainWindow):
         return "dashboard"
 
     def _build_dashboard_page(self) -> QWidget:
-        page = QWidget()
-        root = QVBoxLayout(page)
-        root.setContentsMargins(28, 24, 28, 24)
-        root.setSpacing(18)
-
-        title = QLabel(self._dashboard.product_name)
-        title.setObjectName("appTitle")
-        title.setStyleSheet("font-size: 30px; font-weight: 700;")
-        subtitle = QLabel(self._dashboard.product_subtitle)
-        subtitle.setWordWrap(True)
-        root.addWidget(title)
-        root.addWidget(subtitle)
-
-        create_row = QHBoxLayout()
-        create_bio = QPushButton("新建生信项目")
-        create_bio.clicked.connect(self.create_bioinformatics_project)
-        create_meta = QPushButton("新建 Meta 项目")
-        create_meta.clicked.connect(self.create_meta_analysis_project)
-        create_row.addWidget(create_bio)
-        create_row.addWidget(create_meta)
-        create_row.addStretch(1)
-        root.addLayout(create_row)
-
-        entry_row = QHBoxLayout()
-        entry_row.addWidget(self._entry_card("生信分析 Bioinformatics Analysis", self._dashboard.bioinformatics_features, self.show_bioinformatics))
-        entry_row.addWidget(self._entry_card("Meta 分析 Meta Analysis", self._dashboard.meta_analysis_features, self.show_meta_analysis))
-        root.addLayout(entry_row, 2)
-
-        lower = QHBoxLayout()
-        lower.addWidget(self._recent_projects_card())
-        lower.addWidget(self._list_card("最近任务", [task.display_label() for task in self._dashboard.recent_tasks] or ["暂无最近任务"]))
-        lower.addWidget(StatusPanel(self._dashboard.environment, self._dashboard.test_mode_label))
-        root.addLayout(lower, 1)
-        return page
+        return ModuleSelectionWidget(
+            dashboard=self._dashboard,
+            session=self._session,
+            on_open_bioinformatics=self.show_bioinformatics,
+            on_open_meta_analysis=self.show_meta_analysis,
+            on_logout=self.logout,
+        )
 
     def _refresh_dashboard_page(self) -> None:
         if not hasattr(self, "_stack"):
@@ -217,6 +220,7 @@ class MainWindow(QMainWindow):
         note = QLabel("设置中心当前为占位页，用于统一管理默认项目路径、语言、Python/R 环境、本地 AI 模型、数据库、图表样式、导出格式和缓存清理。")
         note.setWordWrap(True)
         root.addWidget(note)
+        root.addWidget(self._icon_asset_status_card(detailed=True))
         rows = [
             ("默认项目路径", profile.default_project_path),
             ("语言", profile.language),
@@ -232,6 +236,22 @@ class MainWindow(QMainWindow):
             root.addWidget(self._list_card(label, [value]))
         root.addStretch(1)
         return page
+
+    def _icon_asset_status_card(self, *, detailed: bool = False) -> QFrame:
+        summary = icon_asset_summary()
+        rows = [
+            f"图标槽位：{summary['total']}",
+            f"已生成：{summary['generated']}",
+            f"已接入：{summary['connected']}",
+            f"已生成待接入：{summary['generated_waiting']}",
+            f"待生成：{summary['pending']}",
+        ]
+        if detailed:
+            rows.append("明细：")
+            for item in icon_asset_statuses():
+                usages = "；".join(item.usages) if item.usages else "未分配"
+                rows.append(f"{item.state_label} · {item.category} · {item.label} · 调用：{usages}")
+        return self._list_card("图标资源状态", rows)
 
     def _build_testing_page(self) -> QWidget:
         summary = testing_mode_summary()

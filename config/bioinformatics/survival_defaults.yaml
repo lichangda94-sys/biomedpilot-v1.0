@@ -1,0 +1,50 @@
+schema_version: 1
+source_docs:
+  parameter_inventory: docs/bioinformatics_original_code_parameter_inventory.md
+  schema_draft: docs/bioinformatics_software_parameter_schema_draft.md
+
+input:
+  time_column: OS.time
+  event_column: OS
+  subject_id_column: submitter_id
+
+grouping:
+  default_method: median_split
+  high_label: High
+  low_label: Low
+  high_rule: "value >= median(value, na.rm = TRUE)"
+  low_rule: "value < median(value, na.rm = TRUE)"
+
+kaplan_meier:
+  package: survival
+  function: survfit
+  plot_package: survminer
+  plot_function: ggsurvplot
+  test_method: log_rank
+  p_value: true
+  risk_table: true
+  confidence_interval: false
+
+cox:
+  package: survival
+  function: coxph
+  model_types: [univariate, multivariate]
+  default_covariates: [stage_group, age, gender]
+  output_columns: [variable, HR, CI_lower, CI_upper, p_value]
+  confidence_interval: 0.95
+
+forest_plot:
+  point_size: 3
+  errorbar_height: 0.2
+  reference_hr: 1
+  reference_linetype: dashed
+  reference_color: gray40
+  significant_color: red
+  not_significant_color: "#0072B2"
+  legend_position: top
+
+output:
+  univariate_table_template: "{analysis_id}_cox_univariate_results.csv"
+  multivariate_table_template: "{analysis_id}_cox_multivariate_results.csv"
+  km_plot_template: "{analysis_id}_{gene}_KM.png"
+  forest_plot_template: "{analysis_id}_cox_forest.png"

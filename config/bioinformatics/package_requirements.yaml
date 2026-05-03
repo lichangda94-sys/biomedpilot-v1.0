@@ -1,0 +1,58 @@
+schema_version: 1
+source_docs:
+  parameter_inventory: docs/bioinformatics_original_code_parameter_inventory.md
+
+runtime:
+  python:
+    required_for_report_v1: true
+    external_dependencies_required: false
+  r:
+    required_for_report_v1: false
+    required_for_real_analysis: true
+
+r_packages:
+  core_analysis:
+    limma: Differential expression for log-scale expression matrices.
+    DESeq2: Differential expression for raw integer count matrices.
+  data_acquisition:
+    GEOquery: GEO dataset loading.
+    TCGAbiolinks: TCGA GDC query and download.
+    Biobase: ExpressionSet accessors used by GEO workflows.
+  annotation:
+    org.Hs.eg.db: Human gene annotation and ID mapping.
+    biomaRt: Optional annotation lookup.
+  enrichment:
+    clusterProfiler: GO, KEGG, GSEA, and gene ID conversion.
+    enrichplot: Enrichment and GSEA plotting.
+  plotting:
+    ggplot2: General plotting.
+    ggpubr: Statistical annotations for expression plots.
+    ggrepel: Optional label placement.
+    ggtext: Optional rich-text axis labels.
+  survival:
+    survival: Surv objects, Cox models, Kaplan-Meier fits.
+    survminer: Kaplan-Meier plotting.
+  tables:
+    readr: CSV input and output.
+    readxl: Excel input.
+    openxlsx: Excel output.
+    writexl: Optional Excel output.
+  preprocessing_optional:
+    affy: Legacy Affymetrix preprocessing.
+    gcrma: Legacy Affymetrix normalization.
+  utilities:
+    tidyverse: Data wrangling and plotting convenience.
+    dplyr: Data manipulation.
+    tidyr: Data reshaping.
+    stringr: String cleaning.
+    purrr: Functional iteration.
+    XML: TCGA clinical XML parsing.
+    forcats: Factor ordering.
+    reshape2: Legacy reshaping.
+    igraph: Optional network plots.
+
+report_v1:
+  markdown_required: true
+  docx_optional: true
+  pdf_optional: true
+  behavior_when_docx_pdf_unavailable: Generate Markdown and add a warning instead of failing.

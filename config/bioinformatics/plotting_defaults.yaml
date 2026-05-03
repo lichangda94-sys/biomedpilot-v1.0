@@ -1,0 +1,98 @@
+schema_version: 1
+source_docs:
+  parameter_inventory: docs/bioinformatics_original_code_parameter_inventory.md
+  schema_draft: docs/bioinformatics_software_parameter_schema_draft.md
+
+output:
+  output_format: png
+  optional_output_formats: [pdf, tiff, svg]
+  dpi: 300
+
+font:
+  font_family: system_or_sans
+  fallback: system_or_sans
+
+figure_sizes:
+  default:
+    width: 8
+    height: 6
+    units: in
+  square:
+    width: 5
+    height: 5
+    units: in
+  enrichment:
+    width: 7
+    height: 6
+    units: in
+  large:
+    width: 10
+    height: 8
+    units: in
+
+theme:
+  default: theme_bw
+  alternatives: [theme_minimal]
+  base_size: 14
+  title_size: 16
+  axis_title_size: 14
+  axis_text_size: 12
+  legend_title_size: 12
+  legend_text_size: 11
+
+colors:
+  case: "#E64B35"
+  control: "#4DBBD5"
+  significant: red
+  not_significant: grey
+  upregulated: red
+  downregulated: blue
+  neutral: grey
+  annotation: black
+  threshold_line: darkgreen
+  cox_not_significant: "#0072B2"
+
+volcano:
+  point_alpha: 0.6
+  point_size: 1.5
+  show_threshold_lines: true
+  threshold_linetype: dashed
+  label_size: 4
+  label_color: black
+  label_fontface: bold
+  legend_position: top
+
+expression_plot:
+  plot_type: boxplot
+  show_jitter: true
+  jitter_width: 0.2
+  point_size: 1.5
+  point_alpha: 0.7
+  outlier_shape: null
+  significance_label: p.signif
+  legend_position: none
+
+correlation_plot:
+  plot_type: dotplot
+  x: correlation
+  y: gene
+  size: minus_log10_p_value
+  color: correlation
+  base_size: 14
+
+enrichment_plot:
+  plot_type: dotplot
+  show_category: 15
+  x: minus_log10_adjusted_p_value
+  y: description
+  size: gene_count
+  base_size: 13
+
+survival_plot:
+  p_value: true
+  risk_table: true
+  confidence_interval: false
+  palette: ["#00BFC4", "#F8766D"]
+  legend_labels: [Low, High]
+  x_label: Time (days)
+  y_label: Overall Survival Probability

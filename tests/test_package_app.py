@@ -65,4 +65,4 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "BioMedPilot / 医研智析" in completed.stdout
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
-    assert "bioinformatics_features=11" in completed.stdout
+    assert "bioinformatics_features=5" in completed.stdout

@@ -1,0 +1,82 @@
+schema_version: 1
+source_docs:
+  parameter_inventory: docs/bioinformatics_original_code_parameter_inventory.md
+  schema_draft: docs/bioinformatics_software_parameter_schema_draft.md
+
+global:
+  organism: Homo sapiens
+  orgdb: org.Hs.eg.db
+  kegg_code: hsa
+  p_adjust_method: BH
+
+example_gene_panel:
+  description: Thesis example panel only; not hard-coded software logic.
+  genes: [ADIPOR1, ADIPOR2, CDH13, APPL1, LDLR]
+  editable: true
+  hard_coded_default: false
+
+data_ingestion:
+  expression_orientation: genes_by_samples
+  remove_ensembl_version: true
+  duplicate_gene_strategy: max_expression
+  sample_id_cleaning:
+    strip_quotes: true
+    strip_leading_x: true
+    strip_boundary_dots: true
+  accepted_gene_id_types: [SYMBOL, ENSEMBL, ENTREZ, PROBE]
+
+comparisons:
+  require_explicit_group_mapping: true
+  default_paired: false
+  default_case_label: Case
+  default_control_label: Control
+
+limma_deg:
+  enabled: true
+  package: limma
+  design: no_intercept_group
+  contrast_template: "{case_group} - {control_group}"
+  adjust_method: BH
+  sort_by: P
+  number: Inf
+  logfc_abs_cutoff: 1
+  adjusted_p_value_cutoff: 0.05
+  raw_p_value_cutoff: null
+
+deseq2_deg:
+  enabled: true
+  package: DESeq2
+  design_formula: "~ group"
+  contrast_template: ["group", "{case_group}", "{control_group}"]
+  requires_raw_integer_counts: true
+  allow_rounding_normalized_expression: false
+  lfc_shrinkage_enabled: false
+  p_adjust_method: BH
+  log2fc_abs_cutoff: 1
+  adjusted_p_value_cutoff: 0.05
+
+expression_comparison:
+  default_test_method: wilcox.test
+  paired_test_method: wilcox.test
+  alternative: two.sided
+  p_adjust_method: BH
+  significance_label: p.signif
+  star_thresholds:
+    three_stars: 0.001
+    two_stars: 0.01
+    one_star: 0.05
+
+correlation:
+  default_method: pearson
+  alternative_method: spearman
+  p_adjust_method: BH
+  split_positive_negative: true
+  positive_correlation_min: 0
+  negative_correlation_max: 0
+  min_samples: null
+
+output:
+  table_format: csv
+  save_intermediate: true
+  deg_filename_template: "{dataset_id}_DEG_{case_group}_vs_{control_group}.csv"
+  report_filename: bioinformatics_standard_report.md

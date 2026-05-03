@@ -16,16 +16,10 @@ def test_bioinformatics_workspace_steps_are_visible() -> None:
     step_names = [step.feature_name for step in steps]
     assert step_names == [
         "数据检索 / 导入",
-        "Local Expression Matrix Import",
         "数据下载",
         "数据资产识别",
         "数据清洗",
         "样本分组",
-        "差异表达分析",
-        "富集分析",
-        "相关性分析",
-        "生存分析",
-        "报告导出",
     ]
     assert all(step.next_step for step in steps)
 
@@ -44,14 +38,6 @@ def test_bioinformatics_workspace_includes_geo_download_step() -> None:
     assert download
     assert download[0].status.value == "testing"
     assert "下载计划" in download[0].description
-
-
-def test_bioinformatics_workspace_includes_local_expression_import_step() -> None:
-    steps = bioinformatics_step_features()
-    expression_import = [step for step in steps if step.feature_id == "bio-local-expression-import"]
-    assert expression_import
-    assert expression_import[0].status.value == "testing"
-    assert "CSV / TSV / TXT / XLSX" in expression_import[0].description
 
 
 def test_bioinformatics_workspace_includes_geo_asset_detection_step() -> None:
@@ -76,43 +62,3 @@ def test_bioinformatics_workspace_includes_sample_grouping_step() -> None:
     assert grouping
     assert grouping[0].status.value == "testing"
     assert "样本分组预检" in grouping[0].description
-
-
-def test_bioinformatics_workspace_includes_differential_expression_step() -> None:
-    steps = bioinformatics_step_features()
-    deg = [step for step in steps if step.feature_id == "bio-deg"]
-    assert deg
-    assert deg[0].status.value == "testing"
-    assert "不运行正式差异统计" in deg[0].description
-
-
-def test_bioinformatics_workspace_includes_enrichment_step() -> None:
-    steps = bioinformatics_step_features()
-    enrichment = [step for step in steps if step.feature_id == "bio-enrichment"]
-    assert enrichment
-    assert enrichment[0].status.value == "testing"
-    assert "不下载数据库" in enrichment[0].description
-
-
-def test_bioinformatics_workspace_includes_correlation_step() -> None:
-    steps = bioinformatics_step_features()
-    correlation = [step for step in steps if step.feature_id == "bio-correlation"]
-    assert correlation
-    assert correlation[0].status.value == "testing"
-    assert "不计算相关系数" in correlation[0].description
-
-
-def test_bioinformatics_workspace_includes_survival_step() -> None:
-    steps = bioinformatics_step_features()
-    survival = [step for step in steps if step.feature_id == "bio-survival"]
-    assert survival
-    assert survival[0].status.value == "testing"
-    assert "不计算 Kaplan-Meier" in survival[0].description
-
-
-def test_bioinformatics_workspace_includes_reporting_step() -> None:
-    steps = bioinformatics_step_features()
-    reporting = [step for step in steps if step.feature_id == "bio-reporting"]
-    assert reporting
-    assert reporting[0].status.value == "testing"
-    assert "测试摘要" in reporting[0].description

@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report
+from app.bioinformatics.project_readiness import load_readiness_artifacts
+
+
+STANDARDIZED_REGISTRY = Path("manifests") / "standardized_assets_registry.json"
+ANALYSIS_READY_MANIFEST = Path("standardized_data") / "analysis_ready_assets" / "analysis_ready_manifest.json"
+
+
+def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
+    root = Path(project_root).expanduser().resolve()
+    recognition = load_recognition_report(root) or {}
+    files = list(recognition.get("files", []) or [])
+    assets = []
+    warnings = ["当前为资产注册和轻量校验，不等于正式 biological normalization。"]
+    for item in files:
+        asset_type = str(item.get("recognized_type") or "unknown")
+        if asset_type == "unknown":
+            continue
+        assets.append(
+            {
+                "asset_type": asset_type,
+                "label_zh": TYPE_LABELS.get(asset_type, "未知文件"),
+                "file_path": item.get("route_path") or item.get("original_path"),
+                "source_file": item.get("original_path"),
+                "materialize_strategy": "reference_registered_asset",
+                "validation_status": "warning" if item.get("warning") else "registered",
+                "warning": item.get("warning") or "",
+                "analysis_ready": asset_type in {"expression_matrix", "raw_count_matrix", "sample_metadata", "clinical_metadata", "gmt_gene_set"},
+            }
+        )
+    readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
+    usable = [
+        str(row.get("label"))
+        for row in readiness.get("rows", []) or []  # type: ignore[union-attr]
+        if isinstance(row, dict) and row.get("can_run")
+    ]
+    missing = sorted({missing for row in readiness.get("rows", []) or [] if isinstance(row, dict) for missing in row.get("missing_inputs", []) or []})  # type: ignore[union-attr]
+    registry = {
+        "schema_version": "biomedpilot.standardized_assets_registry.v1",
+        "generated_at": _now(),
+        "project_root": str(root),
+        "assets": assets,
+        "warnings": warnings,
+    }
+    manifest = {
+        "schema_version": "biomedpilot.analysis_ready_manifest.v1",
+        "generated_at": registry["generated_at"],
+        "exists": bool(assets),
+        "usable_analyses": usable,
+        "missing_assets": missing,
+        "warnings": warnings,
+    }
+    _write_json(root / STANDARDIZED_REGISTRY, registry)
+    _write_json(root / ANALYSIS_READY_MANIFEST, manifest)
+    return {"registry": registry, "analysis_ready_manifest": manifest}
+
+
+def load_standardization_artifacts(project_root: str | Path) -> dict[str, object]:
+    root = Path(project_root).expanduser().resolve()
+    registry_path = root / STANDARDIZED_REGISTRY
+    manifest_path = root / ANALYSIS_READY_MANIFEST
+    return {
+        "registry": _read_json(registry_path) if registry_path.exists() else None,
+        "analysis_ready_manifest": _read_json(manifest_path) if manifest_path.exists() else None,
+        "registry_path": str(registry_path),
+        "manifest_path": str(manifest_path),
+    }
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _read_json(path: Path) -> dict[str, object]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -1,0 +1,70 @@
+schema_version: 1
+source_docs:
+  parameter_inventory: docs/bioinformatics_original_code_parameter_inventory.md
+  schema_draft: docs/bioinformatics_software_parameter_schema_draft.md
+
+gene_id_mapping:
+  package: clusterProfiler
+  annotation_package: org.Hs.eg.db
+  from_types: [SYMBOL, ENSEMBL, ENTREZ]
+  to_type: ENTREZID
+  minimum_mapping_rate: 0.5
+
+universe:
+  default: mapped_expressed_genes
+  allow_custom_universe: true
+  warning: Enrichment universe/background uses mapped expressed genes by default unless user provides a custom universe.
+
+go:
+  enabled: true
+  package: clusterProfiler
+  function: enrichGO
+  organism_database: org.Hs.eg.db
+  ontology: BP
+  p_adjust_method: BH
+  pvalue_cutoff: 0.05
+  qvalue_cutoff: 0.2
+  readable: true
+
+kegg:
+  enabled: true
+  package: clusterProfiler
+  function: enrichKEGG
+  organism: hsa
+  p_adjust_method: BH
+  pvalue_cutoff: 0.05
+  qvalue_cutoff: 0.2
+
+gsea:
+  enabled: true
+  package: clusterProfiler
+  functions: [gseGO, gseKEGG]
+  ranking_metrics: [logFC, log2FoldChange, correlation]
+  decreasing: true
+  key_type: ENTREZID
+  ontology: BP
+  organism: hsa
+  p_adjust_method: BH
+  min_gene_set_size: 10
+  max_gene_set_size: 500
+  pvalue_cutoff: 0.5
+  exploratory_pvalue_cutoff: 1
+  term_selection_modes: [top_n, keyword, all_significant]
+  default_top_n: 10
+  keyword_filters_are_project_specific: true
+
+deg_filters_for_enrichment:
+  strict:
+    logfc_abs_cutoff: 1
+    adjusted_p_value_cutoff: 0.05
+  relaxed_directional:
+    logfc_abs_cutoff: 0.5
+    adjusted_p_value_cutoff: 0.05
+
+output:
+  go_table_template: "{analysis_id}_GO_BP_enrichment.csv"
+  kegg_table_template: "{analysis_id}_KEGG_enrichment.csv"
+  gsea_table_template: "{analysis_id}_GSEA_results.csv"
+  gsea_object_template: "{analysis_id}_GSEA_object.rds"
+  dotplot_template: "{analysis_id}_{source}_{direction}_dotplot.png"
+  gsea_plot_template: "GSEA_{keyword}_{index}_{safe_description}.png"
