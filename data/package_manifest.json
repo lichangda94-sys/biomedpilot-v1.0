@@ -1,0 +1,22 @@
+{
+  "schema_version": "biomedpilot.package_manifest.v1",
+  "medical_terms_index": {
+    "scope": "BioMedPilot shared medical vocabulary",
+    "shared_layer": "app/shared/query_intelligence/medical_terms",
+    "not_bioinformatics_specific": true,
+    "included_in_default_package": [
+      "data/medical_terms/mini_medical_terms_index.json",
+      "data/medical_terms/zh_term_overrides.json",
+      "data/medical_terms/source_metadata.json",
+      "data/medical_terms/license_attribution.md"
+    ],
+    "optional_enhancement": "data/medical_terms/medical_terms_index.sqlite",
+    "optional_full_index_included": false,
+    "runtime_fallback_order": [
+      "zh_term_overrides.json",
+      "medical_terms_index.sqlite if present",
+      "mini_medical_terms_index.json",
+      "biomedical_term_registry"
+    ]
+  }
+}

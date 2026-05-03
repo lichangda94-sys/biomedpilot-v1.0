@@ -1,0 +1,2266 @@
+[
+  {
+    "concept_id": "mini:glioma",
+    "source_vocabulary": "mini",
+    "source_id": "glioma",
+    "preferred_label_en": "brain glioma",
+    "zh_terms": [
+      "脑胶质瘤",
+      "胶质瘤"
+    ],
+    "synonyms_en": [
+      "glioma",
+      "brain glioma",
+      "glioblastoma",
+      "lower grade glioma",
+      "glioblastoma multiforme",
+      "brain tumor",
+      "brain neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "brain glioma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "GBM",
+      "LGG"
+    ],
+    "mesh_terms": [
+      "Glioma",
+      "Brain Neoplasms"
+    ],
+    "tissue_terms": [
+      "brain"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "central nervous system tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "central nervous system tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-GBM",
+        "TCGA-LGG"
+      ],
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "brain glioma",
+      "glioma",
+      "glioblastoma",
+      "glioblastoma multiforme",
+      "brain tumor",
+      "brain neoplasm",
+      "lower grade glioma",
+      "GBM",
+      "LGG",
+      "脑胶质瘤",
+      "胶质瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:glioblastoma",
+    "source_vocabulary": "mini",
+    "source_id": "glioblastoma",
+    "preferred_label_en": "glioblastoma",
+    "zh_terms": [
+      "胶质母细胞瘤"
+    ],
+    "synonyms_en": [
+      "grade IV glioma",
+      "glioblastoma multiforme",
+      "glioma"
+    ],
+    "exact_synonyms_en": [
+      "glioblastoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "GBM"
+    ],
+    "mesh_terms": [
+      "Glioblastoma",
+      "Brain Neoplasms"
+    ],
+    "tissue_terms": [
+      "brain"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "central nervous system tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "central nervous system tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-GBM"
+      ],
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "glioblastoma",
+      "glioblastoma multiforme",
+      "glioma",
+      "grade IV glioma",
+      "GBM",
+      "胶质母细胞瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:lower_grade_glioma",
+    "source_vocabulary": "mini",
+    "source_id": "lower_grade_glioma",
+    "preferred_label_en": "lower grade glioma",
+    "zh_terms": [
+      "低级别胶质瘤",
+      "低级别脑胶质瘤"
+    ],
+    "synonyms_en": [
+      "low-grade glioma",
+      "low grade glioma",
+      "glioma"
+    ],
+    "exact_synonyms_en": [
+      "lower grade glioma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LGG"
+    ],
+    "mesh_terms": [
+      "Glioma",
+      "Brain Neoplasms"
+    ],
+    "tissue_terms": [
+      "brain"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "central nervous system tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "central nervous system tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LGG"
+      ],
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "lower grade glioma",
+      "low grade glioma",
+      "glioma",
+      "low-grade glioma",
+      "LGG",
+      "低级别胶质瘤",
+      "低级别脑胶质瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:thyroid_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "thyroid_cancer",
+    "preferred_label_en": "thyroid cancer",
+    "zh_terms": [
+      "甲状腺癌",
+      "甲状腺肿瘤"
+    ],
+    "synonyms_en": [
+      "thyroid tumor",
+      "thyroid carcinoma",
+      "thyroid neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "thyroid cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "THCA"
+    ],
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "tissue_terms": [
+      "thyroid"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "endocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "endocrine tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-THCA"
+      ],
+      "gtex": [
+        "Thyroid"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "thyroid cancer",
+      "thyroid carcinoma",
+      "thyroid neoplasm",
+      "thyroid tumor",
+      "THCA",
+      "甲状腺癌",
+      "甲状腺肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:papillary_thyroid_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "papillary_thyroid_carcinoma",
+    "preferred_label_en": "papillary thyroid carcinoma",
+    "zh_terms": [
+      "乳头状甲状腺癌",
+      "甲状腺乳头状癌"
+    ],
+    "synonyms_en": [
+      "papillary thyroid cancer",
+      "thyroid cancer",
+      "thyroid carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "papillary thyroid carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PTC",
+      "THCA"
+    ],
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "tissue_terms": [
+      "thyroid"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "endocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "endocrine tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-THCA"
+      ],
+      "gtex": [
+        "Thyroid"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "papillary thyroid carcinoma",
+      "thyroid cancer",
+      "thyroid carcinoma",
+      "papillary thyroid cancer",
+      "PTC",
+      "THCA",
+      "乳头状甲状腺癌",
+      "甲状腺乳头状癌"
+    ]
+  },
+  {
+    "concept_id": "mini:poorly_differentiated_thyroid_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "poorly_differentiated_thyroid_carcinoma",
+    "preferred_label_en": "poorly differentiated thyroid carcinoma",
+    "zh_terms": [
+      "低分化甲状腺癌"
+    ],
+    "synonyms_en": [
+      "thyroid neoplasm",
+      "poorly differentiated thyroid cancer",
+      "thyroid carcinoma",
+      "thyroid cancer"
+    ],
+    "exact_synonyms_en": [
+      "poorly differentiated thyroid carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PDTC",
+      "THCA"
+    ],
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "tissue_terms": [
+      "thyroid"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [
+      "poorly differentiated"
+    ],
+    "disease_group": "endocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "endocrine tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-THCA"
+      ],
+      "gtex": [
+        "Thyroid"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "poorly differentiated thyroid carcinoma",
+      "poorly differentiated thyroid cancer",
+      "thyroid carcinoma",
+      "thyroid cancer",
+      "thyroid neoplasm",
+      "PDTC",
+      "THCA",
+      "低分化甲状腺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:anaplastic_thyroid_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "anaplastic_thyroid_carcinoma",
+    "preferred_label_en": "anaplastic thyroid carcinoma",
+    "zh_terms": [
+      "未分化甲状腺癌",
+      "甲状腺未分化癌"
+    ],
+    "synonyms_en": [
+      "anaplastic thyroid cancer",
+      "undifferentiated thyroid carcinoma",
+      "thyroid cancer"
+    ],
+    "exact_synonyms_en": [
+      "anaplastic thyroid carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ATC",
+      "THCA"
+    ],
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "tissue_terms": [
+      "thyroid"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [
+      "undifferentiated",
+      "anaplastic"
+    ],
+    "disease_group": "endocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "endocrine tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-THCA"
+      ],
+      "gtex": [
+        "Thyroid"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "anaplastic thyroid carcinoma",
+      "undifferentiated thyroid carcinoma",
+      "thyroid cancer",
+      "anaplastic thyroid cancer",
+      "ATC",
+      "THCA",
+      "未分化甲状腺癌",
+      "甲状腺未分化癌"
+    ]
+  },
+  {
+    "concept_id": "mini:esophageal_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "esophageal_cancer",
+    "preferred_label_en": "esophageal cancer",
+    "zh_terms": [
+      "食管癌",
+      "食道癌"
+    ],
+    "synonyms_en": [
+      "oesophageal cancer",
+      "oesophageal carcinoma",
+      "esophageal carcinoma",
+      "esophageal neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "esophageal cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ESCA"
+    ],
+    "mesh_terms": [
+      "Esophageal Neoplasms"
+    ],
+    "tissue_terms": [
+      "esophagus"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-ESCA"
+      ],
+      "gtex": [
+        "Esophagus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "esophageal cancer",
+      "esophageal carcinoma",
+      "esophageal neoplasm",
+      "oesophageal cancer",
+      "oesophageal carcinoma",
+      "ESCA",
+      "食管癌",
+      "食道癌"
+    ]
+  },
+  {
+    "concept_id": "mini:esophageal_squamous_cell_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "esophageal_squamous_cell_carcinoma",
+    "preferred_label_en": "esophageal squamous cell carcinoma",
+    "zh_terms": [
+      "食管鳞癌",
+      "食道鳞癌",
+      "食管鳞状细胞癌",
+      "食道鳞状细胞癌"
+    ],
+    "synonyms_en": [
+      "esophageal carcinoma",
+      "esophageal squamous carcinoma",
+      "oesophageal squamous cell carcinoma",
+      "ESCC",
+      "esophageal cancer"
+    ],
+    "exact_synonyms_en": [
+      "esophageal squamous cell carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ESCC"
+    ],
+    "mesh_terms": [
+      "Esophageal Neoplasms",
+      "Carcinoma, Squamous Cell"
+    ],
+    "tissue_terms": [
+      "esophagus"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-ESCA"
+      ],
+      "gtex": [
+        "Esophagus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "esophageal squamous cell carcinoma",
+      "oesophageal squamous cell carcinoma",
+      "ESCC",
+      "esophageal cancer",
+      "esophageal carcinoma",
+      "esophageal squamous carcinoma",
+      "食管鳞癌",
+      "食道鳞癌",
+      "食管鳞状细胞癌",
+      "食道鳞状细胞癌"
+    ]
+  },
+  {
+    "concept_id": "mini:lung_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "lung_cancer",
+    "preferred_label_en": "lung cancer",
+    "zh_terms": [
+      "肺癌",
+      "肺部肿瘤"
+    ],
+    "synonyms_en": [
+      "pulmonary carcinoma",
+      "lung carcinoma",
+      "lung neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "lung cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LUNG"
+    ],
+    "mesh_terms": [
+      "Lung Neoplasms"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LUAD",
+        "TCGA-LUSC"
+      ],
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "lung cancer",
+      "lung carcinoma",
+      "lung neoplasm",
+      "pulmonary carcinoma",
+      "LUNG",
+      "肺癌",
+      "肺部肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:non_small_cell_lung_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "non_small_cell_lung_cancer",
+    "preferred_label_en": "non-small cell lung cancer",
+    "zh_terms": [
+      "非小细胞肺癌"
+    ],
+    "synonyms_en": [
+      "non small cell lung cancer",
+      "non-small-cell lung carcinoma",
+      "lung cancer"
+    ],
+    "exact_synonyms_en": [
+      "non-small cell lung cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "NSCLC"
+    ],
+    "mesh_terms": [
+      "Carcinoma, Non-Small-Cell Lung",
+      "Lung Neoplasms"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LUAD",
+        "TCGA-LUSC"
+      ],
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "non-small cell lung cancer",
+      "non-small-cell lung carcinoma",
+      "lung cancer",
+      "non small cell lung cancer",
+      "NSCLC",
+      "非小细胞肺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:lung_adenocarcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "lung_adenocarcinoma",
+    "preferred_label_en": "lung adenocarcinoma",
+    "zh_terms": [
+      "肺腺癌"
+    ],
+    "synonyms_en": [
+      "adenocarcinoma of lung",
+      "lung cancer"
+    ],
+    "exact_synonyms_en": [
+      "lung adenocarcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LUAD"
+    ],
+    "mesh_terms": [
+      "Lung Neoplasms",
+      "Adenocarcinoma"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LUAD"
+      ],
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "lung adenocarcinoma",
+      "lung cancer",
+      "adenocarcinoma of lung",
+      "LUAD",
+      "肺腺癌"
+    ]
+  },
+  {
+    "concept_id": "mini:lung_squamous_cell_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "lung_squamous_cell_carcinoma",
+    "preferred_label_en": "lung squamous cell carcinoma",
+    "zh_terms": [
+      "肺鳞癌",
+      "肺鳞状细胞癌"
+    ],
+    "synonyms_en": [
+      "squamous cell carcinoma of lung",
+      "squamous cell lung carcinoma",
+      "lung cancer"
+    ],
+    "exact_synonyms_en": [
+      "lung squamous cell carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LUSC"
+    ],
+    "mesh_terms": [
+      "Lung Neoplasms",
+      "Carcinoma, Squamous Cell"
+    ],
+    "tissue_terms": [
+      "lung"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LUSC"
+      ],
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "lung squamous cell carcinoma",
+      "squamous cell lung carcinoma",
+      "lung cancer",
+      "squamous cell carcinoma of lung",
+      "LUSC",
+      "肺鳞癌",
+      "肺鳞状细胞癌"
+    ]
+  },
+  {
+    "concept_id": "mini:gastric_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "gastric_cancer",
+    "preferred_label_en": "gastric cancer",
+    "zh_terms": [
+      "胃癌",
+      "胃肿瘤"
+    ],
+    "synonyms_en": [
+      "stomach neoplasm",
+      "stomach cancer",
+      "gastric carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "gastric cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "STAD"
+    ],
+    "mesh_terms": [
+      "Stomach Neoplasms"
+    ],
+    "tissue_terms": [
+      "stomach"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-STAD"
+      ],
+      "gtex": [
+        "Stomach"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "gastric cancer",
+      "stomach cancer",
+      "gastric carcinoma",
+      "stomach neoplasm",
+      "STAD",
+      "胃癌",
+      "胃肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:colorectal_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "colorectal_cancer",
+    "preferred_label_en": "colorectal cancer",
+    "zh_terms": [
+      "结直肠癌",
+      "结肠直肠癌",
+      "肠癌"
+    ],
+    "synonyms_en": [
+      "colon adenocarcinoma",
+      "rectum adenocarcinoma",
+      "colon cancer",
+      "rectal cancer",
+      "colorectal carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "colorectal cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CRC",
+      "COAD",
+      "READ"
+    ],
+    "mesh_terms": [
+      "Colorectal Neoplasms",
+      "Colonic Neoplasms",
+      "Rectal Neoplasms"
+    ],
+    "tissue_terms": [
+      "colon",
+      "rectum"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-COAD",
+        "TCGA-READ"
+      ],
+      "gtex": [
+        "Colon"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "colorectal cancer",
+      "colon cancer",
+      "rectal cancer",
+      "colorectal carcinoma",
+      "colon adenocarcinoma",
+      "rectum adenocarcinoma",
+      "CRC",
+      "COAD",
+      "READ",
+      "结直肠癌",
+      "结肠直肠癌",
+      "肠癌"
+    ]
+  },
+  {
+    "concept_id": "mini:hepatocellular_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "hepatocellular_carcinoma",
+    "preferred_label_en": "hepatocellular carcinoma",
+    "zh_terms": [
+      "肝细胞癌",
+      "肝癌"
+    ],
+    "synonyms_en": [
+      "hepatic cell carcinoma",
+      "liver cancer",
+      "liver cell carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "hepatocellular carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HCC",
+      "LIHC"
+    ],
+    "mesh_terms": [
+      "Carcinoma, Hepatocellular",
+      "Liver Neoplasms"
+    ],
+    "tissue_terms": [
+      "liver"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-LIHC"
+      ],
+      "gtex": [
+        "Liver"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "hepatocellular carcinoma",
+      "liver cancer",
+      "liver cell carcinoma",
+      "hepatic cell carcinoma",
+      "HCC",
+      "LIHC",
+      "肝细胞癌",
+      "肝癌"
+    ]
+  },
+  {
+    "concept_id": "mini:pancreatic_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "pancreatic_cancer",
+    "preferred_label_en": "pancreatic cancer",
+    "zh_terms": [
+      "胰腺癌",
+      "胰腺肿瘤"
+    ],
+    "synonyms_en": [
+      "pancreatic neoplasm",
+      "pancreatic carcinoma",
+      "pancreatic ductal adenocarcinoma"
+    ],
+    "exact_synonyms_en": [
+      "pancreatic cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PAAD",
+      "PDAC"
+    ],
+    "mesh_terms": [
+      "Pancreatic Neoplasms"
+    ],
+    "tissue_terms": [
+      "pancreas"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gastrointestinal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gastrointestinal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-PAAD"
+      ],
+      "gtex": [
+        "Pancreas"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "pancreatic cancer",
+      "pancreatic carcinoma",
+      "pancreatic ductal adenocarcinoma",
+      "pancreatic neoplasm",
+      "PAAD",
+      "PDAC",
+      "胰腺癌",
+      "胰腺肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:breast_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "breast_cancer",
+    "preferred_label_en": "breast cancer",
+    "zh_terms": [
+      "乳腺癌",
+      "乳腺肿瘤"
+    ],
+    "synonyms_en": [
+      "mammary carcinoma",
+      "breast carcinoma",
+      "breast neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "breast cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "BRCA"
+    ],
+    "mesh_terms": [
+      "Breast Neoplasms"
+    ],
+    "tissue_terms": [
+      "breast"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "breast tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "breast tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-BRCA"
+      ],
+      "gtex": [
+        "Breast"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "breast cancer",
+      "breast carcinoma",
+      "breast neoplasm",
+      "mammary carcinoma",
+      "BRCA",
+      "乳腺癌",
+      "乳腺肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:prostate_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "prostate_cancer",
+    "preferred_label_en": "prostate cancer",
+    "zh_terms": [
+      "前列腺癌",
+      "前列腺肿瘤"
+    ],
+    "synonyms_en": [
+      "prostatic carcinoma",
+      "prostate carcinoma",
+      "prostatic neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "prostate cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PRAD"
+    ],
+    "mesh_terms": [
+      "Prostatic Neoplasms"
+    ],
+    "tissue_terms": [
+      "prostate"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "genitourinary tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "genitourinary tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-PRAD"
+      ],
+      "gtex": [
+        "Prostate"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "prostate cancer",
+      "prostate carcinoma",
+      "prostatic neoplasm",
+      "prostatic carcinoma",
+      "PRAD",
+      "前列腺癌",
+      "前列腺肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:ovarian_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "ovarian_cancer",
+    "preferred_label_en": "ovarian cancer",
+    "zh_terms": [
+      "卵巢癌",
+      "卵巢肿瘤"
+    ],
+    "synonyms_en": [
+      "ovary cancer",
+      "ovarian carcinoma",
+      "ovarian neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "ovarian cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "OV"
+    ],
+    "mesh_terms": [
+      "Ovarian Neoplasms"
+    ],
+    "tissue_terms": [
+      "ovary"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gynecologic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gynecologic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-OV"
+      ],
+      "gtex": [
+        "Ovary"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "ovarian cancer",
+      "ovarian carcinoma",
+      "ovarian neoplasm",
+      "ovary cancer",
+      "OV",
+      "卵巢癌",
+      "卵巢肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:cervical_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "cervical_cancer",
+    "preferred_label_en": "cervical cancer",
+    "zh_terms": [
+      "宫颈癌",
+      "子宫颈癌"
+    ],
+    "synonyms_en": [
+      "cervix cancer",
+      "cervical carcinoma",
+      "uterine cervical neoplasm"
+    ],
+    "exact_synonyms_en": [
+      "cervical cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CESC"
+    ],
+    "mesh_terms": [
+      "Uterine Cervical Neoplasms"
+    ],
+    "tissue_terms": [
+      "cervix"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gynecologic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gynecologic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-CESC"
+      ],
+      "gtex": [
+        "Cervix"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "cervical cancer",
+      "cervical carcinoma",
+      "uterine cervical neoplasm",
+      "cervix cancer",
+      "CESC",
+      "宫颈癌",
+      "子宫颈癌"
+    ]
+  },
+  {
+    "concept_id": "mini:endometrial_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "endometrial_cancer",
+    "preferred_label_en": "endometrial cancer",
+    "zh_terms": [
+      "子宫内膜癌",
+      "子宫内膜肿瘤"
+    ],
+    "synonyms_en": [
+      "uterine cancer",
+      "endometrial carcinoma",
+      "uterine corpus endometrial carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "endometrial cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "UCEC"
+    ],
+    "mesh_terms": [
+      "Endometrial Neoplasms"
+    ],
+    "tissue_terms": [
+      "endometrium",
+      "uterus"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gynecologic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gynecologic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-UCEC"
+      ],
+      "gtex": [
+        "Uterus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "endometrial cancer",
+      "endometrial carcinoma",
+      "uterine corpus endometrial carcinoma",
+      "uterine cancer",
+      "UCEC",
+      "子宫内膜癌",
+      "子宫内膜肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:kidney_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "kidney_cancer",
+    "preferred_label_en": "kidney cancer",
+    "zh_terms": [
+      "肾癌",
+      "肾细胞癌",
+      "肾肿瘤"
+    ],
+    "synonyms_en": [
+      "kidney renal clear cell carcinoma",
+      "kidney renal papillary cell carcinoma",
+      "renal cell carcinoma",
+      "renal carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "kidney cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RCC",
+      "KIRC",
+      "KIRP",
+      "KICH"
+    ],
+    "mesh_terms": [
+      "Kidney Neoplasms",
+      "Carcinoma, Renal Cell"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "genitourinary tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "genitourinary tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-KIRC",
+        "TCGA-KIRP",
+        "TCGA-KICH"
+      ],
+      "gtex": [
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "kidney cancer",
+      "renal cell carcinoma",
+      "renal carcinoma",
+      "kidney renal clear cell carcinoma",
+      "kidney renal papillary cell carcinoma",
+      "RCC",
+      "KIRC",
+      "KIRP",
+      "KICH",
+      "肾癌",
+      "肾细胞癌",
+      "肾肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:bladder_cancer",
+    "source_vocabulary": "mini",
+    "source_id": "bladder_cancer",
+    "preferred_label_en": "bladder cancer",
+    "zh_terms": [
+      "膀胱癌",
+      "膀胱肿瘤"
+    ],
+    "synonyms_en": [
+      "bladder urothelial carcinoma",
+      "bladder carcinoma",
+      "urothelial carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "bladder cancer"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "BLCA"
+    ],
+    "mesh_terms": [
+      "Urinary Bladder Neoplasms"
+    ],
+    "tissue_terms": [
+      "bladder"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "genitourinary tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "genitourinary tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-BLCA"
+      ],
+      "gtex": [
+        "Bladder"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "bladder cancer",
+      "bladder carcinoma",
+      "urothelial carcinoma",
+      "bladder urothelial carcinoma",
+      "BLCA",
+      "膀胱癌",
+      "膀胱肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:melanoma",
+    "source_vocabulary": "mini",
+    "source_id": "melanoma",
+    "preferred_label_en": "melanoma",
+    "zh_terms": [
+      "黑色素瘤",
+      "恶性黑色素瘤"
+    ],
+    "synonyms_en": [
+      "cutaneous melanoma",
+      "malignant melanoma",
+      "skin cutaneous melanoma"
+    ],
+    "exact_synonyms_en": [
+      "melanoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SKCM"
+    ],
+    "mesh_terms": [
+      "Melanoma"
+    ],
+    "tissue_terms": [
+      "skin"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "skin tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "skin tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-SKCM"
+      ],
+      "gtex": [
+        "Skin"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "melanoma",
+      "malignant melanoma",
+      "skin cutaneous melanoma",
+      "cutaneous melanoma",
+      "SKCM",
+      "黑色素瘤",
+      "恶性黑色素瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:diabetes_mellitus",
+    "source_vocabulary": "mini",
+    "source_id": "diabetes_mellitus",
+    "preferred_label_en": "Diabetes Mellitus",
+    "zh_terms": [
+      "糖尿病"
+    ],
+    "synonyms_en": [
+      "diabetes mellitus",
+      "diabetes",
+      "diabetic"
+    ],
+    "exact_synonyms_en": [
+      "Diabetes Mellitus"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "DM"
+    ],
+    "mesh_terms": [
+      "Diabetes Mellitus"
+    ],
+    "tissue_terms": [
+      "pancreas",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Pancreas"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Diabetes Mellitus",
+      "diabetes",
+      "diabetic",
+      "DM",
+      "糖尿病"
+    ]
+  },
+  {
+    "concept_id": "mini:type_2_diabetes_mellitus",
+    "source_vocabulary": "mini",
+    "source_id": "type_2_diabetes_mellitus",
+    "preferred_label_en": "Type 2 Diabetes Mellitus",
+    "zh_terms": [
+      "2型糖尿病",
+      "二型糖尿病",
+      "II型糖尿病"
+    ],
+    "synonyms_en": [
+      "T2D",
+      "T2DM",
+      "non-insulin-dependent diabetes mellitus",
+      "type 2 diabetes",
+      "diabetic"
+    ],
+    "exact_synonyms_en": [
+      "Type 2 Diabetes Mellitus"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "T2D",
+      "T2DM"
+    ],
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 2",
+      "Diabetes Mellitus"
+    ],
+    "tissue_terms": [
+      "pancreas",
+      "blood"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Pancreas"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Type 2 Diabetes Mellitus",
+      "type 2 diabetes",
+      "diabetic",
+      "T2D",
+      "T2DM",
+      "non-insulin-dependent diabetes mellitus",
+      "2型糖尿病",
+      "二型糖尿病",
+      "II型糖尿病"
+    ]
+  },
+  {
+    "concept_id": "mini:obesity",
+    "source_vocabulary": "mini",
+    "source_id": "obesity",
+    "preferred_label_en": "Obesity",
+    "zh_terms": [
+      "肥胖",
+      "超重",
+      "体重指数"
+    ],
+    "synonyms_en": [
+      "BMI",
+      "body mass index",
+      "obesity",
+      "obese",
+      "overweight"
+    ],
+    "exact_synonyms_en": [
+      "Obesity"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "BMI"
+    ],
+    "mesh_terms": [
+      "Obesity",
+      "Body Mass Index"
+    ],
+    "tissue_terms": [
+      "adipose tissue"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "metabolic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "metabolic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Adipose"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Obesity",
+      "obese",
+      "overweight",
+      "BMI",
+      "body mass index",
+      "肥胖",
+      "超重",
+      "体重指数"
+    ]
+  },
+  {
+    "concept_id": "mini:hypertension",
+    "source_vocabulary": "mini",
+    "source_id": "hypertension",
+    "preferred_label_en": "Hypertension",
+    "zh_terms": [
+      "高血压"
+    ],
+    "synonyms_en": [
+      "hypertensive",
+      "high blood pressure"
+    ],
+    "exact_synonyms_en": [
+      "Hypertension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HTN"
+    ],
+    "mesh_terms": [
+      "Hypertension"
+    ],
+    "tissue_terms": [
+      "blood vessel",
+      "heart"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery",
+        "Heart"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Hypertension",
+      "high blood pressure",
+      "hypertensive",
+      "HTN",
+      "高血压"
+    ]
+  },
+  {
+    "concept_id": "mini:coronary_artery_disease",
+    "source_vocabulary": "mini",
+    "source_id": "coronary_artery_disease",
+    "preferred_label_en": "Coronary Artery Disease",
+    "zh_terms": [
+      "冠心病",
+      "冠状动脉疾病"
+    ],
+    "synonyms_en": [
+      "ischemic heart disease",
+      "coronary heart disease"
+    ],
+    "exact_synonyms_en": [
+      "Coronary Artery Disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CAD",
+      "CHD"
+    ],
+    "mesh_terms": [
+      "Coronary Artery Disease"
+    ],
+    "tissue_terms": [
+      "heart",
+      "artery"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart",
+        "Artery"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Coronary Artery Disease",
+      "coronary heart disease",
+      "ischemic heart disease",
+      "CAD",
+      "CHD",
+      "冠心病",
+      "冠状动脉疾病"
+    ]
+  },
+  {
+    "concept_id": "mini:chronic_kidney_disease",
+    "source_vocabulary": "mini",
+    "source_id": "chronic_kidney_disease",
+    "preferred_label_en": "Chronic Kidney Disease",
+    "zh_terms": [
+      "慢性肾病",
+      "慢性肾脏病"
+    ],
+    "synonyms_en": [
+      "chronic renal insufficiency",
+      "chronic renal disease",
+      "chronic kidney failure"
+    ],
+    "exact_synonyms_en": [
+      "Chronic Kidney Disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CKD"
+    ],
+    "mesh_terms": [
+      "Renal Insufficiency, Chronic"
+    ],
+    "tissue_terms": [
+      "kidney"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "kidney disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "kidney disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Kidney"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Chronic Kidney Disease",
+      "chronic renal disease",
+      "chronic kidney failure",
+      "chronic renal insufficiency",
+      "CKD",
+      "慢性肾病",
+      "慢性肾脏病"
+    ]
+  },
+  {
+    "concept_id": "mini:alzheimer_disease",
+    "source_vocabulary": "mini",
+    "source_id": "alzheimer_disease",
+    "preferred_label_en": "Alzheimer Disease",
+    "zh_terms": [
+      "阿尔茨海默病",
+      "阿尔兹海默病",
+      "老年痴呆"
+    ],
+    "synonyms_en": [
+      "Alzheimer dementia",
+      "Alzheimer's disease"
+    ],
+    "exact_synonyms_en": [
+      "Alzheimer Disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AD"
+    ],
+    "mesh_terms": [
+      "Alzheimer Disease"
+    ],
+    "tissue_terms": [
+      "brain"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "neurologic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "neurologic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Alzheimer Disease",
+      "Alzheimer's disease",
+      "Alzheimer dementia",
+      "AD",
+      "阿尔茨海默病",
+      "阿尔兹海默病",
+      "老年痴呆"
+    ]
+  },
+  {
+    "concept_id": "mini:parkinson_disease",
+    "source_vocabulary": "mini",
+    "source_id": "parkinson_disease",
+    "preferred_label_en": "Parkinson Disease",
+    "zh_terms": [
+      "帕金森病"
+    ],
+    "synonyms_en": [
+      "parkinsonism",
+      "Parkinson's disease"
+    ],
+    "exact_synonyms_en": [
+      "Parkinson Disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PD"
+    ],
+    "mesh_terms": [
+      "Parkinson Disease"
+    ],
+    "tissue_terms": [
+      "brain"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "neurologic disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "neurologic disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Parkinson Disease",
+      "Parkinson's disease",
+      "parkinsonism",
+      "PD",
+      "帕金森病"
+    ]
+  },
+  {
+    "concept_id": "mini:rheumatoid_arthritis",
+    "source_vocabulary": "mini",
+    "source_id": "rheumatoid_arthritis",
+    "preferred_label_en": "Rheumatoid Arthritis",
+    "zh_terms": [
+      "类风湿关节炎",
+      "类风湿性关节炎"
+    ],
+    "synonyms_en": [
+      "inflammatory arthritis",
+      "rheumatoid arthritis"
+    ],
+    "exact_synonyms_en": [
+      "Rheumatoid Arthritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RA"
+    ],
+    "mesh_terms": [
+      "Arthritis, Rheumatoid"
+    ],
+    "tissue_terms": [
+      "joint",
+      "synovium"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "immune mediated disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "immune mediated disease"
+    ],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Rheumatoid Arthritis",
+      "inflammatory arthritis",
+      "RA",
+      "类风湿关节炎",
+      "类风湿性关节炎"
+    ]
+  },
+  {
+    "concept_id": "mini:inflammatory_bowel_disease",
+    "source_vocabulary": "mini",
+    "source_id": "inflammatory_bowel_disease",
+    "preferred_label_en": "Inflammatory Bowel Disease",
+    "zh_terms": [
+      "炎症性肠病",
+      "炎性肠病"
+    ],
+    "synonyms_en": [
+      "IBD",
+      "inflammatory bowel diseases",
+      "Crohn Disease",
+      "Ulcerative Colitis"
+    ],
+    "exact_synonyms_en": [
+      "Inflammatory Bowel Disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IBD"
+    ],
+    "mesh_terms": [
+      "Inflammatory Bowel Diseases",
+      "Crohn Disease",
+      "Colitis, Ulcerative"
+    ],
+    "tissue_terms": [
+      "intestine",
+      "colon"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "immune mediated disease",
+    "concept_type": "disease",
+    "parent_terms": [
+      "immune mediated disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Colon",
+        "Small Intestine"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.93,
+    "normalized_terms": [
+      "Inflammatory Bowel Disease",
+      "Crohn Disease",
+      "Ulcerative Colitis",
+      "IBD",
+      "inflammatory bowel diseases",
+      "炎症性肠病",
+      "炎性肠病"
+    ]
+  },
+  {
+    "concept_id": "mini:brain_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "brain",
+    "preferred_label_en": "brain",
+    "zh_terms": [
+      "脑"
+    ],
+    "synonyms_en": [
+      "brain tissue"
+    ],
+    "exact_synonyms_en": [
+      "brain"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Brain"
+    ],
+    "disease_group": "",
+    "concept_type": "tissue",
+    "parent_terms": [],
+    "cross_refs": {
+      "gtex": [
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "brain",
+      "脑"
+    ]
+  },
+  {
+    "concept_id": "mini:data_modality_core",
+    "source_vocabulary": "mini",
+    "source_id": "data_modality_core",
+    "preferred_label_en": "expression profiling",
+    "zh_terms": [
+      "表达谱",
+      "转录组",
+      "RNA测序",
+      "RNA-seq",
+      "单细胞",
+      "芯片",
+      "甲基化",
+      "miRNA",
+      "lncRNA",
+      "蛋白质组"
+    ],
+    "synonyms_en": [
+      "expression profiling",
+      "gene expression profiling",
+      "transcriptome",
+      "transcriptomics",
+      "RNA-seq",
+      "RNA sequencing",
+      "single-cell RNA-seq",
+      "single cell RNA sequencing",
+      "scRNA-seq",
+      "microarray",
+      "gene expression microarray",
+      "DNA methylation",
+      "methylation profiling",
+      "methylation array",
+      "miRNA",
+      "microRNA",
+      "miRNA expression profiling",
+      "lncRNA",
+      "long non-coding RNA",
+      "long noncoding RNA",
+      "proteomics",
+      "protein expression profiling",
+      "proteome"
+    ],
+    "exact_synonyms_en": [
+      "expression profiling"
+    ],
+    "related_synonyms_en": [
+      "gene expression profiling",
+      "methylation profiling",
+      "long non-coding RNA",
+      "proteome"
+    ],
+    "abbreviations": [
+      "RNA-seq",
+      "scRNA-seq",
+      "miRNA",
+      "lncRNA"
+    ],
+    "mesh_terms": [
+      "Gene Expression Profiling",
+      "Sequence Analysis, RNA",
+      "Proteomics"
+    ],
+    "disease_group": "",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.1-mini-2026-05-03",
+    "term_source": "stage2_1_curated_mini_index",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "表达谱",
+      "转录组",
+      "RNA测序",
+      "RNA-seq",
+      "单细胞",
+      "芯片",
+      "甲基化",
+      "miRNA",
+      "lncRNA",
+      "蛋白质组",
+      "expression profiling",
+      "gene expression profiling",
+      "transcriptome",
+      "transcriptomics",
+      "RNA sequencing",
+      "single-cell RNA-seq",
+      "single cell RNA sequencing",
+      "scRNA-seq",
+      "microarray",
+      "gene expression microarray",
+      "DNA methylation",
+      "methylation profiling",
+      "methylation array",
+      "microRNA",
+      "miRNA expression profiling",
+      "long non-coding RNA",
+      "long noncoding RNA",
+      "proteomics",
+      "protein expression profiling",
+      "proteome"
+    ]
+  }
+]
