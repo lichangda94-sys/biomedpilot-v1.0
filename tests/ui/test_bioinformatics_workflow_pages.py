@@ -374,16 +374,28 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert widget._gtex_empty_label.isHidden()
     assert widget._tcga_table.horizontalHeaderItem(0).text() == "操作"
     assert widget._tcga_table.columnWidth(0) >= 160
+    assert [widget._tcga_table.horizontalHeaderItem(index).text() for index in range(widget._tcga_table.columnCount())] == [
+        "操作",
+        "project_id",
+        "project_name",
+        "primary_site",
+        "disease_type",
+        "mapping_status",
+        "状态",
+    ]
     assert widget._tcga_table.item(0, 1).text() == "TCGA-THCA"
     assert widget._tcga_table.item(0, 2).text() == "Thyroid Carcinoma"
-    assert widget._tcga_table.item(0, 3).text() == "本地词库映射"
-    assert widget._tcga_table.item(0, 4).text() == "未登记"
+    assert widget._tcga_table.item(0, 3).text() == "Thyroid"
+    assert widget._tcga_table.item(0, 4).text() == "Thyroid carcinoma"
+    assert widget._tcga_table.item(0, 5).text() == "mapped_not_online_checked"
+    assert widget._tcga_table.item(0, 6).text() == "未登记"
     assert widget._gtex_table.horizontalHeaderItem(0).text() == "操作"
     assert widget._gtex_table.columnWidth(0) >= 160
     assert widget._gtex_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 2).text() == "正常组织参考"
-    assert widget._gtex_table.item(0, 3).text() == "本地词库映射"
-    assert widget._gtex_table.item(0, 4).text() == "未登记"
+    assert widget._gtex_table.item(0, 2).text() == "Thyroid"
+    assert widget._gtex_table.item(0, 3).text() == "normal_reference"
+    assert widget._gtex_table.item(0, 4).text() == "mapped_not_online_checked"
+    assert widget._gtex_table.item(0, 5).text() == "未登记"
     tcga_buttons = widget._tcga_table.cellWidget(0, 0).findChildren(QPushButton)
     gtex_buttons = widget._gtex_table.cellWidget(0, 0).findChildren(QPushButton)
     assert "登记为数据源" in [button.text() for button in tcga_buttons]
@@ -396,6 +408,36 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     )
     for forbidden in ("fallback_registry_only", "configurable_not_called", "Ollama", "Translator", "Media", "rejected_terms", "batch effect", "PubMed", "PICO", "literature search", "Meta Analysis"):
         assert forbidden not in visible_text
+
+
+def test_glioma_tcga_gtex_candidates_displayed(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.set_query_text("脑胶质瘤")
+    result = widget.generate_terms()
+
+    assert result is not None
+    assert "glioma" in widget._geo_query_box.toPlainText().lower()
+    assert "glioblastoma" in widget._geo_query_box.toPlainText().lower()
+    assert widget._tcga_table.rowCount() >= 2
+    tcga_projects = {widget._tcga_table.item(row, 1).text() for row in range(widget._tcga_table.rowCount())}
+    assert {"TCGA-GBM", "TCGA-LGG"} <= tcga_projects
+    assert widget._gtex_table.item(0, 1).text() == "Brain"
+    assert widget._gtex_table.item(0, 3).text() == "normal_reference"
+
+
+def test_no_generic_tcga_mapping_label(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.set_query_text("脑胶质瘤")
+    widget.generate_terms()
+
+    rendered = " ".join(
+        widget._tcga_table.item(row, column).text()
+        for row in range(widget._tcga_table.rowCount())
+        for column in range(widget._tcga_table.columnCount())
+        if widget._tcga_table.item(row, column) is not None
+    )
+    assert "TCGA/GDC 项目映射：TCGA" not in rendered
+    assert "本地词库映射" not in rendered
 
 
 def test_chinese_dataset_search_broad_query_guard_does_not_create_candidates(qt_app) -> None:
@@ -463,7 +505,7 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert widget._continue_button.isEnabled()
     assert widget._continue_button.text() == "进入数据识别"
     assert widget.status_message() == "已登记为数据来源，可进入数据识别。"
-    assert widget._tcga_table.item(0, 4).text() == "已登记"
+    assert widget._tcga_table.item(0, 6).text() == "已登记"
     registered_button = widget._tcga_table.cellWidget(0, 0).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
     assert registered_button.text() == "已登记"
     assert not registered_button.isEnabled()
@@ -503,7 +545,7 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
     assert widget._registered_table.rowCount() == 1
     assert widget._registered_table.item(0, 0).text() == "GTEx 正常组织参考"
     assert widget._registered_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 4).text() == "已登记"
+    assert widget._gtex_table.item(0, 5).text() == "已登记"
     assert widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()
 

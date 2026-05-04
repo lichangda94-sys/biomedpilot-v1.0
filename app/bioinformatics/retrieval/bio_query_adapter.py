@@ -104,11 +104,9 @@ def _platform_terms(draft: SearchTranslationDraft) -> list[str]:
 
 
 def _disease_aware_queries(disease_terms: list[str], platform_terms: list[str]) -> list[str]:
-    queries: list[str] = []
-    for disease in disease_terms[:6]:
-        for platform in platform_terms[:4]:
-            queries.append(_and_query(disease, platform))
-    return _unique(queries)
+    if not disease_terms:
+        return []
+    return [_geo_query(disease_terms, platform_terms)]
 
 
 def _supplemental_queries(existing: list[str], confirmed: list[str], platform_terms: list[str]) -> list[str]:
@@ -118,8 +116,14 @@ def _supplemental_queries(existing: list[str], confirmed: list[str], platform_te
     return _unique(supplemental)
 
 
-def _and_query(left: str, right: str) -> str:
-    return f"{_quote_if_needed(left)} AND {_quote_if_needed(right)}"
+def _geo_query(disease_terms: list[str], platform_terms: list[str]) -> str:
+    disease = _or_block(disease_terms[:8])
+    platform = _or_block(platform_terms[:6])
+    return f"{disease} AND {platform} AND GSE[ETYP] AND Homo sapiens[Organism]"
+
+
+def _or_block(values: list[str]) -> str:
+    return "(" + " OR ".join(_quote_if_needed(value) for value in values if value.strip()) + ")"
 
 
 def _quote_if_needed(value: str) -> str:

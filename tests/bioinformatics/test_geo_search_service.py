@@ -10,6 +10,8 @@ def _fake_ncbi(url: str) -> dict[str, object]:
     query = parse_qs(parsed.query)
     if parsed.path.endswith("esearch.fcgi"):
         assert "GSE[ETYP]" in query["term"][0]
+        assert "Homo sapiens[Organism]" in query["term"][0]
+        assert "glioma" in query["term"][0].lower()
         return {"esearchresult": {"idlist": ["1", "2"]}}
     return {
         "result": {
@@ -35,7 +37,11 @@ def test_geo_search_executes_disease_aware_queries_and_ranks_results() -> None:
 
     assert response.search_status == "completed"
     assert response.executed_queries
-    assert all("glioma" in query.lower() or "glioblastoma" in query.lower() or "brain" in query.lower() for query in response.executed_queries[:3])
+    assert response.executed_queries[0].startswith("(")
+    assert "glioma" in response.executed_queries[0].lower()
+    assert "glioblastoma" in response.executed_queries[0].lower()
+    assert "GSE[ETYP]" in response.executed_queries[0]
+    assert "Homo sapiens[Organism]" in response.executed_queries[0]
     assert response.results[0].accession == "GSEGLIOMA1"
     assert response.results[0].query_used
     assert "疾病词" in response.results[0].disease_relevance_reason

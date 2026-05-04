@@ -124,6 +124,11 @@ class TcgaGdcSearchAdapter:
         files = _payload_hits(files_payload)
         cases = _payload_hits(cases_payload)
         metadata = _asset_metadata(project_id, files, cases, project)
+        metadata["project_id"] = project_id
+        metadata["project_name"] = str(project.get("name") or project_id)
+        metadata["primary_site"] = str(project.get("primary_site") or "")
+        metadata["disease_type"] = str(project.get("disease_type") or "")
+        metadata["mapping_status"] = "online_checked_term_mapping"
         warnings = _warnings(metadata)
         return UnifiedDatasetCandidate(
             source=self.source,

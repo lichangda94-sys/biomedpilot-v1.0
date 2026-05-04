@@ -34,7 +34,7 @@ class QueryUnderstandingLayer:
         tcga_project_ids = _unique([*lookup.get("tcga_project_candidates", []), *_tcga_projects(cleaned, [*disease_en, *draft.database_terms])])
         gtex_tissues = _unique([*lookup.get("gtex_tissue_candidates", []), *_gtex_tissues(cleaned, [*disease_en, *tissue_terms, *draft.database_terms])])
         broad_geo_query = _build_geo_query((), data_modalities)
-        geo_queries = () if disease_terms_missing else tuple(draft.geo_query_candidates or (_build_geo_query(disease_en, data_modalities),))
+        geo_queries = () if disease_terms_missing else (_build_geo_query(disease_en, data_modalities),)
         search_execution_status = "disease_terms_missing" if disease_terms_missing else "draft_only"
         guard_warnings = (
             ("未识别出明确疾病词，当前 query 为宽泛表达谱检索，结果可能过宽。",)
@@ -129,7 +129,7 @@ def _analysis_intent(original: str) -> str:
 
 def _build_geo_query(disease_terms: tuple[str, ...], modalities: tuple[str, ...]) -> str:
     disease = " OR ".join(f'"{term}"' for term in disease_terms[:8])
-    modality = " OR ".join(f'"{term}"' for term in modalities[:4])
+    modality = " OR ".join(f'"{term}"' for term in modalities[:6])
     if disease:
         return f"({disease}) AND ({modality}) AND GSE[ETYP] AND Homo sapiens[Organism]"
     return f"({modality}) AND GSE[ETYP] AND Homo sapiens[Organism]"

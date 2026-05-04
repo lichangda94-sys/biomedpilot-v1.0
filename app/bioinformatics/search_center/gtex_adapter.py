@@ -98,6 +98,9 @@ class GtexSearchAdapter:
         expression_available = sample_count not in (0, "未知")
         metadata = {
             "tissue_name": tissue,
+            "tissue_detail": str(record.get("tissueSiteDetail") or tissue),
+            "role": "normal_reference",
+            "mapping_status": "online_checked_term_mapping",
             "normal_reference": True,
             "expression_availability": expression_available,
             "sample_count": sample_count,
@@ -181,7 +184,10 @@ def _fallback_candidate(tissue: str, query: StructuredBioinformaticsQuery, *, wa
         warnings=(warning, GTEX_BATCH_WARNING),
         source_specific_metadata={
             "tissue_name": tissue,
+            "tissue_detail": tissue,
+            "role": "normal_reference",
             "normal_reference": True,
+            "mapping_status": "mapped_not_online_checked",
             "expression_availability": False,
             "recommended_usage": "normal_reference_candidate_pending_online_check",
             "query_disease_terms": list(query.disease_terms_en),
@@ -209,6 +215,8 @@ def _draft_candidate(tissue: str, query: StructuredBioinformaticsQuery) -> Unifi
         warnings=(GTEX_BATCH_WARNING,),
         source_specific_metadata={
             "tissue_name": tissue,
+            "tissue_detail": tissue,
+            "role": "normal_reference",
             "normal_reference": True,
             "mapping_status": "mapped_not_online_checked",
             "recommended_usage": "normal_reference_candidate",

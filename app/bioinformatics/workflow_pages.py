@@ -772,8 +772,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         result_card, result_layout = _card("数据库候选结果")
         self._tabs = QTabWidget()
         self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["操作", "GSE 编号", "标题", "疾病/组织", "平台/数据类型", "样本数", "匹配原因", "推荐等级", "状态"])
-        self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["操作", "项目代码", "项目名称", "匹配来源", "状态"])
-        self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["操作", "组织名称", "组织类型", "匹配来源", "状态"])
+        self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["操作", "project_id", "project_name", "primary_site", "disease_type", "mapping_status", "状态"])
+        self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["操作", "tissue", "tissue_detail", "role", "mapping_status", "状态"])
         self._tabs.addTab(self._geo_tab_page, "GEO/GSE 候选数据集")
         self._tabs.addTab(self._tcga_tab_page, "TCGA/GDC 项目候选")
         self._tabs.addTab(self._gtex_tab_page, "GTEx 组织候选")
@@ -901,8 +901,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                 [
                     "",
                     item.accession_or_project,
-                    item.display_title,
-                    "本地词库映射",
+                    _candidate_metadata_value(item, "project_name", item.display_title),
+                    _candidate_metadata_value(item, "primary_site", item.tissue),
+                    _candidate_metadata_value(item, "disease_type", item.disease),
+                    _candidate_metadata_value(item, "mapping_status", "curated_term_mapping"),
                     self._candidate_registration_status(item),
                 ]
                 for item in candidates
@@ -920,8 +922,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                 [
                     "",
                     item.tissue or item.accession_or_project,
-                    "正常组织参考",
-                    "本地词库映射",
+                    _candidate_metadata_value(item, "tissue_detail", item.tissue or item.display_title),
+                    "normal_reference",
+                    _candidate_metadata_value(item, "mapping_status", "curated_term_mapping"),
                     self._candidate_registration_status(item),
                 ]
                 for item in candidates
@@ -2725,6 +2728,13 @@ def _candidate_match_reason(candidate: UnifiedDatasetCandidate) -> str:
     if candidate.source == "gtex":
         return "组织词映射到 GTEx 正常组织参考"
     return "与当前检索词匹配"
+
+
+def _candidate_metadata_value(candidate: UnifiedDatasetCandidate, key: str, fallback: object = "") -> str:
+    value = candidate.source_specific_metadata.get(key)
+    if value is None or value == "":
+        value = fallback
+    return str(value or "")
 
 
 def _candidate_recommendation(candidate: UnifiedDatasetCandidate) -> str:
