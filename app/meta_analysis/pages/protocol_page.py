@@ -5,12 +5,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.models.protocol import ProjectProtocol
-from app.meta_analysis.search import MetaSearchStrategyDraft, build_meta_search_strategy_draft
+from app.meta_analysis.search import (
+    MetaSearchStrategyDraft,
+    PubMedSearchExecution,
+    PubMedSearchService,
+    build_meta_search_strategy_draft,
+)
 from app.meta_analysis.services.protocol_service import PROTOCOL_RELATIVE_PATHS, ProjectProtocolService
 
 
 SEARCH_STRATEGY_DRAFT_RELATIVE_PATH = "protocol/search_strategy_draft.json"
 SEARCH_STRATEGY_AUDIT_RELATIVE_PATH = "protocol/search_strategy_audit.json"
+SEARCH_STRATEGY_CONFIRMED_RELATIVE_PATH = "protocol/search_strategy_user_confirmed.json"
+SEARCH_EXECUTION_REPORT_RELATIVE_PATH = "protocol/search_execution_report.json"
 
 
 @dataclass(frozen=True)
@@ -73,6 +80,8 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
         "protocol_summary": paths.protocol_summary,
         "search_strategy_draft": str(project_dir / SEARCH_STRATEGY_DRAFT_RELATIVE_PATH),
         "search_strategy_audit": str(project_dir / SEARCH_STRATEGY_AUDIT_RELATIVE_PATH),
+        "search_strategy_user_confirmed": str(project_dir / SEARCH_STRATEGY_CONFIRMED_RELATIVE_PATH),
+        "search_execution_report": str(project_dir / SEARCH_EXECUTION_REPORT_RELATIVE_PATH),
     }
     if protocol is None:
         state = initial_protocol_page_state(project_dir)
@@ -143,6 +152,69 @@ def write_protocol_search_strategy_artifacts(project_dir: Path, draft: MetaSearc
         "search_strategy_draft": str(draft_path),
         "search_strategy_audit": str(audit_path),
     }
+
+
+def execute_protocol_pubmed_search(
+    project_dir: Path,
+    query: str,
+    *,
+    service: PubMedSearchService | None = None,
+    max_results: int = 20,
+) -> dict[str, str]:
+    project_dir = project_dir.expanduser().resolve()
+    service = service or PubMedSearchService()
+    execution = service.search_pubmed(query, max_results=max_results)
+    return write_pubmed_search_execution_artifacts(project_dir, query, execution)
+
+
+def write_pubmed_search_execution_artifacts(
+    project_dir: Path,
+    query: str,
+    execution: PubMedSearchExecution,
+) -> dict[str, str]:
+    project_dir = project_dir.expanduser().resolve()
+    confirmed_path = project_dir / SEARCH_STRATEGY_CONFIRMED_RELATIVE_PATH
+    report_path = project_dir / SEARCH_EXECUTION_REPORT_RELATIVE_PATH
+    _write_json(
+        confirmed_path,
+        {
+            "schema_version": "meta_search_strategy_user_confirmed.v1",
+            "database": "PubMed",
+            "query_used": query.strip(),
+            "confirmed_at": execution.executed_at,
+            "user_action": "confirm_and_search_pubmed",
+            "wos_status": "draft_only",
+            "embase_status": "draft_only",
+            "cnki_status": "draft_only",
+        },
+    )
+    _write_json(report_path, execution.to_report())
+    return {
+        "search_strategy_user_confirmed": str(confirmed_path),
+        "search_execution_report": str(report_path),
+    }
+
+
+def render_pubmed_search_execution_summary(execution: PubMedSearchExecution) -> str:
+    record_lines = [
+        f"- PMID {record.pmid}: {record.title} | {record.journal} | {record.year} | query_used={record.query_used}"
+        for record in execution.records
+    ]
+    return "\n".join(
+        [
+            "PubMed search execution:",
+            f"success={execution.success}",
+            f"result_count={execution.result_count}",
+            f"returned_count={execution.returned_count}",
+            f"query_used={execution.query_used}",
+            "",
+            "Literature candidates:",
+            *(record_lines or ["none"]),
+            "",
+            "WOS/Embase/CNKI remain draft-only.",
+            "No literature is auto-imported or auto-screened.",
+        ]
+    )
 
 
 def render_search_strategy_summary(draft: MetaSearchStrategyDraft) -> str:
@@ -250,6 +322,14 @@ def _load_json_object(path: Path) -> dict[str, object]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _pubmed_query_from_project(project_dir: Path) -> str:
+    payload = _load_json_object(project_dir / SEARCH_STRATEGY_DRAFT_RELATIVE_PATH)
+    for item in payload.get("query_drafts", []):
+        if isinstance(item, dict) and item.get("database") == "pubmed":
+            return str(item.get("query") or "")
+    return ""
+
+
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -303,9 +383,21 @@ if QWidget is not None:
             self._search_strategy_summary.setReadOnly(True)
             self._search_strategy_summary.setPlaceholderText("Search strategy draft will appear after saving the protocol.")
             root.addWidget(self._search_strategy_summary)
+            execute_pubmed = QPushButton("确认并检索 PubMed")
+            execute_pubmed.clicked.connect(self._execute_pubmed)
+            root.addWidget(execute_pubmed)
+            self._pubmed_execution_summary = QTextEdit()
+            self._pubmed_execution_summary.setObjectName("metaPubMedSearchExecutionPreview")
+            self._pubmed_execution_summary.setReadOnly(True)
+            self._pubmed_execution_summary.setPlaceholderText("Confirmed PubMed search results will appear here.")
+            root.addWidget(self._pubmed_execution_summary)
+            self._last_pubmed_query = ""
 
         def _save(self) -> None:
             self.save_protocol_draft()
+
+        def _execute_pubmed(self) -> None:
+            self.execute_confirmed_pubmed_search()
 
         def save_protocol_draft(self) -> MetaSearchStrategyDraft:
             project_dir = Path(self._project_dir.text()).expanduser()
@@ -327,6 +419,7 @@ if QWidget is not None:
             search_paths = write_protocol_search_strategy_artifacts(project_dir, search_strategy)
             summary_text = render_search_strategy_summary(search_strategy)
             self._search_strategy_summary.setPlainText(summary_text)
+            self._last_pubmed_query = search_strategy.pubmed_query_draft
             self._summary.setText(
                 f"{result.message}\n"
                 f"readiness: {result.protocol.readiness_status}\n"
@@ -338,6 +431,28 @@ if QWidget is not None:
                 f"search_execution_status={search_strategy.search_execution_status}"
             )
             return search_strategy
+
+        def execute_confirmed_pubmed_search(
+            self,
+            *,
+            service: PubMedSearchService | None = None,
+            max_results: int = 20,
+        ) -> PubMedSearchExecution:
+            project_dir = Path(self._project_dir.text()).expanduser()
+            query = self._last_pubmed_query or _pubmed_query_from_project(project_dir)
+            service = service or PubMedSearchService()
+            execution = service.search_pubmed(query, max_results=max_results)
+            paths = write_pubmed_search_execution_artifacts(project_dir, query, execution)
+            summary = render_pubmed_search_execution_summary(execution)
+            self._pubmed_execution_summary.setPlainText(summary)
+            self._summary.setText(
+                f"PubMed search_execution_report: {paths['search_execution_report']}\n"
+                f"search_strategy_user_confirmed: {paths['search_strategy_user_confirmed']}\n"
+                f"result_count={execution.result_count}\n"
+                f"returned_count={execution.returned_count}\n"
+                "WOS/Embase/CNKI remain draft-only."
+            )
+            return execution
 
         def set_protocol_inputs(
             self,
@@ -356,6 +471,9 @@ if QWidget is not None:
 
         def search_strategy_summary_text(self) -> str:
             return self._search_strategy_summary.toPlainText()
+
+        def pubmed_execution_summary_text(self) -> str:
+            return self._pubmed_execution_summary.toPlainText()
 
 else:
 

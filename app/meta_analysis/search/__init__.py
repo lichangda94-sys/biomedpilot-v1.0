@@ -5,6 +5,12 @@ from app.meta_analysis.search.search_strategy_models import (
     MetaSearchStrategyDraft,
     QueryDraft,
 )
+from app.meta_analysis.search.pubmed_search_service import (
+    PubMedCountPreview,
+    PubMedSearchExecution,
+    PubMedSearchResult,
+    PubMedSearchService,
+)
 from app.meta_analysis.search.strategy_builder import (
     build_meta_search_strategy_draft,
 )
@@ -12,6 +18,10 @@ from app.meta_analysis.search.strategy_builder import (
 __all__ = [
     "MetaConceptGroupDraft",
     "MetaSearchStrategyDraft",
+    "PubMedCountPreview",
+    "PubMedSearchExecution",
+    "PubMedSearchResult",
+    "PubMedSearchService",
     "QueryDraft",
     "build_meta_search_strategy_draft",
 ]
