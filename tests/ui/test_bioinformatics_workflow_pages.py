@@ -79,6 +79,34 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
     return path
 
 
+def _geo_candidate(*, query_used: str = '("glioma" OR "glioblastoma") AND "RNA-seq" AND GSE[ETYP]') -> workflow_pages.UnifiedDatasetCandidate:
+    return workflow_pages.UnifiedDatasetCandidate(
+        source="geo",
+        accession_or_project="GSE33630",
+        display_title="Glioma RNA-seq expression profile",
+        organism="Homo sapiens",
+        disease="glioma",
+        tissue="brain",
+        data_modality="RNA-seq",
+        sample_count=45,
+        has_expression_matrix=True,
+        has_sample_metadata=True,
+        has_clinical_metadata=False,
+        has_platform_annotation=True,
+        recommended_analyses=("data_recognition",),
+        download_plan_available=True,
+        score=80,
+        warnings=(),
+        source_specific_metadata={
+            "match_reason": "title contains glioma",
+            "platform_accessions": ["GPL11154"],
+            "geo_url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE33630",
+            "query_used": query_used,
+            "search_time": "2026-05-04T00:00:00+00:00",
+        },
+    )
+
+
 def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
     pages = [
         BioinformaticsDataSourceWidget(),
@@ -460,25 +488,7 @@ def test_chinese_dataset_search_broad_query_guard_does_not_create_candidates(qt_
 
 def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) -> None:
     widget = BioinformaticsChineseDatasetSearchWidget()
-    candidate = workflow_pages.UnifiedDatasetCandidate(
-        source="geo",
-        accession_or_project="GSE33630",
-        display_title="Thyroid carcinoma expression profile",
-        organism="Homo sapiens",
-        disease="thyroid cancer",
-        tissue="thyroid",
-        data_modality="expression profiling",
-        sample_count=45,
-        has_expression_matrix=True,
-        has_sample_metadata=True,
-        has_clinical_metadata=False,
-        has_platform_annotation=True,
-        recommended_analyses=("data_recognition",),
-        download_plan_available=True,
-        score=80,
-        warnings=(),
-        source_specific_metadata={"match_reason": "标题匹配疾病词"},
-    )
+    candidate = _geo_candidate()
 
     widget._fill_geo_candidates([candidate])
 
@@ -487,6 +497,109 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     assert widget._geo_table.columnWidth(0) >= 160
     buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
     assert [button.text() for button in buttons][:2] == ["登记为数据源", "查看详情"]
+
+
+def test_register_geo_requires_open_project(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+
+    assert widget.register_candidate("geo", "GSE33630") is None
+    assert widget.status_message() == "请先创建或打开生信分析项目。"
+
+
+def test_register_geo_search_result_as_source(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+    widget.set_query_text("脑胶质瘤")
+
+    summary = widget.register_candidate("geo", "GSE33630")
+
+    assert summary is not None
+    assert summary.source_type == "geo_accession"
+    assert summary.status == "planned"
+    assert summary.registered_files == ()
+    assert widget.status_message() == "已登记为数据来源，可进入数据识别。"
+    record = json.loads(summary.record_path.read_text(encoding="utf-8"))
+    assert record["source_type"] == "geo_accession"
+    assert record["strategy"] == "plan_only"
+    assert record["registered_files"] == []
+    metadata = record["metadata"]
+    assert metadata["accession"] == "GSE33630"
+    assert metadata["title"] == "Glioma RNA-seq expression profile"
+    assert metadata["organism"] == "Homo sapiens"
+    assert metadata["sample_count"] == 45
+    assert metadata["platform_accessions"] == ["GPL11154"]
+    assert metadata["source_database"] == "NCBI GEO"
+    assert metadata["download_plan_available"] is True
+    assert metadata["ready_for_recognition"] == "pending"
+    assert metadata["audit"]["event_type"] == "geo_source_registered"
+
+
+def test_register_geo_result_preserves_query_used(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    candidate = _geo_candidate(query_used='("glioma" OR "glioblastoma") AND "RNA-seq" AND GSE[ETYP]')
+    widget._candidates = {("geo", "GSE33630"): candidate}
+
+    summary = widget.register_candidate("geo", "GSE33630")
+
+    assert summary is not None
+    metadata = json.loads(summary.record_path.read_text(encoding="utf-8"))["metadata"]
+    assert metadata["query_used"] == '("glioma" OR "glioblastoma") AND "RNA-seq" AND GSE[ETYP]'
+    assert metadata["audit"]["query_used"] == metadata["query_used"]
+
+
+def test_register_geo_result_deduplicates_existing_source(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+
+    first = widget.register_candidate("geo", "GSE33630")
+    duplicate = widget.register_candidate("geo", "GSE33630")
+
+    assert first is not None
+    assert duplicate is None
+    records = [path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json"]
+    assert len(records) == 1
+    assert widget.status_message() == "已登记数据源：GSE33630"
+
+
+def test_registered_geo_source_appears_in_pre_recognition_input_list(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+    summary = widget.register_candidate("geo", "GSE33630")
+
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    table = recognition.findChild(QTableWidget, "preRecognitionInputList")
+
+    assert summary is not None
+    assert table.rowCount() == 1
+    assert table.item(0, 0).text() == "GEO/GSE 数据来源"
+    assert table.item(0, 1).text() == "GSE33630"
+    assert table.item(0, 2).text() == "GEO"
+    assert table.item(0, 3).text() == "已登记"
+
+
+def test_geo_source_registration_does_not_auto_download_or_analyze(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+    summary = widget.register_candidate("geo", "GSE33630")
+
+    assert summary is not None
+    assert not (project_summary.project_root / "raw_data" / "geo" / "GSE33630").exists()
+    assert list((project_summary.project_root / "analysis").glob("**/*")) == []
+    record = json.loads(summary.record_path.read_text(encoding="utf-8"))
+    assert record["status"] == "planned"
+    assert record["metadata"]["registration_handoff"] == "data_recognition_pending_source_acquisition"
 
 
 def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt_app, project_summary) -> None:

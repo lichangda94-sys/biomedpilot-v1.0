@@ -2311,7 +2311,7 @@ def _registered_source_display_name(payload: dict[str, object], metadata: dict[s
         values = payload.get("registered_files") or payload.get("referenced_paths") or payload.get("copied_files")
         if isinstance(values, list) and values:
             return Path(str(values[0])).name
-    if source_type in {"geo_search_candidate", "chinese_geo_gse"}:
+    if source_type in {"geo_accession", "geo_search_candidate", "chinese_geo_gse"}:
         return str(metadata.get("gse_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 GSE")
     if source_type in {"tcga_project", "chinese_tcga_gdc_project"}:
         return str(metadata.get("project_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 TCGA 项目")
@@ -2326,7 +2326,7 @@ def _registered_source_location(payload: dict[str, object], metadata: dict[str, 
         if isinstance(values, list) and values:
             return _compact_path(str(values[0]))
     source = str(metadata.get("source") or "")
-    if source == "geo" or payload.get("source_type") == "geo_gse":
+    if source == "geo" or payload.get("source_type") in {"geo_gse", "geo_accession"}:
         return "GEO"
     if source == "tcga_gdc" or "tcga" in str(payload.get("source_type") or ""):
         return "GDC / TCGA"
@@ -2351,6 +2351,7 @@ def _source_type_label(source_type: str) -> str:
         "tcga_gtex_tcga_folder": "TCGA + GTEx / TCGA 来源",
         "tcga_gtex_gtex_folder": "TCGA + GTEx / GTEx 来源",
         "geo_gse": "GSE 编号检索",
+        "geo_accession": "GEO/GSE 数据来源",
         "chinese_geo_gse": "GSE 编号检索",
         "chinese_tcga_gdc_project": "TCGA/GDC 项目",
         "chinese_gtex_tissue": "GTEx 正常组织参考",
@@ -2497,7 +2498,7 @@ def _chinese_search_entry_status(rows: list[RegisteredSourceRow]) -> str:
 
 
 def _is_chinese_topic_source_type(source_type: str) -> bool:
-    return source_type.startswith("chinese_") or source_type in {"geo_search_candidate", "tcga_project", "gtex_tissue"}
+    return source_type.startswith("chinese_") or source_type in {"geo_accession", "geo_search_candidate", "tcga_project", "gtex_tissue"}
 
 
 def _legacy_geo_tool_paths() -> None:
@@ -2642,7 +2643,7 @@ def _rule_based_research_keywords(text: str) -> tuple[str, str]:
 
 def _candidate_source_type(candidate: UnifiedDatasetCandidate) -> str:
     if candidate.source == "geo":
-        return "geo_search_candidate"
+        return "geo_accession"
     if candidate.source == "tcga_gdc":
         return "tcga_project"
     if candidate.source == "gtex":
@@ -2675,11 +2676,32 @@ def _candidate_registration_metadata(
         "warnings": list(candidate.warnings),
     }
     if candidate.source == "geo":
+        source_result = result.source_results.get("geo") if result is not None else None
+        registered_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         metadata.update(
             {
+                "source_type": "geo_accession",
                 "gse_id": candidate.accession_or_project,
+                "accession": candidate.accession_or_project,
                 "title": candidate.display_title,
+                "organism": candidate.organism,
+                "sample_count": candidate.sample_count,
+                "platform_accessions": list(candidate.source_specific_metadata.get("platform_accessions", [])),
+                "geo_url": candidate.source_specific_metadata.get("geo_url", ""),
                 "query": generated,
+                "query_used": generated,
+                "search_time": getattr(source_result, "search_time", "") or candidate.source_specific_metadata.get("search_time", ""),
+                "source_database": "NCBI GEO",
+                "download_plan_available": candidate.download_plan_available,
+                "ready_for_recognition": "pending",
+                "registration_handoff": "data_recognition_pending_source_acquisition",
+                "audit": {
+                    "event_type": "geo_source_registered",
+                    "accession": candidate.accession_or_project,
+                    "query_used": generated,
+                    "registered_at": registered_at,
+                    "user_action": "register_geo_search_result_as_source",
+                },
             }
         )
     elif candidate.source == "tcga_gdc":
