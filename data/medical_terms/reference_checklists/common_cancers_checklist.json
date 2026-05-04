@@ -1,0 +1,28 @@
+{
+  "schema_version": "medical_vocabulary_reference_checklist.v1",
+  "checklist_id": "common_cancers",
+  "title": "Common Cancers Checklist",
+  "source": "GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects",
+  "source_version": "Curated common cancer checklist, 2026-05",
+  "coverage_type": "common_cancers",
+  "items": [
+    {"id": "lung", "label": "lung cancer", "expected_terms": ["lung cancer", "lung adenocarcinoma", "lung squamous cell carcinoma"], "expected_tcga_projects": ["TCGA-LUAD", "TCGA-LUSC"], "priority": "P0"},
+    {"id": "breast", "label": "breast cancer", "expected_terms": ["breast cancer"], "expected_tcga_projects": ["TCGA-BRCA"], "priority": "P0"},
+    {"id": "colorectal", "label": "colorectal cancer", "expected_terms": ["colorectal cancer", "colon cancer", "rectal cancer"], "expected_tcga_projects": ["TCGA-COAD", "TCGA-READ"], "priority": "P0"},
+    {"id": "prostate", "label": "prostate cancer", "expected_terms": ["prostate cancer"], "expected_tcga_projects": ["TCGA-PRAD"], "priority": "P0"},
+    {"id": "stomach", "label": "stomach cancer", "expected_terms": ["stomach cancer", "gastric cancer"], "expected_tcga_projects": ["TCGA-STAD"], "priority": "P1"},
+    {"id": "liver", "label": "liver cancer", "expected_terms": ["liver cancer", "hepatocellular carcinoma"], "expected_tcga_projects": ["TCGA-LIHC"], "priority": "P0"},
+    {"id": "thyroid", "label": "thyroid cancer", "expected_terms": ["thyroid cancer", "papillary thyroid carcinoma"], "expected_tcga_projects": ["TCGA-THCA"], "priority": "P0"},
+    {"id": "cervical", "label": "cervical cancer", "expected_terms": ["cervical cancer"], "expected_tcga_projects": ["TCGA-CESC"], "priority": "P1"},
+    {"id": "bladder", "label": "bladder cancer", "expected_terms": ["bladder cancer"], "expected_tcga_projects": ["TCGA-BLCA"], "priority": "P1"},
+    {"id": "kidney", "label": "kidney cancer", "expected_terms": ["kidney cancer", "renal cell carcinoma"], "expected_tcga_projects": ["TCGA-KIRC", "TCGA-KIRP", "TCGA-KICH"], "priority": "P1"},
+    {"id": "pancreatic", "label": "pancreatic cancer", "expected_terms": ["pancreatic cancer"], "expected_tcga_projects": ["TCGA-PAAD"], "priority": "P0"},
+    {"id": "esophageal", "label": "esophageal cancer", "expected_terms": ["esophageal cancer", "esophageal squamous cell carcinoma"], "expected_tcga_projects": ["TCGA-ESCA"], "priority": "P0"},
+    {"id": "ovarian", "label": "ovarian cancer", "expected_terms": ["ovarian cancer"], "expected_tcga_projects": ["TCGA-OV"], "priority": "P1"},
+    {"id": "endometrial", "label": "endometrial cancer", "expected_terms": ["endometrial cancer"], "expected_tcga_projects": ["TCGA-UCEC"], "priority": "P1"},
+    {"id": "melanoma", "label": "melanoma", "expected_terms": ["melanoma"], "expected_tcga_projects": ["TCGA-SKCM"], "priority": "P0"},
+    {"id": "brain_glioma", "label": "brain/glioma", "expected_terms": ["glioma", "glioblastoma"], "expected_tcga_projects": ["TCGA-GBM", "TCGA-LGG"], "priority": "P0"},
+    {"id": "leukemia", "label": "leukemia", "expected_terms": ["leukemia", "acute myeloid leukemia"], "expected_tcga_projects": ["TCGA-LAML"], "priority": "P1"},
+    {"id": "lymphoma", "label": "lymphoma", "expected_terms": ["lymphoma", "diffuse large B-cell lymphoma"], "expected_tcga_projects": ["TCGA-DLBC"], "priority": "P1"}
+  ]
+}

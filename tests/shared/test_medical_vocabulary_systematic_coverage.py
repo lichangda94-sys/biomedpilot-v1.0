@@ -242,3 +242,65 @@ def test_stage_2_4_gap_driven_publication_exclusion_terms(term: str, required_te
     assert required_term in " ".join(result.publication_type_terms)
     assert result.tcga_project_candidates == []
     assert result.gtex_tissue_candidates == []
+
+
+@pytest.mark.parametrize(
+    ("term", "required_terms", "required_mesh"),
+    [
+        (
+            "心血管疾病",
+            ["cardiovascular disease", "heart disease", "coronary artery disease", "atherosclerosis", "hypertension", "myocardial infarction"],
+            ["Cardiovascular Diseases", "Myocardial Infarction"],
+        ),
+        (
+            "神经退行性疾病",
+            ["neurodegenerative disease", "neurodegeneration", "Alzheimer disease", "Parkinson disease", "dementia"],
+            ["Neurodegenerative Diseases", "Dementia"],
+        ),
+        (
+            "自身免疫性疾病",
+            ["autoimmune disease", "autoimmunity", "rheumatoid arthritis", "systemic lupus erythematosus", "inflammatory bowel disease"],
+            ["Autoimmune Diseases", "Inflammatory Bowel Diseases"],
+        ),
+    ],
+)
+def test_stage_2_5_common_disease_gap_terms(
+    term: str,
+    required_terms: list[str],
+    required_mesh: list[str],
+) -> None:
+    bio = lookup_medical_terms(term, target_context="bioinformatics")
+    meta = lookup_medical_terms(term, target_context="meta_analysis")
+    text = " ".join([*bio.disease_terms_en, *bio.synonyms_en]).lower()
+    meta_text = " ".join([*meta.disease_terms_en, *meta.synonyms_en, *meta.mesh_terms]).lower()
+
+    for required in required_terms:
+        assert required.lower() in text
+        assert required.lower() in meta_text
+    for mesh in required_mesh:
+        assert mesh in meta.mesh_terms
+    assert bio.tcga_project_candidates == []
+    assert meta.tcga_project_candidates == []
+    assert meta.gtex_tissue_candidates == []
+
+
+@pytest.mark.parametrize(
+    ("term", "candidate", "required_terms"),
+    [
+        ("肾", "Kidney", ["kidney", "renal tissue", "kidney cortex", "kidney medulla"]),
+        ("肾脏", "Kidney", ["kidney", "renal tissue", "kidney cortex", "kidney medulla"]),
+        ("肾组织", "Kidney", ["kidney", "renal tissue", "kidney cortex", "kidney medulla"]),
+        ("膀胱", "Bladder", ["bladder", "urinary bladder", "bladder tissue"]),
+    ],
+)
+def test_stage_2_5_gtex_tissue_gap_terms(term: str, candidate: str, required_terms: list[str]) -> None:
+    bio = lookup_medical_terms(term, target_context="bioinformatics")
+    meta = lookup_medical_terms(term, target_context="meta_analysis")
+    text = " ".join([*bio.tissue_terms, *bio.synonyms_en, *bio.mesh_terms]).lower()
+
+    assert candidate in bio.gtex_tissue_candidates
+    for required in required_terms:
+        assert required.lower() in text
+    assert bio.tcga_project_candidates == []
+    assert meta.tcga_project_candidates == []
+    assert meta.gtex_tissue_candidates == []

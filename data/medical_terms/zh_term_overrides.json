@@ -4267,7 +4267,11 @@
   {
     "zh_term": "肾脏",
     "zh_terms": [
-      "肾脏"
+      "肾脏",
+      "肾",
+      "肾组织",
+      "肾皮质",
+      "肾髓质"
     ],
     "preferred_label_en": "kidney",
     "mapped_concept_ids": [
@@ -4275,23 +4279,34 @@
     ],
     "tissue_terms": [
       "kidney",
-      "renal tissue"
+      "renal tissue",
+      "kidney cortex",
+      "kidney medulla"
     ],
     "mesh_terms": [
-      "Kidney"
+      "Kidney",
+      "Kidney Cortex",
+      "Kidney Medulla"
     ],
     "gtex_tissue_candidates": [
       "Kidney"
     ],
     "concept_type": "tissue",
-    "term_source": "stage2_2_systematic_curated_zh_override",
+    "term_source": "stage2_5_reference_audit_gap_fix",
     "confidence": 0.9,
-    "source": "zh_override"
+    "source": "zh_override",
+    "synonyms_en": [
+      "renal tissue",
+      "kidney cortex",
+      "kidney medulla"
+    ]
   },
   {
     "zh_term": "膀胱",
     "zh_terms": [
-      "膀胱"
+      "膀胱",
+      "膀胱组织",
+      "泌尿膀胱"
     ],
     "preferred_label_en": "bladder",
     "mapped_concept_ids": [
@@ -4299,7 +4314,8 @@
     ],
     "tissue_terms": [
       "bladder",
-      "urinary bladder"
+      "urinary bladder",
+      "bladder tissue"
     ],
     "mesh_terms": [
       "Urinary Bladder"
@@ -4308,9 +4324,13 @@
       "Bladder"
     ],
     "concept_type": "tissue",
-    "term_source": "stage2_2_systematic_curated_zh_override",
+    "term_source": "stage2_5_reference_audit_gap_fix",
     "confidence": 0.9,
-    "source": "zh_override"
+    "source": "zh_override",
+    "synonyms_en": [
+      "urinary bladder",
+      "bladder tissue"
+    ]
   },
   {
     "zh_term": "皮肤",
@@ -5853,5 +5873,192 @@
     "publication_type_terms": [
       "in vitro study"
     ]
+  },
+  {
+    "zh_term": "心血管疾病",
+    "zh_terms": [
+      "心血管疾病",
+      "心脏病",
+      "动脉粥样硬化",
+      "心肌梗死"
+    ],
+    "preferred_label_en": "cardiovascular disease",
+    "mapped_concept_ids": [
+      "mini:cardiovascular_disease_core"
+    ],
+    "disease_terms_en": [
+      "cardiovascular disease",
+      "cardiovascular diseases",
+      "heart disease",
+      "coronary artery disease",
+      "atherosclerosis",
+      "hypertension",
+      "myocardial infarction"
+    ],
+    "synonyms_en": [
+      "heart disease",
+      "coronary artery disease",
+      "coronary heart disease",
+      "atherosclerosis",
+      "myocardial infarction"
+    ],
+    "abbreviations": [
+      "CVD",
+      "CAD",
+      "MI"
+    ],
+    "mesh_terms": [
+      "Cardiovascular Diseases",
+      "Coronary Artery Disease",
+      "Atherosclerosis",
+      "Hypertension",
+      "Myocardial Infarction"
+    ],
+    "tissue_terms": [
+      "heart",
+      "blood vessel",
+      "artery"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_5_reference_audit_gap_fix",
+    "confidence": 0.94,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "神经退行性疾病",
+    "zh_terms": [
+      "神经退行性疾病",
+      "神经变性疾病",
+      "痴呆"
+    ],
+    "preferred_label_en": "neurodegenerative disease",
+    "mapped_concept_ids": [
+      "mini:neurodegenerative_disease_core"
+    ],
+    "disease_terms_en": [
+      "neurodegenerative disease",
+      "neurodegenerative diseases",
+      "neurodegeneration",
+      "Alzheimer disease",
+      "Alzheimer's disease",
+      "Parkinson disease",
+      "Parkinson's disease",
+      "dementia"
+    ],
+    "synonyms_en": [
+      "neurodegeneration",
+      "dementia"
+    ],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Neurodegenerative Diseases",
+      "Alzheimer Disease",
+      "Parkinson Disease",
+      "Dementia"
+    ],
+    "tissue_terms": [
+      "brain"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_5_reference_audit_gap_fix",
+    "confidence": 0.93,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "自身免疫性疾病",
+    "zh_terms": [
+      "自身免疫性疾病",
+      "自身免疫病",
+      "自体免疫疾病"
+    ],
+    "preferred_label_en": "autoimmune disease",
+    "mapped_concept_ids": [
+      "mini:autoimmune_disease_core"
+    ],
+    "disease_terms_en": [
+      "autoimmune disease",
+      "autoimmune diseases",
+      "autoimmunity",
+      "rheumatoid arthritis",
+      "systemic lupus erythematosus",
+      "inflammatory bowel disease"
+    ],
+    "synonyms_en": [
+      "autoimmunity",
+      "immune mediated disease"
+    ],
+    "abbreviations": [
+      "RA",
+      "SLE",
+      "IBD"
+    ],
+    "mesh_terms": [
+      "Autoimmune Diseases",
+      "Arthritis, Rheumatoid",
+      "Lupus Erythematosus, Systemic",
+      "Inflammatory Bowel Diseases"
+    ],
+    "tissue_terms": [
+      "immune system",
+      "blood"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_5_reference_audit_gap_fix",
+    "confidence": 0.93,
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
+  },
+  {
+    "zh_term": "肾",
+    "zh_terms": [
+      "肾"
+    ],
+    "preferred_label_en": "kidney",
+    "mapped_concept_ids": [
+      "mini:kidney_tissue"
+    ],
+    "synonyms_en": [
+      "renal tissue",
+      "kidney cortex",
+      "kidney medulla"
+    ],
+    "mesh_terms": [
+      "Kidney",
+      "Kidney Cortex",
+      "Kidney Medulla"
+    ],
+    "tissue_terms": [
+      "kidney",
+      "renal tissue",
+      "kidney cortex",
+      "kidney medulla"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_5_reference_audit_gap_fix",
+    "confidence": 0.9,
+    "source": "zh_override"
   }
 ]

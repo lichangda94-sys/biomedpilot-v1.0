@@ -1,0 +1,45 @@
+{
+  "schema_version": "medical_vocabulary_reference_checklist.v1",
+  "checklist_id": "meta_terms",
+  "title": "Meta Analysis Retrieval Terms Checklist",
+  "source": "Cochrane-style Meta-analysis retrieval strategy term categories",
+  "source_version": "Curated Meta retrieval checklist, 2026-05",
+  "coverage_type": "meta_terms",
+  "items": [
+    {
+      "id": "survival_outcomes",
+      "label": "survival outcomes",
+      "expected_terms": ["overall survival", "OS", "progression-free survival", "PFS", "disease-free survival", "DFS", "recurrence-free survival", "RFS", "mortality", "recurrence"],
+      "expected_fields": ["outcome_terms", "abbreviations"],
+      "priority": "P0"
+    },
+    {
+      "id": "diagnostic_outcomes",
+      "label": "diagnostic outcomes",
+      "expected_terms": ["diagnostic accuracy", "sensitivity", "specificity", "AUC", "ROC"],
+      "expected_fields": ["outcome_terms", "abbreviations"],
+      "priority": "P0"
+    },
+    {
+      "id": "effect_sizes",
+      "label": "effect sizes",
+      "expected_terms": ["hazard ratio", "HR", "odds ratio", "OR", "relative risk", "RR", "mean difference", "MD", "standardized mean difference", "SMD", "weighted mean difference", "WMD", "confidence interval", "CI"],
+      "expected_fields": ["outcome_terms", "abbreviations"],
+      "priority": "P0"
+    },
+    {
+      "id": "study_designs",
+      "label": "study designs",
+      "expected_terms": ["randomized controlled trial", "RCT", "cohort study", "case-control study", "cross-sectional study", "diagnostic accuracy study", "prognostic study"],
+      "expected_fields": ["study_design_terms", "abbreviations"],
+      "priority": "P0"
+    },
+    {
+      "id": "publication_exclusion_types",
+      "label": "publication exclusion types",
+      "expected_terms": ["review", "meta-analysis", "editorial", "letter", "comment", "case report", "conference abstract", "animal study", "cell experiment", "duplicate publication", "preprint", "study protocol", "non-human study", "in vitro study"],
+      "expected_fields": ["publication_type_terms"],
+      "priority": "P0"
+    }
+  ]
+}

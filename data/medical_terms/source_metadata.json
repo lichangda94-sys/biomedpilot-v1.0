@@ -98,5 +98,48 @@
       "GTEx Portal tissue groups and tissueSiteDetail identifiers",
       "WHO major NCD categories and common Meta-analysis retrieval term practice"
     ]
+  },
+  "stage_2_3_v7_reference_coverage_audit": {
+    "processed_at": "2026-05-05",
+    "report_paths": [
+      "data/medical_terms/coverage_audit_report.json",
+      "docs/stage_2_3_medical_vocabulary_reference_audit.md"
+    ],
+    "reference_checklists": [
+      "data/medical_terms/reference_checklists/tcga_projects_checklist.json",
+      "data/medical_terms/reference_checklists/common_cancers_checklist.json",
+      "data/medical_terms/reference_checklists/common_diseases_checklist.json",
+      "data/medical_terms/reference_checklists/gtex_tissues_checklist.json",
+      "data/medical_terms/reference_checklists/meta_terms_checklist.json"
+    ],
+    "source_notes": [
+      "NCI GDC TCGA Study Abbreviations",
+      "GLOBOCAN / Global Cancer Observatory common cancer sites",
+      "WHO noncommunicable diseases and major disease categories",
+      "GTEx Portal tissue groups",
+      "Cochrane-style Meta-analysis retrieval term categories"
+    ]
+  },
+  "stage_2_5_coverage_audit_gap_fix": {
+    "processed_at": "2026-05-05",
+    "stage": "Stage 2.5 coverage audit gap fix",
+    "scope": [
+      "cardiovascular common disease partial gap",
+      "neurodegenerative common disease partial gap",
+      "autoimmune common disease partial gap",
+      "GTEx Kidney approximate gap",
+      "GTEx Bladder approximate gap"
+    ],
+    "data_source_type": "manually curated mini vocabulary extension based on internal reference checklist audit",
+    "added_concept_ids": [
+      "mini:cardiovascular_disease_core",
+      "mini:neurodegenerative_disease_core",
+      "mini:autoimmune_disease_core"
+    ],
+    "updated_concept_ids": [
+      "mini:kidney_tissue",
+      "mini:bladder_tissue"
+    ],
+    "note": "No full ontology index enabled; mini vocabulary JSON remains the primary runtime path."
   }
 }

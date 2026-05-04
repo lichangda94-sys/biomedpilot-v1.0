@@ -1,0 +1,1983 @@
+{
+  "schema_version": "medical_vocabulary_coverage_audit.v1",
+  "generated_at": "2026-05-04T23:43:26.188674+00:00",
+  "inputs": {
+    "mini_index": "data/medical_terms/mini_medical_terms_index.json",
+    "zh_overrides": "data/medical_terms/zh_term_overrides.json",
+    "reference_checklists": "data/medical_terms/reference_checklists"
+  },
+  "overall": {
+    "total_checklist_items": 88,
+    "covered": 88,
+    "partially_covered": 0,
+    "missing": 0,
+    "coverage_rate": 1.0,
+    "weighted_coverage_rate": 1.0
+  },
+  "sections": {
+    "common_cancers": {
+      "checklist_id": "common_cancers",
+      "title": "Common Cancers Checklist",
+      "source": "GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects",
+      "source_version": "Curated common cancer checklist, 2026-05",
+      "total_checklist_items": 18,
+      "covered": 18,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "lung",
+          "label": "lung cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lung cancer",
+            "lung adenocarcinoma",
+            "lung squamous cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LUAD",
+            "TCGA-LUSC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lung cancer",
+            "lung adenocarcinoma",
+            "lung squamous cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LUAD",
+            "TCGA-LUSC"
+          ]
+        },
+        {
+          "id": "breast",
+          "label": "breast cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "breast cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-BRCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "breast cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-BRCA"
+          ]
+        },
+        {
+          "id": "colorectal",
+          "label": "colorectal cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "colorectal cancer",
+            "colon cancer",
+            "rectal cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-COAD",
+            "TCGA-READ"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "colorectal cancer",
+            "colon cancer",
+            "rectal cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-COAD",
+            "TCGA-READ"
+          ]
+        },
+        {
+          "id": "prostate",
+          "label": "prostate cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "prostate cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-PRAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "prostate cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-PRAD"
+          ]
+        },
+        {
+          "id": "stomach",
+          "label": "stomach cancer",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "stomach cancer",
+            "gastric cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-STAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "stomach cancer",
+            "gastric cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-STAD"
+          ]
+        },
+        {
+          "id": "liver",
+          "label": "liver cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "liver cancer",
+            "hepatocellular carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LIHC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "liver cancer",
+            "hepatocellular carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LIHC"
+          ]
+        },
+        {
+          "id": "thyroid",
+          "label": "thyroid cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "thyroid cancer",
+            "papillary thyroid carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-THCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "thyroid cancer",
+            "papillary thyroid carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-THCA"
+          ]
+        },
+        {
+          "id": "cervical",
+          "label": "cervical cancer",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cervical cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-CESC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cervical cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-CESC"
+          ]
+        },
+        {
+          "id": "bladder",
+          "label": "bladder cancer",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "bladder cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-BLCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "bladder cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-BLCA"
+          ]
+        },
+        {
+          "id": "kidney",
+          "label": "kidney cancer",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "kidney cancer",
+            "renal cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-KIRC",
+            "TCGA-KIRP",
+            "TCGA-KICH"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "kidney cancer",
+            "renal cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-KIRC",
+            "TCGA-KIRP",
+            "TCGA-KICH"
+          ]
+        },
+        {
+          "id": "pancreatic",
+          "label": "pancreatic cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "pancreatic cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-PAAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "pancreatic cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-PAAD"
+          ]
+        },
+        {
+          "id": "esophageal",
+          "label": "esophageal cancer",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophageal cancer",
+            "esophageal squamous cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-ESCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "esophageal cancer",
+            "esophageal squamous cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-ESCA"
+          ]
+        },
+        {
+          "id": "ovarian",
+          "label": "ovarian cancer",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "ovarian cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-OV"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "ovarian cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-OV"
+          ]
+        },
+        {
+          "id": "endometrial",
+          "label": "endometrial cancer",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "endometrial cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-UCEC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "endometrial cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-UCEC"
+          ]
+        },
+        {
+          "id": "melanoma",
+          "label": "melanoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "melanoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-SKCM"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "melanoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-SKCM"
+          ]
+        },
+        {
+          "id": "brain_glioma",
+          "label": "brain/glioma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "glioma",
+            "glioblastoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-GBM",
+            "TCGA-LGG"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "glioma",
+            "glioblastoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-GBM",
+            "TCGA-LGG"
+          ]
+        },
+        {
+          "id": "leukemia",
+          "label": "leukemia",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "leukemia",
+            "acute myeloid leukemia"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LAML"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "leukemia",
+            "acute myeloid leukemia"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LAML"
+          ]
+        },
+        {
+          "id": "lymphoma",
+          "label": "lymphoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "lymphoma",
+            "diffuse large B-cell lymphoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-DLBC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lymphoma",
+            "diffuse large B-cell lymphoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-DLBC"
+          ]
+        }
+      ]
+    },
+    "common_diseases": {
+      "checklist_id": "common_diseases",
+      "title": "Common Diseases Checklist",
+      "source": "WHO noncommunicable diseases and major disease categories",
+      "source_version": "Curated major disease category checklist, 2026-05",
+      "total_checklist_items": 9,
+      "covered": 9,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "cardiovascular_diseases",
+          "label": "cardiovascular diseases",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cardiovascular disease",
+            "coronary heart disease",
+            "myocardial infarction",
+            "heart failure",
+            "stroke",
+            "hypertension"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cardiovascular disease",
+            "coronary heart disease",
+            "myocardial infarction",
+            "heart failure",
+            "stroke",
+            "hypertension"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "diabetes",
+          "label": "diabetes",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "diabetes",
+            "Diabetes Mellitus",
+            "type 2 diabetes"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "diabetes",
+            "Diabetes Mellitus",
+            "type 2 diabetes"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "obesity",
+          "label": "obesity",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Obesity",
+            "BMI",
+            "overweight",
+            "body mass index"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Obesity",
+            "BMI",
+            "overweight",
+            "body mass index"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "chronic_respiratory_diseases",
+          "label": "chronic respiratory diseases",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "chronic obstructive pulmonary disease",
+            "COPD",
+            "asthma"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "chronic obstructive pulmonary disease",
+            "COPD",
+            "asthma"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "chronic_kidney_disease",
+          "label": "chronic kidney disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "chronic kidney disease",
+            "CKD"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "chronic kidney disease",
+            "CKD"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "neurodegenerative_disease",
+          "label": "neurodegenerative disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Alzheimer Disease",
+            "Parkinson Disease",
+            "neurodegenerative disease"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Alzheimer Disease",
+            "Parkinson Disease",
+            "neurodegenerative disease"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "autoimmune_disease",
+          "label": "autoimmune disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "autoimmune disease",
+            "Rheumatoid Arthritis",
+            "Systemic Lupus Erythematosus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "autoimmune disease",
+            "Rheumatoid Arthritis",
+            "Systemic Lupus Erythematosus"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "inflammatory_bowel_disease",
+          "label": "inflammatory bowel disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "inflammatory bowel disease",
+            "Crohn Disease",
+            "ulcerative colitis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "inflammatory bowel disease",
+            "Crohn Disease",
+            "ulcerative colitis"
+          ],
+          "matched_tcga_projects": []
+        },
+        {
+          "id": "fatty_liver_disease",
+          "label": "fatty liver disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Fatty Liver Disease",
+            "NAFLD",
+            "hepatic steatosis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Fatty Liver Disease",
+            "NAFLD",
+            "hepatic steatosis"
+          ],
+          "matched_tcga_projects": []
+        }
+      ]
+    },
+    "gtex_tissues": {
+      "checklist_id": "gtex_tissues",
+      "title": "GTEx Tissues Checklist",
+      "source": "GTEx Portal tissue groups",
+      "source_version": "GTEx tissue group checklist, curated access 2026-05",
+      "total_checklist_items": 23,
+      "covered": 23,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "Brain",
+          "label": "Brain",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain"
+          ],
+          "matched_terms": [
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Thyroid",
+          "label": "Thyroid",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "thyroid"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Thyroid"
+          ],
+          "matched_terms": [
+            "thyroid"
+          ],
+          "matched_gtex_tissues": [
+            "Thyroid"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Esophagus",
+          "label": "Esophagus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophagus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Esophagus"
+          ],
+          "matched_terms": [
+            "esophagus"
+          ],
+          "matched_gtex_tissues": [
+            "Esophagus"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Lung",
+          "label": "Lung",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lung"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Lung"
+          ],
+          "matched_terms": [
+            "lung"
+          ],
+          "matched_gtex_tissues": [
+            "Lung"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Stomach",
+          "label": "Stomach",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "stomach",
+            "gastric"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Stomach"
+          ],
+          "matched_terms": [
+            "stomach",
+            "gastric"
+          ],
+          "matched_gtex_tissues": [
+            "Stomach"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Colon",
+          "label": "Colon",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "colon",
+            "colorectal"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon"
+          ],
+          "matched_terms": [
+            "colon",
+            "colorectal"
+          ],
+          "matched_gtex_tissues": [
+            "Colon"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Liver",
+          "label": "Liver",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "liver"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Liver"
+          ],
+          "matched_terms": [
+            "liver"
+          ],
+          "matched_gtex_tissues": [
+            "Liver"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Pancreas",
+          "label": "Pancreas",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "pancreas",
+            "pancreatic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Pancreas"
+          ],
+          "matched_terms": [
+            "pancreas",
+            "pancreatic"
+          ],
+          "matched_gtex_tissues": [
+            "Pancreas"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Breast",
+          "label": "Breast",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "breast"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Breast"
+          ],
+          "matched_terms": [
+            "breast"
+          ],
+          "matched_gtex_tissues": [
+            "Breast"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Prostate",
+          "label": "Prostate",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "prostate"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Prostate"
+          ],
+          "matched_terms": [
+            "prostate"
+          ],
+          "matched_gtex_tissues": [
+            "Prostate"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Ovary",
+          "label": "Ovary",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "ovary",
+            "ovarian"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Ovary"
+          ],
+          "matched_terms": [
+            "ovary",
+            "ovarian"
+          ],
+          "matched_gtex_tissues": [
+            "Ovary"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Uterus",
+          "label": "Uterus",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "uterus",
+            "endometrial"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Uterus"
+          ],
+          "matched_terms": [
+            "uterus",
+            "endometrial"
+          ],
+          "matched_gtex_tissues": [
+            "Uterus"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Kidney",
+          "label": "Kidney",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "kidney",
+            "renal tissue",
+            "kidney cortex",
+            "kidney medulla"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Kidney"
+          ],
+          "matched_terms": [
+            "kidney",
+            "renal tissue",
+            "kidney cortex",
+            "kidney medulla"
+          ],
+          "matched_gtex_tissues": [
+            "Kidney"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Bladder",
+          "label": "Bladder",
+          "priority": "P2",
+          "status": "covered",
+          "expected_terms": [
+            "bladder",
+            "urinary bladder",
+            "bladder tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Bladder"
+          ],
+          "matched_terms": [
+            "bladder",
+            "urinary bladder",
+            "bladder tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Bladder"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Skin",
+          "label": "Skin",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "skin"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin"
+          ],
+          "matched_terms": [
+            "skin"
+          ],
+          "matched_gtex_tissues": [
+            "Skin"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Whole Blood",
+          "label": "Whole Blood",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "whole blood",
+            "blood"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "whole blood",
+            "blood"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Adipose Tissue",
+          "label": "Adipose Tissue",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "adipose tissue",
+            "adipose"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Adipose Tissue"
+          ],
+          "matched_terms": [
+            "adipose tissue",
+            "adipose"
+          ],
+          "matched_gtex_tissues": [
+            "Adipose Tissue"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Muscle",
+          "label": "Muscle",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "muscle"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Muscle"
+          ],
+          "matched_terms": [
+            "muscle"
+          ],
+          "matched_gtex_tissues": [
+            "Muscle"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Heart",
+          "label": "Heart",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "heart"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Heart"
+          ],
+          "matched_terms": [
+            "heart"
+          ],
+          "matched_gtex_tissues": [
+            "Heart"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Spleen",
+          "label": "Spleen",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "spleen"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Spleen"
+          ],
+          "matched_terms": [
+            "spleen"
+          ],
+          "matched_gtex_tissues": [
+            "Spleen"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Pituitary",
+          "label": "Pituitary",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "pituitary"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Pituitary"
+          ],
+          "matched_terms": [
+            "pituitary"
+          ],
+          "matched_gtex_tissues": [
+            "Pituitary"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Adrenal",
+          "label": "Adrenal",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "adrenal gland",
+            "adrenal"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Adrenal Gland"
+          ],
+          "matched_terms": [
+            "adrenal gland",
+            "adrenal"
+          ],
+          "matched_gtex_tissues": [
+            "Adrenal Gland"
+          ],
+          "mapping_status": "exact"
+        },
+        {
+          "id": "Testis",
+          "label": "Testis",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "testis",
+            "testicular"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Testis"
+          ],
+          "matched_terms": [
+            "testis",
+            "testicular"
+          ],
+          "matched_gtex_tissues": [
+            "Testis"
+          ],
+          "mapping_status": "exact"
+        }
+      ],
+      "exact": 23,
+      "approximate": 0
+    },
+    "meta_terms": {
+      "checklist_id": "meta_terms",
+      "title": "Meta Analysis Retrieval Terms Checklist",
+      "source": "Cochrane-style Meta-analysis retrieval strategy term categories",
+      "source_version": "Curated Meta retrieval checklist, 2026-05",
+      "total_checklist_items": 5,
+      "covered": 5,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "survival_outcomes",
+          "label": "survival outcomes",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "overall survival",
+            "OS",
+            "progression-free survival",
+            "PFS",
+            "disease-free survival",
+            "DFS",
+            "recurrence-free survival",
+            "RFS",
+            "mortality",
+            "recurrence"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "overall survival",
+            "OS",
+            "progression-free survival",
+            "PFS",
+            "disease-free survival",
+            "DFS",
+            "recurrence-free survival",
+            "RFS",
+            "mortality",
+            "recurrence"
+          ],
+          "coverage_fraction": 1.0
+        },
+        {
+          "id": "diagnostic_outcomes",
+          "label": "diagnostic outcomes",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "diagnostic accuracy",
+            "sensitivity",
+            "specificity",
+            "AUC",
+            "ROC"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "diagnostic accuracy",
+            "sensitivity",
+            "specificity",
+            "AUC"
+          ],
+          "coverage_fraction": 0.8
+        },
+        {
+          "id": "effect_sizes",
+          "label": "effect sizes",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "hazard ratio",
+            "HR",
+            "odds ratio",
+            "OR",
+            "relative risk",
+            "RR",
+            "mean difference",
+            "MD",
+            "standardized mean difference",
+            "SMD",
+            "weighted mean difference",
+            "WMD",
+            "confidence interval",
+            "CI"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "hazard ratio",
+            "HR",
+            "odds ratio",
+            "OR",
+            "relative risk",
+            "RR",
+            "mean difference",
+            "MD",
+            "standardized mean difference",
+            "SMD",
+            "weighted mean difference",
+            "WMD",
+            "confidence interval",
+            "CI"
+          ],
+          "coverage_fraction": 1.0
+        },
+        {
+          "id": "study_designs",
+          "label": "study designs",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "randomized controlled trial",
+            "RCT",
+            "cohort study",
+            "case-control study",
+            "cross-sectional study",
+            "diagnostic accuracy study",
+            "prognostic study"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "randomized controlled trial",
+            "RCT",
+            "cohort study",
+            "case-control study",
+            "cross-sectional study",
+            "diagnostic accuracy study",
+            "prognostic study"
+          ],
+          "coverage_fraction": 1.0
+        },
+        {
+          "id": "publication_exclusion_types",
+          "label": "publication exclusion types",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "review",
+            "meta-analysis",
+            "editorial",
+            "letter",
+            "comment",
+            "case report",
+            "conference abstract",
+            "animal study",
+            "cell experiment",
+            "duplicate publication",
+            "preprint",
+            "study protocol",
+            "non-human study",
+            "in vitro study"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "review",
+            "meta-analysis",
+            "editorial",
+            "letter",
+            "comment",
+            "case report",
+            "conference abstract",
+            "animal study",
+            "cell experiment",
+            "duplicate publication",
+            "preprint",
+            "study protocol",
+            "non-human study",
+            "in vitro study"
+          ],
+          "coverage_fraction": 1.0
+        }
+      ]
+    },
+    "tcga_projects": {
+      "checklist_id": "tcga_projects",
+      "title": "TCGA Projects Checklist",
+      "source": "NCI GDC TCGA Study Abbreviations",
+      "source_version": "TCGA project abbreviations list, curated access 2026-05",
+      "total_checklist_items": 33,
+      "covered": 33,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "ACC",
+          "label": "Adrenocortical Carcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "adrenocortical carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-ACC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "adrenocortical carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-ACC"
+          ]
+        },
+        {
+          "id": "BLCA",
+          "label": "Bladder Urothelial Carcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "bladder cancer",
+            "bladder urothelial carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-BLCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "bladder cancer",
+            "bladder urothelial carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-BLCA"
+          ]
+        },
+        {
+          "id": "BRCA",
+          "label": "Breast Invasive Carcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "breast cancer",
+            "breast invasive carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-BRCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "breast cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-BRCA"
+          ]
+        },
+        {
+          "id": "CESC",
+          "label": "Cervical Squamous Cell Carcinoma and Endocervical Adenocarcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cervical cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-CESC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cervical cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-CESC"
+          ]
+        },
+        {
+          "id": "CHOL",
+          "label": "Cholangiocarcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cholangiocarcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-CHOL"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cholangiocarcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-CHOL"
+          ]
+        },
+        {
+          "id": "COAD",
+          "label": "Colon Adenocarcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "colon cancer",
+            "colorectal cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-COAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "colon cancer",
+            "colorectal cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-COAD"
+          ]
+        },
+        {
+          "id": "DLBC",
+          "label": "Lymphoid Neoplasm Diffuse Large B-cell Lymphoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "diffuse large B-cell lymphoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-DLBC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "diffuse large B-cell lymphoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-DLBC"
+          ]
+        },
+        {
+          "id": "ESCA",
+          "label": "Esophageal Carcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophageal cancer",
+            "esophageal carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-ESCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "esophageal cancer",
+            "esophageal carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-ESCA"
+          ]
+        },
+        {
+          "id": "GBM",
+          "label": "Glioblastoma Multiforme",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "glioblastoma",
+            "glioma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-GBM"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "glioblastoma",
+            "glioma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-GBM"
+          ]
+        },
+        {
+          "id": "HNSC",
+          "label": "Head and Neck Squamous Cell Carcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "head and neck squamous cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-HNSC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "head and neck squamous cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-HNSC"
+          ]
+        },
+        {
+          "id": "KICH",
+          "label": "Kidney Chromophobe",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "kidney chromophobe"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-KICH"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [],
+          "matched_tcga_projects": [
+            "TCGA-KICH"
+          ]
+        },
+        {
+          "id": "KIRC",
+          "label": "Kidney Renal Clear Cell Carcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "clear cell renal cell carcinoma",
+            "kidney renal clear cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-KIRC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "clear cell renal cell carcinoma",
+            "kidney renal clear cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-KIRC"
+          ]
+        },
+        {
+          "id": "KIRP",
+          "label": "Kidney Renal Papillary Cell Carcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "papillary renal cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-KIRP"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "papillary renal cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-KIRP"
+          ]
+        },
+        {
+          "id": "LAML",
+          "label": "Acute Myeloid Leukemia",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "acute myeloid leukemia",
+            "leukemia"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LAML"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "acute myeloid leukemia",
+            "leukemia"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LAML"
+          ]
+        },
+        {
+          "id": "LGG",
+          "label": "Brain Lower Grade Glioma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lower grade glioma",
+            "glioma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LGG"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lower grade glioma",
+            "glioma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LGG"
+          ]
+        },
+        {
+          "id": "LIHC",
+          "label": "Liver Hepatocellular Carcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "hepatocellular carcinoma",
+            "liver cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LIHC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "hepatocellular carcinoma",
+            "liver cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LIHC"
+          ]
+        },
+        {
+          "id": "LUAD",
+          "label": "Lung Adenocarcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lung adenocarcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LUAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lung adenocarcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LUAD"
+          ]
+        },
+        {
+          "id": "LUSC",
+          "label": "Lung Squamous Cell Carcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lung squamous cell carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-LUSC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lung squamous cell carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-LUSC"
+          ]
+        },
+        {
+          "id": "MESO",
+          "label": "Mesothelioma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "mesothelioma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-MESO"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "mesothelioma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-MESO"
+          ]
+        },
+        {
+          "id": "OV",
+          "label": "Ovarian Serous Cystadenocarcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "ovarian cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-OV"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "ovarian cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-OV"
+          ]
+        },
+        {
+          "id": "PAAD",
+          "label": "Pancreatic Adenocarcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "pancreatic cancer",
+            "pancreatic adenocarcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-PAAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "pancreatic cancer",
+            "pancreatic adenocarcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-PAAD"
+          ]
+        },
+        {
+          "id": "PCPG",
+          "label": "Pheochromocytoma and Paraganglioma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "pheochromocytoma",
+            "paraganglioma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-PCPG"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "pheochromocytoma",
+            "paraganglioma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-PCPG"
+          ]
+        },
+        {
+          "id": "PRAD",
+          "label": "Prostate Adenocarcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "prostate cancer",
+            "prostate adenocarcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-PRAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "prostate cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-PRAD"
+          ]
+        },
+        {
+          "id": "READ",
+          "label": "Rectum Adenocarcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "rectal cancer",
+            "colorectal cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-READ"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "rectal cancer",
+            "colorectal cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-READ"
+          ]
+        },
+        {
+          "id": "SARC",
+          "label": "Sarcoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "sarcoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-SARC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "sarcoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-SARC"
+          ]
+        },
+        {
+          "id": "SKCM",
+          "label": "Skin Cutaneous Melanoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "melanoma",
+            "skin cutaneous melanoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-SKCM"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "melanoma",
+            "skin cutaneous melanoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-SKCM"
+          ]
+        },
+        {
+          "id": "STAD",
+          "label": "Stomach Adenocarcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "stomach cancer",
+            "gastric cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-STAD"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "stomach cancer",
+            "gastric cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-STAD"
+          ]
+        },
+        {
+          "id": "TGCT",
+          "label": "Testicular Germ Cell Tumors",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "testicular germ cell tumor"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-TGCT"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "testicular germ cell tumor"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-TGCT"
+          ]
+        },
+        {
+          "id": "THCA",
+          "label": "Thyroid Carcinoma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "thyroid cancer",
+            "thyroid carcinoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-THCA"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "thyroid cancer",
+            "thyroid carcinoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-THCA"
+          ]
+        },
+        {
+          "id": "THYM",
+          "label": "Thymoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "thymoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-THYM"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "thymoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-THYM"
+          ]
+        },
+        {
+          "id": "UCEC",
+          "label": "Uterine Corpus Endometrial Carcinoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "endometrial cancer"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-UCEC"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "endometrial cancer"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-UCEC"
+          ]
+        },
+        {
+          "id": "UCS",
+          "label": "Uterine Carcinosarcoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "uterine carcinosarcoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-UCS"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "uterine carcinosarcoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-UCS"
+          ]
+        },
+        {
+          "id": "UVM",
+          "label": "Uveal Melanoma",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "uveal melanoma"
+          ],
+          "expected_tcga_projects": [
+            "TCGA-UVM"
+          ],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "uveal melanoma"
+          ],
+          "matched_tcga_projects": [
+            "TCGA-UVM"
+          ]
+        }
+      ]
+    }
+  },
+  "prioritized_gaps": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "source_notes": [
+    {
+      "checklist_id": "common_cancers",
+      "source": "GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects",
+      "source_version": "Curated common cancer checklist, 2026-05"
+    },
+    {
+      "checklist_id": "common_diseases",
+      "source": "WHO noncommunicable diseases and major disease categories",
+      "source_version": "Curated major disease category checklist, 2026-05"
+    },
+    {
+      "checklist_id": "gtex_tissues",
+      "source": "GTEx Portal tissue groups",
+      "source_version": "GTEx tissue group checklist, curated access 2026-05"
+    },
+    {
+      "checklist_id": "meta_terms",
+      "source": "Cochrane-style Meta-analysis retrieval strategy term categories",
+      "source_version": "Curated Meta retrieval checklist, 2026-05"
+    },
+    {
+      "checklist_id": "tcga_projects",
+      "source": "NCI GDC TCGA Study Abbreviations",
+      "source_version": "TCGA project abbreviations list, curated access 2026-05"
+    }
+  ]
+}
