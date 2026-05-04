@@ -765,9 +765,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
         result_card, result_layout = _card("数据库候选结果")
         self._tabs = QTabWidget()
-        self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["GSE 编号", "标题", "疾病/组织", "平台/数据类型", "样本数", "匹配原因", "推荐等级", "状态", "操作"])
-        self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["项目代码", "项目名称", "匹配来源", "状态", "操作"])
-        self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["组织名称", "组织类型", "匹配来源", "状态", "操作"])
+        self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["操作", "GSE 编号", "标题", "疾病/组织", "平台/数据类型", "样本数", "匹配原因", "推荐等级", "状态"])
+        self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["操作", "项目代码", "项目名称", "匹配来源", "状态"])
+        self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["操作", "组织名称", "组织类型", "匹配来源", "状态"])
         self._tabs.addTab(self._geo_tab_page, "GEO/GSE 候选数据集")
         self._tabs.addTab(self._tcga_tab_page, "TCGA/GDC 项目候选")
         self._tabs.addTab(self._gtex_tab_page, "GTEx 组织候选")
@@ -870,6 +870,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_table,
             [
                 [
+                    "",
                     item.accession_or_project,
                     item.display_title,
                     item.disease or item.tissue,
@@ -878,7 +879,6 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     _candidate_match_reason(item),
                     _candidate_recommendation(item),
                     self._candidate_registration_status(item),
-                    "",
                 ]
                 for item in candidates
             ],
@@ -893,11 +893,11 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._tcga_table,
             [
                 [
+                    "",
                     item.accession_or_project,
                     item.display_title,
                     "本地词库映射",
                     self._candidate_registration_status(item),
-                    "",
                 ]
                 for item in candidates
             ],
@@ -912,11 +912,11 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._gtex_table,
             [
                 [
+                    "",
                     item.tissue or item.accession_or_project,
                     "正常组织参考",
                     "本地词库映射",
                     self._candidate_registration_status(item),
-                    "",
                 ]
                 for item in candidates
             ],
@@ -936,7 +936,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._continue_button.setText("进入数据识别" if can_continue else "请先登记至少一个候选数据源")
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
-        action_col = table.columnCount() - 1
+        action_col = _table_column_index(table, "操作")
+        table.setColumnWidth(action_col, 180)
         for row_index, candidate in enumerate(candidates):
             key = (candidate.source, candidate.accession_or_project)
             action_widget = QWidget()
@@ -2198,6 +2199,14 @@ def _fill_table(table: QTableWidget, rows: list[list[object]]) -> None:
             item = QTableWidgetItem(str(value))
             table.setItem(row_index, col_index, item)
     table.resizeColumnsToContents()
+
+
+def _table_column_index(table: QTableWidget, header: str) -> int:
+    for index in range(table.columnCount()):
+        item = table.horizontalHeaderItem(index)
+        if item is not None and item.text() == header:
+            return index
+    return max(0, table.columnCount() - 1)
 
 
 def _registered_source_action_widget(row: RegisteredSourceRow) -> QWidget:

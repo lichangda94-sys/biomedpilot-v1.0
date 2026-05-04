@@ -337,16 +337,20 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "暂无候选结果" not in widget._geo_empty_label.text()
     assert widget._tcga_empty_label.isHidden()
     assert widget._gtex_empty_label.isHidden()
-    assert widget._tcga_table.item(0, 0).text() == "TCGA-THCA"
-    assert widget._tcga_table.item(0, 1).text() == "Thyroid Carcinoma"
-    assert widget._tcga_table.item(0, 2).text() == "本地词库映射"
-    assert widget._tcga_table.item(0, 3).text() == "未登记"
-    assert widget._gtex_table.item(0, 0).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 1).text() == "正常组织参考"
-    assert widget._gtex_table.item(0, 2).text() == "本地词库映射"
-    assert widget._gtex_table.item(0, 3).text() == "未登记"
-    tcga_buttons = widget._tcga_table.cellWidget(0, widget._tcga_table.columnCount() - 1).findChildren(QPushButton)
-    gtex_buttons = widget._gtex_table.cellWidget(0, widget._gtex_table.columnCount() - 1).findChildren(QPushButton)
+    assert widget._tcga_table.horizontalHeaderItem(0).text() == "操作"
+    assert widget._tcga_table.columnWidth(0) >= 160
+    assert widget._tcga_table.item(0, 1).text() == "TCGA-THCA"
+    assert widget._tcga_table.item(0, 2).text() == "Thyroid Carcinoma"
+    assert widget._tcga_table.item(0, 3).text() == "本地词库映射"
+    assert widget._tcga_table.item(0, 4).text() == "未登记"
+    assert widget._gtex_table.horizontalHeaderItem(0).text() == "操作"
+    assert widget._gtex_table.columnWidth(0) >= 160
+    assert widget._gtex_table.item(0, 1).text() == "Thyroid"
+    assert widget._gtex_table.item(0, 2).text() == "正常组织参考"
+    assert widget._gtex_table.item(0, 3).text() == "本地词库映射"
+    assert widget._gtex_table.item(0, 4).text() == "未登记"
+    tcga_buttons = widget._tcga_table.cellWidget(0, 0).findChildren(QPushButton)
+    gtex_buttons = widget._gtex_table.cellWidget(0, 0).findChildren(QPushButton)
     assert "登记为数据源" in [button.text() for button in tcga_buttons]
     assert "登记为数据源" in [button.text() for button in gtex_buttons]
     assert widget._mapping_log.isHidden()
@@ -402,7 +406,9 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     widget._fill_geo_candidates([candidate])
 
     assert not widget._geo_table.isHidden()
-    buttons = widget._geo_table.cellWidget(0, widget._geo_table.columnCount() - 1).findChildren(QPushButton)
+    assert widget._geo_table.horizontalHeaderItem(0).text() == "操作"
+    assert widget._geo_table.columnWidth(0) >= 160
+    buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
     assert [button.text() for button in buttons][:2] == ["登记为数据源", "查看详情"]
 
 
@@ -422,8 +428,8 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert widget._continue_button.isEnabled()
     assert widget._continue_button.text() == "进入数据识别"
     assert widget.status_message() == "已登记为数据来源，可进入数据识别。"
-    assert widget._tcga_table.item(0, 3).text() == "已登记"
-    registered_button = widget._tcga_table.cellWidget(0, widget._tcga_table.columnCount() - 1).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
+    assert widget._tcga_table.item(0, 4).text() == "已登记"
+    registered_button = widget._tcga_table.cellWidget(0, 0).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
     assert registered_button.text() == "已登记"
     assert not registered_button.isEnabled()
     duplicate = widget.register_candidate("tcga_gdc", "TCGA-THCA")
@@ -462,7 +468,7 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
     assert widget._registered_table.rowCount() == 1
     assert widget._registered_table.item(0, 0).text() == "GTEx 正常组织参考"
     assert widget._registered_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 3).text() == "已登记"
+    assert widget._gtex_table.item(0, 4).text() == "已登记"
     assert widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()
 
