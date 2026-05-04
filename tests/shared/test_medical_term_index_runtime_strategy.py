@@ -2,57 +2,102 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import subprocess
+import sys
 from pathlib import Path
 
 import app.shared.query_intelligence.medical_terms.term_lookup as term_lookup
 from app.shared.query_intelligence.medical_terms import lookup_medical_terms
-from app.shared.query_intelligence.medical_terms.term_index_loader import load_full_term_index
+from app.shared.query_intelligence.medical_terms.term_index_loader import SQLITE_SCHEMA_VERSION, load_full_term_index
 from app.shared.query_intelligence.medical_terms.term_index_models import TermConcept
 
 
-def _write_full_index(path: Path) -> None:
+def _write_full_index(path: Path, *, schema_version: str = SQLITE_SCHEMA_VERSION) -> None:
     with sqlite3.connect(path) as conn:
         conn.execute(
             """
-            CREATE TABLE term_concepts (
-                concept_id TEXT PRIMARY KEY,
-                source_vocabulary TEXT,
-                source_id TEXT,
-                preferred_label_en TEXT,
-                synonyms_en TEXT,
-                exact_synonyms_en TEXT,
-                related_synonyms_en TEXT,
-                abbreviations TEXT,
-                mesh_terms TEXT,
-                disease_group TEXT,
-                concept_type TEXT,
-                parent_terms TEXT,
-                cross_refs TEXT,
-                license TEXT,
-                version TEXT,
-                normalized_terms TEXT
+            CREATE TABLE ontology_terms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                concept_id TEXT UNIQUE NOT NULL,
+                ontology_source TEXT NOT NULL,
+                ontology_id TEXT,
+                canonical_name TEXT NOT NULL,
+                normalized_name TEXT NOT NULL,
+                term_type TEXT NOT NULL,
+                definition TEXT,
+                source_reference TEXT,
+                payload_json TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL
             )
             """
         )
         conn.execute(
-            "INSERT INTO term_concepts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            """
+            CREATE TABLE ontology_build_metadata (
+                build_id TEXT PRIMARY KEY,
+                build_time TEXT NOT NULL,
+                schema_version TEXT NOT NULL,
+                source_versions TEXT NOT NULL,
+                source_files TEXT NOT NULL,
+                entry_counts TEXT NOT NULL,
+                warnings TEXT NOT NULL,
+                fallback_mode TEXT NOT NULL,
+                index_kind TEXT NOT NULL
+            )
+            """
+        )
+        payload = {
+            "concept_id": "full:test_disease",
+            "source_vocabulary": "MONDO",
+            "source_id": "MONDO:TEST",
+            "preferred_label_en": "full index test disease",
+            "synonyms_en": ["full index synonym"],
+            "exact_synonyms_en": ["full index exact"],
+            "related_synonyms_en": [],
+            "abbreviations": ["FITD"],
+            "mesh_terms": ["Full Index Test Disease"],
+            "disease_group": "",
+            "concept_type": "disease",
+            "parent_terms": [],
+            "cross_refs": {"tcga": ["TCGA-FULL"], "gtex": ["FullTissue"]},
+            "license": "CC BY 4.0",
+            "version": "test",
+            "normalized_terms": ["测试病", "full index test disease"],
+        }
+        conn.execute(
+            """
+            INSERT INTO ontology_terms (
+                concept_id, ontology_source, ontology_id, canonical_name,
+                normalized_name, term_type, definition, source_reference,
+                payload_json, is_active, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+            """,
             (
-                "full:test_disease",
+                payload["concept_id"],
                 "MONDO",
                 "MONDO:TEST",
                 "full index test disease",
-                json.dumps(["full index synonym"]),
-                json.dumps(["full index exact"]),
-                json.dumps([]),
-                json.dumps(["FITD"]),
-                json.dumps(["Full Index Test Disease"]),
-                "",
+                "full index test disease",
                 "disease",
-                json.dumps([]),
-                json.dumps({"tcga": ["TCGA-FULL"], "gtex": ["FullTissue"]}),
-                "CC BY 4.0",
+                "",
+                "test-fixture",
+                json.dumps(payload, ensure_ascii=False),
+                "2026-05-05T00:00:00+00:00",
+            ),
+        )
+        conn.execute(
+            "INSERT INTO ontology_build_metadata VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "test-build",
+                "2026-05-05T00:00:00+00:00",
+                schema_version,
+                "{}",
+                "[]",
+                "{}",
+                "[]",
                 "test",
-                json.dumps(["测试病", "full index test disease"]),
+                "test",
             ),
         )
         conn.commit()
@@ -91,6 +136,58 @@ def test_full_index_missing_reads_mini_index(monkeypatch) -> None:
 
     assert "mini_medical_terms_index" in result.term_sources
     assert "mini index disease" in result.disease_terms_en
+
+
+def test_full_index_corrupt_falls_back_to_json(monkeypatch, tmp_path: Path) -> None:
+    index_path = tmp_path / "broken.sqlite"
+    index_path.write_text("not sqlite", encoding="utf-8")
+    load_full_term_index.cache_clear()
+    monkeypatch.setattr(term_lookup, "load_full_term_index", lambda: load_full_term_index(str(index_path)))
+
+    result = lookup_medical_terms("脑胶质瘤")
+
+    assert "medical_terms_index.sqlite" not in result.term_sources
+    assert "glioma" in result.disease_terms_en
+    assert "zh_term_overrides" in result.term_sources
+
+
+def test_full_index_schema_mismatch_falls_back_to_json(monkeypatch, tmp_path: Path) -> None:
+    index_path = tmp_path / "old-schema.sqlite"
+    _write_full_index(index_path, schema_version="old.schema")
+    load_full_term_index.cache_clear()
+    monkeypatch.setattr(term_lookup, "load_full_term_index", lambda: load_full_term_index(str(index_path)))
+
+    result = lookup_medical_terms("心血管疾病")
+
+    assert "medical_terms_index.sqlite" not in result.term_sources
+    assert "cardiovascular disease" in result.disease_terms_en
+    assert "zh_term_overrides" in result.term_sources
+
+
+def test_built_sqlite_index_can_be_loaded_first(monkeypatch, tmp_path: Path) -> None:
+    index_path = tmp_path / "medical_terms_index.sqlite"
+    report_path = tmp_path / "medical_terms_index_build_report.json"
+    metadata_path = tmp_path / "source_metadata.json"
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/update_medical_term_index.py",
+            "--output",
+            str(index_path),
+            "--build-report-output",
+            str(report_path),
+            "--metadata-output",
+            str(metadata_path),
+        ],
+        check=True,
+    )
+    load_full_term_index.cache_clear()
+    monkeypatch.setattr(term_lookup, "load_full_term_index", lambda: load_full_term_index(str(index_path)))
+
+    result = lookup_medical_terms("膀胱")
+
+    assert "medical_terms_index.sqlite" in result.term_sources
+    assert "Bladder" in result.gtex_tissue_candidates
 
 
 def test_mini_index_missing_falls_back_to_registry(monkeypatch) -> None:

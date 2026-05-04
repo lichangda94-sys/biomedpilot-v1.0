@@ -260,6 +260,27 @@ def test_meta_pubmed_query_prefers_mesh_terms() -> None:
     assert "TCGA-THCA" not in " ".join(draft.pubmed_query_candidates + draft.database_terms)
 
 
+def test_sqlite_optional_index_preserves_bio_and_meta_boundaries() -> None:
+    bio = build_search_translation_draft(
+        "脑胶质瘤肾脏转录组",
+        target_context="bioinformatics",
+        target_database="geo",
+    )
+    meta = build_search_translation_draft(
+        "神经退行性疾病 Meta 分析",
+        target_context="meta_analysis",
+        target_database="pubmed",
+    )
+
+    assert "glioma" in " ".join([*bio.main_concepts_en, *bio.disease_terms_en]).lower()
+    assert "Brain" in bio.audit.get("gtex_tissue_candidates", [])
+    assert bio.geo_query_candidates
+    assert meta.geo_query_candidates == []
+    assert not meta.audit.get("tcga_project_candidates")
+    assert not meta.audit.get("gtex_tissue_candidates")
+    assert "neurodegenerative disease" in " ".join([*meta.main_concepts_en, *meta.disease_terms_en]).lower()
+
+
 def test_bioinformatics_context_filters_literature_candidates() -> None:
     draft = build_search_translation_draft(
         "甲状腺癌相关数据集",

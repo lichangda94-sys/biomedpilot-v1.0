@@ -1,6 +1,6 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-04T23:43:26.188674+00:00",
+  "generated_at": "2026-05-04T23:52:05.390389+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",

@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .term_index_models import TermConcept
 
+SQLITE_SCHEMA_VERSION = "biomedpilot.medical_terms.sqlite.v6"
+
 
 def default_mini_index_path() -> Path:
     return Path(__file__).resolve().parents[4] / "data" / "medical_terms" / "mini_medical_terms_index.json"
@@ -38,18 +40,20 @@ def load_full_term_index(path: str | None = None) -> tuple[TermConcept, ...]:
     try:
         with sqlite3.connect(str(resolved)) as conn:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                """
-                SELECT concept_id, source_vocabulary, source_id, preferred_label_en,
-                       synonyms_en, exact_synonyms_en, related_synonyms_en,
-                       abbreviations, mesh_terms, disease_group, concept_type,
-                       parent_terms, cross_refs, license, version, normalized_terms
-                FROM term_concepts
-                """
-            ).fetchall()
+            if not _schema_is_supported(conn):
+                return ()
+            rows = conn.execute("SELECT payload_json FROM ontology_terms WHERE is_active = 1").fetchall()
     except Exception:
         return ()
-    return tuple(TermConcept.from_dict(_row_payload(row)) for row in rows)
+    concepts: list[TermConcept] = []
+    for row in rows:
+        try:
+            payload = json.loads(str(row["payload_json"]))
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            concepts.append(TermConcept.from_dict(payload))
+    return tuple(concepts)
 
 
 def active_index_status() -> dict[str, object]:
@@ -59,6 +63,7 @@ def active_index_status() -> dict[str, object]:
         "medical_terms_index_scope": "BioMedPilot shared medical vocabulary",
         "full_index_path": str(full_path),
         "full_index_available": full_path.exists(),
+        "full_index_schema_version": SQLITE_SCHEMA_VERSION if full_path.exists() else "",
         "mini_index_path": str(mini_path),
         "mini_index_available": mini_path.exists(),
         "runtime_load_order": [
@@ -68,6 +73,21 @@ def active_index_status() -> dict[str, object]:
             "biomedical_term_registry",
         ],
     }
+
+
+def _schema_is_supported(conn: sqlite3.Connection) -> bool:
+    try:
+        row = conn.execute(
+            """
+            SELECT schema_version
+            FROM ontology_build_metadata
+            ORDER BY build_time DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    except Exception:
+        return False
+    return bool(row and row["schema_version"] == SQLITE_SCHEMA_VERSION)
 
 
 def _row_payload(row: sqlite3.Row) -> dict[str, object]:

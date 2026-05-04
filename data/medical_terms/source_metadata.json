@@ -1,7 +1,7 @@
 {
   "schema_version": "biomedpilot.medical_terms.source_metadata.v2",
   "medical_terms_index_scope": "BioMedPilot shared medical vocabulary",
-  "runtime_strategy": "preprocessed_sqlite_optional_plus_builtin_mini_index",
+  "runtime_strategy": "sqlite_first_optional_with_json_mini_fallback",
   "runtime_inputs": [
     "data/medical_terms/zh_term_overrides.json",
     "data/medical_terms/medical_terms_index.sqlite if present",
@@ -141,5 +141,19 @@
       "mini:bladder_tissue"
     ],
     "note": "No full ontology index enabled; mini vocabulary JSON remains the primary runtime path."
+  },
+  "stage_v6_optional_sqlite_index": {
+    "processed_at": "2026-05-04T23:52:05.308391+00:00",
+    "schema_version": "biomedpilot.medical_terms.sqlite.v6",
+    "generated_files": [
+      "data/medical_terms/medical_terms_index.sqlite",
+      "data/medical_terms/medical_terms_index_build_report.json"
+    ],
+    "fallback_mode": "mini_vocabulary_only",
+    "index_kind": "mini-derived sqlite index",
+    "terms_count": 116,
+    "synonyms_count": 1968,
+    "crossrefs_count": 175,
+    "note": "Optional sqlite enhancement only; mini_medical_terms_index.json and zh_term_overrides.json remain stable fallback inputs."
   }
 }
