@@ -155,3 +155,90 @@ def test_systematic_forbidden_disease_leakage_guards(term: str, forbidden_terms:
 
     for forbidden in forbidden_terms:
         assert forbidden.lower() not in text.lower()
+
+
+@pytest.mark.parametrize(
+    ("term", "tcga_project", "required_term"),
+    [
+        ("肾上腺皮质癌", "TCGA-ACC", "adrenocortical carcinoma"),
+        ("弥漫大B细胞淋巴瘤", "TCGA-DLBC", "diffuse large B-cell lymphoma"),
+        ("间皮瘤", "TCGA-MESO", "mesothelioma"),
+        ("嗜铬细胞瘤", "TCGA-PCPG", "pheochromocytoma"),
+        ("肉瘤", "TCGA-SARC", "sarcoma"),
+        ("睾丸生殖细胞肿瘤", "TCGA-TGCT", "testicular germ cell tumor"),
+        ("胸腺瘤", "TCGA-THYM", "thymoma"),
+        ("子宫癌肉瘤", "TCGA-UCS", "uterine carcinosarcoma"),
+        ("葡萄膜黑色素瘤", "TCGA-UVM", "uveal melanoma"),
+    ],
+)
+def test_stage_2_4_gap_driven_tcga_project_mapping(term: str, tcga_project: str, required_term: str) -> None:
+    result = lookup_medical_terms(term, target_context="bioinformatics")
+    text = _lookup_text(term, target_context="bioinformatics").lower()
+
+    assert required_term.lower() in text
+    assert tcga_project in result.tcga_project_candidates
+
+
+def test_stage_2_4_adrenal_terms_do_not_leak_kidney_tissue() -> None:
+    result = lookup_medical_terms("肾上腺皮质癌", target_context="bioinformatics")
+    text = _lookup_text("肾上腺皮质癌", target_context="bioinformatics").lower()
+
+    assert "TCGA-ACC" in result.tcga_project_candidates
+    assert "Adrenal Gland" in result.gtex_tissue_candidates
+    assert "Kidney" not in result.gtex_tissue_candidates
+    assert "renal tissue" not in text
+
+
+@pytest.mark.parametrize(
+    ("term", "gtex_tissue"),
+    [
+        ("脾脏", "Spleen"),
+        ("垂体", "Pituitary"),
+        ("肾上腺", "Adrenal Gland"),
+        ("睾丸", "Testis"),
+    ],
+)
+def test_stage_2_4_gap_driven_gtex_tissue_mapping(term: str, gtex_tissue: str) -> None:
+    result = lookup_medical_terms(term, target_context="bioinformatics")
+
+    assert gtex_tissue in result.gtex_tissue_candidates
+
+
+@pytest.mark.parametrize(
+    ("term", "required_term", "required_abbreviation"),
+    [
+        ("标准化均数差", "standardized mean difference", "SMD"),
+        ("均数差", "mean difference", "MD"),
+        ("加权均数差", "weighted mean difference", "WMD"),
+        ("置信区间", "confidence interval", "CI"),
+    ],
+)
+def test_stage_2_4_gap_driven_meta_effect_size_terms(
+    term: str,
+    required_term: str,
+    required_abbreviation: str,
+) -> None:
+    result = lookup_medical_terms(term, target_context="meta_analysis")
+
+    assert required_term in " ".join(result.outcome_terms)
+    assert required_abbreviation in result.abbreviations
+    assert result.tcga_project_candidates == []
+    assert result.gtex_tissue_candidates == []
+
+
+@pytest.mark.parametrize(
+    ("term", "required_term"),
+    [
+        ("预印本", "preprint"),
+        ("研究方案", "study protocol"),
+        ("重复发表", "duplicate publication"),
+        ("非人类研究", "non-human study"),
+        ("体外研究", "in vitro study"),
+    ],
+)
+def test_stage_2_4_gap_driven_publication_exclusion_terms(term: str, required_term: str) -> None:
+    result = lookup_medical_terms(term, target_context="meta_analysis")
+
+    assert required_term in " ".join(result.publication_type_terms)
+    assert result.tcga_project_candidates == []
+    assert result.gtex_tissue_candidates == []

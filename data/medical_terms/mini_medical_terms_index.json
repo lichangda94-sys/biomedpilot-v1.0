@@ -4997,7 +4997,7 @@
     "source_id": "kidney_tissue",
     "preferred_label_en": "kidney",
     "zh_terms": [
-      "肾"
+      "肾脏"
     ],
     "synonyms_en": [
       "renal tissue"
@@ -5027,7 +5027,7 @@
     "normalized_terms": [
       "kidney",
       "renal tissue",
-      "肾"
+      "肾脏"
     ],
     "gtex_mapping_status": {
       "Kidney": "approximate_candidate"
@@ -5500,6 +5500,848 @@
       "会议摘要",
       "动物实验",
       "细胞实验"
+    ]
+  },
+  {
+    "concept_id": "mini:adrenocortical_carcinoma",
+    "source_vocabulary": "mini",
+    "source_id": "adrenocortical_carcinoma",
+    "preferred_label_en": "adrenocortical carcinoma",
+    "zh_terms": [
+      "肾上腺皮质癌",
+      "肾上腺皮质肿瘤"
+    ],
+    "synonyms_en": [
+      "adrenocortical cancer",
+      "adrenal cortical carcinoma",
+      "adrenal cortex carcinoma"
+    ],
+    "exact_synonyms_en": [
+      "adrenocortical carcinoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ACC"
+    ],
+    "mesh_terms": [
+      "Adrenocortical Carcinoma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "endocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "endocrine tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-ACC"
+      ],
+      "gtex": [
+        "Adrenal Gland"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "adrenocortical carcinoma",
+      "adrenocortical cancer",
+      "adrenal cortical carcinoma",
+      "adrenal cortex carcinoma",
+      "ACC",
+      "肾上腺皮质癌",
+      "肾上腺皮质肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:diffuse_large_b_cell_lymphoma",
+    "source_vocabulary": "mini",
+    "source_id": "diffuse_large_b_cell_lymphoma",
+    "preferred_label_en": "diffuse large B-cell lymphoma",
+    "zh_terms": [
+      "弥漫大B细胞淋巴瘤",
+      "弥漫大B细胞性淋巴瘤"
+    ],
+    "synonyms_en": [
+      "DLBCL",
+      "lymphoid neoplasm diffuse large B-cell lymphoma",
+      "diffuse large B cell lymphoma"
+    ],
+    "exact_synonyms_en": [
+      "diffuse large B-cell lymphoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "DLBCL",
+      "DLBC"
+    ],
+    "mesh_terms": [
+      "Lymphoma, Large B-Cell, Diffuse"
+    ],
+    "tissue_terms": [
+      "lymph node",
+      "blood",
+      "spleen"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "hematologic malignancy",
+    "concept_type": "disease",
+    "parent_terms": [
+      "hematologic malignancy"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-DLBC"
+      ],
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "diffuse large B-cell lymphoma",
+      "DLBCL",
+      "lymphoid neoplasm diffuse large B-cell lymphoma",
+      "diffuse large B cell lymphoma",
+      "DLBC",
+      "弥漫大B细胞淋巴瘤",
+      "弥漫大B细胞性淋巴瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:mesothelioma",
+    "source_vocabulary": "mini",
+    "source_id": "mesothelioma",
+    "preferred_label_en": "mesothelioma",
+    "zh_terms": [
+      "间皮瘤",
+      "恶性间皮瘤"
+    ],
+    "synonyms_en": [
+      "malignant mesothelioma",
+      "pleural mesothelioma"
+    ],
+    "exact_synonyms_en": [
+      "mesothelioma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MESO"
+    ],
+    "mesh_terms": [
+      "Mesothelioma"
+    ],
+    "tissue_terms": [
+      "pleura",
+      "lung"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-MESO"
+      ],
+      "gtex": [
+        "Lung"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "mesothelioma",
+      "malignant mesothelioma",
+      "pleural mesothelioma",
+      "MESO",
+      "间皮瘤",
+      "恶性间皮瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:pheochromocytoma_paraganglioma",
+    "source_vocabulary": "mini",
+    "source_id": "pheochromocytoma_paraganglioma",
+    "preferred_label_en": "pheochromocytoma and paraganglioma",
+    "zh_terms": [
+      "嗜铬细胞瘤",
+      "副神经节瘤",
+      "嗜铬细胞瘤和副神经节瘤"
+    ],
+    "synonyms_en": [
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "exact_synonyms_en": [
+      "pheochromocytoma and paraganglioma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PCPG"
+    ],
+    "mesh_terms": [
+      "Pheochromocytoma",
+      "Paraganglioma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "neuroendocrine tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "neuroendocrine tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-PCPG"
+      ],
+      "gtex": [
+        "Adrenal Gland"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "pheochromocytoma and paraganglioma",
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma",
+      "PCPG",
+      "嗜铬细胞瘤",
+      "副神经节瘤",
+      "嗜铬细胞瘤和副神经节瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:sarcoma",
+    "source_vocabulary": "mini",
+    "source_id": "sarcoma",
+    "preferred_label_en": "sarcoma",
+    "zh_terms": [
+      "肉瘤",
+      "软组织肉瘤"
+    ],
+    "synonyms_en": [
+      "soft tissue sarcoma",
+      "bone sarcoma"
+    ],
+    "exact_synonyms_en": [
+      "sarcoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SARC"
+    ],
+    "mesh_terms": [
+      "Sarcoma"
+    ],
+    "tissue_terms": [
+      "soft tissue",
+      "muscle"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "mesenchymal tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "mesenchymal tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-SARC"
+      ],
+      "gtex": [
+        "Muscle",
+        "Adipose Tissue"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "sarcoma",
+      "soft tissue sarcoma",
+      "bone sarcoma",
+      "SARC",
+      "肉瘤",
+      "软组织肉瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:testicular_germ_cell_tumor",
+    "source_vocabulary": "mini",
+    "source_id": "testicular_germ_cell_tumor",
+    "preferred_label_en": "testicular germ cell tumor",
+    "zh_terms": [
+      "睾丸生殖细胞肿瘤",
+      "睾丸癌",
+      "睾丸肿瘤"
+    ],
+    "synonyms_en": [
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "exact_synonyms_en": [
+      "testicular germ cell tumor"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TGCT"
+    ],
+    "mesh_terms": [
+      "Testicular Neoplasms",
+      "Germ Cell Tumor"
+    ],
+    "tissue_terms": [
+      "testis"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "germ cell tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "germ cell tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-TGCT"
+      ],
+      "gtex": [
+        "Testis"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "testicular germ cell tumor",
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer",
+      "TGCT",
+      "睾丸生殖细胞肿瘤",
+      "睾丸癌",
+      "睾丸肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:thymoma",
+    "source_vocabulary": "mini",
+    "source_id": "thymoma",
+    "preferred_label_en": "thymoma",
+    "zh_terms": [
+      "胸腺瘤",
+      "胸腺肿瘤"
+    ],
+    "synonyms_en": [
+      "thymic epithelial tumor",
+      "thymic tumor"
+    ],
+    "exact_synonyms_en": [
+      "thymoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "THYM"
+    ],
+    "mesh_terms": [
+      "Thymoma"
+    ],
+    "tissue_terms": [
+      "thymus"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "thoracic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "thoracic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-THYM"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "thymoma",
+      "thymic epithelial tumor",
+      "thymic tumor",
+      "THYM",
+      "胸腺瘤",
+      "胸腺肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:uterine_carcinosarcoma",
+    "source_vocabulary": "mini",
+    "source_id": "uterine_carcinosarcoma",
+    "preferred_label_en": "uterine carcinosarcoma",
+    "zh_terms": [
+      "子宫癌肉瘤",
+      "子宫恶性混合苗勒管肿瘤"
+    ],
+    "synonyms_en": [
+      "malignant mixed mullerian tumor",
+      "uterine malignant mixed mullerian tumor"
+    ],
+    "exact_synonyms_en": [
+      "uterine carcinosarcoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "UCS"
+    ],
+    "mesh_terms": [
+      "Uterine Neoplasms"
+    ],
+    "tissue_terms": [
+      "uterus"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "gynecologic cancer",
+    "concept_type": "disease",
+    "parent_terms": [
+      "gynecologic cancer"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-UCS"
+      ],
+      "gtex": [
+        "Uterus"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "uterine carcinosarcoma",
+      "malignant mixed mullerian tumor",
+      "uterine malignant mixed mullerian tumor",
+      "UCS",
+      "子宫癌肉瘤",
+      "子宫恶性混合苗勒管肿瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:uveal_melanoma",
+    "source_vocabulary": "mini",
+    "source_id": "uveal_melanoma",
+    "preferred_label_en": "uveal melanoma",
+    "zh_terms": [
+      "葡萄膜黑色素瘤",
+      "眼黑色素瘤"
+    ],
+    "synonyms_en": [
+      "ocular melanoma",
+      "melanoma of uvea"
+    ],
+    "exact_synonyms_en": [
+      "uveal melanoma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "UVM"
+    ],
+    "mesh_terms": [
+      "Uveal Melanoma"
+    ],
+    "tissue_terms": [
+      "uvea",
+      "eye"
+    ],
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ],
+    "modifier_terms_en": [],
+    "disease_group": "melanocytic tumor",
+    "concept_type": "disease",
+    "parent_terms": [
+      "melanocytic tumor"
+    ],
+    "cross_refs": {
+      "tcga": [
+        "TCGA-UVM"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "uveal melanoma",
+      "ocular melanoma",
+      "melanoma of uvea",
+      "UVM",
+      "葡萄膜黑色素瘤",
+      "眼黑色素瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:spleen_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "spleen_tissue",
+    "preferred_label_en": "spleen",
+    "zh_terms": [
+      "脾脏",
+      "脾"
+    ],
+    "synonyms_en": [
+      "spleen"
+    ],
+    "exact_synonyms_en": [
+      "spleen"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "tissue_terms": [
+      "spleen"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "gtex tissue",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "GTEx tissue group"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "spleen",
+      "脾脏",
+      "脾"
+    ]
+  },
+  {
+    "concept_id": "mini:pituitary_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "pituitary_tissue",
+    "preferred_label_en": "pituitary",
+    "zh_terms": [
+      "垂体"
+    ],
+    "synonyms_en": [
+      "pituitary"
+    ],
+    "exact_synonyms_en": [
+      "pituitary"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "tissue_terms": [
+      "pituitary"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "gtex tissue",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "GTEx tissue group"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Pituitary"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "pituitary",
+      "垂体"
+    ]
+  },
+  {
+    "concept_id": "mini:adrenal_gland_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "adrenal_gland_tissue",
+    "preferred_label_en": "adrenal gland",
+    "zh_terms": [
+      "肾上腺"
+    ],
+    "synonyms_en": [
+      "adrenal gland"
+    ],
+    "exact_synonyms_en": [
+      "adrenal gland"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "gtex tissue",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "GTEx tissue group"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Adrenal Gland"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "adrenal gland",
+      "肾上腺"
+    ]
+  },
+  {
+    "concept_id": "mini:testis_tissue",
+    "source_vocabulary": "mini",
+    "source_id": "testis_tissue",
+    "preferred_label_en": "testis",
+    "zh_terms": [
+      "睾丸"
+    ],
+    "synonyms_en": [
+      "testis"
+    ],
+    "exact_synonyms_en": [
+      "testis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "tissue_terms": [
+      "testis"
+    ],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "gtex tissue",
+    "concept_type": "tissue",
+    "parent_terms": [
+      "GTEx tissue group"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Testis"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "testis",
+      "睾丸"
+    ]
+  },
+  {
+    "concept_id": "mini:effect_size_core",
+    "source_vocabulary": "mini",
+    "source_id": "effect_size_core",
+    "preferred_label_en": "effect size",
+    "zh_terms": [
+      "效应量",
+      "标准化均数差",
+      "均数差",
+      "加权均数差",
+      "置信区间"
+    ],
+    "synonyms_en": [
+      "effect estimate",
+      "standardized mean difference",
+      "mean difference",
+      "weighted mean difference",
+      "odds ratio",
+      "risk ratio",
+      "relative risk",
+      "hazard ratio",
+      "confidence interval"
+    ],
+    "exact_synonyms_en": [
+      "effect size"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SMD",
+      "MD",
+      "WMD",
+      "OR",
+      "RR",
+      "HR",
+      "CI"
+    ],
+    "mesh_terms": [],
+    "tissue_terms": [],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "meta-analysis search term",
+    "concept_type": "outcome",
+    "parent_terms": [
+      "meta-analysis search terms"
+    ],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "effect size",
+      "effect estimate",
+      "standardized mean difference",
+      "mean difference",
+      "weighted mean difference",
+      "odds ratio",
+      "risk ratio",
+      "relative risk",
+      "hazard ratio",
+      "confidence interval",
+      "SMD",
+      "MD",
+      "WMD",
+      "OR",
+      "RR",
+      "HR",
+      "CI",
+      "效应量",
+      "标准化均数差",
+      "均数差",
+      "加权均数差",
+      "置信区间"
+    ]
+  },
+  {
+    "concept_id": "mini:publication_exclusion_gap_terms",
+    "source_vocabulary": "mini",
+    "source_id": "publication_exclusion_gap_terms",
+    "preferred_label_en": "publication exclusion type",
+    "zh_terms": [
+      "预印本",
+      "研究方案",
+      "重复发表",
+      "非人类研究",
+      "体外研究"
+    ],
+    "synonyms_en": [
+      "preprint",
+      "study protocol",
+      "duplicate publication",
+      "non-human study",
+      "in vitro study",
+      "animal-only study"
+    ],
+    "exact_synonyms_en": [
+      "publication exclusion type"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "tissue_terms": [],
+    "data_modality_terms": [],
+    "modifier_terms_en": [],
+    "disease_group": "meta-analysis search term",
+    "concept_type": "publication_type",
+    "parent_terms": [
+      "meta-analysis search terms"
+    ],
+    "cross_refs": {},
+    "license": "project-local-curated",
+    "version": "stage2.4-gap-driven-2026-05-04",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "normalized_terms": [
+      "publication exclusion type",
+      "preprint",
+      "study protocol",
+      "duplicate publication",
+      "non-human study",
+      "in vitro study",
+      "animal-only study",
+      "预印本",
+      "研究方案",
+      "重复发表",
+      "非人类研究",
+      "体外研究"
     ]
   }
 ]

@@ -4265,9 +4265,9 @@
     "source": "zh_override"
   },
   {
-    "zh_term": "肾",
+    "zh_term": "肾脏",
     "zh_terms": [
-      "肾"
+      "肾脏"
     ],
     "preferred_label_en": "kidney",
     "mapped_concept_ids": [
@@ -4885,5 +4885,973 @@
     "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.9,
     "source": "zh_override"
+  },
+  {
+    "zh_term": "肾上腺皮质癌",
+    "preferred_label_en": "adrenocortical carcinoma",
+    "mapped_concept_ids": [
+      "mini:adrenocortical_carcinoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "adrenocortical carcinoma",
+      "adrenocortical cancer",
+      "adrenal cortical carcinoma",
+      "adrenal cortex carcinoma"
+    ],
+    "synonyms_en": [
+      "adrenocortical cancer",
+      "adrenal cortical carcinoma",
+      "adrenal cortex carcinoma"
+    ],
+    "abbreviations": [
+      "ACC"
+    ],
+    "mesh_terms": [
+      "Adrenocortical Carcinoma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-ACC"
+    ],
+    "gtex_tissue_candidates": [
+      "Adrenal Gland"
+    ]
+  },
+  {
+    "zh_term": "肾上腺皮质肿瘤",
+    "preferred_label_en": "adrenocortical carcinoma",
+    "mapped_concept_ids": [
+      "mini:adrenocortical_carcinoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "adrenocortical carcinoma",
+      "adrenocortical cancer",
+      "adrenal cortical carcinoma",
+      "adrenal cortex carcinoma"
+    ],
+    "synonyms_en": [
+      "adrenocortical cancer",
+      "adrenal cortical carcinoma",
+      "adrenal cortex carcinoma"
+    ],
+    "abbreviations": [
+      "ACC"
+    ],
+    "mesh_terms": [
+      "Adrenocortical Carcinoma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-ACC"
+    ],
+    "gtex_tissue_candidates": [
+      "Adrenal Gland"
+    ]
+  },
+  {
+    "zh_term": "弥漫大B细胞淋巴瘤",
+    "preferred_label_en": "diffuse large B-cell lymphoma",
+    "mapped_concept_ids": [
+      "mini:diffuse_large_b_cell_lymphoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "diffuse large B-cell lymphoma",
+      "DLBCL",
+      "lymphoid neoplasm diffuse large B-cell lymphoma",
+      "diffuse large B cell lymphoma"
+    ],
+    "synonyms_en": [
+      "DLBCL",
+      "lymphoid neoplasm diffuse large B-cell lymphoma",
+      "diffuse large B cell lymphoma"
+    ],
+    "abbreviations": [
+      "DLBCL",
+      "DLBC"
+    ],
+    "mesh_terms": [
+      "Lymphoma, Large B-Cell, Diffuse"
+    ],
+    "tissue_terms": [
+      "lymph node",
+      "blood",
+      "spleen"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-DLBC"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ]
+  },
+  {
+    "zh_term": "弥漫大B细胞性淋巴瘤",
+    "preferred_label_en": "diffuse large B-cell lymphoma",
+    "mapped_concept_ids": [
+      "mini:diffuse_large_b_cell_lymphoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "diffuse large B-cell lymphoma",
+      "DLBCL",
+      "lymphoid neoplasm diffuse large B-cell lymphoma",
+      "diffuse large B cell lymphoma"
+    ],
+    "synonyms_en": [
+      "DLBCL",
+      "lymphoid neoplasm diffuse large B-cell lymphoma",
+      "diffuse large B cell lymphoma"
+    ],
+    "abbreviations": [
+      "DLBCL",
+      "DLBC"
+    ],
+    "mesh_terms": [
+      "Lymphoma, Large B-Cell, Diffuse"
+    ],
+    "tissue_terms": [
+      "lymph node",
+      "blood",
+      "spleen"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-DLBC"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ]
+  },
+  {
+    "zh_term": "间皮瘤",
+    "preferred_label_en": "mesothelioma",
+    "mapped_concept_ids": [
+      "mini:mesothelioma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "mesothelioma",
+      "malignant mesothelioma",
+      "pleural mesothelioma"
+    ],
+    "synonyms_en": [
+      "malignant mesothelioma",
+      "pleural mesothelioma"
+    ],
+    "abbreviations": [
+      "MESO"
+    ],
+    "mesh_terms": [
+      "Mesothelioma"
+    ],
+    "tissue_terms": [
+      "pleura",
+      "lung"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-MESO"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung"
+    ]
+  },
+  {
+    "zh_term": "恶性间皮瘤",
+    "preferred_label_en": "mesothelioma",
+    "mapped_concept_ids": [
+      "mini:mesothelioma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "mesothelioma",
+      "malignant mesothelioma",
+      "pleural mesothelioma"
+    ],
+    "synonyms_en": [
+      "malignant mesothelioma",
+      "pleural mesothelioma"
+    ],
+    "abbreviations": [
+      "MESO"
+    ],
+    "mesh_terms": [
+      "Mesothelioma"
+    ],
+    "tissue_terms": [
+      "pleura",
+      "lung"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-MESO"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung"
+    ]
+  },
+  {
+    "zh_term": "嗜铬细胞瘤",
+    "preferred_label_en": "pheochromocytoma and paraganglioma",
+    "mapped_concept_ids": [
+      "mini:pheochromocytoma_paraganglioma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "pheochromocytoma and paraganglioma",
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "synonyms_en": [
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "abbreviations": [
+      "PCPG"
+    ],
+    "mesh_terms": [
+      "Pheochromocytoma",
+      "Paraganglioma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-PCPG"
+    ],
+    "gtex_tissue_candidates": [
+      "Adrenal Gland"
+    ]
+  },
+  {
+    "zh_term": "副神经节瘤",
+    "preferred_label_en": "pheochromocytoma and paraganglioma",
+    "mapped_concept_ids": [
+      "mini:pheochromocytoma_paraganglioma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "pheochromocytoma and paraganglioma",
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "synonyms_en": [
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "abbreviations": [
+      "PCPG"
+    ],
+    "mesh_terms": [
+      "Pheochromocytoma",
+      "Paraganglioma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-PCPG"
+    ],
+    "gtex_tissue_candidates": [
+      "Adrenal Gland"
+    ]
+  },
+  {
+    "zh_term": "嗜铬细胞瘤和副神经节瘤",
+    "preferred_label_en": "pheochromocytoma and paraganglioma",
+    "mapped_concept_ids": [
+      "mini:pheochromocytoma_paraganglioma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "pheochromocytoma and paraganglioma",
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "synonyms_en": [
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
+    ],
+    "abbreviations": [
+      "PCPG"
+    ],
+    "mesh_terms": [
+      "Pheochromocytoma",
+      "Paraganglioma"
+    ],
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-PCPG"
+    ],
+    "gtex_tissue_candidates": [
+      "Adrenal Gland"
+    ]
+  },
+  {
+    "zh_term": "肉瘤",
+    "preferred_label_en": "sarcoma",
+    "mapped_concept_ids": [
+      "mini:sarcoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "sarcoma",
+      "soft tissue sarcoma",
+      "bone sarcoma"
+    ],
+    "synonyms_en": [
+      "soft tissue sarcoma",
+      "bone sarcoma"
+    ],
+    "abbreviations": [
+      "SARC"
+    ],
+    "mesh_terms": [
+      "Sarcoma"
+    ],
+    "tissue_terms": [
+      "soft tissue",
+      "muscle"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-SARC"
+    ],
+    "gtex_tissue_candidates": [
+      "Muscle",
+      "Adipose Tissue"
+    ]
+  },
+  {
+    "zh_term": "软组织肉瘤",
+    "preferred_label_en": "sarcoma",
+    "mapped_concept_ids": [
+      "mini:sarcoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "sarcoma",
+      "soft tissue sarcoma",
+      "bone sarcoma"
+    ],
+    "synonyms_en": [
+      "soft tissue sarcoma",
+      "bone sarcoma"
+    ],
+    "abbreviations": [
+      "SARC"
+    ],
+    "mesh_terms": [
+      "Sarcoma"
+    ],
+    "tissue_terms": [
+      "soft tissue",
+      "muscle"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-SARC"
+    ],
+    "gtex_tissue_candidates": [
+      "Muscle",
+      "Adipose Tissue"
+    ]
+  },
+  {
+    "zh_term": "睾丸生殖细胞肿瘤",
+    "preferred_label_en": "testicular germ cell tumor",
+    "mapped_concept_ids": [
+      "mini:testicular_germ_cell_tumor"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "testicular germ cell tumor",
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "synonyms_en": [
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "abbreviations": [
+      "TGCT"
+    ],
+    "mesh_terms": [
+      "Testicular Neoplasms",
+      "Germ Cell Tumor"
+    ],
+    "tissue_terms": [
+      "testis"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-TGCT"
+    ],
+    "gtex_tissue_candidates": [
+      "Testis"
+    ]
+  },
+  {
+    "zh_term": "睾丸癌",
+    "preferred_label_en": "testicular germ cell tumor",
+    "mapped_concept_ids": [
+      "mini:testicular_germ_cell_tumor"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "testicular germ cell tumor",
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "synonyms_en": [
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "abbreviations": [
+      "TGCT"
+    ],
+    "mesh_terms": [
+      "Testicular Neoplasms",
+      "Germ Cell Tumor"
+    ],
+    "tissue_terms": [
+      "testis"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-TGCT"
+    ],
+    "gtex_tissue_candidates": [
+      "Testis"
+    ]
+  },
+  {
+    "zh_term": "睾丸肿瘤",
+    "preferred_label_en": "testicular germ cell tumor",
+    "mapped_concept_ids": [
+      "mini:testicular_germ_cell_tumor"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "testicular germ cell tumor",
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "synonyms_en": [
+      "testicular germ cell cancer",
+      "germ cell tumor of testis",
+      "testicular cancer"
+    ],
+    "abbreviations": [
+      "TGCT"
+    ],
+    "mesh_terms": [
+      "Testicular Neoplasms",
+      "Germ Cell Tumor"
+    ],
+    "tissue_terms": [
+      "testis"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-TGCT"
+    ],
+    "gtex_tissue_candidates": [
+      "Testis"
+    ]
+  },
+  {
+    "zh_term": "胸腺瘤",
+    "preferred_label_en": "thymoma",
+    "mapped_concept_ids": [
+      "mini:thymoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "thymoma",
+      "thymic epithelial tumor",
+      "thymic tumor"
+    ],
+    "synonyms_en": [
+      "thymic epithelial tumor",
+      "thymic tumor"
+    ],
+    "abbreviations": [
+      "THYM"
+    ],
+    "mesh_terms": [
+      "Thymoma"
+    ],
+    "tissue_terms": [
+      "thymus"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-THYM"
+    ]
+  },
+  {
+    "zh_term": "胸腺肿瘤",
+    "preferred_label_en": "thymoma",
+    "mapped_concept_ids": [
+      "mini:thymoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "thymoma",
+      "thymic epithelial tumor",
+      "thymic tumor"
+    ],
+    "synonyms_en": [
+      "thymic epithelial tumor",
+      "thymic tumor"
+    ],
+    "abbreviations": [
+      "THYM"
+    ],
+    "mesh_terms": [
+      "Thymoma"
+    ],
+    "tissue_terms": [
+      "thymus"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-THYM"
+    ]
+  },
+  {
+    "zh_term": "子宫癌肉瘤",
+    "preferred_label_en": "uterine carcinosarcoma",
+    "mapped_concept_ids": [
+      "mini:uterine_carcinosarcoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "uterine carcinosarcoma",
+      "malignant mixed mullerian tumor",
+      "uterine malignant mixed mullerian tumor"
+    ],
+    "synonyms_en": [
+      "malignant mixed mullerian tumor",
+      "uterine malignant mixed mullerian tumor"
+    ],
+    "abbreviations": [
+      "UCS"
+    ],
+    "mesh_terms": [
+      "Uterine Neoplasms"
+    ],
+    "tissue_terms": [
+      "uterus"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-UCS"
+    ],
+    "gtex_tissue_candidates": [
+      "Uterus"
+    ]
+  },
+  {
+    "zh_term": "子宫恶性混合苗勒管肿瘤",
+    "preferred_label_en": "uterine carcinosarcoma",
+    "mapped_concept_ids": [
+      "mini:uterine_carcinosarcoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "uterine carcinosarcoma",
+      "malignant mixed mullerian tumor",
+      "uterine malignant mixed mullerian tumor"
+    ],
+    "synonyms_en": [
+      "malignant mixed mullerian tumor",
+      "uterine malignant mixed mullerian tumor"
+    ],
+    "abbreviations": [
+      "UCS"
+    ],
+    "mesh_terms": [
+      "Uterine Neoplasms"
+    ],
+    "tissue_terms": [
+      "uterus"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-UCS"
+    ],
+    "gtex_tissue_candidates": [
+      "Uterus"
+    ]
+  },
+  {
+    "zh_term": "葡萄膜黑色素瘤",
+    "preferred_label_en": "uveal melanoma",
+    "mapped_concept_ids": [
+      "mini:uveal_melanoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "uveal melanoma",
+      "ocular melanoma",
+      "melanoma of uvea"
+    ],
+    "synonyms_en": [
+      "ocular melanoma",
+      "melanoma of uvea"
+    ],
+    "abbreviations": [
+      "UVM"
+    ],
+    "mesh_terms": [
+      "Uveal Melanoma"
+    ],
+    "tissue_terms": [
+      "uvea",
+      "eye"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-UVM"
+    ]
+  },
+  {
+    "zh_term": "眼黑色素瘤",
+    "preferred_label_en": "uveal melanoma",
+    "mapped_concept_ids": [
+      "mini:uveal_melanoma"
+    ],
+    "concept_type": "disease",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "disease_terms_en": [
+      "uveal melanoma",
+      "ocular melanoma",
+      "melanoma of uvea"
+    ],
+    "synonyms_en": [
+      "ocular melanoma",
+      "melanoma of uvea"
+    ],
+    "abbreviations": [
+      "UVM"
+    ],
+    "mesh_terms": [
+      "Uveal Melanoma"
+    ],
+    "tissue_terms": [
+      "uvea",
+      "eye"
+    ],
+    "tcga_project_candidates": [
+      "TCGA-UVM"
+    ]
+  },
+  {
+    "zh_term": "脾脏",
+    "preferred_label_en": "spleen",
+    "mapped_concept_ids": [
+      "mini:spleen_tissue"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "tissue_terms": [
+      "spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Spleen"
+    ]
+  },
+  {
+    "zh_term": "脾",
+    "preferred_label_en": "spleen",
+    "mapped_concept_ids": [
+      "mini:spleen_tissue"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "tissue_terms": [
+      "spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Spleen"
+    ]
+  },
+  {
+    "zh_term": "垂体",
+    "preferred_label_en": "pituitary",
+    "mapped_concept_ids": [
+      "mini:pituitary_tissue"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "tissue_terms": [
+      "pituitary"
+    ],
+    "gtex_tissue_candidates": [
+      "Pituitary"
+    ]
+  },
+  {
+    "zh_term": "肾上腺",
+    "preferred_label_en": "adrenal gland",
+    "mapped_concept_ids": [
+      "mini:adrenal_gland_tissue"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "tissue_terms": [
+      "adrenal gland"
+    ],
+    "gtex_tissue_candidates": [
+      "Adrenal Gland"
+    ]
+  },
+  {
+    "zh_term": "睾丸",
+    "preferred_label_en": "testis",
+    "mapped_concept_ids": [
+      "mini:testis_tissue"
+    ],
+    "concept_type": "tissue",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "tissue_terms": [
+      "testis"
+    ],
+    "gtex_tissue_candidates": [
+      "Testis"
+    ]
+  },
+  {
+    "zh_term": "效应量",
+    "preferred_label_en": "effect size",
+    "mapped_concept_ids": [
+      "mini:effect_size_core"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "outcome_terms": [
+      "effect size",
+      "effect estimate"
+    ]
+  },
+  {
+    "zh_term": "标准化均数差",
+    "preferred_label_en": "standardized mean difference",
+    "mapped_concept_ids": [
+      "mini:effect_size_core"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "abbreviations": [
+      "SMD"
+    ],
+    "outcome_terms": [
+      "standardized mean difference"
+    ]
+  },
+  {
+    "zh_term": "均数差",
+    "preferred_label_en": "mean difference",
+    "mapped_concept_ids": [
+      "mini:effect_size_core"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "abbreviations": [
+      "MD"
+    ],
+    "outcome_terms": [
+      "mean difference"
+    ]
+  },
+  {
+    "zh_term": "加权均数差",
+    "preferred_label_en": "weighted mean difference",
+    "mapped_concept_ids": [
+      "mini:effect_size_core"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "abbreviations": [
+      "WMD"
+    ],
+    "outcome_terms": [
+      "weighted mean difference"
+    ]
+  },
+  {
+    "zh_term": "置信区间",
+    "preferred_label_en": "confidence interval",
+    "mapped_concept_ids": [
+      "mini:effect_size_core"
+    ],
+    "concept_type": "outcome",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "abbreviations": [
+      "CI"
+    ],
+    "outcome_terms": [
+      "confidence interval"
+    ]
+  },
+  {
+    "zh_term": "预印本",
+    "preferred_label_en": "preprint",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_gap_terms"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "publication_type_terms": [
+      "preprint"
+    ]
+  },
+  {
+    "zh_term": "研究方案",
+    "preferred_label_en": "study protocol",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_gap_terms"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "publication_type_terms": [
+      "study protocol"
+    ]
+  },
+  {
+    "zh_term": "重复发表",
+    "preferred_label_en": "duplicate publication",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_gap_terms"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "publication_type_terms": [
+      "duplicate publication"
+    ]
+  },
+  {
+    "zh_term": "非人类研究",
+    "preferred_label_en": "non-human study",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_gap_terms"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "publication_type_terms": [
+      "non-human study"
+    ]
+  },
+  {
+    "zh_term": "体外研究",
+    "preferred_label_en": "in vitro study",
+    "mapped_concept_ids": [
+      "mini:publication_exclusion_gap_terms"
+    ],
+    "concept_type": "publication_type",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
+    "publication_type_terms": [
+      "in vitro study"
+    ]
   }
 ]
