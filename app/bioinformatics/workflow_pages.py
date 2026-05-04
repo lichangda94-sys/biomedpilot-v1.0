@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
-from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
+from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
@@ -317,9 +317,15 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._local_strategy_combo.setObjectName("localImportStrategyCombo")
         self._local_strategy_combo.addItems(["复制到项目（推荐）", "保留原位置，仅记录路径"])
         layout.addWidget(self._local_strategy_combo)
-        select_button = _button("选择本地数据", "primaryButton", self._choose_local_data)
+        select_button = _button("选择本地数据", "primaryButton", self._choose_local_files)
         select_button.setMinimumHeight(44)
-        layout.addWidget(select_button, alignment=Qt.AlignLeft)
+        folder_button = _button("选择本地文件夹", "secondaryButton", self._choose_local_folder)
+        folder_button.setMinimumHeight(44)
+        actions = QHBoxLayout()
+        actions.addWidget(select_button)
+        actions.addWidget(folder_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
         layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地数据。", detail_button_text="查看登记详情"))
         return card
 
@@ -2431,6 +2437,10 @@ def _infer_local_data_type(paths: list[Path], *, source_type: str = "local_impor
         return "GTEx 本地数据"
     if any(token in names for token in ("expression", "expr", "matrix", "count", "counts", "tpm", "fpkm")):
         return "本地表达矩阵"
+    if len(paths) == 1 and paths[0].suffix.lower() == ".xlsx":
+        kind, _reason, confidence = classify_file(paths[0])
+        if confidence >= 0.6 and kind in TYPE_LABELS:
+            return TYPE_LABELS[kind]
     if any(token in names for token in ("sample", "metadata", "pheno", "phenotype")):
         return "样本注释"
     if "clinical" in names or "clinic" in names:

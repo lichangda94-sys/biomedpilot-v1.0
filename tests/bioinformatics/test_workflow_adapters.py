@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 import pytest
 
@@ -24,6 +26,33 @@ from app.bioinformatics.results.project_results import load_result_index, write_
 @pytest.fixture
 def project_root(tmp_path: Path) -> Path:
     return create_bioinformatics_project("Workflow Adapter Project", tmp_path).project_root
+
+
+def _write_xlsx_count_matrix(path: Path) -> Path:
+    rows = [
+        ["gene_id", "A1_count", "A2_count", "B1_count"],
+        ["ENSMUSG00000026193", 195458, 215969, 197661],
+        ["ENSMUSG00000064351", 160365, 142505, 129666],
+    ]
+    sheet_rows: list[str] = []
+    for row_index, row in enumerate(rows, start=1):
+        cells: list[str] = []
+        for column_index, value in enumerate(row):
+            reference = f"{chr(ord('A') + column_index)}{row_index}"
+            if isinstance(value, (int, float)):
+                cells.append(f'<c r="{reference}"><v>{value}</v></c>')
+            else:
+                cells.append(f'<c r="{reference}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>')
+        sheet_rows.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+    worksheet_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f'<sheetData>{"".join(sheet_rows)}</sheetData>'
+        "</worksheet>"
+    )
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+    return path
 
 
 def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, tmp_path: Path) -> None:
@@ -86,6 +115,19 @@ def test_recognition_readiness_standardization_chain(project_root: Path) -> None
     standardization = generate_standardized_assets(project_root)
     assert "不等于正式 biological normalization" in standardization["registry"]["warnings"][0]  # type: ignore[index]
     assert load_standardization_artifacts(project_root)["registry"] is not None
+
+
+def test_recognition_classifies_xlsx_gene_count_matrix(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    _write_xlsx_count_matrix(raw_file)
+
+    recognition = run_project_recognition(project_root)
+
+    assert recognition["files"][0]["file_name"] == "GSE236866_Processed_data_tau_with_inhibitors.xlsx"  # type: ignore[index]
+    assert recognition["files"][0]["recognized_type"] == "raw_count_matrix"  # type: ignore[index]
+    assert recognition["files"][0]["recognized_type_zh"] == "原始计数矩阵"  # type: ignore[index]
+    assert "count 样本列" in recognition["files"][0]["reason"]  # type: ignore[index]
 
 
 def test_workflow_and_task_center_do_not_run_analysis(project_root: Path) -> None:

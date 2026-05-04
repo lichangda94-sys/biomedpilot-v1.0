@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from xml.etree import ElementTree
 
 from app.bioinformatics.legacy.geo_processing.detector.dataset_detector import detect_dataset
 
@@ -85,7 +87,90 @@ def classify_file(path: Path) -> tuple[str, str, float]:
         return "raw_count_matrix", "文件名包含 raw/counts 提示。", 0.66
     if any(token in name for token in ("expression", "expr", "matrix", "tpm", "fpkm", "series_matrix")):
         return "expression_matrix", "文件名包含表达矩阵提示。", 0.7
+    if path.suffix.lower() == ".xlsx":
+        workbook_kind = _classify_xlsx_table(path)
+        if workbook_kind is not None:
+            return workbook_kind
     return "unknown", "未匹配到稳定识别规则。", 0.2
+
+
+def _classify_xlsx_table(path: Path) -> tuple[str, str, float] | None:
+    try:
+        headers = _xlsx_first_row(path)
+    except Exception:
+        return None
+    if len(headers) < 3:
+        return None
+    normalized = [_normalize_header(header) for header in headers]
+    first_header = normalized[0]
+    has_gene_column = any(token in first_header for token in ("gene", "ensembl", "probe", "symbol", "id"))
+    numeric_sample_like = sum(
+        1
+        for header in normalized[1:]
+        if header and any(token in header for token in ("count", "counts", "sample", "gsm", "srr", "tcga", "tpm", "fpkm"))
+    )
+    if has_gene_column and numeric_sample_like >= 2:
+        if any("count" in header for header in normalized[1:]):
+            return "raw_count_matrix", "XLSX 首行包含 gene/probe/id 列和多个 count 样本列。", 0.82
+        return "expression_matrix", "XLSX 首行包含 gene/probe/id 列和多个样本表达列。", 0.78
+    return None
+
+
+def _xlsx_first_row(path: Path, *, max_cells: int = 200) -> list[str]:
+    with zipfile.ZipFile(path) as archive:
+        names = set(archive.namelist())
+        worksheet_name = "xl/worksheets/sheet1.xml"
+        if worksheet_name not in names:
+            return []
+        shared_strings = _xlsx_shared_strings(archive, names)
+        worksheet = ElementTree.fromstring(archive.read(worksheet_name))
+        first_row = worksheet.find(".//{*}sheetData/{*}row")
+        if first_row is None:
+            return []
+        values_by_column: dict[int, str] = {}
+        for cell in list(first_row.findall("{*}c"))[:max_cells]:
+            column_index = _xlsx_column_index(str(cell.attrib.get("r", "")))
+            values_by_column[column_index] = _xlsx_cell_value(cell, shared_strings)
+        if not values_by_column:
+            return []
+        return [values_by_column.get(index, "") for index in range(max(values_by_column) + 1)]
+
+
+def _xlsx_shared_strings(archive: zipfile.ZipFile, names: set[str]) -> list[str]:
+    if "xl/sharedStrings.xml" not in names:
+        return []
+    root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
+    strings: list[str] = []
+    for item in root.findall("{*}si"):
+        strings.append("".join(node.text or "" for node in item.findall(".//{*}t")))
+    return strings
+
+
+def _xlsx_cell_value(cell: ElementTree.Element, shared_strings: list[str]) -> str:
+    if cell.attrib.get("t") == "inlineStr":
+        return "".join(node.text or "" for node in cell.findall(".//{*}t")).strip()
+    value_node = cell.find("{*}v")
+    if value_node is None or value_node.text is None:
+        return ""
+    raw_value = value_node.text
+    if cell.attrib.get("t") == "s":
+        try:
+            return shared_strings[int(raw_value)].strip()
+        except (ValueError, IndexError):
+            return ""
+    return raw_value.strip()
+
+
+def _xlsx_column_index(reference: str) -> int:
+    letters = "".join(character for character in reference if character.isalpha())
+    index = 0
+    for character in letters.upper():
+        index = index * 26 + ord(character) - ord("A") + 1
+    return max(index - 1, 0)
+
+
+def _normalize_header(value: str) -> str:
+    return "".join(character.lower() if character.isalnum() else "_" for character in str(value)).strip("_")
 
 
 def _candidate_files(root: Path) -> list[Path]:

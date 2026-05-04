@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import os
 import json
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
+from xml.sax.saxutils import escape
 
 import pytest
 
@@ -48,6 +50,33 @@ def qt_app():
 @pytest.fixture
 def project_summary(tmp_path: Path):
     return create_bioinformatics_project("UI Workflow Project", tmp_path)
+
+
+def _write_xlsx_count_matrix(path: Path) -> Path:
+    rows = [
+        ["gene_id", "A1_count", "A2_count", "B1_count"],
+        ["ENSMUSG00000026193", 195458, 215969, 197661],
+        ["ENSMUSG00000064351", 160365, 142505, 129666],
+    ]
+    sheet_rows: list[str] = []
+    for row_index, row in enumerate(rows, start=1):
+        cells: list[str] = []
+        for column_index, value in enumerate(row):
+            reference = f"{chr(ord('A') + column_index)}{row_index}"
+            if isinstance(value, (int, float)):
+                cells.append(f'<c r="{reference}"><v>{value}</v></c>')
+            else:
+                cells.append(f'<c r="{reference}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>')
+        sheet_rows.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+    worksheet_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f'<sheetData>{"".join(sheet_rows)}</sheetData>'
+        "</worksheet>"
+    )
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+    return path
 
 
 def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
@@ -115,6 +144,7 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     assert "本地 AI 检索助手" not in card_titles
     assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究问题检索"]
     assert "选择本地数据" in button_texts
+    assert "选择本地文件夹" in button_texts
     assert "进入中文检索" in button_texts
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
@@ -215,6 +245,11 @@ def test_data_source_infers_local_data_types_in_single_import_card(qt_app, proje
     assert widget.source_summary_text("local_import") == "已登记本地数据：expression_matrix.csv"
     assert "本地表达矩阵" in widget.source_summary_tooltip("local_import")
     assert str(expression.resolve()) in widget.source_summary_tooltip("local_import")
+
+    workbook = _write_xlsx_count_matrix(tmp_path / "GSE236866_Processed_data_tau_with_inhibitors.xlsx")
+    widget.register_local_paths([workbook], strategy="reference", selected_kind="file", summary_key="local_import")
+    assert widget.source_summary_text("local_import") == "已登记本地数据：GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    assert "原始计数矩阵" in widget.source_summary_tooltip("local_import")
 
 
 def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(qt_app, project_summary, monkeypatch) -> None:
