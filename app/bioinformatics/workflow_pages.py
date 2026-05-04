@@ -56,6 +56,7 @@ from app.bioinformatics.project_workspace_binding import (
     register_acquisition,
 )
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
+from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import load_result_index
 from app.bioinformatics.search_center import (
@@ -585,6 +586,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._last_render_searched = False
         self._candidates: dict[tuple[str, str], UnifiedDatasetCandidate] = {}
         self._candidate_register_buttons: dict[tuple[str, str], QPushButton] = {}
+        self._candidate_download_buttons: dict[tuple[str, str], QPushButton] = {}
+        self._geo_brief_cache: dict[str, dict[str, object]] = {}
+        self._download_service = DatasetDownloadService()
+        self._text_summary_service = GeoTextSummaryService(timeout=20)
         self.setObjectName("bioinformaticsChineseDatasetSearchPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -707,6 +712,62 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self.source_registered.emit(summary)
         self._set_status("已登记为数据来源，可进入数据识别。")
         return summary
+
+    def generate_candidate_download_task(self, source: str, accession_or_project: str) -> object | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        candidate = self._candidates.get((source, accession_or_project))
+        if candidate is None:
+            self._set_status("候选结果不存在。", error=True)
+            return None
+        if self._is_candidate_registered(source, accession_or_project):
+            self._set_status(f"已登记数据源：{accession_or_project}")
+            self._refresh_candidate_registration_buttons()
+            return None
+        result = self._download_service.create_candidate_download_task(
+            project_root=self._project_root,
+            candidate=candidate,
+            search_result=self._last_result,
+            original_chinese_topic=self._query_input.text().strip(),
+            execute_download=False,
+        )
+        self._refresh_registered_sources()
+        if self._last_result is not None:
+            self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
+        self.source_registered.emit(result.acquisition_summary)
+        self._set_status("已生成下载任务，可进入数据识别。")
+        return result
+
+    def generate_geo_chinese_brief(self, accession_or_project: str) -> dict[str, object] | None:
+        candidate = self._candidates.get(("geo", accession_or_project))
+        if candidate is None:
+            self._set_status("候选结果不存在。", error=True)
+            return None
+        cached = self._geo_brief_cache.get(accession_or_project)
+        if cached is not None:
+            self._mapping_log.setPlainText(_geo_text_summary_display(candidate, cached))
+            self._mapping_log.setVisible(True)
+            self._set_status("已显示中文简介。")
+            return cached
+        metadata = candidate.source_specific_metadata
+        summary = self._text_summary_service.summarize(
+            GeoStudyTextInput(
+                accession=accession_or_project,
+                title_en=str(metadata.get("title_en") or candidate.display_title),
+                summary_en=str(metadata.get("summary_en") or ""),
+                overall_design_en=str(metadata.get("overall_design_en") or ""),
+            )
+        )
+        payload = summary.to_dict()
+        self._geo_brief_cache[accession_or_project] = payload
+        self._mapping_log.setPlainText(_geo_text_summary_display(candidate, payload))
+        self._mapping_log.setVisible(True)
+        if summary.status == "completed":
+            self._set_status("已生成中文一句话简介。")
+        else:
+            self._set_status("本地中文简介暂未生成，已显示英文摘要。")
+        return payload
 
     def continue_to_recognition(self) -> None:
         if self._project_root is None:
@@ -862,6 +923,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._gtex_query_box.setPlainText(", ".join(query.gtex_tissues) if query.gtex_tissues else "暂无 GTEx 组织草稿")
         self._candidates = {(candidate.source, candidate.accession_or_project): candidate for candidate in result.candidates}
         self._candidate_register_buttons.clear()
+        self._candidate_download_buttons.clear()
         self._render_candidate_tables(result, searched=searched)
         self._refresh_candidate_registration_buttons()
         self._mapping_log.setPlainText(_mapping_log_text(result))
@@ -954,7 +1016,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
         action_col = _table_column_index(table, "操作")
-        table.setColumnWidth(action_col, 180)
+        table.setColumnWidth(action_col, 320)
         for row_index, candidate in enumerate(candidates):
             key = (candidate.source, candidate.accession_or_project)
             action_widget = QWidget()
@@ -966,11 +1028,21 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             detail_button = QPushButton("查看详情")
             detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
             detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
+            download_button = QPushButton("生成下载任务")
+            download_button.setObjectName(f"candidateDownloadTaskButton_{candidate.source}_{candidate.accession_or_project}")
+            download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
             layout.addWidget(register_button)
+            layout.addWidget(download_button)
+            if candidate.source == "geo":
+                brief_button = QPushButton("中文简介")
+                brief_button.setObjectName(f"candidateChineseBriefButton_{candidate.source}_{candidate.accession_or_project}")
+                brief_button.clicked.connect(lambda checked=False, a=candidate.accession_or_project: self.generate_geo_chinese_brief(a))
+                layout.addWidget(brief_button)
             layout.addWidget(detail_button)
             layout.addStretch(1)
             table.setCellWidget(row_index, action_col, action_widget)
             self._candidate_register_buttons[key] = register_button
+            self._candidate_download_buttons[key] = download_button
         self._refresh_candidate_registration_buttons()
 
     def _show_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
@@ -982,6 +1054,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         for (source, accession), button in self._candidate_register_buttons.items():
             registered = self._is_candidate_registered(source, accession)
             button.setText("已登记" if registered else "登记为数据源")
+            button.setEnabled(not registered)
+        for (source, accession), button in self._candidate_download_buttons.items():
+            registered = self._is_candidate_registered(source, accession)
+            button.setText("已生成任务" if registered else "生成下载任务")
             button.setEnabled(not registered)
 
     def _is_candidate_registered(self, source: str, accession_or_project: str) -> bool:
@@ -2847,6 +2923,22 @@ def _mapping_log_text(result: BioinformaticsSearchCenterResult) -> str:
             },
             "错误和警告": list(result.warnings),
         }
+    )
+
+
+def _geo_text_summary_display(candidate: UnifiedDatasetCandidate, summary: dict[str, object]) -> str:
+    metadata = candidate.source_specific_metadata
+    return "\n".join(
+        [
+            f"GSE：{candidate.accession_or_project}",
+            f"英文标题：{metadata.get('title_en') or candidate.display_title or '未记录'}",
+            f"英文摘要：{metadata.get('summary_en') or '未记录'}",
+            f"中文标题：{summary.get('title_zh') or '未生成'}",
+            f"中文摘要：{summary.get('summary_zh') or '未生成'}",
+            f"中文一句话简介：{summary.get('brief_zh') or '未生成'}",
+            f"处理状态：{summary.get('status') or 'unknown'}",
+            f"提示：{summary.get('error_message') or '无'}",
+        ]
     )
 
 

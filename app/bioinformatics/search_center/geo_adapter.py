@@ -87,6 +87,9 @@ def _candidate_from_geo_item(item: GeoDatasetSearchItem, query: StructuredBioinf
     metadata = {
         "gse_accession": item.accession,
         "geo_url": item.geo_url,
+        "title_en": item.title,
+        "summary_en": item.summary,
+        "overall_design_en": "",
         "platform_accessions": list(item.platform_accessions),
         "platform_titles": list(item.platform_titles),
         "publication_date": item.publication_date,

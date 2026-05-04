@@ -437,6 +437,8 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     gtex_buttons = widget._gtex_table.cellWidget(0, 0).findChildren(QPushButton)
     assert "登记为数据源" in [button.text() for button in tcga_buttons]
     assert "登记为数据源" in [button.text() for button in gtex_buttons]
+    assert "生成下载任务" in [button.text() for button in tcga_buttons]
+    assert "生成下载任务" in [button.text() for button in gtex_buttons]
     assert widget._mapping_log.isHidden()
     visible_text = " ".join(
         [label.text() for label in widget.findChildren(QLabel)]
@@ -503,9 +505,9 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
 
     assert not widget._geo_table.isHidden()
     assert widget._geo_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._geo_table.columnWidth(0) >= 160
+    assert widget._geo_table.columnWidth(0) >= 300
     buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert [button.text() for button in buttons][:2] == ["登记为数据源", "查看详情"]
+    assert [button.text() for button in buttons] == ["登记为数据源", "生成下载任务", "中文简介", "查看详情"]
 
 
 def test_register_geo_requires_open_project(qt_app) -> None:
@@ -559,6 +561,58 @@ def test_register_geo_result_preserves_query_used(qt_app, project_summary) -> No
     metadata = json.loads(summary.record_path.read_text(encoding="utf-8"))["metadata"]
     assert metadata["query_used"] == '("glioma" OR "glioblastoma") AND "RNA-seq" AND GSE[ETYP]'
     assert metadata["audit"]["query_used"] == metadata["query_used"]
+
+
+def test_chinese_dataset_search_generates_download_task_without_fake_download(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+    widget.set_query_text("脑胶质瘤")
+
+    result = widget.generate_candidate_download_task("geo", "GSE33630")
+
+    assert result is not None
+    assert widget.status_message() == "已生成下载任务，可进入数据识别。"
+    assert widget._continue_button.isEnabled()
+    assert not (project_summary.project_root / "raw_data" / "geo" / "GSE33630" / "GSE33630_family.soft.gz").exists()
+    records = [path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json"]
+    assert len(records) == 1
+    record = json.loads(records[0].read_text(encoding="utf-8"))
+    assert record["source_type"] == "geo_accession"
+    assert record["strategy"] == "plan_only"
+    assert record["metadata"]["download_status"] == "registered_pending_geo_download"
+    assert record["metadata"]["download_executed"] is False
+    assert Path(record["metadata"]["download_request_path"]).exists()
+    assert Path(record["metadata"]["download_receipt_path"]).exists()
+
+
+def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+
+    class _FakeSummaryService:
+        def summarize(self, text):
+            return SimpleNamespace(
+                status="completed",
+                to_dict=lambda: {
+                    "status": "completed",
+                    "title_zh": "胶质瘤表达谱",
+                    "summary_zh": "胶质瘤样本摘要。",
+                    "overall_design_zh": "肿瘤和对照。",
+                    "brief_zh": "该数据集比较胶质瘤和对照样本。",
+                    "error_message": "",
+                },
+            )
+
+    widget._text_summary_service = _FakeSummaryService()
+    payload = widget.generate_geo_chinese_brief("GSE33630")
+
+    assert payload is not None
+    assert widget.status_message() == "已生成中文一句话简介。"
+    assert not widget._mapping_log.isHidden()
+    assert "该数据集比较胶质瘤和对照样本。" in widget._mapping_log.toPlainText()
 
 
 def test_register_geo_result_deduplicates_existing_source(qt_app, project_summary) -> None:
