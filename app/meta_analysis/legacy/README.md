@@ -1,3 +1,17 @@
+# BioMedPilot Mainline Boundary Notice
+
+This directory is a historical Meta Analysis snapshot. It is not the current
+BioMedPilot Meta Analysis mainline runtime path.
+
+`geo_readiness/` belongs to the old snapshot and does not belong to the current
+Meta Analysis product boundary. Current Meta Analysis does not own GEO/GSE,
+TCGA/GDC, GTEx dataset-source candidates, Bioinformatics data recognition,
+Bioinformatics standardization, or Bioinformatics analysis task workflows.
+
+New BioMedPilot feature work must not import legacy `geo_readiness` logic. It
+may be moved to an archive or removed only in a separately approved
+housekeeping stage.
+
 # model9
 
 Desktop application skeleton for macOS and Windows based on Python and PySide6.

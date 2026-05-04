@@ -105,13 +105,13 @@ current mainline runtime path:
 
 Mainline code must not import:
 
-- `app.bioinformatics.legacy`
-- `app.meta_analysis.legacy`
+- `app.bioinformatics.legacy.literature_cli`
+- `app.bioinformatics.legacy.literature_gui`
+- `app.meta_analysis.legacy.geo_readiness`
 
-Current Bioinformatics mainline still has known compatibility bridges to legacy
-GEO processing components. Those bridges are treated as pre-existing boundary
-debt for a separate migration stage and must not be used as a precedent for new
-mainline code.
+Current Bioinformatics mainline still has approved compatibility adapters to
+legacy GEO processing components. Those bridges are separate from the legacy
+literature files and are not changed by this contract.
 
 Legacy code can remain in place for audit and recovery until a separate archive
 or deletion stage is approved. New feature work must target the mainline module

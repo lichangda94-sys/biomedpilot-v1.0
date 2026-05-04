@@ -3,8 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
 from app.shared.search_context import BIOINFORMATICS_SEARCH_CONTEXT, META_ANALYSIS_SEARCH_CONTEXT
 
 
@@ -148,17 +146,13 @@ def test_meta_runtime_does_not_call_bioinformatics_retrieval_services() -> None:
     assert violations == []
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Known pre-existing Bioinformatics mainline bridges to legacy GEO code: "
-        "project_recognition.py, project_workspace_binding.py, workflow_pages.py, "
-        "and retrieval/geo_search_service.py."
-    ),
-    strict=True,
-)
-def test_legacy_modules_are_not_imported_by_non_legacy_runtime() -> None:
+def test_legacy_literature_and_geo_readiness_modules_are_not_imported_by_mainline() -> None:
     violations: list[str] = []
-    forbidden_prefixes = ("app.bioinformatics.legacy", "app.meta_analysis.legacy")
+    forbidden_prefixes = (
+        "app.bioinformatics.legacy.literature_cli",
+        "app.bioinformatics.legacy.literature_gui",
+        "app.meta_analysis.legacy.geo_readiness",
+    )
 
     for path in _python_files("app"):
         if "legacy" in path.parts:

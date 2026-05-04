@@ -1,3 +1,18 @@
+# BioMedPilot Mainline Boundary Notice
+
+This directory is a historical Bioinformatics snapshot. It is not the current
+BioMedPilot Bioinformatics mainline runtime path.
+
+`literature_cli.py` and `literature_gui.py` are legacy-compatible literature
+utilities kept with the old GEO snapshot. They do not belong to the current
+Bioinformatics product boundary. Current Bioinformatics does not own PubMed,
+PICO/PICOS, literature screening, NBIB/RIS/Zotero/EndNote import, or Meta
+Analysis workflows.
+
+New BioMedPilot feature work must not import these legacy literature files.
+They may be moved to an archive or removed only in a separately approved
+housekeeping stage.
+
 # GEO Mainline, Module Map, and Utilities
 
 This repository is organized around one GEO mainline plus shared module layers:
