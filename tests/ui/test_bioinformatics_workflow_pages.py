@@ -305,33 +305,58 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     widget = BioinformaticsChineseDatasetSearchWidget()
 
     assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
-    assert not widget._search_candidates_button.isEnabled()
     assert not widget._continue_button.isEnabled()
     assert widget._registered_count_label.text() == "已登记数据源：0 个"
-    assert widget._geo_query_box.toPlainText() == "暂无 GEO 检索词"
-    assert widget._tcga_query_box.toPlainText() == "暂无 TCGA 检索词"
-    assert widget._gtex_query_box.toPlainText() == "暂无 GTEx 检索词"
+    assert widget._geo_query_box.toPlainText() == "暂无 GEO/GSE 检索草稿"
+    assert widget._tcga_query_box.toPlainText() == "暂无 TCGA/GDC 项目草稿"
+    assert widget._gtex_query_box.toPlainText() == "暂无 GTEx 组织草稿"
     assert not widget._geo_empty_label.isHidden()
     assert not widget._tcga_empty_label.isHidden()
     assert not widget._gtex_empty_label.isHidden()
     assert widget._mapping_log.isHidden()
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    assert "检索 GEO/GSE 候选数据集" in button_texts
+    assert "检索 TCGA/GDC 项目" in button_texts
+    assert "检索 GTEx 组织" in button_texts
+    assert "检索候选数据集" not in button_texts
+    assert "GEO/GSE 候选数据集" == widget._tabs.tabText(0)
+    assert "TCGA/GDC 项目候选" == widget._tabs.tabText(1)
+    assert "GTEx 组织候选" == widget._tabs.tabText(2)
+    assert widget._continue_button.text() == "进入数据识别"
 
     widget.set_query_text("甲状腺癌")
     result = widget.generate_terms()
 
     assert result is not None
+    assert widget.status_message() == "已生成检索草稿。请确认后检索候选数据集。"
     assert "thyroid cancer" in widget._geo_query_box.toPlainText()
     assert "TCGA-THCA" in widget._tcga_query_box.toPlainText()
     assert "Thyroid" in widget._gtex_query_box.toPlainText()
-    assert widget._search_candidates_button.isEnabled()
     assert not widget._continue_button.isEnabled()
-    assert widget._tcga_table.rowCount() >= 1
-    assert widget._gtex_table.rowCount() >= 1
+    assert widget._geo_empty_label.text() == "已生成 GEO/GSE 检索草稿，尚未执行在线检索。"
+    assert "暂无候选结果" not in widget._geo_empty_label.text()
+    assert widget._tcga_empty_label.isHidden()
+    assert widget._gtex_empty_label.isHidden()
+    assert widget._tcga_table.item(0, 0).text() == "TCGA-THCA"
+    assert widget._tcga_table.item(0, 1).text() == "Thyroid Carcinoma"
+    assert widget._tcga_table.item(0, 2).text() == "本地词库映射"
+    assert widget._tcga_table.item(0, 3).text() == "已匹配，尚未下载"
+    assert widget._gtex_table.item(0, 0).text() == "Thyroid"
+    assert widget._gtex_table.item(0, 1).text() == "正常组织参考"
+    assert widget._gtex_table.item(0, 2).text() == "本地词库映射"
+    assert widget._gtex_table.item(0, 3).text() == "已匹配，尚未下载"
     tcga_buttons = widget._tcga_table.cellWidget(0, widget._tcga_table.columnCount() - 1).findChildren(QPushButton)
     gtex_buttons = widget._gtex_table.cellWidget(0, widget._gtex_table.columnCount() - 1).findChildren(QPushButton)
     assert "登记为数据源" in [button.text() for button in tcga_buttons]
     assert "登记为数据源" in [button.text() for button in gtex_buttons]
     assert widget._mapping_log.isHidden()
+    visible_text = " ".join(
+        [label.text() for label in widget.findChildren(QLabel)]
+        + [button.text() for button in widget.findChildren(QPushButton)]
+        + [widget.status_message()]
+    )
+    for forbidden in ("fallback_registry_only", "configurable_not_called", "Ollama", "Translator", "Media", "rejected_terms", "batch effect", "PubMed", "PICO", "literature search", "Meta Analysis"):
+        assert forbidden not in visible_text
 
 
 def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) -> None:
