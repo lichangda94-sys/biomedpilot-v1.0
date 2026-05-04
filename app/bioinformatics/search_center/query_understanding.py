@@ -34,7 +34,7 @@ class QueryUnderstandingLayer:
         tcga_project_ids = _unique([*lookup.get("tcga_project_candidates", []), *_tcga_projects(cleaned, [*disease_en, *draft.database_terms])])
         gtex_tissues = _unique([*lookup.get("gtex_tissue_candidates", []), *_gtex_tissues(cleaned, [*disease_en, *tissue_terms, *draft.database_terms])])
         broad_geo_query = _build_geo_query((), data_modalities)
-        geo_queries = tuple(draft.geo_query_candidates or (_build_geo_query(disease_en, data_modalities),))
+        geo_queries = () if disease_terms_missing else tuple(draft.geo_query_candidates or (_build_geo_query(disease_en, data_modalities),))
         search_execution_status = "disease_terms_missing" if disease_terms_missing else "draft_only"
         guard_warnings = (
             ("未识别出明确疾病词，当前 query 为宽泛表达谱检索，结果可能过宽。",)
@@ -55,7 +55,7 @@ class QueryUnderstandingLayer:
             allowed_sources=BIOINFORMATICS_ALLOWED_SOURCES,
             geo_query_candidates=geo_queries,
             tcga_project_ids=tcga_project_ids,
-            gtex_tissues=gtex_tissues,
+            gtex_tissues=() if disease_terms_missing else gtex_tissues,
             search_execution_status=search_execution_status,
             broad_query_guard=disease_terms_missing,
             warnings=warnings,

@@ -5,6 +5,7 @@ import shutil
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -567,6 +568,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self._last_result: BioinformaticsSearchCenterResult | None = None
+        self._last_render_searched = False
         self._candidates: dict[tuple[str, str], UnifiedDatasetCandidate] = {}
         self._candidate_register_buttons: dict[tuple[str, str], QPushButton] = {}
         self.setObjectName("bioinformaticsChineseDatasetSearchPage")
@@ -599,7 +601,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         result = BioinformaticsSourceRouter().search(query, online_enabled=False, limit=20)
         self._last_result = result
         self._render_result(result, searched=False)
-        self._set_status("已生成检索草稿。请确认后检索候选数据集。")
+        if result.query.broad_query_guard:
+            self._set_status("请补充明确疾病或组织主题后再检索候选数据集。", error=True)
+        else:
+            self._set_status("已生成检索草稿。请确认后检索候选数据集。")
         return result
 
     def search_candidates(self, *, online_enabled: bool = False) -> BioinformaticsSearchCenterResult | None:
@@ -678,20 +683,15 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             source_label=candidate.accession_or_project,
             strategy="plan_only",
             selected_paths=[],
-            metadata={
-                "ui_source": "chinese_research_question_search",
-                "source": candidate.source,
-                "accession_or_project": candidate.accession_or_project,
-                "display_title": candidate.display_title,
-                "query": self._query_input.text().strip(),
-                "source_specific_metadata": candidate.source_specific_metadata,
-                "warnings": list(candidate.warnings),
-            },
+            metadata=_candidate_registration_metadata(candidate, self._last_result, self._query_input.text().strip()),
         )
         self._refresh_registered_sources()
-        self._refresh_candidate_registration_buttons()
+        if self._last_result is not None:
+            self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
+        else:
+            self._refresh_candidate_registration_buttons()
         self.source_registered.emit(summary)
-        self._set_status(f"已登记数据源：{candidate.accession_or_project}。可进入数据识别。")
+        self._set_status("已登记为数据来源，可进入数据识别。")
         return summary
 
     def continue_to_recognition(self) -> None:
@@ -765,7 +765,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
         result_card, result_layout = _card("数据库候选结果")
         self._tabs = QTabWidget()
-        self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["GSE 编号", "标题", "疾病/组织", "平台/数据类型", "样本数", "匹配原因", "推荐等级", "操作"])
+        self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["GSE 编号", "标题", "疾病/组织", "平台/数据类型", "样本数", "匹配原因", "推荐等级", "状态", "操作"])
         self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["项目代码", "项目名称", "匹配来源", "状态", "操作"])
         self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["组织名称", "组织类型", "匹配来源", "状态", "操作"])
         self._tabs.addTab(self._geo_tab_page, "GEO/GSE 候选数据集")
@@ -795,7 +795,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         bottom_layout = QHBoxLayout(bottom_frame)
         bottom_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
         self._registered_count_label = _status_label("已登记数据源：0 个")
-        self._continue_button = _button("进入数据识别", "primaryButton", self.continue_to_recognition)
+        self._continue_button = _button("请先登记至少一个候选数据源", "primaryButton", self.continue_to_recognition)
         self._continue_button.setEnabled(False)
         bottom_layout.addWidget(self._registered_count_label)
         bottom_layout.addStretch(1)
@@ -840,6 +840,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         return page, empty, table
 
     def _render_result(self, result: BioinformaticsSearchCenterResult, *, searched: bool) -> None:
+        self._last_render_searched = searched
         query = result.query
         geo_queries = tuple(query.geo_query_candidates)
         self._geo_query_box.setPlainText("\n".join(geo_queries) if geo_queries else "暂无 GEO/GSE 检索草稿")
@@ -876,6 +877,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.sample_count,
                     _candidate_match_reason(item),
                     _candidate_recommendation(item),
+                    self._candidate_registration_status(item),
                     "",
                 ]
                 for item in candidates
@@ -894,7 +896,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.accession_or_project,
                     item.display_title,
                     "本地词库映射",
-                    "已匹配，尚未下载",
+                    self._candidate_registration_status(item),
                     "",
                 ]
                 for item in candidates
@@ -913,7 +915,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.tissue or item.accession_or_project,
                     "正常组织参考",
                     "本地词库映射",
-                    "已匹配，尚未下载",
+                    self._candidate_registration_status(item),
                     "",
                 ]
                 for item in candidates
@@ -929,7 +931,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._registered_table.setCellWidget(row_index, 4, _registered_source_action_widget(row))
         count = len(rows)
         self._registered_count_label.setText(f"已登记数据源：{count} 个")
-        self._continue_button.setEnabled(count > 0 and self._project_root is not None)
+        can_continue = count > 0 and self._project_root is not None
+        self._continue_button.setEnabled(can_continue)
+        self._continue_button.setText("进入数据识别" if can_continue else "请先登记至少一个候选数据源")
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
         action_col = table.columnCount() - 1
@@ -986,10 +990,13 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         return keys
 
     def _registered_chinese_rows(self) -> list[RegisteredSourceRow]:
-        return [row for row in _registered_source_rows(self._project_root) if row.source_type_key.startswith("chinese_")]
+        return [row for row in _registered_source_rows(self._project_root) if _is_chinese_topic_source_type(row.source_type_key)]
 
     def _registered_source_count(self) -> int:
         return len(self._registered_chinese_rows())
+
+    def _candidate_registration_status(self, candidate: UnifiedDatasetCandidate) -> str:
+        return "已登记" if self._is_candidate_registered(candidate.source, candidate.accession_or_project) else "未登记"
 
     def _ensure_draft_result(self) -> BioinformaticsSearchCenterResult | None:
         if self._last_result is not None:
@@ -2286,6 +2293,12 @@ def _registered_source_display_name(payload: dict[str, object], metadata: dict[s
         values = payload.get("registered_files") or payload.get("referenced_paths") or payload.get("copied_files")
         if isinstance(values, list) and values:
             return Path(str(values[0])).name
+    if source_type in {"geo_search_candidate", "chinese_geo_gse"}:
+        return str(metadata.get("gse_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 GSE")
+    if source_type in {"tcga_project", "chinese_tcga_gdc_project"}:
+        return str(metadata.get("project_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 TCGA 项目")
+    if source_type in {"gtex_tissue", "chinese_gtex_tissue"}:
+        return str(metadata.get("tissue_name") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 GTEx 组织")
     return str(payload.get("source_label") or metadata.get("accession_or_project") or "未知数据源")
 
 
@@ -2323,6 +2336,9 @@ def _source_type_label(source_type: str) -> str:
         "chinese_geo_gse": "GSE 编号检索",
         "chinese_tcga_gdc_project": "TCGA/GDC 项目",
         "chinese_gtex_tissue": "GTEx 正常组织参考",
+        "geo_search_candidate": "GEO/GSE 候选数据集",
+        "tcga_project": "TCGA/GDC 项目",
+        "gtex_tissue": "GTEx 正常组织参考",
     }.get(source_type, source_type)
 
 
@@ -2452,10 +2468,14 @@ def _source_card_status_text(summary: SelectedSourceSummary) -> str:
 
 
 def _chinese_search_entry_status(rows: list[RegisteredSourceRow]) -> str:
-    chinese_rows = [row for row in rows if row.source_type_key.startswith("chinese_")]
+    chinese_rows = [row for row in rows if _is_chinese_topic_source_type(row.source_type_key)]
     if not chinese_rows:
         return "尚未进行中文检索。"
     return f"最近中文检索：已登记 {len(chinese_rows)} 个数据源。"
+
+
+def _is_chinese_topic_source_type(source_type: str) -> bool:
+    return source_type.startswith("chinese_") or source_type in {"geo_search_candidate", "tcga_project", "gtex_tissue"}
 
 
 def _legacy_geo_tool_paths() -> None:
@@ -2600,12 +2620,79 @@ def _rule_based_research_keywords(text: str) -> tuple[str, str]:
 
 def _candidate_source_type(candidate: UnifiedDatasetCandidate) -> str:
     if candidate.source == "geo":
-        return "chinese_geo_gse"
+        return "geo_search_candidate"
     if candidate.source == "tcga_gdc":
-        return "chinese_tcga_gdc_project"
+        return "tcga_project"
     if candidate.source == "gtex":
-        return "chinese_gtex_tissue"
-    return f"chinese_{candidate.source}"
+        return "gtex_tissue"
+    return f"topic_search_{candidate.source}"
+
+
+def _candidate_registration_metadata(
+    candidate: UnifiedDatasetCandidate,
+    result: BioinformaticsSearchCenterResult | None,
+    original_topic: str,
+) -> dict[str, object]:
+    source_type = _candidate_source_type(candidate)
+    generated = _candidate_generated_query_or_mapping(candidate, result)
+    metadata: dict[str, object] = {
+        "ui_source": "chinese_research_question_search",
+        "query_source": "chinese_topic_search",
+        "source": candidate.source,
+        "source_type": source_type,
+        "source_name": candidate.display_title,
+        "source_id": candidate.accession_or_project,
+        "source_origin": "online_search" if candidate.source == "geo" else "local_mapping",
+        "accession_or_project": candidate.accession_or_project,
+        "display_title": candidate.display_title,
+        "original_chinese_topic": original_topic,
+        "generated_query_or_mapping": generated,
+        "registration_status": "registered_as_planned_source",
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "source_specific_metadata": candidate.source_specific_metadata,
+        "warnings": list(candidate.warnings),
+    }
+    if candidate.source == "geo":
+        metadata.update(
+            {
+                "gse_id": candidate.accession_or_project,
+                "title": candidate.display_title,
+                "query": generated,
+            }
+        )
+    elif candidate.source == "tcga_gdc":
+        metadata.update(
+            {
+                "project_id": candidate.accession_or_project,
+                "project_name": candidate.display_title,
+            }
+        )
+    elif candidate.source == "gtex":
+        metadata.update(
+            {
+                "tissue_name": candidate.tissue or candidate.source_specific_metadata.get("tissue_name") or candidate.accession_or_project,
+            }
+        )
+    return metadata
+
+
+def _candidate_generated_query_or_mapping(
+    candidate: UnifiedDatasetCandidate,
+    result: BioinformaticsSearchCenterResult | None,
+) -> str:
+    metadata = candidate.source_specific_metadata
+    if candidate.source == "geo":
+        query = metadata.get("query_used") or metadata.get("executed_query")
+        if query:
+            return str(query)
+        if result is not None and result.query.geo_query_candidates:
+            return result.query.geo_query_candidates[0]
+        return candidate.accession_or_project
+    if candidate.source == "tcga_gdc":
+        return str(metadata.get("project_id") or candidate.accession_or_project)
+    if candidate.source == "gtex":
+        return str(metadata.get("tissue_name") or candidate.tissue or candidate.accession_or_project)
+    return candidate.accession_or_project
 
 
 def _candidate_match_reason(candidate: UnifiedDatasetCandidate) -> str:
@@ -2630,9 +2717,11 @@ def _candidate_recommendation(candidate: UnifiedDatasetCandidate) -> str:
 
 
 def _geo_empty_state_text(source_result: object | None, *, searched: bool) -> str:
+    status = str(getattr(source_result, "search_status", "") or "")
+    if status == "disease_terms_missing":
+        return "未生成 GEO/GSE 检索草稿，请补充明确疾病或组织主题。"
     if not searched:
         return "已生成 GEO/GSE 检索草稿，尚未执行在线检索。"
-    status = str(getattr(source_result, "search_status", "") or "")
     if status == "search_failed":
         return "GEO/GSE 在线检索失败，请检查网络或稍后重试。"
     if status in {"draft_only", "disease_terms_missing", ""}:
