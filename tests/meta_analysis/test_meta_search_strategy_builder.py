@@ -10,6 +10,8 @@ def test_meta_search_strategy_uses_shared_vocabulary_as_peco_concept_blocks() ->
     assert draft.target_context == "meta_analysis"
     assert draft.review_framework == "PECO"
     assert draft.review_or_analysis_intent == "exposure_disease_risk_meta"
+    assert draft.local_model_status
+    assert draft.search_execution_status == "draft_only"
     assert draft.population.slot == "population"
     assert draft.intervention_or_exposure.label == "Exposure"
     assert "obesity" in " ".join(draft.intervention_or_exposure.terms_en).lower()

@@ -20,6 +20,16 @@ class MetaConceptGroupDraft:
     def all_terms(self) -> tuple[str, ...]:
         return _unique([*self.terms_zh, *self.terms_en, *self.mesh_terms])
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "slot": self.slot,
+            "label": self.label,
+            "terms_zh": list(self.terms_zh),
+            "terms_en": list(self.terms_en),
+            "mesh_terms": list(self.mesh_terms),
+            "source": self.source,
+        }
+
 
 @dataclass(frozen=True)
 class QueryDraft:
@@ -27,6 +37,14 @@ class QueryDraft:
     query: str
     status: str = "draft_only"
     note: str = "Requires reviewer validation before execution."
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "database": self.database,
+            "query": self.query,
+            "status": self.status,
+            "note": self.note,
+        }
 
 
 @dataclass(frozen=True)
@@ -37,6 +55,8 @@ class MetaSearchStrategyDraft:
     review_or_analysis_intent: str
     concept_groups: tuple[MetaConceptGroupDraft, ...]
     query_drafts: tuple[QueryDraft, ...]
+    local_model_status: str
+    search_execution_status: str = "draft_only"
     warnings: tuple[str, ...] = ()
     audit: dict[str, object] = field(default_factory=dict)
 
@@ -81,6 +101,21 @@ class MetaSearchStrategyDraft:
             if draft.database == database:
                 return draft.query
         return ""
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_version": "meta_search_strategy_draft.v1",
+            "original_question": self.original_question,
+            "target_context": self.target_context,
+            "review_framework": self.review_framework,
+            "review_or_analysis_intent": self.review_or_analysis_intent,
+            "local_model_status": self.local_model_status,
+            "search_execution_status": self.search_execution_status,
+            "concept_groups": [group.to_dict() for group in self.concept_groups],
+            "query_drafts": [draft.to_dict() for draft in self.query_drafts],
+            "warnings": list(self.warnings),
+            "audit": self.audit,
+        }
 
     def _group(self, slot: str) -> MetaConceptGroupDraft:
         for group in self.concept_groups:
