@@ -21,7 +21,8 @@ ANALYSIS_ROWS = (
     ("reporting", "报告生成", {"analysis_result"}),
 )
 
-CORE_INPUTS = {"expression_matrix", "raw_count_matrix"}
+CORE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
+EXPRESSION_COMPATIBLE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
 
 
 def run_project_readiness(project_root: str | Path) -> dict[str, object]:
@@ -93,14 +94,29 @@ def _available_inputs(files: list[object]) -> set[str]:
     for item in files:
         if not isinstance(item, dict):
             continue
+        detected_assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
+        if detected_assets:
+            for asset in detected_assets:
+                if asset.get("input_eligible") is False:
+                    continue
+                role = str(asset.get("role") or asset.get("asset_type") or "")
+                _add_available_input(available, role)
+            continue
         primary = str(item.get("recognized_type") or "")
-        if primary and primary != "unknown":
-            available.add(primary)
+        _add_available_input(available, primary)
         for role in item.get("recognized_roles", []) or []:
-            role_name = str(role)
-            if role_name and role_name != "unknown":
-                available.add(role_name)
+            _add_available_input(available, str(role))
+        for role in item.get("secondary_roles", []) or []:
+            _add_available_input(available, str(role))
     return available
+
+
+def _add_available_input(available: set[str], role: str) -> None:
+    if not role or role in {"unknown", "differential_result_table", "unsupported", "archive"}:
+        return
+    available.add(role)
+    if role in EXPRESSION_COMPATIBLE_INPUTS:
+        available.add("expression_matrix")
 
 
 def load_readiness_artifacts(project_root: str | Path) -> dict[str, object]:

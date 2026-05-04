@@ -10,6 +10,17 @@ from app.bioinformatics.project_readiness import load_readiness_artifacts
 
 STANDARDIZED_REGISTRY = Path("manifests") / "standardized_assets_registry.json"
 ANALYSIS_READY_MANIFEST = Path("standardized_data") / "analysis_ready_assets" / "analysis_ready_manifest.json"
+EXCLUDED_STANDARDIZATION_TYPES = {
+    "unknown",
+    "unsupported",
+    "archive",
+    "archive_container",
+    "geo_soft_container",
+    "geo_series_matrix_container",
+    "tabular_text_file",
+    "differential_result_table",
+    "platform_reference_hint",
+}
 
 
 def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
@@ -30,7 +41,8 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
                     "materialize_strategy": "reference_registered_asset",
                     "validation_status": "warning" if item.get("warning") else "registered",
                     "warning": item.get("warning") or "",
-                    "analysis_ready": asset_type in {"expression_matrix", "raw_count_matrix", "sample_metadata", "clinical_metadata", "gmt_gene_set"},
+                    "analysis_ready": asset_type
+                    in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "gmt_gene_set"},
                 }
             )
     readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
@@ -61,11 +73,22 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
 
 
 def _asset_types_for_standardization(item: dict[str, object]) -> list[str]:
+    detected_assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
+    if detected_assets:
+        roles = []
+        for asset in detected_assets:
+            if asset.get("input_eligible") is False:
+                continue
+            role = str(asset.get("role") or asset.get("asset_type") or "")
+            if role and role not in EXCLUDED_STANDARDIZATION_TYPES:
+                roles.append(role)
+        return list(dict.fromkeys(roles))
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != "unknown"]
+    roles.extend(str(role) for role in item.get("secondary_roles", []) or [] if str(role) and str(role) != "unknown")
     primary = str(item.get("recognized_type") or "unknown")
     if roles:
-        return [role for role in dict.fromkeys(roles) if role != "geo_soft_container"]
-    if primary == "unknown":
+        return [role for role in dict.fromkeys(roles) if role not in EXCLUDED_STANDARDIZATION_TYPES]
+    if primary in EXCLUDED_STANDARDIZATION_TYPES:
         return []
     return [primary]
 

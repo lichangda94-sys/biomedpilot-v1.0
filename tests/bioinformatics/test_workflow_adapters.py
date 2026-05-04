@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import gzip
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -97,6 +98,37 @@ def _write_geo_family_soft(path: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def _write_geo_series_matrix(path: Path) -> Path:
+    path.write_text(
+        "\n".join(
+            [
+                "!Series_title = Thyroid cancer expression profile",
+                "!Series_geo_accession = GSE12345",
+                "!Series_platform_id = GPL570",
+                "!Sample_title = Tumor sample 1",
+                "!Sample_title = Normal sample 1",
+                "!Sample_geo_accession = GSM100001",
+                "!Sample_geo_accession = GSM100002",
+                "!Sample_characteristics_ch1 = tissue: tumor",
+                "!Sample_characteristics_ch1 = tissue: normal",
+                "!Sample_source_name_ch1 = thyroid cancer tissue",
+                "!series_matrix_table_begin",
+                '"ID_REF"\t"GSM100001"\t"GSM100002"',
+                '"1007_s_at"\t8.1\t6.2',
+                '"1053_at"\t4.4\t5.0',
+                "!series_matrix_table_end",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _asset_by_role(record: dict[str, object]) -> dict[str, dict[str, object]]:
+    return {str(asset.get("role") or asset.get("asset_type")): asset for asset in record.get("detected_assets", []) if isinstance(asset, dict)}
 
 
 def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, tmp_path: Path) -> None:
@@ -222,6 +254,112 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
     standardization = generate_standardized_assets(project_root)
     asset_types = {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
     assert asset_types >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
+
+
+def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE12345-GPL570_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_series_matrix(source)
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    assets = _asset_by_role(record)  # type: ignore[arg-type]
+
+    assert record["recognized_type"] == "geo_series_matrix_container"
+    assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "platform_reference_hint"}  # type: ignore[arg-type]
+    assert {"phenotype_metadata", "clinical_metadata"} & set(record["recognized_roles"])  # type: ignore[arg-type]
+    assert assets["expression_matrix"]["input_eligible"] is True
+    assert assets["expression_matrix"]["location"]["start_line"] == 11  # type: ignore[index]
+    assert assets["expression_matrix"]["location"]["header_line"] == 12  # type: ignore[index]
+    assert assets["expression_matrix"]["location"]["end_line"] == 15  # type: ignore[index]
+    assert "ID_REF header" in assets["expression_matrix"]["evidence"]
+    assert assets["sample_metadata"]["input_eligible"] is True
+    assert assets["platform_reference_hint"]["input_eligible"] is False
+    assert assets["platform_reference_hint"]["platform_id"] == "GPL570"
+
+
+def test_csv_expression_matrix_content_profile(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "matrix.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,A1,A2,B1\nTP53,1.2,1.5,1.8\nEGFR,4.0,4.1,4.3\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    assets = _asset_by_role(record)  # type: ignore[arg-type]
+
+    assert record["recognized_type"] == "normalized_expression_matrix"
+    assert "normalized_expression_matrix" in assets
+    assert assets["normalized_expression_matrix"]["input_eligible"] is True
+    assert record["content_profile"]["possible_table_role"] == "normalized_expression_matrix"  # type: ignore[index]
+    assert "differential_result_table" not in record["recognized_roles"]  # type: ignore[operator]
+
+
+def test_csv_raw_count_matrix_content_profile(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "counts.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,A1_count,A2_count,B1_count\nTP53,12,15,18\nEGFR,40,41,43\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    assets = _asset_by_role(record)  # type: ignore[arg-type]
+
+    assert record["recognized_type"] == "raw_count_matrix"
+    assert assets["raw_count_matrix"]["input_eligible"] is True
+
+
+def test_csv_sample_metadata_content_profile(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "samples.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("sample_id,group,tissue,condition\nGSM1,case,thyroid,tumor\nGSM2,control,thyroid,normal\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "sample_metadata"
+    assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+
+
+def test_csv_clinical_survival_metadata_content_profile(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "clinical.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("sample_id,age,sex,stage,OS_time,OS_status\nS1,61,F,II,12,1\nS2,55,M,I,24,0\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "clinical_metadata"
+    assert {"clinical_metadata", "survival_metadata"} <= set(record["recognized_roles"])  # type: ignore[arg-type]
+
+
+def test_differential_result_table_not_counted_as_expression_input(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "deg_results.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,logFC,P.Value,adj.P.Val,t\nTP53,1.2,0.01,0.05,3.1\nEGFR,-1.1,0.02,0.07,-2.8\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    assets = _asset_by_role(record)  # type: ignore[arg-type]
+
+    assert record["recognized_type"] == "differential_result_table"
+    assert assets["differential_result_table"]["input_eligible"] is False
+    readiness = run_project_readiness(project_root)["readiness_report"]  # type: ignore[index]
+    assert readiness["has_core_input"] is False
+    assert "expression_matrix" not in readiness["available_inputs"]
+    standardization = generate_standardized_assets(project_root)
+    assert standardization["registry"]["assets"] == []  # type: ignore[index]
+
+
+def test_gzip_text_expression_matrix_is_recognized(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "expression.tsv.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write("gene\tGSM1\tGSM2\tGSM3\nTP53\t1.2\t1.3\t1.4\nEGFR\t2.2\t2.3\t2.4\n")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "normalized_expression_matrix"
+    assert record["container_format"] == "tabular_text"
 
 
 def test_workflow_and_task_center_do_not_run_analysis(project_root: Path) -> None:
