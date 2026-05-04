@@ -55,6 +55,50 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
     return path
 
 
+def _write_geo_family_soft(path: Path) -> Path:
+    path.write_text(
+        "\n".join(
+            [
+                "^DATABASE = GeoMiame",
+                "!Database_name = Gene Expression Omnibus (GEO)",
+                "^SERIES = GSE6004",
+                "!Series_title = Gene Expression and Functional Evidence of EMT in PTC",
+                "!Series_geo_accession = GSE6004",
+                "!Series_type = Expression profiling by array",
+                "!Series_sample_id = GSM139002",
+                "!Series_sample_id = GSM139003",
+                "^PLATFORM = GPL570",
+                "!Platform_title = [HG-U133_Plus_2] Affymetrix Human Genome U133 Plus 2.0 Array",
+                "!platform_table_begin",
+                "ID\tGene Symbol",
+                "1007_s_at\tDDR1",
+                "!platform_table_end",
+                "^SAMPLE = GSM139002",
+                "!Sample_title = PC10: Normal thyroid paired with tumor",
+                "!Sample_characteristics_ch1 = Tissue: normal thyroid; Gender: male; Age: 71",
+                "#ID_REF =",
+                "#VALUE = RMA Gene Expression Estimates",
+                "!sample_table_begin",
+                "ID_REF\tVALUE",
+                "1007_s_at\t8.4",
+                "!sample_table_end",
+                "^SAMPLE = GSM139003",
+                "!Sample_title = PC11: Papillary thyroid cancer invasive front",
+                "!Sample_characteristics_ch1 = Tissue: tumor; Gender: female; Age: 55",
+                "#ID_REF =",
+                "#VALUE = RMA Gene Expression Estimates",
+                "!sample_table_begin",
+                "ID_REF\tVALUE",
+                "1007_s_at\t9.1",
+                "!sample_table_end",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, tmp_path: Path) -> None:
     source = tmp_path / "expression_matrix.tsv"
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
@@ -128,6 +172,56 @@ def test_recognition_classifies_xlsx_gene_count_matrix(project_root: Path) -> No
     assert recognition["files"][0]["recognized_type"] == "raw_count_matrix"  # type: ignore[index]
     assert recognition["files"][0]["recognized_type_zh"] == "原始计数矩阵"  # type: ignore[index]
     assert "count 样本列" in recognition["files"][0]["reason"]  # type: ignore[index]
+
+
+def test_reference_acquisition_is_scanned_by_recognition(project_root: Path, tmp_path: Path) -> None:
+    source = tmp_path / "expression_matrix.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    register_acquisition(
+        project_root,
+        source_type="local_import",
+        source_label="本地表达矩阵",
+        strategy="reference",
+        selected_paths=[source],
+    )
+
+    recognition = run_project_recognition(project_root)
+
+    assert recognition["files"][0]["original_path"] == str(source.resolve())  # type: ignore[index]
+    assert recognition["files"][0]["recognized_type"] == "expression_matrix"  # type: ignore[index]
+
+
+def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Path) -> None:
+    source = _write_geo_family_soft(tmp_path / "GSE6004_family.soft")
+    register_acquisition(
+        project_root,
+        source_type="local_import",
+        source_label="GEO family SOFT",
+        strategy="reference",
+        selected_paths=[source],
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "geo_soft_container"
+    assert record["recognized_type_zh"] == "GEO SOFT 容器"
+    assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
+    assert {asset["asset_type"] for asset in record["detected_assets"]} >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
+    assert recognition["type_counts"]["geo_soft_container"] == 1  # type: ignore[index]
+    assert recognition["type_counts"]["expression_matrix"] == 1  # type: ignore[index]
+    assert recognition["type_counts"]["sample_metadata"] == 1  # type: ignore[index]
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    assert report["has_core_input"] is True
+    assert "expression_matrix" in report["available_inputs"]
+    assert "sample_metadata" in report["available_inputs"]
+    assert "样本信息缺失。" not in report["warnings"]
+
+    standardization = generate_standardized_assets(project_root)
+    asset_types = {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert asset_types >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
 
 
 def test_workflow_and_task_center_do_not_run_analysis(project_root: Path) -> None:

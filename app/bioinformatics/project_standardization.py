@@ -19,21 +19,20 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
     assets = []
     warnings = ["当前为资产注册和轻量校验，不等于正式 biological normalization。"]
     for item in files:
-        asset_type = str(item.get("recognized_type") or "unknown")
-        if asset_type == "unknown":
-            continue
-        assets.append(
-            {
-                "asset_type": asset_type,
-                "label_zh": TYPE_LABELS.get(asset_type, "未知文件"),
-                "file_path": item.get("route_path") or item.get("original_path"),
-                "source_file": item.get("original_path"),
-                "materialize_strategy": "reference_registered_asset",
-                "validation_status": "warning" if item.get("warning") else "registered",
-                "warning": item.get("warning") or "",
-                "analysis_ready": asset_type in {"expression_matrix", "raw_count_matrix", "sample_metadata", "clinical_metadata", "gmt_gene_set"},
-            }
-        )
+        for asset_type in _asset_types_for_standardization(item):
+            assets.append(
+                {
+                    "asset_type": asset_type,
+                    "label_zh": TYPE_LABELS.get(asset_type, "未知文件"),
+                    "file_path": item.get("route_path") or item.get("original_path"),
+                    "source_file": item.get("original_path"),
+                    "source_container_type": item.get("recognized_type"),
+                    "materialize_strategy": "reference_registered_asset",
+                    "validation_status": "warning" if item.get("warning") else "registered",
+                    "warning": item.get("warning") or "",
+                    "analysis_ready": asset_type in {"expression_matrix", "raw_count_matrix", "sample_metadata", "clinical_metadata", "gmt_gene_set"},
+                }
+            )
     readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
     usable = [
         str(row.get("label"))
@@ -59,6 +58,16 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
     _write_json(root / STANDARDIZED_REGISTRY, registry)
     _write_json(root / ANALYSIS_READY_MANIFEST, manifest)
     return {"registry": registry, "analysis_ready_manifest": manifest}
+
+
+def _asset_types_for_standardization(item: dict[str, object]) -> list[str]:
+    roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != "unknown"]
+    primary = str(item.get("recognized_type") or "unknown")
+    if roles:
+        return [role for role in dict.fromkeys(roles) if role != "geo_soft_container"]
+    if primary == "unknown":
+        return []
+    return [primary]
 
 
 def load_standardization_artifacts(project_root: str | Path) -> dict[str, object]:

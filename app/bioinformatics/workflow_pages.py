@@ -94,6 +94,7 @@ class RegisteredSourceRow:
     status: str
     created_at: str
     strategy: str
+    location_tooltip: str = ""
 
 
 @dataclass(frozen=True)
@@ -220,6 +221,13 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
         resolved_strategy = strategy or _strategy_from_combo(self._local_strategy_combo)
+        summary_key_resolved = summary_key or source_type
+        progress_text = "正在复制本地数据，请稍候。" if resolved_strategy == "copy" else "正在登记本地数据，请稍候。"
+        progress_label = self._source_summary_labels.get(summary_key_resolved)
+        if progress_label is not None:
+            progress_label.setText(progress_text)
+            progress_label.setToolTip(progress_text)
+            QApplication.processEvents()
         summary = register_acquisition(
             self._project_root,
             source_type=source_type,
@@ -233,7 +241,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._render_acquisition_summary(
             summary,
             selected_paths=normalized_paths,
-            summary_key=summary_key or source_type,
+            summary_key=summary_key_resolved,
             selected_kind=inferred_kind,
             data_type_label=data_type_label or _infer_local_data_type(normalized_paths, source_type=source_type),
         )
@@ -1123,9 +1131,11 @@ class BioinformaticsRecognitionWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。")
             return None
+        self._set_status("正在识别数据文件，请稍候。大文件可能需要几十秒。")
+        QApplication.processEvents()
         report = run_project_recognition(self._project_root)
         self._render_report(report)
-        self._set_status(f"{self.status_message()} 重新识别已重新扫描当前项目中的数据文件；不会删除 raw_data 中的历史导入副本。")
+        self._set_status(f"{self.status_message()} 已重新扫描当前项目数据和已登记的外部引用文件。")
         return report
 
     def refresh_report(self) -> None:
@@ -1194,7 +1204,6 @@ class BioinformaticsRecognitionWidget(QWidget):
         root.addWidget(pre_card)
         actions = QHBoxLayout()
         actions.addWidget(_button("开始数据识别", "primaryButton", self.run_recognition))
-        actions.addWidget(_button("重新识别", "secondaryButton", self.run_recognition))
         actions.addWidget(_button("刷新报告", "secondaryButton", self.refresh_report))
         actions.addWidget(_button("清理旧识别结果", "secondaryButton", self.clean_old_recognition_results))
         actions.addWidget(_button("打开 recognized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "recognized_data" if self._project_root else None)))
@@ -1202,7 +1211,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         root.addLayout(actions)
         root.addWidget(
             _muted(
-                "刷新报告只更新当前显示；重新识别会重新扫描当前项目数据目录；清理旧识别结果不会删除 raw_data 原始数据文件。"
+                "开始数据识别会扫描当前项目数据和已登记的外部引用文件；刷新报告只更新显示；清理旧识别结果不会删除原始数据。"
             )
         )
         self._status_label = _status_label("尚未生成数据识别报告。")
@@ -1260,6 +1269,10 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._pre_recognition_table,
             [[row.source_type, row.source_label, row.location, row.status] for row in rows],
         )
+        for row_index, row in enumerate(rows):
+            item = self._pre_recognition_table.item(row_index, 2)
+            if item is not None and row.location_tooltip:
+                item.setToolTip(row.location_tooltip)
 
     def _fill_recognition_table(self, files: list[dict[str, object]]) -> None:
         self._table.setRowCount(len(files))
@@ -1271,13 +1284,13 @@ class BioinformaticsRecognitionWidget(QWidget):
             rows.append(
                 [
                     str(item.get("file_name", "")),
-                    _compact_path(str(item.get("original_path", "")), max_chars=58),
-                    str(item.get("recognized_type_zh") or TYPE_LABELS.get(str(item.get("recognized_type")), "未知文件")),
+                    _compact_path(str(item.get("original_path", "")), max_chars=44),
+                    _recognition_type_text(item),
                     _format_confidence(item.get("confidence")),
                     _format_file_size(item.get("file_size")),
                     str(item.get("reason", "")),
                     warning,
-                    _compact_path(str(item.get("route_path", "")), max_chars=58),
+                    _compact_path(str(item.get("route_path", "")), max_chars=44),
                 ]
             )
         for row_index, row in enumerate(rows):
@@ -1286,6 +1299,8 @@ class BioinformaticsRecognitionWidget(QWidget):
                 source = files[row_index]
                 if col_index == 1:
                     table_item.setToolTip(str(source.get("original_path", "")))
+                elif col_index == 2:
+                    table_item.setToolTip(_recognition_roles_tooltip(source))
                 elif col_index == 3:
                     table_item.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
                 elif col_index == 4:
@@ -2300,6 +2315,7 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
                 status=_registered_status_text(payload),
                 created_at=str(payload.get("created_at") or ""),
                 strategy=str(payload.get("strategy") or ""),
+                location_tooltip=_registered_source_full_location(payload, metadata),  # type: ignore[arg-type]
             )
         )
     return sorted(rows, key=lambda row: row.created_at)
@@ -2324,7 +2340,7 @@ def _registered_source_location(payload: dict[str, object], metadata: dict[str, 
     for key in ("registered_files", "referenced_paths", "copied_files"):
         values = payload.get(key)
         if isinstance(values, list) and values:
-            return _compact_path(str(values[0]))
+            return _compact_path(str(values[0]), max_chars=48)
     source = str(metadata.get("source") or "")
     if source == "geo" or payload.get("source_type") in {"geo_gse", "geo_accession"}:
         return "GEO"
@@ -2333,6 +2349,14 @@ def _registered_source_location(payload: dict[str, object], metadata: dict[str, 
     if source == "gtex" or "gtex" in str(payload.get("source_type") or ""):
         return "GTEx"
     return "项目登记记录"
+
+
+def _registered_source_full_location(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    for key in ("registered_files", "referenced_paths", "copied_files"):
+        values = payload.get(key)
+        if isinstance(values, list) and values:
+            return str(values[0])
+    return _registered_source_location(payload, metadata)
 
 
 def _registered_status_text(payload: dict[str, object]) -> str:
@@ -3011,6 +3035,30 @@ def _format_confidence(value: object) -> str:
     return f"{numeric * 100:.0f}%"
 
 
+def _recognition_type_text(item: dict[str, object]) -> str:
+    primary = str(item.get("recognized_type") or "unknown")
+    primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
+    roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != primary]
+    if not roles:
+        return primary_label
+    role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
+    return f"{primary_label}（含：{'、'.join(role_labels)}）" if role_labels else primary_label
+
+
+def _recognition_roles_tooltip(item: dict[str, object]) -> str:
+    roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role)]
+    assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
+    lines = [f"主类型：{item.get('recognized_type_zh') or TYPE_LABELS.get(str(item.get('recognized_type') or 'unknown'), '未知文件')}"]
+    if roles:
+        lines.append("可用角色：" + "、".join(TYPE_LABELS.get(role, role) for role in roles))
+    for asset in assets:
+        label = str(asset.get("label_zh") or TYPE_LABELS.get(str(asset.get("asset_type") or ""), ""))
+        reason = str(asset.get("reason") or "")
+        if label or reason:
+            lines.append(f"{label}：{reason}".strip("："))
+    return "\n".join(lines)
+
+
 def _format_file_size(value: object) -> str:
     try:
         size = float(value)
@@ -3115,7 +3163,11 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
     files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
     if not files:
         return False, "识别报告中没有任何文件。"
-    has_core = any(str(item.get("recognized_type")) in {"expression_matrix", "raw_count_matrix"} for item in files)
+    has_core = any(
+        str(item.get("recognized_type")) in {"expression_matrix", "raw_count_matrix"}
+        or any(str(role) in {"expression_matrix", "raw_count_matrix"} for role in item.get("recognized_roles", []) or [])
+        for item in files
+    )
     if not has_core:
         return False, "未识别到表达矩阵或原始计数矩阵。"
     return True, ""

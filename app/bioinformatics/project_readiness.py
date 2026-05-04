@@ -28,7 +28,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
     recognition = load_recognition_report(root) or {}
     files = list(recognition.get("files", []) or [])
-    available = {str(item.get("recognized_type")) for item in files if item.get("recognized_type") and item.get("recognized_type") != "unknown"}
+    available = _available_inputs(files)
     has_core_input = bool(available & CORE_INPUTS)
     warnings: list[str] = [str(item) for item in recognition.get("warnings", []) or []]
     if not has_core_input:
@@ -86,6 +86,21 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     _write_json(root / READINESS_REPORT, report)
     _write_json(root / CAPABILITY_MATRIX, matrix)
     return {"readiness_report": report, "capability_matrix": matrix}
+
+
+def _available_inputs(files: list[object]) -> set[str]:
+    available: set[str] = set()
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        primary = str(item.get("recognized_type") or "")
+        if primary and primary != "unknown":
+            available.add(primary)
+        for role in item.get("recognized_roles", []) or []:
+            role_name = str(role)
+            if role_name and role_name != "unknown":
+                available.add(role_name)
+    return available
 
 
 def load_readiness_artifacts(project_root: str | Path) -> dict[str, object]:

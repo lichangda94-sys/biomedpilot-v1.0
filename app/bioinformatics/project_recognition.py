@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import gzip
 import zipfile
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
@@ -21,8 +23,19 @@ TYPE_LABELS = {
     "platform_annotation": "平台注释",
     "comparison_config": "分组比较配置",
     "gmt_gene_set": "GMT 基因集",
+    "geo_soft_container": "GEO SOFT 容器",
     "unknown": "未知文件",
 }
+
+
+@dataclass(frozen=True)
+class RecognitionClassification:
+    primary_type: str
+    reason: str
+    confidence: float
+    roles: tuple[str, ...]
+    detected_assets: tuple[dict[str, object], ...] = ()
+    container_format: str = ""
 
 
 def run_project_recognition(project_root: str | Path) -> dict[str, object]:
@@ -33,13 +46,20 @@ def run_project_recognition(project_root: str | Path) -> dict[str, object]:
     if not files:
         warnings.append("未找到可识别的数据文件，请返回数据来源页补充数据。")
     for path in files:
-        kind, reason, confidence = classify_file(path)
+        classification = classify_file_details(path)
+        kind = classification.primary_type
+        reason = classification.reason
+        confidence = classification.confidence
         records.append(
             {
                 "file_name": path.name,
                 "original_path": str(path),
                 "recognized_type": kind,
                 "recognized_type_zh": TYPE_LABELS.get(kind, "未知文件"),
+                "recognized_roles": list(classification.roles),
+                "recognized_roles_zh": [TYPE_LABELS.get(role, role) for role in classification.roles],
+                "detected_assets": list(classification.detected_assets),
+                "container_format": classification.container_format,
                 "confidence": confidence,
                 "file_size": path.stat().st_size if path.exists() else 0,
                 "reason": reason,
@@ -72,29 +92,58 @@ def load_recognition_report(project_root: str | Path) -> dict[str, object] | Non
 
 
 def classify_file(path: Path) -> tuple[str, str, float]:
+    classification = classify_file_details(path)
+    return classification.primary_type, classification.reason, classification.confidence
+
+
+def classify_file_details(path: Path) -> RecognitionClassification:
     name = path.name.lower()
     if name.endswith((".gmt", ".gmx")):
-        return "gmt_gene_set", "文件扩展名提示为基因集。", 0.85
+        return _classification("gmt_gene_set", "文件扩展名提示为基因集。", 0.85)
+    if _is_geo_soft_path(path):
+        geo_soft = _classify_geo_soft(path)
+        if geo_soft is not None:
+            return geo_soft
     if any(token in name for token in ("clinical", "survival", "patient")):
-        return "clinical_metadata", "文件名包含临床/生存信息提示。", 0.72
+        return _classification("clinical_metadata", "文件名包含临床/生存信息提示。", 0.72)
     if any(token in name for token in ("sample", "metadata", "phenotype", "pheno")):
-        return "sample_metadata", "文件名包含样本注释提示。", 0.72
+        return _classification("sample_metadata", "文件名包含样本注释提示。", 0.72)
     if any(token in name for token in ("gene_annotation", "platform", "gpl", "probe", "annotation")):
-        return "platform_annotation", "文件名包含平台或注释提示。", 0.68
+        return _classification("platform_annotation", "文件名包含平台或注释提示。", 0.68)
     if any(token in name for token in ("comparison", "contrast", "group")):
-        return "comparison_config", "文件名包含分组比较提示。", 0.64
+        return _classification("comparison_config", "文件名包含分组比较提示。", 0.64)
     if any(token in name for token in ("count", "counts", "raw")):
-        return "raw_count_matrix", "文件名包含 raw/counts 提示。", 0.66
+        return _classification("raw_count_matrix", "文件名包含 raw/counts 提示。", 0.66)
     if any(token in name for token in ("expression", "expr", "matrix", "tpm", "fpkm", "series_matrix")):
-        return "expression_matrix", "文件名包含表达矩阵提示。", 0.7
+        return _classification("expression_matrix", "文件名包含表达矩阵提示。", 0.7)
     if path.suffix.lower() == ".xlsx":
         workbook_kind = _classify_xlsx_table(path)
         if workbook_kind is not None:
             return workbook_kind
-    return "unknown", "未匹配到稳定识别规则。", 0.2
+    return _classification("unknown", "未匹配到稳定识别规则。", 0.2, roles=())
 
 
-def _classify_xlsx_table(path: Path) -> tuple[str, str, float] | None:
+def _classification(
+    primary_type: str,
+    reason: str,
+    confidence: float,
+    *,
+    roles: tuple[str, ...] | None = None,
+    detected_assets: tuple[dict[str, object], ...] = (),
+    container_format: str = "",
+) -> RecognitionClassification:
+    normalized_roles = tuple(dict.fromkeys(roles if roles is not None else (() if primary_type == "unknown" else (primary_type,))))
+    return RecognitionClassification(
+        primary_type=primary_type,
+        reason=reason,
+        confidence=confidence,
+        roles=normalized_roles,
+        detected_assets=detected_assets or tuple(_detected_asset(role, confidence=confidence, reason=reason) for role in normalized_roles),
+        container_format=container_format,
+    )
+
+
+def _classify_xlsx_table(path: Path) -> RecognitionClassification | None:
     try:
         headers = _xlsx_first_row(path)
     except Exception:
@@ -111,9 +160,168 @@ def _classify_xlsx_table(path: Path) -> tuple[str, str, float] | None:
     )
     if has_gene_column and numeric_sample_like >= 2:
         if any("count" in header for header in normalized[1:]):
-            return "raw_count_matrix", "XLSX 首行包含 gene/probe/id 列和多个 count 样本列。", 0.82
-        return "expression_matrix", "XLSX 首行包含 gene/probe/id 列和多个样本表达列。", 0.78
+            return _classification("raw_count_matrix", "XLSX 首行包含 gene/probe/id 列和多个 count 样本列。", 0.82)
+        return _classification("expression_matrix", "XLSX 首行包含 gene/probe/id 列和多个样本表达列。", 0.78)
     return None
+
+
+def _classify_geo_soft(path: Path) -> RecognitionClassification | None:
+    scan = _scan_geo_soft(path)
+    if not scan["has_geo_header"]:
+        return None
+    roles: list[str] = []
+    assets: list[dict[str, object]] = []
+    if scan["has_expression_table"]:
+        roles.append("expression_matrix")
+        assets.append(
+            _detected_asset(
+                "expression_matrix",
+                confidence=0.86,
+                reason="SOFT sample table 包含 ID_REF / VALUE 表达值。",
+                source_section="sample_table",
+                source_format="geo_family_soft",
+                extra={"sample_count": scan["sample_count"], "value_description": scan["value_description"]},
+            )
+        )
+    if scan["has_sample_metadata"]:
+        roles.append("sample_metadata")
+        assets.append(
+            _detected_asset(
+                "sample_metadata",
+                confidence=0.84,
+                reason="SOFT 包含 SAMPLE 块、样本标题或样本 characteristics。",
+                source_section="sample_metadata",
+                source_format="geo_family_soft",
+                extra={"sample_count": scan["sample_count"]},
+            )
+        )
+    if scan["has_platform_annotation"]:
+        roles.append("platform_annotation")
+        assets.append(
+            _detected_asset(
+                "platform_annotation",
+                confidence=0.82,
+                reason="SOFT 包含 PLATFORM 块或 platform table。",
+                source_section="platform_table",
+                source_format="geo_family_soft",
+            )
+        )
+    if scan["has_clinical_metadata"]:
+        roles.append("clinical_metadata")
+        assets.append(
+            _detected_asset(
+                "clinical_metadata",
+                confidence=0.68,
+                reason="样本 characteristics 中包含年龄、性别、组织、肿瘤/正常等临床或分组线索。",
+                source_section="sample_characteristics",
+                source_format="geo_family_soft",
+                extra={"sample_count": scan["sample_count"]},
+            )
+        )
+    if not roles:
+        return None
+    role_labels = "、".join(TYPE_LABELS.get(role, role) for role in roles)
+    reason = f"GEO family SOFT 容器，检测到：{role_labels}。"
+    return _classification(
+        "geo_soft_container",
+        reason,
+        0.86,
+        roles=tuple(roles),
+        detected_assets=tuple(assets),
+        container_format="geo_family_soft",
+    )
+
+
+def _scan_geo_soft(path: Path) -> dict[str, object]:
+    scan: dict[str, object] = {
+        "has_geo_header": False,
+        "has_expression_table": False,
+        "has_sample_metadata": False,
+        "has_platform_annotation": False,
+        "has_clinical_metadata": False,
+        "sample_count": 0,
+        "value_description": "",
+    }
+    sample_ids: set[str] = set()
+    sample_blocks = 0
+    sample_characteristics = 0
+    sample_table_begin = 0
+    id_ref_seen = False
+    value_seen = False
+    clinical_tokens = ("age", "gender", "sex", "tissue", "tumor", "normal", "disease", "stage", "metastasis", "survival")
+    try:
+        handle = gzip.open(path, "rt", encoding="utf-8", errors="ignore") if path.name.lower().endswith(".gz") else path.open("r", encoding="utf-8", errors="ignore")
+        with handle:
+            for line in handle:
+                stripped = line.strip()
+                lower = stripped.lower()
+                if stripped.startswith("^DATABASE") or stripped.startswith("^SERIES") or "gene expression omnibus" in lower:
+                    scan["has_geo_header"] = True
+                if stripped.startswith("!Series_sample_id"):
+                    sample_ids.add(stripped.partition("=")[2].strip())
+                elif stripped.startswith("^SAMPLE"):
+                    sample_blocks += 1
+                elif stripped.startswith("!Sample_title"):
+                    sample_characteristics += 1
+                elif stripped.startswith("!Sample_characteristics"):
+                    sample_characteristics += 1
+                    if any(token in lower for token in clinical_tokens):
+                        scan["has_clinical_metadata"] = True
+                elif stripped.startswith("^PLATFORM") or stripped.startswith("!platform_table_begin"):
+                    scan["has_platform_annotation"] = True
+                elif stripped.startswith("!sample_table_begin"):
+                    sample_table_begin += 1
+                elif stripped.startswith("#ID_REF") or lower == "id_ref" or lower.startswith("id_ref\t"):
+                    id_ref_seen = True
+                elif stripped.startswith("#VALUE") or lower == "value" or "\tvalue" in lower:
+                    value_seen = True
+                    if not scan["value_description"]:
+                        scan["value_description"] = stripped.partition("=")[2].strip() if "=" in stripped else stripped
+                if (
+                    scan["has_geo_header"]
+                    and scan["has_platform_annotation"]
+                    and (sample_ids or sample_blocks)
+                    and sample_characteristics
+                    and sample_table_begin
+                    and id_ref_seen
+                    and value_seen
+                ):
+                    break
+    except OSError:
+        return scan
+    sample_count = max(len(sample_ids), sample_blocks)
+    scan["sample_count"] = sample_count
+    scan["has_sample_metadata"] = bool(sample_ids or sample_blocks or sample_characteristics)
+    scan["has_expression_table"] = bool(sample_table_begin and id_ref_seen and value_seen)
+    return scan
+
+
+def _is_geo_soft_path(path: Path) -> bool:
+    name = path.name.lower()
+    return name.endswith(".soft") or name.endswith(".soft.gz")
+
+
+def _detected_asset(
+    asset_type: str,
+    *,
+    confidence: float,
+    reason: str,
+    source_section: str = "file",
+    source_format: str = "",
+    extra: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "asset_type": asset_type,
+        "label_zh": TYPE_LABELS.get(asset_type, asset_type),
+        "confidence": confidence,
+        "reason": reason,
+        "source_section": source_section,
+    }
+    if source_format:
+        payload["source_format"] = source_format
+    if extra:
+        payload.update(extra)
+    return payload
 
 
 def _xlsx_first_row(path: Path, *, max_cells: int = 200) -> list[str]:
@@ -178,14 +386,42 @@ def _candidate_files(root: Path) -> list[Path]:
     for base in (root / "raw_data", root / "acquisition"):
         if base.exists():
             paths.extend(path for path in base.rglob("*") if path.is_file() and path.suffix.lower() not in {".json"})
+    paths.extend(_registered_reference_files(root))
     return sorted(set(paths))
+
+
+def _registered_reference_files(root: Path) -> list[Path]:
+    records_dir = root / "acquisition" / "records"
+    if not records_dir.exists():
+        return []
+    paths: list[Path] = []
+    for record_path in records_dir.glob("*.json"):
+        try:
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if record.get("strategy") != "reference":
+            continue
+        for key in ("referenced_paths", "registered_files"):
+            values = record.get(key)
+            if not isinstance(values, list):
+                continue
+            for raw in values:
+                candidate = Path(str(raw)).expanduser()
+                if candidate.is_file():
+                    paths.append(candidate.resolve())
+                elif candidate.is_dir():
+                    paths.extend(path.resolve() for path in candidate.rglob("*") if path.is_file() and path.suffix.lower() not in {".json"})
+    return paths
 
 
 def _type_counts(records: list[dict[str, object]]) -> dict[str, int]:
     counts = {key: 0 for key in TYPE_LABELS}
     for record in records:
-        key = str(record.get("recognized_type") or "unknown")
-        counts[key] = counts.get(key, 0) + 1
+        keys = [str(record.get("recognized_type") or "unknown")]
+        keys.extend(str(role) for role in record.get("recognized_roles", []) or [])
+        for key in dict.fromkeys(key for key in keys if key):
+            counts[key] = counts.get(key, 0) + 1
     return counts
 
 

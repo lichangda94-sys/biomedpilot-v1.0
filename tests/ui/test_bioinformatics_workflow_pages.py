@@ -195,7 +195,15 @@ def test_data_source_shows_local_file_source_summary_and_copy_open(qt_app, proje
     source = tmp_path / "expression_matrix.csv"
     source.write_text("gene,s1\nTP53,1\n", encoding="utf-8")
     opened: list[str] = []
+    progress_messages: list[str] = []
+    real_register_acquisition = workflow_pages.register_acquisition
+
+    def capture_progress(*args, **kwargs):
+        progress_messages.append(widget.source_summary_text("local_import"))
+        return real_register_acquisition(*args, **kwargs)
+
     monkeypatch.setattr(workflow_pages.QDesktopServices, "openUrl", lambda url: opened.append(url.toLocalFile()) or True)
+    monkeypatch.setattr(workflow_pages, "register_acquisition", capture_progress)
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
 
@@ -203,6 +211,7 @@ def test_data_source_shows_local_file_source_summary_and_copy_open(qt_app, proje
 
     text = widget.source_summary_text("local_import")
     assert summary is not None
+    assert progress_messages == ["正在登记本地数据，请稍候。"]
     assert text == "已登记本地数据：expression_matrix.csv"
     assert str(source.resolve()) not in text
     assert "数据获取计划" not in text
@@ -828,11 +837,16 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
             {
                 "file_name": long_path.name,
                 "original_path": str(long_path),
-                "recognized_type": "expression_matrix",
-                "recognized_type_zh": "表达矩阵",
+                "recognized_type": "geo_soft_container",
+                "recognized_type_zh": "GEO SOFT 容器",
+                "recognized_roles": ["expression_matrix", "sample_metadata"],
+                "detected_assets": [
+                    {"asset_type": "expression_matrix", "label_zh": "表达矩阵", "reason": "SOFT sample table 包含表达值。"},
+                    {"asset_type": "sample_metadata", "label_zh": "样本注释", "reason": "SOFT 包含 SAMPLE 块。"},
+                ],
                 "confidence": 0.7,
                 "file_size": 5763709,
-                "reason": "文件名包含表达矩阵提示。",
+                "reason": "GEO family SOFT 容器，检测到表达矩阵和样本注释。",
                 "warning": "",
                 "route_path": str(project_summary.project_root / "recognized_data/expression_matrix/GSE54350_series_matrix.txt"),
             }
@@ -848,6 +862,8 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     assert table.item(0, 4).text() == "5.5 MB"
     assert table.item(0, 1).text().startswith("...")
     assert table.item(0, 1).toolTip() == str(long_path)
+    assert table.item(0, 2).text() == "GEO SOFT 容器（含：表达矩阵、样本注释）"
+    assert "可用角色：表达矩阵、样本注释" in table.item(0, 2).toolTip()
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
 
 
@@ -864,7 +880,7 @@ def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, projec
 
     widget.run_recognition()
     assert calls == [str(project_summary.project_root)]
-    assert "重新识别已重新扫描" in widget.status_message()
+    assert "已重新扫描当前项目数据和已登记的外部引用文件" in widget.status_message()
 
 
 def test_recognition_clean_old_results_keeps_raw_data(qt_app, project_summary) -> None:
