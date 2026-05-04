@@ -9,14 +9,16 @@ literature retrieval is executed.
 ## UI Output
 
 - PICO/PECO mode
-- Concept blocks
+- Concept blocks with `role` values for population, exposure/intervention,
+  comparison, outcome, and study type
 - PubMed query draft with MeSH and tiab terms
 - Web of Science query draft marked draft-only
-- Embase query draft marked draft-only
+- Embase query draft marked draft-only with `/exp` and `:ti,ab,kw` terms
 - CNKI query draft marked draft-only
 - Warnings
 - `local_model_status`
 - `search_execution_status=draft_only`
+- Chinese draft-only status text: 当前仅生成检索式草稿，尚未执行在线检索。
 
 ## Artifacts
 

@@ -50,7 +50,7 @@ def test_meta_search_strategy_has_wos_embase_cnki_placeholders() -> None:
     draft = build_meta_search_strategy_draft("肥胖与甲状腺癌发病风险 Meta 分析")
 
     assert draft.web_of_science_query_draft.startswith("TS=")
-    assert ":ti,ab" in draft.embase_query_draft
+    assert ":ti,ab,kw" in draft.embase_query_draft
     assert "主题=" in draft.cnki_query_draft
     assert {item.database for item in draft.query_drafts} == {"pubmed", "web_of_science", "embase", "cnki"}
     assert all(item.status == "draft_only" for item in draft.query_drafts)
@@ -70,3 +70,25 @@ def test_meta_context_does_not_output_dataset_source_terms() -> None:
     assert "gse" not in rendered
     assert "tcga" not in rendered
     assert "gtex" not in rendered
+
+
+def test_peco_obesity_thyroid_risk_query() -> None:
+    draft = build_meta_search_strategy_draft("肥胖与甲状腺癌发病风险")
+    rendered = " ".join([draft.pubmed_query_draft, draft.web_of_science_query_draft, draft.embase_query_draft, draft.cnki_query_draft])
+
+    assert draft.review_framework == "PECO"
+    assert draft.intervention_or_exposure.label == "Exposure"
+    assert "obesity" in " ".join(draft.intervention_or_exposure.terms_en).lower()
+    assert "BMI" in draft.intervention_or_exposure.all_terms
+    assert '"Obesity"[Mesh]' in draft.pubmed_query_draft
+    assert "thyroid cancer" in " ".join(draft.outcome.terms_en).lower()
+    assert '"Thyroid Neoplasms"[Mesh]' in draft.pubmed_query_draft
+    assert "TS=" in rendered
+    assert ":ti,ab,kw" in rendered
+    assert "主题=" in rendered
+
+
+def test_meta_search_strategy_concept_blocks_include_role() -> None:
+    payload = build_meta_search_strategy_draft("肥胖与甲状腺癌发病风险").to_dict()
+
+    assert all(group["role"] == group["slot"] for group in payload["concept_groups"])

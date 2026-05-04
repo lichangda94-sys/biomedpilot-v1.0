@@ -47,7 +47,7 @@ def initial_protocol_page_state(project_dir: Path | None = None) -> ProtocolPage
         next_step="保存并人工复核检索式草稿后，进入 Literature Import。",
         testing_limitations=(
             "本模块只生成 draft search strategy，不执行真实数据库检索。",
-            "PubMed / Web of Science / CNKI / WanFang 检索式必须由 reviewer 人工复核。",
+            "PubMed / Web of Science / Embase / CNKI 检索式必须由 reviewer 人工复核。",
         ),
         protocol=None,
         readiness_status="not_started",
@@ -95,7 +95,7 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
         next_step="如果 readiness 为 ready/completed，请进入 Literature Import；如果有 warnings，请先人工补全 protocol。",
         testing_limitations=(
             "Developer Preview：检索式是 draft，不是投稿级最终检索式。",
-            "本阶段不调用 PubMed / Web of Science / CNKI / WanFang API。",
+            "当前仅生成检索式草稿，尚未执行在线检索。",
         ),
         protocol=protocol,
         readiness_status=protocol.readiness_status,
@@ -176,6 +176,7 @@ def render_search_strategy_summary(draft: MetaSearchStrategyDraft) -> str:
             ", ".join(draft.warnings) if draft.warnings else "none",
             "",
             "No live literature search is executed. search_execution_report.json is not written.",
+            "当前仅生成检索式草稿，尚未执行在线检索。",
         ]
     )
 

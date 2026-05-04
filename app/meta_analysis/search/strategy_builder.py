@@ -152,11 +152,19 @@ def _web_of_science_query_draft(concept_groups: tuple[MetaConceptGroupDraft, ...
 def _embase_query_draft(concept_groups: tuple[MetaConceptGroupDraft, ...]) -> str:
     blocks: list[str] = []
     for group in concept_groups:
-        terms = [*(f"{_quote(term)}/exp" for term in group.mesh_terms), *(f"{_quote(term)}:ti,ab" for term in group.terms_en)]
+        terms = [
+            *(_embase_exp_term(term) for term in group.mesh_terms),
+            *(f"{_quote(term)}:ti,ab,kw" for term in group.terms_en),
+        ]
         block = _or_block(terms)
         if block:
             blocks.append(block)
     return " AND ".join(blocks)
+
+
+def _embase_exp_term(term: str) -> str:
+    cleaned = term.strip().strip("'").strip('"')
+    return f"'{cleaned}'/exp"
 
 
 def _cnki_query_draft(concept_groups: tuple[MetaConceptGroupDraft, ...]) -> str:

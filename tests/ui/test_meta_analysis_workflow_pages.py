@@ -59,11 +59,12 @@ def test_meta_protocol_search_strategy_summary_displays_database_drafts() -> Non
     assert "WOS query draft (draft-only):" in summary
     assert "TS=" in summary
     assert "Embase query draft (draft-only):" in summary
-    assert ":ti,ab" in summary
+    assert ":ti,ab,kw" in summary
     assert "CNKI query draft (draft-only):" in summary
     assert "主题=" in summary
     assert "search_execution_status=draft_only" in summary
     assert "local_model_status:" in summary
+    assert "当前仅生成检索式草稿，尚未执行在线检索。" in summary
 
 
 def test_meta_protocol_search_strategy_artifacts_are_draft_only_without_execution_report(tmp_path: Path) -> None:
@@ -118,4 +119,57 @@ def test_meta_protocol_page_saves_and_displays_search_strategy_draft(qt_app, tmp
     assert state.output_paths["search_strategy_audit"].endswith("protocol/search_strategy_audit.json")
     assert "PubMed query draft" in state.search_strategy_summary
     assert state.search_execution_status == "draft_only"
+    assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+
+
+def test_meta_page_displays_pubmed_query_draft() -> None:
+    summary = render_search_strategy_summary(build_protocol_search_strategy_draft(_values()))
+
+    assert "PubMed query draft (MeSH + tiab):" in summary
+    assert '"Obesity"[Mesh]' in summary
+    assert '"obesity"[tiab]' in summary
+
+
+def test_meta_page_displays_wos_embase_cnki_draft_only() -> None:
+    summary = render_search_strategy_summary(build_protocol_search_strategy_draft(_values()))
+
+    assert "WOS query draft (draft-only):" in summary
+    assert "TS=" in summary
+    assert "Embase query draft (draft-only):" in summary
+    assert ":ti,ab,kw" in summary
+    assert "CNKI query draft (draft-only):" in summary
+    assert "主题=" in summary
+
+
+def test_meta_page_uses_mesh_and_tiab() -> None:
+    draft = build_protocol_search_strategy_draft(_values())
+
+    assert '"Obesity"[Mesh]' in draft.pubmed_query_draft
+    assert '"obesity"[tiab]' in draft.pubmed_query_draft
+    assert '"Thyroid Neoplasms"[Mesh]' in draft.pubmed_query_draft
+    assert '"thyroid cancer"[tiab]' in draft.pubmed_query_draft
+
+
+def test_meta_page_does_not_show_geo_tcga_gtex() -> None:
+    rendered = render_search_strategy_summary(build_protocol_search_strategy_draft(_values())).lower()
+
+    assert "geo" not in rendered
+    assert "gse" not in rendered
+    assert "tcga" not in rendered
+    assert "gtex" not in rendered
+
+
+def test_meta_search_strategy_writes_draft_and_audit(tmp_path: Path) -> None:
+    paths = write_protocol_search_strategy_artifacts(tmp_path, build_protocol_search_strategy_draft(_values()))
+
+    assert Path(paths["search_strategy_draft"]).exists()
+    assert Path(paths["search_strategy_audit"]).exists()
+    assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+
+
+def test_meta_search_does_not_execute_network(tmp_path: Path) -> None:
+    draft = build_protocol_search_strategy_draft(_values())
+    write_protocol_search_strategy_artifacts(tmp_path, draft)
+
+    assert draft.search_execution_status == "draft_only"
     assert not (tmp_path / "protocol" / "search_execution_report.json").exists()

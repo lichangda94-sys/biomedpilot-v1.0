@@ -23,6 +23,7 @@ class MetaConceptGroupDraft:
     def to_dict(self) -> dict[str, object]:
         return {
             "slot": self.slot,
+            "role": self.slot,
             "label": self.label,
             "terms_zh": list(self.terms_zh),
             "terms_en": list(self.terms_en),
