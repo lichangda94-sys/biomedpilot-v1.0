@@ -76,6 +76,13 @@ def test_ollama_available_not_called_by_default(monkeypatch) -> None:
     assert "esophageal squamous cell carcinoma" in draft.main_concepts_en
 
 
+def test_local_model_defaults_use_installed_translate_and_medical_names() -> None:
+    config = LocalModelConfig()
+
+    assert config.translator_model == "translategemma"
+    assert config.medical_model == "medgemma:4b"
+
+
 def test_ollama_called_success_json(monkeypatch) -> None:
     monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
     payload = {

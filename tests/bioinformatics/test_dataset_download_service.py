@@ -259,7 +259,7 @@ def test_geo_text_summary_service_uses_local_models_when_available() -> None:
     def generator(model: str, prompt: str) -> str:
         if model == "translategemma":
             return '{"title_zh":"胶质瘤表达谱","summary_zh":"胶质瘤与正常脑组织样本。","overall_design_zh":"肿瘤和正常对照。"}'
-        return "该数据集比较胶质瘤样本和正常脑组织对照。"
+        return '{"brief_zh":"该数据集比较胶质瘤样本和正常脑组织对照。","covered_terms":["胶质瘤","正常脑组织"],"missing_or_uncertain":[]}'
 
     service = GeoTextSummaryService(generator=generator, availability_checker=lambda: True)
     summary = service.summarize(
@@ -274,6 +274,50 @@ def test_geo_text_summary_service_uses_local_models_when_available() -> None:
     assert summary.status == "completed"
     assert summary.title_zh == "胶质瘤表达谱"
     assert summary.brief_zh == "该数据集比较胶质瘤样本和正常脑组织对照。"
+    assert summary.model_status["translate_model_status"] == "available"
+    assert summary.model_status["brief_model_status"] == "available"
+
+
+def test_geo_text_summary_service_accepts_latest_translate_model_alias() -> None:
+    service = GeoTextSummaryService(model_names_provider=lambda: ("translategemma:latest", "medgemma:4b"))
+
+    status = service.model_availability()
+
+    assert service.is_available()
+    assert status["translate_model_status"] == "available"
+    assert status["brief_model_status"] == "available"
+
+
+def test_geo_text_summary_service_requires_translate_and_medical_models() -> None:
+    service = GeoTextSummaryService(model_names_provider=lambda: ("translategemma:latest",))
+
+    summary = service.summarize(GeoStudyTextInput(accession="GSE33630", title_en="Glioma expression profile"))
+
+    assert summary.status == "local_model_unavailable"
+    assert summary.model_status["translate_model_status"] == "available"
+    assert summary.model_status["brief_model_status"] == "missing"
+    assert "医学提炼模型 medgemma:4b" in summary.error_message
+
+
+def test_geo_text_summary_service_falls_back_when_brief_json_is_empty() -> None:
+    def generator(model: str, prompt: str) -> str:
+        if model == "translategemma":
+            return '{"title_zh":"甲状腺滤泡癌表达谱","summary_zh":"研究甲状腺滤泡癌、滤泡腺瘤和正常甲状腺组织。","overall_design_zh":"比较甲状腺滤泡癌、滤泡腺瘤和正常甲状腺对照的 microarray 表达谱。"}'
+        return '{"brief_zh":"","covered_terms":[],"missing_or_uncertain":["模型未能提炼简介"]}'
+
+    service = GeoTextSummaryService(generator=generator, availability_checker=lambda: True)
+    summary = service.summarize(
+        GeoStudyTextInput(
+            accession="GSETEST",
+            title_en="Expression profiling of follicular thyroid carcinoma",
+            summary_en="Follicular thyroid carcinoma, follicular adenoma and normal thyroid tissue.",
+            overall_design_en="Microarray comparison of FTC, adenoma and normal thyroid controls.",
+        )
+    )
+
+    assert summary.status == "completed"
+    assert summary.brief_zh == "比较甲状腺滤泡癌、滤泡腺瘤和正常甲状腺对照的 microarray 表达谱。"
+    assert "医学模型 brief_zh 为空" in "；".join(summary.quality_warnings)
 
 
 def test_geo_text_summary_service_falls_back_when_local_model_unavailable() -> None:

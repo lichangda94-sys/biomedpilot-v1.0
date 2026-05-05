@@ -3246,6 +3246,8 @@ def _mapping_log_text(result: BioinformaticsSearchCenterResult) -> str:
 
 def _geo_text_summary_display(candidate: UnifiedDatasetCandidate, summary: dict[str, object]) -> str:
     metadata = candidate.source_specific_metadata
+    model_status = summary.get("model_status") if isinstance(summary.get("model_status"), dict) else {}
+    warnings = summary.get("quality_warnings") if isinstance(summary.get("quality_warnings"), (list, tuple)) else ()
     return "\n".join(
         [
             f"GSE：{candidate.accession_or_project}",
@@ -3254,6 +3256,9 @@ def _geo_text_summary_display(candidate: UnifiedDatasetCandidate, summary: dict[
             f"中文标题：{summary.get('title_zh') or '未生成'}",
             f"中文摘要：{summary.get('summary_zh') or '未生成'}",
             f"中文一句话简介：{summary.get('brief_zh') or '未生成'}",
+            f"翻译模型：{summary.get('translate_model') or model_status.get('translate_model') or '未配置'}（{model_status.get('translate_model_status') or '未检查'}）",
+            f"医学提炼模型：{summary.get('brief_model') or model_status.get('brief_model') or '未配置'}（{model_status.get('brief_model_status') or '未检查'}）",
+            f"质量提示：{'；'.join(str(item) for item in warnings) if warnings else '无'}",
             f"处理状态：{summary.get('status') or 'unknown'}",
             f"提示：{summary.get('error_message') or '无'}",
         ]

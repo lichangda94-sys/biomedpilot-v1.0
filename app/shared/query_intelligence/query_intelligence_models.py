@@ -17,8 +17,8 @@ class QueryIntelligenceInput:
 class LocalModelConfig:
     enabled: bool = False
     provider: str = "ollama"
-    translator_model: str = "translator"
-    medical_model: str = "media"
+    translator_model: str = "translategemma"
+    medical_model: str = "medgemma:4b"
     timeout_seconds: int = 20
     max_retries: int = 1
     require_json: bool = True

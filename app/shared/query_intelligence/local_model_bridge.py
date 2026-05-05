@@ -62,13 +62,13 @@ def describe_local_model_components() -> dict[str, str]:
         return {
             "ollama": "available_not_called",
             "translator": "optional_not_called",
-            "media": "optional_not_called",
+            "medical": "optional_not_called",
             "status": "available_not_called",
         }
     return {
         "ollama": "unavailable",
         "translator": "unavailable",
-        "media": "unavailable",
+        "medical": "unavailable",
         "status": "fallback_registry_only",
     }
 
