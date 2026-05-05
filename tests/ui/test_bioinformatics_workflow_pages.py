@@ -282,7 +282,7 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
 
 def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
-    card_titles = [label.text() for label in widget.findChildren(QLabel, "bioProjectCardTitle")]
+    card_titles = [label.text() for label in widget.findChildren(QLabel, "bioProjectCardTitle") if label.text() not in {"GEO 数据集详情", "GEO 下载列表"}]
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
 
     assert "本地数据导入" in card_titles
@@ -421,11 +421,21 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     preview = widget.search_gse_dataset()
     assert preview is not None
     assert not widget._register_gse_button.isHidden()
+    assert isinstance(widget._gse_geo_detail_panel, workflow_pages.GeoDatasetDetailPanel)
+    assert isinstance(widget._gse_geo_download_list_panel, workflow_pages.GeoDownloadListPanel)
+    assert not widget._gse_geo_detail_panel.isHidden()
+    assert "GSE60024" in widget._gse_geo_detail_panel._title.text()
+    assert widget._gse_geo_detail_panel._save_button.text() == "保存到下载列表"
     summary = widget.register_gse_dataset()
 
     text = widget.source_summary_text("geo_gse")
     assert summary is not None
     assert text == "已登记 GSE 数据集：GSE60024"
+    assert widget._gse_geo_download_list_panel._table.rowCount() == 1
+    assert widget._gse_geo_download_list_panel._table.item(0, 0).text() == "GSE60024"
+    assert widget._gse_geo_download_list_panel._table.item(0, 3).text() == "元数据待下载"
+    assert widget.register_gse_dataset() is None
+    assert widget._gse_geo_download_list_panel._table.rowCount() == 1
     assert "数据获取计划" not in text
     assert "数据登记记录" not in text
     assert widget._gse_status_label.text() == "已登记 GSE 数据集：GSE60024"
@@ -439,6 +449,37 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
     assert not widget._next_button.isEnabled()
+
+
+def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_summary, monkeypatch) -> None:
+    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id: f"当前 GSE 编号：{gse_id}\n数据集标题：Glioma expression profile\n样本数：12\n平台信息：GPL570")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    widget.set_gse_input("GSE33630")
+    widget.search_gse_dataset()
+
+    class _FakeSummaryService:
+        def summarize(self, text):
+            return SimpleNamespace(
+                status="completed",
+                to_dict=lambda: {
+                    "status": "completed",
+                    "title_zh": "胶质瘤表达谱",
+                    "summary_zh": "胶质瘤样本摘要。",
+                    "overall_design_zh": "肿瘤和对照。",
+                    "brief_zh": "该数据集比较胶质瘤和对照样本。",
+                    "error_message": "",
+                },
+            )
+
+    widget._text_summary_service = _FakeSummaryService()
+    candidate = widget._gse_geo_detail_panel.current_candidate()
+    assert candidate is not None
+    payload = widget._generate_gse_geo_summary(candidate)
+
+    assert payload is not None
+    assert "该数据集比较胶质瘤和对照样本。" in widget._gse_geo_detail_panel._translation_text.toPlainText()
+    assert "医学实体一致性状态" in widget._gse_geo_detail_panel._translation_text.toPlainText()
 
 
 def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
@@ -636,11 +677,12 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     assert widget._geo_table.horizontalHeaderItem(0).text() == "操作"
     assert widget._geo_table.columnWidth(0) >= 120
     buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert [button.text() for button in buttons] == ["选择", "查看详情"]
-    buttons[1].click()
-    assert "候选详情：GSE33630" == widget._candidate_detail_title.text()
-    assert "下载并登记" == widget._detail_download_button.text()
-    assert not widget._detail_brief_button.isHidden()
+    assert [button.text() for button in buttons] == ["查看详情"]
+    buttons[0].click()
+    assert not widget._geo_dataset_detail_panel.isHidden()
+    assert "GSE33630" in widget._geo_dataset_detail_panel._title.text()
+    assert widget._geo_dataset_detail_panel._save_button.text() == "保存到下载列表"
+    assert widget._geo_dataset_detail_panel._translation_text.toPlainText() == "尚未生成中文翻译。"
 
 
 def test_register_geo_requires_open_project(qt_app) -> None:
@@ -746,8 +788,8 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert widget._continue_button.isEnabled()
     assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
     widget._show_candidate_detail(candidate)
-    assert widget._detail_download_button.text() == "下载并登记"
-    assert widget._detail_download_button.isEnabled()
+    assert "元数据已下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
+    assert "表达矩阵" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
     manifest_path = Path(str(result.details["asset_manifest_path"]))
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -787,7 +829,7 @@ def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes
     assert "表达矩阵" in widget._geo_registered_table.item(0, 2).text()
     assert widget._geo_registered_table.item(0, 4).text() == "进入数据识别"
     widget._show_candidate_detail(candidate)
-    assert "补充文件已下载" in widget._candidate_detail_text.toPlainText()
+    assert "补充文件" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
     report = workflow_pages.load_recognition_report(project_summary.project_root)
     assert report is not None
     recognized_types = {file["recognized_type"] for file in report.get("files", [])}
@@ -822,9 +864,11 @@ def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
     payload = widget.generate_geo_chinese_brief("GSE33630")
 
     assert payload is not None
-    assert widget.status_message() == "已生成中文一句话简介。"
-    assert not widget._mapping_log.isHidden()
-    assert "该数据集比较胶质瘤和对照样本。" in widget._mapping_log.toPlainText()
+    assert widget.status_message() == "已生成中文翻译与一句话简介。"
+    assert widget._mapping_log.isHidden()
+    assert not widget._geo_dataset_detail_panel.isHidden()
+    assert "该数据集比较胶质瘤和对照样本。" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
+    assert "医学实体一致性状态" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
 
 
 def test_register_geo_result_deduplicates_existing_source(qt_app, project_summary) -> None:

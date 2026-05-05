@@ -107,6 +107,198 @@ class GseDatasetPreview:
     status: str = "尚未登记"
 
 
+class GeoDatasetDetailPanel(QFrame):
+    save_requested = Signal(object)
+    ignore_requested = Signal(object)
+    remove_requested = Signal(object)
+    translate_requested = Signal(object)
+    brief_requested = Signal(object)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._candidate: UnifiedDatasetCandidate | None = None
+        self.setObjectName("geoDatasetDetailView")
+        self.setVisible(False)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
+        layout.setSpacing(SPACING["sm"])
+
+        self._title = QLabel("GEO 数据集详情")
+        self._title.setObjectName("bioProjectCardTitle")
+        self._title.setWordWrap(True)
+        layout.addWidget(self._title)
+        self._saved_status = _status_label("尚未保存到下载列表。")
+        layout.addWidget(self._saved_status)
+
+        layout.addWidget(_muted("基础信息"))
+        self._basic_table = _table(["字段", "内容"])
+        self._basic_table.setObjectName("geoDatasetBasicInfoTable")
+        self._basic_table.setMaximumHeight(230)
+        layout.addWidget(self._basic_table)
+
+        layout.addWidget(_muted("英文原始信息"))
+        self._english_text = _text_preview(150)
+        self._english_text.setObjectName("geoDatasetEnglishMetadata")
+        layout.addWidget(self._english_text)
+
+        layout.addWidget(_muted("中文翻译与精炼"))
+        translate_actions = QHBoxLayout()
+        self._translate_button = _button("生成中文翻译", "secondaryButton", lambda: self._emit_translate())
+        self._brief_button = _button("生成一句话简介", "secondaryButton", lambda: self._emit_brief())
+        translate_actions.addWidget(self._translate_button)
+        translate_actions.addWidget(self._brief_button)
+        translate_actions.addStretch(1)
+        layout.addLayout(translate_actions)
+        self._translation_text = _text_preview(150)
+        self._translation_text.setObjectName("geoDatasetChineseSummary")
+        self._translation_text.setPlainText("尚未生成中文翻译。")
+        layout.addWidget(self._translation_text)
+
+        layout.addWidget(_muted("数据资产状态"))
+        self._asset_text = _text_preview(120)
+        self._asset_text.setObjectName("geoDatasetAssetStatus")
+        layout.addWidget(self._asset_text)
+
+        decision_actions = QHBoxLayout()
+        self._save_button = _button("保存到下载列表", "primaryButton", lambda: self._emit_save())
+        self._remove_button = _button("从下载列表移除", "secondaryButton", lambda: self._emit_remove())
+        self._ignore_button = _button("忽略该数据集", "secondaryButton", lambda: self._emit_ignore())
+        self._remove_button.setVisible(False)
+        decision_actions.addWidget(self._save_button)
+        decision_actions.addWidget(self._remove_button)
+        decision_actions.addWidget(self._ignore_button)
+        decision_actions.addStretch(1)
+        layout.addLayout(decision_actions)
+
+    def current_candidate(self) -> UnifiedDatasetCandidate | None:
+        return self._candidate
+
+    def show_candidate(
+        self,
+        candidate: UnifiedDatasetCandidate,
+        *,
+        project_root: Path | None,
+        summary_payload: dict[str, object] | None = None,
+        saved: bool = False,
+    ) -> None:
+        self._candidate = candidate
+        self.setVisible(True)
+        self._title.setText(f"{candidate.accession_or_project} · {candidate.display_title or 'GEO 数据集'}")
+        _fill_table(self._basic_table, _geo_detail_basic_rows(candidate))
+        self._english_text.setPlainText(_geo_detail_english_text(candidate))
+        self._asset_text.setPlainText(_geo_asset_detail_text(project_root, candidate.accession_or_project))
+        self.set_saved(saved)
+        if summary_payload:
+            self.render_summary(candidate, summary_payload)
+        else:
+            self._translation_text.setPlainText("尚未生成中文翻译。")
+
+    def set_saved(self, saved: bool) -> None:
+        self._saved_status.setText("已在下载列表中。" if saved else "尚未保存到下载列表。")
+        self._save_button.setText("已在下载列表中" if saved else "保存到下载列表")
+        self._save_button.setEnabled(not saved)
+        self._remove_button.setVisible(saved)
+
+    def render_summary(self, candidate: UnifiedDatasetCandidate, payload: dict[str, object]) -> None:
+        self._translation_text.setPlainText(_geo_text_summary_user_display(candidate, payload))
+
+    def set_busy_text(self, text: str) -> None:
+        self._translation_text.setPlainText(text)
+
+    def _emit_save(self) -> None:
+        if self._candidate is not None:
+            self.save_requested.emit(self._candidate)
+
+    def _emit_ignore(self) -> None:
+        if self._candidate is not None:
+            self.ignore_requested.emit(self._candidate)
+
+    def _emit_remove(self) -> None:
+        if self._candidate is not None:
+            self.remove_requested.emit(self._candidate)
+
+    def _emit_translate(self) -> None:
+        if self._candidate is not None:
+            self.translate_requested.emit(self._candidate)
+
+    def _emit_brief(self) -> None:
+        if self._candidate is not None:
+            self.brief_requested.emit(self._candidate)
+
+
+class GeoDownloadListPanel(QFrame):
+    view_requested = Signal(str)
+    download_metadata_requested = Signal(str)
+    download_assets_requested = Signal(str)
+    continue_requested = Signal()
+    remove_requested = Signal(str)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("geoDownloadListPanel")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
+        layout.setSpacing(SPACING["sm"])
+        title = QLabel("GEO 下载列表")
+        title.setObjectName("bioProjectCardTitle")
+        layout.addWidget(title)
+        self._empty = _muted("尚未保存 GEO 数据集。")
+        layout.addWidget(self._empty)
+        self._table = _table(["GSE 编号", "标题", "来源", "当前状态", "已发现资产", "缺失资产", "下一步", "操作"])
+        self._table.setObjectName("geoDownloadListTable")
+        self._table.setMinimumHeight(180)
+        layout.addWidget(self._table)
+
+    def refresh(self, project_root: Path | None) -> None:
+        entries = _geo_download_list_entries(project_root)
+        self._empty.setVisible(not entries)
+        self._table.setVisible(bool(entries))
+        _fill_table(
+            self._table,
+            [
+                [
+                    entry["accession"],
+                    entry["title"],
+                    entry["source"],
+                    entry["status"],
+                    entry["assets"],
+                    entry["missing"],
+                    entry["next_step"],
+                    "",
+                ]
+                for entry in entries
+            ],
+        )
+        for row_index, entry in enumerate(entries):
+            self._table.setCellWidget(row_index, 7, self._action_widget(entry))
+        _set_table_widths(self._table, [92, 240, 92, 150, 120, 110, 120, 360])
+
+    def _action_widget(self, entry: dict[str, str]) -> QWidget:
+        accession = entry["accession"]
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        view_button = QPushButton("查看详情")
+        metadata_button = QPushButton("下载元数据")
+        assets_button = QPushButton("下载推荐文件")
+        continue_button = QPushButton("进入识别")
+        remove_button = QPushButton("移除")
+        view_button.clicked.connect(lambda checked=False, value=accession: self.view_requested.emit(value))
+        metadata_button.clicked.connect(lambda checked=False, value=accession: self.download_metadata_requested.emit(value))
+        assets_button.clicked.connect(lambda checked=False, value=accession: self.download_assets_requested.emit(value))
+        continue_button.clicked.connect(lambda checked=False: self.continue_requested.emit())
+        remove_button.clicked.connect(lambda checked=False, value=accession: self.remove_requested.emit(value))
+        assets_button.setEnabled(entry.get("pending_assets") == "yes")
+        continue_button.setEnabled(entry.get("ready") == "yes")
+        layout.addWidget(view_button)
+        layout.addWidget(metadata_button)
+        layout.addWidget(assets_button)
+        layout.addWidget(continue_button)
+        layout.addWidget(remove_button)
+        layout.addStretch(1)
+        return widget
+
+
 class BioinformaticsDataSourceWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
@@ -129,6 +321,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._source_detail_edits: dict[str, QPlainTextEdit] = {}
         self._source_detail_buttons: dict[str, QPushButton] = {}
         self._gse_preview: GseDatasetPreview | None = None
+        self._geo_candidates: dict[str, UnifiedDatasetCandidate] = {}
+        self._geo_brief_cache: dict[str, dict[str, object]] = {}
+        self._download_service = DatasetDownloadService()
+        self._text_summary_service = GeoTextSummaryService(timeout=20)
         self.setObjectName("bioinformaticsDataSourcePage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -147,6 +343,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         else:
             self._set_status("先登记数据来源，下一步进入数据识别。")
         self._refresh_registered_sources()
+        self._refresh_geo_download_list()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -174,8 +371,11 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_input.setText(gse_id)
         metadata_text = _fetch_geo_accession_metadata(gse_id)
         self._gse_preview = _gse_preview_from_metadata(gse_id, metadata_text)
+        candidate = _geo_candidate_from_gse_preview(self._gse_preview)
+        self._geo_candidates[candidate.accession_or_project] = candidate
         self._render_gse_preview(self._gse_preview)
-        self._set_status("GSE 数据集摘要已生成，请确认后登记为数据源。")
+        self._show_gse_geo_detail(candidate)
+        self._set_status("GSE 数据集摘要已生成，请查看详情后保存到下载列表。")
         return self._gse_preview
 
     def register_gse_dataset(self) -> AcquisitionSummary | None:
@@ -185,7 +385,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         preview = self._gse_preview or self.search_gse_dataset()
         if preview is None:
             return None
-        summary = generate_gse_acquisition_plan(self._project_root, preview.gse_id)
+        candidate = self._geo_candidates.get(preview.gse_id) or _geo_candidate_from_gse_preview(preview)
+        summary = self._save_gse_geo_candidate(candidate)
+        if summary is None:
+            return None
         self._render_acquisition_summary(
             summary,
             summary_key="geo_gse",
@@ -203,6 +406,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         )
         self._render_gse_preview(self._gse_preview)
         self._refresh_registered_sources()
+        self._refresh_geo_download_list()
         self._set_status(f"{preview.gse_id} 已登记为数据源。")
         return summary
 
@@ -369,6 +573,20 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_search_detail_button.setVisible(False)
         layout.addWidget(self._gse_search_detail_button, alignment=Qt.AlignLeft)
         layout.addWidget(self._gse_search_details)
+        self._gse_geo_detail_panel = GeoDatasetDetailPanel()
+        self._gse_geo_detail_panel.save_requested.connect(self._save_gse_geo_candidate)
+        self._gse_geo_detail_panel.ignore_requested.connect(self._ignore_gse_geo_candidate)
+        self._gse_geo_detail_panel.remove_requested.connect(self._remove_gse_geo_candidate)
+        self._gse_geo_detail_panel.translate_requested.connect(self._generate_gse_geo_summary)
+        self._gse_geo_detail_panel.brief_requested.connect(self._generate_gse_geo_summary)
+        layout.addWidget(self._gse_geo_detail_panel)
+        self._gse_geo_download_list_panel = GeoDownloadListPanel()
+        self._gse_geo_download_list_panel.view_requested.connect(self._show_gse_geo_detail_by_accession)
+        self._gse_geo_download_list_panel.download_metadata_requested.connect(self._download_gse_geo_metadata)
+        self._gse_geo_download_list_panel.download_assets_requested.connect(self._download_gse_geo_assets)
+        self._gse_geo_download_list_panel.continue_requested.connect(self.continue_to_recognition)
+        self._gse_geo_download_list_panel.remove_requested.connect(self._remove_gse_geo_accession)
+        layout.addWidget(self._gse_geo_download_list_panel)
         layout.addWidget(self._source_summary_frame("geo_gse", "尚未检索 GSE 数据集。", detail_button_text="查看登记详情"))
         return card
 
@@ -541,6 +759,127 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._register_gse_button.setVisible(preview.status != "已登记")
         self._register_gse_button.setEnabled(preview.status != "已登记")
 
+    def _show_gse_geo_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._geo_candidates[candidate.accession_or_project] = candidate
+        self._gse_geo_detail_panel.show_candidate(
+            candidate,
+            project_root=self._project_root,
+            summary_payload=self._geo_brief_cache.get(candidate.accession_or_project),
+            saved=_is_geo_saved_to_download_list(self._project_root, candidate.accession_or_project),
+        )
+
+    def _show_gse_geo_detail_by_accession(self, accession: str) -> None:
+        candidate = self._geo_candidates.get(accession) or _geo_candidate_from_download_entry(self._project_root, accession)
+        if candidate is None:
+            self._set_status(f"未找到 GEO 数据集详情：{accession}", error=True)
+            return
+        self._show_gse_geo_detail(candidate)
+        self._set_status(f"正在查看：{accession}")
+
+    def _save_gse_geo_candidate(self, candidate: UnifiedDatasetCandidate) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        if _is_geo_saved_to_download_list(self._project_root, candidate.accession_or_project):
+            self._set_status(f"已在下载列表中：{candidate.accession_or_project}")
+            self._show_gse_geo_detail(candidate)
+            self._refresh_geo_download_list()
+            return None
+        metadata = _candidate_registration_metadata(candidate, None, "GSE 编号检索")
+        metadata.update({"ui_source": "gse_accession_search", "query_source": "gse_accession_search"})
+        summary = register_acquisition(
+            self._project_root,
+            source_type="geo_accession",
+            source_label=candidate.accession_or_project,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata=metadata,
+        )
+        self._latest_summary = summary
+        self._refresh_geo_download_list()
+        self._show_gse_geo_detail(candidate)
+        self._set_status(f"{candidate.accession_or_project} 已保存到 GEO 下载列表。")
+        return summary
+
+    def _ignore_gse_geo_candidate(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._gse_geo_detail_panel.setVisible(False)
+        self._set_status(f"已忽略：{candidate.accession_or_project}")
+
+    def _remove_gse_geo_candidate(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._remove_gse_geo_accession(candidate.accession_or_project)
+
+    def _remove_gse_geo_accession(self, accession: str) -> None:
+        if _remove_geo_download_entry(self._project_root, accession):
+            self._refresh_registered_sources()
+            self._refresh_geo_download_list()
+            candidate = self._geo_candidates.get(accession)
+            if candidate is not None:
+                self._show_gse_geo_detail(candidate)
+            self._set_status(f"已从 GEO 下载列表移除：{accession}")
+        else:
+            self._set_status(f"下载列表中未找到：{accession}", error=True)
+
+    def _generate_gse_geo_summary(self, candidate: UnifiedDatasetCandidate) -> dict[str, object] | None:
+        cached = self._geo_brief_cache.get(candidate.accession_or_project)
+        if cached is not None:
+            self._gse_geo_detail_panel.render_summary(candidate, cached)
+            self._set_status("已显示中文简介。")
+            return cached
+        self._gse_geo_detail_panel.set_busy_text("正在生成中文翻译与一句话简介，请稍候。")
+        QApplication.processEvents()
+        metadata = candidate.source_specific_metadata
+        summary = self._text_summary_service.summarize(
+            GeoStudyTextInput(
+                accession=candidate.accession_or_project,
+                title_en=str(metadata.get("title_en") or candidate.display_title),
+                summary_en=str(metadata.get("summary_en") or ""),
+                overall_design_en=str(metadata.get("overall_design_en") or ""),
+            )
+        )
+        payload = summary.to_dict()
+        self._geo_brief_cache[candidate.accession_or_project] = payload
+        self._gse_geo_detail_panel.render_summary(candidate, payload)
+        self._set_status("已生成中文翻译与一句话简介。" if summary.status == "completed" else "中文简介需人工确认。")
+        return payload
+
+    def _download_gse_geo_metadata(self, accession: str) -> object | None:
+        candidate = self._geo_candidates.get(accession) or _geo_candidate_from_download_entry(self._project_root, accession)
+        if candidate is None:
+            self._set_status(f"未找到 GEO 数据集：{accession}", error=True)
+            return None
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        self._set_status(f"正在下载 GEO 元数据：{accession}，请稍候。")
+        QApplication.processEvents()
+        result = self._download_service.create_candidate_download_task(
+            project_root=self._project_root,
+            candidate=candidate,
+            search_result=None,
+            original_chinese_topic="GSE 编号检索",
+            execute_download=True,
+        )
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._show_gse_geo_detail(candidate)
+        self._set_status(result.message if result.success else (result.message or "GEO 下载未完成，请稍后重试。"), error=not result.success)
+        return result
+
+    def _download_gse_geo_assets(self, accession: str) -> object | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        try:
+            result = self._download_service.download_geo_manifest_assets(project_root=self._project_root, accession_or_project=accession)
+        except Exception as exc:
+            self._set_status(f"补充文件下载失败：{exc}", error=True)
+            return None
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._show_gse_geo_detail_by_accession(accession)
+        self._set_status(result.message if result.success else (result.message or "未下载到补充文件，请检查 manifest。"), error=not result.success)
+        return result
+
     def _refresh_registered_sources(self) -> None:
         rows = _registered_source_rows(self._project_root)
         self._registered_empty_label.setVisible(not rows)
@@ -553,6 +892,11 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._registered_count_label.setText(f"可识别数据源：{ready_count} 个 / 已登记 {count} 个")
         self._next_button.setEnabled(ready_count > 0 and self._project_root is not None)
         self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
+
+    def _refresh_geo_download_list(self) -> None:
+        panel = getattr(self, "_gse_geo_download_list_panel", None)
+        if panel is not None:
+            panel.refresh(self._project_root)
 
     def _registered_source_count(self) -> int:
         return _ready_registered_source_count(self._project_root)
@@ -759,10 +1103,11 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
-        candidate = self._candidates.get(("geo", accession_or_project))
+        candidate = self._candidates.get(("geo", accession_or_project)) or _geo_candidate_from_download_entry(self._project_root, accession_or_project)
         if candidate is None:
             self._set_status("GEO/GSE 候选结果不存在。", error=True)
             return None
+        self._candidates[("geo", candidate.accession_or_project)] = candidate
         if self._is_candidate_ready_for_recognition("geo", accession_or_project):
             if _candidate_has_pending_geo_assets(self._project_root, accession_or_project):
                 return self.download_geo_supplementary_assets(accession_or_project)
@@ -836,12 +1181,15 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if candidate is None:
             self._set_status("候选结果不存在。", error=True)
             return None
+        if self._geo_dataset_detail_panel.current_candidate() is None or self._geo_dataset_detail_panel.current_candidate().accession_or_project != accession_or_project:
+            self._show_geo_candidate_detail(candidate)
         cached = self._geo_brief_cache.get(accession_or_project)
         if cached is not None:
-            self._mapping_log.setPlainText(_geo_text_summary_display(candidate, cached))
-            self._mapping_log.setVisible(True)
+            self._geo_dataset_detail_panel.render_summary(candidate, cached)
             self._set_status("已显示中文简介。")
             return cached
+        self._geo_dataset_detail_panel.set_busy_text("正在生成中文翻译与一句话简介，请稍候。")
+        QApplication.processEvents()
         metadata = candidate.source_specific_metadata
         summary = self._text_summary_service.summarize(
             GeoStudyTextInput(
@@ -853,12 +1201,11 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         )
         payload = summary.to_dict()
         self._geo_brief_cache[accession_or_project] = payload
-        self._mapping_log.setPlainText(_geo_text_summary_display(candidate, payload))
-        self._mapping_log.setVisible(True)
+        self._geo_dataset_detail_panel.render_summary(candidate, payload)
         if summary.status == "completed":
-            self._set_status("已生成中文一句话简介。")
+            self._set_status("已生成中文翻译与一句话简介。")
         else:
-            self._set_status("本地中文简介暂未生成，已显示英文摘要。")
+            self._set_status("中文简介需人工确认。")
         return payload
 
     def continue_to_recognition(self) -> None:
@@ -1058,6 +1405,22 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         detail_actions.addStretch(1)
         detail_layout.addLayout(detail_actions)
         layout.addWidget(detail_frame)
+        if source_key == "geo":
+            detail_frame.setVisible(False)
+            self._geo_dataset_detail_panel = GeoDatasetDetailPanel()
+            self._geo_dataset_detail_panel.save_requested.connect(self._save_geo_candidate_from_detail)
+            self._geo_dataset_detail_panel.ignore_requested.connect(self._ignore_geo_candidate_from_detail)
+            self._geo_dataset_detail_panel.remove_requested.connect(self._remove_geo_candidate_from_detail)
+            self._geo_dataset_detail_panel.translate_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
+            self._geo_dataset_detail_panel.brief_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
+            layout.addWidget(self._geo_dataset_detail_panel)
+            self._geo_download_list_panel = GeoDownloadListPanel()
+            self._geo_download_list_panel.view_requested.connect(self._show_geo_detail_by_accession)
+            self._geo_download_list_panel.download_metadata_requested.connect(self.download_geo_candidate)
+            self._geo_download_list_panel.download_assets_requested.connect(self.download_geo_supplementary_assets)
+            self._geo_download_list_panel.continue_requested.connect(self.continue_to_recognition)
+            self._geo_download_list_panel.remove_requested.connect(self._remove_geo_accession_from_download_list)
+            layout.addWidget(self._geo_download_list_panel)
 
         layout.addWidget(_muted("已选本库数据源"))
         registered_empty = _muted(selected_empty)
@@ -1306,6 +1669,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         can_continue = ready_count > 0 and self._project_root is not None
         self._continue_button.setEnabled(can_continue)
         self._continue_button.setText("下一步：进入数据识别")
+        self._refresh_geo_download_list()
+
+    def _refresh_geo_download_list(self) -> None:
+        panel = getattr(self, "_geo_download_list_panel", None)
+        if panel is not None:
+            panel.refresh(self._project_root)
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
         action_col = _table_column_index(table, "操作")
@@ -1315,20 +1684,24 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             action_widget = QWidget()
             layout = QHBoxLayout(action_widget)
             layout.setContentsMargins(0, 0, 0, 0)
-            register_button = QPushButton("选择")
-            register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
-            register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
             detail_button = QPushButton("查看详情")
             detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
             detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-            layout.addWidget(register_button)
+            if candidate.source != "geo":
+                register_button = QPushButton("选择")
+                register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+                register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
+                layout.addWidget(register_button)
+                self._candidate_register_buttons[key] = register_button
             layout.addWidget(detail_button)
             layout.addStretch(1)
             table.setCellWidget(row_index, action_col, action_widget)
-            self._candidate_register_buttons[key] = register_button
         self._refresh_candidate_registration_buttons()
 
     def _show_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        if candidate.source == "geo":
+            self._show_geo_candidate_detail(candidate)
+            return
         self._selected_candidate = candidate
         source_key = _candidate_source_bucket(candidate.source)
         self._candidate_detail_title = self._source_detail_titles[source_key]
@@ -1345,6 +1718,48 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._detail_brief_button.setVisible(candidate.source == "geo")
         self._detail_brief_button.setEnabled(candidate.source == "geo")
         self._set_status(f"正在查看：{candidate.accession_or_project}")
+
+    def _show_geo_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._selected_candidate = candidate
+        self._geo_dataset_detail_panel.show_candidate(
+            candidate,
+            project_root=self._project_root,
+            summary_payload=self._geo_brief_cache.get(candidate.accession_or_project),
+            saved=_is_geo_saved_to_download_list(self._project_root, candidate.accession_or_project),
+        )
+        self._tabs.setCurrentWidget(self._geo_tab_page)
+        self._set_status(f"正在查看：{candidate.accession_or_project}")
+
+    def _show_geo_detail_by_accession(self, accession: str) -> None:
+        candidate = self._candidates.get(("geo", accession)) or _geo_candidate_from_download_entry(self._project_root, accession)
+        if candidate is None:
+            self._set_status(f"未找到 GEO 数据集详情：{accession}", error=True)
+            return
+        self._show_geo_candidate_detail(candidate)
+
+    def _save_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        summary = self.register_candidate(candidate.source, candidate.accession_or_project)
+        if summary is not None:
+            self._geo_dataset_detail_panel.set_saved(True)
+            self._refresh_geo_download_list()
+
+    def _ignore_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._geo_dataset_detail_panel.setVisible(False)
+        self._set_status(f"已忽略：{candidate.accession_or_project}")
+
+    def _remove_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
+        self._remove_geo_accession_from_download_list(candidate.accession_or_project)
+
+    def _remove_geo_accession_from_download_list(self, accession: str) -> None:
+        if _remove_geo_download_entry(self._project_root, accession):
+            self._refresh_registered_sources()
+            self._refresh_geo_download_list()
+            candidate = self._candidates.get(("geo", accession))
+            if candidate is not None:
+                self._show_geo_candidate_detail(candidate)
+            self._set_status(f"已从 GEO 下载列表移除：{accession}")
+        else:
+            self._set_status(f"下载列表中未找到：{accession}", error=True)
 
     def _select_current_candidate(self) -> None:
         if self._selected_candidate is None:
@@ -2780,6 +3195,9 @@ def _summary_to_dict(summary: AcquisitionSummary | None) -> dict[str, object] | 
     }
 
 
+GEO_SOURCE_TYPES = {"geo_gse", "geo_accession", "geo_search_candidate", "chinese_geo_gse"}
+
+
 def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceRow]:
     if project_root is None:
         return []
@@ -2816,6 +3234,229 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
             )
         )
     return sorted(rows, key=lambda row: row.created_at)
+
+
+def _geo_download_list_entries(project_root: Path | None) -> list[dict[str, str]]:
+    if project_root is None:
+        return []
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return []
+    entries: dict[str, dict[str, str]] = {}
+    ranks: dict[str, tuple[int, str]] = {}
+    for path in sorted(records_dir.glob("*.json")):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        if not isinstance(metadata, dict) or not _is_geo_record(payload, metadata):
+            continue
+        accession = _geo_accession_from_record(payload, metadata)
+        if not accession:
+            continue
+        status = _geo_download_status_text(payload, metadata)
+        entry = {
+            "accession": accession,
+            "title": _geo_record_title(payload, metadata),
+            "source": _geo_record_source_label(payload, metadata),
+            "status": status,
+            "assets": _geo_download_assets_text(status),
+            "missing": _geo_download_missing_text(status),
+            "next_step": _geo_download_next_step_text(project_root, accession, status),
+            "ready": "yes" if "可进入识别" in status else "no",
+            "pending_assets": "yes" if _candidate_has_pending_geo_assets(project_root, accession) else "no",
+        }
+        rank = _geo_download_entry_rank(status), str(payload.get("created_at") or "")
+        if accession not in entries or rank >= ranks[accession]:
+            entries[accession] = entry
+            ranks[accession] = rank
+    return [entries[key] for key in sorted(entries)]
+
+
+def _is_geo_record(payload: dict[str, object], metadata: dict[str, object]) -> bool:
+    source_type = str(payload.get("source_type") or "")
+    return source_type in GEO_SOURCE_TYPES or str(metadata.get("source") or "") == "geo"
+
+
+def _geo_accession_from_record(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    for key in ("accession_or_project", "accession", "gse_id", "source_id"):
+        value = str(metadata.get(key) or "").strip().upper()
+        if value.startswith("GSE"):
+            return value
+    label = str(payload.get("source_label") or "").strip().upper()
+    return label if label.startswith("GSE") else ""
+
+
+def _geo_record_title(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    for key in ("title", "display_title", "source_name"):
+        value = str(metadata.get(key) or "").strip()
+        if value:
+            return value
+    return str(payload.get("source_label") or "GEO 数据集")
+
+
+def _geo_record_source_label(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    ui_source = str(metadata.get("ui_source") or "")
+    if ui_source == "chinese_research_question_search":
+        return "中文检索"
+    if ui_source == "gse_accession_search" or payload.get("source_type") == "geo_gse":
+        return "GSE 编号检索"
+    return "GEO"
+
+
+def _geo_download_status_text(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    status = _registered_status_text(payload)
+    if status in {"已登记", "待下载"} and str(payload.get("strategy") or "") == "plan_only":
+        return "元数据待下载"
+    return status
+
+
+def _geo_download_entry_rank(status: str) -> int:
+    if "补充文件已下载" in status or "表达矩阵已下载" in status:
+        return 4
+    if "可进入识别" in status:
+        return 3
+    if "元数据已下载" in status:
+        return 2
+    if "元数据待下载" in status:
+        return 1
+    return 0
+
+
+def _geo_download_assets_text(status: str) -> str:
+    assets: list[str] = []
+    if "元数据已下载" in status:
+        assets.append("metadata")
+    if "表达矩阵已下载" in status:
+        assets.append("表达矩阵")
+    if "补充文件已下载" in status:
+        assets.append("补充文件")
+    return "、".join(assets) if assets else "待下载"
+
+
+def _geo_download_missing_text(status: str) -> str:
+    if "可进入识别" in status and "表达矩阵待确认" not in status:
+        return "无明确缺失"
+    if "表达矩阵待确认" in status or "已发现补充文件" in status:
+        return "表达矩阵/补充文件"
+    if "元数据待下载" in status or "待下载" in status:
+        return "元数据、表达矩阵"
+    return "待确认"
+
+
+def _geo_download_next_step_text(project_root: Path | None, accession: str, status: str) -> str:
+    if _candidate_has_pending_geo_assets(project_root, accession):
+        return "下载推荐文件"
+    if "可进入识别" in status:
+        return "进入识别"
+    if "元数据已下载" in status:
+        return "发现文件"
+    return "下载元数据"
+
+
+def _is_geo_saved_to_download_list(project_root: Path | None, accession: str) -> bool:
+    normalized = accession.strip().upper()
+    return any(entry["accession"] == normalized for entry in _geo_download_list_entries(project_root))
+
+
+def _geo_candidate_from_download_entry(project_root: Path | None, accession: str) -> UnifiedDatasetCandidate | None:
+    normalized = accession.strip().upper()
+    if project_root is None:
+        return None
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return None
+    for path in sorted(records_dir.glob("*.json"), reverse=True):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        if not isinstance(metadata, dict) or not _is_geo_record(payload, metadata):
+            continue
+        if _geo_accession_from_record(payload, metadata) != normalized:
+            continue
+        title = _geo_record_title(payload, metadata)
+        return UnifiedDatasetCandidate(
+            source="geo",
+            accession_or_project=normalized,
+            display_title=title,
+            organism=str(metadata.get("organism") or "Homo sapiens"),
+            disease="",
+            tissue="",
+            data_modality=str(metadata.get("data_modality") or "GEO dataset"),
+            sample_count=metadata.get("sample_count") or "待确认",
+            has_expression_matrix=False,
+            has_sample_metadata=False,
+            has_clinical_metadata=False,
+            has_platform_annotation=bool(metadata.get("platform_accessions")),
+            recommended_analyses=("data_recognition",),
+            download_plan_available=True,
+            score=55,
+            warnings=tuple(str(item) for item in metadata.get("warnings", []) or []) if isinstance(metadata.get("warnings"), list) else (),
+            source_specific_metadata={
+                "title_en": title,
+                "platform_accessions": metadata.get("platform_accessions", []),
+                "geo_url": metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={normalized}",
+                "query_used": metadata.get("query_used") or normalized,
+                "match_reason": metadata.get("match_reason") or "GEO 下载列表记录",
+            },
+        )
+    return None
+
+
+def _remove_geo_download_entry(project_root: Path | None, accession: str) -> bool:
+    if project_root is None:
+        return False
+    normalized = accession.strip().upper()
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return False
+    removed = False
+    latest_ids: set[str] = set()
+    for latest in (records_dir / LATEST_RECORD, project_root / "acquisition" / "plans" / LATEST_PLAN, project_root / "acquisition" / "handoffs" / LATEST_HANDOFF):
+        if latest.exists():
+            try:
+                payload = json.loads(latest.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payload = {}
+            latest_ids.add(str(payload.get("acquisition_id") or ""))
+    for path in list(records_dir.glob("*.json")):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        if not isinstance(metadata, dict) or not _is_geo_record(payload, metadata):
+            continue
+        if _geo_accession_from_record(payload, metadata) != normalized:
+            continue
+        acquisition_id = str(payload.get("acquisition_id") or path.stem)
+        for folder in ("records", "plans", "handoffs"):
+            target = project_root / "acquisition" / folder / f"{acquisition_id}.json"
+            try:
+                target.unlink(missing_ok=True)
+            except OSError:
+                pass
+        if acquisition_id in latest_ids:
+            for target in (
+                project_root / "acquisition" / "records" / LATEST_RECORD,
+                project_root / "acquisition" / "plans" / LATEST_PLAN,
+                project_root / "acquisition" / "handoffs" / LATEST_HANDOFF,
+            ):
+                try:
+                    target.unlink(missing_ok=True)
+                except OSError:
+                    pass
+        removed = True
+    return removed
 
 
 def _ready_registered_source_count(project_root: Path | None) -> int:
@@ -2951,7 +3592,7 @@ def _registered_source_display_name(payload: dict[str, object], metadata: dict[s
         values = payload.get("registered_files") or payload.get("referenced_paths") or payload.get("copied_files")
         if isinstance(values, list) and values:
             return Path(str(values[0])).name
-    if source_type in {"geo_accession", "geo_search_candidate", "chinese_geo_gse"}:
+    if source_type in GEO_SOURCE_TYPES:
         return str(metadata.get("gse_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 GSE")
     if source_type in {"tcga_project", "chinese_tcga_gdc_project"}:
         return str(metadata.get("project_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 TCGA 项目")
@@ -2988,7 +3629,7 @@ def _registered_status_text(payload: dict[str, object]) -> str:
     if isinstance(metadata, dict):
         download_status = str(metadata.get("download_status") or "")
         ready = str(metadata.get("ready_for_recognition") or "")
-        if str(metadata.get("source") or "") == "geo" or payload.get("source_type") in {"geo_accession", "geo_search_candidate", "chinese_geo_gse"}:
+        if str(metadata.get("source") or "") == "geo" or payload.get("source_type") in GEO_SOURCE_TYPES:
             asset_status = _geo_asset_status_text(metadata)
             if asset_status:
                 return asset_status
@@ -3269,6 +3910,36 @@ def _gse_preview_from_metadata(gse_id: str, metadata_text: str) -> GseDatasetPre
     )
 
 
+def _geo_candidate_from_gse_preview(preview: GseDatasetPreview) -> UnifiedDatasetCandidate:
+    platform = preview.platform if preview.platform != "未记录" else ""
+    platforms = [item.strip() for item in platform.replace(";", ",").split(",") if item.strip()]
+    return UnifiedDatasetCandidate(
+        source="geo",
+        accession_or_project=preview.gse_id,
+        display_title=preview.title,
+        organism="Homo sapiens",
+        disease="",
+        tissue="",
+        data_modality="GEO dataset",
+        sample_count=preview.sample_count,
+        has_expression_matrix=False,
+        has_sample_metadata=False,
+        has_clinical_metadata=False,
+        has_platform_annotation=bool(platforms),
+        recommended_analyses=("data_recognition",),
+        download_plan_available=True,
+        score=55,
+        warnings=(),
+        source_specific_metadata={
+            "title_en": preview.title,
+            "platform_accessions": platforms,
+            "geo_url": f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={preview.gse_id}",
+            "match_reason": "GSE 编号精确匹配",
+            "query_used": preview.gse_id,
+        },
+    )
+
+
 def _research_topic_search_text(text: str) -> str:
     english_terms, geo_query = _rule_based_research_keywords(text)
     base_lines = [
@@ -3486,6 +4157,111 @@ def _candidate_match_reason(candidate: UnifiedDatasetCandidate) -> str:
     if candidate.source == "gtex":
         return "组织词映射到 GTEx 正常组织参考"
     return "与当前检索词匹配"
+
+
+def _geo_detail_basic_rows(candidate: UnifiedDatasetCandidate) -> list[list[object]]:
+    metadata = candidate.source_specific_metadata
+    platforms = metadata.get("platform_accessions") or metadata.get("platform_titles") or "未记录"
+    if isinstance(platforms, list):
+        platforms = ", ".join(str(item) for item in platforms) or "未记录"
+    return [
+        ["GSE 编号", candidate.accession_or_project],
+        ["英文标题", candidate.display_title or "未记录"],
+        ["数据来源", "GEO"],
+        ["物种", candidate.organism or "未记录"],
+        ["样本数", candidate.sample_count or "待确认"],
+        ["平台 GPL", platforms],
+        ["数据类型", candidate.data_modality or "待确认"],
+        ["匹配原因", _candidate_match_reason(candidate)],
+        ["推荐等级", _candidate_recommendation(candidate)],
+        ["GEO 链接", metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={candidate.accession_or_project}"],
+    ]
+
+
+def _geo_detail_english_text(candidate: UnifiedDatasetCandidate) -> str:
+    metadata = candidate.source_specific_metadata
+    lines = [
+        f"英文标题：{metadata.get('title_en') or candidate.display_title or '未记录'}",
+        f"英文摘要：{metadata.get('summary_en') or '未记录'}",
+        f"样本信息：{metadata.get('sample_summary') or metadata.get('overall_design_en') or '未记录'}",
+        f"样本数量：{candidate.sample_count or '待确认'}",
+        f"平台信息：{metadata.get('platform_titles') or metadata.get('platform_accessions') or '未记录'}",
+        f"实验类型：{candidate.data_modality or '待确认'}",
+        f"原始关键词：{metadata.get('query_used') or metadata.get('executed_query') or '未记录'}",
+        f"PMID/DOI/GEO link：{metadata.get('pmid') or metadata.get('doi') or metadata.get('geo_url') or '未记录'}",
+    ]
+    return "\n".join(lines)
+
+
+def _geo_asset_detail_text(project_root: Path | None, accession: str) -> str:
+    manifest = _candidate_geo_asset_manifest(project_root, accession)
+    if not manifest:
+        return "\n".join(
+            [
+                "family SOFT：未发现",
+                "Series Matrix：未发现",
+                "supplementary files：未发现",
+                "表达矩阵：未确认",
+                "样本注释：未确认",
+                "平台注释：未确认",
+                "当前可分析性：元数据待下载",
+            ]
+        )
+    assets = [asset for asset in manifest.get("assets", []) or [] if isinstance(asset, dict)]
+    summary = manifest.get("summary", {}) if isinstance(manifest.get("summary"), dict) else {}
+    family_status = _asset_type_status(assets, "family_soft")
+    matrix_status = _asset_type_status(assets, "series_matrix")
+    supplementary = [asset for asset in assets if asset.get("asset_type") == "supplementary_file"]
+    downloaded_supplementary = [asset for asset in supplementary if asset.get("status") == "downloaded"]
+    if downloaded_supplementary:
+        supplementary_text = f"已下载 {len(downloaded_supplementary)} 个"
+    elif supplementary:
+        supplementary_text = f"已发现 {len(supplementary)} 个"
+    else:
+        supplementary_text = "未发现"
+    expression_status = "已识别" if summary.get("expression_matrix_status") == "downloaded" else ("已发现" if summary.get("series_matrix_discovered") or summary.get("expression_candidate_count") else "未确认")
+    sample_status = "已识别" if summary.get("metadata_downloaded") else "未确认"
+    platform_status = "已识别" if summary.get("metadata_downloaded") else "未确认"
+    current = _geo_asset_status_text({"asset_manifest_summary": summary}) or "仅元数据"
+    return "\n".join(
+        [
+            f"family SOFT：{family_status}",
+            f"Series Matrix：{matrix_status}",
+            f"supplementary files：{supplementary_text}",
+            f"表达矩阵：{expression_status}",
+            f"样本注释：{sample_status}",
+            f"平台注释：{platform_status}",
+            f"当前可分析性：{current}",
+        ]
+    )
+
+
+def _asset_type_status(assets: list[dict[str, object]], asset_type: str) -> str:
+    matches = [asset for asset in assets if asset.get("asset_type") == asset_type]
+    if any(asset.get("status") == "downloaded" for asset in matches):
+        return "已下载"
+    if matches:
+        return "已发现"
+    return "未发现"
+
+
+def _geo_text_summary_user_display(candidate: UnifiedDatasetCandidate, summary: dict[str, object]) -> str:
+    status = str(summary.get("status") or "")
+    warnings = [str(item) for item in summary.get("quality_warnings", []) or []] if isinstance(summary.get("quality_warnings"), list) else list(summary.get("quality_warnings", ()) or ())
+    consistency = "通过" if status == "completed" and not warnings else "需人工确认"
+    risk = "未发现明显风险。" if consistency == "通过" else "翻译或医学实体提炼不完整，需人工确认后再用于筛选决策。"
+    reliable = "可作为初筛参考" if consistency == "通过" else "不可标记为可靠结论"
+    return "\n".join(
+        [
+            f"GSE 编号：{candidate.accession_or_project}",
+            f"中文标题：{summary.get('title_zh') or '未生成'}",
+            f"中文摘要：{summary.get('summary_zh') or '未生成'}",
+            f"一句话简介：{summary.get('brief_zh') or '未生成'}",
+            f"医学实体一致性状态：{consistency}",
+            f"可靠性：{reliable}",
+            f"风险提示：{summary.get('error_message') or '；'.join(warnings) or risk}",
+        ]
+    )
 
 
 def _recommendation_card_title(candidate: UnifiedDatasetCandidate) -> str:
