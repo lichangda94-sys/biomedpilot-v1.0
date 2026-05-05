@@ -494,8 +494,9 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
 
     assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
     assert not widget._continue_button.isEnabled()
-    assert widget._registered_count_label.text() == "可识别数据源：0 个 / 已登记 0 个"
+    assert widget._registered_count_label.text() == "已选择 0 个数据源，其中 0 个可进入识别。"
     assert widget._geo_query_box.toPlainText() == "暂无 GEO/GSE 检索草稿"
+    assert widget._geo_query_box.isHidden()
     assert widget._tcga_query_box.toPlainText() == "暂无 TCGA/GDC 项目草稿"
     assert widget._gtex_query_box.toPlainText() == "暂无 GTEx 组织草稿"
     assert not widget._geo_empty_label.isHidden()
@@ -506,11 +507,12 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "检索 GEO/GSE 候选数据集" in button_texts
     assert "检索 TCGA/GDC 项目" in button_texts
     assert "检索 GTEx 组织" in button_texts
+    assert "查看完整检索词" in button_texts
     assert "检索候选数据集" not in button_texts
     assert "GEO/GSE 候选数据集" == widget._tabs.tabText(0)
     assert "TCGA/GDC 项目候选" == widget._tabs.tabText(1)
     assert "GTEx 组织候选" == widget._tabs.tabText(2)
-    assert widget._continue_button.text() == "请先下载或导入数据文件"
+    assert widget._continue_button.text() == "下一步：进入数据识别"
 
     widget.set_query_text("甲状腺癌")
     result = widget.generate_terms()
@@ -518,6 +520,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert result is not None
     assert widget.status_message() == "已生成检索草稿。请确认后检索候选数据集。"
     assert "thyroid cancer" in widget._geo_query_box.toPlainText()
+    assert "thyroid cancer" in widget._geo_draft_summary.text()
     assert "TCGA-THCA" in widget._tcga_query_box.toPlainText()
     assert "Thyroid" in widget._gtex_query_box.toPlainText()
     assert not widget._continue_button.isEnabled()
@@ -526,35 +529,28 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert widget._tcga_empty_label.isHidden()
     assert widget._gtex_empty_label.isHidden()
     assert widget._tcga_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._tcga_table.columnWidth(0) >= 160
+    assert widget._tcga_table.columnWidth(0) >= 120
     assert [widget._tcga_table.horizontalHeaderItem(index).text() for index in range(widget._tcga_table.columnCount())] == [
         "操作",
-        "project_id",
-        "project_name",
-        "primary_site",
-        "disease_type",
-        "mapping_status",
+        "项目代码",
+        "癌种/项目名称",
+        "样本类型",
+        "数据类型",
         "状态",
     ]
     assert widget._tcga_table.item(0, 1).text() == "TCGA-THCA"
     assert widget._tcga_table.item(0, 2).text() == "Thyroid Carcinoma"
     assert widget._tcga_table.item(0, 3).text() == "Thyroid"
-    assert widget._tcga_table.item(0, 4).text() == "Thyroid carcinoma"
-    assert widget._tcga_table.item(0, 5).text() == "mapped_not_online_checked"
-    assert widget._tcga_table.item(0, 6).text() == "未登记"
+    assert widget._tcga_table.item(0, 5).text() == "未登记"
     assert widget._gtex_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._gtex_table.columnWidth(0) >= 160
+    assert widget._gtex_table.columnWidth(0) >= 120
     assert widget._gtex_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 2).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 3).text() == "normal_reference"
-    assert widget._gtex_table.item(0, 4).text() == "mapped_not_online_checked"
-    assert widget._gtex_table.item(0, 5).text() == "未登记"
+    assert widget._gtex_table.item(0, 3).text() == "normal tissue expression reference"
+    assert widget._gtex_table.item(0, 4).text() == "未登记"
     tcga_buttons = widget._tcga_table.cellWidget(0, 0).findChildren(QPushButton)
     gtex_buttons = widget._gtex_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert "登记为数据源" in [button.text() for button in tcga_buttons]
-    assert "登记为数据源" in [button.text() for button in gtex_buttons]
-    assert "生成下载任务" in [button.text() for button in tcga_buttons]
-    assert "生成下载任务" in [button.text() for button in gtex_buttons]
+    assert [button.text() for button in tcga_buttons] == ["选择", "查看详情"]
+    assert [button.text() for button in gtex_buttons] == ["选择", "查看详情"]
     assert widget._mapping_log.isHidden()
     visible_text = " ".join(
         [label.text() for label in widget.findChildren(QLabel)]
@@ -577,7 +573,7 @@ def test_glioma_tcga_gtex_candidates_displayed(qt_app) -> None:
     tcga_projects = {widget._tcga_table.item(row, 1).text() for row in range(widget._tcga_table.rowCount())}
     assert {"TCGA-GBM", "TCGA-LGG"} <= tcga_projects
     assert widget._gtex_table.item(0, 1).text() == "Brain"
-    assert widget._gtex_table.item(0, 3).text() == "normal_reference"
+    assert widget._gtex_table.item(0, 3).text() == "normal tissue expression reference"
 
 
 def test_no_generic_tcga_mapping_label(qt_app) -> None:
@@ -621,9 +617,13 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
 
     assert not widget._geo_table.isHidden()
     assert widget._geo_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._geo_table.columnWidth(0) >= 300
+    assert widget._geo_table.columnWidth(0) >= 120
     buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert [button.text() for button in buttons] == ["登记为数据源", "下载并登记", "中文简介", "查看详情"]
+    assert [button.text() for button in buttons] == ["选择", "查看详情"]
+    buttons[1].click()
+    assert "候选详情：GSE33630" == widget._candidate_detail_title.text()
+    assert "下载并登记" == widget._detail_download_button.text()
+    assert not widget._detail_brief_button.isHidden()
 
 
 def test_register_geo_requires_open_project(qt_app) -> None:
@@ -725,12 +725,12 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert Path(result.downloaded_files[0]).exists()
     assert "元数据已下载" in widget.status_message()
     assert "表达矩阵待确认" in widget.status_message()
-    assert widget._registered_count_label.text() == "可识别数据源：1 个 / 已登记 1 个"
+    assert widget._registered_count_label.text() == "已选择 1 个数据源，其中 1 个可进入识别。当前建议操作：进入数据识别。"
     assert widget._continue_button.isEnabled()
-    assert widget._geo_table.item(0, 8).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
-    download_button = widget._geo_table.cellWidget(0, 0).findChild(QPushButton, "candidateDownloadTaskButton_geo_GSE33630")
-    assert download_button.text() == "下载补充文件"
-    assert download_button.isEnabled()
+    assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
+    widget._show_candidate_detail(candidate)
+    assert widget._detail_download_button.text() == "下载并登记"
+    assert widget._detail_download_button.isEnabled()
     manifest_path = Path(str(result.details["asset_manifest_path"]))
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -764,10 +764,13 @@ def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes
     assert supplement_result.status == "geo_assets_downloaded"
     assert "补充/Matrix 资产" in widget.status_message()
     assert "数据处理任务" in widget.status_message()
-    assert widget._geo_table.item(0, 8).text() == "元数据已下载 / 表达矩阵已下载 / 补充文件已下载 / 可进入识别"
-    download_button = widget._geo_table.cellWidget(0, 0).findChild(QPushButton, "candidateDownloadTaskButton_geo_GSE33630")
-    assert download_button.text() == "补充文件已下载"
-    assert not download_button.isEnabled()
+    assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵已下载 / 补充文件已下载 / 可进入识别"
+    assert widget._registered_table.rowCount() == 1
+    assert widget._registered_table.item(0, 0).text() == "GSE33630"
+    assert "表达矩阵" in widget._registered_table.item(0, 3).text()
+    assert widget._registered_table.item(0, 5).text() == "进入数据识别"
+    widget._show_candidate_detail(candidate)
+    assert "补充文件已下载" in widget._candidate_detail_text.toPlainText()
     report = workflow_pages.load_recognition_report(project_summary.project_root)
     assert report is not None
     recognized_types = {file["recognized_type"] for file in report.get("files", [])}
@@ -868,14 +871,15 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert summary is not None
     assert summary.source_type == "tcga_project"
     assert widget._registered_table.rowCount() == 1
-    assert widget._registered_table.item(0, 0).text() == "TCGA/GDC 项目"
-    assert widget._registered_count_label.text() == "可识别数据源：0 个 / 已登记 1 个"
+    assert widget._registered_table.item(0, 0).text() == "TCGA-THCA"
+    assert widget._registered_table.item(0, 1).text() == "TCGA/GDC 项目"
+    assert widget._registered_count_label.text() == "已选择 1 个数据源，其中 0 个可进入识别。当前建议操作：先补全表达矩阵。"
     assert not widget._continue_button.isEnabled()
-    assert widget._continue_button.text() == "请先下载或导入数据文件"
+    assert widget._continue_button.text() == "下一步：进入数据识别"
     assert widget.status_message() == "已登记候选来源，待下载数据文件。"
-    assert widget._tcga_table.item(0, 6).text() == "待下载"
+    assert widget._tcga_table.item(0, 5).text() == "待下载"
     registered_button = widget._tcga_table.cellWidget(0, 0).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
-    assert registered_button.text() == "已登记"
+    assert registered_button.text() == "已选择"
     assert not registered_button.isEnabled()
     duplicate = widget.register_candidate("tcga_gdc", "TCGA-THCA")
     assert duplicate is None
@@ -911,9 +915,9 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
     assert summary is not None
     assert summary.source_type == "gtex_tissue"
     assert widget._registered_table.rowCount() == 1
-    assert widget._registered_table.item(0, 0).text() == "GTEx 正常组织参考"
-    assert widget._registered_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 5).text() == "待下载"
+    assert widget._registered_table.item(0, 0).text() == "Thyroid"
+    assert widget._registered_table.item(0, 1).text() == "GTEx 正常组织参考"
+    assert widget._gtex_table.item(0, 4).text() == "待下载"
     assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()
 
