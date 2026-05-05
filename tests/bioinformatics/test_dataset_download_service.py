@@ -51,6 +51,62 @@ class _FakeGeoDownloader:
         }
 
 
+class _FakeGeoAssetDiscoverer:
+    def discover(self, accession: str, target_dir: Path, download_result: dict[str, object]) -> dict[str, object]:
+        family_path = Path(str(download_result["family_soft_path"]))
+        return {
+            "schema_version": "biomedpilot.geo_asset_manifest.v1",
+            "accession": accession,
+            "assets": [
+                {
+                    "asset_type": "family_soft",
+                    "role": "metadata_container",
+                    "file_name": family_path.name,
+                    "status": "downloaded",
+                    "local_path": str(family_path),
+                    "remote_url": f"https://example.org/{family_path.name}",
+                    "input_eligible": True,
+                    "needs_download": False,
+                },
+                {
+                    "asset_type": "series_matrix",
+                    "role": "expression_matrix_candidate",
+                    "file_name": f"{accession}-GPL570_series_matrix.txt.gz",
+                    "status": "remote_discovered",
+                    "local_path": "",
+                    "remote_url": f"https://example.org/{accession}-GPL570_series_matrix.txt.gz",
+                    "input_eligible": False,
+                    "needs_download": True,
+                },
+                {
+                    "asset_type": "supplementary_file",
+                    "role": "supplementary_expression_candidate",
+                    "file_name": f"{accession}_counts.tsv.gz",
+                    "status": "remote_discovered",
+                    "local_path": "",
+                    "remote_url": f"https://example.org/{accession}_counts.tsv.gz",
+                    "input_eligible": False,
+                    "needs_download": True,
+                },
+            ],
+            "summary": {
+                "family_soft_count": 1,
+                "downloaded_family_soft_count": 1,
+                "series_matrix_count": 1,
+                "downloaded_series_matrix_count": 0,
+                "supplementary_file_count": 1,
+                "expression_candidate_count": 2,
+                "metadata_downloaded": True,
+                "series_matrix_discovered": True,
+                "supplementary_files_discovered": True,
+                "expression_matrix_status": "remote_discovered",
+                "recognition_ready": True,
+            },
+            "ui_status_parts": ["元数据已下载", "表达矩阵待确认", "已发现补充文件", "可进入识别"],
+            "warnings": [],
+        }
+
+
 def test_geo_candidate_download_task_writes_request_receipt_and_plan_record(tmp_path: Path) -> None:
     root = tmp_path / "project"
     service = DatasetDownloadService()
@@ -82,7 +138,7 @@ def test_geo_candidate_download_task_writes_request_receipt_and_plan_record(tmp_
 
 def test_geo_candidate_execute_download_registers_downloaded_file_as_reference(tmp_path: Path) -> None:
     root = tmp_path / "project"
-    service = DatasetDownloadService(geo_downloader=_FakeGeoDownloader())
+    service = DatasetDownloadService(geo_downloader=_FakeGeoDownloader(), geo_asset_discoverer=_FakeGeoAssetDiscoverer())
 
     result = service.create_candidate_download_task(
         project_root=root,
@@ -92,16 +148,26 @@ def test_geo_candidate_execute_download_registers_downloaded_file_as_reference(t
     )
 
     assert result.success
-    assert result.status == "downloaded"
+    assert result.status == "geo_metadata_downloaded"
+    assert "元数据已下载" in result.message
     assert result.download_executed is True
     assert len(result.downloaded_files) == 1
     assert Path(result.downloaded_files[0]).name == "GSE33630_family.soft.gz"
+    manifest_path = Path(str(result.details["asset_manifest_path"]))
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert {item["asset_type"] for item in manifest["assets"]} == {"family_soft", "series_matrix", "supplementary_file"}
+    assert manifest["summary"]["metadata_downloaded"] is True
+    assert manifest["summary"]["series_matrix_discovered"] is True
+    assert manifest["summary"]["supplementary_files_discovered"] is True
     assert result.acquisition_summary is not None
     assert result.acquisition_summary.strategy == "reference"
     assert result.downloaded_files[0] in result.acquisition_summary.referenced_paths
     record = json.loads(result.acquisition_summary.record_path.read_text(encoding="utf-8"))
-    assert record["metadata"]["registration_status"] == "registered_downloaded_source"
+    assert record["metadata"]["registration_status"] == "registered_metadata_source"
     assert record["metadata"]["ready_for_recognition"] == "ready"
+    assert record["metadata"]["asset_manifest_path"] == str(manifest_path)
+    assert record["metadata"]["asset_manifest_summary"]["expression_matrix_status"] == "remote_discovered"
 
 
 def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:

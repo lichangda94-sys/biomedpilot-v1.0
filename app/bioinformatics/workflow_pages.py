@@ -723,7 +723,10 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status("候选结果不存在。", error=True)
             return None
         if self._is_candidate_ready_for_recognition(source, accession_or_project):
-            self._set_status(f"已下载数据源：{accession_or_project}")
+            if source == "geo":
+                self._set_status(_candidate_record_status_text(self._project_root, source, accession_or_project) or f"元数据已下载：{accession_or_project}")
+            else:
+                self._set_status(f"已生成下载任务：{accession_or_project}")
             self._refresh_candidate_registration_buttons()
             return None
         result = self._download_service.create_candidate_download_task(
@@ -749,7 +752,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status("GEO/GSE 候选结果不存在。", error=True)
             return None
         if self._is_candidate_ready_for_recognition("geo", accession_or_project):
-            self._set_status(f"已下载数据源：{accession_or_project}")
+            self._set_status(_candidate_record_status_text(self._project_root, "geo", accession_or_project) or f"元数据已下载：{accession_or_project}")
             self._refresh_candidate_registration_buttons()
             return None
         self._set_status(f"正在下载 GEO 数据：{accession_or_project}，请稍候。")
@@ -771,7 +774,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if result.success and result.downloaded_files:
             report = run_project_recognition(self._project_root)
             file_count = len(report.get("files", []) or []) if isinstance(report, dict) else 0
-            self._set_status(f"已下载并完成数据识别：{accession_or_project}（识别 {file_count} 个文件）。")
+            self._set_status(f"{result.message}（已完成元数据识别：{file_count} 个文件）。")
         else:
             self._set_status(result.message or "GEO 下载未完成，请稍后重试。", error=True)
         return result
@@ -1100,7 +1103,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             ready = self._is_candidate_ready_for_recognition(source, accession)
             planned = self._is_candidate_registered(source, accession)
             if source == "geo":
-                button.setText("已下载" if ready else "下载并登记")
+                button.setText("元数据已下载" if ready else "下载并登记")
                 button.setEnabled(not ready)
             else:
                 button.setText("已生成任务" if planned else "生成下载任务")
@@ -1183,7 +1186,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
     def _candidate_registration_status(self, candidate: UnifiedDatasetCandidate) -> str:
         state = self._candidate_registration_state(candidate.source, candidate.accession_or_project)
         if state == "ready":
-            return "已下载"
+            return _candidate_record_status_text(self._project_root, candidate.source, candidate.accession_or_project) or "可进入识别"
         if state == "planned":
             return "待下载"
         return "未登记"
@@ -2540,6 +2543,30 @@ def _ready_chinese_source_count(project_root: Path | None) -> int:
     return len(ready_keys)
 
 
+def _candidate_record_status_text(project_root: Path | None, source: str, accession_or_project: str) -> str:
+    if project_root is None:
+        return ""
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return ""
+    latest_text = ""
+    for path in sorted(records_dir.glob("*.json")):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata")
+        if not isinstance(metadata, dict) or metadata.get("ui_source") != "chinese_research_question_search":
+            continue
+        key = (str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
+        if key != (source, accession_or_project):
+            continue
+        latest_text = _geo_asset_status_text(metadata) if source == "geo" else _registered_status_text(payload)
+    return latest_text
+
+
 def _registered_source_display_name(payload: dict[str, object], metadata: dict[str, object]) -> str:
     source_type = str(payload.get("source_type") or "")
     if source_type == "local_import":
@@ -2583,6 +2610,12 @@ def _registered_status_text(payload: dict[str, object]) -> str:
     if isinstance(metadata, dict):
         download_status = str(metadata.get("download_status") or "")
         ready = str(metadata.get("ready_for_recognition") or "")
+        if str(metadata.get("source") or "") == "geo" or payload.get("source_type") in {"geo_accession", "geo_search_candidate", "chinese_geo_gse"}:
+            asset_status = _geo_asset_status_text(metadata)
+            if asset_status:
+                return asset_status
+        if ready == "ready" and download_status == "geo_metadata_downloaded":
+            return "元数据已下载 / 表达矩阵待确认 / 可进入识别"
         if ready == "ready" or download_status == "downloaded":
             return "已下载，待识别"
         if download_status.startswith("registered_pending") or ready.startswith("pending") or metadata.get("registration_status") == "registered_as_planned_source":
@@ -2591,6 +2624,26 @@ def _registered_status_text(payload: dict[str, object]) -> str:
     if isinstance(warnings, list) and warnings:
         return "已登记，需确认"
     return "已登记"
+
+
+def _geo_asset_status_text(metadata: dict[str, object]) -> str:
+    summary = metadata.get("asset_manifest_summary")
+    if not isinstance(summary, dict):
+        return ""
+    parts: list[str] = []
+    if summary.get("metadata_downloaded"):
+        parts.append("元数据已下载")
+    if summary.get("series_matrix_discovered"):
+        parts.append("表达矩阵待确认")
+    elif summary.get("download_status") == "downloaded":
+        parts.append("表达矩阵待确认")
+    elif summary:
+        parts.append("表达矩阵待确认")
+    if summary.get("supplementary_files_discovered"):
+        parts.append("已发现补充文件")
+    if summary.get("recognition_ready") or metadata.get("ready_for_recognition") == "ready":
+        parts.append("可进入识别")
+    return " / ".join(dict.fromkeys(parts))
 
 
 def _record_ready_for_recognition(payload: dict[str, object], metadata: dict[str, object]) -> bool:

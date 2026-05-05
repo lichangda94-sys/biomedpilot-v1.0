@@ -137,6 +137,56 @@ class _FakeGeoDownloader:
         return {"status": "success", "accession": accession, "family_soft_path": str(path)}
 
 
+class _FakeGeoAssetDiscoverer:
+    def discover(self, accession: str, target_dir: Path, download_result: dict[str, object]) -> dict[str, object]:
+        family_path = Path(str(download_result["family_soft_path"]))
+        return {
+            "schema_version": "biomedpilot.geo_asset_manifest.v1",
+            "accession": accession,
+            "assets": [
+                {
+                    "asset_type": "family_soft",
+                    "role": "metadata_container",
+                    "file_name": family_path.name,
+                    "status": "downloaded",
+                    "local_path": str(family_path),
+                    "remote_url": f"https://example.org/{family_path.name}",
+                    "input_eligible": True,
+                    "needs_download": False,
+                },
+                {
+                    "asset_type": "series_matrix",
+                    "role": "expression_matrix_candidate",
+                    "file_name": f"{accession}-GPL570_series_matrix.txt.gz",
+                    "status": "remote_discovered",
+                    "local_path": "",
+                    "remote_url": f"https://example.org/{accession}-GPL570_series_matrix.txt.gz",
+                    "input_eligible": False,
+                    "needs_download": True,
+                },
+                {
+                    "asset_type": "supplementary_file",
+                    "role": "supplementary_expression_candidate",
+                    "file_name": f"{accession}_counts.tsv.gz",
+                    "status": "remote_discovered",
+                    "local_path": "",
+                    "remote_url": f"https://example.org/{accession}_counts.tsv.gz",
+                    "input_eligible": False,
+                    "needs_download": True,
+                },
+            ],
+            "summary": {
+                "metadata_downloaded": True,
+                "series_matrix_discovered": True,
+                "supplementary_files_discovered": True,
+                "expression_matrix_status": "remote_discovered",
+                "recognition_ready": True,
+            },
+            "ui_status_parts": ["元数据已下载", "表达矩阵待确认", "已发现补充文件", "可进入识别"],
+            "warnings": [],
+        }
+
+
 def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
     pages = [
         BioinformaticsDataSourceWidget(),
@@ -621,7 +671,10 @@ def test_chinese_dataset_search_generates_download_task_without_fake_download(qt
 def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, project_summary) -> None:
     widget = BioinformaticsChineseDatasetSearchWidget()
     widget.refresh_project(project_summary)
-    widget._download_service = workflow_pages.DatasetDownloadService(geo_downloader=_FakeGeoDownloader())
+    widget._download_service = workflow_pages.DatasetDownloadService(
+        geo_downloader=_FakeGeoDownloader(),
+        geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+    )
     candidate = _geo_candidate()
     widget._candidates = {("geo", "GSE33630"): candidate}
     widget._fill_geo_candidates([candidate])
@@ -630,17 +683,22 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     result = widget.download_geo_candidate("GSE33630")
 
     assert result is not None
-    assert result.status == "downloaded"
+    assert result.status == "geo_metadata_downloaded"
     assert result.download_executed is True
     assert len(result.downloaded_files) == 1
     assert Path(result.downloaded_files[0]).exists()
-    assert "已下载并完成数据识别：GSE33630" in widget.status_message()
+    assert "元数据已下载" in widget.status_message()
+    assert "表达矩阵待确认" in widget.status_message()
     assert widget._registered_count_label.text() == "可识别数据源：1 个 / 已登记 1 个"
     assert widget._continue_button.isEnabled()
-    assert widget._geo_table.item(0, 8).text() == "已下载"
+    assert widget._geo_table.item(0, 8).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
     download_button = widget._geo_table.cellWidget(0, 0).findChild(QPushButton, "candidateDownloadTaskButton_geo_GSE33630")
-    assert download_button.text() == "已下载"
+    assert download_button.text() == "元数据已下载"
     assert not download_button.isEnabled()
+    manifest_path = Path(str(result.details["asset_manifest_path"]))
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert {item["asset_type"] for item in manifest["assets"]} == {"family_soft", "series_matrix", "supplementary_file"}
     report = workflow_pages.load_recognition_report(project_summary.project_root)
     assert report is not None
     files = report.get("files", [])
@@ -803,7 +861,10 @@ def test_chinese_dataset_search_continue_enters_recognition(qt_app, project_summ
     widget.show_chinese_search(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsChineseDatasetSearchPage"
     widget._chinese_search_page.set_query_text("脑胶质瘤")
-    widget._chinese_search_page._download_service = workflow_pages.DatasetDownloadService(geo_downloader=_FakeGeoDownloader())
+    widget._chinese_search_page._download_service = workflow_pages.DatasetDownloadService(
+        geo_downloader=_FakeGeoDownloader(),
+        geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+    )
     widget._chinese_search_page._candidates = {("geo", "GSE33630"): _geo_candidate()}
     widget._chinese_search_page.download_geo_candidate("GSE33630")
     widget._chinese_search_page.continue_to_recognition()
