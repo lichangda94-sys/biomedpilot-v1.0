@@ -108,6 +108,13 @@ def _geo_candidate(*, query_used: str = '("glioma" OR "glioblastoma") AND "RNA-s
     )
 
 
+def _source_card_text(widget: BioinformaticsChineseDatasetSearchWidget, source: str) -> str:
+    container = widget._source_recommendation_widgets[source]
+    texts = [label.text() for label in container.findChildren(QLabel)]
+    texts.extend(button.text() for button in container.findChildren(QPushButton))
+    return " ".join(texts)
+
+
 class _FakeGeoDownloader:
     def download(self, accession: str, target_dir: Path) -> dict[str, object]:
         path = target_dir / f"{accession}_family.soft"
@@ -528,29 +535,40 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "暂无候选结果" not in widget._geo_empty_label.text()
     assert widget._tcga_empty_label.isHidden()
     assert widget._gtex_empty_label.isHidden()
-    assert widget._tcga_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._tcga_table.columnWidth(0) >= 120
-    assert [widget._tcga_table.horizontalHeaderItem(index).text() for index in range(widget._tcga_table.columnCount())] == [
-        "操作",
-        "项目代码",
-        "癌种/项目名称",
-        "样本类型",
-        "数据类型",
-        "状态",
-    ]
-    assert widget._tcga_table.item(0, 1).text() == "TCGA-THCA"
-    assert widget._tcga_table.item(0, 2).text() == "Thyroid Carcinoma"
-    assert widget._tcga_table.item(0, 3).text() == "Thyroid"
-    assert widget._tcga_table.item(0, 5).text() == "未登记"
-    assert widget._gtex_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._gtex_table.columnWidth(0) >= 120
-    assert widget._gtex_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 3).text() == "normal tissue expression reference"
-    assert widget._gtex_table.item(0, 4).text() == "未登记"
-    tcga_buttons = widget._tcga_table.cellWidget(0, 0).findChildren(QPushButton)
-    gtex_buttons = widget._gtex_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert [button.text() for button in tcga_buttons] == ["选择", "查看详情"]
-    assert [button.text() for button in gtex_buttons] == ["选择", "查看详情"]
+    assert widget._tcga_table.isHidden()
+    assert widget._gtex_table.isHidden()
+    tcga_card = _source_card_text(widget, "tcga_gdc")
+    gtex_card = _source_card_text(widget, "gtex")
+    assert "项目代码：" in tcga_card
+    assert "TCGA-THCA" in tcga_card
+    assert "中文名称：" in tcga_card
+    assert "甲状腺癌队列" in tcga_card
+    assert "英文名称：" in tcga_card
+    assert "Thyroid Carcinoma" in tcga_card
+    assert "数据库：" in tcga_card
+    assert "TCGA/GDC" in tcga_card
+    assert "可用数据：" in tcga_card
+    assert "RNA-seq 表达、临床信息、突变数据" in tcga_card
+    assert "适用说明：" in tcga_card
+    assert "适合肿瘤样本分析" in tcga_card
+    assert "选择项目" in tcga_card
+    assert "查看说明" in tcga_card
+    assert "创建下载任务" in tcga_card
+    assert "待创建下载任务" in tcga_card
+    assert "组织名称：" in gtex_card
+    assert "Thyroid" in gtex_card
+    assert "中文名称：" in gtex_card
+    assert "甲状腺组织" in gtex_card
+    assert "数据库：" in gtex_card
+    assert "GTEx" in gtex_card
+    assert "可用数据：" in gtex_card
+    assert "正常组织 RNA 表达" in gtex_card
+    assert "适用说明：" in gtex_card
+    assert "GTEx 是正常组织表达参考，不是肿瘤样本数据库" in gtex_card
+    assert "选择组织" in gtex_card
+    assert "查看说明" in gtex_card
+    assert "创建下载任务" in gtex_card
+    assert "待创建下载任务" in gtex_card
     assert widget._mapping_log.isHidden()
     visible_text = " ".join(
         [label.text() for label in widget.findChildren(QLabel)]
@@ -569,11 +587,15 @@ def test_glioma_tcga_gtex_candidates_displayed(qt_app) -> None:
     assert result is not None
     assert "glioma" in widget._geo_query_box.toPlainText().lower()
     assert "glioblastoma" in widget._geo_query_box.toPlainText().lower()
-    assert widget._tcga_table.rowCount() >= 2
-    tcga_projects = {widget._tcga_table.item(row, 1).text() for row in range(widget._tcga_table.rowCount())}
-    assert {"TCGA-GBM", "TCGA-LGG"} <= tcga_projects
-    assert widget._gtex_table.item(0, 1).text() == "Brain"
-    assert widget._gtex_table.item(0, 3).text() == "normal tissue expression reference"
+    tcga_card = _source_card_text(widget, "tcga_gdc")
+    assert "TCGA-GBM" in tcga_card
+    assert "胶质母细胞瘤队列" in tcga_card
+    assert "TCGA-LGG" in tcga_card
+    assert "低级别胶质瘤队列" in tcga_card
+    gtex_card = _source_card_text(widget, "gtex")
+    assert "Brain" in gtex_card
+    assert "脑组织" in gtex_card
+    assert "正常组织 RNA 表达" in gtex_card
 
 
 def test_no_generic_tcga_mapping_label(qt_app) -> None:
@@ -581,12 +603,7 @@ def test_no_generic_tcga_mapping_label(qt_app) -> None:
     widget.set_query_text("脑胶质瘤")
     widget.generate_terms()
 
-    rendered = " ".join(
-        widget._tcga_table.item(row, column).text()
-        for row in range(widget._tcga_table.rowCount())
-        for column in range(widget._tcga_table.columnCount())
-        if widget._tcga_table.item(row, column) is not None
-    )
+    rendered = _source_card_text(widget, "tcga_gdc")
     assert "TCGA/GDC 项目映射：TCGA" not in rendered
     assert "本地词库映射" not in rendered
 
@@ -876,8 +893,8 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert not widget._continue_button.isEnabled()
     assert widget._continue_button.text() == "下一步：进入数据识别"
     assert widget.status_message() == "已登记候选来源，待下载数据文件。"
-    assert widget._tcga_table.item(0, 5).text() == "待下载"
-    registered_button = widget._tcga_table.cellWidget(0, 0).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
+    assert "已选择，待创建下载任务" in _source_card_text(widget, "tcga_gdc")
+    registered_button = widget.findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
     assert registered_button.text() == "已选择"
     assert not registered_button.isEnabled()
     duplicate = widget.register_candidate("tcga_gdc", "TCGA-THCA")
@@ -915,7 +932,7 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
     assert summary.source_type == "gtex_tissue"
     assert widget._gtex_registered_table.rowCount() == 1
     assert widget._gtex_registered_table.item(0, 0).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 4).text() == "待下载"
+    assert "已选择，待创建下载任务" in _source_card_text(widget, "gtex")
     assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()
 
