@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import importlib
 import json
+import ssl
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.request import urlopen
 from uuid import uuid4
 
 from app.bioinformatics.project_workspace_binding import AcquisitionSummary, register_acquisition
@@ -53,6 +55,59 @@ class GeoFamilySoftDownloader(Protocol):
         ...
 
 
+class HttpsGeoFamilySoftDownloader:
+    """Download GEO family SOFT files from the NCBI HTTPS mirror."""
+
+    def download(self, accession: str, target_dir: Path) -> dict[str, Any]:
+        normalized = _normalize_gse_accession(accession)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / f"{normalized}_family.soft.gz"
+        download_url = _geo_family_soft_https_url(normalized)
+        if target_path.exists() and target_path.stat().st_size > 0:
+            return {
+                "status": "success",
+                "accession": normalized,
+                "family_soft_path": str(target_path),
+                "download_url": download_url,
+                "download_method": "ncbi_https_family_soft",
+                "bytes_downloaded": target_path.stat().st_size,
+                "note": "Loaded existing family SOFT from project cache.",
+            }
+        partial_path = target_path.with_suffix(target_path.suffix + ".part")
+        bytes_downloaded = 0
+        try:
+            with urlopen(download_url, timeout=45, context=_ssl_context()) as response:  # nosec B310 - fixed NCBI GEO HTTPS endpoint.
+                with partial_path.open("wb") as output:
+                    while True:
+                        chunk = response.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                        bytes_downloaded += len(chunk)
+            if bytes_downloaded <= 0:
+                raise RuntimeError("NCBI GEO returned an empty family SOFT file.")
+            with partial_path.open("rb") as downloaded:
+                if downloaded.read(2) != b"\x1f\x8b":
+                    raise RuntimeError("Downloaded GEO family SOFT is not gzip-compressed.")
+            partial_path.replace(target_path)
+        except Exception:
+            try:
+                partial_path.unlink()
+            except OSError:
+                pass
+            raise
+        return {
+            "status": "success",
+            "accession": normalized,
+            "family_soft_path": str(target_path),
+            "download_url": download_url,
+            "download_method": "ncbi_https_family_soft",
+            "bytes_downloaded": bytes_downloaded,
+            "full_download_success": True,
+            "note": "GEO family SOFT downloaded via NCBI HTTPS.",
+        }
+
+
 class LegacyGeoFamilySoftDownloader:
     """Thin optional wrapper around the archived GEO full-family-SOFT downloader."""
 
@@ -69,7 +124,7 @@ class DatasetDownloadService:
     """Create mainline download requests and acquisition records for dataset candidates."""
 
     def __init__(self, *, geo_downloader: GeoFamilySoftDownloader | None = None) -> None:
-        self._geo_downloader = geo_downloader or LegacyGeoFamilySoftDownloader()
+        self._geo_downloader = geo_downloader or HttpsGeoFamilySoftDownloader()
 
     def create_request_from_candidate(
         self,
@@ -335,6 +390,33 @@ def _download_target_dir(root: Path, candidate: UnifiedDatasetCandidate) -> Path
         slug = "".join(char if char.isalnum() else "_" for char in candidate.accession_or_project).strip("_")
         return root / "raw_data" / "gtex" / slug
     return root / "raw_data" / candidate.source / candidate.accession_or_project
+
+
+def _normalize_gse_accession(accession: str) -> str:
+    normalized = str(accession).strip().upper()
+    if not normalized.startswith("GSE") or not normalized[3:].isdigit():
+        raise ValueError(f"Only GSE accessions are supported for GEO download, got: {accession}")
+    return normalized
+
+
+def _geo_series_prefix(accession: str) -> str:
+    digits = accession[3:]
+    prefix = digits[:-3] if len(digits) > 3 else "0"
+    return f"GSE{prefix}nnn"
+
+
+def _geo_family_soft_https_url(accession: str) -> str:
+    normalized = _normalize_gse_accession(accession)
+    return f"https://ftp.ncbi.nlm.nih.gov/geo/series/{_geo_series_prefix(normalized)}/{normalized}/soft/{normalized}_family.soft.gz"
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
 
 
 def _planned_status(source: str) -> str:

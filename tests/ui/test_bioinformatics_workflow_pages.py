@@ -107,6 +107,36 @@ def _geo_candidate(*, query_used: str = '("glioma" OR "glioblastoma") AND "RNA-s
     )
 
 
+class _FakeGeoDownloader:
+    def download(self, accession: str, target_dir: Path) -> dict[str, object]:
+        path = target_dir / f"{accession}_family.soft"
+        path.write_text(
+            "\n".join(
+                [
+                    "^DATABASE = Gene Expression Omnibus",
+                    f"^SERIES = {accession}",
+                    "!Series_sample_id = GSM1",
+                    "^SAMPLE = GSM1",
+                    "!Sample_title = tumor sample",
+                    "!Sample_characteristics_ch1 = tissue: tumor",
+                    "#ID_REF = ID_REF",
+                    "#VALUE = RMA expression estimate",
+                    "!sample_table_begin",
+                    "ID_REF\tVALUE",
+                    "1007_s_at\t1.0",
+                    "!sample_table_end",
+                    "^PLATFORM = GPL570",
+                    "!platform_table_begin",
+                    "ID\tGene Symbol",
+                    "1007_s_at\tDDR1",
+                    "!platform_table_end",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        return {"status": "success", "accession": accession, "family_soft_path": str(path)}
+
+
 def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
     pages = [
         BioinformaticsDataSourceWidget(),
@@ -153,7 +183,8 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
 
     assert summary is not None
     assert summary.strategy == "plan_only"
-    assert events == [project_summary.project_root]
+    assert events == []
+    assert "实际数据文件" in widget.status_message()
     assert widget.objectName() == "bioinformaticsDataSourcePage"
 
 
@@ -315,7 +346,7 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert widget.status_message() == "先登记数据来源，下一步进入数据识别。"
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
-    assert widget._next_button.isEnabled()
+    assert not widget._next_button.isEnabled()
 
 
 def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
@@ -378,7 +409,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
 
     assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
     assert not widget._continue_button.isEnabled()
-    assert widget._registered_count_label.text() == "已登记数据源：0 个"
+    assert widget._registered_count_label.text() == "可识别数据源：0 个 / 已登记 0 个"
     assert widget._geo_query_box.toPlainText() == "暂无 GEO/GSE 检索草稿"
     assert widget._tcga_query_box.toPlainText() == "暂无 TCGA/GDC 项目草稿"
     assert widget._gtex_query_box.toPlainText() == "暂无 GTEx 组织草稿"
@@ -394,7 +425,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "GEO/GSE 候选数据集" == widget._tabs.tabText(0)
     assert "TCGA/GDC 项目候选" == widget._tabs.tabText(1)
     assert "GTEx 组织候选" == widget._tabs.tabText(2)
-    assert widget._continue_button.text() == "请先登记至少一个候选数据源"
+    assert widget._continue_button.text() == "请先下载或导入数据文件"
 
     widget.set_query_text("甲状腺癌")
     result = widget.generate_terms()
@@ -507,7 +538,7 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     assert widget._geo_table.horizontalHeaderItem(0).text() == "操作"
     assert widget._geo_table.columnWidth(0) >= 300
     buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert [button.text() for button in buttons] == ["登记为数据源", "生成下载任务", "中文简介", "查看详情"]
+    assert [button.text() for button in buttons] == ["登记为数据源", "下载并登记", "中文简介", "查看详情"]
 
 
 def test_register_geo_requires_open_project(qt_app) -> None:
@@ -532,7 +563,7 @@ def test_register_geo_search_result_as_source(qt_app, project_summary) -> None:
     assert summary.source_type == "geo_accession"
     assert summary.status == "planned"
     assert summary.registered_files == ()
-    assert widget.status_message() == "已登记为数据来源，可进入数据识别。"
+    assert widget.status_message() == "已登记候选来源，待下载数据文件。"
     record = json.loads(summary.record_path.read_text(encoding="utf-8"))
     assert record["source_type"] == "geo_accession"
     assert record["strategy"] == "plan_only"
@@ -573,8 +604,8 @@ def test_chinese_dataset_search_generates_download_task_without_fake_download(qt
     result = widget.generate_candidate_download_task("geo", "GSE33630")
 
     assert result is not None
-    assert widget.status_message() == "已生成下载任务，可进入数据识别。"
-    assert widget._continue_button.isEnabled()
+    assert widget.status_message() == "已生成下载任务，等待下载数据文件。"
+    assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "geo" / "GSE33630" / "GSE33630_family.soft.gz").exists()
     records = [path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json"]
     assert len(records) == 1
@@ -585,6 +616,37 @@ def test_chinese_dataset_search_generates_download_task_without_fake_download(qt
     assert record["metadata"]["download_executed"] is False
     assert Path(record["metadata"]["download_request_path"]).exists()
     assert Path(record["metadata"]["download_receipt_path"]).exists()
+
+
+def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    widget._download_service = workflow_pages.DatasetDownloadService(geo_downloader=_FakeGeoDownloader())
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+    widget._fill_geo_candidates([candidate])
+    widget.set_query_text("脑胶质瘤")
+
+    result = widget.download_geo_candidate("GSE33630")
+
+    assert result is not None
+    assert result.status == "downloaded"
+    assert result.download_executed is True
+    assert len(result.downloaded_files) == 1
+    assert Path(result.downloaded_files[0]).exists()
+    assert "已下载并完成数据识别：GSE33630" in widget.status_message()
+    assert widget._registered_count_label.text() == "可识别数据源：1 个 / 已登记 1 个"
+    assert widget._continue_button.isEnabled()
+    assert widget._geo_table.item(0, 8).text() == "已下载"
+    download_button = widget._geo_table.cellWidget(0, 0).findChild(QPushButton, "candidateDownloadTaskButton_geo_GSE33630")
+    assert download_button.text() == "已下载"
+    assert not download_button.isEnabled()
+    report = workflow_pages.load_recognition_report(project_summary.project_root)
+    assert report is not None
+    files = report.get("files", [])
+    assert files
+    assert files[0]["recognized_type"] == "geo_soft_container"
+    assert "expression_matrix" in files[0]["recognized_roles"]
 
 
 def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
@@ -647,7 +709,7 @@ def test_registered_geo_source_appears_in_pre_recognition_input_list(qt_app, pro
     assert table.item(0, 0).text() == "GEO/GSE 数据来源"
     assert table.item(0, 1).text() == "GSE33630"
     assert table.item(0, 2).text() == "GEO"
-    assert table.item(0, 3).text() == "已登记"
+    assert table.item(0, 3).text() == "待下载"
 
 
 def test_geo_source_registration_does_not_auto_download_or_analyze(qt_app, project_summary) -> None:
@@ -677,11 +739,11 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert summary.source_type == "tcga_project"
     assert widget._registered_table.rowCount() == 1
     assert widget._registered_table.item(0, 0).text() == "TCGA/GDC 项目"
-    assert widget._registered_count_label.text() == "已登记数据源：1 个"
-    assert widget._continue_button.isEnabled()
-    assert widget._continue_button.text() == "进入数据识别"
-    assert widget.status_message() == "已登记为数据来源，可进入数据识别。"
-    assert widget._tcga_table.item(0, 6).text() == "已登记"
+    assert widget._registered_count_label.text() == "可识别数据源：0 个 / 已登记 1 个"
+    assert not widget._continue_button.isEnabled()
+    assert widget._continue_button.text() == "请先下载或导入数据文件"
+    assert widget.status_message() == "已登记候选来源，待下载数据文件。"
+    assert widget._tcga_table.item(0, 6).text() == "待下载"
     registered_button = widget._tcga_table.cellWidget(0, 0).findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
     assert registered_button.text() == "已登记"
     assert not registered_button.isEnabled()
@@ -721,8 +783,8 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
     assert widget._registered_table.rowCount() == 1
     assert widget._registered_table.item(0, 0).text() == "GTEx 正常组织参考"
     assert widget._registered_table.item(0, 1).text() == "Thyroid"
-    assert widget._gtex_table.item(0, 5).text() == "已登记"
-    assert widget._continue_button.isEnabled()
+    assert widget._gtex_table.item(0, 5).text() == "待下载"
+    assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()
 
     record = json.loads(summary.record_path.read_text(encoding="utf-8"))
@@ -740,15 +802,16 @@ def test_chinese_dataset_search_continue_enters_recognition(qt_app, project_summ
 
     widget.show_chinese_search(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsChineseDatasetSearchPage"
-    widget._chinese_search_page.set_query_text("甲状腺癌")
-    widget._chinese_search_page.generate_terms()
-    widget._chinese_search_page.register_candidate("tcga_gdc", "TCGA-THCA")
+    widget._chinese_search_page.set_query_text("脑胶质瘤")
+    widget._chinese_search_page._download_service = workflow_pages.DatasetDownloadService(geo_downloader=_FakeGeoDownloader())
+    widget._chinese_search_page._candidates = {("geo", "GSE33630"): _geo_candidate()}
+    widget._chinese_search_page.download_geo_candidate("GSE33630")
     widget._chinese_search_page.continue_to_recognition()
 
     assert widget.current_page_object_name() == "bioinformaticsRecognitionPage"
     table = widget._recognition_page.findChild(QTableWidget, "preRecognitionInputList")
     assert table.rowCount() == 1
-    assert table.item(0, 1).text() == "TCGA-THCA"
+    assert table.item(0, 1).text() == "GSE33630"
 
 
 def test_acquisition_status_empty_and_continue_signal(qt_app, project_summary) -> None:

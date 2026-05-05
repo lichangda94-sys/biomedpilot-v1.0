@@ -266,7 +266,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._latest_summary is None:
             self._latest_summary = load_latest_acquisition_summary(self._project_root)
         if self._registered_source_count() == 0:
-            self._set_status("请先生成或登记一个数据来源。", error=True)
+            self._set_status("请先下载或导入至少一个实际数据文件。", error=True)
             return
         self.continue_requested.emit(self._project_root)
 
@@ -549,12 +549,13 @@ class BioinformaticsDataSourceWidget(QWidget):
             [[row.source_type, row.source_label, row.status, "查看"] for row in rows],
         )
         count = len(rows)
-        self._registered_count_label.setText(f"已登记数据源：{count} 个")
-        self._next_button.setEnabled(count > 0 and self._project_root is not None)
+        ready_count = _ready_registered_source_count(self._project_root)
+        self._registered_count_label.setText(f"可识别数据源：{ready_count} 个 / 已登记 {count} 个")
+        self._next_button.setEnabled(ready_count > 0 and self._project_root is not None)
         self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
 
     def _registered_source_count(self) -> int:
-        return len(_registered_source_rows(self._project_root))
+        return _ready_registered_source_count(self._project_root)
 
     def _toggle_source_detail(self, key: str) -> None:
         detail = self._source_detail_edits.get(key)
@@ -710,7 +711,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         else:
             self._refresh_candidate_registration_buttons()
         self.source_registered.emit(summary)
-        self._set_status("已登记为数据来源，可进入数据识别。")
+        self._set_status("已登记候选来源，待下载数据文件。")
         return summary
 
     def generate_candidate_download_task(self, source: str, accession_or_project: str) -> object | None:
@@ -721,8 +722,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if candidate is None:
             self._set_status("候选结果不存在。", error=True)
             return None
-        if self._is_candidate_registered(source, accession_or_project):
-            self._set_status(f"已登记数据源：{accession_or_project}")
+        if self._is_candidate_ready_for_recognition(source, accession_or_project):
+            self._set_status(f"已下载数据源：{accession_or_project}")
             self._refresh_candidate_registration_buttons()
             return None
         result = self._download_service.create_candidate_download_task(
@@ -736,7 +737,43 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if self._last_result is not None:
             self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
         self.source_registered.emit(result.acquisition_summary)
-        self._set_status("已生成下载任务，可进入数据识别。")
+        self._set_status("已生成下载任务，等待下载数据文件。")
+        return result
+
+    def download_geo_candidate(self, accession_or_project: str) -> object | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        candidate = self._candidates.get(("geo", accession_or_project))
+        if candidate is None:
+            self._set_status("GEO/GSE 候选结果不存在。", error=True)
+            return None
+        if self._is_candidate_ready_for_recognition("geo", accession_or_project):
+            self._set_status(f"已下载数据源：{accession_or_project}")
+            self._refresh_candidate_registration_buttons()
+            return None
+        self._set_status(f"正在下载 GEO 数据：{accession_or_project}，请稍候。")
+        QApplication.processEvents()
+        result = self._download_service.create_candidate_download_task(
+            project_root=self._project_root,
+            candidate=candidate,
+            search_result=self._last_result,
+            original_chinese_topic=self._query_input.text().strip(),
+            execute_download=True,
+        )
+        self._refresh_registered_sources()
+        if self._last_result is not None:
+            self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
+        else:
+            self._refresh_candidate_registration_buttons()
+            self._refresh_candidate_status_cells()
+        self.source_registered.emit(result.acquisition_summary)
+        if result.success and result.downloaded_files:
+            report = run_project_recognition(self._project_root)
+            file_count = len(report.get("files", []) or []) if isinstance(report, dict) else 0
+            self._set_status(f"已下载并完成数据识别：{accession_or_project}（识别 {file_count} 个文件）。")
+        else:
+            self._set_status(result.message or "GEO 下载未完成，请稍后重试。", error=True)
         return result
 
     def generate_geo_chinese_brief(self, accession_or_project: str) -> dict[str, object] | None:
@@ -800,7 +837,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         action_row.addWidget(_button("生成检索词", "primaryButton", self.generate_terms))
         action_row.addStretch(1)
         input_layout.addLayout(action_row)
-        input_layout.addWidget(_muted("选择候选数据集并登记后，可进入数据识别。"))
+        input_layout.addWidget(_muted("GEO 候选下载后会自动进入数据识别；TCGA/GTEx 当前先生成下载任务。"))
         self._status_label = _status_label("未生成检索词")
         input_layout.addWidget(self._status_label)
         root.addWidget(input_card)
@@ -869,8 +906,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         bottom_frame.setObjectName("chineseDatasetSearchBottomActionBar")
         bottom_layout = QHBoxLayout(bottom_frame)
         bottom_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
-        self._registered_count_label = _status_label("已登记数据源：0 个")
-        self._continue_button = _button("请先登记至少一个候选数据源", "primaryButton", self.continue_to_recognition)
+        self._registered_count_label = _status_label("可识别数据源：0 个 / 已登记 0 个")
+        self._continue_button = _button("请先下载或导入数据文件", "primaryButton", self.continue_to_recognition)
         self._continue_button.setEnabled(False)
         bottom_layout.addWidget(self._registered_count_label)
         bottom_layout.addStretch(1)
@@ -1008,11 +1045,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         _fill_table(self._registered_table, [[row.source_type, row.source_label, row.location, row.status, ""] for row in rows])
         for row_index, row in enumerate(rows):
             self._registered_table.setCellWidget(row_index, 4, _registered_source_action_widget(row))
-        count = len(rows)
-        self._registered_count_label.setText(f"已登记数据源：{count} 个")
-        can_continue = count > 0 and self._project_root is not None
+        total_count = len(rows)
+        ready_count = _ready_chinese_source_count(self._project_root)
+        self._registered_count_label.setText(f"可识别数据源：{ready_count} 个 / 已登记 {total_count} 个")
+        can_continue = ready_count > 0 and self._project_root is not None
         self._continue_button.setEnabled(can_continue)
-        self._continue_button.setText("进入数据识别" if can_continue else "请先登记至少一个候选数据源")
+        self._continue_button.setText("进入数据识别" if can_continue else "请先下载或导入数据文件")
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
         action_col = _table_column_index(table, "操作")
@@ -1028,9 +1066,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             detail_button = QPushButton("查看详情")
             detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
             detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-            download_button = QPushButton("生成下载任务")
+            download_button = QPushButton("下载并登记" if candidate.source == "geo" else "生成下载任务")
             download_button.setObjectName(f"candidateDownloadTaskButton_{candidate.source}_{candidate.accession_or_project}")
-            download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
+            if candidate.source == "geo":
+                download_button.clicked.connect(lambda checked=False, a=candidate.accession_or_project: self.download_geo_candidate(a))
+            else:
+                download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
             layout.addWidget(register_button)
             layout.addWidget(download_button)
             if candidate.source == "geo":
@@ -1056,9 +1097,30 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             button.setText("已登记" if registered else "登记为数据源")
             button.setEnabled(not registered)
         for (source, accession), button in self._candidate_download_buttons.items():
-            registered = self._is_candidate_registered(source, accession)
-            button.setText("已生成任务" if registered else "生成下载任务")
-            button.setEnabled(not registered)
+            ready = self._is_candidate_ready_for_recognition(source, accession)
+            planned = self._is_candidate_registered(source, accession)
+            if source == "geo":
+                button.setText("已下载" if ready else "下载并登记")
+                button.setEnabled(not ready)
+            else:
+                button.setText("已生成任务" if planned else "生成下载任务")
+                button.setEnabled(not planned)
+
+    def _refresh_candidate_status_cells(self) -> None:
+        for source, table in (("geo", self._geo_table), ("tcga_gdc", self._tcga_table), ("gtex", self._gtex_table)):
+            status_col = _table_column_index(table, "状态")
+            id_col = 1
+            for row_index in range(table.rowCount()):
+                item = table.item(row_index, id_col)
+                if item is None:
+                    continue
+                if source == "gtex":
+                    candidate = next((value for (candidate_source, _key), value in self._candidates.items() if candidate_source == "gtex" and (value.tissue == item.text() or value.accession_or_project == item.text())), None)
+                else:
+                    candidate = self._candidates.get((source, item.text()))
+                if candidate is None:
+                    continue
+                table.setItem(row_index, status_col, QTableWidgetItem(self._candidate_registration_status(candidate)))
 
     def _is_candidate_registered(self, source: str, accession_or_project: str) -> bool:
         return (source, accession_or_project) in self._registered_candidate_keys()
@@ -1083,14 +1145,48 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             keys.add((str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or "")))
         return keys
 
+    def _is_candidate_ready_for_recognition(self, source: str, accession_or_project: str) -> bool:
+        return self._candidate_registration_state(source, accession_or_project) == "ready"
+
+    def _candidate_registration_state(self, source: str, accession_or_project: str) -> str:
+        state = ""
+        if self._project_root is None:
+            return state
+        records_dir = self._project_root / "acquisition" / "records"
+        if not records_dir.exists():
+            return state
+        for path in sorted(records_dir.glob("*.json")):
+            if path.name == LATEST_RECORD:
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            metadata = payload.get("metadata")
+            if not isinstance(metadata, dict) or metadata.get("ui_source") != "chinese_research_question_search":
+                continue
+            key = (str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
+            if key != (source, accession_or_project):
+                continue
+            if metadata.get("ready_for_recognition") == "ready" or payload.get("strategy") != "plan_only":
+                state = "ready"
+            elif not state:
+                state = "planned"
+        return state
+
     def _registered_chinese_rows(self) -> list[RegisteredSourceRow]:
         return [row for row in _registered_source_rows(self._project_root) if _is_chinese_topic_source_type(row.source_type_key)]
 
     def _registered_source_count(self) -> int:
-        return len(self._registered_chinese_rows())
+        return _ready_chinese_source_count(self._project_root)
 
     def _candidate_registration_status(self, candidate: UnifiedDatasetCandidate) -> str:
-        return "已登记" if self._is_candidate_registered(candidate.source, candidate.accession_or_project) else "未登记"
+        state = self._candidate_registration_state(candidate.source, candidate.accession_or_project)
+        if state == "ready":
+            return "已下载"
+        if state == "planned":
+            return "待下载"
+        return "未登记"
 
     def _ensure_draft_result(self) -> BioinformaticsSearchCenterResult | None:
         if self._last_result is not None:
@@ -2397,6 +2493,53 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
     return sorted(rows, key=lambda row: row.created_at)
 
 
+def _ready_registered_source_count(project_root: Path | None) -> int:
+    if project_root is None:
+        return 0
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return 0
+    ready_ids: set[str] = set()
+    for path in records_dir.glob("*.json"):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+        if not _record_ready_for_recognition(payload, metadata):
+            continue
+        ready_ids.add(str(payload.get("acquisition_id") or path.stem))
+    return len(ready_ids)
+
+
+def _ready_chinese_source_count(project_root: Path | None) -> int:
+    if project_root is None:
+        return 0
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return 0
+    ready_keys: set[tuple[str, str]] = set()
+    for path in records_dir.glob("*.json"):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata")
+        if not isinstance(metadata, dict) or metadata.get("ui_source") != "chinese_research_question_search":
+            continue
+        if not _record_ready_for_recognition(payload, metadata):
+            continue
+        key = (str(metadata.get("source") or payload.get("source_type") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
+        ready_keys.add(key)
+    return len(ready_keys)
+
+
 def _registered_source_display_name(payload: dict[str, object], metadata: dict[str, object]) -> str:
     source_type = str(payload.get("source_type") or "")
     if source_type == "local_import":
@@ -2436,10 +2579,26 @@ def _registered_source_full_location(payload: dict[str, object], metadata: dict[
 
 
 def _registered_status_text(payload: dict[str, object]) -> str:
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    if isinstance(metadata, dict):
+        download_status = str(metadata.get("download_status") or "")
+        ready = str(metadata.get("ready_for_recognition") or "")
+        if ready == "ready" or download_status == "downloaded":
+            return "已下载，待识别"
+        if download_status.startswith("registered_pending") or ready.startswith("pending") or metadata.get("registration_status") == "registered_as_planned_source":
+            return "待下载"
     warnings = payload.get("warnings")
     if isinstance(warnings, list) and warnings:
         return "已登记，需确认"
     return "已登记"
+
+
+def _record_ready_for_recognition(payload: dict[str, object], metadata: dict[str, object]) -> bool:
+    if metadata.get("ready_for_recognition") == "ready" or metadata.get("download_status") == "downloaded":
+        return True
+    if payload.get("strategy") != "plan_only":
+        return True
+    return False
 
 
 def _source_type_label(source_type: str) -> str:

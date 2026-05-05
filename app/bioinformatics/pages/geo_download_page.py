@@ -18,7 +18,7 @@ def initial_geo_download_state() -> GeoDownloadPageState:
     feature = get_feature("bio-download")
     return GeoDownloadPageState(
         title="数据下载",
-        description="读取 GEO 查询计划并生成下载计划。本阶段不实际下载 NCBI 数据。",
+        description="读取 GEO 查询计划并生成下载任务；中文检索候选页支持下载 GEO/GSE 后自动进入数据识别。",
         status_label=feature.status.display_label() if feature is not None else "测试中",
     )
 
