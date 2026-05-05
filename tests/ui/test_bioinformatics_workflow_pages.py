@@ -494,7 +494,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
 
     assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
     assert not widget._continue_button.isEnabled()
-    assert widget._registered_count_label.text() == "已选择 0 个数据源，其中 0 个可进入识别。"
+    assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 0 个，GTEx 0 个；0 个可进入识别。"
     assert widget._geo_query_box.toPlainText() == "暂无 GEO/GSE 检索草稿"
     assert widget._geo_query_box.isHidden()
     assert widget._tcga_query_box.toPlainText() == "暂无 TCGA/GDC 项目草稿"
@@ -509,9 +509,9 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "检索 GTEx 组织" in button_texts
     assert "查看完整检索词" in button_texts
     assert "检索候选数据集" not in button_texts
-    assert "GEO/GSE 候选数据集" == widget._tabs.tabText(0)
-    assert "TCGA/GDC 项目候选" == widget._tabs.tabText(1)
-    assert "GTEx 组织候选" == widget._tabs.tabText(2)
+    assert "GEO/GSE" == widget._tabs.tabText(0)
+    assert "TCGA/GDC" == widget._tabs.tabText(1)
+    assert "GTEx" == widget._tabs.tabText(2)
     assert widget._continue_button.text() == "下一步：进入数据识别"
 
     widget.set_query_text("甲状腺癌")
@@ -725,7 +725,7 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert Path(result.downloaded_files[0]).exists()
     assert "元数据已下载" in widget.status_message()
     assert "表达矩阵待确认" in widget.status_message()
-    assert widget._registered_count_label.text() == "已选择 1 个数据源，其中 1 个可进入识别。当前建议操作：进入数据识别。"
+    assert widget._registered_count_label.text() == "已选 GEO 1 个，TCGA 0 个，GTEx 0 个；1 个可进入识别。 当前建议操作：进入数据识别。"
     assert widget._continue_button.isEnabled()
     assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
     widget._show_candidate_detail(candidate)
@@ -765,10 +765,10 @@ def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes
     assert "补充/Matrix 资产" in widget.status_message()
     assert "数据处理任务" in widget.status_message()
     assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵已下载 / 补充文件已下载 / 可进入识别"
-    assert widget._registered_table.rowCount() == 1
-    assert widget._registered_table.item(0, 0).text() == "GSE33630"
-    assert "表达矩阵" in widget._registered_table.item(0, 3).text()
-    assert widget._registered_table.item(0, 5).text() == "进入数据识别"
+    assert widget._geo_registered_table.rowCount() == 1
+    assert widget._geo_registered_table.item(0, 0).text() == "GSE33630"
+    assert "表达矩阵" in widget._geo_registered_table.item(0, 2).text()
+    assert widget._geo_registered_table.item(0, 4).text() == "进入数据识别"
     widget._show_candidate_detail(candidate)
     assert "补充文件已下载" in widget._candidate_detail_text.toPlainText()
     report = workflow_pages.load_recognition_report(project_summary.project_root)
@@ -870,10 +870,9 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
 
     assert summary is not None
     assert summary.source_type == "tcga_project"
-    assert widget._registered_table.rowCount() == 1
-    assert widget._registered_table.item(0, 0).text() == "TCGA-THCA"
-    assert widget._registered_table.item(0, 1).text() == "TCGA/GDC 项目"
-    assert widget._registered_count_label.text() == "已选择 1 个数据源，其中 0 个可进入识别。当前建议操作：先补全表达矩阵。"
+    assert widget._tcga_registered_table.rowCount() == 1
+    assert widget._tcga_registered_table.item(0, 0).text() == "TCGA-THCA"
+    assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 1 个，GTEx 0 个；0 个可进入识别。 当前建议操作：先补全表达矩阵。"
     assert not widget._continue_button.isEnabled()
     assert widget._continue_button.text() == "下一步：进入数据识别"
     assert widget.status_message() == "已登记候选来源，待下载数据文件。"
@@ -883,7 +882,7 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert not registered_button.isEnabled()
     duplicate = widget.register_candidate("tcga_gdc", "TCGA-THCA")
     assert duplicate is None
-    assert widget._registered_table.rowCount() == 1
+    assert widget._tcga_registered_table.rowCount() == 1
 
     recognition = BioinformaticsRecognitionWidget()
     recognition.refresh_project(project_summary)
@@ -914,9 +913,8 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
 
     assert summary is not None
     assert summary.source_type == "gtex_tissue"
-    assert widget._registered_table.rowCount() == 1
-    assert widget._registered_table.item(0, 0).text() == "Thyroid"
-    assert widget._registered_table.item(0, 1).text() == "GTEx 正常组织参考"
+    assert widget._gtex_registered_table.rowCount() == 1
+    assert widget._gtex_registered_table.item(0, 0).text() == "Thyroid"
     assert widget._gtex_table.item(0, 4).text() == "待下载"
     assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()

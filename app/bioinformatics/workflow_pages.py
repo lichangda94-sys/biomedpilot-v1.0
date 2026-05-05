@@ -590,6 +590,13 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._candidate_download_buttons: dict[tuple[str, str], QPushButton] = {}
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
         self._selected_candidate: UnifiedDatasetCandidate | None = None
+        self._source_detail_titles: dict[str, QLabel] = {}
+        self._source_detail_texts: dict[str, QPlainTextEdit] = {}
+        self._source_detail_select_buttons: dict[str, QPushButton] = {}
+        self._source_detail_download_buttons: dict[str, QPushButton] = {}
+        self._source_detail_brief_buttons: dict[str, QPushButton] = {}
+        self._source_registered_empty_labels: dict[str, QLabel] = {}
+        self._source_registered_tables: dict[str, QTableWidget] = {}
         self._download_service = DatasetDownloadService()
         self._text_summary_service = GeoTextSummaryService(timeout=20)
         self.setObjectName("bioinformaticsChineseDatasetSearchPage")
@@ -883,96 +890,54 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         input_layout.addLayout(action_row)
         self._status_label = _status_label("未生成检索词")
         input_layout.addWidget(self._status_label)
+        self._topic_summary_label = _status_label("主题识别：尚未开始。")
+        input_layout.addWidget(self._topic_summary_label)
         root.addWidget(input_card)
 
-        drafts_card, drafts_layout = _card("检索草稿")
-        self._geo_draft_summary = _status_label("GEO：尚未生成")
-        self._tcga_draft_summary = _status_label("TCGA：尚未生成")
-        self._gtex_draft_summary = _status_label("GTEx：尚未生成")
-        drafts_layout.addWidget(self._geo_draft_summary)
-        drafts_layout.addWidget(self._tcga_draft_summary)
-        drafts_layout.addWidget(self._gtex_draft_summary)
-        draft_toggle_row = QHBoxLayout()
-        self._draft_toggle_button = _button("查看完整检索词", "secondaryButton", self._toggle_full_drafts)
-        draft_toggle_row.addWidget(self._draft_toggle_button)
-        draft_toggle_row.addStretch(1)
-        drafts_layout.addLayout(draft_toggle_row)
-        self._geo_query_box = self._query_draft_box("暂无 GEO/GSE 检索草稿")
-        self._tcga_query_box = self._query_draft_box("暂无 TCGA/GDC 项目草稿")
-        self._gtex_query_box = self._query_draft_box("暂无 GTEx 组织草稿")
-        self._draft_detail_widgets: list[QWidget] = [self._geo_query_box, self._tcga_query_box, self._gtex_query_box]
-        self._add_draft_section(
-            drafts_layout,
-            title="GEO/GSE 检索草稿",
-            box=self._geo_query_box,
-            copy_text="复制",
-            search_text="检索 GEO/GSE 候选数据集",
-            copy_source="geo",
-            search_callback=self.search_geo_candidates,
-        )
-        self._add_draft_section(
-            drafts_layout,
-            title="TCGA/GDC 项目草稿",
-            box=self._tcga_query_box,
-            copy_text="复制",
-            search_text="检索 TCGA/GDC 项目",
-            copy_source="tcga",
-            search_callback=self.search_tcga_candidates,
-        )
-        self._add_draft_section(
-            drafts_layout,
-            title="GTEx 组织草稿",
-            box=self._gtex_query_box,
-            copy_text="复制",
-            search_text="检索 GTEx 组织",
-            copy_source="gtex",
-            search_callback=self.search_gtex_candidates,
-        )
-        self._set_full_drafts_visible(False)
-        root.addWidget(drafts_card)
-
-        result_card, result_layout = _card("数据库候选结果")
+        result_card, result_layout = _card("数据库区")
         self._tabs = QTabWidget()
-        self._geo_tab_page, self._geo_empty_label, self._geo_table = self._candidate_tab(["操作", "GSE 编号", "标题", "样本数", "数据类型/平台", "匹配度", "资产状态"])
-        self._tcga_tab_page, self._tcga_empty_label, self._tcga_table = self._candidate_tab(["操作", "项目代码", "癌种/项目名称", "样本类型", "数据类型", "状态"])
-        self._gtex_tab_page, self._gtex_empty_label, self._gtex_table = self._candidate_tab(["操作", "组织", "样本数", "表达类型", "状态"])
-        self._tabs.addTab(self._geo_tab_page, "GEO/GSE 候选数据集")
-        self._tabs.addTab(self._tcga_tab_page, "TCGA/GDC 项目候选")
-        self._tabs.addTab(self._gtex_tab_page, "GTEx 组织候选")
+        self._draft_detail_widgets: list[QWidget] = []
+        self._geo_tab_page = self._build_database_tab(
+            source_key="geo",
+            draft_title="GEO/GSE 检索草稿",
+            draft_placeholder="暂无 GEO/GSE 检索草稿",
+            copy_source="geo",
+            search_text="检索 GEO/GSE 候选数据集",
+            search_callback=self.search_geo_candidates,
+            candidate_headers=["操作", "GSE 编号", "标题", "样本数", "数据类型/平台", "匹配度", "资产状态"],
+            selected_empty="尚未选择 GEO/GSE 数据源。",
+        )
+        self._tcga_tab_page = self._build_database_tab(
+            source_key="tcga_gdc",
+            draft_title="TCGA/GDC 项目草稿",
+            draft_placeholder="暂无 TCGA/GDC 项目草稿",
+            copy_source="tcga",
+            search_text="检索 TCGA/GDC 项目",
+            search_callback=self.search_tcga_candidates,
+            candidate_headers=["操作", "项目代码", "癌种/项目名称", "样本类型", "数据类型", "状态"],
+            selected_empty="尚未选择 TCGA/GDC 项目。",
+        )
+        self._gtex_tab_page = self._build_database_tab(
+            source_key="gtex",
+            draft_title="GTEx 组织草稿",
+            draft_placeholder="暂无 GTEx 组织草稿",
+            copy_source="gtex",
+            search_text="检索 GTEx 组织",
+            search_callback=self.search_gtex_candidates,
+            candidate_headers=["操作", "组织", "样本数", "表达类型", "状态"],
+            selected_empty="尚未选择 GTEx 组织参考。",
+        )
+        self._candidate_detail_title = self._source_detail_titles["geo"]
+        self._candidate_detail_text = self._source_detail_texts["geo"]
+        self._detail_select_button = self._source_detail_select_buttons["geo"]
+        self._detail_download_button = self._source_detail_download_buttons["geo"]
+        self._detail_brief_button = self._source_detail_brief_buttons["geo"]
+        self._registered_table = self._source_registered_tables["geo"]
+        self._tabs.addTab(self._geo_tab_page, "GEO/GSE")
+        self._tabs.addTab(self._tcga_tab_page, "TCGA/GDC")
+        self._tabs.addTab(self._gtex_tab_page, "GTEx")
         result_layout.addWidget(self._tabs)
-
-        self._candidate_detail_frame = QFrame()
-        self._candidate_detail_frame.setObjectName("candidateDetailPanel")
-        detail_layout = QVBoxLayout(self._candidate_detail_frame)
-        detail_layout.setContentsMargins(0, SPACING["sm"], 0, 0)
-        self._candidate_detail_title = _status_label("候选详情")
-        detail_layout.addWidget(self._candidate_detail_title)
-        self._candidate_detail_text = _text_preview(150)
-        self._candidate_detail_text.setObjectName("candidateDetailText")
-        self._candidate_detail_text.setPlainText("点击候选结果的“详情”查看标题、中文简介、匹配原因、资产状态和下载建议。")
-        detail_layout.addWidget(self._candidate_detail_text)
-        detail_actions = QHBoxLayout()
-        self._detail_select_button = _button("选择", "secondaryButton", self._select_current_candidate)
-        self._detail_download_button = _button("下载并登记", "secondaryButton", self._download_current_candidate)
-        self._detail_brief_button = _button("生成中文简介", "secondaryButton", self._brief_current_candidate)
-        self._detail_select_button.setEnabled(False)
-        self._detail_download_button.setEnabled(False)
-        self._detail_brief_button.setEnabled(False)
-        detail_actions.addWidget(self._detail_select_button)
-        detail_actions.addWidget(self._detail_download_button)
-        detail_actions.addWidget(self._detail_brief_button)
-        detail_actions.addStretch(1)
-        detail_layout.addLayout(detail_actions)
-        result_layout.addWidget(self._candidate_detail_frame)
         root.addWidget(result_card)
-
-        registered_card, registered_layout = _card("已选数据源")
-        self._registered_empty_label = _muted("尚未从中文检索结果登记数据源。")
-        registered_layout.addWidget(self._registered_empty_label)
-        self._registered_table = _table(["数据源", "来源", "当前状态", "已有资产", "缺失资产", "下一步", "操作"])
-        self._registered_table.setObjectName("chineseRegisteredSourceTable")
-        registered_layout.addWidget(self._registered_table)
-        root.addWidget(registered_card)
 
         log_card, log_layout = _card("高级信息")
         self._mapping_log = _text_preview(180)
@@ -986,7 +951,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         bottom_frame.setObjectName("chineseDatasetSearchBottomActionBar")
         bottom_layout = QHBoxLayout(bottom_frame)
         bottom_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
-        self._registered_count_label = _status_label("已选择 0 个数据源，其中 0 个可进入识别。")
+        self._registered_count_label = _status_label("已选 GEO 0 个，TCGA 0 个，GTEx 0 个；0 个可进入识别。")
         self._continue_button = _button("下一步：进入数据识别", "primaryButton", self.continue_to_recognition)
         self._continue_button.setEnabled(False)
         bottom_layout.addWidget(self._registered_count_label)
@@ -1002,6 +967,116 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         box.setMaximumHeight(92)
         return box
 
+    def _build_database_tab(
+        self,
+        *,
+        source_key: str,
+        draft_title: str,
+        draft_placeholder: str,
+        copy_source: str,
+        search_text: str,
+        search_callback: Callable[[], object],
+        candidate_headers: list[str],
+        selected_empty: str,
+    ) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(SPACING["sm"], SPACING["md"], SPACING["sm"], SPACING["sm"])
+        layout.setSpacing(SPACING["md"])
+
+        summary = _status_label(f"{draft_title}：尚未生成")
+        query_box = self._query_draft_box(draft_placeholder)
+        query_box.setVisible(False)
+        self._draft_detail_widgets.append(query_box)
+        toggle_button = _button("查看完整检索词", "secondaryButton", lambda checked=False, box=query_box: self._toggle_single_draft_box(box))
+        draft_frame = QFrame()
+        draft_frame.setObjectName("databaseDraftPanel")
+        draft_layout = QVBoxLayout(draft_frame)
+        draft_layout.setContentsMargins(0, 0, 0, 0)
+        draft_layout.addWidget(_muted(draft_title))
+        draft_layout.addWidget(summary)
+        draft_actions = QHBoxLayout()
+        draft_actions.addWidget(toggle_button)
+        draft_actions.addWidget(_button("复制", "secondaryButton", lambda checked=False, s=copy_source: self.copy_query(s)))
+        draft_actions.addWidget(_button(search_text, "secondaryButton", lambda checked=False, callback=search_callback: callback()))
+        draft_actions.addStretch(1)
+        draft_layout.addLayout(draft_actions)
+        draft_layout.addWidget(query_box)
+        layout.addWidget(draft_frame)
+
+        layout.addWidget(_muted("候选结果"))
+        empty = _muted("暂无候选结果。")
+        table = _table(candidate_headers)
+        table.setWordWrap(True)
+        table.setMinimumHeight(220)
+        layout.addWidget(empty)
+        layout.addWidget(table)
+
+        detail_frame = QFrame()
+        detail_frame.setObjectName(f"{source_key}CandidateDetailPanel")
+        detail_layout = QVBoxLayout(detail_frame)
+        detail_layout.setContentsMargins(0, SPACING["sm"], 0, 0)
+        detail_title = _status_label("候选详情")
+        detail_text = _text_preview(140)
+        detail_text.setObjectName(f"{source_key}CandidateDetailText")
+        detail_text.setPlainText("点击候选结果的“详情”查看标题、中文简介、匹配原因、资产状态和下载建议。")
+        detail_layout.addWidget(detail_title)
+        detail_layout.addWidget(detail_text)
+        detail_actions = QHBoxLayout()
+        select_button = _button("选择", "secondaryButton", self._select_current_candidate)
+        download_button = _button("下载并登记" if source_key == "geo" else "生成下载任务", "secondaryButton", self._download_current_candidate)
+        brief_button = _button("生成中文简介", "secondaryButton", self._brief_current_candidate)
+        select_button.setEnabled(False)
+        download_button.setEnabled(False)
+        brief_button.setEnabled(False)
+        brief_button.setVisible(source_key == "geo")
+        detail_actions.addWidget(select_button)
+        detail_actions.addWidget(download_button)
+        detail_actions.addWidget(brief_button)
+        detail_actions.addStretch(1)
+        detail_layout.addLayout(detail_actions)
+        layout.addWidget(detail_frame)
+
+        layout.addWidget(_muted("已选本库数据源"))
+        registered_empty = _muted(selected_empty)
+        registered_table = _table(["数据源", "当前状态", "已有资产", "缺失资产", "下一步", "操作"])
+        registered_table.setObjectName(f"{source_key}RegisteredSourceTable")
+        layout.addWidget(registered_empty)
+        layout.addWidget(registered_table)
+
+        self._source_detail_titles[source_key] = detail_title
+        self._source_detail_texts[source_key] = detail_text
+        self._source_detail_select_buttons[source_key] = select_button
+        self._source_detail_download_buttons[source_key] = download_button
+        self._source_detail_brief_buttons[source_key] = brief_button
+        self._source_registered_empty_labels[source_key] = registered_empty
+        self._source_registered_tables[source_key] = registered_table
+        if source_key == "geo":
+            self._geo_draft_summary = summary
+            self._geo_query_box = query_box
+            self._geo_empty_label = empty
+            self._geo_table = table
+            self._geo_registered_empty_label = registered_empty
+            self._geo_registered_table = registered_table
+        elif source_key == "tcga_gdc":
+            self._tcga_draft_summary = summary
+            self._tcga_query_box = query_box
+            self._tcga_empty_label = empty
+            self._tcga_table = table
+            self._tcga_registered_empty_label = registered_empty
+            self._tcga_registered_table = registered_table
+        elif source_key == "gtex":
+            self._gtex_draft_summary = summary
+            self._gtex_query_box = query_box
+            self._gtex_empty_label = empty
+            self._gtex_table = table
+            self._gtex_registered_empty_label = registered_empty
+            self._gtex_registered_table = registered_table
+        return page
+
+    def _toggle_single_draft_box(self, box: QPlainTextEdit) -> None:
+        box.setVisible(not box.isVisible())
+
     def _toggle_full_drafts(self) -> None:
         visible = not self._geo_query_box.isVisible()
         self._set_full_drafts_visible(visible)
@@ -1009,7 +1084,6 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
     def _set_full_drafts_visible(self, visible: bool) -> None:
         for widget in self._draft_detail_widgets:
             widget.setVisible(visible)
-        self._draft_toggle_button.setText("收起完整检索词" if visible else "查看完整检索词")
 
     def _add_draft_section(
         self,
@@ -1048,6 +1122,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._geo_query_box.setPlainText("\n".join(geo_queries) if geo_queries else "暂无 GEO/GSE 检索草稿")
         self._tcga_query_box.setPlainText(", ".join(query.tcga_project_ids) if query.tcga_project_ids else "暂无 TCGA/GDC 项目草稿")
         self._gtex_query_box.setPlainText(", ".join(query.gtex_tissues) if query.gtex_tissues else "暂无 GTEx 组织草稿")
+        self._topic_summary_label.setText(_topic_summary_text(query))
         self._geo_draft_summary.setText(_geo_draft_summary_text(query))
         self._tcga_draft_summary.setText(f"TCGA：{', '.join(query.tcga_project_ids) if query.tcga_project_ids else '未生成项目草稿'}")
         self._gtex_draft_summary.setText(f"GTEx：{', '.join(query.gtex_tissues) if query.gtex_tissues else '未生成组织草稿'}")
@@ -1133,35 +1208,39 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _refresh_registered_sources(self) -> None:
         rows = self._registered_chinese_rows()
-        self._registered_empty_label.setVisible(not rows)
-        display_rows: list[list[object]] = []
+        grouped_rows: dict[str, list[RegisteredSourceRow]] = {"geo": [], "tcga_gdc": [], "gtex": []}
         for row in rows:
-            status = _current_registered_row_status(self._project_root, row)
-            display_rows.append(
-                [
-                    row.source_label,
-                    row.source_type,
-                    status,
-                    _registered_existing_assets(row, status),
-                    _registered_missing_assets(row, status),
-                    _registered_next_step(row, status),
-                    "",
-                ]
-            )
-        _fill_table(
-            self._registered_table,
-            display_rows,
-        )
-        for row_index, row in enumerate(rows):
-            self._registered_table.setCellWidget(row_index, 6, _registered_source_action_widget(row))
+            grouped_rows[_registered_source_bucket(row)].append(row)
+        for source_key, source_rows in grouped_rows.items():
+            empty_label = self._source_registered_empty_labels[source_key]
+            table = self._source_registered_tables[source_key]
+            empty_label.setVisible(not source_rows)
+            display_rows: list[list[object]] = []
+            for row in source_rows:
+                status = _current_registered_row_status(self._project_root, row)
+                display_rows.append(
+                    [
+                        row.source_label,
+                        status,
+                        _registered_existing_assets(row, status),
+                        _registered_missing_assets(row, status),
+                        _registered_next_step(row, status),
+                        "",
+                    ]
+                )
+            _fill_table(table, display_rows)
+            for row_index, row in enumerate(source_rows):
+                table.setCellWidget(row_index, 5, _registered_source_action_widget(row))
         total_count = len(rows)
         ready_count = _ready_chinese_source_count(self._project_root)
+        source_counts = {key: len(value) for key, value in grouped_rows.items()}
+        prefix = f"已选 GEO {source_counts['geo']} 个，TCGA {source_counts['tcga_gdc']} 个，GTEx {source_counts['gtex']} 个；{ready_count} 个可进入识别。"
         if ready_count:
-            self._registered_count_label.setText(f"已选择 {total_count} 个数据源，其中 {ready_count} 个可进入识别。当前建议操作：进入数据识别。")
+            self._registered_count_label.setText(f"{prefix} 当前建议操作：进入数据识别。")
         elif total_count:
-            self._registered_count_label.setText(f"已选择 {total_count} 个数据源，其中 0 个可进入识别。当前建议操作：先补全表达矩阵。")
+            self._registered_count_label.setText(f"{prefix} 当前建议操作：先补全表达矩阵。")
         else:
-            self._registered_count_label.setText("已选择 0 个数据源，其中 0 个可进入识别。当前建议操作：先选择数据源。")
+            self._registered_count_label.setText(f"{prefix} 当前建议操作：先选择数据源。")
         can_continue = ready_count > 0 and self._project_root is not None
         self._continue_button.setEnabled(can_continue)
         self._continue_button.setText("下一步：进入数据识别")
@@ -1189,6 +1268,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _show_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
         self._selected_candidate = candidate
+        source_key = _candidate_source_bucket(candidate.source)
+        self._candidate_detail_title = self._source_detail_titles[source_key]
+        self._candidate_detail_text = self._source_detail_texts[source_key]
+        self._detail_select_button = self._source_detail_select_buttons[source_key]
+        self._detail_download_button = self._source_detail_download_buttons[source_key]
+        self._detail_brief_button = self._source_detail_brief_buttons[source_key]
         self._candidate_detail_title.setText(f"候选详情：{candidate.accession_or_project}")
         self._candidate_detail_text.setPlainText(_candidate_detail_text(candidate, self._project_root, self._geo_brief_cache.get(candidate.accession_or_project)))
         self._detail_select_button.setEnabled(not self._is_candidate_registered(candidate.source, candidate.accession_or_project))
@@ -3262,6 +3347,31 @@ def _geo_draft_summary_text(query: object) -> str:
     data_types = ", ".join(getattr(query, "data_modalities", ()) or getattr(query, "data_type_terms_en", ()) or ()) or "表达谱/RNA-seq/芯片"
     species = ", ".join(getattr(query, "species", ()) or ()) or "Homo sapiens"
     return f"GEO：{diseases} · {data_types} · {species}"
+
+
+def _topic_summary_text(query: object) -> str:
+    diseases_zh = ", ".join(getattr(query, "disease_terms_zh", ()) or ()) or "未识别中文疾病"
+    diseases_en = ", ".join(getattr(query, "disease_terms_en", ()) or ()) or "未生成英文疾病词"
+    tcga = ", ".join(getattr(query, "tcga_project_ids", ()) or ()) or "无 TCGA 项目草稿"
+    gtex = ", ".join(getattr(query, "gtex_tissues", ()) or ()) or "无 GTEx 组织草稿"
+    return f"主题识别：{diseases_zh} → {diseases_en}；TCGA：{tcga}；GTEx：{gtex}"
+
+
+def _candidate_source_bucket(source: str) -> str:
+    if source == "tcga_gdc":
+        return "tcga_gdc"
+    if source == "gtex":
+        return "gtex"
+    return "geo"
+
+
+def _registered_source_bucket(row: RegisteredSourceRow) -> str:
+    source_type = row.source_type_key
+    if "tcga" in source_type:
+        return "tcga_gdc"
+    if "gtex" in source_type:
+        return "gtex"
+    return "geo"
 
 
 def _candidate_modality_label(candidate: UnifiedDatasetCandidate) -> str:
