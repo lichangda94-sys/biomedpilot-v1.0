@@ -738,7 +738,7 @@ def _profile_tabular_text(path: Path, *, max_rows: int = 250) -> dict[str, objec
     clinical_like = _is_clinical_header(normalized_header)
     survival_like = _is_survival_header(normalized_header)
     annotation_like = _is_annotation_header(normalized_header)
-    first_gene_like = _is_gene_identifier_header(normalized_header[0]) or first_column_pattern in {"ensembl_id", "probe_id", "gene_symbol"}
+    first_gene_like = _is_gene_identifier_header(normalized_header[0]) or first_column_pattern in {"ensembl_id", "probe_id", "gene_symbol", "entrez_id"}
     numeric_ratio = numeric_cells / total_cells if total_cells else 0.0
     integer_numeric_ratio = integer_cells / numeric_cells if numeric_cells else 0.0
     non_negative_integer_ratio = non_negative_integer_cells / numeric_cells if numeric_cells else 0.0
@@ -953,11 +953,14 @@ def _first_column_id_pattern(values: list[str]) -> str:
     ensembl = sum(1 for value in sample if re.match(r"ENS[A-Z]*G\d+", _clean_cell(value), flags=re.IGNORECASE))
     probe = sum(1 for value in sample if re.match(r"\d+_[a-z]+_at|[A-Z]{2,}\d+", _clean_cell(value), flags=re.IGNORECASE))
     gene_symbol = sum(1 for value in sample if re.match(r"[A-Za-z][A-Za-z0-9.-]{1,12}$", _clean_cell(value)))
+    entrez = sum(1 for value in sample if re.fullmatch(r"\d{3,12}", _clean_cell(value)))
     threshold = max(1, int(len(sample) * 0.5))
     if ensembl >= threshold:
         return "ensembl_id"
     if probe >= threshold:
         return "probe_id"
+    if entrez >= threshold:
+        return "entrez_id"
     if gene_symbol >= threshold:
         return "gene_symbol"
     return "unknown"
@@ -993,7 +996,7 @@ def _is_survival_header(headers: list[str]) -> bool:
 
 
 def _is_annotation_header(headers: list[str]) -> bool:
-    annotation_tokens = ("probe", "id_ref", "gene_symbol", "gene_assignment", "entrez", "ensembl", "chromosome", "chr", "description")
+    annotation_tokens = ("probe", "id_ref", "gene_symbol", "symbol", "gene_assignment", "entrez", "ensembl", "chromosome", "chr", "description")
     return any(any(token in header for token in annotation_tokens) for header in headers)
 
 

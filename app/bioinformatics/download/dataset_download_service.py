@@ -63,6 +63,11 @@ class GeoAssetManifestDiscoverer(Protocol):
         ...
 
 
+class GeoRemoteAssetDownloader(Protocol):
+    def download_asset(self, asset: dict[str, Any], target_dir: Path) -> dict[str, Any]:
+        ...
+
+
 class HttpsGeoFamilySoftDownloader:
     """Download GEO family SOFT files from the NCBI HTTPS mirror."""
 
@@ -177,6 +182,54 @@ class HttpsGeoAssetManifestDiscoverer:
         return manifest
 
 
+class HttpsGeoRemoteAssetDownloader:
+    """Download a remote GEO asset discovered in the asset manifest."""
+
+    def download_asset(self, asset: dict[str, Any], target_dir: Path) -> dict[str, Any]:
+        remote_url = str(asset.get("remote_url") or "").strip()
+        if not remote_url.startswith("https://ftp.ncbi.nlm.nih.gov/geo/"):
+            raise ValueError("Only NCBI GEO HTTPS assets can be downloaded.")
+        file_name = Path(str(asset.get("file_name") or remote_url.rstrip("/").rsplit("/", 1)[-1])).name
+        if not file_name:
+            raise ValueError("GEO asset file name is empty.")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / file_name
+        if target_path.exists() and target_path.stat().st_size > 0:
+            return {
+                "status": "success",
+                "remote_url": remote_url,
+                "local_path": str(target_path.resolve()),
+                "bytes_downloaded": target_path.stat().st_size,
+                "note": "Loaded existing asset from project cache.",
+            }
+        partial_path = target_path.with_suffix(target_path.suffix + ".part")
+        bytes_downloaded = 0
+        try:
+            with urlopen(remote_url, timeout=60, context=_ssl_context()) as response:  # nosec B310 - validated NCBI GEO HTTPS URL.
+                with partial_path.open("wb") as output:
+                    while True:
+                        chunk = response.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                        bytes_downloaded += len(chunk)
+            if bytes_downloaded <= 0:
+                raise RuntimeError("NCBI GEO returned an empty asset file.")
+            partial_path.replace(target_path)
+        except Exception:
+            try:
+                partial_path.unlink()
+            except OSError:
+                pass
+            raise
+        return {
+            "status": "success",
+            "remote_url": remote_url,
+            "local_path": str(target_path.resolve()),
+            "bytes_downloaded": bytes_downloaded,
+        }
+
+
 class LegacyGeoFamilySoftDownloader:
     """Thin optional wrapper around the archived GEO full-family-SOFT downloader."""
 
@@ -197,9 +250,11 @@ class DatasetDownloadService:
         *,
         geo_downloader: GeoFamilySoftDownloader | None = None,
         geo_asset_discoverer: GeoAssetManifestDiscoverer | None = None,
+        geo_asset_downloader: GeoRemoteAssetDownloader | None = None,
     ) -> None:
         self._geo_downloader = geo_downloader or HttpsGeoFamilySoftDownloader()
         self._geo_asset_discoverer = geo_asset_discoverer or HttpsGeoAssetManifestDiscoverer()
+        self._geo_asset_downloader = geo_asset_downloader or HttpsGeoRemoteAssetDownloader()
 
     def create_request_from_candidate(
         self,
@@ -427,6 +482,140 @@ class DatasetDownloadService:
             manifest["ui_status_parts"] = _geo_asset_ui_status_parts(manifest)
             return manifest
 
+    def download_geo_manifest_assets(
+        self,
+        *,
+        project_root: str | Path,
+        accession_or_project: str,
+        asset_types: tuple[str, ...] = ("series_matrix", "supplementary_file"),
+    ) -> CandidateDownloadResult:
+        root = Path(project_root).expanduser().resolve()
+        _ensure_download_dirs(root)
+        accession = _normalize_gse_accession(accession_or_project)
+        manifest_path = _find_geo_asset_manifest_path(root, accession)
+        if manifest_path is None:
+            raise FileNotFoundError(f"未找到 {accession} 的 GEO asset manifest，请先下载 family SOFT 元数据。")
+        manifest = _read_json(manifest_path)
+        target_dir = manifest_path.parent
+        request = DatasetDownloadRequest(
+            download_id=f"dl-{uuid4().hex[:10]}",
+            project_root=str(root),
+            source="geo",
+            source_type="geo_accession",
+            accession_or_project=accession,
+            display_title=accession,
+            original_chinese_topic="",
+            generated_query_or_mapping=accession,
+            target_dir=str(target_dir),
+            execute_download=True,
+            metadata={
+                "query_source": "geo_asset_manifest",
+                "ui_source": "chinese_research_question_search",
+                "source": "geo",
+                "source_type": "geo_accession",
+                "source_name": accession,
+                "source_id": accession,
+                "source_origin": "geo_asset_manifest",
+                "accession_or_project": accession,
+                "generated_query_or_mapping": accession,
+                "asset_manifest_path": str(manifest_path),
+            },
+            created_at=_now(),
+        )
+        request_path = root / "acquisition" / "download_requests" / f"{request.download_id}.json"
+        receipt_path = root / "acquisition" / "download_receipts" / f"{request.download_id}.json"
+        _write_json(request_path, _request_payload(request))
+        assets = [asset for asset in manifest.get("assets", []) or [] if isinstance(asset, dict)]
+        selected_types = set(asset_types)
+        downloaded_files: list[str] = []
+        downloaded_asset_count = 0
+        errors: list[str] = []
+        for asset in assets:
+            if asset.get("asset_type") not in selected_types or asset.get("status") == "downloaded":
+                continue
+            remote_url = str(asset.get("remote_url") or "")
+            if not remote_url:
+                continue
+            asset_target_dir = _geo_asset_download_dir(target_dir, str(asset.get("asset_type") or "supplementary_file"))
+            try:
+                result = self._geo_asset_downloader.download_asset(asset, asset_target_dir)
+            except Exception as exc:
+                errors.append(f"{asset.get('file_name') or remote_url}: {exc}")
+                continue
+            local_path = str(result.get("local_path") or "")
+            if local_path and Path(local_path).is_file():
+                downloaded_asset_count += 1
+                downloaded_files.append(str(Path(local_path).resolve()))
+                asset["status"] = "downloaded"
+                asset["local_path"] = str(Path(local_path).resolve())
+                asset["input_eligible"] = True
+                asset["needs_download"] = False
+                asset["size_bytes"] = Path(local_path).stat().st_size
+        manifest["assets"] = assets
+        manifest["summary"] = _geo_asset_manifest_summary(assets)
+        manifest["ui_status_parts"] = _geo_asset_ui_status_parts(manifest)
+        manifest.setdefault("download_events", [])
+        if isinstance(manifest["download_events"], list):
+            manifest["download_events"].append(
+                {
+                    "download_id": request.download_id,
+                    "created_at": _now(),
+                    "asset_types": list(asset_types),
+                    "downloaded_asset_count": downloaded_asset_count,
+                    "downloaded_files": downloaded_files,
+                    "errors": errors,
+                }
+            )
+        _write_json(manifest_path, manifest)
+        success = bool(downloaded_files)
+        status = "geo_assets_downloaded_with_warnings" if downloaded_files and errors else ("geo_assets_downloaded" if downloaded_files else "geo_asset_download_failed")
+        message = _geo_supplement_download_message(accession, manifest, downloaded_asset_count, errors)
+        receipt = {
+            "schema_version": "biomedpilot.dataset_download_receipt.v1",
+            "download_id": request.download_id,
+            "created_at": _now(),
+            "source": "geo",
+            "source_type": "geo_accession",
+            "accession_or_project": accession,
+            "display_title": accession,
+            "status": status,
+            "message": message,
+            "download_executed": True,
+            "target_dir": str(target_dir),
+            "downloaded_files": downloaded_files,
+            "asset_manifest_path": str(manifest_path),
+            "asset_manifest": manifest,
+            "request_path": str(request_path),
+            "download_result": {"downloaded_asset_count": downloaded_asset_count, "errors": errors},
+            "metadata": request.metadata,
+        }
+        _write_json(receipt_path, receipt)
+        summary = self._register_download_acquisition(
+            request=request,
+            receipt_path=receipt_path,
+            request_path=request_path,
+            status=status,
+            downloaded_files=downloaded_files,
+            download_executed=True,
+            asset_manifest_path=manifest_path,
+            asset_manifest=manifest,
+        )
+        return CandidateDownloadResult(
+            success=success,
+            status=status,
+            message=message,
+            source="geo",
+            accession_or_project=accession,
+            download_id=request.download_id,
+            request_path=str(request_path),
+            receipt_path=str(receipt_path),
+            target_dir=str(target_dir),
+            downloaded_files=tuple(downloaded_files),
+            download_executed=True,
+            acquisition_summary=summary,
+            details=receipt,
+        )
+
 
 def _ensure_download_dirs(root: Path) -> None:
     for relative in (
@@ -487,6 +676,38 @@ def _write_geo_asset_manifest(target_dir: Path, accession: str, manifest: dict[s
     return path
 
 
+def _find_geo_asset_manifest_path(root: Path, accession: str) -> Path | None:
+    normalized = _normalize_gse_accession(accession)
+    records_dir = root / "acquisition" / "records"
+    if records_dir.exists():
+        for path in sorted(records_dir.glob("*.json"), reverse=True):
+            try:
+                payload = _read_json(path)
+            except (OSError, json.JSONDecodeError):
+                continue
+            metadata = payload.get("metadata")
+            if not isinstance(metadata, dict):
+                continue
+            if str(metadata.get("source") or "") != "geo":
+                continue
+            record_accession = str(metadata.get("accession_or_project") or payload.get("source_label") or "").upper()
+            if record_accession != normalized:
+                continue
+            manifest_path = Path(str(metadata.get("asset_manifest_path") or ""))
+            if manifest_path.is_file():
+                return manifest_path
+    candidate = root / "raw_data" / "geo" / normalized / f"{normalized}_asset_manifest.json"
+    return candidate if candidate.is_file() else None
+
+
+def _geo_asset_download_dir(target_dir: Path, asset_type: str) -> Path:
+    if asset_type == "series_matrix":
+        return target_dir / "matrix"
+    if asset_type == "supplementary_file":
+        return target_dir / "supplementary"
+    return target_dir
+
+
 def _geo_asset_entry(
     *,
     asset_type: str,
@@ -521,22 +742,28 @@ def _geo_asset_manifest_summary(assets: list[dict[str, Any]]) -> dict[str, Any]:
     supplementary = [item for item in assets if item.get("asset_type") == "supplementary_file"]
     downloaded_family = [item for item in family_soft if item.get("status") == "downloaded"]
     downloaded_matrix = [item for item in series_matrix if item.get("status") == "downloaded"]
+    downloaded_supplementary = [item for item in supplementary if item.get("status") == "downloaded"]
     expression_candidates = [
         item
         for item in [*series_matrix, *supplementary]
         if "expression" in str(item.get("role") or "") or "matrix" in str(item.get("role") or "")
     ]
+    downloaded_expression_candidates = [item for item in expression_candidates if item.get("status") == "downloaded"]
     return {
         "family_soft_count": len(family_soft),
         "downloaded_family_soft_count": len(downloaded_family),
         "series_matrix_count": len(series_matrix),
         "downloaded_series_matrix_count": len(downloaded_matrix),
         "supplementary_file_count": len(supplementary),
+        "downloaded_supplementary_file_count": len(downloaded_supplementary),
         "expression_candidate_count": len(expression_candidates),
+        "downloaded_expression_candidate_count": len(downloaded_expression_candidates),
         "metadata_downloaded": bool(downloaded_family),
         "series_matrix_discovered": bool(series_matrix),
+        "series_matrix_downloaded": bool(downloaded_matrix),
         "supplementary_files_discovered": bool(supplementary),
-        "expression_matrix_status": "downloaded" if downloaded_matrix else ("remote_discovered" if series_matrix else "pending_confirmation"),
+        "supplementary_files_downloaded": bool(downloaded_supplementary),
+        "expression_matrix_status": "downloaded" if downloaded_expression_candidates else ("remote_discovered" if expression_candidates else "pending_confirmation"),
         "recognition_ready": bool(downloaded_family or downloaded_matrix),
     }
 
@@ -548,11 +775,15 @@ def _geo_asset_ui_status_parts(manifest: dict[str, Any] | None) -> list[str]:
     parts: list[str] = []
     if summary.get("metadata_downloaded"):
         parts.append("元数据已下载")
-    if summary.get("series_matrix_discovered"):
+    if summary.get("expression_matrix_status") == "downloaded":
+        parts.append("表达矩阵已下载")
+    elif summary.get("series_matrix_discovered") or summary.get("expression_candidate_count"):
         parts.append("表达矩阵待确认")
     else:
         parts.append("表达矩阵待确认")
-    if summary.get("supplementary_files_discovered"):
+    if summary.get("supplementary_files_downloaded"):
+        parts.append("补充文件已下载")
+    elif summary.get("supplementary_files_discovered"):
         parts.append("已发现补充文件")
     if summary.get("recognition_ready"):
         parts.append("可进入识别")
@@ -561,6 +792,14 @@ def _geo_asset_ui_status_parts(manifest: dict[str, Any] | None) -> list[str]:
 
 def _geo_download_message(accession: str, manifest: dict[str, Any] | None) -> str:
     return f"{_normalize_gse_accession(accession)}：" + " / ".join(_geo_asset_ui_status_parts(manifest))
+
+
+def _geo_supplement_download_message(accession: str, manifest: dict[str, Any], downloaded_asset_count: int, errors: list[str]) -> str:
+    prefix = f"{_normalize_gse_accession(accession)}：已下载 {downloaded_asset_count} 个补充/Matrix 资产"
+    status = " / ".join(_geo_asset_ui_status_parts(manifest))
+    if errors:
+        return f"{prefix}，部分失败 {len(errors)} 个。{status}"
+    return f"{prefix}。{status}"
 
 
 def _candidate_source_type(candidate: UnifiedDatasetCandidate) -> str:
@@ -698,6 +937,10 @@ def _planned_message(source: str, accession_or_project: str) -> str:
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _now() -> str:

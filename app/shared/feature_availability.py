@@ -35,10 +35,10 @@ class FeatureAvailability:
 
 FEATURE_REGISTRY: tuple[FeatureAvailability, ...] = (
     FeatureAvailability("bioinformatics", "bio-study-question", "研究问题", FeatureAvailabilityStatus.PLACEHOLDER, "研究设计入口已预留。", "接入项目向导和研究目标记录。"),
-    FeatureAvailability("bioinformatics", "bio-data-import", "数据检索 / 导入", FeatureAvailabilityStatus.TESTING, "支持生成 GEO 查询计划和 GSE accession 导入记录；当前不自动下载 NCBI 数据。", "接入受控在线检索、候选列表和下载步骤。", "app/bioinformatics/legacy/geo_tool"),
+    FeatureAvailability("bioinformatics", "bio-data-import", "数据检索 / 导入", FeatureAvailabilityStatus.TESTING, "支持 GEO 查询计划、中文主题检索、GSE accession 导入登记，以及受控 GEO 元数据和补充文件下载。", "继续完善在线候选筛选和下载进度反馈。", "app/bioinformatics/legacy/geo_tool"),
     FeatureAvailability("bioinformatics", "bio-local-expression-import", "Local Expression Matrix Import", FeatureAvailabilityStatus.TESTING, "已支持本地 CSV / TSV / TXT / XLSX 表达矩阵结构诊断、导入摘要和标准 asset manifest；尚未进行表达矩阵标准化、样本分组和差异分析。", "接入数据资产确认、样本注释导入和表达矩阵清洗。"),
-    FeatureAvailability("bioinformatics", "bio-download", "数据下载", FeatureAvailabilityStatus.TESTING, "读取 GEO 查询计划并生成下载计划；当前不实际下载 NCBI 数据。", "在用户确认后接入 legacy GEO 下载执行。", "app/bioinformatics/legacy/geo_pipeline"),
-    FeatureAvailability("bioinformatics", "bio-asset-detection", "数据资产识别", FeatureAvailabilityStatus.TESTING, "读取 GEO 下载计划并扫描本地目标目录，不联网、不下载。", "接入真实下载产物后的表达矩阵、样本注释和平台注释识别。", "app/bioinformatics/legacy/geo_processing"),
+    FeatureAvailability("bioinformatics", "bio-download", "数据下载", FeatureAvailabilityStatus.TESTING, "读取下载计划；已支持用户确认后下载 GEO family SOFT、Series Matrix 和 supplementary files，并生成 asset manifest。", "继续完善大文件进度、失败重试和 TCGA/GTEx 下载接入。", "app/bioinformatics/legacy/geo_pipeline"),
+    FeatureAvailability("bioinformatics", "bio-asset-detection", "数据资产识别", FeatureAvailabilityStatus.TESTING, "识别步骤本身不联网；读取本地导入和 GEO 下载产物，识别表达矩阵、样本注释、平台注释和临床/表型资产。", "继续完善下载后资产确认和标准化预览。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-cleaning", "数据清洗", FeatureAvailabilityStatus.TESTING, "读取资产识别结果并生成清洗预检计划；当前不执行矩阵标准化。", "接入受控矩阵清洗、标准化结果预览和输出登记。", "app/bioinformatics/legacy/geo_processing"),
     FeatureAvailability("bioinformatics", "bio-sample-groups", "样本分组", FeatureAvailabilityStatus.TESTING, "读取数据清洗计划并生成样本分组预检；当前不自动推断病例/对照分组。", "接入样本注释表预览、分组编辑和保存。"),
     FeatureAvailability("bioinformatics", "bio-deg", "差异表达分析", FeatureAvailabilityStatus.TESTING, "读取样本分组计划并检查表达矩阵、样本注释和病例/对照分组；当前不运行正式差异统计。", "接入参数配置、统计引擎选择和受控 DEG runner。"),

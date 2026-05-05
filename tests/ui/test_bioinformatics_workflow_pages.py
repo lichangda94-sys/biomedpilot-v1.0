@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import json
+import gzip
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -185,6 +186,40 @@ class _FakeGeoAssetDiscoverer:
             "ui_status_parts": ["元数据已下载", "表达矩阵待确认", "已发现补充文件", "可进入识别"],
             "warnings": [],
         }
+
+
+class _FakeGeoRemoteAssetDownloader:
+    def download_asset(self, asset: dict[str, object], target_dir: Path) -> dict[str, object]:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        path = target_dir / Path(str(asset["file_name"])).name
+        if str(asset.get("asset_type")) == "series_matrix":
+            content = "\n".join(
+                [
+                    "!Series_title = demo",
+                    "!Series_geo_accession = GSE33630",
+                    "!Series_platform_id = GPL570",
+                    "!Sample_title = tumor",
+                    "!Sample_geo_accession = GSM1",
+                    "!Sample_characteristics_ch1 = tissue: tumor",
+                    "!series_matrix_table_begin",
+                    "ID_REF\tGSM1\tGSM2",
+                    "1007_s_at\t1.0\t2.0",
+                    "!series_matrix_table_end",
+                ]
+            )
+            if path.name.endswith(".gz"):
+                with gzip.open(path, "wt", encoding="utf-8") as handle:
+                    handle.write(content)
+            else:
+                path.write_text(content, encoding="utf-8")
+        else:
+            content = "gene\tGSM1\tGSM2\nTP53\t1\t2\nEGFR\t3\t4\n"
+            if path.name.endswith(".gz"):
+                with gzip.open(path, "wt", encoding="utf-8") as handle:
+                    handle.write(content)
+            else:
+                path.write_text(content, encoding="utf-8")
+        return {"status": "success", "local_path": str(path), "bytes_downloaded": path.stat().st_size}
 
 
 def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
@@ -674,6 +709,7 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     widget._download_service = workflow_pages.DatasetDownloadService(
         geo_downloader=_FakeGeoDownloader(),
         geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+        geo_asset_downloader=_FakeGeoRemoteAssetDownloader(),
     )
     candidate = _geo_candidate()
     widget._candidates = {("geo", "GSE33630"): candidate}
@@ -693,8 +729,8 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert widget._continue_button.isEnabled()
     assert widget._geo_table.item(0, 8).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
     download_button = widget._geo_table.cellWidget(0, 0).findChild(QPushButton, "candidateDownloadTaskButton_geo_GSE33630")
-    assert download_button.text() == "元数据已下载"
-    assert not download_button.isEnabled()
+    assert download_button.text() == "下载补充文件"
+    assert download_button.isEnabled()
     manifest_path = Path(str(result.details["asset_manifest_path"]))
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -705,6 +741,42 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert files
     assert files[0]["recognized_type"] == "geo_soft_container"
     assert "expression_matrix" in files[0]["recognized_roles"]
+
+
+def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes_processing(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    widget._download_service = workflow_pages.DatasetDownloadService(
+        geo_downloader=_FakeGeoDownloader(),
+        geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+        geo_asset_downloader=_FakeGeoRemoteAssetDownloader(),
+    )
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+    widget._fill_geo_candidates([candidate])
+    widget.set_query_text("脑胶质瘤")
+
+    metadata_result = widget.download_geo_candidate("GSE33630")
+    supplement_result = widget.download_geo_candidate("GSE33630")
+
+    assert metadata_result is not None
+    assert supplement_result is not None
+    assert supplement_result.status == "geo_assets_downloaded"
+    assert "补充/Matrix 资产" in widget.status_message()
+    assert "数据处理任务" in widget.status_message()
+    assert widget._geo_table.item(0, 8).text() == "元数据已下载 / 表达矩阵已下载 / 补充文件已下载 / 可进入识别"
+    download_button = widget._geo_table.cellWidget(0, 0).findChild(QPushButton, "candidateDownloadTaskButton_geo_GSE33630")
+    assert download_button.text() == "补充文件已下载"
+    assert not download_button.isEnabled()
+    report = workflow_pages.load_recognition_report(project_summary.project_root)
+    assert report is not None
+    recognized_types = {file["recognized_type"] for file in report.get("files", [])}
+    assert "geo_series_matrix_container" in recognized_types
+    standardization = workflow_pages.load_standardization_artifacts(project_summary.project_root)
+    task_plan = standardization["data_processing_task_plan"]
+    assert task_plan is not None
+    task_types = {task["task_type"] for task in task_plan["tasks"]}
+    assert {"expression_matrix_cleaning", "gene_annotation_mapping", "sample_annotation_review"} <= task_types
 
 
 def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:

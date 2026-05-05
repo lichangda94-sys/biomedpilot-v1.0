@@ -107,6 +107,32 @@ class _FakeGeoAssetDiscoverer:
         }
 
 
+class _FakeGeoRemoteAssetDownloader:
+    def download_asset(self, asset: dict[str, object], target_dir: Path) -> dict[str, object]:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        path = target_dir / Path(str(asset["file_name"])).name
+        if str(asset.get("asset_type")) == "series_matrix":
+            path.write_text(
+                "\n".join(
+                    [
+                        "!Series_title = demo",
+                        "!Series_geo_accession = GSE33630",
+                        "!Series_platform_id = GPL570",
+                        "!Sample_title = tumor",
+                        "!Sample_geo_accession = GSM1",
+                        "!series_matrix_table_begin",
+                        "ID_REF\tGSM1\tGSM2",
+                        "1007_s_at\t1.0\t2.0",
+                        "!series_matrix_table_end",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+        else:
+            path.write_text("gene\tGSM1\tGSM2\nTP53\t1\t2\n", encoding="utf-8")
+        return {"status": "success", "local_path": str(path), "bytes_downloaded": path.stat().st_size}
+
+
 def test_geo_candidate_download_task_writes_request_receipt_and_plan_record(tmp_path: Path) -> None:
     root = tmp_path / "project"
     service = DatasetDownloadService()
@@ -168,6 +194,42 @@ def test_geo_candidate_execute_download_registers_downloaded_file_as_reference(t
     assert record["metadata"]["ready_for_recognition"] == "ready"
     assert record["metadata"]["asset_manifest_path"] == str(manifest_path)
     assert record["metadata"]["asset_manifest_summary"]["expression_matrix_status"] == "remote_discovered"
+
+
+def test_geo_manifest_assets_download_updates_manifest_and_registers_files(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    service = DatasetDownloadService(
+        geo_downloader=_FakeGeoDownloader(),
+        geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+        geo_asset_downloader=_FakeGeoRemoteAssetDownloader(),
+    )
+    metadata = service.create_candidate_download_task(
+        project_root=root,
+        candidate=_candidate(),
+        original_chinese_topic="脑胶质瘤",
+        execute_download=True,
+    )
+
+    result = service.download_geo_manifest_assets(project_root=root, accession_or_project="GSE33630")
+
+    assert metadata.status == "geo_metadata_downloaded"
+    assert result.success
+    assert result.status == "geo_assets_downloaded"
+    assert len(result.downloaded_files) == 2
+    assert any(Path(path).name.endswith("_series_matrix.txt.gz") for path in result.downloaded_files)
+    manifest = json.loads(Path(str(result.details["asset_manifest_path"])).read_text(encoding="utf-8"))
+    assert manifest["summary"]["expression_matrix_status"] == "downloaded"
+    assert manifest["summary"]["downloaded_supplementary_file_count"] == 1
+    assert all(
+        asset["status"] == "downloaded"
+        for asset in manifest["assets"]
+        if asset["asset_type"] in {"series_matrix", "supplementary_file"}
+    )
+    assert result.acquisition_summary is not None
+    record = json.loads(result.acquisition_summary.record_path.read_text(encoding="utf-8"))
+    assert record["strategy"] == "reference"
+    assert record["metadata"]["download_status"] == "geo_assets_downloaded"
+    assert record["metadata"]["asset_manifest_summary"]["expression_matrix_status"] == "downloaded"
 
 
 def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:

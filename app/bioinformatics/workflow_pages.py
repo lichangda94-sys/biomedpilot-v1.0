@@ -752,6 +752,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status("GEO/GSE 候选结果不存在。", error=True)
             return None
         if self._is_candidate_ready_for_recognition("geo", accession_or_project):
+            if _candidate_has_pending_geo_assets(self._project_root, accession_or_project):
+                return self.download_geo_supplementary_assets(accession_or_project)
             self._set_status(_candidate_record_status_text(self._project_root, "geo", accession_or_project) or f"元数据已下载：{accession_or_project}")
             self._refresh_candidate_registration_buttons()
             return None
@@ -777,6 +779,44 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status(f"{result.message}（已完成元数据识别：{file_count} 个文件）。")
         else:
             self._set_status(result.message or "GEO 下载未完成，请稍后重试。", error=True)
+        return result
+
+    def download_geo_supplementary_assets(self, accession_or_project: str) -> object | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        if not _candidate_has_pending_geo_assets(self._project_root, accession_or_project):
+            self._set_status("未发现待下载的 Matrix 或补充文件。")
+            self._refresh_candidate_registration_buttons()
+            return None
+        self._set_status(f"正在下载补充文件：{accession_or_project}，请稍候。")
+        QApplication.processEvents()
+        try:
+            result = self._download_service.download_geo_manifest_assets(
+                project_root=self._project_root,
+                accession_or_project=accession_or_project,
+            )
+        except Exception as exc:
+            self._set_status(f"补充文件下载失败：{exc}", error=True)
+            return None
+        self._refresh_registered_sources()
+        if self._last_result is not None:
+            self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
+        else:
+            self._refresh_candidate_registration_buttons()
+            self._refresh_candidate_status_cells()
+        self.source_registered.emit(result.acquisition_summary)
+        if result.success and result.downloaded_files:
+            recognition = run_project_recognition(self._project_root)
+            readiness = run_project_readiness(self._project_root)
+            standardization = generate_standardized_assets(self._project_root)
+            load_analysis_task_center(self._project_root)
+            file_count = len(recognition.get("files", []) or []) if isinstance(recognition, dict) else 0
+            available = readiness.get("readiness_report", {}).get("available_inputs", []) if isinstance(readiness, dict) else []
+            task_count = len(standardization.get("data_processing_task_plan", {}).get("tasks", []) or []) if isinstance(standardization, dict) else 0
+            self._set_status(f"{result.message}（已识别 {file_count} 个文件；数据处理任务 {task_count} 项；可用资产：{', '.join(available) or '待确认'}）。")
+        else:
+            self._set_status(result.message or "未下载到补充文件，请检查 manifest。", error=True)
         return result
 
     def generate_geo_chinese_brief(self, accession_or_project: str) -> dict[str, object] | None:
@@ -1103,8 +1143,14 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             ready = self._is_candidate_ready_for_recognition(source, accession)
             planned = self._is_candidate_registered(source, accession)
             if source == "geo":
-                button.setText("元数据已下载" if ready else "下载并登记")
-                button.setEnabled(not ready)
+                pending_assets = ready and _candidate_has_pending_geo_assets(self._project_root, accession)
+                if pending_assets:
+                    button.setText("下载补充文件")
+                    button.setEnabled(True)
+                else:
+                    status_text = _candidate_record_status_text(self._project_root, source, accession)
+                    button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "下载并登记"))
+                    button.setEnabled(not ready)
             else:
                 button.setText("已生成任务" if planned else "生成下载任务")
                 button.setEnabled(not planned)
@@ -2546,6 +2592,12 @@ def _ready_chinese_source_count(project_root: Path | None) -> int:
 def _candidate_record_status_text(project_root: Path | None, source: str, accession_or_project: str) -> str:
     if project_root is None:
         return ""
+    if source == "geo":
+        manifest = _candidate_geo_asset_manifest(project_root, accession_or_project)
+        if manifest:
+            status = _geo_asset_status_text({"asset_manifest_summary": manifest.get("summary", {})})
+            if status:
+                return status
     records_dir = project_root / "acquisition" / "records"
     if not records_dir.exists():
         return ""
@@ -2565,6 +2617,56 @@ def _candidate_record_status_text(project_root: Path | None, source: str, access
             continue
         latest_text = _geo_asset_status_text(metadata) if source == "geo" else _registered_status_text(payload)
     return latest_text
+
+
+def _candidate_has_pending_geo_assets(project_root: Path | None, accession_or_project: str) -> bool:
+    manifest = _candidate_geo_asset_manifest(project_root, accession_or_project)
+    if not manifest:
+        return False
+    for asset in manifest.get("assets", []) or []:
+        if not isinstance(asset, dict):
+            continue
+        if asset.get("asset_type") not in {"series_matrix", "supplementary_file"}:
+            continue
+        if asset.get("status") != "downloaded" and asset.get("remote_url"):
+            return True
+    return False
+
+
+def _candidate_geo_asset_manifest(project_root: Path | None, accession_or_project: str) -> dict[str, object] | None:
+    if project_root is None:
+        return None
+    accession = str(accession_or_project).strip().upper()
+    records_dir = project_root / "acquisition" / "records"
+    candidates: list[Path] = []
+    if records_dir.exists():
+        for path in sorted(records_dir.glob("*.json"), reverse=True):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            metadata = payload.get("metadata")
+            if not isinstance(metadata, dict):
+                continue
+            if str(metadata.get("source") or "") != "geo":
+                continue
+            record_accession = str(metadata.get("accession_or_project") or payload.get("source_label") or "").upper()
+            if record_accession != accession:
+                continue
+            manifest_path = Path(str(metadata.get("asset_manifest_path") or ""))
+            if manifest_path.is_file():
+                candidates.append(manifest_path)
+    fallback = project_root / "raw_data" / "geo" / accession / f"{accession}_asset_manifest.json"
+    if fallback.is_file():
+        candidates.append(fallback)
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
 
 
 def _registered_source_display_name(payload: dict[str, object], metadata: dict[str, object]) -> str:
@@ -2633,13 +2735,17 @@ def _geo_asset_status_text(metadata: dict[str, object]) -> str:
     parts: list[str] = []
     if summary.get("metadata_downloaded"):
         parts.append("元数据已下载")
-    if summary.get("series_matrix_discovered"):
+    if summary.get("expression_matrix_status") == "downloaded":
+        parts.append("表达矩阵已下载")
+    elif summary.get("series_matrix_discovered") or summary.get("expression_candidate_count"):
         parts.append("表达矩阵待确认")
     elif summary.get("download_status") == "downloaded":
         parts.append("表达矩阵待确认")
     elif summary:
         parts.append("表达矩阵待确认")
-    if summary.get("supplementary_files_discovered"):
+    if summary.get("supplementary_files_downloaded"):
+        parts.append("补充文件已下载")
+    elif summary.get("supplementary_files_discovered"):
         parts.append("已发现补充文件")
     if summary.get("recognition_ready") or metadata.get("ready_for_recognition") == "ready":
         parts.append("可进入识别")

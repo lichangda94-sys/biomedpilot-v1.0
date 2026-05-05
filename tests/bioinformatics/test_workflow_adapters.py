@@ -191,6 +191,8 @@ def test_recognition_readiness_standardization_chain(project_root: Path) -> None
     standardization = generate_standardized_assets(project_root)
     assert "不等于正式 biological normalization" in standardization["registry"]["warnings"][0]  # type: ignore[index]
     assert load_standardization_artifacts(project_root)["registry"] is not None
+    task_types = {task["task_type"] for task in standardization["data_processing_task_plan"]["tasks"]}  # type: ignore[index]
+    assert {"expression_matrix_cleaning", "gene_annotation_mapping"} <= task_types
 
 
 def test_recognition_classifies_xlsx_gene_count_matrix(project_root: Path) -> None:
@@ -254,6 +256,8 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
     standardization = generate_standardized_assets(project_root)
     asset_types = {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
     assert asset_types >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
+    task_types = {task["task_type"] for task in standardization["data_processing_task_plan"]["tasks"]}  # type: ignore[index]
+    assert {"expression_matrix_cleaning", "gene_annotation_mapping", "sample_annotation_review"} <= task_types
 
 
 def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
@@ -360,6 +364,25 @@ def test_gzip_text_expression_matrix_is_recognized(project_root: Path) -> None:
 
     assert record["recognized_type"] == "normalized_expression_matrix"
     assert record["container_format"] == "tabular_text"
+
+
+def test_gzip_csv_expression_matrix_with_entrez_rowname_and_symbol_annotation(project_root: Path) -> None:
+    source = project_root / "raw_data" / "geo" / "GSE317461" / "supplementary" / "GSE317461_Thy.8505C.cells.cpm.csv.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write('"rowname","X8505c.CUET.4.BAM","X8505c.CUET.6.BAM","X8505c.UT.1.BAM","SYMBOL"\n')
+        handle.write('"653635",11.2,14.0,11.2,"WASH7P"\n')
+        handle.write('"102723897",4.3,3.8,3.6,"LOC102723897"\n')
+        handle.write('"79854",1.3,2.7,2.3,"LINC00115"\n')
+
+    recognition = run_project_recognition(project_root)
+    record = next(item for item in recognition["files"] if item["file_name"] == source.name)  # type: ignore[index]
+    assets = _asset_by_role(record)  # type: ignore[arg-type]
+
+    assert record["recognized_type"] == "tabular_text_file"
+    assert "normalized_expression_matrix" in assets
+    assert "platform_annotation" in assets
+    assert record["content_profile"]["first_column_id_pattern"] == "entrez_id"  # type: ignore[index]
 
 
 def test_workflow_and_task_center_do_not_run_analysis(project_root: Path) -> None:
