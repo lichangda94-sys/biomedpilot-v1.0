@@ -2,6 +2,8 @@
 
 ## Module Positioning
 
+Current version: `0.2.0-internal-beta.testing`.
+
 Meta Analysis is currently a Developer Preview / testing module. It is not a production systematic review or pooled meta-analysis application.
 
 No Meta Analysis workflow should be presented as production-ready. Connected features are intended for controlled developer preview testing and workflow stabilization.
@@ -10,18 +12,30 @@ No Meta Analysis workflow should be presented as production-ready. Connected fea
 
 The current testing chain is:
 
-1. Literature Import
-2. Prepare Screening
-3. Duplicate Review
-4. Screening
-5. Extraction Pool
-6. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
-7. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
-8. AI Suggestions Queue
+1. Protocol / PICO / PICOS / PECO draft
+2. Search strategy draft generation
+3. Reviewer-confirmed PubMed execution
+4. Literature Import
+5. Prepare Screening
+6. Duplicate Review
+7. Screening
+8. Full-text eligibility
+9. Extraction Pool
+10. Quality assessment
+11. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
+12. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
+13. AI Suggestions Queue
 
 ## Implemented Testing Capabilities
 
 - Literature Import supports NBIB / RIS / CSV smoke testing and registers imported literature records.
+- Protocol supports testing-level research question, PICO, PICOS, and PECO draft capture.
+- `app/meta_analysis/search/` is the active Meta-owned search layer for literature query strategy drafts.
+- Search strategy generation builds PubMed, Web of Science, Embase, and CNKI query drafts from shared medical-language translation with `target_context="meta_analysis"`.
+- PubMed draft queries support MeSH and `tiab` terms.
+- Reviewer-confirmed PubMed queries can execute real PubMed E-utilities search inside the Meta search layer and write a structured execution report.
+- Web of Science, Embase, and CNKI remain draft-only; no real execution clients are implemented for them.
+- PubMed search execution returns literature candidates only. It does not automatically import records into the literature library, run duplicate review, start screening, or update PRISMA counts.
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
@@ -33,22 +47,29 @@ The current testing chain is:
 
 ## Not Implemented Yet
 
-- Funnel plots, subgroup analysis, sensitivity analysis, and publication bias analysis.
+- Web of Science, Embase, and CNKI real online execution clients are not implemented.
+- PubMed search results are not automatically imported into the literature library.
+- PubMed search results are not automatically deduplicated through the Duplicate Review workflow.
+- PubMed search results are not automatically moved into title/abstract screening or PRISMA counting.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
-- PRISMA diagram generation, production Word/PDF reports, and publication-ready report packages.
-- OCR, PDF table extraction, and automated full-text data extraction.
-- Production risk of bias, GRADE, and related evidence-certainty workflow.
+- Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
+- PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
+- Automatic full-text acquisition, production PDF parsing, OCR, PDF table extraction, and automated full-text data extraction are not complete.
+- Production risk of bias, automated GRADE judgement, and related evidence-certainty workflow are not complete.
+- Production-grade online adapters for all planned literature databases are not complete.
 - Autonomous AI-assisted review, automatic final screening, automatic final extraction, and automatic final conclusions.
 - Multi-reviewer adjudication, team workflow, and production audit trail.
 
 ## Why This Cannot Be Marked Production
 
 - The current Analysis step has a basic testing statistics core, several advanced method MVP calculations, and common add-on analyses, but it is not production-grade statistical software.
-- The current Reporting step exports Markdown/HTML/DOCX testing drafts and ZIP packages; production Word/PDF reporting is not complete, and PDF remains a placeholder.
+- The current Reporting step exports Markdown/HTML/DOCX testing drafts and ZIP packages; production PDF reporting is not complete, and publication-ready reporting remains incomplete.
 - ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
 - Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
+- PubMed execution is reviewer-confirmed and auditable, but its results do not yet hand off automatically into literature import, deduplication, screening, or PRISMA.
+- WOS, Embase, and CNKI are still query drafts only.
 - Full-text, quality, publication export, reproducibility package, and AI suggestion workflows are testing-level only.
 
 ## Next Priority
 
-The current staged roadmap through Stage L is implemented at Developer Preview / testing level. Next priorities should be stabilization, UX hardening, statistical validation review, and production-readiness audit rather than marking workflows production-ready.
+The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, search-to-import handoff design, and production-readiness audit rather than marking workflows production-ready.
