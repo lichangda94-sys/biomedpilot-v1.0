@@ -7,6 +7,10 @@ from pathlib import Path
 from app.meta_analysis.extraction.schema_registry import list_extraction_schema_profiles
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.extraction_form_service import ExtractionFormService
+from app.meta_analysis.services.extraction_schema_registry_v1_service import (
+    EXTRACTION_SCHEMA_REGISTRY_V1_SCHEMA_VERSION,
+    ExtractionSchemaRegistryV1Service,
+)
 from app.meta_analysis.services.extraction_service import ExtractionPoolResult, ExtractionService
 from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
@@ -49,6 +53,10 @@ class ExtractionPageState:
     empty_state: str
     export_path: str
     last_result: ExtractionPoolResult | None = None
+    extraction_schema_registry_version: str = EXTRACTION_SCHEMA_REGISTRY_V1_SCHEMA_VERSION
+    extraction_schema_registry_path: str = ""
+    extraction_schema_count: int = 0
+    extraction_schema_options: tuple[str, ...] = ()
     title_zh: str = EXTRACTION_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = EXTRACTION_DESCRIPTION_ZH
@@ -100,6 +108,11 @@ class SimplifiedExtractionPageState:
     export_ready: bool
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    extraction_schema_registry_version: str = EXTRACTION_SCHEMA_REGISTRY_V1_SCHEMA_VERSION
+    extraction_schema_registry_path: str = ""
+    extraction_schema_count: int = 0
+    extraction_schema_options: tuple[str, ...] = ()
+    selected_extraction_schema_path: str = ""
     title_zh: str = EXTRACTION_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = EXTRACTION_DESCRIPTION_ZH
@@ -115,6 +128,8 @@ class SimplifiedExtractionPageState:
 
 def initial_extraction_state() -> ExtractionPageState:
     feature = get_feature("meta-extraction")
+    schema_service = ExtractionSchemaRegistryV1Service()
+    schemas = schema_service.default_schemas()
     return ExtractionPageState(
         title="Extraction / 数据提取",
         description="读取 Screening 队列并为 included 文献生成数据提取池；结构化 ExtractionRecord 表单处于 testing 状态，并支持 prevalence、correlation、diagnostic basic 等 advanced method 数据结构。",
@@ -242,6 +257,9 @@ def initial_extraction_state() -> ExtractionPageState:
         ),
         empty_state="没有 extraction_pool 候选文献时，可以先生成提取池或手动输入 record_id / study_id。",
         export_path="project_dir/exports/extraction_records.csv",
+        extraction_schema_registry_path="extraction/schema_registry_v1.json",
+        extraction_schema_count=len(schemas),
+        extraction_schema_options=tuple(schema.meta_type for schema in schemas),
         title_zh=EXTRACTION_TITLE_ZH,
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
         description_zh=EXTRACTION_DESCRIPTION_ZH,
@@ -252,10 +270,13 @@ def simplified_extraction_state_from_project(
     project_dir: Path,
     *,
     service: ExtractionFormService | None = None,
+    schema_registry_service: ExtractionSchemaRegistryV1Service | None = None,
 ) -> SimplifiedExtractionPageState:
     project_dir = project_dir.expanduser().resolve()
     service = service or ExtractionFormService()
+    schema_registry_service = schema_registry_service or ExtractionSchemaRegistryV1Service()
     base = initial_extraction_state()
+    registry = schema_registry_service.load_registry(project_dir)
     records = service.load_extraction_records(project_dir)
     drafts = service.load_drafts(project_dir)
     completeness = service.pre_export_completeness_check(project_dir)
@@ -293,7 +314,13 @@ def simplified_extraction_state_from_project(
             "Developer Preview：该视图不改变 extraction schema，只整理人工录入体验。",
             "人工补充必须写入 manual_edits_log.jsonl；不能静默覆盖正式分析数据。",
             "缺失 required fields 会阻止或提示保存，取决于 validation service 的 error/warning 级别。",
+            "Extraction Schema Registry v1 只生成表单模板和校验规则，不写最终提取值。",
         ),
+        extraction_schema_registry_version=registry.schema_version,
+        extraction_schema_registry_path=str(schema_registry_service.registry_path(project_dir)),
+        extraction_schema_count=len(registry.schemas),
+        extraction_schema_options=tuple(schema.meta_type for schema in registry.schemas),
+        selected_extraction_schema_path=str(schema_registry_service.selection_path(project_dir)),
         title_zh=EXTRACTION_TITLE_ZH,
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
         description_zh=EXTRACTION_DESCRIPTION_ZH,

@@ -57,6 +57,7 @@ The current testing chain is:
 - Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
 - Full-text Management v1 can create a manual retrieval registry from reviewer screening decisions, bind local PDFs, record DOI / PubMed / PMCID / publisher links, mark full text unavailable with a reason, and write audit/governance records. It does not fetch PDFs automatically, parse PDFs, or create full-text screening decisions.
 - PDF / Full-text Parsing v1 can run testing-level local PDF text extraction, save extracted text, parse diagnostics, initial title / DOI / PMID candidates, and coarse abstract / methods / results / tables / references text sections. These artifacts are auxiliary and do not write final extraction, quality, analysis, or report conclusions.
+- Data Extraction Schema Registry v1 provides ten testing-level extraction schema templates for binary, continuous, survival, prevalence/incidence, diagnostic 2x2, exposure-risk, biomarker difference, correlation, prognostic-factor, and dose-response Meta types. It stores required/optional fields, validation rules, effect-size mapping, analysis defaults, quality-tool recommendations, and report-template mapping.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, CSV export, and advanced method outcome structures for prevalence, correlation, and diagnostic basic data.
 - Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, prevalence / incidence proportion effects, Fisher z correlation effects, diagnostic basic 2x2 metrics, subgroup analysis, leave-one-out sensitivity analysis, basic Egger publication-bias testing, and exports forest/funnel plot PNG plus result table CSV.
 - Reporting exports the older testing Markdown summary, testing PRISMA flow numbers, a formal Markdown/HTML/DOCX report draft, advanced method and advanced add-on summaries, supplementary CSV tables, a figure package ZIP, project snapshot metadata, and a reproducibility package ZIP; these are testing outputs, not production publication packages.
@@ -76,6 +77,7 @@ The current testing chain is:
 - Exclusion Criteria Library v1 does not automatically create screening or full-text exclusion decisions. PRISMA reason counts still require real reviewer decision records.
 - Full-text Management v1 does not automatically download full text, parse PDFs, perform full-text exclusion, create final included-study records, or update PRISMA full-text exclusion counts.
 - PDF / Full-text Parsing v1 is not production PDF parsing. It does not run OCR, extract tables reliably, infer final data extraction values, or update screening / PRISMA / quality artifacts.
+- Data Extraction Schema Registry v1 does not write final extraction values, does not validate real study data by itself, and does not create analysis-ready datasets.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
@@ -98,4 +100,4 @@ The current testing chain is:
 
 ## Next Priority
 
-The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, extraction schema registry, manual extraction UI, and production-readiness audit rather than marking workflows production-ready.
+The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, manual extraction UI, AI-assisted extraction queue, and production-readiness audit rather than marking workflows production-ready.
