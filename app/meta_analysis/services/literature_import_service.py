@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from app.meta_analysis.adapters.literature_import_adapter import LiteratureImportAdapter, _legacy_path
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
+from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
 from app.shared.data_center.service import DataCenter
 from app.shared.storage import default_storage_root
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
@@ -39,12 +40,14 @@ class LiteratureImportService:
         data_center: DataCenter | None = None,
         storage_root: Path | None = None,
         audit_log: MetaAuditLogService | None = None,
+        literature_library: LiteratureLibraryService | None = None,
     ) -> None:
         self._adapter = adapter or LiteratureImportAdapter()
         self._task_center = task_center or TaskCenter.default()
         self._data_center = data_center or DataCenter.default()
         self._storage_root = storage_root or default_storage_root()
         self._audit_log = audit_log or MetaAuditLogService()
+        self._literature_library = literature_library or LiteratureLibraryService(audit_log=self._audit_log)
 
     def import_file(self, *, project_id: str, source_path: str) -> ImportResult:
         validation_error = self._validate_source_path(source_path)
@@ -79,7 +82,24 @@ class LiteratureImportService:
                 source_path=str(path),
                 summary=f"Import batch created for {source_type}",
             )
-            output_path, diagnostics_paths, warning_count = self._write_output(project_id, adapter_result.batch_id, path, source_type, adapter_result.records)
+            output_path, diagnostics_paths, warning_count, serialized, duplicate_candidate_count = self._write_output(project_id, adapter_result.batch_id, path, source_type, adapter_result.records)
+            library_result = self._literature_library.import_records(
+                project_dir,
+                project_id=project_id,
+                raw_records=serialized,
+                source_type=source_type,
+                source_name=source_type.upper(),
+                source_file=str(path),
+                import_batch_id=adapter_result.batch_id,
+                diagnostics={
+                    "legacy_import_output_path": str(output_path),
+                    "diagnostics_path": str(diagnostics_paths[0]),
+                    "warnings_path": str(diagnostics_paths[1]),
+                    "warning_count": warning_count,
+                    "duplicate_candidate_count": duplicate_candidate_count,
+                    "technical_debt": "transitional_bridge_uses_existing_legacy_adapter_output_without_expanding_legacy_import_dependency",
+                },
+            )
             result = ImportResult(
                 success=True,
                 source_path=str(path),
@@ -96,6 +116,10 @@ class LiteratureImportService:
                     "diagnostics_path": str(diagnostics_paths[0]),
                     "warnings_path": str(diagnostics_paths[1]),
                     "warning_count": warning_count,
+                    "canonical_literature_records_path": library_result.records_path,
+                    "library_manifest_path": library_result.manifest_path,
+                    "library_schema_version": "meta_literature_library.v2",
+                    "record_schema_version": "meta_normalized_literature_record.v2",
                 },
             )
             self._data_center.register_asset(
@@ -186,7 +210,7 @@ class LiteratureImportService:
         source_path: Path,
         source_type: str,
         records: list[object],
-    ) -> tuple[Path, tuple[Path, Path], int]:
+    ) -> tuple[Path, tuple[Path, Path], int, list[dict[str, object]], int]:
         output_dir = self._storage_root / "projects" / project_id / "meta_analysis" / "literature_import"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"{batch_id}_records.json"
@@ -265,7 +289,7 @@ class LiteratureImportService:
             summary="Import diagnostics generated.",
             details={"warnings_path": str(diagnostics_paths[1])},
         )
-        return output_path, diagnostics_paths, diagnostics.warning_count
+        return output_path, diagnostics_paths, diagnostics.warning_count, serialized, diagnostics.duplicate_candidate_count
 
     def _project_dir(self, project_id: str) -> Path:
         return self._storage_root / "projects" / project_id / "meta_analysis"

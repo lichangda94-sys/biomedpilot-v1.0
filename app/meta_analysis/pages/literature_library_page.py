@@ -13,6 +13,7 @@ from app.meta_analysis.ui_text import (
     LITERATURE_LIBRARY_TITLE_ZH,
     LITERATURE_TABLE_COLUMN_ZH,
 )
+from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
 from app.version import APP_VERSION
 
 
@@ -71,6 +72,11 @@ class LiteratureLibraryState:
     table_column_labels_zh: tuple[str, ...]
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    total_batches: int = 0
+    source_counts: dict[str, int] | None = None
+    recent_import_batch_id: str = ""
+    library_manifest_path: str = ""
+    record_detail_preview: str = ""
     title_zh: str = LITERATURE_LIBRARY_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = "中文友好的只读文献库表格，用于查看文献基本信息、重复风险和流程状态。"
@@ -118,6 +124,11 @@ def initial_literature_library_state(project_dir: Path | None = None) -> Literat
         probable_duplicate_count=0,
         possible_duplicate_count=0,
         no_obvious_duplicate_risk_count=0,
+        total_batches=0,
+        source_counts={},
+        recent_import_batch_id="",
+        library_manifest_path="",
+        record_detail_preview="",
         table_columns=TABLE_COLUMNS,
         table_column_labels_zh=tuple(LITERATURE_TABLE_COLUMN_ZH[column] for column in TABLE_COLUMNS),
         warnings=("missing_literature_records",),
@@ -131,7 +142,10 @@ def initial_literature_library_state(project_dir: Path | None = None) -> Literat
 
 def literature_library_state_from_project(project_dir: Path) -> LiteratureLibraryState:
     project_dir = project_dir.expanduser().resolve()
+    service = LiteratureLibraryService()
     records, record_warnings = _load_literature_records(project_dir)
+    manifest = service.read_manifest(project_dir)
+    import_batches = _import_batches(project_dir)
     duplicate_lookup = _duplicate_lookup(project_dir)
     screening_lookup = _screening_lookup(project_dir)
     fulltext_lookup = _fulltext_lookup(project_dir)
@@ -172,6 +186,11 @@ def literature_library_state_from_project(project_dir: Path) -> LiteratureLibrar
         probable_duplicate_count=counts[DUPLICATE_RISK_PROBABLE],
         possible_duplicate_count=counts[DUPLICATE_RISK_POSSIBLE],
         no_obvious_duplicate_risk_count=counts[DUPLICATE_RISK_NONE],
+        total_batches=int(manifest.get("total_batches", len(import_batches)) or 0),
+        source_counts=dict(manifest.get("source_counts", _source_counts(records))),
+        recent_import_batch_id=_recent_import_batch_id(import_batches),
+        library_manifest_path=str(service.manifest_path(project_dir)) if manifest else "",
+        record_detail_preview=_record_detail_preview(rows[0]) if rows else "",
         table_columns=TABLE_COLUMNS,
         table_column_labels_zh=tuple(LITERATURE_TABLE_COLUMN_ZH[column] for column in TABLE_COLUMNS),
         warnings=tuple(warnings),
@@ -220,6 +239,44 @@ def _records_from_payload(payload: Any) -> list[dict[str, Any]]:
         if isinstance(value, list):
             return [dict(item) for item in value if isinstance(item, dict)]
     return []
+
+
+def _import_batches(project_dir: Path) -> list[dict[str, Any]]:
+    payload = _load_json(project_dir / "literature" / "import_batches.json")
+    if isinstance(payload, list):
+        return [dict(item) for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict) and isinstance(payload.get("import_batches"), list):
+        return [dict(item) for item in payload["import_batches"] if isinstance(item, dict)]
+    return []
+
+
+def _source_counts(records: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for record in records:
+        source = _first_text(record, "source_type", "source", "source_database", "database_source") or "unknown"
+        counts[source] = counts.get(source, 0) + 1
+    return counts
+
+
+def _recent_import_batch_id(import_batches: list[dict[str, Any]]) -> str:
+    if not import_batches:
+        return ""
+    return str(import_batches[-1].get("import_batch_id") or import_batches[-1].get("batch_id") or "")
+
+
+def _record_detail_preview(row: LiteratureLibraryRow) -> str:
+    return "\n".join(
+        [
+            f"title: {row.title}",
+            f"authors: {row.authors_text}",
+            f"journal/year: {row.journal} / {row.year or row.publication_date}",
+            f"doi: {row.doi or 'missing'}",
+            f"pmid: {row.pmid or 'missing'}",
+            f"source: {row.source_database}",
+            f"screening_status: {row.screening_status}",
+            f"duplicate_risk: {row.duplicate_risk}",
+        ]
+    )
 
 
 def _duplicate_lookup(project_dir: Path) -> dict[str, list[dict[str, Any]]]:

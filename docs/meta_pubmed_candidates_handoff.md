@@ -13,8 +13,8 @@ PubMed confirmed execution now produces a candidate preview that can be reviewed
 3. Candidate preview is written to `protocol/pubmed_candidates/*_candidates_preview.json`.
 4. Candidates remain `pending` by default and are not imported.
 5. Reviewer explicitly selects candidates.
-6. Selected candidates are converted into normalized literature records in `literature/literature_records.json`.
-7. Import batch metadata is appended to `literature/import_batches.json`.
+6. Selected candidates are converted through `LiteratureLibraryService` into `meta_normalized_literature_record.v2` records in `literature/literature_records.json`.
+7. Import batch metadata is appended as `meta_literature_import_batch.v2` in `literature/import_batches.json`.
 8. Dedup preparation is written to `deduplication/pubmed_candidate_duplicate_groups.json`.
 9. No title/abstract screening artifact is created.
 10. PRISMA included, screened, and full-text counts are not advanced by the handoff.

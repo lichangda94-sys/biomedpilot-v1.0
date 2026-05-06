@@ -16,16 +16,17 @@ The current testing chain is:
 2. Search strategy draft generation
 3. Reviewer-confirmed PubMed execution
 4. PubMed literature candidates preview and reviewer-selected handoff
-5. Literature Import
-6. Prepare Screening
-7. Duplicate Review
-8. Screening
-9. Full-text eligibility
-10. Extraction Pool
-11. Quality assessment
-12. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
-13. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
-14. AI Suggestions Queue
+5. Normalized Literature Library v2
+6. Literature Import
+7. Prepare Screening
+8. Duplicate Review
+9. Screening
+10. Full-text eligibility
+11. Extraction Pool
+12. Quality assessment
+13. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
+14. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
+15. AI Suggestions Queue
 
 ## Implemented Testing Capabilities
 
@@ -39,6 +40,10 @@ The current testing chain is:
 - PubMed search execution returns literature candidates only. It does not automatically import records into the literature library, run duplicate review, start screening, or update PRISMA counts.
 - Reviewer-selected PubMed candidates can be handed off into the normalized Meta literature library with provenance, import batch metadata, research-governance audit, and dedup review preparation.
 - PubMed candidate handoff imports only selected records; rejected and pending candidates are not imported. Imported candidates remain `screening_status=not_started` and `dedup_status=pending_review`.
+- `LiteratureLibraryService` is the active normalized literature library layer. It writes `meta_literature_library.v2` records, `meta_literature_import_batch.v2` batches, record-level audit JSONL, and `meta_literature_library_manifest.v1`.
+- PubMed selected candidates, NBIB, RIS, and CSV imports are bridged into the same normalized record schema with provenance and import batch metadata.
+- Literature library diagnostics record missing DOI, missing PMID, missing abstract, missing year, incomplete author fields, and incomplete source information without crashing.
+- Literature library query helpers support listing records, record lookup, and filtering by source type, PMID, DOI, title keyword, and import batch.
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
@@ -54,6 +59,7 @@ The current testing chain is:
 - PubMed search results are not automatically imported into the literature library; reviewer selection is required before PubMed candidates are imported.
 - PubMed search results are not automatically merged or silently deduplicated; selected imports only prepare a dedup review queue.
 - PubMed search results are not automatically moved into title/abstract screening or PRISMA counting.
+- Literature library import does not automatically create title/abstract screening decisions and does not update PRISMA artifacts.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.

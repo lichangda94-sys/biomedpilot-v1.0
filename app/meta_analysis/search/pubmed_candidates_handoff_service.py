@@ -10,6 +10,7 @@ from uuid import uuid4
 from app.meta_analysis.adapters.duplicate_review_adapter import DuplicateReviewAdapter
 from app.meta_analysis.search.pubmed_search_service import PubMedSearchExecution, PubMedSearchResult
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
+from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
 from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
 
 
@@ -115,10 +116,12 @@ class PubMedCandidatesHandoffService:
         audit_log: MetaAuditLogService | None = None,
         research_governance: MetaResearchGovernanceService | None = None,
         duplicate_adapter: DuplicateReviewAdapter | None = None,
+        literature_library: LiteratureLibraryService | None = None,
     ) -> None:
         self._audit_log = audit_log or MetaAuditLogService()
         self._research_governance = research_governance or MetaResearchGovernanceService(audit_log=self._audit_log)
         self._duplicate_adapter = duplicate_adapter or DuplicateReviewAdapter()
+        self._literature_library = literature_library or LiteratureLibraryService(audit_log=self._audit_log)
 
     def create_candidates_preview(
         self,
@@ -336,16 +339,31 @@ class PubMedCandidatesHandoffService:
             )
             for candidate in selected
         ]
-        literature_path = self._append_literature_records(project_dir, preview.project_id, imported_records)
-        import_batch_path = self._append_import_batch(
+        library_result = self._literature_library.import_records(
             project_dir,
             project_id=preview.project_id,
-            batch_id=batch_id,
-            preview=preview,
-            selected_count=selection.selected_count,
-            rejected_count=selection.rejected_count,
-            imported_count=len(imported_records),
+            raw_records=imported_records,
+            source_type="pubmed_confirmed_candidates",
+            source_name="PubMed",
+            source_file=preview.execution_report_path,
+            source_query=preview.source_query,
+            search_execution_id=preview.search_execution_id,
+            import_batch_id=batch_id,
+            provenance_base={
+                "pubmed_execution_report_path": preview.execution_report_path,
+                "search_strategy_snapshot": preview.search_strategy_snapshot_path,
+                "candidate_preview_id": preview.preview_id,
+            },
+            governance_refs=[f"literature_inclusion:{candidate.candidate_id}" for candidate in selected],
+            diagnostics={
+                "selected_count": selection.selected_count,
+                "rejected_count": selection.rejected_count,
+                "duplicate_candidate_count": 0,
+            },
         )
+        imported_records = list(library_result.imported_records)
+        literature_path = Path(library_result.records_path)
+        import_batch_path = Path(library_result.import_batches_path)
         dedup_queue_path = self._write_dedup_preparation(project_dir, preview.project_id, batch_id, imported_records)
         handoff_audit_path = self._write_handoff_audit(
             project_dir,
