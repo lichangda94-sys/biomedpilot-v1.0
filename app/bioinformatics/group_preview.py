@@ -17,12 +17,19 @@ GROUP_FIELD_PRIORITY = (
     "treatment",
     "disease_state",
     "phenotype",
-    "source_name_ch1",
+    "benign_malignant",
+    "malignancy",
+    "histology",
     "disease",
+    "diagnosis",
+    "tumor_status",
     "genotype",
     "tissue",
+    "sample_type",
+    "source_name_ch1",
     "cell_line",
     "time_point",
+    "title_pattern",
     "characteristics_ch1",
 )
 EXCLUDED_GROUP_FIELDS = {
@@ -42,6 +49,9 @@ EXCLUDED_GROUP_FIELDS = {
     "run",
     "run_accession",
     "library_strategy",
+    "extract_protocol_ch1",
+    "growth_protocol_ch1",
+    "data_processing",
     "sex",
     "gender",
     "age",
@@ -60,7 +70,9 @@ def build_group_preview_report(project_root: str | Path, recognition_records: li
             continue
         roles = {str(role) for role in record.get("recognized_roles", []) or []}
         primary = str(record.get("recognized_type") or "")
-        if primary == "geo_series_matrix_container":
+        if primary == "geo_soft_container":
+            preview = _preview_geo_family_soft(path)
+        elif primary == "geo_series_matrix_container":
             preview = _preview_geo_series_matrix(path)
         elif roles & {"sample_metadata", "clinical_metadata", "phenotype_metadata"} or primary in {"sample_metadata", "clinical_metadata"}:
             preview = _preview_metadata_table(path)
@@ -96,6 +108,7 @@ def _empty_preview(reason: str = "未在样本信息中识别到明确分组字�
         "selected_preview_field": "",
         "group_count": 0,
         "group_sizes": {},
+        "sample_group_assignments": {},
         "confidence": "low",
         "status": "no_group_detected",
         "warnings": [],
@@ -151,14 +164,17 @@ def _preview_geo_series_matrix(path: Path) -> dict[str, object]:
                     sample_ids.extend(values)
                 elif normalized == "sample_title":
                     titles.extend(values)
-                elif normalized in {"sample_source_name_ch1", "sample_treatment_protocol_ch1", "sample_extract_protocol_ch1"}:
+                elif normalized in {"sample_source_name_ch1", "sample_treatment_protocol_ch1"}:
                     field = normalized.replace("sample_", "")
                     metadata_fields.setdefault(field, []).extend(values)
+                elif normalized == "sample_extract_protocol_ch1":
+                    continue
                 elif normalized == "sample_characteristics_ch1":
                     _collect_characteristics(metadata_fields, values)
     except OSError:
         return _empty_preview("无法读取文件内容")
-    metadata_sample_count = max(len(sample_ids), *(len(values) for values in metadata_fields.values()), len(titles), 0)
+    sample_ids = list(dict.fromkeys(sample_ids))
+    metadata_sample_count = max(len(sample_ids), len(titles), len(expression_samples), 0)
     preview = _preview_from_fields(
         metadata_fields,
         metadata_sample_count=metadata_sample_count,
@@ -166,6 +182,76 @@ def _preview_geo_series_matrix(path: Path) -> dict[str, object]:
         metadata_sample_ids=sample_ids,
         default_confidence="medium",
         reason="未在 GEO Series Matrix 样本信息中识别到明确分组字段",
+    )
+    if not preview.get("sample_count"):
+        preview["sample_count"] = max(metadata_sample_count, len(expression_samples))
+    return preview
+
+
+def _preview_geo_family_soft(path: Path) -> dict[str, object]:
+    sample_ids: list[str] = []
+    titles: list[str] = []
+    metadata_fields: dict[str, list[str]] = {}
+    expression_samples: list[str] = []
+    current_sample = ""
+    current_has_table = False
+    try:
+        with _open_text(path) as handle:
+            for line in handle:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("^SAMPLE"):
+                    if current_sample and current_has_table:
+                        expression_samples.append(current_sample)
+                    current_sample = _clean_cell(stripped.partition("=")[2]) or current_sample
+                    current_has_table = False
+                    if current_sample:
+                        sample_ids.append(current_sample)
+                    continue
+                if stripped.startswith("!sample_table_begin"):
+                    current_has_table = True
+                    continue
+                key, _, raw_value = stripped.partition("=")
+                if not raw_value:
+                    continue
+                normalized = _normalize(key.lstrip("!"))
+                value = _clean_cell(raw_value)
+                if normalized == "sample_geo_accession":
+                    if value:
+                        sample_ids.append(value)
+                        current_sample = value
+                elif normalized == "sample_title":
+                    titles.append(value)
+                    title_group = _coarse_group_from_text(value)
+                    if title_group:
+                        metadata_fields.setdefault("title_pattern", []).append(title_group)
+                elif normalized in {"sample_source_name_ch1", "sample_treatment_protocol_ch1"}:
+                    field = normalized.replace("sample_", "")
+                    metadata_fields.setdefault(field, []).append(_clean_group_value(value))
+                    coarse = _coarse_group_from_text(value)
+                    if coarse:
+                        metadata_fields.setdefault("title_pattern", []).append(coarse)
+                elif normalized == "sample_extract_protocol_ch1":
+                    continue
+                elif normalized == "sample_characteristics_ch1":
+                    _collect_characteristics(metadata_fields, [value])
+                    coarse = _coarse_group_from_text(value)
+                    if coarse:
+                        metadata_fields.setdefault("title_pattern", []).append(coarse)
+            if current_sample and current_has_table:
+                expression_samples.append(current_sample)
+    except OSError:
+        return _empty_preview("无法读取文件内容")
+    sample_ids = list(dict.fromkeys(sample_ids))
+    metadata_sample_count = max(len(sample_ids), len(titles), len(expression_samples), 0)
+    preview = _preview_from_fields(
+        metadata_fields,
+        metadata_sample_count=metadata_sample_count,
+        expression_samples=expression_samples,
+        metadata_sample_ids=sample_ids,
+        default_confidence="medium",
+        reason="未在 GEO family SOFT 样本信息中识别到明确分组字段",
     )
     if not preview.get("sample_count"):
         preview["sample_count"] = max(metadata_sample_count, len(expression_samples))
@@ -183,13 +269,17 @@ def _series_metadata_values(line: str) -> tuple[str, list[str]]:
 def _collect_characteristics(fields: dict[str, list[str]], values: list[str]) -> None:
     for value in values:
         raw = _clean_cell(value)
-        label, sep, content = raw.partition(":")
-        if sep:
-            field = _normalize(label)
-            if _is_group_candidate_field(field):
-                fields.setdefault(field, []).append(_clean_group_value(content))
-            fields.setdefault("characteristics_ch1", []).append(raw)
-        else:
+        parts = [part.strip() for part in re.split(r";\s*", raw) if part.strip()] or [raw]
+        parsed_any = False
+        for part in parts:
+            label, sep, content = part.partition(":")
+            if sep:
+                parsed_any = True
+                field = _normalize(label)
+                if _is_group_candidate_field(field):
+                    fields.setdefault(field, []).append(_clean_group_value(content))
+                fields.setdefault("characteristics_ch1", []).append(part)
+        if not parsed_any:
             fields.setdefault("characteristics_ch1", []).append(raw)
 
 
@@ -244,6 +334,9 @@ def _preview_expression_matrix(path: Path) -> dict[str, object]:
         "selected_preview_field": "expression_column_pattern" if group_sizes else "",
         "group_count": len(group_sizes),
         "group_sizes": group_sizes,
+        "sample_group_assignments": {
+            sample: group for sample, group in zip(sample_columns, groups, strict=False) if sample and group
+        },
         "confidence": "low",
         "status": status,
         "warnings": ["仅根据表达矩阵列名推断，不能作为正式比较组。"] if group_sizes else [],
@@ -263,7 +356,10 @@ def _preview_from_fields(
 ) -> dict[str, object]:
     candidates: list[tuple[str, dict[str, int]]] = []
     for field in _ordered_fields(fields):
-        group_sizes = _valid_group_sizes(fields.get(field, []))
+        values = fields.get(field, [])
+        if metadata_sample_count and len(values) != metadata_sample_count:
+            continue
+        group_sizes = _valid_group_sizes(values)
         if group_sizes:
             candidates.append((field, group_sizes))
     expression_sample_count = len(expression_samples)
@@ -280,6 +376,16 @@ def _preview_from_fields(
         )
         return preview
     selected_field, group_sizes = candidates[0]
+    selected_values = [_clean_group_value(value) for value in fields.get(selected_field, [])]
+    sample_group_assignments = (
+        {
+            sample_id: group
+            for sample_id, group in zip(metadata_sample_ids, selected_values, strict=False)
+            if sample_id and group
+        }
+        if metadata_sample_ids and len(metadata_sample_ids) == len(selected_values)
+        else {}
+    )
     return {
         "sample_count": sample_count,
         "expression_sample_count": expression_sample_count,
@@ -289,6 +395,7 @@ def _preview_from_fields(
         "selected_preview_field": selected_field,
         "group_count": len(group_sizes),
         "group_sizes": group_sizes,
+        "sample_group_assignments": sample_group_assignments,
         "confidence": default_confidence,
         "status": "preview_only",
         "warnings": ["检测到多个可能分组字段，请选择用于分析的比较组。"] if len(candidates) > 1 else [],
@@ -329,7 +436,29 @@ def _is_group_candidate_field(field: str) -> bool:
         return False
     if field in GROUP_FIELD_PRIORITY:
         return True
-    return any(token in field for token in ("group", "condition", "treatment", "disease_state", "phenotype", "source_name", "characteristics"))
+    return any(
+        token in field
+        for token in (
+            "group",
+            "condition",
+            "treatment",
+            "disease_state",
+            "phenotype",
+            "source_name",
+            "characteristics",
+            "disease",
+            "diagnosis",
+            "tumor",
+            "benign",
+            "malignant",
+            "malignancy",
+            "histology",
+            "genotype",
+            "tissue",
+            "sample_type",
+            "cell_line",
+        )
+    )
 
 
 def _read_table_rows(path: Path, *, max_rows: int = 250) -> list[list[str]]:
@@ -410,6 +539,34 @@ def _group_from_sample_column(value: str) -> str:
     if match and match.group(1) in {"control", "treated", "case", "tumor", "normal"}:
         return match.group(1)
     return ""
+
+
+def _coarse_group_from_text(value: str) -> str:
+    normalized = _normalize(value)
+    if not normalized:
+        return ""
+    token_map = (
+        ("normal", "normal"),
+        ("control", "control"),
+        ("healthy", "normal"),
+        ("vehicle", "control"),
+        ("untreated", "control"),
+        ("treated", "treated"),
+        ("treatment", "treated"),
+        ("tumor", "tumor"),
+        ("tumour", "tumor"),
+        ("cancer", "tumor"),
+        ("carcinoma", "tumor"),
+        ("case", "case"),
+        ("disease", "case"),
+    )
+    matches = [label for token, label in token_map if token in normalized]
+    unique = list(dict.fromkeys(matches))
+    if len(unique) == 1:
+        return unique[0]
+    if "normal" in unique and "tumor" in unique:
+        return ""
+    return unique[0] if unique else ""
 
 
 def _xlsx_rows(path: Path, *, max_rows: int = 250) -> list[list[str]]:

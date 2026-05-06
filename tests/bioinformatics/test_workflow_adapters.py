@@ -237,6 +237,20 @@ def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_r
     assert "differential_result_table" not in record["recognized_roles"]  # type: ignore[operator]
 
 
+def test_recognition_ignores_partial_download_files(project_root: Path) -> None:
+    raw_root = project_root / "raw_data" / "geo" / "GSE300956"
+    raw_root.mkdir(parents=True, exist_ok=True)
+    (raw_root / "GSE300956_family.soft.gz.part").write_text("partial download", encoding="utf-8")
+    expression = raw_root / "expression.tsv"
+    expression.write_text("gene\tcontrol_1\ttreated_1\nTP53\t1.0\t2.0\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    names = [str(record["file_name"]) for record in recognition["files"]]  # type: ignore[index]
+
+    assert "GSE300956_family.soft.gz.part" not in names
+    assert "expression.tsv" in names
+
+
 def test_reference_acquisition_is_scanned_by_recognition(project_root: Path, tmp_path: Path) -> None:
     source = tmp_path / "expression_matrix.tsv"
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
@@ -354,6 +368,33 @@ def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
     assert recognition["group_preview"]["status"] == "preview_only"  # type: ignore[index]
     assert recognition["group_preview"]["selected_preview_field"] == "tissue"  # type: ignore[index]
     assert (project_root / GROUP_PREVIEW_REPORT).exists()
+
+
+def test_geo_series_matrix_header_without_rows_is_metadata_not_expression(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE304653_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_title = RNA-seq metadata only",
+                "!Series_geo_accession = GSE304653",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_characteristics_ch1\ttreatment: exercise\ttreatment: sedentary",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "geo_series_matrix_container"
+    assert "sample_metadata" in record["recognized_roles"]  # type: ignore[operator]
+    assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+    assert record["content_profile"]["table_data_row_count"] == 0  # type: ignore[index]
 
 
 def test_csv_expression_matrix_content_profile(project_root: Path) -> None:

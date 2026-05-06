@@ -84,6 +84,7 @@ def run_geo_differential_expression(
     dataset_id: str = "",
     case_terms: tuple[str, ...] | list[str] | None = None,
     control_terms: tuple[str, ...] | list[str] | None = None,
+    group_assignments: dict[str, str] | None = None,
     case_label: str = "case",
     control_label: str = "control",
     min_samples_per_group: int = 1,
@@ -108,6 +109,9 @@ def run_geo_differential_expression(
     case_indices, control_indices = _infer_group_columns(
         header,
         sample_columns,
+        group_assignments=group_assignments or {},
+        case_label=case_label,
+        control_label=control_label,
         case_terms=tuple(case_terms or DEFAULT_CASE_TERMS),
         control_terms=tuple(control_terms or DEFAULT_CONTROL_TERMS),
     )
@@ -190,6 +194,7 @@ def run_geo_differential_expression(
         "parameters": {
             "case_terms": list(case_terms or DEFAULT_CASE_TERMS),
             "control_terms": list(control_terms or DEFAULT_CONTROL_TERMS),
+            "explicit_group_assignments_used": bool(group_assignments),
             "min_samples_per_group": min_samples_per_group,
             "pseudocount": pseudocount,
         },
@@ -199,7 +204,9 @@ def run_geo_differential_expression(
 
 
 def _read_matrix(path: Path, *, max_rows: int | None = None) -> tuple[list[str], list[list[str]]]:
-    if path.suffix.lower() == ".xlsx":
+    if _is_geo_series_matrix_path(path):
+        rows = _geo_series_matrix_rows(path, max_rows=max_rows)
+    elif path.suffix.lower() == ".xlsx":
         rows = _xlsx_rows(path, max_rows=max_rows)
     else:
         rows = _delimited_rows(path, max_rows=max_rows)
@@ -207,6 +214,30 @@ def _read_matrix(path: Path, *, max_rows: int | None = None) -> tuple[list[str],
     if not rows:
         return [], []
     return rows[0], [row for row in rows[1:] if len(row) >= 2 and str(row[0]).strip()]
+
+
+def _is_geo_series_matrix_path(path: Path) -> bool:
+    return "series_matrix" in path.name.lower()
+
+
+def _geo_series_matrix_rows(path: Path, *, max_rows: int | None = None) -> list[list[str]]:
+    rows: list[list[str]] = []
+    opener = gzip.open if path.name.lower().endswith(".gz") else open
+    with opener(path, "rt", encoding="utf-8", errors="ignore", newline="") as handle:
+        in_table = False
+        for line in handle:
+            stripped = line.rstrip("\n")
+            if stripped.startswith("!series_matrix_table_begin"):
+                in_table = True
+                continue
+            if stripped.startswith("!series_matrix_table_end"):
+                break
+            if not in_table or not stripped:
+                continue
+            rows.append(next(csv.reader([stripped], delimiter="\t")))
+            if max_rows is not None and len(rows) >= max_rows + 1:
+                break
+    return rows
 
 
 def _delimited_rows(path: Path, *, max_rows: int | None = None) -> list[list[str]]:
@@ -318,13 +349,24 @@ def _infer_group_columns(
     header: list[str],
     sample_columns: list[int],
     *,
+    group_assignments: dict[str, str],
+    case_label: str,
+    control_label: str,
     case_terms: tuple[str, ...],
     control_terms: tuple[str, ...],
 ) -> tuple[list[int], list[int]]:
     case_indices: list[int] = []
     control_indices: list[int] = []
+    normalized_assignments = {_normalize_sample_key(key): _normalize(value) for key, value in group_assignments.items() if str(key).strip()}
     for index in sample_columns:
         normalized = _normalize(header[index])
+        assigned_group = normalized_assignments.get(_normalize_sample_key(header[index]))
+        if assigned_group:
+            if assigned_group == _normalize(control_label) or _matches_any(assigned_group, control_terms):
+                control_indices.append(index)
+            elif assigned_group == _normalize(case_label) or _matches_any(assigned_group, case_terms):
+                case_indices.append(index)
+            continue
         if _matches_any(normalized, control_terms):
             control_indices.append(index)
         elif _matches_any(normalized, case_terms):
@@ -347,6 +389,10 @@ def _matches_any(normalized: str, terms: tuple[str, ...]) -> bool:
 
 def _normalize(value: str) -> str:
     return "".join(character.lower() if character.isalnum() else "_" for character in str(value)).strip("_")
+
+
+def _normalize_sample_key(value: object) -> str:
+    return str(value).strip().strip('"').upper()
 
 
 def _as_float(value: object) -> float | None:

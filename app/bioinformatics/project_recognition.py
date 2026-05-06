@@ -349,6 +349,7 @@ def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
             "table_begin_line": scan.get("table_begin_line"),
             "table_end_line": scan.get("table_end_line"),
             "table_header_line": scan.get("table_header_line"),
+            "table_data_row_count": scan.get("table_data_row_count", 0),
             "gsm_column_count": scan.get("gsm_column_count", 0),
         },
     )
@@ -616,6 +617,7 @@ def _scan_geo_series_matrix(path: Path) -> dict[str, object]:
         "table_begin_line": None,
         "table_end_line": None,
         "table_header_line": None,
+        "table_data_row_count": 0,
         "sample_metadata_start_line": None,
         "sample_metadata_end_line": None,
         "expression_evidence": [],
@@ -685,6 +687,10 @@ def _scan_geo_series_matrix(path: Path) -> dict[str, object]:
                         scan["gsm_column_count"] = gsm_count
                         if gsm_count:
                             scan["expression_evidence"] = _append_unique(scan["expression_evidence"], "GSM sample columns")
+                elif in_matrix_table and scan["table_header_line"] is not None:
+                    cells = [_clean_cell(cell) for cell in _split_delimited_line(stripped, "\t")]
+                    if len(cells) >= 2 and not stripped.startswith("!"):
+                        scan["table_data_row_count"] = int(scan.get("table_data_row_count") or 0) + 1
     except OSError:
         return scan
     if not scan["platform_id"]:
@@ -697,7 +703,12 @@ def _scan_geo_series_matrix(path: Path) -> dict[str, object]:
         scan["sample_metadata_end_line"] = max(sample_lines)
     scan["sample_count"] = max(len(sample_accessions), int(scan.get("gsm_column_count") or 0))
     scan["has_sample_metadata"] = bool(sample_lines or sample_accessions)
-    scan["has_expression_matrix"] = bool(scan.get("table_begin_line") and scan.get("table_header_line") and int(scan.get("gsm_column_count") or 0) >= 1)
+    scan["has_expression_matrix"] = bool(
+        scan.get("table_begin_line")
+        and scan.get("table_header_line")
+        and int(scan.get("gsm_column_count") or 0) >= 1
+        and int(scan.get("table_data_row_count") or 0) >= 1
+    )
     if scan["has_expression_matrix"]:
         scan["is_geo_series_matrix"] = True
     return scan
@@ -1188,6 +1199,8 @@ def _expand_selected_candidate_paths(root: Path, selected_paths: list[str | Path
 
 def _is_recognition_candidate_file(path: Path, root: Path) -> bool:
     if not path.is_file() or path.suffix.lower() in {".json"}:
+        return False
+    if path.name.lower().endswith((".part", ".tmp", ".download", ".partial")):
         return False
     try:
         relative = path.resolve().relative_to(root.resolve())

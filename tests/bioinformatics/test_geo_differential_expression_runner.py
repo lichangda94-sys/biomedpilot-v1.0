@@ -82,3 +82,62 @@ def test_geo_deg_runner_infers_cuet_vs_untreated_csv(tmp_path: Path) -> None:
     assert summary["case_samples"] == ["X8505c.CUET.4.BAM", "X8505c.CUET.6.BAM"]
     assert summary["control_samples"] == ["X8505c.UT.1.BAM", "X8505c.UT.5.BAM"]
     assert Path(str(summary["result_path"])).exists()
+
+
+def test_geo_deg_runner_uses_explicit_gsm_group_assignments(tmp_path: Path) -> None:
+    source = tmp_path / "expression.tsv"
+    source.write_text(
+        "\n".join(
+            [
+                "ID_REF\tGSM1\tGSM2\tGSM3\tGSM4",
+                "TP53\t10\t11\t2\t3",
+                "EGFR\t1\t2\t8\t9",
+                "GAPDH\t5\t5\t5\t5",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    summary = run_geo_differential_expression(
+        source,
+        output_dir=tmp_path / "analysis",
+        dataset_id="GSETEST",
+        group_assignments={"GSM1": "tumor", "GSM2": "tumor", "GSM3": "normal", "GSM4": "normal"},
+        case_label="tumor",
+        control_label="normal",
+    )
+
+    assert summary["case_samples"] == ["GSM1", "GSM2"]
+    assert summary["control_samples"] == ["GSM3", "GSM4"]
+    assert summary["parameters"]["explicit_group_assignments_used"] is True
+    assert Path(str(summary["result_path"])).exists()
+
+
+def test_geo_deg_runner_reads_series_matrix_table_block(tmp_path: Path) -> None:
+    source = tmp_path / "GSE_series_matrix.txt"
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_title = demo",
+                "!Sample_geo_accession\tGSM1\tGSM2\tGSM3\tGSM4",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2\tGSM3\tGSM4",
+                "TP53\t10\t11\t2\t3",
+                "EGFR\t1\t2\t8\t9",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    summary = run_geo_differential_expression(
+        source,
+        output_dir=tmp_path / "analysis",
+        dataset_id="GSETEST",
+        group_assignments={"GSM1": "tumor", "GSM2": "tumor", "GSM3": "normal", "GSM4": "normal"},
+        case_label="tumor",
+        control_label="normal",
+    )
+
+    assert summary["gene_count_tested"] == 2
+    assert summary["case_samples"] == ["GSM1", "GSM2"]
