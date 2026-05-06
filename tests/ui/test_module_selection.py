@@ -131,6 +131,16 @@ def test_meta_button_triggers_callback(qt_app, local_session: LocalSession) -> N
     assert events == ["meta"]
 
 
+def test_meta_module_card_mentions_current_workflow(qt_app, local_session: LocalSession) -> None:
+    widget = _widget(local_session)
+
+    descriptions = [label.text() for label in widget.findChildren(QLabel, "moduleDescription")]
+
+    assert any("中文 14 步工作流" in text for text in descriptions)
+    assert any("PubMed 候选确认" in text for text in descriptions)
+    assert any("testing-level / 待开发" in text for text in descriptions)
+
+
 def test_logout_button_triggers_callback(qt_app, local_session: LocalSession) -> None:
     events: list[str] = []
     widget = _widget(local_session, on_logout=lambda: events.append("logout"))
@@ -176,3 +186,9 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
     meta_button = window._dashboard_page.findChild(QPushButton, "metaModuleButton")
     meta_button.click()
     assert window.current_workspace_key() == "meta_analysis"
+    assert window._meta_analysis_page.page_keys()[:4] == (
+        "workflow_home",
+        "pico_workspace",
+        "search_strategy",
+        "pubmed_handoff",
+    )
