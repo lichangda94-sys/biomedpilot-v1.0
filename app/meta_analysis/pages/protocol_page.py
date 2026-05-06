@@ -12,6 +12,7 @@ from app.meta_analysis.search import (
     build_meta_search_strategy_draft,
 )
 from app.meta_analysis.services.protocol_service import PROTOCOL_RELATIVE_PATHS, ProjectProtocolService
+from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
 
 
 SEARCH_STRATEGY_DRAFT_RELATIVE_PATH = "protocol/search_strategy_draft.json"
@@ -135,6 +136,16 @@ def write_protocol_search_strategy_artifacts(project_dir: Path, draft: MetaSearc
     draft_path = project_dir / SEARCH_STRATEGY_DRAFT_RELATIVE_PATH
     audit_path = project_dir / SEARCH_STRATEGY_AUDIT_RELATIVE_PATH
     _write_json(draft_path, draft.to_dict())
+    MetaResearchGovernanceService().record_draft_created(
+        project_dir,
+        target_type="final_search_strategy",
+        target_id="multi_database_search_strategy",
+        after=draft.to_dict(),
+        metadata={
+            "search_execution_status": draft.search_execution_status,
+            "databases": [item.database for item in draft.query_drafts],
+        },
+    )
     _write_json(
         audit_path,
         {
@@ -175,20 +186,38 @@ def write_pubmed_search_execution_artifacts(
     project_dir = project_dir.expanduser().resolve()
     confirmed_path = project_dir / SEARCH_STRATEGY_CONFIRMED_RELATIVE_PATH
     report_path = project_dir / SEARCH_EXECUTION_REPORT_RELATIVE_PATH
+    confirmation_payload = {
+        "schema_version": "meta_search_strategy_user_confirmed.v1",
+        "database": "PubMed",
+        "query_used": query.strip(),
+        "confirmed_at": execution.executed_at,
+        "user_action": "confirm_and_search_pubmed",
+        "wos_status": "draft_only",
+        "embase_status": "draft_only",
+        "cnki_status": "draft_only",
+    }
     _write_json(
         confirmed_path,
-        {
-            "schema_version": "meta_search_strategy_user_confirmed.v1",
-            "database": "PubMed",
-            "query_used": query.strip(),
-            "confirmed_at": execution.executed_at,
-            "user_action": "confirm_and_search_pubmed",
+        confirmation_payload,
+    )
+    _write_json(report_path, execution.to_report())
+    MetaResearchGovernanceService().record_user_confirmation(
+        project_dir,
+        action="confirm",
+        actor="reviewer",
+        target_type="final_search_strategy",
+        target_id="pubmed_query",
+        before={"query": query.strip(), "status": "draft"},
+        after=confirmation_payload,
+        metadata={
+            "search_execution_status": "confirmed_pubmed_execution",
+            "literature_import_status": "not_imported",
+            "screening_status": "not_started",
             "wos_status": "draft_only",
             "embase_status": "draft_only",
             "cnki_status": "draft_only",
         },
     )
-    _write_json(report_path, execution.to_report())
     return {
         "search_strategy_user_confirmed": str(confirmed_path),
         "search_execution_report": str(report_path),

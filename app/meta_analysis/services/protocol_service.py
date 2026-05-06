@@ -22,6 +22,7 @@ from app.meta_analysis.models.protocol import (
 )
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.project_contract_service import MetaProjectContractService
+from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
 from app.shared.data_center.service import DataCenter
 
 
@@ -49,10 +50,12 @@ class ProjectProtocolService:
         data_center: DataCenter | None = None,
         audit_log: MetaAuditLogService | None = None,
         project_contract: MetaProjectContractService | None = None,
+        research_governance: MetaResearchGovernanceService | None = None,
     ) -> None:
         self._data_center = data_center or DataCenter.default()
         self._audit_log = audit_log or MetaAuditLogService()
         self._project_contract = project_contract or MetaProjectContractService(data_center=self._data_center)
+        self._research_governance = research_governance or MetaResearchGovernanceService(audit_log=self._audit_log)
 
     def protocol_paths(self, project_dir: Path) -> ProtocolArtifactPaths:
         project_dir = project_dir.expanduser().resolve()
@@ -153,6 +156,7 @@ class ProjectProtocolService:
     def save_protocol(self, project_dir: Path, values: dict[str, Any], *, confirmed: bool = False) -> ProtocolSaveResult:
         project_dir = project_dir.expanduser().resolve()
         self._project_contract.ensure_project_structure(project_dir)
+        before_protocol = self.load_protocol(project_dir)
         protocol = self.build_protocol(project_dir, values, confirmed=confirmed)
         terms = self.build_search_terms(protocol)
         strategy_preview = self.build_search_strategy_preview(protocol, terms)
@@ -182,6 +186,28 @@ class ProjectProtocolService:
                 "developer_preview": protocol.developer_preview,
             },
         )
+        before_payload = before_protocol.to_dict() if before_protocol is not None else {}
+        if protocol.confirmed:
+            self._research_governance.record_user_confirmation(
+                project_dir,
+                project_id=protocol.project_id,
+                action="confirm",
+                actor=str(values.get("actor") or values.get("reviewer") or "reviewer"),
+                target_type="final_pico",
+                target_id=protocol.protocol_id,
+                before=before_payload,
+                after=protocol.to_dict(),
+                metadata={"readiness_status": protocol.readiness_status, "warnings": list(protocol.warnings)},
+            )
+        else:
+            self._research_governance.record_draft_created(
+                project_dir,
+                project_id=protocol.project_id,
+                target_type="final_pico",
+                target_id=protocol.protocol_id,
+                after=protocol.to_dict(),
+                metadata={"readiness_status": protocol.readiness_status, "warnings": list(protocol.warnings)},
+            )
         self._project_contract.write_project_manifests(project_dir)
         message = "Protocol saved as Developer Preview / testing draft."
         if protocol.confirmed:

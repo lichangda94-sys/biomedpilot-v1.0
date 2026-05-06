@@ -24,6 +24,7 @@ AUDIT_EVENT_TYPES = (
     "analysis_run_completed",
     "analysis_profile_config_saved",
     "task_lifecycle_changed",
+    "research_governance_event",
     "report_exported",
 )
 

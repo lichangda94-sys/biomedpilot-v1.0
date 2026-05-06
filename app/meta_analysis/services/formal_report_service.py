@@ -320,6 +320,8 @@ def _load_project_json_payloads(project_dir: Path) -> list[tuple[Path, dict[str,
         except Exception:
             continue
         if isinstance(payload, dict):
+            if payload.get("schema_version") == "meta_pubmed_search_execution.v1":
+                continue
             payloads.append((path, payload))
     return payloads
 

@@ -16,6 +16,7 @@ from app.meta_analysis.models.ai_suggestion import (
     new_ai_suggestion_id,
     now_utc,
 )
+from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
 
@@ -26,9 +27,11 @@ class AISuggestionService:
         *,
         task_center: TaskCenter | None = None,
         data_center: DataCenter | None = None,
+        research_governance: MetaResearchGovernanceService | None = None,
     ) -> None:
         self._task_center = task_center
         self._data_center = data_center
+        self._research_governance = research_governance or MetaResearchGovernanceService()
 
     def create_ai_suggestion(
         self,
@@ -67,6 +70,15 @@ class AISuggestionService:
             updated_at=now,
         )
         self._append_or_update(project_dir, suggestion)
+        self._research_governance.record_suggestion_created(
+            project_dir,
+            project_id=project_id,
+            target_type=target_type,
+            target_id=target_id,
+            source_suggestion_id=suggestion.suggestion_id,
+            after=ai_suggestion_to_dict(suggestion),
+            metadata={"suggestion_type": suggestion_type, "confidence": suggestion.confidence},
+        )
         self._register_asset(project_id, project_dir)
         self._finish_task(task, success=True, summary=f"AI suggestion created: {suggestion.suggestion_id}")
         return suggestion
@@ -141,6 +153,18 @@ class AISuggestionService:
             updated_at=now_utc(),
         )
         self._append_or_update(project_dir, updated)
+        self._research_governance.record_user_confirmation(
+            project_dir,
+            project_id=suggestion.project_id,
+            action="edit",
+            actor="reviewer",
+            target_type=suggestion.target_type,
+            target_id=suggestion.target_id,
+            before=ai_suggestion_to_dict(suggestion),
+            after=ai_suggestion_to_dict(updated),
+            source_suggestion_id=suggestion_id,
+            metadata={"reviewer_action": reviewer_action},
+        )
         self._finish_task(task, success=True, summary=f"AI suggestion edited: {suggestion_id}")
         return AISuggestionActionResult(
             success=True,
@@ -201,6 +225,19 @@ class AISuggestionService:
         )
         updated = replace(suggestion, status=status, reviewer_action=reviewer_action, updated_at=now_utc())
         self._append_or_update(project_dir, updated)
+        action = "accept" if status == AISuggestionStatus.ACCEPTED.value else "reject"
+        self._research_governance.record_user_confirmation(
+            project_dir,
+            project_id=suggestion.project_id,
+            action=action,
+            actor="reviewer",
+            target_type=suggestion.target_type,
+            target_id=suggestion.target_id,
+            before=ai_suggestion_to_dict(suggestion),
+            after=ai_suggestion_to_dict(updated),
+            source_suggestion_id=suggestion_id,
+            metadata={"reviewer_action": reviewer_action},
+        )
         self._finish_task(task, success=True, summary=f"AI suggestion {status}: {suggestion_id}")
         return AISuggestionActionResult(
             success=True,
