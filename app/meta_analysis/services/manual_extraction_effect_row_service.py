@@ -619,10 +619,31 @@ class ManualExtractionEffectRowService:
         return _items_from_payload(_load_json(self.evidence_refs_path(project_dir)), "evidence_refs")
 
     def read_manifest(self, project_dir: Path) -> dict[str, Any]:
+        project_dir = project_dir.expanduser().resolve()
         payload = _load_json(self.manifest_path(project_dir))
         if payload:
             return payload
-        return self._write_manifest(project_dir, project_id=project_dir.expanduser().resolve().name)
+        return {
+            "schema_version": MANUAL_EXTRACTION_MANIFEST_SCHEMA_VERSION,
+            "project_id": project_dir.name,
+            "updated_at": "",
+            "paths": {
+                "study_units": str(self.study_units_path(project_dir).relative_to(project_dir)),
+                "effect_rows": str(self.effect_rows_path(project_dir).relative_to(project_dir)),
+                "evidence_refs": str(self.evidence_refs_path(project_dir).relative_to(project_dir)),
+                "validation_report": str(self.validation_report_path(project_dir).relative_to(project_dir)),
+                "audit": str(self.extraction_audit_path(project_dir).relative_to(project_dir)),
+            },
+            "study_unit_count": 0,
+            "effect_row_count": 0,
+            "missing_required_fields_count": 0,
+            "analysis_candidate_row_count": 0,
+            "completed_by_user_count": 0,
+            "analysis_ready_dataset_created": False,
+            "statistics_run": False,
+            "prisma_advanced": False,
+            "safety_note": "Manual extraction rows are candidate effect rows only; completed_by_user does not create an analysis-ready dataset.",
+        }
 
     def literature_records_for_extraction(self, project_dir: Path) -> list[dict[str, Any]]:
         final_included = _load_json(project_dir.expanduser().resolve() / "fulltext" / "final_included_studies.json")

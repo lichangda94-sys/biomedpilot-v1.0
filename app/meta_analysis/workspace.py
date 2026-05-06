@@ -101,9 +101,12 @@ def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
             MetaWorkspaceNavigationItem("attachment", "全文 / 附件管理 Full-text", "管理附件、缺失全文和 link/copy 状态。", "attachment"),
             MetaWorkspaceNavigationItem("fulltext_eligibility", "全文筛选 Full-text Screening", "完成全文资格审查和最终纳入清单。", "fulltext_eligibility"),
             MetaWorkspaceNavigationItem("extraction", "数据提取 Data Extraction", "录入结构化提取数据、草稿和完整性检查。", "extraction"),
+            MetaWorkspaceNavigationItem("extraction_schema", "提取 Schema Registry", "查看 M12 提取 schema、字段、校验规则和 testing 边界。", "extraction_schema"),
+            MetaWorkspaceNavigationItem("manual_extraction", "人工提取 Effect Rows", "测试 M13 逐篇文献、study unit、effect row 和 evidence 草稿工作区。", "manual_extraction"),
             MetaWorkspaceNavigationItem("quality", "质量评价 Quality Assessment", "填写质量评价并导出 quality table。", "quality"),
             MetaWorkspaceNavigationItem("analysis", "统计分析 Meta-analysis", "构建 dataset、运行 testing meta-analysis 并查看 warnings。", "analysis"),
             MetaWorkspaceNavigationItem("reporting", "结果报告 Reporting", "生成 PRISMA、报告、导出和复现包。", "reporting"),
+            MetaWorkspaceNavigationItem("ai_suggestions", "AI 建议审核队列", "查看 AI/model suggestion 必须人工 accept / reject / edit 的治理入口。", "ai_suggestions"),
             MetaWorkspaceNavigationItem("audit", "审计日志 Audit", "查看 audit log 和 review log 导出状态。", "audit"),
         ),
         default_page_key="workflow_dashboard",
@@ -287,14 +290,17 @@ if QWidget is not None:
     from app.meta_analysis.pages.duplicate_review_page import DuplicateReviewPage
     from app.meta_analysis.pages.screening_page import ScreeningPage
     from app.meta_analysis.pages.extraction_page import ExtractionPage
+    from app.meta_analysis.pages.extraction_page import manual_extraction_effect_row_state_from_project
     from app.meta_analysis.pages.quality_page import initial_quality_state
     from app.meta_analysis.pages.analysis_page import AnalysisPage
     from app.meta_analysis.pages.reporting_page import ReportingPage
     from app.meta_analysis.pages.attachment_page import AttachmentPage
     from app.meta_analysis.pages.fulltext_eligibility_page import FullTextEligibilityPage
     from app.meta_analysis.pages.audit_log_page import AuditLogPage
+    from app.meta_analysis.pages.ai_suggestions_page import AISuggestionsPage
     from app.meta_analysis.pages.protocol_page import ProtocolPage
     from app.meta_analysis.pages.workflow_dashboard_page import WorkflowDashboardPage
+    from app.meta_analysis.services.extraction_schema_registry_v1_service import ExtractionSchemaRegistryV1Service
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -384,9 +390,12 @@ if QWidget is not None:
             "attachment": AttachmentPage(),
             "fulltext_eligibility": FullTextEligibilityPage(),
             "extraction": ExtractionPage(),
+            "extraction_schema": _extraction_schema_registry_panel(),
+            "manual_extraction": _manual_extraction_effect_row_panel(),
             "quality": _quality_page_panel(),
             "analysis": AnalysisPage(),
             "reporting": ReportingPage(),
+            "ai_suggestions": AISuggestionsPage(),
             "audit": AuditLogPage(),
         }
 
@@ -421,6 +430,90 @@ if QWidget is not None:
         layout.addWidget(sections)
         layout.addWidget(output)
         layout.addWidget(next_step)
+        return frame
+
+
+    def _extraction_schema_registry_panel() -> QFrame:
+        service = ExtractionSchemaRegistryV1Service()
+        schemas = service.default_schemas()
+        frame = QFrame()
+        frame.setObjectName("metaExtractionSchemaRegistryPanel")
+        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        title = QLabel("提取 Schema Registry · M12")
+        title.setStyleSheet("font-weight: 700; font-size: 16px;")
+        layout.addWidget(title)
+        description = QLabel(
+            "按 Meta 类型展示 required fields、effect-size mapping、analysis defaults 和 quality tool recommendation。"
+        )
+        description.setWordWrap(True)
+        layout.addWidget(description)
+        safety = QLabel("边界：Schema 只生成表单模板和校验规则，不写最终提取值，不创建 analysis-ready dataset，不推进 PRISMA。")
+        safety.setWordWrap(True)
+        layout.addWidget(safety)
+        layout.addWidget(QLabel(f"Schema 数量：{len(schemas)}"))
+        for schema in schemas:
+            detail = QLabel(
+                "\n".join(
+                    [
+                        f"{schema.display_name} / {schema.meta_type}",
+                        f"Required: {', '.join(schema.required_fields)}",
+                        f"Effect mapping: {schema.effect_size_mapping}",
+                        f"Quality tools: {', '.join(schema.quality_tool_recommendation)}",
+                    ]
+                )
+            )
+            detail.setWordWrap(True)
+            layout.addWidget(detail)
+        layout.addStretch(1)
+        return frame
+
+
+    def _manual_extraction_effect_row_panel() -> QFrame:
+        # Use a default local project path for display only; this panel is a UI testing entry and does not run analysis.
+        project_dir = default_storage_root() / "projects" / "manual-meta-ui-test" / "meta_analysis"
+        state = manual_extraction_effect_row_state_from_project(project_dir)
+        frame = QFrame()
+        frame.setObjectName("metaManualExtractionEffectRowPanel")
+        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        title = QLabel(f"{state.title} · M13")
+        title.setStyleSheet("font-weight: 700; font-size: 16px;")
+        layout.addWidget(title)
+        overview = QLabel(
+            "\n".join(
+                [
+                    f"当前 Meta 类型：{state.overview.current_meta_type}",
+                    f"当前 schema：{state.overview.current_extraction_schema}",
+                    f"纳入文献数：{state.overview.included_literature_count}",
+                    f"study unit 数：{state.overview.study_unit_count}",
+                    f"effect row 数：{state.overview.effect_row_count}",
+                    f"缺失关键字段数：{state.overview.missing_required_fields_count}",
+                    f"analysis candidate rows：{state.overview.analysis_candidate_row_count}",
+                ]
+            )
+        )
+        overview.setWordWrap(True)
+        layout.addWidget(overview)
+        layout.addWidget(QLabel("布局：顶部概览 / 左侧文献列表 / 中间 effect rows / 右侧编辑面板"))
+        layout.addWidget(QLabel(f"Study unit 字段：{', '.join(state.editor.study_unit_fields)}"))
+        layout.addWidget(QLabel(f"Comparison / outcome 字段：{', '.join(state.editor.comparison_outcome_fields)}"))
+        layout.addWidget(QLabel(f"动态数据字段：{', '.join(state.editor.dynamic_data_fields)}"))
+        layout.addWidget(QLabel(f"Source evidence 字段：{', '.join(state.editor.source_evidence_fields)}"))
+        actions = QLabel(f"主操作：{' / '.join(state.primary_actions)}")
+        actions.setWordWrap(True)
+        layout.addWidget(actions)
+        csv_actions = QLabel(f"CSV：{' / '.join(state.csv_actions)}")
+        csv_actions.setWordWrap(True)
+        layout.addWidget(csv_actions)
+        safety = QLabel("边界：completed_by_user 不等于 analysis-ready；不运行统计，不创建 analysis-ready dataset，不推进 PRISMA。")
+        safety.setWordWrap(True)
+        layout.addWidget(safety)
+        if state.warnings:
+            warnings = QLabel("Warnings: " + "；".join(state.warnings))
+            warnings.setWordWrap(True)
+            layout.addWidget(warnings)
+        layout.addStretch(1)
         return frame
 
 
