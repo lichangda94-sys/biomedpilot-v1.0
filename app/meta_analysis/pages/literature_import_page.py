@@ -10,6 +10,11 @@ from app.meta_analysis.services.literature_batch_import_service import (
     LiteratureBatchImportSummary,
 )
 from app.meta_analysis.services.literature_import_service import ImportResult, LiteratureImportService
+from app.meta_analysis.services.multisource_literature_import_service import (
+    MULTISOURCE_SUPPORTED_FORMATS,
+    MultiSourceLiteratureImportResult,
+    MultiSourceLiteratureImportService,
+)
 from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.ui_text import (
     DEDUP_MODE_ZH,
@@ -95,7 +100,7 @@ class LiteratureImportPageState:
     diagnostics_export_path: str = ""
     warnings_export_path: str = ""
     recent_import_batches: tuple[dict[str, object], ...] = ()
-    import_format_options: tuple[str, ...] = ("auto", "ris", "nbib", "csv")
+    import_format_options: tuple[str, ...] = ("auto", "ris", "nbib", "csv", "pubmed_xml", "medline", "endnote_export", "zotero_export", "wos_plain_text", "wos_tab_delimited", "cnki_export", "embase_ris", "cochrane_ris")
     dedup_mode_options: tuple[str, ...] = ("detect_only", "manual_review", "skip")
     source_database: str = ""
     search_date: str = ""
@@ -194,8 +199,8 @@ def initial_literature_import_state() -> LiteratureImportPageState:
     feature = get_feature("meta-literature-import")
     return LiteratureImportPageState(
         title="文献导入",
-        description="支持 NBIB / RIS / CSV 文件导入，用于后续去重和筛选。",
-        supported_formats=("NBIB", "RIS", "CSV"),
+        description="支持 NBIB / RIS / CSV / PubMed XML / WOS / EndNote / Zotero / CNKI / Embase / Cochrane 文件导入，用于后续去重和筛选。",
+        supported_formats=("NBIB", "RIS", "CSV", "PubMed XML", "MEDLINE", "EndNote", "Zotero", "WOS", "CNKI", "Embase RIS", "Cochrane RIS"),
         status_label=feature.status.display_label() if feature is not None else "测试中",
         input_summary="输入：本地 NBIB / RIS / CSV 文献文件路径。",
         output_summary="输出：literature_records 数据资产和 literature_import task。",
@@ -203,7 +208,7 @@ def initial_literature_import_state() -> LiteratureImportPageState:
         empty_state="未选择文件时不会运行导入，请先选择本地文献文件。",
         warning_summary="错误会显示为用户可读 message；详细解析错误保留在 details。",
         panel_help=(
-            "当前面板显示本地 RIS / NBIB / CSV 导入后的解析质量和 diagnostics 路径。",
+            "当前面板显示本地多来源文献导入后的解析质量和 diagnostics 路径。",
             "输入来自用户选择的文献导出文件；输出写入 literature_records、import diagnostics 和 warnings CSV。",
             "warning 表示需要测试人员复核的字段质量问题，不会自动修复原始文件。",
             "下一步建议：检查 failed records 和 major/blocker warning 后进入 Duplicate Review。",
@@ -225,15 +230,15 @@ def initial_literature_import_wizard_state() -> LiteratureImportWizardState:
         steps=WIZARD_STEPS,
         current_step="source_selection",
         source_options=("local_database_export", "zotero_export", "endnote_export", "pubmed_download", "csv_or_txt"),
-        format_options=("auto", "ris", "nbib", "csv"),
+        format_options=("auto", *MULTISOURCE_SUPPORTED_FORMATS),
         dedup_mode_options=("detect_only", "manual_review", "skip"),
         file_picker_first=True,
         drag_drop_supported=True,
         multi_file_ready=True,
-        input_summary="输入：通过文件选择器选择本地 RIS / NBIB / CSV 文献导出文件，可多文件。",
+        input_summary="输入：通过文件选择器选择本地 NBIB / RIS / CSV / XML / WOS / CNKI 等文献导出文件，可多文件。",
         output_summary="输出：ImportBatch summary、diagnostics JSON、warnings CSV 和 Review duplicates 下一步提示。",
         next_step="导入成功后进入 Duplicate Review / Review duplicates。",
-        empty_state="尚未选择文件。请使用文件选择器添加 RIS / NBIB / CSV 文件。",
+        empty_state="尚未选择文件。请使用文件选择器添加 NBIB / RIS / CSV / XML / WOS / CNKI 等文件。",
         testing_limitations=(
             "Developer Preview：该向导包装现有 parser 和 diagnostics，不是 production 导入系统。",
             "多文件导入按路径排序逐个执行；不会自动合并、删除或修复原始文件。",
@@ -374,6 +379,27 @@ def execute_literature_import_wizard(
     )
     message = f"Imported {len(summaries)} file(s). Next step: Review duplicates." if success else state.error_message or "Import failed."
     return LiteratureImportWizardExecutionResult(success=success, state=state, summaries=tuple(summaries), message=message)
+
+
+def execute_multisource_literature_import(
+    *,
+    project_dir: Path,
+    source_path: str,
+    source_format: str = "auto",
+    source_database: str = "",
+    search_date: str = "",
+    search_strategy: str = "",
+    service: MultiSourceLiteratureImportService | None = None,
+) -> MultiSourceLiteratureImportResult:
+    service = service or MultiSourceLiteratureImportService()
+    return service.import_file(
+        project_dir,
+        source_path=Path(source_path),
+        source_format=source_format,
+        source_database=source_database,
+        search_date=search_date,
+        search_strategy=search_strategy,
+    )
 
 
 def literature_import_state_from_batch_summary(
@@ -589,14 +615,14 @@ def _preview_file(path_text: str, *, requested_format: str) -> LiteratureImportW
     path = Path(path_text).expanduser()
     detected = _detect_preview_format(path, requested_format)
     exists = path.exists() and path.is_file()
-    supported = detected in {"ris", "nbib", "csv"} and exists
+    supported = detected in set(MULTISOURCE_SUPPORTED_FORMATS) and exists
     record_count_preview = _preview_record_count(path, detected) if supported else None
     if not exists:
         status = "missing"
         message = "导入文件不存在，请检查路径。"
     elif detected == "unknown":
         status = "unsupported"
-        message = "无法识别导入格式，请选择 RIS、NBIB 或 CSV。"
+        message = "无法识别导入格式，请选择 NBIB、RIS、CSV、XML、WOS、CNKI 等支持格式。"
     else:
         status = "ready"
         message = "File is ready for testing import preview."
@@ -615,11 +641,23 @@ def _preview_file(path_text: str, *, requested_format: str) -> LiteratureImportW
 
 def _detect_preview_format(path: Path, requested_format: str) -> str:
     requested = (requested_format or "auto").strip().lower()
-    if requested in {"ris", "nbib", "csv"}:
+    if requested in set(MULTISOURCE_SUPPORTED_FORMATS):
         return requested
     if requested not in {"", "auto", "auto-detect", "autodetect"}:
         return "unknown"
-    return {".ris": "ris", ".nbib": "nbib", ".csv": "csv"}.get(path.suffix.lower(), "unknown")
+    suffix = path.suffix.lower()
+    if suffix in {".ris", ".nbib", ".csv", ".xml", ".tsv", ".tab"}:
+        return {".ris": "ris", ".nbib": "nbib", ".csv": "csv", ".xml": "pubmed_xml", ".tsv": "wos_tab_delimited", ".tab": "wos_tab_delimited"}[suffix]
+    if suffix in {".txt", ".ciw"} and path.exists():
+        text = path.read_text(encoding="utf-8", errors="ignore")[:2000]
+        if "\nER" in text and ("\nUT " in text or "\nTI " in text):
+            return "wos_plain_text"
+        if "题名" in text or "作者" in text or "来源" in text:
+            return "cnki_export"
+        if "PMID-" in text or "TI  -" in text or "AB  -" in text:
+            return "medline"
+        return "unknown"
+    return "unknown"
 
 
 def _preview_record_count(path: Path, detected_format: str) -> int:
@@ -634,6 +672,16 @@ def _preview_record_count(path: Path, detected_format: str) -> int:
     if detected_format == "csv":
         lines = [line for line in text.splitlines() if line.strip()]
         return max(0, len(lines) - 1)
+    if detected_format == "pubmed_xml":
+        return text.count("<PubmedArticle>")
+    if detected_format in {"wos_plain_text", "wos_tab_delimited"}:
+        if detected_format == "wos_plain_text":
+            return text.count("\nER")
+        return max(0, len([line for line in text.splitlines() if line.strip()]) - 1)
+    if detected_format == "cnki_export":
+        return max(1, len([block for block in text.split("\n\n") if block.strip()])) if text.strip() else 0
+    if detected_format in {"endnote_export", "zotero_export", "embase_ris", "cochrane_ris"}:
+        return len([line for line in text.splitlines() if line.startswith("TY  -")]) or (1 if text.strip() else 0)
     return 0
 
 

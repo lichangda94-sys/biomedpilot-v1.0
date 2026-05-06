@@ -105,11 +105,16 @@ The library records Chinese-friendly diagnostics without failing import when met
 ## Current Sources
 
 - PubMed confirmed candidates: selected candidates only, with search execution and reviewer decision provenance.
-- NBIB: bridged through the existing active import service and normalized into the v2 library.
-- RIS: bridged through the existing active import service and normalized into the v2 library.
-- CSV: bridged through the existing active import service and normalized into the v2 library.
+- NBIB: bridged through the existing active import service and normalized into the v2 library; also supported by the M7 active multi-source adapter.
+- RIS: bridged through the existing active import service and normalized into the v2 library; also supported by the M7 active multi-source adapter.
+- CSV: bridged through the existing active import service and normalized into the v2 library; also supported by the M7 active multi-source adapter.
+- PubMed XML / MEDLINE: supported by the M7 active multi-source adapter.
+- Web of Science plain text / tab-delimited: supported by the M7 active multi-source adapter.
+- EndNote / Zotero RIS exports: supported by the M7 active multi-source adapter.
+- CNKI-style local text exports, Embase RIS, and Cochrane RIS: supported by the M7 active multi-source adapter.
 
 The NBIB/RIS/CSV bridge still uses the existing transitional parser adapter. This is recorded as technical debt and should not be expanded into a broader active legacy dependency.
+The M7 multi-source adapter is Meta-owned and file-import only; it does not add online database clients.
 
 ## Guardrails
 

@@ -94,6 +94,6 @@ def test_literature_import_feature_availability_status() -> None:
 def test_literature_import_page_state() -> None:
     state = initial_literature_import_state()
     assert state.title == "文献导入"
-    assert state.supported_formats == ("NBIB", "RIS", "CSV")
+    assert {"NBIB", "RIS", "CSV"} <= set(state.supported_formats)
+    assert {"PubMed XML", "WOS", "CNKI", "EndNote", "Zotero"} <= set(state.supported_formats)
     assert state.status_label in {"测试中", "已开放"}
-

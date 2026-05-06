@@ -44,6 +44,7 @@ The current testing chain is:
 - PubMed candidate handoff imports only selected records; rejected and pending candidates are not imported. Imported candidates remain `screening_status=not_started` and `dedup_status=pending_review`.
 - `LiteratureLibraryService` is the active normalized literature library layer. It writes `meta_literature_library.v2` records, `meta_literature_import_batch.v2` batches, record-level audit JSONL, and `meta_literature_library_manifest.v1`.
 - PubMed selected candidates, NBIB, RIS, and CSV imports are bridged into the same normalized record schema with provenance and import batch metadata.
+- Multi-source Literature Import v2 adds a Meta-owned file-import adapter path for PubMed XML/MEDLINE, WOS plain text/tab-delimited, EndNote/Zotero RIS, Embase RIS, Cochrane RIS, and CNKI-style local exports, all normalized through `LiteratureLibraryService`.
 - Literature library diagnostics record missing DOI, missing PMID, missing abstract, missing year, incomplete author fields, and incomplete source information without crashing.
 - Literature library query helpers support listing records, record lookup, and filtering by source type, PMID, DOI, title keyword, and import batch.
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
@@ -72,6 +73,7 @@ The current testing chain is:
 - Automatic full-text acquisition, production PDF parsing, OCR, PDF table extraction, and automated full-text data extraction are not complete.
 - Production risk of bias, automated GRADE judgement, and related evidence-certainty workflow are not complete.
 - Production-grade online adapters for all planned literature databases are not complete.
+- Multi-source Literature Import v2 is file-import oriented; it does not implement WOS, Embase, CNKI, WanFang, VIP, or Cochrane online execution clients.
 - Autonomous AI-assisted review, automatic final screening, automatic final extraction, and automatic final conclusions.
 - Multi-reviewer adjudication, team workflow, and production audit trail.
 
