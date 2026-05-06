@@ -131,6 +131,19 @@ No P1 gaps detected.
 
 No P2 gaps detected.
 
+## Quality Gates
+
+| Gate | Observed | Threshold | Status |
+| --- | ---: | ---: | --- |
+| core_cancers_coverage | 1.0 | 0.95 | pass |
+| tcga_project_mapping | 1.0 | 0.9 | pass |
+| gtex_tissue_mapping | 1.0 | 0.95 | pass |
+| meta_retrieval_terms | 1.0 | 0.9 | pass |
+| missing_items | 0 | 0 | pass |
+| p0_gaps | 0 | 0 | pass |
+| audit_cross_context_pollution | 0 | 0 | pass |
+| overall_quality_gate_status | - | - | pass |
+
 ## External Resource Sources And Version Notes
 
 - common_cancers: GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects (Curated common cancer checklist, 2026-05)

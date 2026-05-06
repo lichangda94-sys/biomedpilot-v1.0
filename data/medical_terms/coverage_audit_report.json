@@ -1,6 +1,6 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-04T23:52:05.390389+00:00",
+  "generated_at": "2026-05-06T04:12:25.712657+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
@@ -1952,6 +1952,67 @@
     "P0": [],
     "P1": [],
     "P2": []
+  },
+  "quality_gates": {
+    "status": "pass",
+    "gates": [
+      {
+        "gate_id": "core_cancers_coverage",
+        "description": "Common cancer checklist coverage must stay >= 95%.",
+        "metric": "coverage_rate",
+        "minimum": 0.95,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "tcga_project_mapping",
+        "description": "TCGA project checklist coverage must stay >= 90%.",
+        "metric": "coverage_rate",
+        "minimum": 0.9,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "gtex_tissue_mapping",
+        "description": "GTEx tissue weighted coverage must stay >= 95%.",
+        "metric": "coverage_rate",
+        "minimum": 0.95,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "meta_retrieval_terms",
+        "description": "Meta outcome, design, effect-size, and publication filter terms must stay >= 90%.",
+        "metric": "coverage_rate",
+        "minimum": 0.9,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "missing_items",
+        "description": "Reference checklist missing count must remain zero.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "p0_gaps",
+        "description": "P0 gaps must remain zero.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "audit_cross_context_pollution",
+        "description": "Meta audit details must not report TCGA or GTEx matches.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      }
+    ]
   },
   "source_notes": [
     {

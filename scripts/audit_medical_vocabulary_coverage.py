@@ -52,6 +52,7 @@ def build_coverage_audit_report() -> dict[str, Any]:
             section = _audit_generic_terms(checklist, corpus)
         sections[str(checklist.get("checklist_id"))] = section
     gaps = _prioritized_gaps(sections)
+    quality_gates = _quality_gates(sections, gaps)
     return {
         "schema_version": "medical_vocabulary_coverage_audit.v1",
         "generated_at": _now(),
@@ -63,6 +64,7 @@ def build_coverage_audit_report() -> dict[str, Any]:
         "overall": _overall_summary(sections),
         "sections": sections,
         "prioritized_gaps": gaps,
+        "quality_gates": quality_gates,
         "source_notes": _source_notes(checklists),
     }
 
@@ -107,6 +109,10 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         "## P2 Gaps",
         "",
         _gap_list(report["prioritized_gaps"]["P2"], "No P2 gaps detected."),
+        "",
+        "## Quality Gates",
+        "",
+        _quality_gate_table(report["quality_gates"]),
         "",
         "## External Resource Sources And Version Notes",
         "",
@@ -291,6 +297,84 @@ def _prioritized_gaps(sections: dict[str, Any]) -> dict[str, list[dict[str, str]
     return gaps
 
 
+def _quality_gates(sections: dict[str, Any], gaps: dict[str, list[dict[str, str]]]) -> dict[str, Any]:
+    gates = [
+        _threshold_gate(
+            "core_cancers_coverage",
+            "Common cancer checklist coverage must stay >= 95%.",
+            sections["common_cancers"]["coverage_rate"],
+            0.95,
+        ),
+        _threshold_gate(
+            "tcga_project_mapping",
+            "TCGA project checklist coverage must stay >= 90%.",
+            sections["tcga_projects"]["coverage_rate"],
+            0.90,
+        ),
+        _threshold_gate(
+            "gtex_tissue_mapping",
+            "GTEx tissue weighted coverage must stay >= 95%.",
+            sections["gtex_tissues"]["weighted_coverage_rate"],
+            0.95,
+        ),
+        _threshold_gate(
+            "meta_retrieval_terms",
+            "Meta outcome, design, effect-size, and publication filter terms must stay >= 90%.",
+            sections["meta_terms"]["coverage_rate"],
+            0.90,
+        ),
+        _zero_gate(
+            "missing_items",
+            "Reference checklist missing count must remain zero.",
+            sum(section["missing"] for section in sections.values()),
+        ),
+        _zero_gate(
+            "p0_gaps",
+            "P0 gaps must remain zero.",
+            len(gaps["P0"]),
+        ),
+        _zero_gate(
+            "audit_cross_context_pollution",
+            "Meta audit details must not report TCGA or GTEx matches.",
+            _audit_cross_context_pollution_count(sections),
+        ),
+    ]
+    return {
+        "status": "pass" if all(gate["status"] == "pass" for gate in gates) else "fail",
+        "gates": gates,
+    }
+
+
+def _threshold_gate(gate_id: str, description: str, observed: float, minimum: float) -> dict[str, Any]:
+    return {
+        "gate_id": gate_id,
+        "description": description,
+        "metric": "coverage_rate",
+        "minimum": minimum,
+        "observed": observed,
+        "status": "pass" if observed >= minimum else "fail",
+    }
+
+
+def _zero_gate(gate_id: str, description: str, observed: int) -> dict[str, Any]:
+    return {
+        "gate_id": gate_id,
+        "description": description,
+        "metric": "count",
+        "maximum": 0,
+        "observed": observed,
+        "status": "pass" if observed == 0 else "fail",
+    }
+
+
+def _audit_cross_context_pollution_count(sections: dict[str, Any]) -> int:
+    count = 0
+    for item in sections["meta_terms"]["details"]:
+        count += len(item.get("matched_tcga_projects", []))
+        count += len(item.get("matched_gtex_tissues", []))
+    return count
+
+
 def _source_notes(checklists: list[dict[str, Any]]) -> list[dict[str, str]]:
     return [
         {
@@ -425,6 +509,15 @@ def _gap_list(items: list[dict[str, str]], empty: str) -> str:
     if not items:
         return empty
     return "\n".join(f"- {item['checklist']}::{item['id']} ({item['label']}): {item['status']}" for item in items)
+
+
+def _quality_gate_table(quality_gates: dict[str, Any]) -> str:
+    rows = ["| Gate | Observed | Threshold | Status |", "| --- | ---: | ---: | --- |"]
+    for gate in quality_gates["gates"]:
+        threshold = gate.get("minimum", gate.get("maximum", ""))
+        rows.append(f"| {gate['gate_id']} | {gate['observed']} | {threshold} | {gate['status']} |")
+    rows.append(f"| overall_quality_gate_status | - | - | {quality_gates['status']} |")
+    return "\n".join(rows)
 
 
 def _list(value: Any) -> list[str]:

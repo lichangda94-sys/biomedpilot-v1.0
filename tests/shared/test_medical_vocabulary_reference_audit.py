@@ -101,3 +101,17 @@ def test_stage_2_5_partial_and_approximate_gaps_are_closed() -> None:
     assert gtex_tissues["Bladder"]["status"] == "covered"
     assert gtex_tissues["Bladder"]["mapping_status"] == "exact"
     assert report["prioritized_gaps"] == {"P0": [], "P1": [], "P2": []}
+
+
+def test_stage_v7_quality_gates_pass() -> None:
+    report = build_coverage_audit_report()
+    gates = {gate["gate_id"]: gate for gate in report["quality_gates"]["gates"]}
+
+    assert report["quality_gates"]["status"] == "pass"
+    assert gates["core_cancers_coverage"]["observed"] >= 0.95
+    assert gates["tcga_project_mapping"]["observed"] >= 0.90
+    assert gates["gtex_tissue_mapping"]["observed"] >= 0.95
+    assert gates["meta_retrieval_terms"]["observed"] >= 0.90
+    assert gates["missing_items"]["observed"] == 0
+    assert gates["p0_gaps"]["observed"] == 0
+    assert gates["audit_cross_context_pollution"]["observed"] == 0
