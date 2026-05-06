@@ -285,6 +285,20 @@ class DatasetDownloadService:
             "source_specific_metadata": dict(candidate.source_specific_metadata),
             "warnings": list(candidate.warnings),
         }
+        if candidate.source == "tcga_gdc":
+            metadata.update(
+                {
+                    "project_id": candidate.source_specific_metadata.get("project_id") or candidate.accession_or_project,
+                    "project_name": candidate.source_specific_metadata.get("project_name") or candidate.display_title,
+                }
+            )
+        elif candidate.source == "gtex":
+            metadata.update(
+                {
+                    "tissue_name": candidate.source_specific_metadata.get("tissue_name") or candidate.tissue or candidate.accession_or_project,
+                    "tissue_detail": candidate.source_specific_metadata.get("tissue_detail") or candidate.tissue or candidate.accession_or_project,
+                }
+            )
         return DatasetDownloadRequest(
             download_id=download_id,
             project_root=str(root),
@@ -331,6 +345,7 @@ class DatasetDownloadService:
         download_result: dict[str, Any] = {}
         asset_manifest: dict[str, Any] | None = None
         asset_manifest_path: Path | None = None
+        download_manifest_path: Path | None = None
         status = _planned_status(request.source)
         message = _planned_message(request.source, request.accession_or_project)
         success = True
@@ -359,8 +374,17 @@ class DatasetDownloadService:
                 message = f"GEO 下载失败：{exc}"
                 download_result = {"error": str(exc)}
         elif request.execute_download and request.source != "geo":
-            status = _planned_status(request.source)
-            message = "当前阶段仅生成下载任务；TCGA/GDC 或 GTEx 真实下载待接入。"
+            download_executed = True
+            try:
+                download_manifest_path, download_result = _write_standard_source_download_manifest(request, target_dir)
+                status = str(download_result.get("status") or _planned_status(request.source))
+                message = str(download_result.get("message") or _planned_message(request.source, request.accession_or_project))
+                success = True
+            except Exception as exc:
+                success = False
+                status = "download_manifest_failed"
+                message = f"下载清单创建失败：{exc}"
+                download_result = {"error": str(exc)}
 
         receipt = {
             "schema_version": "biomedpilot.dataset_download_receipt.v1",
@@ -376,6 +400,7 @@ class DatasetDownloadService:
             "target_dir": str(target_dir),
             "downloaded_files": downloaded_files,
             "asset_manifest_path": str(asset_manifest_path) if asset_manifest_path is not None else "",
+            "download_manifest_path": str(download_manifest_path) if download_manifest_path is not None else "",
             "asset_manifest": asset_manifest or {},
             "request_path": str(request_path),
             "download_result": download_result,
@@ -391,6 +416,7 @@ class DatasetDownloadService:
             download_executed=download_executed,
             asset_manifest_path=asset_manifest_path,
             asset_manifest=asset_manifest,
+            download_manifest_path=download_manifest_path,
         )
         return CandidateDownloadResult(
             success=success,
@@ -419,6 +445,7 @@ class DatasetDownloadService:
         download_executed: bool,
         asset_manifest_path: Path | None = None,
         asset_manifest: dict[str, Any] | None = None,
+        download_manifest_path: Path | None = None,
     ) -> AcquisitionSummary:
         metadata = dict(request.metadata)
         asset_summary = asset_manifest.get("summary", {}) if isinstance(asset_manifest, dict) else {}
@@ -430,6 +457,7 @@ class DatasetDownloadService:
                 "download_request_path": str(request_path),
                 "download_receipt_path": str(receipt_path),
                 "asset_manifest_path": str(asset_manifest_path) if asset_manifest_path is not None else "",
+                "download_manifest_path": str(download_manifest_path) if download_manifest_path is not None else "",
                 "asset_manifest_summary": asset_summary if isinstance(asset_summary, dict) else {},
                 "registration_status": "registered_with_download_task" if not downloaded_files else "registered_metadata_source",
                 "ready_for_recognition": "ready" if downloaded_files else "pending_source_download",
@@ -615,6 +643,164 @@ class DatasetDownloadService:
             acquisition_summary=summary,
             details=receipt,
         )
+
+
+def _write_standard_source_download_manifest(request: DatasetDownloadRequest, target_dir: Path) -> tuple[Path, dict[str, Any]]:
+    if request.source == "tcga_gdc":
+        return _write_tcga_gdc_download_manifest(request, target_dir)
+    if request.source == "gtex":
+        return _write_gtex_download_manifest(request, target_dir)
+    raise ValueError(f"Unsupported standard source: {request.source}")
+
+
+def _write_tcga_gdc_download_manifest(request: DatasetDownloadRequest, target_dir: Path) -> tuple[Path, dict[str, Any]]:
+    metadata = request.metadata.get("source_specific_metadata")
+    source_metadata = metadata if isinstance(metadata, dict) else {}
+    project_id = str(source_metadata.get("project_id") or request.accession_or_project).upper()
+    entries = _tcga_manifest_entries(source_metadata)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    manifest_json_path = target_dir / f"{project_id}_gdc_download_manifest.json"
+    transfer_manifest_path = target_dir / f"{project_id}_gdc_file_manifest.tsv"
+    payload = {
+        "schema_version": "biomedpilot.tcga_gdc_download_manifest.v1",
+        "created_at": _now(),
+        "project_id": project_id,
+        "project_name": source_metadata.get("project_name") or request.display_title,
+        "database": "TCGA/GDC",
+        "status": "pending_data_file_download",
+        "source_origin": "gdc_project_asset_inventory" if entries else "local_project_mapping",
+        "data_availability": {
+            "expression_file_available": bool(source_metadata.get("expression_file_availability")),
+            "clinical_available": bool(source_metadata.get("clinical_availability")),
+            "biospecimen_available": bool(source_metadata.get("biospecimen_availability")),
+            "file_count": source_metadata.get("file_count", 0),
+            "case_count": source_metadata.get("case_count", "未知"),
+        },
+        "recommended_filters": {
+            "project_id": project_id,
+            "data_category": "Transcriptome Profiling",
+            "data_type": "Gene Expression Quantification",
+            "access": "open",
+        },
+        "file_manifest_entries": entries,
+        "transfer_manifest_path": str(transfer_manifest_path),
+        "gdc_api": {
+            "files_endpoint": "https://api.gdc.cancer.gov/files",
+            "data_endpoint": "https://api.gdc.cancer.gov/data",
+            "portal_project_url": f"https://portal.gdc.cancer.gov/projects/{project_id}",
+        },
+        "notes": [
+            "已创建项目级 GDC 文件清单；尚未下载表达矩阵或临床文件。",
+            "后续需要用户确认文件类型、workflow 和样本范围后再执行真实数据文件下载。",
+        ],
+    }
+    _write_gdc_transfer_manifest(transfer_manifest_path, entries)
+    _write_json(manifest_json_path, payload)
+    status = "tcga_gdc_download_manifest_created" if entries else "tcga_gdc_download_manifest_pending_file_selection"
+    message = (
+        f"{project_id}：已创建 GDC 文件清单（{len(entries)} 个候选文件），尚未下载表达/临床数据文件。"
+        if entries
+        else f"{project_id}：已创建 GDC 下载任务清单，待在线选择表达/临床数据文件。"
+    )
+    return manifest_json_path, {
+        "status": status,
+        "message": message,
+        "download_manifest_path": str(manifest_json_path),
+        "transfer_manifest_path": str(transfer_manifest_path),
+        "candidate_file_count": len(entries),
+        "data_files_downloaded": False,
+    }
+
+
+def _write_gtex_download_manifest(request: DatasetDownloadRequest, target_dir: Path) -> tuple[Path, dict[str, Any]]:
+    metadata = request.metadata.get("source_specific_metadata")
+    source_metadata = metadata if isinstance(metadata, dict) else {}
+    tissue_name = str(source_metadata.get("tissue_name") or source_metadata.get("tissue_detail") or request.accession_or_project).strip()
+    slug = "".join(character if character.isalnum() else "_" for character in tissue_name).strip("_").upper() or "GTEX_TISSUE"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = target_dir / f"{slug}_gtex_download_manifest.json"
+    payload = {
+        "schema_version": "biomedpilot.gtex_download_manifest.v1",
+        "created_at": _now(),
+        "tissue_name": tissue_name,
+        "tissue_detail": source_metadata.get("tissue_detail") or tissue_name,
+        "database": "GTEx",
+        "role": "normal_reference",
+        "status": "pending_data_file_download",
+        "data_availability": {
+            "expression_available": bool(source_metadata.get("expression_availability")),
+            "sample_count": source_metadata.get("sample_count", "未知"),
+            "expression_matrix_version": source_metadata.get("expression_matrix_version", ""),
+        },
+        "recommended_assets": [
+            {
+                "asset_type": "normal_tissue_expression_reference",
+                "status": "pending_download_or_user_supplied_file",
+                "input_eligible": False,
+                "notes": "GTEx 表达矩阵通常为公共 bulk 文件；当前先创建组织级下载清单，不伪造本地表达矩阵。",
+            }
+        ],
+        "gtex_api": {
+            "tissue_endpoint": "https://gtexportal.org/api/v2/dataset/tissueSiteDetail",
+            "portal_url": "https://gtexportal.org/home/datasets",
+        },
+        "notes": [
+            "已创建 GTEx 正常组织参考下载清单；尚未下载表达矩阵文件。",
+            "TCGA 与 GTEx 联合分析前必须进行批次效应处理。",
+        ],
+    }
+    _write_json(manifest_path, payload)
+    return manifest_path, {
+        "status": "gtex_download_manifest_created",
+        "message": f"{tissue_name}：已创建 GTEx 组织下载清单，尚未下载表达矩阵文件。",
+        "download_manifest_path": str(manifest_path),
+        "data_files_downloaded": False,
+    }
+
+
+def _tcga_manifest_entries(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_entries = metadata.get("file_manifest_entries") or metadata.get("files") or metadata.get("raw_files") or []
+    entries: list[dict[str, Any]] = []
+    if not isinstance(raw_entries, list):
+        return entries
+    for item in raw_entries:
+        if not isinstance(item, dict):
+            continue
+        file_id = str(item.get("file_id") or item.get("id") or "").strip()
+        file_name = str(item.get("file_name") or item.get("filename") or "").strip()
+        if not file_id and not file_name:
+            continue
+        entries.append(
+            {
+                "file_id": file_id,
+                "file_name": file_name,
+                "md5sum": str(item.get("md5sum") or item.get("md5") or "").strip(),
+                "file_size": item.get("file_size") or item.get("size") or "",
+                "state": str(item.get("state") or "").strip(),
+                "access": str(item.get("access") or "").strip(),
+                "data_category": str(item.get("data_category") or "").strip(),
+                "data_type": str(item.get("data_type") or "").strip(),
+                "workflow_type": str(item.get("workflow_type") or "").strip(),
+            }
+        )
+    return entries
+
+
+def _write_gdc_transfer_manifest(path: Path, entries: list[dict[str, Any]]) -> None:
+    lines = ["id\tfilename\tmd5\tsize\tstate"]
+    for item in entries:
+        lines.append(
+            "\t".join(
+                [
+                    str(item.get("file_id") or ""),
+                    str(item.get("file_name") or ""),
+                    str(item.get("md5sum") or ""),
+                    str(item.get("file_size") or ""),
+                    str(item.get("state") or ""),
+                ]
+            )
+        )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _ensure_download_dirs(root: Path) -> None:
@@ -928,9 +1114,9 @@ def _planned_message(source: str, accession_or_project: str) -> str:
     if source == "geo":
         return f"已生成 GEO 下载任务：{accession_or_project}。尚未下载数据文件。"
     if source == "tcga_gdc":
-        return f"已生成 TCGA/GDC 下载任务：{accession_or_project}。真实下载待接入。"
+        return f"已生成 TCGA/GDC 下载任务：{accession_or_project}。请创建 GDC 文件清单后再确认下载。"
     if source == "gtex":
-        return f"已生成 GTEx 来源任务：{accession_or_project}。真实下载待接入。"
+        return f"已生成 GTEx 来源任务：{accession_or_project}。请创建组织下载清单后再确认下载。"
     return f"已生成下载任务：{accession_or_project}。"
 
 

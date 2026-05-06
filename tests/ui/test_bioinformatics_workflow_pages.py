@@ -677,7 +677,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "适合肿瘤样本分析" in tcga_card
     assert "选择项目" in tcga_card
     assert "查看说明" in tcga_card
-    assert "创建下载任务" in tcga_card
+    assert "创建下载清单" in tcga_card
     assert "待创建下载任务" in tcga_card
     assert "组织名称：" in gtex_card
     assert "Thyroid" in gtex_card
@@ -691,7 +691,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "GTEx 是正常组织表达参考，不是肿瘤样本数据库" in gtex_card
     assert "选择组织" in gtex_card
     assert "查看说明" in gtex_card
-    assert "创建下载任务" in gtex_card
+    assert "创建下载清单" in gtex_card
     assert "待创建下载任务" in gtex_card
     assert widget._mapping_log.isHidden()
     visible_text = " ".join(
@@ -791,7 +791,8 @@ def test_register_geo_search_result_as_source(qt_app, project_summary) -> None:
     assert summary.status == "planned"
     assert summary.registered_files == ()
     assert widget.status_message() == "已选择候选来源，待下载数据文件。"
-    record = json.loads(summary.record_path.read_text(encoding="utf-8"))
+    record_path = project_summary.project_root / "acquisition" / "records" / f"{summary.acquisition_id}.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["source_type"] == "geo_accession"
     assert record["strategy"] == "plan_only"
     assert record["registered_files"] == []
@@ -831,7 +832,7 @@ def test_chinese_dataset_search_generates_download_task_without_fake_download(qt
     result = widget.generate_candidate_download_task("geo", "GSE33630")
 
     assert result is not None
-    assert widget.status_message() == "已生成下载任务，等待下载数据文件。"
+    assert widget.status_message() == "已生成 GEO 下载任务：GSE33630。尚未下载数据文件。"
     assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "geo" / "GSE33630" / "GSE33630_family.soft.gz").exists()
     records = [path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json"]
@@ -1068,7 +1069,8 @@ def test_geo_source_registration_does_not_auto_download_or_analyze(qt_app, proje
     assert summary is not None
     assert not (project_summary.project_root / "raw_data" / "geo" / "GSE33630").exists()
     assert list((project_summary.project_root / "analysis").glob("**/*")) == []
-    record = json.loads(summary.record_path.read_text(encoding="utf-8"))
+    record_path = project_summary.project_root / "acquisition" / "records" / f"{summary.acquisition_id}.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["status"] == "planned"
     assert record["metadata"]["registration_handoff"] == "data_recognition_pending_source_acquisition"
 
@@ -1090,6 +1092,11 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert widget._continue_button.text() == "下一步：进入数据识别"
     assert widget.status_message() == "已选择候选来源，待下载数据文件。"
     assert "已选择，待创建下载任务" in _source_card_text(widget, "tcga_gdc")
+    download_result = widget.generate_candidate_download_task("tcga_gdc", "TCGA-THCA")
+    assert download_result is not None
+    assert download_result.status == "tcga_gdc_download_manifest_pending_file_selection"
+    assert "GDC 下载任务清单" in widget.status_message()
+    assert "下载清单已创建" in _source_card_text(widget, "tcga_gdc")
     registered_button = widget.findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
     assert registered_button.text() == "已选择"
     assert not registered_button.isEnabled()
@@ -1103,7 +1110,8 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert table.rowCount() == 1
     assert table.item(0, 0).text() == "TCGA/GDC 项目"
     assert table.item(0, 1).text() == "TCGA-THCA"
-    record = json.loads(summary.record_path.read_text(encoding="utf-8"))
+    record_path = project_summary.project_root / "acquisition" / "records" / f"{summary.acquisition_id}.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["source_type"] == "tcga_project"
     assert record["strategy"] == "plan_only"
     assert record["status"] == "planned"
@@ -1129,10 +1137,16 @@ def test_chinese_dataset_search_registers_gtex_tissue_as_planned_source(qt_app, 
     assert widget._gtex_registered_table.rowCount() == 1
     assert widget._gtex_registered_table.item(0, 0).text() == "Thyroid"
     assert "已选择，待创建下载任务" in _source_card_text(widget, "gtex")
+    download_result = widget.generate_candidate_download_task("gtex", "GTEX-THYROID")
+    assert download_result is not None
+    assert download_result.status == "gtex_download_manifest_created"
+    assert "GTEx 组织下载清单" in widget.status_message()
+    assert "下载清单已创建" in _source_card_text(widget, "gtex")
     assert not widget._continue_button.isEnabled()
     assert not (project_summary.project_root / "raw_data" / "gtex" / "GTEX-THYROID").exists()
 
-    record = json.loads(summary.record_path.read_text(encoding="utf-8"))
+    record_path = project_summary.project_root / "acquisition" / "records" / f"{summary.acquisition_id}.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["source_type"] == "gtex_tissue"
     assert record["status"] == "planned"
     assert record["registered_files"] == []
@@ -1315,6 +1329,38 @@ def test_analysis_task_center_can_save_comparison_groups(qt_app, project_summary
     report = artifacts["readiness_report"]
     assert isinstance(report, dict)
     assert "comparison_config" in report["available_inputs"]
+
+
+def test_analysis_task_center_runs_geo_differential_expression_and_indexes_results(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "GSETEST_expression_matrix.tsv"
+    expression_file.write_text(
+        "gene\tcase_1\tcase_2\tcontrol_1\tcontrol_2\n"
+        "TP53\t10\t12\t2\t3\n"
+        "EGFR\t4\t5\t9\t10\n",
+        encoding="utf-8",
+    )
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="geo_accession",
+        source_label="GSETEST",
+        strategy="reference",
+        selected_paths=[expression_file],
+        metadata={"source": "geo", "accession_or_project": "GSETEST", "ready_for_recognition": "ready"},
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+    result = task_center.run_geo_differential_expression_task()
+
+    assert result is not None
+    assert result["summaries"]
+    index = workflow_pages.load_result_index(project_summary.project_root)
+    entries = index["entries"]
+    assert any(item["analysis_type"] == "differential_expression" for item in entries)
+    assert "已运行 GEO 差异分析" in task_center.status_message()
 
 
 def _write_mock_recognition_report(project_root: Path, files: list[dict[str, object]]) -> Path:

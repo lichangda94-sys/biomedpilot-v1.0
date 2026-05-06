@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from collections.abc import Callable
@@ -61,14 +62,17 @@ from app.bioinformatics.project_workspace_binding import (
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
 from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
-from app.bioinformatics.results.project_results import load_result_index
+from app.bioinformatics.results.project_results import load_result_index, write_result_index
 from app.bioinformatics.search_center import (
     BioinformaticsSearchCenterResult,
     BioinformaticsSourceRouter,
     GeoSearchAdapter,
+    GtexSearchAdapter,
     SourceSearchResult,
+    TcgaGdcSearchAdapter,
     UnifiedDatasetCandidate,
 )
+from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
 
@@ -1265,26 +1269,40 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         return result
 
     def search_tcga_candidates(self) -> BioinformaticsSearchCenterResult | None:
-        result = self._ensure_draft_result()
-        if result is None:
+        draft = self._ensure_draft_result()
+        if draft is None:
             return None
+        self._set_status("正在检查 TCGA/GDC 项目资产，请稍候。")
+        QApplication.processEvents()
+        tcga_result = TcgaGdcSearchAdapter().search(draft.query, online_enabled=True, limit=20)
+        if not tcga_result.candidates and draft.source_results.get("tcga_gdc") is not None:
+            tcga_result = draft.source_results["tcga_gdc"]
+        result = _merge_source_search_result(draft, "tcga_gdc", tcga_result, online_enabled=True)
+        self._last_result = result
         self._render_result(result, searched=False)
         candidates = [candidate for candidate in result.candidates if candidate.source == "tcga_gdc"]
         self._set_status(
-            "已根据本地词库匹配到 TCGA/GDC 项目，尚未执行在线数据获取。"
+            "已匹配 TCGA/GDC 项目，可创建 GDC 文件清单。"
             if candidates
             else "未生成 TCGA/GDC 项目候选。"
         )
         return result
 
     def search_gtex_candidates(self) -> BioinformaticsSearchCenterResult | None:
-        result = self._ensure_draft_result()
-        if result is None:
+        draft = self._ensure_draft_result()
+        if draft is None:
             return None
+        self._set_status("正在检查 GTEx 组织参考，请稍候。")
+        QApplication.processEvents()
+        gtex_result = GtexSearchAdapter().search(draft.query, online_enabled=True, limit=20)
+        if not gtex_result.candidates and draft.source_results.get("gtex") is not None:
+            gtex_result = draft.source_results["gtex"]
+        result = _merge_source_search_result(draft, "gtex", gtex_result, online_enabled=True)
+        self._last_result = result
         self._render_result(result, searched=False)
         candidates = [candidate for candidate in result.candidates if candidate.source == "gtex"]
         self._set_status(
-            "已根据本地词库匹配到 GTEx 组织，尚未执行在线数据获取。"
+            "已匹配 GTEx 组织参考，可创建组织下载清单。"
             if candidates
             else "未生成 GTEx 组织候选。"
         )
@@ -1319,7 +1337,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._set_status("已选择候选来源，待下载数据文件。")
         return summary
 
-    def generate_candidate_download_task(self, source: str, accession_or_project: str) -> object | None:
+    def generate_candidate_download_task(self, source: str, accession_or_project: str, *, execute_download: bool | None = None) -> object | None:
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
@@ -1327,25 +1345,30 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if candidate is None:
             self._set_status("候选结果不存在。", error=True)
             return None
-        if self._is_candidate_ready_for_recognition(source, accession_or_project):
+        if source != "geo" and _candidate_has_download_manifest(self._project_root, source, accession_or_project):
+            self._set_status(_candidate_record_status_text(self._project_root, source, accession_or_project) or f"下载清单已创建：{accession_or_project}")
+            self._refresh_candidate_registration_buttons()
+            return None
+        if source == "geo" and self._is_candidate_ready_for_recognition(source, accession_or_project):
             if source == "geo":
                 self._set_status(_candidate_record_status_text(self._project_root, source, accession_or_project) or f"元数据已下载：{accession_or_project}")
             else:
                 self._set_status(f"已生成下载任务：{accession_or_project}")
             self._refresh_candidate_registration_buttons()
             return None
+        should_execute = source != "geo" if execute_download is None else execute_download
         result = self._download_service.create_candidate_download_task(
             project_root=self._project_root,
             candidate=candidate,
             search_result=self._last_result,
             original_chinese_topic=self._query_input.text().strip(),
-            execute_download=False,
+            execute_download=should_execute,
         )
         self._refresh_registered_sources()
         if self._last_result is not None:
             self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
         self.source_registered.emit(result.acquisition_summary)
-        self._set_status("已生成下载任务，等待下载数据文件。")
+        self._set_status(result.message or "已生成下载任务，等待下载数据文件。")
         return result
 
     def download_geo_candidate(self, accession_or_project: str) -> object | None:
@@ -1879,7 +1902,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         detail_button = QPushButton("查看说明")
         detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
         detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-        download_button = QPushButton("创建下载任务")
+        download_button = QPushButton("创建下载清单")
         download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
         download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
         actions.addWidget(register_button)
@@ -2090,8 +2113,13 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "下载并添加"))
                     button.setEnabled(not ready)
             else:
-                button.setText("已生成任务" if planned else "创建下载任务")
-                button.setEnabled(not planned)
+                manifest_created = _candidate_has_download_manifest(self._project_root, source, accession)
+                if manifest_created:
+                    button.setText("下载清单已创建")
+                    button.setEnabled(False)
+                else:
+                    button.setText("创建下载清单")
+                    button.setEnabled(True)
 
     def _refresh_candidate_status_cells(self) -> None:
         for key, label in self._candidate_status_labels.items():
@@ -3002,6 +3030,44 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._records.setPlainText(_json({"任务记录": [task.__dict__ | {"record_path": str(task.record_path)}]}))
         return task
 
+    def run_geo_differential_expression_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        expression_assets = _geo_expression_assets_for_analysis(self._project_root)
+        if not expression_assets:
+            self._status_label.setText("未找到可用于差异分析的表达矩阵。请先完成数据识别和标准化资产生成。")
+            return None
+        summaries: list[dict[str, object]] = []
+        warnings: list[str] = []
+        for asset in expression_assets:
+            file_path = Path(str(asset.get("file_path") or "")).expanduser()
+            if not file_path.is_absolute():
+                file_path = self._project_root / file_path
+            if not file_path.is_file() and asset.get("source_file"):
+                source_path = Path(str(asset.get("source_file") or "")).expanduser()
+                file_path = source_path if source_path.is_absolute() else self._project_root / source_path
+            if not file_path.is_file():
+                warnings.append(f"表达矩阵文件不存在：{file_path}")
+                continue
+            dataset_id = _analysis_dataset_id(asset, file_path)
+            output_dir = self._project_root / "analysis" / "geo" / "differential_expression" / dataset_id
+            try:
+                summary = run_geo_differential_expression(file_path, output_dir=output_dir, dataset_id=dataset_id)
+            except Exception as exc:
+                warnings.append(f"{dataset_id}: {exc}")
+                continue
+            summaries.append(summary)
+        if summaries:
+            _append_geo_deg_results_to_index(self._project_root, summaries)
+            load_analysis_task_center(self._project_root)
+            self._status_label.setText(f"已运行 GEO 差异分析：{len(summaries)} 个表达矩阵。")
+            self._records.setPlainText(_json({"差异分析结果": summaries, "warnings": warnings}))
+            return {"summaries": summaries, "warnings": warnings}
+        self._status_label.setText("差异分析未运行：无法从表达矩阵列名推断 case/control 分组。请先点击“设置比较组”。")
+        self._records.setPlainText(_json({"warnings": warnings}))
+        return {"summaries": [], "warnings": warnings}
+
     def configure_comparison_groups(self, manual_text: str | None = None) -> bool:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -3048,6 +3114,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(self._task_type_input)
         actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
+        actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
         actions.addStretch(1)
         root.addLayout(actions)
         self._tasks = _table(["任务", "是否可运行", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
@@ -3510,7 +3577,7 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
     records_dir = project_root / "acquisition" / "records"
     if not records_dir.exists():
         return []
-    rows: list[RegisteredSourceRow] = []
+    rows_by_key: dict[tuple[str, str], RegisteredSourceRow] = {}
     seen: set[str] = set()
     for path in sorted(records_dir.glob("*.json")):
         if path.name == LATEST_RECORD:
@@ -3526,20 +3593,22 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
         source_type = str(payload.get("source_type") or "unknown")
         metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
         source_label = _registered_source_display_name(payload, metadata)  # type: ignore[arg-type]
-        rows.append(
-            RegisteredSourceRow(
-                acquisition_id=acquisition_id,
-                source_type_key=source_type,
-                source_type=_source_type_label(source_type),
-                source_label=source_label,
-                location=_registered_source_location(payload, metadata),  # type: ignore[arg-type]
-                status=_registered_status_text(payload),
-                created_at=str(payload.get("created_at") or ""),
-                strategy=str(payload.get("strategy") or ""),
-                location_tooltip=_registered_source_full_location(payload, metadata),  # type: ignore[arg-type]
-            )
+        row = RegisteredSourceRow(
+            acquisition_id=acquisition_id,
+            source_type_key=source_type,
+            source_type=_source_type_label(source_type),
+            source_label=source_label,
+            location=_registered_source_location(payload, metadata),  # type: ignore[arg-type]
+            status=_registered_status_text(payload),
+            created_at=str(payload.get("created_at") or ""),
+            strategy=str(payload.get("strategy") or ""),
+            location_tooltip=_registered_source_full_location(payload, metadata),  # type: ignore[arg-type]
         )
-    return sorted(rows, key=lambda row: row.created_at)
+        key = (row.source_type_key, row.source_label)
+        previous = rows_by_key.get(key)
+        if previous is None or _registered_row_rank(row) >= _registered_row_rank(previous):
+            rows_by_key[key] = row
+    return sorted(rows_by_key.values(), key=lambda row: row.created_at)
 
 
 def _current_project_dataset_entries(project_root: Path | None, *, geo_only: bool = False) -> list[DatasetListEntry]:
@@ -4232,6 +4301,33 @@ def _candidate_has_pending_geo_assets(project_root: Path | None, accession_or_pr
     return False
 
 
+def _candidate_has_download_manifest(project_root: Path | None, source: str, accession_or_project: str) -> bool:
+    if project_root is None:
+        return False
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return False
+    for path in sorted(records_dir.glob("*.json"), reverse=True):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata")
+        if not isinstance(metadata, dict) or metadata.get("ui_source") != "chinese_research_question_search":
+            continue
+        key = (str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
+        if key != (source, accession_or_project):
+            continue
+        manifest_path = Path(str(metadata.get("download_manifest_path") or ""))
+        if manifest_path.is_file():
+            return True
+        if str(metadata.get("download_status") or "") in {"tcga_gdc_download_manifest_created", "tcga_gdc_download_manifest_pending_file_selection", "gtex_download_manifest_created"}:
+            return True
+    return False
+
+
 def _candidate_geo_asset_manifest(project_root: Path | None, accession_or_project: str) -> dict[str, object] | None:
     if project_root is None:
         return None
@@ -4315,6 +4411,10 @@ def _registered_status_text(payload: dict[str, object]) -> str:
             asset_status = _geo_asset_status_text(metadata)
             if asset_status:
                 return asset_status
+        if download_status in {"tcga_gdc_download_manifest_created", "tcga_gdc_download_manifest_pending_file_selection"}:
+            return "GDC 文件清单已创建，待下载数据文件"
+        if download_status == "gtex_download_manifest_created":
+            return "GTEx 下载清单已创建，待下载表达矩阵"
         if ready == "ready" and download_status == "geo_metadata_downloaded":
             return "元数据已下载 / 表达矩阵待下载 / 可进入识别"
         if ready == "ready" or download_status == "downloaded":
@@ -5640,6 +5740,60 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     if not has_ready_core:
         return False, "没有 analysis-ready 表达矩阵资产。"
     return True, ""
+
+
+def _geo_expression_assets_for_analysis(project_root: Path) -> list[dict[str, object]]:
+    artifacts = load_standardization_artifacts(project_root)
+    registry = artifacts.get("registry")
+    if not isinstance(registry, dict):
+        return []
+    assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
+    expression_assets: list[dict[str, object]] = []
+    for asset in assets:
+        asset_type = str(asset.get("asset_type") or "")
+        if asset_type not in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+            continue
+        if not asset.get("analysis_ready"):
+            continue
+        path_text = str(asset.get("file_path") or "")
+        if not path_text:
+            continue
+        expression_assets.append(asset)
+    return expression_assets
+
+
+def _analysis_dataset_id(asset: dict[str, object], file_path: Path) -> str:
+    for value in (asset.get("source_file"), asset.get("file_path"), file_path.name):
+        match = re.search(r"GSE\d+", str(value), flags=re.I)
+        if match:
+            return match.group(0).upper()
+    return file_path.stem
+
+
+def _append_geo_deg_results_to_index(project_root: Path, summaries: list[dict[str, object]]) -> None:
+    existing = load_result_index(project_root)
+    entries = [dict(item) for item in existing.get("entries", []) or [] if isinstance(item, dict)]
+    seen_paths = {str(item.get("path") or item.get("file_path") or "") for item in entries}
+    for summary in summaries:
+        result_path = str(summary.get("result_path") or "")
+        if not result_path or result_path in seen_paths:
+            continue
+        dataset_id = str(summary.get("dataset_id") or Path(result_path).parent.name)
+        entries.append(
+            {
+                "result_name": f"{dataset_id} 差异表达结果",
+                "analysis_type": "differential_expression",
+                "file_type": "csv",
+                "created_at": str(summary.get("generated_at") or _utc_now_iso()),
+                "path": result_path,
+                "status": "generated",
+                "summary_path": str(summary.get("summary_path") or ""),
+                "dataset_id": dataset_id,
+                "warning": "、".join(str(item) for item in summary.get("warnings", []) or []),
+            }
+        )
+        seen_paths.add(result_path)
+    write_result_index(project_root, entries)
 
 
 def _toggle_details(edit: QPlainTextEdit) -> None:

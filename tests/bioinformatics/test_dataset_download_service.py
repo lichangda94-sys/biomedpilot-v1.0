@@ -16,9 +16,38 @@ def _candidate(source: str = "geo", accession: str = "GSE33630") -> UnifiedDatas
         "platform_accessions": ["GPL11154"],
     }
     if source == "tcga_gdc":
-        metadata = {"project_id": accession, "project_name": "Thyroid Carcinoma", "mapping_status": "mapped_not_online_checked"}
+        metadata = {
+            "project_id": accession,
+            "project_name": "Thyroid Carcinoma",
+            "mapping_status": "online_checked_term_mapping",
+            "expression_file_availability": True,
+            "clinical_availability": True,
+            "biospecimen_availability": True,
+            "file_count": 1,
+            "case_count": 509,
+            "file_manifest_entries": [
+                {
+                    "file_id": "tcga-file-1",
+                    "file_name": "TCGA-THCA.star_counts.tsv",
+                    "md5sum": "abc123",
+                    "file_size": 12345,
+                    "state": "released",
+                    "access": "open",
+                    "data_category": "Transcriptome Profiling",
+                    "data_type": "Gene Expression Quantification",
+                    "workflow_type": "STAR - Counts",
+                }
+            ],
+        }
     elif source == "gtex":
-        metadata = {"tissue_name": "Thyroid", "role": "normal_reference", "mapping_status": "mapped_not_online_checked"}
+        metadata = {
+            "tissue_name": "Thyroid",
+            "tissue_detail": "Thyroid",
+            "role": "normal_reference",
+            "mapping_status": "online_checked_term_mapping",
+            "expression_availability": True,
+            "sample_count": 653,
+        }
     return UnifiedDatasetCandidate(
         source=source,
         accession_or_project=accession,
@@ -252,8 +281,50 @@ def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:
     assert gtex.status == "registered_pending_gtex_source_selection"
     assert tcga.downloaded_files == ()
     assert gtex.downloaded_files == ()
-    assert "真实下载待接入" in tcga.message
-    assert "真实下载待接入" in gtex.message
+    assert "创建 GDC 文件清单" in tcga.message
+    assert "创建组织下载清单" in gtex.message
+
+
+def test_tcga_and_gtex_execute_download_creates_manifests_without_fake_data_files(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    service = DatasetDownloadService()
+
+    tcga = service.create_candidate_download_task(
+        project_root=root,
+        candidate=_candidate("tcga_gdc", "TCGA-THCA"),
+        original_chinese_topic="甲状腺癌",
+        execute_download=True,
+    )
+    gtex = service.create_candidate_download_task(
+        project_root=root,
+        candidate=_candidate("gtex", "GTEX-THYROID"),
+        original_chinese_topic="甲状腺癌",
+        execute_download=True,
+    )
+
+    assert tcga.success
+    assert gtex.success
+    assert tcga.status == "tcga_gdc_download_manifest_created"
+    assert gtex.status == "gtex_download_manifest_created"
+    assert tcga.downloaded_files == ()
+    assert gtex.downloaded_files == ()
+    tcga_manifest = Path(str(tcga.details["download_manifest_path"]))
+    gtex_manifest = Path(str(gtex.details["download_manifest_path"]))
+    assert tcga_manifest.exists()
+    assert gtex_manifest.exists()
+    assert (tcga_manifest.parent / "TCGA-THCA_gdc_file_manifest.tsv").exists()
+    tcga_payload = json.loads(tcga_manifest.read_text(encoding="utf-8"))
+    gtex_payload = json.loads(gtex_manifest.read_text(encoding="utf-8"))
+    assert tcga_payload["file_manifest_entries"][0]["file_id"] == "tcga-file-1"
+    assert tcga_payload["status"] == "pending_data_file_download"
+    assert gtex_payload["recommended_assets"][0]["input_eligible"] is False
+    assert gtex_payload["status"] == "pending_data_file_download"
+    assert tcga.acquisition_summary is not None
+    tcga_record_path = root / "acquisition" / "records" / f"{tcga.acquisition_summary.acquisition_id}.json"
+    tcga_record = json.loads(tcga_record_path.read_text(encoding="utf-8"))
+    assert tcga_record["strategy"] == "plan_only"
+    assert tcga_record["metadata"]["download_manifest_path"] == str(tcga_manifest)
+    assert tcga_record["metadata"]["ready_for_recognition"] == "pending_source_download"
 
 
 def test_geo_supplementary_role_detects_cpm_and_exp_workbooks() -> None:

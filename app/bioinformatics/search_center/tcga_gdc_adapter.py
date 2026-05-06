@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import ssl
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -104,7 +105,7 @@ class TcgaGdcSearchAdapter:
             f"{GDC_API_ROOT}/files",
             {
                 "filters": json.dumps(_project_filter(project_id)),
-                "fields": "file_id,file_name,data_category,data_type,workflow_type,cases.samples.sample_type",
+                "fields": "file_id,file_name,md5sum,file_size,state,access,data_category,data_type,workflow_type,cases.samples.sample_type",
                 "format": "JSON",
                 "size": "100",
             },
@@ -246,6 +247,7 @@ def _asset_metadata(project_id: str, files: list[dict[str, Any]], cases: list[di
         "biospecimen_availability": biospecimen_available,
         "case_count": len(cases) if cases else str(project.get("summary", {}).get("case_count", "未知")),
         "file_count": len(files),
+        "file_manifest_entries": _file_manifest_entries(files),
         "project": project,
         "record_shape": "tcga_gdc_project_asset_inventory",
     }
@@ -268,6 +270,25 @@ def _case_has_survival(case: dict[str, Any]) -> bool:
         if any(diagnosis.get(key) not in (None, "") for key in ("vital_status", "days_to_death", "days_to_last_follow_up")):
             return True
     return False
+
+
+def _file_manifest_entries(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for file in files:
+        entries.append(
+            {
+                "file_id": file.get("file_id") or file.get("id") or "",
+                "file_name": file.get("file_name") or "",
+                "md5sum": file.get("md5sum") or "",
+                "file_size": file.get("file_size") or "",
+                "state": file.get("state") or "",
+                "access": file.get("access") or "",
+                "data_category": file.get("data_category") or "",
+                "data_type": file.get("data_type") or "",
+                "workflow_type": file.get("workflow_type") or "",
+            }
+        )
+    return entries
 
 
 def _recommended_analyses(metadata: dict[str, Any]) -> tuple[str, ...]:
@@ -312,8 +333,17 @@ def _unique(values: object) -> list[str]:
 
 def _fetch_json(url: str, params: dict[str, str], timeout: int) -> dict[str, Any]:
     full_url = f"{url}?{urlencode(params)}" if params else url
-    with urlopen(full_url, timeout=timeout) as handle:
+    with urlopen(full_url, timeout=timeout, context=_ssl_context()) as handle:
         return json.loads(handle.read().decode("utf-8"))
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
 
 
 def _now() -> str:
