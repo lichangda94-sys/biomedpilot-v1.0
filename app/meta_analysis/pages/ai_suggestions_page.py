@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from app.meta_analysis.models.ai_suggestion import SUGGESTION_TYPES, TARGET_TYPES
+from app.meta_analysis.services.ai_assisted_extraction_queue_service import (
+    AI_EXTRACTION_QUEUE_SCHEMA_VERSION,
+    AIAssistedExtractionQueueService,
+)
 from app.shared.feature_availability import get_feature
 
 
@@ -21,6 +26,27 @@ class AISuggestionsPageState:
     allowed_actions: tuple[str, ...]
     safety_rules: tuple[str, ...]
     empty_state: str
+
+
+@dataclass(frozen=True)
+class AIExtractionSuggestionQueuePageState:
+    title: str
+    status_label: str
+    project_dir: str
+    queue_schema_version: str
+    queue_path: str
+    validation_path: str
+    application_path: str
+    suggestion_count: int
+    pending_count: int
+    accepted_count: int
+    rejected_count: int
+    edited_count: int
+    source_options: tuple[str, ...]
+    review_actions: tuple[str, ...]
+    safety_rules: tuple[str, ...]
+    empty_state: str
+    warnings: tuple[str, ...] = ()
 
 
 def initial_ai_suggestions_state() -> AISuggestionsPageState:
@@ -57,6 +83,47 @@ def initial_ai_suggestions_state() -> AISuggestionsPageState:
     )
 
 
+def ai_extraction_suggestion_queue_state_from_project(
+    project_dir: Path,
+    *,
+    service: AIAssistedExtractionQueueService | None = None,
+) -> AIExtractionSuggestionQueuePageState:
+    project_dir = project_dir.expanduser().resolve()
+    service = service or AIAssistedExtractionQueueService()
+    suggestions = service.list_extraction_suggestions(project_dir)
+    pending = [item for item in suggestions if item.status == "pending"]
+    accepted = [item for item in suggestions if item.status == "accepted"]
+    rejected = [item for item in suggestions if item.status == "rejected"]
+    edited = [item for item in suggestions if item.status == "edited"]
+    warnings: list[str] = []
+    if not suggestions:
+        warnings.append("no_ai_extraction_suggestions")
+    return AIExtractionSuggestionQueuePageState(
+        title="AI-assisted Extraction Queue / AI 辅助提取建议",
+        status_label="Testing / suggestion-only",
+        project_dir=str(project_dir),
+        queue_schema_version=AI_EXTRACTION_QUEUE_SCHEMA_VERSION,
+        queue_path=str(service.queue_path(project_dir)),
+        validation_path=str(service.validation_path(project_dir)),
+        application_path=str(service.application_path(project_dir)),
+        suggestion_count=len(suggestions),
+        pending_count=len(pending),
+        accepted_count=len(accepted),
+        rejected_count=len(rejected),
+        edited_count=len(edited),
+        source_options=("abstract", "parsed_pdf_text", "manual_text"),
+        review_actions=("accept", "reject", "edit", "apply_accepted_as_manual_draft"),
+        safety_rules=(
+            "AI/PDF parsing output is suggestion only.",
+            "Pending/rejected/edited suggestions cannot write extraction drafts.",
+            "Accepted suggestions apply only as manual extraction draft effect rows.",
+            "No analysis-ready dataset, statistics run, or PRISMA update is created.",
+        ),
+        empty_state="当前没有 AI extraction suggestions。可从 abstract、parsed PDF text 或手动文本生成 suggestion。",
+        warnings=tuple(warnings),
+    )
+
+
 try:
     from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover
@@ -77,6 +144,19 @@ if QWidget is not None:
             description.setWordWrap(True)
             root.addWidget(description)
             root.addWidget(QLabel(f"功能状态：{state.status_label}"))
+            extraction_state = ai_extraction_suggestion_queue_state_from_project(Path.cwd())
+            extraction_label = QLabel(
+                "\n".join(
+                    [
+                        f"{extraction_state.title} · {extraction_state.status_label}",
+                        f"Suggestions: {extraction_state.suggestion_count}",
+                        f"Review actions: {' / '.join(extraction_state.review_actions)}",
+                        "Accepted suggestion 也只会写入 manual extraction draft，不会进入 analysis-ready dataset。",
+                    ]
+                )
+            )
+            extraction_label.setWordWrap(True)
+            root.addWidget(extraction_label)
             root.addWidget(QLabel(state.empty_state))
             root.addStretch(1)
 

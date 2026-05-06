@@ -45,6 +45,7 @@ TARGET_TYPES = (
     "screening_decision",
     "exclusion_reason",
     "extraction_candidate",
+    "extraction_effect_row",
     "report_text",
     "data_warning",
 )
@@ -55,6 +56,7 @@ SUGGESTION_TYPES = (
     "relevance_screening",
     "exclusion_reason_suggestion",
     "extraction_candidate",
+    "extraction_effect_row_suggestion",
     "data_consistency_warning",
     "report_draft_suggestion",
 )

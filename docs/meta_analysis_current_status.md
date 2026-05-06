@@ -28,6 +28,7 @@ The current testing chain is:
 14. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
 15. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
 16. AI Suggestions Queue
+17. AI-assisted Extraction Queue v1 suggestion workflow
 
 ## Implemented Testing Capabilities
 
@@ -65,6 +66,7 @@ The current testing chain is:
 - Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, prevalence / incidence proportion effects, Fisher z correlation effects, diagnostic basic 2x2 metrics, subgroup analysis, leave-one-out sensitivity analysis, basic Egger publication-bias testing, and exports forest/funnel plot PNG plus result table CSV.
 - Reporting exports the older testing Markdown summary, testing PRISMA flow numbers, a formal Markdown/HTML/DOCX report draft, advanced method and advanced add-on summaries, supplementary CSV tables, a figure package ZIP, project snapshot metadata, and a reproducibility package ZIP; these are testing outputs, not production publication packages.
 - AI-assisted Review supports a testing AI suggestion queue with pending / accepted / rejected / edited statuses. AI suggestions require explicit human review and apply action, and they do not directly overwrite screening, extraction, analysis, or report artifacts.
+- AI-assisted Extraction Queue v1 can generate testing extraction effect-row suggestions from abstract/manual text or parsed full-text text, attach schema validation diagnostics, disease-guard metadata, confidence, and queue status. Accepted suggestions can be applied only as Manual Data Extraction UI v1 draft effect rows, not as final extraction or analysis-ready data.
 
 ## Not Implemented Yet
 
@@ -82,6 +84,7 @@ The current testing chain is:
 - PDF / Full-text Parsing v1 is not production PDF parsing. It does not run OCR, extract tables reliably, infer final data extraction values, or update screening / PRISMA / quality artifacts.
 - Data Extraction Schema Registry v1 does not write final extraction values, does not validate real study data by itself, and does not create analysis-ready datasets.
 - Manual Data Extraction UI v1 does not create analysis-ready datasets, does not run statistical analysis, does not promote AI/PDF parsing suggestions into final values, and does not update PRISMA counts. CSV import is draft-only and reports conflicts instead of silently overwriting existing rows.
+- AI-assisted Extraction Queue v1 does not automatically write final extraction values. Pending, rejected, or edited suggestions cannot be applied. Accepted suggestions still apply only as manual extraction draft rows and require later reviewer confirmation before analysis use.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
