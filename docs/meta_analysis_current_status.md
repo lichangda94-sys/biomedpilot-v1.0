@@ -15,16 +15,17 @@ The current testing chain is:
 1. Protocol / PICO / PICOS / PECO draft
 2. Search strategy draft generation
 3. Reviewer-confirmed PubMed execution
-4. Literature Import
-5. Prepare Screening
-6. Duplicate Review
-7. Screening
-8. Full-text eligibility
-9. Extraction Pool
-10. Quality assessment
-11. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
-12. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
-13. AI Suggestions Queue
+4. PubMed literature candidates preview and reviewer-selected handoff
+5. Literature Import
+6. Prepare Screening
+7. Duplicate Review
+8. Screening
+9. Full-text eligibility
+10. Extraction Pool
+11. Quality assessment
+12. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
+13. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
+14. AI Suggestions Queue
 
 ## Implemented Testing Capabilities
 
@@ -36,6 +37,8 @@ The current testing chain is:
 - Reviewer-confirmed PubMed queries can execute real PubMed E-utilities search inside the Meta search layer and write a structured execution report.
 - Web of Science, Embase, and CNKI remain draft-only; no real execution clients are implemented for them.
 - PubMed search execution returns literature candidates only. It does not automatically import records into the literature library, run duplicate review, start screening, or update PRISMA counts.
+- Reviewer-selected PubMed candidates can be handed off into the normalized Meta literature library with provenance, import batch metadata, research-governance audit, and dedup review preparation.
+- PubMed candidate handoff imports only selected records; rejected and pending candidates are not imported. Imported candidates remain `screening_status=not_started` and `dedup_status=pending_review`.
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
@@ -48,8 +51,8 @@ The current testing chain is:
 ## Not Implemented Yet
 
 - Web of Science, Embase, and CNKI real online execution clients are not implemented.
-- PubMed search results are not automatically imported into the literature library.
-- PubMed search results are not automatically deduplicated through the Duplicate Review workflow.
+- PubMed search results are not automatically imported into the literature library; reviewer selection is required before PubMed candidates are imported.
+- PubMed search results are not automatically merged or silently deduplicated; selected imports only prepare a dedup review queue.
 - PubMed search results are not automatically moved into title/abstract screening or PRISMA counting.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
@@ -66,10 +69,10 @@ The current testing chain is:
 - The current Reporting step exports Markdown/HTML/DOCX testing drafts and ZIP packages; production PDF reporting is not complete, and publication-ready reporting remains incomplete.
 - ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
 - Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
-- PubMed execution is reviewer-confirmed and auditable, but its results do not yet hand off automatically into literature import, deduplication, screening, or PRISMA.
+- PubMed execution is reviewer-confirmed and auditable. Its results can hand off to the literature library only after explicit reviewer candidate selection, and they still do not automatically enter screening or PRISMA included/screened/full-text counts.
 - WOS, Embase, and CNKI are still query drafts only.
 - Full-text, quality, publication export, reproducibility package, and AI suggestion workflows are testing-level only.
 
 ## Next Priority
 
-The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, search-to-import handoff design, and production-readiness audit rather than marking workflows production-ready.
+The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, normalized literature library v2, dedup review v2, and production-readiness audit rather than marking workflows production-ready.

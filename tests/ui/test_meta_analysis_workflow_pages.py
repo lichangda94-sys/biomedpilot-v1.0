@@ -221,14 +221,19 @@ def test_pubmed_search_report_written(tmp_path: Path) -> None:
 
     report = json.loads(Path(paths["search_execution_report"]).read_text(encoding="utf-8"))
     confirmed = json.loads(Path(paths["search_strategy_user_confirmed"]).read_text(encoding="utf-8"))
+    preview = json.loads(Path(paths["pubmed_candidates_preview"]).read_text(encoding="utf-8"))
 
     assert report["database"] == "PubMed"
+    assert report["search_execution_id"]
     assert report["query_used"] == query
     assert report["result_count"] == 2
     assert report["returned_count"] == 2
     assert report["pmids"] == ["111", "222"]
     assert confirmed["query_used"] == query
     assert confirmed["user_action"] == "confirm_and_search_pubmed"
+    assert preview["schema_version"] == "meta_pubmed_candidate_preview.v1"
+    assert preview["candidate_count"] == 2
+    assert preview["auto_imported"] is False
 
 
 def test_meta_pubmed_execution_does_not_auto_import_or_screen(tmp_path: Path) -> None:
@@ -241,7 +246,7 @@ def test_meta_pubmed_execution_does_not_auto_import_or_screen(tmp_path: Path) ->
     assert report["auto_imported"] is False
     assert report["auto_screened"] is False
     assert not (tmp_path / "literature").exists()
-    assert not (tmp_path / "screening").exists()
+    assert not any((tmp_path / "screening").glob("*"))
 
 
 def test_meta_page_pubmed_results_table(qt_app, tmp_path: Path) -> None:
@@ -259,10 +264,37 @@ def test_meta_page_pubmed_results_table(qt_app, tmp_path: Path) -> None:
     summary = widget.pubmed_execution_summary_text()
 
     assert execution.returned_count == 2
+    assert "candidate_id=pcand-111" in summary
     assert "PMID 111" in summary
     assert "Obesity and thyroid cancer risk" in summary
     assert "query_used=" in summary
     assert (tmp_path / "protocol" / "search_execution_report.json").exists()
+    assert (tmp_path / "protocol" / "pubmed_candidates").exists()
+
+
+def test_meta_page_imports_only_selected_pubmed_candidates_after_reviewer_selection(qt_app, tmp_path: Path) -> None:
+    widget = ProtocolPage()
+    widget.set_protocol_inputs(
+        project_dir=tmp_path,
+        project_title="肥胖与甲状腺癌发病风险 Meta 分析",
+        review_question="肥胖是否增加甲状腺癌发病风险？",
+        pico="甲状腺癌人群; 肥胖; 非肥胖; 发病风险; systematic review; meta-analysis",
+        method_profile="TREATMENT_EFFECT_META",
+    )
+
+    widget.save_protocol_draft()
+    widget.execute_confirmed_pubmed_search(service=_pubmed_service(), max_results=2)
+    result = widget.import_selected_pubmed_candidates(selected_candidate_ids=("pcand-111",), rejected_candidate_ids=("pcand-222",))
+    handoff_summary = widget.pubmed_handoff_summary_text()
+    library = json.loads((tmp_path / "literature" / "literature_records.json").read_text(encoding="utf-8"))
+
+    assert result.success
+    assert result.imported_count == 1
+    assert library["records"][0]["pmid"] == "111"
+    assert library["records"][0]["screening_status"] == "not_started"
+    assert "PMID 111" in handoff_summary
+    assert "No title/abstract screening is created" in handoff_summary
+    assert not any((tmp_path / "screening").glob("*"))
 
 
 def test_wos_embase_cnki_remain_draft_only(tmp_path: Path) -> None:

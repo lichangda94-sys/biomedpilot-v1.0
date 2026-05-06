@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Callable
+from uuid import uuid4
 
 
 Fetcher = Callable[[str, float], bytes]
@@ -44,13 +45,19 @@ class PubMedSearchResult:
     snippet: str
     url: str
     query_used: str
+    doi: str = ""
+    pmcid: str = ""
+    publication_date: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return {
             "pmid": self.pmid,
+            "doi": self.doi,
+            "pmcid": self.pmcid,
             "title": self.title,
             "journal": self.journal,
             "year": self.year,
+            "publication_date": self.publication_date,
             "authors": list(self.authors),
             "abstract": self.abstract,
             "snippet": self.snippet,
@@ -70,6 +77,7 @@ class PubMedSearchExecution:
     dedup_summary: dict[str, int] = field(default_factory=dict)
     errors: tuple[dict[str, str], ...] = ()
     warnings: tuple[str, ...] = ()
+    search_execution_id: str = field(default_factory=lambda: f"pubmedexec-{uuid4().hex[:12]}")
 
     @property
     def pmids(self) -> tuple[str, ...]:
@@ -78,6 +86,7 @@ class PubMedSearchExecution:
     def to_report(self) -> dict[str, object]:
         return {
             "schema_version": "meta_pubmed_search_execution.v1",
+            "search_execution_id": self.search_execution_id,
             "database": "PubMed",
             "query_used": self.query_used,
             "executed_at": self.executed_at,
@@ -261,6 +270,15 @@ def _deduplicate_records(records: list[PubMedSearchResult]) -> tuple[list[PubMed
 
 def _record_from_pubmed_article(article: ET.Element, *, query_used: str) -> PubMedSearchResult:
     pmid = _text(article, ".//MedlineCitation/PMID")
+    doi = ""
+    pmcid = ""
+    for article_id in article.findall(".//PubmedData/ArticleIdList/ArticleId"):
+        id_type = str(article_id.attrib.get("IdType", "")).lower()
+        value = _text_from(article_id)
+        if id_type == "doi":
+            doi = value
+        elif id_type == "pmc":
+            pmcid = value
     title = _iter_text(article.find(".//ArticleTitle"))
     abstract = " ".join(_iter_text(item) for item in article.findall(".//Abstract/AbstractText")).strip()
     journal = _text(article, ".//Journal/Title")
@@ -278,9 +296,12 @@ def _record_from_pubmed_article(article: ET.Element, *, query_used: str) -> PubM
             authors.append(full)
     return PubMedSearchResult(
         pmid=pmid,
+        doi=doi,
+        pmcid=pmcid,
         title=title,
         journal=journal,
         year=str(year or ""),
+        publication_date=_publication_date_from_article(article),
         authors=tuple(authors),
         abstract=abstract,
         snippet=abstract[:280],
@@ -329,6 +350,13 @@ def _year_from_article(article: ET.Element) -> int | None:
     medline = _text(article, ".//JournalIssue/PubDate/MedlineDate")
     match = re.search(r"\b(19|20)\d{2}\b", medline)
     return int(match.group(0)) if match else None
+
+
+def _publication_date_from_article(article: ET.Element) -> str:
+    year = _text(article, ".//JournalIssue/PubDate/Year") or _text(article, ".//ArticleDate/Year")
+    month = _text(article, ".//JournalIssue/PubDate/Month") or _text(article, ".//ArticleDate/Month")
+    day = _text(article, ".//JournalIssue/PubDate/Day") or _text(article, ".//ArticleDate/Day")
+    return "-".join(part for part in (year, month, day) if part)
 
 
 def _now() -> str:

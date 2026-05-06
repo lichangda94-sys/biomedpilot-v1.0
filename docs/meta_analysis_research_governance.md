@@ -48,6 +48,7 @@ Automatic generation is recorded only as `draft_created` or `suggestion_created`
 - Confirmed protocol saves record `final_pico` as `confirmed`.
 - Search strategy draft saves record `final_search_strategy` as `draft`.
 - PubMed confirmed execution records `final_search_strategy` as `confirmed`, but the execution report remains candidate preview only.
+- PubMed candidate preview records `literature_inclusion` candidates as `draft`; selected and rejected candidates record reviewer `accept` / `reject`, and the selected-candidate import batch records handoff `confirm`.
 - AI suggestions record `suggestion_created`; reviewer accept/reject/edit actions create separate governance events.
 - Accepted AI suggestions still write only to the AI application log and do not overwrite formal screening, extraction, analysis, quality, or report artifacts.
 - PubMed search execution reports are excluded from PRISMA evidence collection so candidate previews do not advance PRISMA.

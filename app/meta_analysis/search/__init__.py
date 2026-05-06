@@ -11,6 +11,13 @@ from app.meta_analysis.search.pubmed_search_service import (
     PubMedSearchResult,
     PubMedSearchService,
 )
+from app.meta_analysis.search.pubmed_candidates_handoff_service import (
+    PubMedCandidateHandoffResult,
+    PubMedCandidatePreview,
+    PubMedCandidatesHandoffService,
+    PubMedCandidateSelectionResult,
+    PubMedLiteratureCandidate,
+)
 from app.meta_analysis.search.strategy_builder import (
     build_meta_search_strategy_draft,
 )
@@ -18,7 +25,12 @@ from app.meta_analysis.search.strategy_builder import (
 __all__ = [
     "MetaConceptGroupDraft",
     "MetaSearchStrategyDraft",
+    "PubMedCandidateHandoffResult",
+    "PubMedCandidatePreview",
+    "PubMedCandidateSelectionResult",
+    "PubMedCandidatesHandoffService",
     "PubMedCountPreview",
+    "PubMedLiteratureCandidate",
     "PubMedSearchExecution",
     "PubMedSearchResult",
     "PubMedSearchService",

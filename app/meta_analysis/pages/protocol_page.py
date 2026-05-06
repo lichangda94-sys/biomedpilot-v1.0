@@ -7,6 +7,8 @@ from pathlib import Path
 from app.meta_analysis.models.protocol import ProjectProtocol
 from app.meta_analysis.search import (
     MetaSearchStrategyDraft,
+    PubMedCandidateHandoffResult,
+    PubMedCandidatesHandoffService,
     PubMedSearchExecution,
     PubMedSearchService,
     build_meta_search_strategy_draft,
@@ -201,6 +203,12 @@ def write_pubmed_search_execution_artifacts(
         confirmation_payload,
     )
     _write_json(report_path, execution.to_report())
+    preview = PubMedCandidatesHandoffService().create_candidates_preview(
+        project_dir,
+        execution=execution,
+        execution_report_path=str(report_path.relative_to(project_dir)),
+        search_strategy_snapshot_path=str(confirmed_path.relative_to(project_dir)),
+    )
     MetaResearchGovernanceService().record_user_confirmation(
         project_dir,
         action="confirm",
@@ -221,12 +229,13 @@ def write_pubmed_search_execution_artifacts(
     return {
         "search_strategy_user_confirmed": str(confirmed_path),
         "search_execution_report": str(report_path),
+        "pubmed_candidates_preview": str(PubMedCandidatesHandoffService().preview_path(project_dir, preview.preview_id)),
     }
 
 
 def render_pubmed_search_execution_summary(execution: PubMedSearchExecution) -> str:
     record_lines = [
-        f"- PMID {record.pmid}: {record.title} | {record.journal} | {record.year} | query_used={record.query_used}"
+        f"- candidate_id=pcand-{record.pmid} | PMID {record.pmid}: {record.title} | {record.journal} | {record.year} | query_used={record.query_used}"
         for record in execution.records
     ]
     return "\n".join(
@@ -241,7 +250,31 @@ def render_pubmed_search_execution_summary(execution: PubMedSearchExecution) -> 
             *(record_lines or ["none"]),
             "",
             "WOS/Embase/CNKI remain draft-only.",
-            "No literature is auto-imported or auto-screened.",
+            "No literature is auto-imported or auto-screened. Use explicit candidate selection before import.",
+        ]
+    )
+
+
+def render_pubmed_candidate_handoff_summary(result: PubMedCandidateHandoffResult) -> str:
+    record_lines = [
+        f"- {record.get('record_id', '')}: PMID {record.get('pmid', '')} | {record.get('title', '')} | screening_status={record.get('screening_status', '')} | dedup_status={record.get('dedup_status', '')}"
+        for record in result.imported_records
+    ]
+    return "\n".join(
+        [
+            "PubMed candidate handoff:",
+            f"success={result.success}",
+            f"import_batch_id={result.import_batch_id}",
+            f"selected_count={result.selected_count}",
+            f"rejected_count={result.rejected_count}",
+            f"imported_count={result.imported_count}",
+            f"literature_records_path={result.literature_records_path}",
+            f"dedup_queue_path={result.dedup_queue_path}",
+            "",
+            "Imported records:",
+            *(record_lines or ["none"]),
+            "",
+            "No title/abstract screening is created. PRISMA included/screened/full-text numbers are not advanced.",
         ]
     )
 
@@ -359,6 +392,14 @@ def _pubmed_query_from_project(project_dir: Path) -> str:
     return ""
 
 
+def _latest_pubmed_candidate_preview_id(project_dir: Path) -> str:
+    preview_dir = project_dir.expanduser().resolve() / "protocol" / "pubmed_candidates"
+    previews = sorted(preview_dir.glob("*_candidates_preview.json"), key=lambda path: path.stat().st_mtime)
+    if not previews:
+        return ""
+    return previews[-1].name.replace("_candidates_preview.json", "")
+
+
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -420,13 +461,29 @@ if QWidget is not None:
             self._pubmed_execution_summary.setReadOnly(True)
             self._pubmed_execution_summary.setPlaceholderText("Confirmed PubMed search results will appear here.")
             root.addWidget(self._pubmed_execution_summary)
+            self._selected_pubmed_candidates = QLineEdit()
+            self._selected_pubmed_candidates.setObjectName("metaSelectedPubMedCandidateIds")
+            self._selected_pubmed_candidates.setPlaceholderText("选中文献 candidate_id 或 PMID，逗号分隔")
+            root.addWidget(self._selected_pubmed_candidates)
+            import_pubmed = QPushButton("导入选中文献")
+            import_pubmed.clicked.connect(self._import_selected_pubmed_candidates)
+            root.addWidget(import_pubmed)
+            self._pubmed_handoff_summary = QTextEdit()
+            self._pubmed_handoff_summary.setObjectName("metaPubMedCandidateHandoffPreview")
+            self._pubmed_handoff_summary.setReadOnly(True)
+            self._pubmed_handoff_summary.setPlaceholderText("Selected PubMed candidates will be imported into the literature library only after explicit reviewer selection.")
+            root.addWidget(self._pubmed_handoff_summary)
             self._last_pubmed_query = ""
+            self._last_candidate_preview_id = ""
 
         def _save(self) -> None:
             self.save_protocol_draft()
 
         def _execute_pubmed(self) -> None:
             self.execute_confirmed_pubmed_search()
+
+        def _import_selected_pubmed_candidates(self) -> None:
+            self.import_selected_pubmed_candidates()
 
         def save_protocol_draft(self) -> MetaSearchStrategyDraft:
             project_dir = Path(self._project_dir.text()).expanduser()
@@ -474,14 +531,50 @@ if QWidget is not None:
             paths = write_pubmed_search_execution_artifacts(project_dir, query, execution)
             summary = render_pubmed_search_execution_summary(execution)
             self._pubmed_execution_summary.setPlainText(summary)
+            preview_path = Path(paths["pubmed_candidates_preview"])
+            self._last_candidate_preview_id = preview_path.name.replace("_candidates_preview.json", "")
             self._summary.setText(
                 f"PubMed search_execution_report: {paths['search_execution_report']}\n"
                 f"search_strategy_user_confirmed: {paths['search_strategy_user_confirmed']}\n"
+                f"pubmed_candidates_preview: {paths['pubmed_candidates_preview']}\n"
                 f"result_count={execution.result_count}\n"
                 f"returned_count={execution.returned_count}\n"
-                "WOS/Embase/CNKI remain draft-only."
+                "WOS/Embase/CNKI remain draft-only.\n"
+                "PubMed candidates are preview-only until selected and imported by reviewer."
             )
             return execution
+
+        def import_selected_pubmed_candidates(
+            self,
+            *,
+            selected_candidate_ids: tuple[str, ...] | None = None,
+            rejected_candidate_ids: tuple[str, ...] = (),
+            service: PubMedCandidatesHandoffService | None = None,
+        ) -> PubMedCandidateHandoffResult:
+            project_dir = Path(self._project_dir.text()).expanduser()
+            service = service or PubMedCandidatesHandoffService()
+            selected_ids = selected_candidate_ids or tuple(
+                item.strip()
+                for item in self._selected_pubmed_candidates.text().replace("\n", ",").split(",")
+                if item.strip()
+            )
+            preview_id = self._last_candidate_preview_id or _latest_pubmed_candidate_preview_id(project_dir)
+            result = service.import_selected_candidates(
+                project_dir,
+                preview_id=preview_id,
+                selected_candidate_ids=selected_ids,
+                rejected_candidate_ids=rejected_candidate_ids,
+                actor="reviewer",
+            )
+            self._pubmed_handoff_summary.setPlainText(render_pubmed_candidate_handoff_summary(result))
+            self._summary.setText(
+                f"PubMed candidate handoff: {result.message}\n"
+                f"literature_records: {result.literature_records_path or 'not_written'}\n"
+                f"dedup_queue: {result.dedup_queue_path or 'not_written'}\n"
+                "screening_status=not_started\n"
+                "PRISMA included/screened/full-text numbers are not advanced."
+            )
+            return result
 
         def set_protocol_inputs(
             self,
@@ -503,6 +596,9 @@ if QWidget is not None:
 
         def pubmed_execution_summary_text(self) -> str:
             return self._pubmed_execution_summary.toPlainText()
+
+        def pubmed_handoff_summary_text(self) -> str:
+            return self._pubmed_handoff_summary.toPlainText()
 
 else:
 

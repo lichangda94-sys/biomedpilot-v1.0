@@ -25,6 +25,9 @@ AUDIT_EVENT_TYPES = (
     "analysis_profile_config_saved",
     "task_lifecycle_changed",
     "research_governance_event",
+    "pubmed_candidate_preview_created",
+    "pubmed_candidate_decision",
+    "pubmed_candidate_handoff",
     "report_exported",
 )
 
