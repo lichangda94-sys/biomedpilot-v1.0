@@ -80,6 +80,26 @@ class RecognitionClassification:
 def run_project_recognition(project_root: str | Path) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
     files = _candidate_files(root)
+    return _run_project_recognition_for_files(root, files)
+
+
+def run_project_recognition_for_paths(
+    project_root: str | Path,
+    selected_paths: list[str | Path] | tuple[str | Path, ...],
+    *,
+    skipped_unselected_count: int = 0,
+) -> dict[str, object]:
+    root = Path(project_root).expanduser().resolve()
+    files = _expand_selected_candidate_paths(root, selected_paths)
+    report = _run_project_recognition_for_files(root, files)
+    report["selected_input_count"] = len(files)
+    report["skipped_unselected_count"] = max(0, int(skipped_unselected_count))
+    report["selected_inputs"] = [str(path) for path in files]
+    _write_json(root / RECOGNITION_REPORT, report)
+    return report
+
+
+def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[str, object]:
     warnings: list[str] = []
     records: list[dict[str, object]] = []
     if not files:
@@ -1137,6 +1157,23 @@ def _candidate_files(root: Path) -> list[Path]:
         if base.exists():
             paths.extend(path for path in base.rglob("*") if _is_recognition_candidate_file(path, root))
     paths.extend(_registered_reference_files(root))
+    deduped: dict[str, Path] = {}
+    for path in paths:
+        key = str(path.resolve()) if path.exists() else str(path)
+        deduped.setdefault(key, path.resolve() if path.exists() else path)
+    return sorted(deduped.values())
+
+
+def _expand_selected_candidate_paths(root: Path, selected_paths: list[str | Path] | tuple[str | Path, ...]) -> list[Path]:
+    paths: list[Path] = []
+    for raw in selected_paths:
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            path = root / path
+        if path.is_file() and _is_recognition_candidate_file(path, root):
+            paths.append(path.resolve())
+        elif path.is_dir():
+            paths.extend(candidate.resolve() for candidate in path.rglob("*") if _is_recognition_candidate_file(candidate, root))
     deduped: dict[str, Path] = {}
     for path in paths:
         key = str(path.resolve()) if path.exists() else str(path)

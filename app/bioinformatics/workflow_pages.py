@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
     QGridLayout,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -32,13 +33,14 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
-from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition
+from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
@@ -626,6 +628,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._registered_source_count() == 0:
             self._set_status("请先下载或导入至少一个实际数据文件。", error=True)
             return
+        selected_entries = [entry for entry in self._dataset_list_panel.selected_entries() if entry.ready_for_recognition]
+        _save_pending_recognition_selection(self._project_root, selected_entries)
         self.continue_requested.emit(self._project_root)
 
     def continue_to_acquisition_status(self) -> None:
@@ -662,9 +666,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._history_cache_hint = _muted("未发现历史缓存数据。")
         self._history_cache_table = _table(["数据集", "位置", "操作"])
         self._history_cache_table.setObjectName("historicalCacheDataTable")
+        self._history_cache_table.setMinimumWidth(0)
         self._history_cache_layout.addWidget(self._history_cache_hint)
         self._history_cache_layout.addWidget(self._history_cache_table)
-        self._history_cache_card.setVisible(False)
         root.addWidget(self._history_cache_card)
 
         self._dataset_detail_panel = DatasetDetailPanel()
@@ -1066,11 +1070,16 @@ class BioinformaticsDataSourceWidget(QWidget):
         card = getattr(self, "_history_cache_card", None)
         if card is None:
             return
-        card.setVisible(bool(entries))
-        self._history_cache_hint.setText(f"发现 {len(entries)} 个历史下载数据集，尚未加入当前项目。" if entries else "未发现历史缓存数据。")
+        card.setVisible(True)
+        self._history_cache_hint.setText(f"发现 {len(entries)} 个历史下载数据集，尚未加入当前项目。" if entries else "暂无历史缓存数据。")
+        self._history_cache_table.setVisible(bool(entries))
         _fill_table(self._history_cache_table, [[entry["name"], _compact_path(entry["path"], max_chars=64), "加入当前项目 / 查看 / 删除缓存"] for entry in entries])
         for row_index, entry in enumerate(entries):
             self._history_cache_table.setCellWidget(row_index, 2, self._history_cache_action_widget(entry))
+            item = self._history_cache_table.item(row_index, 1)
+            if item is not None:
+                item.setToolTip(entry["path"])
+        _configure_history_cache_table(self._history_cache_table)
 
     def _history_cache_action_widget(self, entry: dict[str, str]) -> QWidget:
         widget = QWidget()
@@ -1103,7 +1112,12 @@ class BioinformaticsDataSourceWidget(QWidget):
             data_type_label="历史缓存数据",
         )
         if summary is not None:
-            self._set_status(f"已加入当前项目：{entry['name']}")
+            self._refresh_registered_sources()
+            self._status_label.setText("已加入当前项目")
+            self._status_label.setProperty("status", "ok")
+            _refresh_style(self._status_label)
+        else:
+            self._set_status("加入当前项目失败。", error=True)
         return summary
 
     def _show_dataset_detail(self, key: str) -> None:
@@ -1501,6 +1515,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if self._registered_source_count() == 0:
             self._set_status("请先选择至少一个数据源。", error=True)
             return
+        _save_pending_recognition_selection(self._project_root, [])
         self.continue_requested.emit(self._project_root)
 
     def copy_query(self, source: str) -> bool:
@@ -2324,6 +2339,8 @@ class BioinformaticsRecognitionWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self._last_report: dict[str, object] | None = None
+        self._pre_recognition_rows: list[RegisteredSourceRow] = []
+        self._pre_recognition_checks: dict[str, QCheckBox] = {}
         self.setObjectName("bioinformaticsRecognitionPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -2340,11 +2357,23 @@ class BioinformaticsRecognitionWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。")
             return None
+        selected_rows = self._selected_pre_recognition_rows()
+        if not selected_rows:
+            self._set_status("请先选择需要识别的数据。")
+            return None
+        selected_paths = _recognition_paths_for_rows(self._project_root, selected_rows)
+        if not selected_paths:
+            self._set_status("所选数据没有可识别文件，请返回数据导入与检索页补充数据。")
+            return None
         self._set_status("正在识别数据文件，请稍候。大文件可能需要几十秒。")
         QApplication.processEvents()
-        report = run_project_recognition(self._project_root)
+        report = run_project_recognition_for_paths(
+            self._project_root,
+            selected_paths,
+            skipped_unselected_count=max(0, len(self._pre_recognition_rows) - len(selected_rows)),
+        )
         self._render_report(report)
-        self._set_status(f"{self.status_message()} 已重新扫描当前项目数据和已选择的外部引用文件。")
+        self._set_status(f"{self.status_message()} 本次只识别已勾选的数据。")
         return report
 
     def refresh_report(self) -> None:
@@ -2406,23 +2435,24 @@ class BioinformaticsRecognitionWidget(QWidget):
         pre_card, pre_layout = _card("待识别数据源")
         self._pre_recognition_empty_label = _muted("尚未选择数据。")
         pre_layout.addWidget(self._pre_recognition_empty_label)
-        self._pre_recognition_table = _table(["来源类型", "名称/编号", "路径/数据库", "数据状态"])
+        self._pre_recognition_table = _table(["选择", "来源类型", "名称 / 编号", "当前位置", "数据状态"])
         self._pre_recognition_table.setObjectName("preRecognitionInputList")
         self._pre_recognition_table.setMinimumHeight(130)
+        self._pre_recognition_table.horizontalHeader().sectionClicked.connect(self._toggle_pre_recognition_header)
         pre_layout.addWidget(self._pre_recognition_table)
+        pre_actions = QHBoxLayout()
+        self._delete_selected_inputs_button = _button("删除所选", "secondaryButton", self._delete_selected_pre_recognition_sources)
+        self._delete_selected_inputs_button.setEnabled(False)
+        pre_actions.addStretch(1)
+        pre_actions.addWidget(self._delete_selected_inputs_button)
+        pre_layout.addLayout(pre_actions)
         root.addWidget(pre_card)
         actions = QHBoxLayout()
-        actions.addWidget(_button("开始数据识别", "primaryButton", self.run_recognition))
-        actions.addWidget(_button("刷新报告", "secondaryButton", self.refresh_report))
-        actions.addWidget(_button("清理旧识别结果", "secondaryButton", self.clean_old_recognition_results))
-        actions.addWidget(_button("打开 recognized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "recognized_data" if self._project_root else None)))
+        actions.addWidget(_button("开始识别", "primaryButton", self.run_recognition))
+        actions.addWidget(_button("刷新", "secondaryButton", self.refresh_report))
         actions.addStretch(1)
         root.addLayout(actions)
-        root.addWidget(
-            _muted(
-                "开始数据识别会扫描当前项目数据和已选择的外部引用文件；刷新报告只更新显示；清理旧识别结果不会删除原始数据。"
-            )
-        )
+        root.addWidget(_muted("开始识别只处理上方勾选的数据；刷新只更新当前报告显示。"))
         self._status_label = _status_label("尚未生成数据识别报告。")
         root.addWidget(self._status_label)
         filter_row = QHBoxLayout()
@@ -2433,17 +2463,29 @@ class BioinformaticsRecognitionWidget(QWidget):
         filter_row.addWidget(self._duplicate_filter)
         filter_row.addStretch(1)
         root.addLayout(filter_row)
-        self._table = _table(["文件名", "原始位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning", "路由位置"])
+        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning"])
+        self._table.setObjectName("recognitionResultTable")
         confidence_header = self._table.horizontalHeaderItem(3)
         if confidence_header is not None:
             confidence_header.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
         root.addWidget(self._table)
-        self._counts = _text_preview(120)
+        self._counts = _read_only_report_view(130)
+        self._counts.setObjectName("recognitionSummaryReport")
         root.addWidget(self._counts)
         self._technical_details = _text_preview(180)
         self._technical_details.setVisible(False)
-        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._technical_details)), alignment=Qt.AlignLeft)
+        root.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._technical_details)), alignment=Qt.AlignLeft)
         root.addWidget(self._technical_details)
+        tech_ops = QFrame()
+        tech_ops.setObjectName("recognitionTechnicalOperations")
+        tech_ops.setVisible(False)
+        tech_layout = QHBoxLayout(tech_ops)
+        tech_layout.setContentsMargins(0, 0, 0, 0)
+        tech_layout.addWidget(_button("清理旧识别结果", "secondaryButton", self.clean_old_recognition_results))
+        tech_layout.addWidget(_button("打开 recognized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "recognized_data" if self._project_root else None)))
+        tech_layout.addStretch(1)
+        root.addWidget(_button("技术操作", "secondaryButton", lambda: tech_ops.setVisible(not tech_ops.isVisible())), alignment=Qt.AlignLeft)
+        root.addWidget(tech_ops)
         root.addWidget(_button("继续：数据准备与标准化", "primaryButton", self.continue_to_readiness), alignment=Qt.AlignLeft)
 
     def _render_report(self, report: dict[str, object]) -> None:
@@ -2473,16 +2515,35 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def _render_pre_recognition_inputs(self) -> None:
         rows = _registered_source_rows(self._project_root)
+        self._pre_recognition_rows = rows
+        self._pre_recognition_checks = {}
+        selection = _load_pending_recognition_selection(self._project_root)
         self._pre_recognition_empty_label.setVisible(not rows)
         _fill_table(
             self._pre_recognition_table,
-            [[row.source_type, row.source_label, row.location, row.status] for row in rows],
+            [["", row.source_type, row.source_label, row.location, row.status] for row in rows],
         )
-        _set_table_widths(self._pre_recognition_table, [140, 210, 210, 240])
+        header_item = self._pre_recognition_table.horizontalHeaderItem(0)
+        if header_item is not None:
+            header_item.setText("选择")
+            header_item.setCheckState(Qt.Unchecked)
+        _set_table_widths(self._pre_recognition_table, [56, 140, 190, 260, 210])
+        self._pre_recognition_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         for row_index, row in enumerate(rows):
-            item = self._pre_recognition_table.item(row_index, 2)
+            checkbox = QCheckBox()
+            checkbox.setObjectName(f"preRecognitionSelect_{row.acquisition_id}")
+            checkbox.setChecked(_recognition_row_selected_by_context(row, selection))
+            checkbox.stateChanged.connect(lambda _state=0: self._refresh_pre_recognition_selection_state())
+            self._pre_recognition_checks[row.acquisition_id] = checkbox
+            self._pre_recognition_table.setCellWidget(row_index, 0, checkbox)
+            item = self._pre_recognition_table.item(row_index, 3)
             if item is not None and row.location_tooltip:
                 item.setToolTip(row.location_tooltip)
+            for col in range(self._pre_recognition_table.columnCount()):
+                cell = self._pre_recognition_table.item(row_index, col)
+                if cell is not None and col in {3, 4}:
+                    cell.setToolTip(row.location_tooltip or row.location)
+        self._refresh_pre_recognition_selection_state()
 
     def _fill_recognition_table(self, files: list[dict[str, object]]) -> None:
         self._table.setRowCount(len(files))
@@ -2494,13 +2555,12 @@ class BioinformaticsRecognitionWidget(QWidget):
             rows.append(
                 [
                     str(item.get("file_name", "")),
-                    _compact_path(str(item.get("original_path", "")), max_chars=44),
+                    _compact_path(str(item.get("route_path") or item.get("original_path") or ""), max_chars=54),
                     _recognition_type_text(item),
                     _format_confidence(item.get("confidence")),
                     _format_file_size(item.get("file_size")),
                     str(item.get("reason", "")),
                     warning,
-                    _compact_path(str(item.get("route_path", "")), max_chars=44),
                 ]
             )
         for row_index, row in enumerate(rows):
@@ -2508,17 +2568,54 @@ class BioinformaticsRecognitionWidget(QWidget):
                 table_item = QTableWidgetItem(value)
                 source = files[row_index]
                 if col_index == 1:
-                    table_item.setToolTip(str(source.get("original_path", "")))
+                    table_item.setToolTip(str(source.get("route_path") or source.get("original_path") or ""))
                 elif col_index == 2:
                     table_item.setToolTip(_recognition_roles_tooltip(source))
                 elif col_index == 3:
                     table_item.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
                 elif col_index == 4:
                     table_item.setToolTip(f"原始 bytes：{source.get('file_size', '未记录')}")
-                elif col_index == 7:
-                    table_item.setToolTip(str(source.get("route_path", "")))
                 self._table.setItem(row_index, col_index, table_item)
         self._table.resizeColumnsToContents()
+
+    def _toggle_pre_recognition_header(self, section: int) -> None:
+        if section != 0 or not self._pre_recognition_checks:
+            return
+        should_check = not all(checkbox.isChecked() for checkbox in self._pre_recognition_checks.values())
+        for checkbox in self._pre_recognition_checks.values():
+            checkbox.setChecked(should_check)
+        self._refresh_pre_recognition_selection_state()
+
+    def _selected_pre_recognition_rows(self) -> list[RegisteredSourceRow]:
+        selected = []
+        for row in self._pre_recognition_rows:
+            checkbox = self._pre_recognition_checks.get(row.acquisition_id)
+            if checkbox is not None and checkbox.isChecked():
+                selected.append(row)
+        return selected
+
+    def _refresh_pre_recognition_selection_state(self) -> None:
+        selected_count = len(self._selected_pre_recognition_rows())
+        self._delete_selected_inputs_button.setEnabled(selected_count > 0)
+        header_item = self._pre_recognition_table.horizontalHeaderItem(0)
+        if header_item is not None:
+            all_checked = bool(self._pre_recognition_checks) and selected_count == len(self._pre_recognition_checks)
+            header_item.setCheckState(Qt.Checked if all_checked else Qt.Unchecked)
+
+    def _delete_selected_pre_recognition_sources(self) -> None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。")
+            return
+        rows = self._selected_pre_recognition_rows()
+        if not rows:
+            self._set_status("请先选择需要移除的数据。")
+            return
+        removed = 0
+        for row in rows:
+            if _remove_acquisition_binding_by_id(self._project_root, row.acquisition_id):
+                removed += 1
+        self._render_pre_recognition_inputs()
+        self._set_status(f"已从待识别列表移除 {removed} 个条目；未删除原始文件。")
 
     def _set_status(self, text: str) -> None:
         self._status_label.setText(text)
@@ -3478,6 +3575,16 @@ def _text_preview(height: int = 220) -> QPlainTextEdit:
     return edit
 
 
+def _read_only_report_view(height: int = 150) -> QTextEdit:
+    edit = QTextEdit()
+    edit.setReadOnly(True)
+    edit.setAcceptRichText(False)
+    edit.setMinimumHeight(min(height, 180))
+    edit.setMaximumHeight(max(height, 120))
+    edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    return edit
+
+
 def _table(headers: list[str]) -> QTableWidget:
     table = QTableWidget()
     table.setColumnCount(len(headers))
@@ -3508,6 +3615,16 @@ def _clear_layout(layout: QVBoxLayout) -> None:
 def _set_table_widths(table: QTableWidget, widths: list[int]) -> None:
     for index, width in enumerate(widths[: table.columnCount()]):
         table.setColumnWidth(index, width)
+
+
+def _configure_history_cache_table(table: QTableWidget) -> None:
+    header = table.horizontalHeader()
+    header.setStretchLastSection(False)
+    header.setSectionResizeMode(0, QHeaderView.Fixed)
+    header.setSectionResizeMode(1, QHeaderView.Stretch)
+    header.setSectionResizeMode(2, QHeaderView.Fixed)
+    table.setColumnWidth(0, 140)
+    table.setColumnWidth(2, 260)
 
 
 def _table_column_index(table: QTableWidget, header: str) -> int:
@@ -3927,6 +4044,7 @@ def _historical_cache_entries(project_root: Path | None) -> list[dict[str, str]]
     if project_root is None:
         return []
     selected = {entry.key for entry in _current_project_dataset_entries(project_root)}
+    bound_paths = _current_project_bound_paths(project_root)
     entries: list[dict[str, str]] = []
     geo_root = project_root / "raw_data" / "geo"
     if geo_root.exists():
@@ -3934,9 +4052,126 @@ def _historical_cache_entries(project_root: Path | None) -> list[dict[str, str]]
             if child.name.startswith("."):
                 continue
             key = f"geo:{child.name.upper()}"
-            if key not in selected:
+            child_path = str(child.resolve()) if child.exists() else str(child)
+            if key not in selected and child_path not in bound_paths:
                 entries.append({"name": child.name, "path": str(child)})
     return entries
+
+
+def _current_project_bound_paths(project_root: Path) -> set[str]:
+    records_dir = project_root / "acquisition" / "records"
+    if not records_dir.exists():
+        return set()
+    paths: set[str] = set()
+    for path in records_dir.glob("*.json"):
+        if path.name == LATEST_RECORD:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for key in ("registered_files", "copied_files", "referenced_paths"):
+            values = payload.get(key)
+            if not isinstance(values, list):
+                continue
+            for raw in values:
+                candidate = Path(str(raw)).expanduser()
+                paths.add(str(candidate.resolve()) if candidate.exists() else str(candidate))
+    return paths
+
+
+def _pending_recognition_selection_path(project_root: Path) -> Path:
+    return project_root / "manifests" / "pending_recognition_selection.json"
+
+
+def _save_pending_recognition_selection(project_root: Path, entries: list[DatasetListEntry]) -> None:
+    path = _pending_recognition_selection_path(project_root)
+    payload = {
+        "schema_version": "biomedpilot.pending_recognition_selection.v1",
+        "updated_at": _utc_now_iso(),
+        "selected_keys": [entry.key for entry in entries],
+        "selected_acquisition_ids": sorted({acquisition_id for entry in entries for acquisition_id in entry.acquisition_ids}),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _load_pending_recognition_selection(project_root: Path | None) -> dict[str, set[str]]:
+    if project_root is None:
+        return {"selected_keys": set(), "selected_acquisition_ids": set()}
+    path = _pending_recognition_selection_path(project_root)
+    if not path.exists():
+        return {"selected_keys": set(), "selected_acquisition_ids": set()}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"selected_keys": set(), "selected_acquisition_ids": set()}
+    return {
+        "selected_keys": {str(item) for item in payload.get("selected_keys", []) or []},
+        "selected_acquisition_ids": {str(item) for item in payload.get("selected_acquisition_ids", []) or []},
+    }
+
+
+def _recognition_row_selected_by_context(row: RegisteredSourceRow, selection: dict[str, set[str]]) -> bool:
+    return row.acquisition_id in selection.get("selected_acquisition_ids", set()) or _recognition_row_key(row) in selection.get("selected_keys", set())
+
+
+def _recognition_row_key(row: RegisteredSourceRow) -> str:
+    if row.source_type_key in GEO_SOURCE_TYPES:
+        return f"geo:{row.source_label.upper()}"
+    if "tcga" in row.source_type_key:
+        return f"tcga:{row.source_label.upper()}"
+    if "gtex" in row.source_type_key:
+        return f"gtex:{row.source_label.upper()}"
+    return f"local:{row.acquisition_id}"
+
+
+def _recognition_paths_for_rows(project_root: Path, rows: list[RegisteredSourceRow]) -> list[str]:
+    paths: list[str] = []
+    for row in rows:
+        payload = _acquisition_payload_by_id(project_root, row.acquisition_id)
+        if not payload:
+            continue
+        for key in ("copied_files", "referenced_paths", "registered_files"):
+            values = payload.get(key)
+            if isinstance(values, list):
+                paths.extend(str(value) for value in values if str(value).strip())
+    return list(dict.fromkeys(paths))
+
+
+def _acquisition_payload_by_id(project_root: Path, acquisition_id: str) -> dict[str, object] | None:
+    path = project_root / "acquisition" / "records" / f"{acquisition_id}.json"
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _remove_acquisition_binding_by_id(project_root: Path, acquisition_id: str) -> bool:
+    removed = False
+    latest_ids = _latest_acquisition_ids(project_root)
+    for folder in ("records", "plans", "handoffs"):
+        target = project_root / "acquisition" / folder / f"{acquisition_id}.json"
+        if target.exists():
+            try:
+                target.unlink()
+                removed = True
+            except OSError:
+                pass
+    if acquisition_id in latest_ids:
+        for target in (
+            project_root / "acquisition" / "records" / LATEST_RECORD,
+            project_root / "acquisition" / "plans" / LATEST_PLAN,
+            project_root / "acquisition" / "handoffs" / LATEST_HANDOFF,
+        ):
+            try:
+                target.unlink(missing_ok=True)
+            except OSError:
+                pass
+    return removed
 
 
 def _remove_dataset_project_binding(project_root: Path, entry: DatasetListEntry) -> bool:

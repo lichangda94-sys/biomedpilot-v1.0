@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -612,12 +612,16 @@ def test_data_source_keeps_history_cache_separate_until_user_adds(qt_app, projec
     assert not widget._history_cache_card.isHidden()
     assert "发现 1 个历史下载数据集" in widget._history_cache_hint.text()
     assert widget._history_cache_table.item(0, 0).text() == "GSE99999"
+    assert widget._history_cache_table.horizontalHeader().sectionResizeMode(1) == QHeaderView.Stretch
 
     summary = widget._add_history_cache_to_project({"name": "GSE99999", "path": str(cache_dir)})
 
     assert summary is not None
     assert widget._dataset_list_panel._table.rowCount() == 1
     assert widget._dataset_list_panel._table.item(0, 1).text() == "本地导入"
+    assert widget._history_cache_table.isHidden()
+    assert widget._history_cache_hint.text() == "暂无历史缓存数据。"
+    assert widget.status_message() == "已加入当前项目"
 
 
 def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
@@ -1053,10 +1057,11 @@ def test_registered_geo_source_appears_in_pre_recognition_input_list(qt_app, pro
 
     assert summary is not None
     assert table.rowCount() == 1
-    assert table.item(0, 0).text() == "GEO/GSE 数据来源"
-    assert table.item(0, 1).text() == "GSE33630"
-    assert table.item(0, 2).text() == "GEO"
-    assert table.item(0, 3).text() == "待下载"
+    assert table.cellWidget(0, 0) is not None
+    assert table.item(0, 1).text() == "GEO/GSE 数据来源"
+    assert table.item(0, 2).text() == "GSE33630"
+    assert table.item(0, 3).text() == "GEO"
+    assert table.item(0, 4).text() == "待下载"
 
 
 def test_geo_source_registration_does_not_auto_download_or_analyze(qt_app, project_summary) -> None:
@@ -1108,8 +1113,9 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     recognition.refresh_project(project_summary)
     table = recognition.findChild(QTableWidget, "preRecognitionInputList")
     assert table.rowCount() == 1
-    assert table.item(0, 0).text() == "TCGA/GDC 项目"
-    assert table.item(0, 1).text() == "TCGA-THCA"
+    assert table.cellWidget(0, 0) is not None
+    assert table.item(0, 1).text() == "TCGA/GDC 项目"
+    assert table.item(0, 2).text() == "TCGA-THCA"
     record_path = project_summary.project_root / "acquisition" / "records" / f"{summary.acquisition_id}.json"
     record = json.loads(record_path.read_text(encoding="utf-8"))
     assert record["source_type"] == "tcga_project"
@@ -1173,7 +1179,7 @@ def test_chinese_dataset_search_continue_enters_recognition(qt_app, project_summ
     assert widget.current_page_object_name() == "bioinformaticsRecognitionPage"
     table = widget._recognition_page.findChild(QTableWidget, "preRecognitionInputList")
     assert table.rowCount() == 1
-    assert table.item(0, 1).text() == "GSE33630"
+    assert table.item(0, 2).text() == "GSE33630"
 
 
 def test_acquisition_status_empty_and_continue_signal(qt_app, project_summary) -> None:
@@ -1207,9 +1213,19 @@ def test_recognition_readiness_standardization_pages(qt_app, project_summary) ->
     raw_file = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
     raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression_matrix.tsv",
+        strategy="reference",
+        selected_paths=[raw_file],
+    )
 
     recognition = BioinformaticsRecognitionWidget()
     recognition.refresh_project(project_summary)
+    checkbox = recognition.findChild(QCheckBox)
+    assert checkbox is not None
+    checkbox.setChecked(True)
     report = recognition.run_recognition()
     assert report is not None
     assert "已读取识别报告" in recognition.status_message()
@@ -1225,6 +1241,73 @@ def test_recognition_readiness_standardization_pages(qt_app, project_summary) ->
     generated = standardization.generate_assets()
     assert generated is not None
     assert "标准化资产" in standardization.status_message()
+
+
+def test_recognition_requires_selected_inputs(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(project_summary.project_root, source_type="local_import", source_label="expression.tsv", strategy="reference", selected_paths=[source])
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+
+    assert widget.run_recognition() is None
+    assert widget.status_message() == "请先选择需要识别的数据。"
+
+
+def test_recognition_only_scans_checked_sources(qt_app, project_summary) -> None:
+    selected = project_summary.project_root / "raw_data" / "local_import" / "selected_expression.tsv"
+    skipped = project_summary.project_root / "raw_data" / "local_import" / "skipped_expression.tsv"
+    selected.parent.mkdir(parents=True, exist_ok=True)
+    selected.write_text("gene\tcase_1\tcontrol_1\nTP53\t2\t1\n", encoding="utf-8")
+    skipped.write_text("gene\tcase_1\tcontrol_1\nEGFR\t3\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(project_summary.project_root, source_type="local_import", source_label="selected", strategy="reference", selected_paths=[selected])
+    workflow_pages.register_acquisition(project_summary.project_root, source_type="local_import", source_label="skipped", strategy="reference", selected_paths=[skipped])
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "preRecognitionInputList")
+    assert table.rowCount() == 2
+    selected_row = next(row for row in range(table.rowCount()) if table.item(row, 2).text() == "selected_expression.tsv")
+    table.cellWidget(selected_row, 0).setChecked(True)
+
+    report = widget.run_recognition()
+
+    assert report is not None
+    assert report["selected_input_count"] == 1
+    assert report["skipped_unselected_count"] == 1
+    file_names = [item["file_name"] for item in report["files"]]
+    assert file_names == [Path(report["selected_inputs"][0]).name]
+    assert "skipped_expression.tsv" not in file_names
+
+
+def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, project_summary) -> None:
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+
+    assert "开始识别" in button_texts
+    assert "刷新" in button_texts
+    assert widget.findChild(QFrame, "recognitionTechnicalOperations").isHidden()
+    assert widget._counts.isReadOnly()
+
+
+def test_recognition_delete_selected_removes_binding_not_file(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(project_summary.project_root, source_type="local_import", source_label="expression.tsv", strategy="reference", selected_paths=[source])
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "preRecognitionInputList")
+    table.cellWidget(0, 0).setChecked(True)
+
+    widget._delete_selected_pre_recognition_sources()
+
+    assert source.exists()
+    assert table.rowCount() == 0
+    assert "未删除原始文件" in widget.status_message()
 
 
 def test_readiness_page_uses_compact_status_and_warning_chips(qt_app, project_summary) -> None:
@@ -1403,23 +1486,39 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     )
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
-    table = widget.findChild(QTableWidget)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
 
     assert table.horizontalHeaderItem(3).text() == "识别可信度"
     assert "不是数据质量评分" in table.horizontalHeaderItem(3).toolTip()
     assert table.item(0, 3).text() == "70%"
     assert table.item(0, 4).text() == "5.5 MB"
     assert table.item(0, 1).text().startswith("...")
-    assert table.item(0, 1).toolTip() == str(long_path)
+    assert table.horizontalHeaderItem(1).text() == "当前位置"
+    assert table.item(0, 1).toolTip() == str(project_summary.project_root / "recognized_data/expression_matrix/GSE54350_series_matrix.txt")
     assert table.item(0, 2).text() == "GEO SOFT 容器（含：表达矩阵、样本注释）"
     assert "可用角色：表达矩阵、样本注释" in table.item(0, 2).toolTip()
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
 
 
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression.tsv",
+        strategy="reference",
+        selected_paths=[source],
+    )
     _write_mock_recognition_report(project_summary.project_root, [])
     calls: list[str] = []
-    monkeypatch.setattr(workflow_pages, "run_project_recognition", lambda root: calls.append(str(root)) or {"files": [], "warnings": [], "type_counts": {}})
+    monkeypatch.setattr(
+        workflow_pages,
+        "run_project_recognition_for_paths",
+        lambda root, paths, skipped_unselected_count=0: calls.append((str(root), tuple(paths), skipped_unselected_count))
+        or {"files": [], "warnings": [], "type_counts": {}, "selected_inputs": list(paths), "selected_input_count": len(paths), "skipped_unselected_count": skipped_unselected_count},
+    )
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
 
@@ -1427,9 +1526,13 @@ def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, projec
     assert calls == []
     assert "不重新扫描文件" in widget.status_message()
 
+    table = widget.findChild(QTableWidget, "preRecognitionInputList")
+    checkbox = table.cellWidget(0, 0)
+    assert checkbox is not None
+    checkbox.setChecked(True)
     widget.run_recognition()
-    assert calls == [str(project_summary.project_root)]
-    assert "已重新扫描当前项目数据和已选择的外部引用文件" in widget.status_message()
+    assert calls == [(str(project_summary.project_root), (str(source),), 0)]
+    assert "本次只识别已勾选的数据" in widget.status_message()
 
 
 def test_recognition_clean_old_results_keeps_raw_data(qt_app, project_summary) -> None:
