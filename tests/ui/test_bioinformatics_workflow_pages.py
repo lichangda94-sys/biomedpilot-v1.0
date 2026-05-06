@@ -484,8 +484,11 @@ def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_
     payload = widget._generate_gse_geo_summary(candidate)
 
     assert payload is not None
-    assert "该数据集比较胶质瘤和对照样本。" in widget._gse_geo_detail_panel._translation_text.toPlainText()
-    assert "医学实体一致性状态" in widget._gse_geo_detail_panel._translation_text.toPlainText()
+    text = widget._gse_geo_detail_panel._translation_text.toPlainText()
+    assert "该数据集比较胶质瘤和对照样本。" in text
+    assert "与检索主题匹配：是" in text
+    assert "推荐等级：" in text
+    assert "医学实体一致性状态" not in text
 
 
 def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
@@ -956,8 +959,28 @@ def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
     assert widget.status_message() == "已生成中文翻译与一句话简介。"
     assert widget._mapping_log.isHidden()
     assert not widget._geo_dataset_detail_panel.isHidden()
-    assert "该数据集比较胶质瘤和对照样本。" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
-    assert "医学实体一致性状态" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
+    text = widget._geo_dataset_detail_panel._translation_text.toPlainText()
+    assert "该数据集比较胶质瘤和对照样本。" in text
+    assert "与检索主题匹配：是" in text
+    assert "推荐等级：" in text
+    assert "医学实体一致性状态" not in text
+
+
+def test_geo_brief_topic_match_label_maps_consistency_status(qt_app) -> None:
+    candidate = _geo_candidate()
+    text = workflow_pages._geo_text_summary_user_display(
+        candidate,
+        {
+            "status": "completed",
+            "title_zh": "胶质瘤表达谱",
+            "summary_zh": "胶质瘤样本摘要。",
+            "brief_zh": "该数据集可能与检索主题相关。",
+            "entity_consistency_status": "partial",
+        },
+    )
+
+    assert "与检索主题匹配：可能相关" in text
+    assert "医学实体一致性状态" not in text
 
 
 def test_chinese_dataset_search_geo_brief_retries_after_fallback(qt_app) -> None:

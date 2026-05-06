@@ -4930,20 +4930,50 @@ def _asset_type_status(assets: list[dict[str, object]], asset_type: str) -> str:
 def _geo_text_summary_user_display(candidate: UnifiedDatasetCandidate, summary: dict[str, object]) -> str:
     status = str(summary.get("status") or "")
     warnings = [str(item) for item in summary.get("quality_warnings", []) or []] if isinstance(summary.get("quality_warnings"), list) else list(summary.get("quality_warnings", ()) or ())
-    consistency = "通过" if status == "completed" and not warnings else "需人工确认"
-    risk = "未发现明显风险。" if consistency == "通过" else "翻译或医学实体提炼不完整，需人工确认后再用于筛选决策。"
-    reliable = "可作为初筛参考" if consistency == "通过" else "不可标记为可靠结论"
+    topic_match = _geo_topic_match_label(summary, status=status, warnings=warnings)
+    risk = "未发现明显风险。" if topic_match == "是" else "翻译或主题匹配判断不完整，需人工确认后再用于筛选决策。"
+    reliable = "可作为初筛参考" if topic_match == "是" else "不可标记为可靠结论"
     return "\n".join(
         [
             f"GSE 编号：{candidate.accession_or_project}",
             f"中文标题：{summary.get('title_zh') or '未生成'}",
             f"中文摘要：{summary.get('summary_zh') or '未生成'}",
             f"一句话简介：{summary.get('brief_zh') or '未生成'}",
-            f"医学实体一致性状态：{consistency}",
+            f"与检索主题匹配：{topic_match}",
+            f"推荐等级：{_candidate_recommendation(candidate)}",
             f"可靠性：{reliable}",
             f"风险提示：{summary.get('error_message') or '；'.join(warnings) or risk}",
         ]
     )
+
+
+def _geo_topic_match_label(summary: dict[str, object], *, status: str, warnings: list[str]) -> str:
+    for key in (
+        "topic_match_status",
+        "entity_consistency_status",
+        "medical_entity_consistency",
+        "entity_consistency",
+        "consistency",
+        "search_topic_match",
+        "topic_match",
+    ):
+        value = summary.get(key)
+        if value is None or value == "":
+            continue
+        normalized = str(value).strip().lower()
+        if normalized in {"passed", "pass", "true", "consistent", "yes", "matched"}:
+            return "是"
+        if normalized in {"warning", "partial", "uncertain", "maybe", "possible"}:
+            return "可能相关"
+        if normalized in {"failed", "fail", "false", "inconsistent", "no", "mismatch"}:
+            return "不明确"
+        if normalized in {"missing", "unknown", "none", "not_checked", "not judged"}:
+            return "未判断"
+    if status == "completed" and not warnings:
+        return "是"
+    if status == "completed" and warnings:
+        return "可能相关"
+    return "未判断"
 
 
 def _recommendation_card_title(candidate: UnifiedDatasetCandidate) -> str:
