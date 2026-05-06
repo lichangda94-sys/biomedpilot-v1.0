@@ -111,6 +111,32 @@ def test_geo_profile_keeps_multiple_candidate_comparisons_preview_only(tmp_path:
     assert not (tmp_path / "manifests" / "manual_supplements" / "comparison_config.tsv").exists()
 
 
+def test_series_matrix_parser_prefers_geo_accession_count_over_long_description_rows(tmp_path: Path) -> None:
+    source = tmp_path / "GSE1009_series_matrix.txt"
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_title = thyroid samples",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_title\tcontrol 1\ttumor 1",
+                "!Sample_description\tcontrol desc\ttumor desc\textra prose that is not a sample",
+                "!Sample_characteristics_ch1\tpathological diagnostic: normal\tpathological diagnostic: tumor",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "GeneA\t1\t2",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    profile = GeoDatasetProfileService().build_profile(accession="GSE1009", series_matrix_path=source)
+
+    assert profile.metadata_sample_count == 2
+    assert [record.sample_accession for record in profile.sample_records] == ["GSM1", "GSM2"]
+    assert profile.candidate_comparisons[0].group_sizes == {"normal": 1, "tumor": 1}
+
+
 def test_geo_profile_penalizes_non_bulk_expression_modalities() -> None:
     profile = GeoDatasetProfileService().build_profile(
         accession="GSE1004",

@@ -1567,6 +1567,175 @@ def test_analysis_task_center_runs_geo_differential_expression_and_indexes_resul
     assert "已运行 GEO 差异分析" in task_center.status_message()
 
 
+def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
+    from app.bioinformatics.services.geo_metadata_profile_service import (
+        GeoCandidateComparison,
+        GeoMetadataProfile,
+        GeoSampleGroupAssignment,
+        GeoSupplementaryFile,
+    )
+
+    profile = GeoMetadataProfile(
+        accession="GSETEST",
+        analysis_potential_level="高",
+        analysis_potential_reason="sample-level metadata supports tumor/normal grouping",
+        geo_sample_count=4,
+        metadata_sample_count=4,
+        sample_structure_preview={"sample_types": {"tumor": 2, "normal": 2}},
+        candidate_comparisons=(
+            GeoCandidateComparison(
+                comparison_id="pathological_diagnostic:tumor_vs_normal",
+                label="tumor vs normal",
+                control_group="normal",
+                case_group="tumor",
+                group_sizes={"normal": 2, "tumor": 2},
+                sample_assignments=(
+                    GeoSampleGroupAssignment("GSM1", "normal", "pathological_diagnostic", "diagnosis: normal", "high"),
+                    GeoSampleGroupAssignment("GSM2", "tumor", "pathological_diagnostic", "diagnosis: tumor", "high"),
+                ),
+                confidence="high",
+            ),
+        ),
+        supplementary_file_preview=(
+            GeoSupplementaryFile("GSETEST_family.soft.gz", predicted_type="metadata_container", asset_type="family_soft", recommendation="元数据容器，用于读取标题、样本和平台信息。"),
+            GeoSupplementaryFile("GSETEST_series_matrix.txt.gz", predicted_type="expression_matrix", asset_type="series_matrix", recommendation="建议优先查看，可能包含表达矩阵。"),
+            GeoSupplementaryFile("GSETEST_RAW.tar", predicted_type="raw_data", risk_level="高", recommendation="文件较大，建议确认后下载。"),
+        ),
+    )
+
+    text = workflow_pages._geo_profile_user_display(profile)
+
+    assert "候选比较组：肿瘤组 vs 正常/对照组" in text
+    assert "样本数：正常/对照组 2 个，肿瘤组 2 个" in text
+    assert "判断依据：样本注释中的病理诊断信息" in text
+    assert "推荐下载：元数据/样本注释" in text
+    assert "可能用于分析：表达矩阵或标准化表达文件" in text
+    assert "可能包含表达矩阵或样本注释，需下载后确认" in text
+    assert "不建议默认下载：raw/CEL/大文件/SRA 原始数据" in text
+
+
+def test_geo_profile_confirmation_writes_formal_comparison_and_audit(qt_app, project_summary, monkeypatch) -> None:
+    from app.bioinformatics.services.geo_metadata_profile_service import (
+        GeoCandidateComparison,
+        GeoMetadataProfile,
+        GeoSampleGroupAssignment,
+    )
+
+    profile = GeoMetadataProfile(
+        accession="GSETEST",
+        candidate_comparisons=(
+            GeoCandidateComparison(
+                comparison_id="pathological_diagnostic:tumor_vs_normal",
+                label="tumor vs normal",
+                control_group="normal",
+                case_group="tumor",
+                group_sizes={"normal": 2, "tumor": 2},
+                sample_assignments=(
+                    GeoSampleGroupAssignment("GSM1", "normal", "pathological_diagnostic", "diagnosis: normal", "high"),
+                    GeoSampleGroupAssignment("GSM2", "normal", "pathological_diagnostic", "diagnosis: normal", "high"),
+                    GeoSampleGroupAssignment("GSM3", "tumor", "pathological_diagnostic", "diagnosis: tumor", "high"),
+                    GeoSampleGroupAssignment("GSM4", "tumor", "pathological_diagnostic", "diagnosis: tumor", "high"),
+                ),
+                confidence="high",
+            ),
+        ),
+    )
+    monkeypatch.setattr(workflow_pages, "_build_geo_detail_profile", lambda *args, **kwargs: profile)
+    candidate = SimpleNamespace(accession_or_project="GSETEST")
+
+    ok, message = workflow_pages._save_geo_profile_comparison_with_confirmation(
+        BioinformaticsDataSourceWidget(),
+        project_summary.project_root,
+        candidate,
+        None,
+        included_sample_ids=["GSM1", "GSM3", "GSM4"],
+        assignment_overrides={"GSM4": "normal"},
+        skip_dialog=True,
+    )
+
+    comparison_file = project_summary.project_root / "raw_data" / "local_import" / "manual_supplements" / "comparison_config_manual.tsv"
+    audit_log = project_summary.project_root / "logs" / "readiness" / "comparison_group_confirmation_log.jsonl"
+    text = comparison_file.read_text(encoding="utf-8")
+
+    assert ok is True
+    assert "正式比较组" in message
+    assert comparison_file.exists()
+    assert audit_log.exists()
+    assert "sample_accession\tassigned_group\tinclude" in text
+    assert "GSM2\tnormal\tno" in text
+    assert "GSM4\tnormal\tyes" in text
+
+
+def test_readiness_reports_confirmed_comparison_and_sample_match(qt_app, project_summary) -> None:
+    expression = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text("gene\tGSM1\tGSM2\tGSM3\tGSM4\nTP53\t1\t2\t8\t9\n", encoding="utf-8")
+    workflow_pages._save_manual_supplement(
+        project_summary.project_root,
+        "comparison_config",
+        "comparison_id\tgroup_column\tcase_group\tcontrol_group\tcase_label_zh\tcontrol_label_zh\n"
+        "tumor_vs_normal\tpathological_diagnostic\ttumor\tnormal\t肿瘤组\t正常/对照组\n\n"
+        "sample_accession\tassigned_group\tinclude\tevidence_field\tevidence_text\tconfidence\n"
+        "GSM1\tnormal\tyes\tpathological_diagnostic\tdiagnosis: normal\thigh\n"
+        "GSM2\tnormal\tyes\tpathological_diagnostic\tdiagnosis: normal\thigh\n"
+        "GSM3\ttumor\tyes\tpathological_diagnostic\tdiagnosis: tumor\thigh\n"
+        "GSM4\ttumor\tyes\tpathological_diagnostic\tdiagnosis: tumor\thigh\n",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    artifacts = workflow_pages.run_project_readiness(project_summary.project_root)
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness._render(artifacts)
+
+    labels = "\n".join(label.text() for label in readiness.findChildren(QLabel))
+    table = readiness.findChild(QTableWidget, "readinessCapabilityTable")
+    row_text = " ".join(table.item(0, column).text() for column in range(table.columnCount()))
+
+    assert "比较组已确认：肿瘤组 2 个 vs 正常/对照组 2 个" in labels
+    assert "可继续" in row_text
+
+
+def test_analysis_task_center_uses_confirmed_geo_assignments(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "GSETEST_expression_matrix.tsv"
+    expression_file.write_text(
+        "gene\tGSM1\tGSM2\tGSM3\tGSM4\n"
+        "TP53\t2\t3\t10\t12\n"
+        "EGFR\t9\t10\t4\t5\n",
+        encoding="utf-8",
+    )
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="geo_accession",
+        source_label="GSETEST",
+        strategy="reference",
+        selected_paths=[expression_file],
+        metadata={"source": "geo", "accession_or_project": "GSETEST", "ready_for_recognition": "ready"},
+    )
+    workflow_pages._save_manual_supplement(
+        project_summary.project_root,
+        "comparison_config",
+        "comparison_id\tgroup_column\tcase_group\tcontrol_group\tcase_label_zh\tcontrol_label_zh\n"
+        "tumor_vs_normal\tpathological_diagnostic\ttumor\tnormal\t肿瘤组\t正常/对照组\n\n"
+        "sample_accession\tassigned_group\tinclude\tevidence_field\tevidence_text\tconfidence\n"
+        "GSM1\tnormal\tyes\tpathological_diagnostic\tdiagnosis: normal\thigh\n"
+        "GSM2\tnormal\tyes\tpathological_diagnostic\tdiagnosis: normal\thigh\n"
+        "GSM3\ttumor\tyes\tpathological_diagnostic\tdiagnosis: tumor\thigh\n"
+        "GSM4\ttumor\tyes\tpathological_diagnostic\tdiagnosis: tumor\thigh\n",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+    result = task_center.run_geo_differential_expression_task()
+
+    assert result is not None
+    summary = result["summaries"][0]
+    assert summary["parameters"]["explicit_group_assignments_used"] is True
+    assert summary["case_label"] == "tumor"
+    assert summary["control_label"] == "normal"
+
+
 def _write_mock_recognition_report(project_root: Path, files: list[dict[str, object]]) -> Path:
     path = project_root / "logs" / "recognition" / "recognition_report.json"
     path.parent.mkdir(parents=True, exist_ok=True)

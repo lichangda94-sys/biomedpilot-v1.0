@@ -847,6 +847,11 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         "first_column_id_pattern": first_column_pattern,
         "sample_like_column_count": sample_like_column_count,
         "numeric_column_count": len(numeric_column_indices),
+        "sample_columns": [
+            header[index]
+            for index in numeric_column_indices
+            if index < len(header) and not _is_annotation_header([normalized_header[index]])
+        ],
         "known_keyword_hits": header_hits,
         "possible_table_role": possible_role,
         "evidence": evidence,

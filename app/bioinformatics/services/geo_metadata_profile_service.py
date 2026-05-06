@@ -429,7 +429,11 @@ def _parse_series_matrix(path: Path) -> _ParsedGeoMetadata:
         parsed.parsing_warnings.append(f"series_matrix_read_failed:{exc}")
         return parsed
     sample_ids = sample_fields.get("sample_geo_accession", [])
-    count = max((len(values) for values in [*sample_fields.values(), *characteristics_by_index.values()]), default=0)
+    sample_titles = sample_fields.get("sample_title", [])
+    count = len(sample_ids) or len(sample_titles) or max(
+        (len(values) for values in [*sample_fields.values(), *characteristics_by_index.values()]),
+        default=0,
+    )
     records: list[GeoSampleRecord] = []
     for index in range(count):
         raw_fields = {

@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from PySide6.QtCore import Signal, Qt, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -39,6 +39,14 @@ from PySide6.QtWidgets import (
 )
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
+from app.bioinformatics.comparison_config import (
+    build_geo_comparison_config_text,
+    comparison_summary_text,
+    evidence_field_label_zh,
+    group_label_zh,
+    confirmed_group_assignments,
+    load_confirmed_comparison_config,
+)
 from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
@@ -3280,6 +3288,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             return None
         summaries: list[dict[str, object]] = []
         warnings: list[str] = []
+        comparison_config = load_confirmed_comparison_config(self._project_root)
+        explicit_assignments = confirmed_group_assignments(comparison_config)
         for asset in expression_assets:
             file_path = Path(str(asset.get("file_path") or "")).expanduser()
             if not file_path.is_absolute():
@@ -3293,7 +3303,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             dataset_id = _analysis_dataset_id(asset, file_path)
             output_dir = self._project_root / "analysis" / "geo" / "differential_expression" / dataset_id
             try:
-                summary = run_geo_differential_expression(file_path, output_dir=output_dir, dataset_id=dataset_id)
+                summary = run_geo_differential_expression(
+                    file_path,
+                    output_dir=output_dir,
+                    dataset_id=dataset_id,
+                    group_assignments=explicit_assignments or None,
+                    case_label=comparison_config.case_group if comparison_config is not None else "case",
+                    control_label=comparison_config.control_group if comparison_config is not None else "control",
+                )
             except Exception as exc:
                 warnings.append(f"{dataset_id}: {exc}")
                 continue
@@ -3301,10 +3318,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         if summaries:
             _append_geo_deg_results_to_index(self._project_root, summaries)
             load_analysis_task_center(self._project_root)
-            self._status_label.setText(f"已运行 GEO 差异分析：{len(summaries)} 个表达矩阵。")
-            self._records.setPlainText(_json({"差异分析结果": summaries, "warnings": warnings}))
+            comparison_message = f"；{comparison_summary_text(comparison_config)}" if comparison_config is not None else ""
+            self._status_label.setText(f"已运行 GEO 差异分析：{len(summaries)} 个表达矩阵{comparison_message}")
+            self._records.setPlainText(_json({"差异分析结果": summaries, "warnings": warnings, "comparison_config": comparison_config.to_dict() if comparison_config is not None else {}}))
             return {"summaries": summaries, "warnings": warnings}
-        self._status_label.setText("差异分析未运行：无法从表达矩阵列名推断 case/control 分组。请先点击“设置比较组”。")
+        if comparison_config is not None:
+            self._status_label.setText("差异分析未运行：已确认比较组，但表达矩阵样本 ID 未能匹配。请修正比较组或选择其他表达文件。")
+        else:
+            self._status_label.setText("差异分析未运行：尚未确认比较组。请先点击“设置比较组”。")
         self._records.setPlainText(_json({"warnings": warnings}))
         return {"summaries": [], "warnings": warnings}
 
@@ -5443,28 +5464,29 @@ def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
         lines.append(f"样本数：GEO {geo_count}；元数据 {metadata_count}。")
     sample_types = preview.get("sample_types") if isinstance(preview, dict) else {}
     if isinstance(sample_types, dict) and sample_types:
-        group_text = "，".join(f"{key} {value} 个" for key, value in sample_types.items())
+        group_text = "，".join(f"{group_label_zh(str(key))} {value} 个" for key, value in sample_types.items())
         lines.append(f"样本结构预览：可能包括 {group_text}。")
     else:
         lines.append("样本结构预览：尚未识别明确分组。")
     if profile.candidate_comparisons:
         lines.append("候选比较组：")
         for comparison in profile.candidate_comparisons[:3]:
-            groups = "，".join(f"{key}：{value} 个样本" for key, value in comparison.group_sizes.items())
-            lines.append(f"- {comparison.label}（{groups}；置信度：{_confidence_zh(comparison.confidence)}；需用户确认）")
+            case_label = group_label_zh(comparison.case_group)
+            control_label = group_label_zh(comparison.control_group)
+            groups = "，".join(f"{group_label_zh(str(key))} {value} 个" for key, value in comparison.group_sizes.items())
+            evidence_field = _geo_comparison_evidence_field(comparison)
+            lines.append(f"- 候选比较组：{case_label} vs {control_label}")
+            lines.append(f"  样本数：{groups}")
+            lines.append(f"  置信度：{_confidence_zh(comparison.confidence)}；需用户确认")
+            lines.append(f"  判断依据：样本注释中的{evidence_field_label_zh(evidence_field)}")
             for assignment in comparison.sample_assignments[:5]:
                 lines.append(
-                    f"  · {assignment.sample_accession} → {assignment.assigned_group}"
-                    f"（证据：{assignment.evidence_field} = {assignment.evidence_text[:80]}）"
+                    f"  · {assignment.sample_accession} → {group_label_zh(assignment.assigned_group)}"
+                    f"（证据详情：{evidence_field_label_zh(assignment.evidence_field)} = {assignment.evidence_text[:80]}）"
                 )
     else:
         lines.append("候选比较组：未识别到明确候选比较组。")
-    if profile.suggested_download_files:
-        lines.append("建议下载文件：" + "；".join(profile.suggested_download_files[:5]))
-    elif profile.possible_expression_files:
-        lines.append("建议下载文件：" + "；".join(profile.possible_expression_files[:5]))
-    else:
-        lines.append("建议下载文件：尚未发现明确表达矩阵文件，建议先下载/查看元数据。")
+    lines.extend(_geo_download_recommendation_lines(profile))
     if profile.supplementary_file_preview:
         lines.append("补充文件预览：")
         for item in profile.supplementary_file_preview[:5]:
@@ -5480,6 +5502,52 @@ def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
     if warnings:
         lines.append("提示：" + "；".join(warnings[:3]))
     return "\n".join(lines)
+
+
+def _geo_comparison_evidence_field(comparison: object) -> str:
+    assignments = list(getattr(comparison, "sample_assignments", ()) or ())
+    if assignments:
+        return str(getattr(assignments[0], "evidence_field", "") or "")
+    comparison_id = str(getattr(comparison, "comparison_id", "") or "")
+    return comparison_id.split(":", 1)[0]
+
+
+def _geo_download_recommendation_lines(profile: GeoDatasetProfile) -> list[str]:
+    buckets = {
+        "推荐下载：元数据/样本注释": [],
+        "可能用于分析：表达矩阵或标准化表达文件": [],
+        "不建议默认下载：raw/CEL/大文件/SRA 原始数据": [],
+    }
+    for item in profile.supplementary_file_preview:
+        name = item.file_name
+        if not name:
+            continue
+        label = name
+        if item.asset_type == "series_matrix":
+            label = f"{name}（可能包含表达矩阵或样本注释，需下载后确认）"
+        elif item.predicted_type == "expression_matrix":
+            label = f"{name}（可能包含表达矩阵，需下载后确认）"
+        elif item.predicted_type in {"metadata_container", "sample_metadata", "clinical_metadata", "platform_annotation"}:
+            label = f"{name}（{item.recommendation}）"
+        elif item.predicted_type == "raw_data" or item.risk_level in {"中", "高"}:
+            label = f"{name}（{item.recommendation}）"
+        if item.predicted_type == "raw_data" or item.risk_level in {"中", "高"}:
+            buckets["不建议默认下载：raw/CEL/大文件/SRA 原始数据"].append(label)
+        elif item.predicted_type in {"metadata_container", "sample_metadata", "clinical_metadata", "platform_annotation"} and item.asset_type != "series_matrix":
+            buckets["推荐下载：元数据/样本注释"].append(label)
+        elif item.predicted_type == "expression_matrix" or item.asset_type == "series_matrix":
+            buckets["可能用于分析：表达矩阵或标准化表达文件"].append(label)
+        elif item.predicted_type != "unknown":
+            buckets["推荐下载：元数据/样本注释"].append(label)
+    lines = ["建议下载文件："]
+    any_item = False
+    for title, values in buckets.items():
+        if values:
+            any_item = True
+            lines.append(f"- {title}：" + "；".join(values[:5]))
+    if not any_item:
+        lines.append("- 尚未发现明确表达矩阵文件，建议先下载/查看元数据。")
+    return lines
 
 
 def _confidence_zh(value: str) -> str:
@@ -5507,34 +5575,32 @@ def _slug_text(value: object) -> str:
 def _comparison_config_text_from_geo_profile(profile: GeoDatasetProfile) -> str:
     if not profile.candidate_comparisons:
         return _template_text_for_missing_input("comparison_config")
-    comparison = profile.candidate_comparisons[0]
-    field = comparison.comparison_id.split(":", 1)[0] or "group"
-    case = comparison.case_group or "case"
-    control = comparison.control_group or "control"
-    return f"comparison_id\tgroup_column\tcase_group\tcontrol_group\n{_slug_text(comparison.label)}\t{field}\t{case}\t{control}\n"
+    return build_geo_comparison_config_text(profile)
 
 
 def _geo_comparison_confirmation_prompt(profile: GeoDatasetProfile) -> str:
     if not profile.candidate_comparisons:
         return "请手动填写比较组设置。"
     comparison = profile.candidate_comparisons[0]
+    case_label = group_label_zh(comparison.case_group)
+    control_label = group_label_zh(comparison.control_group)
     lines = [
         "请确认候选分组是否符合研究设计。确认后才会写入正式比较组设置。",
         "",
-        f"候选比较组：{comparison.label}",
-        f"control group：{comparison.control_group}",
-        f"case group：{comparison.case_group}",
-        "每组样本数：" + "，".join(f"{key} {value}" for key, value in comparison.group_sizes.items()),
+        f"候选比较组：{case_label} vs {control_label}",
+        f"对照组：{control_label}（{comparison.control_group}）",
+        f"实验组：{case_label}（{comparison.case_group}）",
+        "每组样本数：" + "，".join(f"{group_label_zh(key)} {value}" for key, value in comparison.group_sizes.items()),
         "样本分配证据：",
     ]
     for assignment in comparison.sample_assignments[:12]:
         lines.append(
-            f"- {assignment.sample_accession}: {assignment.assigned_group}; "
-            f"{assignment.evidence_field} = {assignment.evidence_text[:120]}"
+            f"- {assignment.sample_accession}: {group_label_zh(assignment.assigned_group)}；"
+            f"{evidence_field_label_zh(assignment.evidence_field)} = {assignment.evidence_text[:120]}"
         )
     if len(comparison.sample_assignments) > 12:
         lines.append(f"- 其余 {len(comparison.sample_assignments) - 12} 个样本略。")
-    lines.extend(["", "可编辑下方 TSV；如需调整样本，请使用手动设置比较组。"])
+    lines.extend(["", "下方 TSV 可编辑。可以调整 case/control、移除样本或修改个别样本分组；确认后才会写入正式比较组。"])
     return "\n".join(lines)
 
 
@@ -5545,14 +5611,27 @@ def _save_geo_profile_comparison_with_confirmation(
     summary_payload: dict[str, object] | None,
     *,
     manual_text: str | None = None,
+    comparison_index: int = 0,
+    case_group: str | None = None,
+    control_group: str | None = None,
+    included_sample_ids: Iterable[str] | None = None,
+    assignment_overrides: dict[str, str] | None = None,
+    skip_dialog: bool = False,
 ) -> tuple[bool, str]:
     if project_root is None:
         return False, "请先创建或打开生信分析项目。"
     profile = _build_geo_detail_profile(project_root, candidate, summary_payload)
     if manual_text is None and not profile.candidate_comparisons:
         return False, "该 GEO 数据集尚未检测到可确认的候选分组，请手动设置比较组。"
-    text = manual_text or _comparison_config_text_from_geo_profile(profile)
-    if manual_text is None:
+    text = manual_text or build_geo_comparison_config_text(
+        profile,
+        comparison_index=comparison_index,
+        case_group=case_group,
+        control_group=control_group,
+        included_sample_ids=included_sample_ids,
+        assignment_overrides=assignment_overrides,
+    )
+    if manual_text is None and not skip_dialog:
         text, ok = QInputDialog.getMultiLineText(
             parent,
             "确认比较组",
@@ -6081,7 +6160,7 @@ def _readiness_overall_summary(readiness: dict[str, object], matrix: dict[str, o
 def _readiness_recognized_inputs_text(readiness: dict[str, object]) -> str:
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
     labels = []
-    for key in ("expression_matrix", "sample_metadata", "clinical_metadata", "platform_annotation", "gene_annotation", "gmt_gene_set"):
+    for key in ("expression_matrix", "sample_metadata", "clinical_metadata", "platform_annotation", "gene_annotation", "comparison_config", "gmt_gene_set"):
         if key == "expression_matrix" and available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
             labels.append("表达矩阵")
         elif key in available:
@@ -6109,6 +6188,15 @@ def _readiness_next_step_text(
 ) -> str:
     has_core_input = bool(readiness.get("has_core_input"))
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
+    comparison_status = str(readiness.get("comparison_group_status") or "")
+    if comparison_status == "confirmed_missing_expression":
+        summary = str(readiness.get("comparison_group_summary_zh") or "比较组已确认。")
+        return f"下一步建议：{summary}但缺少表达矩阵，请补充表达矩阵。"
+    if comparison_status == "confirmed_sample_mismatch":
+        return "下一步建议：比较组已确认，但表达矩阵样本 ID 不匹配。请修正比较组或选择其他表达文件。"
+    if comparison_status == "confirmed_ready":
+        summary = str(readiness.get("comparison_group_summary_zh") or "比较组已确认。")
+        return f"下一步建议：{summary}可以进入标准化，并在分析中心运行差异表达分析。"
     if "expression_matrix" in missing or not has_core_input:
         return "下一步建议：请返回数据导入页面补充表达矩阵文件。"
     if "comparison_config" in missing and _group_preview_has_candidate(group_preview):
@@ -6151,6 +6239,11 @@ def _ordered_missing_inputs(missing: set[str]) -> list[str]:
 def _analysis_readiness_status_label(row: dict[str, object]) -> str:
     if row.get("can_run"):
         return "可继续，但需注意" if row.get("warnings") else "可继续"
+    warnings = [str(item) for item in row.get("warnings", []) or []]
+    if any("样本 ID 不匹配" in item for item in warnings):
+        return "需要修正样本匹配"
+    if any("比较组已确认，但缺少表达矩阵" in item for item in warnings):
+        return "缺少表达矩阵"
     missing = [str(item) for item in row.get("missing_inputs", []) or []]
     if missing:
         return "需要补充信息"
@@ -6160,6 +6253,11 @@ def _analysis_readiness_status_label(row: dict[str, object]) -> str:
 
 
 def _analysis_missing_text(row: dict[str, object], group_preview: dict[str, object] | None = None) -> str:
+    warnings = [str(item) for item in row.get("warnings", []) or []]
+    if any("样本 ID 不匹配" in item for item in warnings):
+        return "样本 ID 不匹配"
+    if any("比较组已确认，但缺少表达矩阵" in item for item in warnings):
+        return "表达矩阵"
     missing = []
     for item in row.get("missing_inputs", []) or []:
         normalized = _normalize_missing_input(str(item))
@@ -6171,6 +6269,11 @@ def _analysis_missing_text(row: dict[str, object], group_preview: dict[str, obje
 
 
 def _analysis_suggested_action(row: dict[str, object], group_preview: dict[str, object] | None = None) -> str:
+    warnings = [str(item) for item in row.get("warnings", []) or []]
+    if any("样本 ID 不匹配" in item for item in warnings):
+        return "修正比较组或选择其他表达文件"
+    if any("比较组已确认，但缺少表达矩阵" in item for item in warnings):
+        return "补充表达矩阵"
     missing = {_normalize_missing_input(str(item)) for item in row.get("missing_inputs", []) or []}
     if "expression_matrix" in missing:
         return "返回数据导入页面补充表达矩阵"
