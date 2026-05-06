@@ -18,6 +18,12 @@ from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.analysis_setup_service import BLOCKED_ADVANCED_METHODS, AnalysisSetupService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
 from app.meta_analysis.services.figure_result_service import FigureResultService
+from app.meta_analysis.services.meta_statistics_engine_service import (
+    META_STATISTICS_ANALYSIS_MANIFEST_SCHEMA_VERSION,
+    META_STATISTICS_ANALYSIS_RUN_SCHEMA_VERSION,
+    META_STATISTICS_STANDARDIZED_RESULT_SCHEMA_VERSION,
+    MetaStatisticsEngineService,
+)
 from app.meta_analysis.ui_text import (
     ANALYSIS_BLOCKED_METHOD_ZH,
     ANALYSIS_DESCRIPTION_ZH,
@@ -178,6 +184,33 @@ class AnalysisPlanBuilderPageState:
     description_zh: str = "从 confirmed protocol、提取行和质量评价摘要生成分析计划草稿；确认后仍不运行统计。"
 
 
+@dataclass(frozen=True)
+class MetaStatisticsEnginePageState:
+    title: str
+    status_label: str
+    description: str
+    project_dir: str
+    run_schema_version: str
+    result_schema_version: str
+    manifest_schema_version: str
+    confirmed_plan_status: str
+    latest_run_id: str
+    latest_result_id: str
+    run_count: int
+    run_path: str
+    result_path: str
+    manifest_path: str
+    input_validation_status: str
+    result_status: str
+    warnings: tuple[str, ...]
+    primary_actions: tuple[str, ...]
+    safety_flags: dict[str, bool]
+    testing_level_notice: str = "testing-level statistics only; not production-grade."
+    title_zh: str = "统计引擎"
+    status_label_zh: str = "内部测试"
+    description_zh: str = "必须基于已确认分析计划运行；输出 testing-level 标准结果，不生成医学结论。"
+
+
 def initial_analysis_state() -> AnalysisPageState:
     feature = get_feature("meta-analysis")
     return AnalysisPageState(
@@ -319,6 +352,54 @@ def analysis_plan_builder_state_from_project(
     )
 
 
+def meta_statistics_engine_state_from_project(
+    project_dir: Path,
+    *,
+    service: MetaStatisticsEngineService | None = None,
+) -> MetaStatisticsEnginePageState:
+    project_dir = project_dir.expanduser().resolve()
+    stats_service = service or MetaStatisticsEngineService()
+    manifest = _load_json(stats_service.manifest_path(project_dir))
+    confirmed_plan_path = project_dir / "analysis" / "analysis_plan_confirmed_v1.json"
+    latest_run_id = str(manifest.get("latest_analysis_run_id", ""))
+    latest_result_id = str(manifest.get("latest_result_id", ""))
+    result = stats_service.load_standardized_result(project_dir, latest_run_id) if latest_run_id else {}
+    diagnostics = dict(result.get("diagnostics", {})) if isinstance(result.get("diagnostics"), dict) else {}
+    warnings: list[str] = []
+    if not confirmed_plan_path.exists():
+        warnings.append("confirmed_analysis_plan_missing")
+    warnings.extend(str(item) for item in diagnostics.get("warnings", []) if item)
+    return MetaStatisticsEnginePageState(
+        title="Meta Statistics Engine v2",
+        status_label="Confirmed-plan only / Developer Preview",
+        description="只允许从 confirmed_analysis_plan.v1 运行 testing-level 统计；不会生成 final conclusion。",
+        project_dir=str(project_dir),
+        run_schema_version=META_STATISTICS_ANALYSIS_RUN_SCHEMA_VERSION,
+        result_schema_version=META_STATISTICS_STANDARDIZED_RESULT_SCHEMA_VERSION,
+        manifest_schema_version=META_STATISTICS_ANALYSIS_MANIFEST_SCHEMA_VERSION,
+        confirmed_plan_status="confirmed" if confirmed_plan_path.exists() else "missing",
+        latest_run_id=latest_run_id,
+        latest_result_id=latest_result_id,
+        run_count=int(manifest.get("run_count", 0) or 0),
+        run_path=str(stats_service.runs_dir(project_dir) / f"{latest_run_id}.json") if latest_run_id else "",
+        result_path=str(stats_service.results_dir(project_dir) / f"{latest_run_id}_result.json") if latest_run_id else "",
+        manifest_path=str(stats_service.manifest_path(project_dir)),
+        input_validation_status=str(diagnostics.get("input_validation_status", "")),
+        result_status=str(result.get("result_status", "testing_result_generated" if result else "not_started")),
+        warnings=tuple(_dedupe(warnings)),
+        primary_actions=("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果"),
+        safety_flags={
+            "requires_confirmed_analysis_plan": True,
+            "modifies_extraction_records": False,
+            "modifies_quality_assessment": False,
+            "advances_prisma": False,
+            "generates_medical_conclusion": False,
+            "production_grade": False,
+        },
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+    )
+
+
 def _analysis_alias_summary(path: Path, payload_key: str) -> dict[str, object]:
     if not path.exists():
         return {"status": "missing", "path": str(path)}
@@ -385,6 +466,7 @@ if QWidget is not None:
             self._run_service = run_service or AnalysisRunService(dataset_service=self._dataset_service)
             self._figure_service = figure_service or FigureResultService(analysis_run_service=self._run_service)
             self._analysis_plan_service = AnalysisPlanService()
+            self._statistics_engine_service = MetaStatisticsEngineService()
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -429,6 +511,30 @@ if QWidget is not None:
             self._analysis_plan_label = QLabel("分析计划草稿和候选效应量会显示在这里。")
             self._analysis_plan_label.setWordWrap(True)
             root.addWidget(self._analysis_plan_label)
+
+            stats_title = QLabel("Meta Statistics Engine v2（需已确认分析计划）")
+            stats_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(stats_title)
+            stats_hint = QLabel("运行统计分析只读取 confirmed_analysis_plan.v1；输出 testing-level standardized result，不推进 PRISMA，不生成医学结论。")
+            stats_hint.setWordWrap(True)
+            root.addWidget(stats_hint)
+            stats_buttons = QHBoxLayout()
+            run_stats_button = QPushButton("运行统计分析")
+            run_stats_button.clicked.connect(self._run_statistics_v2)
+            view_plan_button = QPushButton("查看分析计划")
+            view_plan_button.clicked.connect(self._view_confirmed_analysis_plan)
+            view_validation_button = QPushButton("查看输入校验")
+            view_validation_button.clicked.connect(self._view_statistics_validation)
+            view_result_button = QPushButton("查看统计结果")
+            view_result_button.clicked.connect(self._view_statistics_result)
+            stats_buttons.addWidget(run_stats_button)
+            stats_buttons.addWidget(view_plan_button)
+            stats_buttons.addWidget(view_validation_button)
+            stats_buttons.addWidget(view_result_button)
+            root.addLayout(stats_buttons)
+            self._statistics_engine_label = QLabel("请先确认分析计划。")
+            self._statistics_engine_label.setWordWrap(True)
+            root.addWidget(self._statistics_engine_label)
 
             dataset_title = QLabel("Analysis-ready Dataset（测试中）")
             dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
@@ -583,6 +689,59 @@ if QWidget is not None:
             except Exception as exc:
                 self._analysis_plan_label.setText("没有确认分析计划。")
                 self._error_label.setText(f"分析计划确认失败：{exc}")
+
+        def _run_statistics_v2(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                result = self._statistics_engine_service.run_statistics(project_dir, actor="reviewer")
+                output = result.standardized_result
+                self._statistics_engine_label.setText(
+                    f"Run ID：{result.analysis_run_id}\n"
+                    f"Result ID：{result.result_id}\n"
+                    f"Effect measure：{output.get('effect_measure', '')}\n"
+                    f"Model：{output.get('model', '')}\n"
+                    f"Pooled effect：{output.get('pooled_effect', '')}\n"
+                    f"95% CI：{output.get('ci_low', '')} - {output.get('ci_high', '')}\n"
+                    f"I²：{output.get('i_squared', '')}\n"
+                    f"输出：{result.result_path}\n"
+                    "testing-level；未生成医学结论。"
+                )
+                self._error_label.setText("")
+            except Exception as exc:
+                self._statistics_engine_label.setText("请先确认分析计划。")
+                self._error_label.setText(f"统计分析未运行：{exc}")
+
+        def _view_confirmed_analysis_plan(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            path = project_dir / "analysis" / "analysis_plan_confirmed_v1.json"
+            payload = _load_json(path)
+            self._statistics_engine_label.setText(
+                f"Confirmed plan：{path}\n"
+                f"Plan ID：{payload.get('confirmed_analysis_plan_id', '')}\n"
+                f"Effect measure：{payload.get('confirmed_effect_measure', '')}\n"
+                f"Model：{payload.get('confirmed_model', '')}\n"
+                f"Locked：{payload.get('locked_for_analysis_run', False)}"
+            )
+
+        def _view_statistics_validation(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            state = meta_statistics_engine_state_from_project(project_dir, service=self._statistics_engine_service)
+            self._statistics_engine_label.setText(
+                f"Input validation：{state.input_validation_status or 'not_started'}\n"
+                f"Warnings：{', '.join(state.warnings) or '无'}\n"
+                f"Manifest：{state.manifest_path}"
+            )
+
+        def _view_statistics_result(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            state = meta_statistics_engine_state_from_project(project_dir, service=self._statistics_engine_service)
+            result = self._statistics_engine_service.load_standardized_result(project_dir, state.latest_run_id) if state.latest_run_id else {}
+            self._statistics_engine_label.setText(
+                f"Result：{state.result_path or 'not_started'}\n"
+                f"Status：{state.result_status}\n"
+                f"Pooled effect：{result.get('pooled_effect', '')}\n"
+                f"Testing：{result.get('testing_level_notice', '')}"
+            )
 
         def _build_dataset(self) -> None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
