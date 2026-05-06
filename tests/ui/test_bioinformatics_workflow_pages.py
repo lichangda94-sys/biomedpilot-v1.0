@@ -484,7 +484,7 @@ def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_
     widget._text_summary_service = _FakeSummaryService()
     candidate = widget._gse_geo_detail_panel.current_candidate()
     assert candidate is not None
-    assert "推荐等级" in widget._gse_geo_detail_panel._profile_text.toPlainText()
+    assert "分析潜力" in widget._gse_geo_detail_panel._profile_text.toPlainText()
     payload = widget._generate_gse_geo_summary(candidate)
 
     assert payload is not None

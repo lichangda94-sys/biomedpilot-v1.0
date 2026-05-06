@@ -16,9 +16,13 @@ from .geo_page_profile_service import (
     GeoCandidateComparison,
     GeoDatasetProfile,
     GeoDatasetProfileService,
+    GeoMetadataProfile,
+    GeoMetadataProfileService,
+    GeoSampleGroupAssignment,
     GeoSampleRecord,
     GeoSupplementaryFile,
     build_geo_dataset_profile,
+    build_geo_metadata_profile,
 )
 
 __all__ = [
@@ -33,6 +37,9 @@ __all__ = [
     "GeoCandidateComparison",
     "GeoDatasetProfile",
     "GeoDatasetProfileService",
+    "GeoMetadataProfile",
+    "GeoMetadataProfileService",
+    "GeoSampleGroupAssignment",
     "GeoSampleRecord",
     "GeoSupplementaryFile",
     "HttpsGeoFamilySoftDownloader",
@@ -40,4 +47,5 @@ __all__ = [
     "HttpsGeoRemoteAssetDownloader",
     "LegacyGeoFamilySoftDownloader",
     "build_geo_dataset_profile",
+    "build_geo_metadata_profile",
 ]

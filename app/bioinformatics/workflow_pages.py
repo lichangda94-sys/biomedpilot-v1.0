@@ -1650,7 +1650,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             copy_source="geo",
             search_text="检索 GEO/GSE 候选数据集",
             search_callback=self.search_geo_candidates,
-            candidate_headers=["操作", "GSE 编号", "标题", "样本数", "数据类型/平台", "匹配度", "资产状态"],
+            candidate_headers=["操作", "GSE 编号", "标题", "样本数", "数据类型/平台", "分析潜力", "资产状态"],
             selected_empty="尚未选择 GEO/GSE 数据源。",
         )
         self._tcga_tab_page = self._build_database_tab(
@@ -1939,7 +1939,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     item.display_title,
                     item.sample_count,
                     _candidate_modality_label(item),
-                    _candidate_recommendation(item),
+                    _geo_candidate_potential_text(self._project_root, item),
                     self._candidate_registration_status(item),
                 ]
                 for item in candidates
@@ -5353,7 +5353,7 @@ def _geo_detail_basic_rows(candidate: UnifiedDatasetCandidate) -> list[list[obje
         ["平台 GPL", platforms],
         ["数据类型", candidate.data_modality or "待确认"],
         ["匹配原因", _candidate_match_reason(candidate)],
-        ["推荐等级", _candidate_recommendation(candidate)],
+        ["分析潜力", _geo_candidate_potential_text(None, candidate)],
         ["GEO 链接", metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={candidate.accession_or_project}"],
     ]
 
@@ -5371,6 +5371,18 @@ def _geo_detail_english_text(candidate: UnifiedDatasetCandidate) -> str:
         f"PMID/DOI/GEO link：{metadata.get('pmid') or metadata.get('doi') or metadata.get('geo_url') or '未记录'}",
     ]
     return "\n".join(lines)
+
+
+def _geo_candidate_potential_text(project_root: Path | None, candidate: UnifiedDatasetCandidate) -> str:
+    try:
+        profile = _build_geo_detail_profile(project_root, candidate, None)
+    except Exception:
+        return _candidate_recommendation(candidate)
+    summary = profile.sample_structure_preview.get("sample_types") if isinstance(profile.sample_structure_preview, dict) else {}
+    if isinstance(summary, dict) and summary:
+        groups = " / ".join(f"{key} {value}" for key, value in summary.items())
+        return f"{profile.analysis_potential_level} · {groups}"
+    return profile.analysis_potential_level
 
 
 def _build_geo_detail_profile(
@@ -5415,22 +5427,36 @@ def _geo_recognition_report_for_accession(project_root: Path | None, accession: 
 
 def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
     lines = [
-        f"推荐等级：{profile.recommendation_level}",
-        f"原因：{profile.recommendation_reason or '页面信息不足，需人工判断。'}",
+        f"分析潜力：{profile.analysis_potential_level}",
+        f"判断依据：{profile.analysis_potential_reason or '结构化元数据不足，需人工判断。'}",
     ]
     preview = profile.sample_structure_preview
-    sample_count = preview.get("sample_count") or profile.sample_count or "待确认"
+    geo_count = preview.get("geo_sample_count") or profile.geo_sample_count or "待确认"
+    metadata_count = preview.get("metadata_sample_count") or profile.metadata_sample_count or 0
+    if profile.analysis_availability_status:
+        lines.append(
+            "样本数："
+            f"GEO {geo_count}；元数据 {metadata_count}；表达矩阵 {profile.expression_sample_count}；匹配 {profile.matched_sample_count}。"
+        )
+        lines.append(f"下载后可用性：{profile.analysis_availability_status}")
+    else:
+        lines.append(f"样本数：GEO {geo_count}；元数据 {metadata_count}。")
     sample_types = preview.get("sample_types") if isinstance(preview, dict) else {}
     if isinstance(sample_types, dict) and sample_types:
         group_text = "，".join(f"{key} {value} 个" for key, value in sample_types.items())
-        lines.append(f"样本结构预览：检测到 {sample_count} 个样本，可能包括 {group_text}。")
+        lines.append(f"样本结构预览：可能包括 {group_text}。")
     else:
-        lines.append(f"样本结构预览：检测到 {sample_count} 个样本，尚未识别明确分组。")
+        lines.append("样本结构预览：尚未识别明确分组。")
     if profile.candidate_comparisons:
         lines.append("候选比较组：")
         for comparison in profile.candidate_comparisons[:3]:
             groups = "，".join(f"{key}：{value} 个样本" for key, value in comparison.group_sizes.items())
             lines.append(f"- {comparison.label}（{groups}；置信度：{_confidence_zh(comparison.confidence)}；需用户确认）")
+            for assignment in comparison.sample_assignments[:5]:
+                lines.append(
+                    f"  · {assignment.sample_accession} → {assignment.assigned_group}"
+                    f"（证据：{assignment.evidence_field} = {assignment.evidence_text[:80]}）"
+                )
     else:
         lines.append("候选比较组：未识别到明确候选比较组。")
     if profile.suggested_download_files:
@@ -5439,6 +5465,11 @@ def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
         lines.append("建议下载文件：" + "；".join(profile.possible_expression_files[:5]))
     else:
         lines.append("建议下载文件：尚未发现明确表达矩阵文件，建议先下载/查看元数据。")
+    if profile.supplementary_file_preview:
+        lines.append("补充文件预览：")
+        for item in profile.supplementary_file_preview[:5]:
+            size = _format_file_size(item.file_size) if item.file_size else "大小未知"
+            lines.append(f"- {item.file_name}：{item.predicted_type}；风险：{item.risk_level}；{size}；{item.recommendation}")
     if profile.chinese_brief:
         lines.append(f"中文提炼：{profile.chinese_brief}")
     if profile.consistency_review.get("status") == "needs_review":
@@ -5455,6 +5486,20 @@ def _confidence_zh(value: str) -> str:
     return {"high": "高", "medium": "中", "low": "低"}.get(str(value), str(value) or "待确认")
 
 
+def _format_file_size(size: object) -> str:
+    try:
+        value = int(size)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return "大小未知"
+    if value >= 1024 * 1024 * 1024:
+        return f"{value / (1024 * 1024 * 1024):.1f} GB"
+    if value >= 1024 * 1024:
+        return f"{value / (1024 * 1024):.1f} MB"
+    if value >= 1024:
+        return f"{value / 1024:.1f} KB"
+    return f"{value} B"
+
+
 def _slug_text(value: object) -> str:
     return re.sub(r"_+", "_", "".join(character.lower() if character.isalnum() else "_" for character in str(value))).strip("_") or "comparison"
 
@@ -5467,6 +5512,30 @@ def _comparison_config_text_from_geo_profile(profile: GeoDatasetProfile) -> str:
     case = comparison.case_group or "case"
     control = comparison.control_group or "control"
     return f"comparison_id\tgroup_column\tcase_group\tcontrol_group\n{_slug_text(comparison.label)}\t{field}\t{case}\t{control}\n"
+
+
+def _geo_comparison_confirmation_prompt(profile: GeoDatasetProfile) -> str:
+    if not profile.candidate_comparisons:
+        return "请手动填写比较组设置。"
+    comparison = profile.candidate_comparisons[0]
+    lines = [
+        "请确认候选分组是否符合研究设计。确认后才会写入正式比较组设置。",
+        "",
+        f"候选比较组：{comparison.label}",
+        f"control group：{comparison.control_group}",
+        f"case group：{comparison.case_group}",
+        "每组样本数：" + "，".join(f"{key} {value}" for key, value in comparison.group_sizes.items()),
+        "样本分配证据：",
+    ]
+    for assignment in comparison.sample_assignments[:12]:
+        lines.append(
+            f"- {assignment.sample_accession}: {assignment.assigned_group}; "
+            f"{assignment.evidence_field} = {assignment.evidence_text[:120]}"
+        )
+    if len(comparison.sample_assignments) > 12:
+        lines.append(f"- 其余 {len(comparison.sample_assignments) - 12} 个样本略。")
+    lines.extend(["", "可编辑下方 TSV；如需调整样本，请使用手动设置比较组。"])
+    return "\n".join(lines)
 
 
 def _save_geo_profile_comparison_with_confirmation(
@@ -5487,7 +5556,7 @@ def _save_geo_profile_comparison_with_confirmation(
         text, ok = QInputDialog.getMultiLineText(
             parent,
             "确认比较组",
-            "请确认候选分组是否符合研究设计。确认后才会写入正式比较组设置。",
+            _geo_comparison_confirmation_prompt(profile),
             text,
         )
         if not ok:

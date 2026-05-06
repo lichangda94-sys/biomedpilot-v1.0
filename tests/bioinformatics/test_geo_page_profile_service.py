@@ -4,7 +4,10 @@ import gzip
 import json
 from pathlib import Path
 
-from app.bioinformatics.download.geo_page_profile_service import GeoDatasetProfileService
+from app.bioinformatics.services.geo_metadata_profile_service import GeoMetadataProfileService
+
+
+GeoDatasetProfileService = GeoMetadataProfileService
 
 
 def test_geo_profile_detects_tumor_normal_from_summary_and_design(tmp_path: Path) -> None:
@@ -21,13 +24,17 @@ def test_geo_profile_detects_tumor_normal_from_summary_and_design(tmp_path: Path
         asset_manifest=_manifest("GSE1000", expression_file=True),
     )
 
-    assert profile.recommendation_level == "高"
+    assert profile.analysis_potential_level in {"低", "中"}
     assert profile.candidate_comparisons
     comparison = profile.candidate_comparisons[0]
     assert comparison.label == "tumor vs normal"
     assert comparison.requires_user_confirmation is True
+    assert comparison.confidence == "low"
+    assert comparison.sample_assignments == ()
+    assert "summary/overall design" in " ".join(comparison.evidence)
     assert profile.sample_structure_preview["sample_types"] == {"normal": 10, "tumor": 10}
     assert profile.suggested_download_files
+    assert profile.analysis_availability_status == ""
 
 
 def test_geo_profile_detects_treated_control_from_sample_titles(tmp_path: Path) -> None:
@@ -46,9 +53,17 @@ def test_geo_profile_detects_treated_control_from_sample_titles(tmp_path: Path) 
     profile = GeoDatasetProfileService().build_profile(accession="GSE1001", family_soft_path=source)
 
     assert profile.sample_count == 4
+    assert profile.geo_sample_count == 4
+    assert profile.metadata_sample_count == 4
+    assert profile.metadata_source == "family_soft"
     assert profile.candidate_comparisons[0].label == "treated vs control"
     assert profile.candidate_comparisons[0].group_sizes == {"control": 2, "treated": 2}
     assert profile.candidate_comparisons[0].confidence == "high"
+    first_assignment = profile.candidate_comparisons[0].sample_assignments[0]
+    assert first_assignment.sample_accession == "GSM1"
+    assert first_assignment.assigned_group == "control"
+    assert first_assignment.evidence_field == "treatment"
+    assert first_assignment.evidence_text == "treatment: control"
 
 
 def test_geo_profile_detects_resistant_sensitive_from_characteristics(tmp_path: Path) -> None:
@@ -91,6 +106,7 @@ def test_geo_profile_keeps_multiple_candidate_comparisons_preview_only(tmp_path:
     profile = GeoDatasetProfileService().build_profile(accession="GSE1003", series_matrix_path=source)
 
     assert len(profile.candidate_comparisons) >= 2
+    assert {item.comparison_id.split(":", 1)[0] for item in profile.candidate_comparisons} >= {"tissue", "genotype"}
     assert all(item.requires_user_confirmation for item in profile.candidate_comparisons)
     assert not (tmp_path / "manifests" / "manual_supplements" / "comparison_config.tsv").exists()
 
@@ -114,6 +130,9 @@ def test_geo_profile_uses_chinese_summary_and_checks_consistency(tmp_path: Path)
     recognition = {
         "group_preview": {
             "sample_count": 8,
+            "expression_sample_count": 8,
+            "metadata_sample_count": 8,
+            "sample_id_match_status": "matched",
             "group_sizes": {"control": 4, "treated": 4},
         },
         "files": [
@@ -142,6 +161,73 @@ def test_geo_profile_uses_chinese_summary_and_checks_consistency(tmp_path: Path)
     assert profile.chinese_brief == "比较肿瘤和正常样本。"
     assert profile.consistency_review["status"] == "needs_review"
     assert any("不完全一致" in warning for warning in profile.warnings)
+
+
+def test_geo_profile_reports_downloaded_availability_after_recognition() -> None:
+    recognition = {
+        "group_preview": {
+            "status": "preview_only",
+            "expression_sample_count": 4,
+            "metadata_sample_count": 4,
+            "sample_id_match_status": "matched",
+        },
+        "files": [
+            {
+                "recognized_type": "geo_series_matrix_container",
+                "recognized_roles": ["expression_matrix", "sample_metadata"],
+                "content_profile": {"sample_columns": ["GSM1", "GSM2", "GSM3", "GSM4"]},
+            }
+        ],
+    }
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE1006",
+        candidate_metadata={
+            "title_en": "bulk expression",
+            "summary_en": "tumor and normal expression",
+            "data_type": "microarray expression profiling",
+            "sample_count": 4,
+        },
+        recognition_report=recognition,
+    )
+
+    assert profile.expression_sample_count == 4
+    assert profile.analysis_availability_status in {"需要确认比较组", "暂不建议"}
+    assert "可运行" not in profile.analysis_potential_level
+
+
+def test_geo_profile_supplementary_preview_flags_large_raw_file() -> None:
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE1007",
+        asset_manifest={
+            "assets": [
+                {
+                    "asset_type": "supplementary_file",
+                    "role": "raw_data_candidate",
+                    "file_name": "GSE1007_RAW.tar",
+                    "remote_url": "https://example.test/GSE1007_RAW.tar",
+                    "status": "remote_discovered",
+                    "size_bytes": 900 * 1024 * 1024,
+                }
+            ],
+            "summary": {},
+        },
+    )
+
+    preview = profile.supplementary_file_preview[0]
+    assert preview.predicted_type == "raw_data"
+    assert preview.risk_level == "高"
+    assert "确认后下载" in preview.recommendation
+
+
+def test_geo_profile_chinese_brief_does_not_create_groups() -> None:
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE1008",
+        candidate_metadata={"title_en": "unstructured dataset", "sample_count": 6},
+        summary_payload={"brief_zh": "该数据集比较肿瘤和正常样本。"},
+    )
+
+    assert not profile.candidate_comparisons
+    assert profile.sample_structure_preview["status"] == "no_group_detected"
 
 
 def _write_family_soft(path: Path, *, title: str, samples: list[tuple[str, str, str, list[str]]]) -> None:
