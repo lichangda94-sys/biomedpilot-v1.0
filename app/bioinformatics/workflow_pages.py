@@ -62,7 +62,7 @@ from app.bioinformatics.project_workspace_binding import (
     register_acquisition,
 )
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
-from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
+from app.bioinformatics.download import DatasetDownloadService, GeoDatasetProfile, GeoDatasetProfileService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import load_result_index, write_result_index
 from app.bioinformatics.search_center import (
@@ -144,6 +144,8 @@ class GeoDatasetDetailPanel(QFrame):
     download_assets_requested = Signal(object)
     translate_requested = Signal(object)
     brief_requested = Signal(object)
+    confirm_comparison_requested = Signal(object)
+    manual_comparison_requested = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -185,6 +187,20 @@ class GeoDatasetDetailPanel(QFrame):
         self._translation_text.setPlainText("尚未生成中文翻译。")
         layout.addWidget(self._translation_text)
 
+        layout.addWidget(_muted("样本结构与下载建议"))
+        self._profile_text = _text_preview(150)
+        self._profile_text.setObjectName("geoDatasetProfileSummary")
+        layout.addWidget(self._profile_text)
+        comparison_actions = QHBoxLayout()
+        self._confirm_comparison_button = _button("使用该分组创建比较组", "secondaryButton", lambda: self._emit_confirm_comparison())
+        self._manual_comparison_button = _button("手动设置比较组", "secondaryButton", lambda: self._emit_manual_comparison())
+        self._confirm_comparison_button.setEnabled(False)
+        self._manual_comparison_button.setEnabled(False)
+        comparison_actions.addWidget(self._confirm_comparison_button)
+        comparison_actions.addWidget(self._manual_comparison_button)
+        comparison_actions.addStretch(1)
+        layout.addLayout(comparison_actions)
+
         layout.addWidget(_muted("数据资产状态"))
         self._asset_text = _text_preview(120)
         self._asset_text.setObjectName("geoDatasetAssetStatus")
@@ -220,6 +236,10 @@ class GeoDatasetDetailPanel(QFrame):
         self._title.setText(f"{candidate.accession_or_project} · {candidate.display_title or 'GEO 数据集'}")
         _fill_table(self._basic_table, _geo_detail_basic_rows(candidate))
         self._english_text.setPlainText(_geo_detail_english_text(candidate))
+        profile = _build_geo_detail_profile(project_root, candidate, summary_payload)
+        self._profile_text.setPlainText(_geo_profile_user_display(profile))
+        self._confirm_comparison_button.setEnabled(bool(profile.candidate_comparisons and project_root is not None))
+        self._manual_comparison_button.setEnabled(project_root is not None)
         self._asset_text.setPlainText(_geo_asset_detail_text(project_root, candidate.accession_or_project))
         self.set_saved(saved)
         self.set_pending_assets(saved and _candidate_has_pending_geo_assets(project_root, candidate.accession_or_project))
@@ -267,6 +287,14 @@ class GeoDatasetDetailPanel(QFrame):
     def _emit_brief(self) -> None:
         if self._candidate is not None:
             self.brief_requested.emit(self._candidate)
+
+    def _emit_confirm_comparison(self) -> None:
+        if self._candidate is not None:
+            self.confirm_comparison_requested.emit(self._candidate)
+
+    def _emit_manual_comparison(self) -> None:
+        if self._candidate is not None:
+            self.manual_comparison_requested.emit(self._candidate)
 
 
 class GeoDownloadListPanel(QFrame):
@@ -748,6 +776,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_geo_detail_panel.remove_requested.connect(self._remove_gse_geo_candidate)
         self._gse_geo_detail_panel.translate_requested.connect(self._generate_gse_geo_summary)
         self._gse_geo_detail_panel.brief_requested.connect(self._generate_gse_geo_summary)
+        self._gse_geo_detail_panel.confirm_comparison_requested.connect(self._confirm_gse_geo_profile_comparison)
+        self._gse_geo_detail_panel.manual_comparison_requested.connect(self._manual_gse_geo_profile_comparison)
         layout.addWidget(self._gse_geo_detail_panel)
         layout.addWidget(self._source_summary_frame("geo_gse", "尚未检索 GSE 数据集。", detail_button_text="查看检索详情"))
         return card
@@ -1009,6 +1039,38 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_geo_detail_panel.render_summary(candidate, payload)
         self._set_status("已生成中文翻译与一句话简介。" if summary.status == "completed" else "中文简介需人工确认。")
         return payload
+
+    def _confirm_gse_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
+        ok, message = _save_geo_profile_comparison_with_confirmation(
+            self,
+            self._project_root,
+            candidate,
+            self._geo_brief_cache.get(candidate.accession_or_project),
+        )
+        self._set_status(message, error=not ok)
+        self._show_gse_geo_detail(candidate)
+        return ok
+
+    def _manual_gse_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
+        text, ok = QInputDialog.getMultiLineText(
+            self,
+            "手动设置比较组",
+            "请按 TSV 格式输入比较组；保存后才会作为正式比较组设置。",
+            _template_text_for_missing_input("comparison_config"),
+        )
+        if not ok:
+            self._set_status("已取消手动设置比较组。")
+            return False
+        saved, message = _save_geo_profile_comparison_with_confirmation(
+            self,
+            self._project_root,
+            candidate,
+            self._geo_brief_cache.get(candidate.accession_or_project),
+            manual_text=text,
+        )
+        self._set_status(message, error=not saved)
+        self._show_gse_geo_detail(candidate)
+        return saved
 
     def _download_gse_geo_metadata(self, accession: str) -> object | None:
         candidate = self._geo_candidates.get(accession) or _geo_candidate_from_download_entry(self._project_root, accession)
@@ -1508,6 +1570,38 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status("中文简介需人工确认。")
         return payload
 
+    def _confirm_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
+        ok, message = _save_geo_profile_comparison_with_confirmation(
+            self,
+            self._project_root,
+            candidate,
+            self._geo_brief_cache.get(candidate.accession_or_project),
+        )
+        self._set_status(message, error=not ok)
+        self._show_geo_candidate_detail(candidate)
+        return ok
+
+    def _manual_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
+        text, ok = QInputDialog.getMultiLineText(
+            self,
+            "手动设置比较组",
+            "请按 TSV 格式输入比较组；保存后才会作为正式比较组设置。",
+            _template_text_for_missing_input("comparison_config"),
+        )
+        if not ok:
+            self._set_status("已取消手动设置比较组。")
+            return False
+        saved, message = _save_geo_profile_comparison_with_confirmation(
+            self,
+            self._project_root,
+            candidate,
+            self._geo_brief_cache.get(candidate.accession_or_project),
+            manual_text=text,
+        )
+        self._set_status(message, error=not saved)
+        self._show_geo_candidate_detail(candidate)
+        return saved
+
     def continue_to_recognition(self) -> None:
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
@@ -1715,6 +1809,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_dataset_detail_panel.download_assets_requested.connect(lambda candidate: self.download_geo_supplementary_assets(candidate.accession_or_project))
             self._geo_dataset_detail_panel.translate_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
             self._geo_dataset_detail_panel.brief_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
+            self._geo_dataset_detail_panel.confirm_comparison_requested.connect(self._confirm_geo_profile_comparison)
+            self._geo_dataset_detail_panel.manual_comparison_requested.connect(self._manual_geo_profile_comparison)
             layout.addWidget(self._geo_dataset_detail_panel)
             self._geo_download_list_panel = GeoDownloadListPanel(title="已选 GEO 数据集", geo_only=True)
             self._geo_download_list_panel.view_requested.connect(self._show_geo_detail_by_accession)
@@ -5275,6 +5371,147 @@ def _geo_detail_english_text(candidate: UnifiedDatasetCandidate) -> str:
         f"PMID/DOI/GEO link：{metadata.get('pmid') or metadata.get('doi') or metadata.get('geo_url') or '未记录'}",
     ]
     return "\n".join(lines)
+
+
+def _build_geo_detail_profile(
+    project_root: Path | None,
+    candidate: UnifiedDatasetCandidate,
+    summary_payload: dict[str, object] | None = None,
+) -> GeoDatasetProfile:
+    recognition_report = _geo_recognition_report_for_accession(project_root, candidate.accession_or_project)
+    return GeoDatasetProfileService().build_profile(
+        accession=candidate.accession_or_project,
+        candidate_metadata={
+            **dict(candidate.source_specific_metadata),
+            "display_title": candidate.display_title,
+            "organism": candidate.organism,
+            "data_type": candidate.data_modality,
+            "sample_count": candidate.sample_count,
+        },
+        project_root=project_root,
+        summary_payload=dict(summary_payload or {}),
+        recognition_report=recognition_report,
+    )
+
+
+def _geo_recognition_report_for_accession(project_root: Path | None, accession: str) -> dict[str, object] | None:
+    if project_root is None:
+        return None
+    report = load_recognition_report(project_root)
+    if not isinstance(report, dict):
+        return None
+    accession_key = str(accession or "").upper()
+    files = report.get("files")
+    if not isinstance(files, list) or not files:
+        return None
+    for record in files:
+        if not isinstance(record, dict):
+            continue
+        path_text = " ".join(str(record.get(key) or "") for key in ("original_path", "route_path", "file_name")).upper()
+        if accession_key and accession_key in path_text:
+            return report
+    return None
+
+
+def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
+    lines = [
+        f"推荐等级：{profile.recommendation_level}",
+        f"原因：{profile.recommendation_reason or '页面信息不足，需人工判断。'}",
+    ]
+    preview = profile.sample_structure_preview
+    sample_count = preview.get("sample_count") or profile.sample_count or "待确认"
+    sample_types = preview.get("sample_types") if isinstance(preview, dict) else {}
+    if isinstance(sample_types, dict) and sample_types:
+        group_text = "，".join(f"{key} {value} 个" for key, value in sample_types.items())
+        lines.append(f"样本结构预览：检测到 {sample_count} 个样本，可能包括 {group_text}。")
+    else:
+        lines.append(f"样本结构预览：检测到 {sample_count} 个样本，尚未识别明确分组。")
+    if profile.candidate_comparisons:
+        lines.append("候选比较组：")
+        for comparison in profile.candidate_comparisons[:3]:
+            groups = "，".join(f"{key}：{value} 个样本" for key, value in comparison.group_sizes.items())
+            lines.append(f"- {comparison.label}（{groups}；置信度：{_confidence_zh(comparison.confidence)}；需用户确认）")
+    else:
+        lines.append("候选比较组：未识别到明确候选比较组。")
+    if profile.suggested_download_files:
+        lines.append("建议下载文件：" + "；".join(profile.suggested_download_files[:5]))
+    elif profile.possible_expression_files:
+        lines.append("建议下载文件：" + "；".join(profile.possible_expression_files[:5]))
+    else:
+        lines.append("建议下载文件：尚未发现明确表达矩阵文件，建议先下载/查看元数据。")
+    if profile.chinese_brief:
+        lines.append(f"中文提炼：{profile.chinese_brief}")
+    if profile.consistency_review.get("status") == "needs_review":
+        lines.append("复核提示：GEO 页面描述与下载文件识别结果不完全一致，请人工确认比较组。")
+    elif profile.consistency_review.get("status") == "consistent":
+        lines.append("页面与文件识别：当前未发现明显冲突。")
+    warnings = [warning for warning in profile.warnings if warning]
+    if warnings:
+        lines.append("提示：" + "；".join(warnings[:3]))
+    return "\n".join(lines)
+
+
+def _confidence_zh(value: str) -> str:
+    return {"high": "高", "medium": "中", "low": "低"}.get(str(value), str(value) or "待确认")
+
+
+def _slug_text(value: object) -> str:
+    return re.sub(r"_+", "_", "".join(character.lower() if character.isalnum() else "_" for character in str(value))).strip("_") or "comparison"
+
+
+def _comparison_config_text_from_geo_profile(profile: GeoDatasetProfile) -> str:
+    if not profile.candidate_comparisons:
+        return _template_text_for_missing_input("comparison_config")
+    comparison = profile.candidate_comparisons[0]
+    field = comparison.comparison_id.split(":", 1)[0] or "group"
+    case = comparison.case_group or "case"
+    control = comparison.control_group or "control"
+    return f"comparison_id\tgroup_column\tcase_group\tcontrol_group\n{_slug_text(comparison.label)}\t{field}\t{case}\t{control}\n"
+
+
+def _save_geo_profile_comparison_with_confirmation(
+    parent: QWidget,
+    project_root: Path | None,
+    candidate: UnifiedDatasetCandidate,
+    summary_payload: dict[str, object] | None,
+    *,
+    manual_text: str | None = None,
+) -> tuple[bool, str]:
+    if project_root is None:
+        return False, "请先创建或打开生信分析项目。"
+    profile = _build_geo_detail_profile(project_root, candidate, summary_payload)
+    if manual_text is None and not profile.candidate_comparisons:
+        return False, "该 GEO 数据集尚未检测到可确认的候选分组，请手动设置比较组。"
+    text = manual_text or _comparison_config_text_from_geo_profile(profile)
+    if manual_text is None:
+        text, ok = QInputDialog.getMultiLineText(
+            parent,
+            "确认比较组",
+            "请确认候选分组是否符合研究设计。确认后才会写入正式比较组设置。",
+            text,
+        )
+        if not ok:
+            return False, "已取消确认比较组。"
+    _save_manual_supplement(project_root, "comparison_config", text)
+    _append_geo_profile_confirmation_audit(project_root, profile, text)
+    run_project_recognition(project_root)
+    run_project_readiness(project_root)
+    return True, "已确认候选分组为正式比较组。"
+
+
+def _append_geo_profile_confirmation_audit(project_root: Path, profile: GeoDatasetProfile, comparison_text: str) -> Path:
+    path = project_root / "logs" / "readiness" / "comparison_group_confirmation_log.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "created_at": _utc_now_iso(),
+        "action": "confirm_geo_page_profile_comparison",
+        "accession": profile.accession,
+        "candidate_comparisons": [item.to_dict() for item in profile.candidate_comparisons],
+        "comparison_text": comparison_text,
+    }
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+    return path
 
 
 def _geo_asset_detail_text(project_root: Path | None, accession: str) -> str:

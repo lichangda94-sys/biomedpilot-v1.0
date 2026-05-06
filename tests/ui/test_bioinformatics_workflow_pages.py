@@ -100,6 +100,9 @@ def _geo_candidate(*, query_used: str = '("glioma" OR "glioblastoma") AND "RNA-s
         warnings=(),
         source_specific_metadata={
             "match_reason": "title contains glioma",
+            "title_en": "Glioma RNA-seq expression profile",
+            "summary_en": "Expression profiling of glioma tumor and normal brain control samples.",
+            "overall_design_en": "Tumor versus normal control samples were analyzed.",
             "platform_accessions": ["GPL11154"],
             "geo_url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE33630",
             "query_used": query_used,
@@ -481,6 +484,7 @@ def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_
     widget._text_summary_service = _FakeSummaryService()
     candidate = widget._gse_geo_detail_panel.current_candidate()
     assert candidate is not None
+    assert "推荐等级" in widget._gse_geo_detail_panel._profile_text.toPlainText()
     payload = widget._generate_gse_geo_summary(candidate)
 
     assert payload is not None
@@ -770,6 +774,10 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     assert "GSE33630" in widget._geo_dataset_detail_panel._title.text()
     assert widget._geo_dataset_detail_panel._save_button.text() == "添加到项目"
     assert widget._geo_dataset_detail_panel._translation_text.toPlainText() == "尚未生成中文翻译。"
+    profile_text = widget._geo_dataset_detail_panel._profile_text.toPlainText()
+    assert "样本结构预览" in profile_text
+    assert "候选比较组" in profile_text
+    assert "需用户确认" in profile_text
 
 
 def test_register_geo_requires_open_project(qt_app) -> None:
@@ -878,6 +886,8 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     widget._show_candidate_detail(candidate)
     assert "元数据已下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
     assert "表达矩阵：待下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
+    assert "建议下载文件" in widget._geo_dataset_detail_panel._profile_text.toPlainText()
+    assert "GSE33630_counts.tsv.gz" in widget._geo_dataset_detail_panel._profile_text.toPlainText()
     assert not widget._geo_dataset_detail_panel._download_assets_button.isHidden()
     assert widget._geo_dataset_detail_panel._download_assets_button.isEnabled()
     assert widget._geo_download_list_panel._table.item(0, 3).text() == "元数据已下载"
