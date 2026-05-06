@@ -136,6 +136,9 @@ if QWidget is not None:
         def show_chinese_search(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._chinese_search_page.refresh_project(self._current_project)
+            pending_query = self._data_source_page.pending_chinese_query()
+            if pending_query:
+                self._chinese_search_page.set_query_text(pending_query)
             self._stack.setCurrentWidget(self._chinese_search_page)
 
         def show_recognition(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:

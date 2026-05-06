@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget
+    from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -282,8 +282,13 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
 
 def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
-    card_titles = [label.text() for label in widget.findChildren(QLabel, "bioProjectCardTitle") if label.text() not in {"GEO 数据集详情", "GEO 下载列表"}]
+    card_titles = [
+        label.text()
+        for label in widget.findChildren(QLabel, "bioProjectCardTitle")
+        if label.text() not in {"GEO 数据集详情", "待处理数据集", "历史缓存数据", "数据详情"}
+    ]
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    inputs = widget.findChildren(workflow_pages.QLineEdit)
 
     assert "本地数据导入" in card_titles
     assert "GSE 编号检索" in card_titles
@@ -296,9 +301,11 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究问题检索"]
     assert "选择本地数据" in button_texts
     assert "选择本地文件夹" in button_texts
-    assert "进入中文检索" in button_texts
+    assert "进入检索界面" in button_texts
+    assert any(input_box.placeholderText() == "请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据" for input_box in inputs)
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
+    assert "登记为数据源" not in button_texts
 
 
 def test_data_source_registers_local_reference_strategy(qt_app, project_summary, tmp_path: Path) -> None:
@@ -334,15 +341,15 @@ def test_data_source_shows_local_file_source_summary_and_copy_open(qt_app, proje
 
     text = widget.source_summary_text("local_import")
     assert summary is not None
-    assert progress_messages == ["正在登记本地数据，请稍候。"]
-    assert text == "已登记本地数据：expression_matrix.csv"
+    assert progress_messages == ["正在添加本地数据，请稍候。"]
+    assert text == "已选择本地数据：expression_matrix.csv"
     assert str(source.resolve()) not in text
     assert "数据获取计划" not in text
-    assert "数据登记记录" not in text
+    assert "数据记录" not in text
     detail = widget.source_summary_tooltip("local_import")
     assert str(source.resolve()) in detail
     assert "引用原始位置" in detail
-    assert "数据登记记录：已生成" in detail
+    assert "数据记录：已生成" in detail
     assert widget.copy_selected_source_path("local_import") is True
     assert QApplication.clipboard().text() == str(source.resolve())
     assert widget.open_selected_source_location("local_import") is True
@@ -357,7 +364,7 @@ def test_data_source_copy_strategy_displays_chinese_policy(qt_app, project_summa
 
     widget.register_local_paths([source], strategy="copy", selected_kind="file", summary_key="local_import")
 
-    assert widget.source_summary_text("local_import") == "已登记本地数据：copy_expression.csv"
+    assert widget.source_summary_text("local_import") == "已选择本地数据：copy_expression.csv"
     assert "已复制到项目文件夹" in widget.source_summary_tooltip("local_import")
 
 
@@ -370,7 +377,7 @@ def test_data_source_shows_local_folder_source_summary(qt_app, project_summary, 
     widget.register_local_paths([folder], strategy="reference", selected_kind="folder", summary_key="local_import")
 
     text = widget.source_summary_text("local_import")
-    assert text == "已登记本地数据：local_matrix_folder"
+    assert text == "已选择本地数据：local_matrix_folder"
     assert str(folder.resolve()) in widget.source_summary_tooltip("local_import")
 
 
@@ -387,33 +394,33 @@ def test_data_source_infers_local_data_types_in_single_import_card(qt_app, proje
     widget.refresh_project(project_summary)
 
     widget.register_local_paths([series], strategy="reference", selected_kind="file", summary_key="local_import")
-    assert widget.source_summary_text("local_import") == "已登记本地数据：GSE60024_series_matrix.txt"
+    assert widget.source_summary_text("local_import") == "已选择本地数据：GSE60024_series_matrix.txt"
     assert "GEO Series Matrix" in widget.source_summary_tooltip("local_import")
     assert str(series.resolve()) in widget.source_summary_tooltip("local_import")
 
     widget.register_local_paths([tcga], strategy="reference", selected_kind="folder", summary_key="local_import")
-    assert widget.source_summary_text("local_import") == "已登记本地数据：TCGA_GDC_folder"
+    assert widget.source_summary_text("local_import") == "已选择本地数据：TCGA_GDC_folder"
     assert "TCGA 本地数据" in widget.source_summary_tooltip("local_import")
     assert str(tcga.resolve()) in widget.source_summary_tooltip("local_import")
 
     widget.register_local_paths([gtex], strategy="reference", selected_kind="folder", summary_key="local_import")
-    assert widget.source_summary_text("local_import") == "已登记本地数据：GTEx_folder"
+    assert widget.source_summary_text("local_import") == "已选择本地数据：GTEx_folder"
     assert "GTEx 本地数据" in widget.source_summary_tooltip("local_import")
     assert str(gtex.resolve()) in widget.source_summary_tooltip("local_import")
 
     widget.register_local_paths([expression], strategy="reference", selected_kind="file", summary_key="local_import")
-    assert widget.source_summary_text("local_import") == "已登记本地数据：expression_matrix.csv"
+    assert widget.source_summary_text("local_import") == "已选择本地数据：expression_matrix.csv"
     assert "本地表达矩阵" in widget.source_summary_tooltip("local_import")
     assert str(expression.resolve()) in widget.source_summary_tooltip("local_import")
 
     workbook = _write_xlsx_count_matrix(tmp_path / "GSE236866_Processed_data_tau_with_inhibitors.xlsx")
     widget.register_local_paths([workbook], strategy="reference", selected_kind="file", summary_key="local_import")
-    assert widget.source_summary_text("local_import") == "已登记本地数据：GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    assert widget.source_summary_text("local_import") == "已选择本地数据：GSE236866_Processed_data_tau_with_inhibitors.xlsx"
     assert "原始计数矩阵" in widget.source_summary_tooltip("local_import")
 
 
 def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(qt_app, project_summary, monkeypatch) -> None:
-    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id: f"当前 GSE 编号：{gse_id}\n处理状态：已登记到项目。")
+    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id: f"当前 GSE 编号：{gse_id}\n处理状态：已添加到项目。")
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
     widget.set_gse_input("gse60024")
@@ -422,30 +429,29 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert preview is not None
     assert not widget._register_gse_button.isHidden()
     assert isinstance(widget._gse_geo_detail_panel, workflow_pages.GeoDatasetDetailPanel)
-    assert isinstance(widget._gse_geo_download_list_panel, workflow_pages.GeoDownloadListPanel)
     assert not widget._gse_geo_detail_panel.isHidden()
     assert "GSE60024" in widget._gse_geo_detail_panel._title.text()
-    assert widget._gse_geo_detail_panel._save_button.text() == "保存到下载列表"
+    assert widget._gse_geo_detail_panel._save_button.text() == "添加到项目"
     summary = widget.register_gse_dataset()
 
     text = widget.source_summary_text("geo_gse")
     assert summary is not None
-    assert text == "已登记 GSE 数据集：GSE60024"
-    assert widget._gse_geo_download_list_panel._table.rowCount() == 1
-    assert widget._gse_geo_download_list_panel._table.item(0, 0).text() == "GSE60024"
-    assert widget._gse_geo_download_list_panel._table.item(0, 3).text() == "元数据待下载"
+    assert text == "已添加 GSE 数据集：GSE60024"
+    assert widget._dataset_list_panel._table.rowCount() == 1
+    assert widget._dataset_list_panel._table.item(0, 2).text() == "GSE60024"
+    assert widget._dataset_list_panel._table.item(0, 3).text() == "未下载"
     assert widget.register_gse_dataset() is None
-    assert widget._gse_geo_download_list_panel._table.rowCount() == 1
+    assert widget._dataset_list_panel._table.rowCount() == 1
     assert "数据获取计划" not in text
-    assert "数据登记记录" not in text
-    assert widget._gse_status_label.text() == "已登记 GSE 数据集：GSE60024"
-    assert "已登记编号，等待数据获取" in widget.source_summary_tooltip("geo_gse")
+    assert "数据记录" not in text
+    assert widget._gse_status_label.text() == "已添加 GSE 数据集：GSE60024"
+    assert "已添加编号，等待数据获取" in widget.source_summary_tooltip("geo_gse")
     assert "数据获取计划：已生成" in widget.source_summary_tooltip("geo_gse")
-    assert "数据登记记录：已生成" in widget.source_summary_tooltip("geo_gse")
+    assert "数据记录：已生成" in widget.source_summary_tooltip("geo_gse")
     assert "下一步交接清单：已生成" in widget.source_summary_tooltip("geo_gse")
     assert str(summary.plan_path) in widget._technical_details.toPlainText()
     assert widget._technical_details.isHidden()
-    assert widget.status_message() == "先登记数据来源，下一步进入数据识别。"
+    assert widget.status_message() == "先添加数据，下一步进入数据识别。"
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
     assert not widget._next_button.isEnabled()
@@ -496,6 +502,17 @@ def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
     assert "本地 AI 检索助手" not in card_titles
 
 
+def test_workspace_chinese_entry_opens_search_page_with_prefilled_topic(qt_app, project_summary) -> None:
+    widget = BioinformaticsWorkspaceWidget()
+    widget.show_data_source(project_summary)
+    widget._data_source_page._chinese_query_input.setText("甲状腺癌与肥胖相关基因表达数据")
+
+    widget._data_source_page.open_chinese_search()
+
+    assert widget.current_page_object_name() == "bioinformaticsChineseDatasetSearchPage"
+    assert widget._chinese_search_page._query_input.text() == "甲状腺癌与肥胖相关基因表达数据"
+
+
 def test_data_source_long_path_does_not_break_summary(qt_app, project_summary, tmp_path: Path) -> None:
     nested = tmp_path / ("very_long_folder_name_" * 4) / ("another_long_folder_name_" * 4)
     nested.mkdir(parents=True)
@@ -522,19 +539,82 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
 
-    assert widget._registered_sources_table.rowCount() == 0
-    assert not widget._registered_empty_label.isHidden()
+    assert widget._dataset_list_panel._table.rowCount() == 0
+    assert not widget._dataset_list_panel._empty.isHidden()
     assert not widget._next_button.isEnabled()
     assert not widget.findChild(QPushButton, "local_importOpenSourceButton").isVisible()
     assert not widget.findChild(QPushButton, "local_importCopyPathButton").isVisible()
+    assert not widget._dataset_list_panel._download_selected_button.isEnabled()
+    assert not widget._dataset_list_panel._delete_selected_button.isEnabled()
+    assert not widget._dataset_list_panel._continue_selected_button.isEnabled()
 
     widget.register_local_paths([source], strategy="reference", selected_kind="file", summary_key="local_import")
 
-    assert widget._registered_sources_table.rowCount() == 1
-    assert widget._registered_sources_table.columnCount() == 4
-    assert widget._registered_sources_table.item(0, 0).text() == "本地数据导入"
-    assert "expression_matrix.tsv" in widget._registered_sources_table.item(0, 1).text()
+    table = widget._dataset_list_panel._table
+    assert table.rowCount() == 1
+    assert table.columnCount() == 8
+    assert table.horizontalHeaderItem(0).text() == "选择"
+    assert table.horizontalHeaderItem(1).text() == "来源"
+    assert table.horizontalHeaderItem(2).text() == "数据集 / 文件名"
+    assert table.horizontalHeaderItem(3).text() == "数据状态"
+    assert table.horizontalHeaderItem(4).text() == "可用内容"
+    assert table.horizontalHeaderItem(5).text() == "需要补充"
+    assert table.horizontalHeaderItem(6).text() == "备注"
+    assert table.horizontalHeaderItem(7).text() == "操作"
+    assert table.item(0, 1).text() == "本地导入"
+    assert "expression_matrix.tsv" in table.item(0, 2).text()
+    assert table.item(0, 3).text() == "已导入"
+    assert [button.text() for button in table.cellWidget(0, 7).findChildren(QPushButton)] == ["查看详情"]
+    checkbox = table.cellWidget(0, 0)
+    assert isinstance(checkbox, QCheckBox)
+    checkbox.setChecked(True)
+    assert not widget._dataset_list_panel._download_selected_button.isEnabled()
+    assert widget._dataset_list_panel._delete_selected_button.isEnabled()
+    assert widget._dataset_list_panel._continue_selected_button.isEnabled()
     assert widget._next_button.isEnabled()
+
+
+def test_data_source_dataset_detail_prefers_summary_and_saves_user_note(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "expression_matrix.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    widget.register_local_paths([source], strategy="reference", selected_kind="file", summary_key="local_import")
+
+    key = next(iter(widget._dataset_entries))
+    widget._show_dataset_detail(key)
+
+    assert not widget._dataset_detail_panel.isHidden()
+    assert "数据集编号或文件名：expression_matrix.tsv" in widget._dataset_detail_panel._summary.toPlainText()
+    assert "摘要：暂无摘要" in widget._dataset_detail_panel._summary.toPlainText()
+    assert widget._dataset_detail_panel._technical.isHidden()
+    widget._dataset_detail_panel._note_edit.setPlainText("优先用于差异分析")
+    widget._dataset_detail_panel._save_note()
+
+    notes_path = project_summary.project_root / "manifests" / "user_dataset_notes.json"
+    payload = json.loads(notes_path.read_text(encoding="utf-8"))
+    assert payload["notes"][key]["note"] == "优先用于差异分析"
+    assert "user_notes" not in json.loads(project_summary.manifest_path.read_text(encoding="utf-8"))
+    assert widget._dataset_list_panel._table.item(0, 6).text() == "优先用于差异分析"
+
+
+def test_data_source_keeps_history_cache_separate_until_user_adds(qt_app, project_summary) -> None:
+    cache_dir = project_summary.project_root / "raw_data" / "geo" / "GSE99999"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "GSE99999_family.soft").write_text("^SERIES = GSE99999\n", encoding="utf-8")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    assert widget._dataset_list_panel._table.rowCount() == 0
+    assert not widget._history_cache_card.isHidden()
+    assert "发现 1 个历史下载数据集" in widget._history_cache_hint.text()
+    assert widget._history_cache_table.item(0, 0).text() == "GSE99999"
+
+    summary = widget._add_history_cache_to_project({"name": "GSE99999", "path": str(cache_dir)})
+
+    assert summary is not None
+    assert widget._dataset_list_panel._table.rowCount() == 1
+    assert widget._dataset_list_panel._table.item(0, 1).text() == "本地导入"
 
 
 def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
@@ -681,7 +761,7 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     buttons[0].click()
     assert not widget._geo_dataset_detail_panel.isHidden()
     assert "GSE33630" in widget._geo_dataset_detail_panel._title.text()
-    assert widget._geo_dataset_detail_panel._save_button.text() == "保存到下载列表"
+    assert widget._geo_dataset_detail_panel._save_button.text() == "添加到项目"
     assert widget._geo_dataset_detail_panel._translation_text.toPlainText() == "尚未生成中文翻译。"
 
 
@@ -707,7 +787,7 @@ def test_register_geo_search_result_as_source(qt_app, project_summary) -> None:
     assert summary.source_type == "geo_accession"
     assert summary.status == "planned"
     assert summary.registered_files == ()
-    assert widget.status_message() == "已登记候选来源，待下载数据文件。"
+    assert widget.status_message() == "已选择候选来源，待下载数据文件。"
     record = json.loads(summary.record_path.read_text(encoding="utf-8"))
     assert record["source_type"] == "geo_accession"
     assert record["strategy"] == "plan_only"
@@ -884,7 +964,7 @@ def test_register_geo_result_deduplicates_existing_source(qt_app, project_summar
     assert duplicate is None
     records = [path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json"]
     assert len(records) == 1
-    assert widget.status_message() == "已登记数据源：GSE33630"
+    assert widget.status_message() == "已选择数据：GSE33630"
 
 
 def test_registered_geo_source_appears_in_pre_recognition_input_list(qt_app, project_summary) -> None:
@@ -936,7 +1016,7 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 1 个，GTEx 0 个；0 个可进入识别。 当前建议操作：先补全表达矩阵。"
     assert not widget._continue_button.isEnabled()
     assert widget._continue_button.text() == "下一步：进入数据识别"
-    assert widget.status_message() == "已登记候选来源，待下载数据文件。"
+    assert widget.status_message() == "已选择候选来源，待下载数据文件。"
     assert "已选择，待创建下载任务" in _source_card_text(widget, "tcga_gdc")
     registered_button = widget.findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
     assert registered_button.text() == "已选择"
@@ -1193,7 +1273,7 @@ def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, projec
 
     widget.run_recognition()
     assert calls == [str(project_summary.project_root)]
-    assert "已重新扫描当前项目数据和已登记的外部引用文件" in widget.status_message()
+    assert "已重新扫描当前项目数据和已选择的外部引用文件" in widget.status_message()
 
 
 def test_recognition_clean_old_results_keeps_raw_data(qt_app, project_summary) -> None:
