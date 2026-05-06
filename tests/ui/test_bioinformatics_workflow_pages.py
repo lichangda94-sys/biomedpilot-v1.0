@@ -190,7 +190,7 @@ class _FakeGeoAssetDiscoverer:
                 "expression_matrix_status": "remote_discovered",
                 "recognition_ready": True,
             },
-            "ui_status_parts": ["元数据已下载", "表达矩阵待确认", "已发现补充文件", "可进入识别"],
+            "ui_status_parts": ["元数据已下载", "表达矩阵待下载", "已发现补充文件", "可进入识别"],
             "warnings": [],
         }
 
@@ -863,13 +863,21 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert len(result.downloaded_files) == 1
     assert Path(result.downloaded_files[0]).exists()
     assert "元数据已下载" in widget.status_message()
-    assert "表达矩阵待确认" in widget.status_message()
+    assert "表达矩阵待下载" in widget.status_message()
     assert widget._registered_count_label.text() == "已选 GEO 1 个，TCGA 0 个，GTEx 0 个；1 个可进入识别。 当前建议操作：进入数据识别。"
     assert widget._continue_button.isEnabled()
-    assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待确认 / 已发现补充文件 / 可进入识别"
+    assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待下载 / 已发现补充文件 / 可进入识别"
     widget._show_candidate_detail(candidate)
     assert "元数据已下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
-    assert "表达矩阵" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
+    assert "表达矩阵：待下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
+    assert not widget._geo_dataset_detail_panel._download_assets_button.isHidden()
+    assert widget._geo_dataset_detail_panel._download_assets_button.isEnabled()
+    assert widget._geo_download_list_panel._table.item(0, 3).text() == "元数据已下载"
+    assert "表达矩阵" not in widget._geo_download_list_panel._table.item(0, 4).text()
+    assert "表达矩阵" in widget._geo_download_list_panel._table.item(0, 5).text()
+    widget._geo_download_list_panel._checks["geo:GSE33630"].setChecked(True)
+    assert widget._geo_download_list_panel._download_selected_button.text() == "下载补充文件"
+    assert widget._geo_download_list_panel._download_selected_button.isEnabled()
     manifest_path = Path(str(result.details["asset_manifest_path"]))
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -910,6 +918,7 @@ def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes
     assert widget._geo_registered_table.item(0, 4).text() == "进入数据识别"
     widget._show_candidate_detail(candidate)
     assert "补充文件" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
+    assert widget._geo_dataset_detail_panel._download_assets_button.isHidden()
     report = workflow_pages.load_recognition_report(project_summary.project_root)
     assert report is not None
     recognized_types = {file["recognized_type"] for file in report.get("files", [])}
@@ -949,6 +958,46 @@ def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
     assert not widget._geo_dataset_detail_panel.isHidden()
     assert "该数据集比较胶质瘤和对照样本。" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
     assert "医学实体一致性状态" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
+
+
+def test_chinese_dataset_search_geo_brief_retries_after_fallback(qt_app) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    candidate = _geo_candidate()
+    widget._candidates = {("geo", "GSE33630"): candidate}
+
+    class _RetrySummaryService:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def summarize(self, text):
+            self.calls += 1
+            status = "failed" if self.calls == 1 else "completed"
+            brief = "英文摘要待人工确认。" if self.calls == 1 else "第二次生成了可靠中文简介。"
+            return SimpleNamespace(
+                status=status,
+                to_dict=lambda: {
+                    "status": status,
+                    "title_zh": "胶质瘤表达谱",
+                    "summary_zh": "胶质瘤样本摘要。",
+                    "overall_design_zh": "肿瘤和对照。",
+                    "brief_zh": brief,
+                    "error_message": "timeout" if status == "failed" else "",
+                    "quality_warnings": ["需人工确认"] if status == "failed" else [],
+                },
+            )
+
+    service = _RetrySummaryService()
+    widget._text_summary_service = service
+
+    first = widget.generate_geo_chinese_brief("GSE33630")
+    second = widget.generate_geo_chinese_brief("GSE33630")
+
+    assert first is not None
+    assert first["status"] == "failed"
+    assert second is not None
+    assert second["status"] == "completed"
+    assert service.calls == 2
+    assert "第二次生成了可靠中文简介。" in widget._geo_dataset_detail_panel._translation_text.toPlainText()
 
 
 def test_register_geo_result_deduplicates_existing_source(qt_app, project_summary) -> None:
@@ -1176,12 +1225,18 @@ def test_readiness_missing_info_entry_and_templates(qt_app, project_summary) -> 
     assert not readiness._sample_manual_button.isHidden()
     assert not readiness._clinical_file_button.isHidden()
     assert not readiness._clinical_manual_button.isHidden()
+    assert not readiness._comparison_file_button.isHidden()
+    assert not readiness._comparison_manual_button.isHidden()
+    assert not readiness._comparison_template_button.isHidden()
     assert readiness._expression_file_button.isHidden()
 
     template = readiness.create_missing_info_template("sample_metadata")
     assert template is not None
     assert template.exists()
     assert "sample_id" in template.read_text(encoding="utf-8")
+    comparison_template = readiness.create_missing_info_template("comparison_config")
+    assert comparison_template is not None
+    assert "case_group" in comparison_template.read_text(encoding="utf-8")
 
 
 def test_readiness_supplement_manual_and_file_then_rerun(qt_app, project_summary, tmp_path: Path) -> None:
@@ -1196,15 +1251,47 @@ def test_readiness_supplement_manual_and_file_then_rerun(qt_app, project_summary
     assert readiness.supplement_missing_info("expression_matrix", mode="file", path=expression_file) is True
     assert readiness.supplement_missing_info("sample_metadata", mode="manual", manual_text="sample_id\tgroup\ns1\tcase\ns2\tcontrol\n") is True
     assert readiness.supplement_missing_info("clinical_metadata", mode="file", path=clinical_file) is True
+    assert readiness.supplement_missing_info("comparison_config", mode="manual", manual_text="comparison_id\tgroup_column\tcase_group\tcontrol_group\ncase_vs_control\tgroup\tcase\tcontrol\n") is True
 
     manual_file = project_summary.project_root / "raw_data" / "local_import" / "manual_supplements" / "sample_metadata_manual.tsv"
+    comparison_file = project_summary.project_root / "raw_data" / "local_import" / "manual_supplements" / "comparison_config_manual.tsv"
     assert manual_file.exists()
+    assert comparison_file.exists()
     artifacts = readiness.save_and_rerun_readiness()
     assert artifacts is not None
     report = artifacts["readiness_report"]
     assert isinstance(report, dict)
     assert report["has_core_input"] is True
+    assert "comparison_config" in report["available_inputs"]
     assert "已重新检查" in readiness.status_message()
+
+
+def test_analysis_task_center_can_save_comparison_groups(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "expression_matrix.tsv"
+    expression_file.write_text("gene\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
+    sample_file = tmp_path / "sample_metadata.tsv"
+    sample_file.write_text("sample_id\tgroup\ns1\tcase\ns2\tcontrol\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression",
+        strategy="copy",
+        selected_paths=[expression_file, sample_file],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+
+    assert task_center.configure_comparison_groups(
+        "comparison_id\tgroup_column\tcase_group\tcontrol_group\ncase_vs_control\tgroup\tcase\tcontrol\n"
+    ) is True
+    assert "已保存比较组设置" in task_center.status_message()
+    artifacts = workflow_pages.load_readiness_artifacts(project_summary.project_root)
+    report = artifacts["readiness_report"]
+    assert isinstance(report, dict)
+    assert "comparison_config" in report["available_inputs"]
 
 
 def _write_mock_recognition_report(project_root: Path, files: list[dict[str, object]]) -> Path:

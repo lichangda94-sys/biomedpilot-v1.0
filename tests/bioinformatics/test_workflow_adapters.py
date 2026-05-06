@@ -260,6 +260,28 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
     assert {"expression_matrix_cleaning", "gene_annotation_mapping", "sample_annotation_review"} <= task_types
 
 
+def test_recognition_skips_organized_geo_soft_duplicate(project_root: Path) -> None:
+    source = project_root / "raw_data" / "geo" / "GSE6004" / "GSE6004_family.soft"
+    duplicate = project_root / "raw_data" / "geo" / "organized" / "sample_annotation" / "GSE6004_family.soft"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    duplicate.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft(source)
+    _write_geo_family_soft(duplicate)
+
+    recognition = run_project_recognition(project_root)
+
+    source_paths = [Path(str(item["original_path"])) for item in recognition["files"]]  # type: ignore[index]
+    assert source.resolve() in source_paths
+    assert duplicate.resolve() not in source_paths
+    assert recognition["type_counts"]["geo_soft_container"] == 1  # type: ignore[index]
+
+    standardization = generate_standardized_assets(project_root)
+    assets = standardization["registry"]["assets"]  # type: ignore[index]
+    soft_assets = [asset for asset in assets if Path(str(asset["source_file"])).name == "GSE6004_family.soft"]
+    assert len([asset for asset in soft_assets if asset["asset_type"] == "expression_matrix"]) == 1
+    assert len([asset for asset in soft_assets if asset["asset_type"] == "sample_metadata"]) == 1
+
+
 def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
     source = project_root / "raw_data" / "local_import" / "GSE12345-GPL570_series_matrix.txt"
     source.parent.mkdir(parents=True, exist_ok=True)

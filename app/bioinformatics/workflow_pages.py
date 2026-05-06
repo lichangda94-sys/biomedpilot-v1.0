@@ -135,6 +135,7 @@ class GeoDatasetDetailPanel(QFrame):
     save_requested = Signal(object)
     ignore_requested = Signal(object)
     remove_requested = Signal(object)
+    download_assets_requested = Signal(object)
     translate_requested = Signal(object)
     brief_requested = Signal(object)
 
@@ -185,10 +186,13 @@ class GeoDatasetDetailPanel(QFrame):
 
         decision_actions = QHBoxLayout()
         self._save_button = _button("添加到项目", "primaryButton", lambda: self._emit_save())
+        self._download_assets_button = _button("下载补充文件", "primaryButton", lambda: self._emit_download_assets())
         self._remove_button = _button("从项目列表移除", "secondaryButton", lambda: self._emit_remove())
         self._ignore_button = _button("忽略该数据集", "secondaryButton", lambda: self._emit_ignore())
+        self._download_assets_button.setVisible(False)
         self._remove_button.setVisible(False)
         decision_actions.addWidget(self._save_button)
+        decision_actions.addWidget(self._download_assets_button)
         decision_actions.addWidget(self._remove_button)
         decision_actions.addWidget(self._ignore_button)
         decision_actions.addStretch(1)
@@ -212,6 +216,7 @@ class GeoDatasetDetailPanel(QFrame):
         self._english_text.setPlainText(_geo_detail_english_text(candidate))
         self._asset_text.setPlainText(_geo_asset_detail_text(project_root, candidate.accession_or_project))
         self.set_saved(saved)
+        self.set_pending_assets(saved and _candidate_has_pending_geo_assets(project_root, candidate.accession_or_project))
         if summary_payload:
             self.render_summary(candidate, summary_payload)
         else:
@@ -222,6 +227,10 @@ class GeoDatasetDetailPanel(QFrame):
         self._save_button.setText("已添加" if saved else "添加到项目")
         self._save_button.setEnabled(not saved)
         self._remove_button.setVisible(saved)
+
+    def set_pending_assets(self, pending: bool) -> None:
+        self._download_assets_button.setVisible(pending)
+        self._download_assets_button.setEnabled(pending)
 
     def render_summary(self, candidate: UnifiedDatasetCandidate, payload: dict[str, object]) -> None:
         self._translation_text.setPlainText(_geo_text_summary_user_display(candidate, payload))
@@ -240,6 +249,10 @@ class GeoDatasetDetailPanel(QFrame):
     def _emit_remove(self) -> None:
         if self._candidate is not None:
             self.remove_requested.emit(self._candidate)
+
+    def _emit_download_assets(self) -> None:
+        if self._candidate is not None:
+            self.download_assets_requested.emit(self._candidate)
 
     def _emit_translate(self) -> None:
         if self._candidate is not None:
@@ -347,7 +360,12 @@ class GeoDownloadListPanel(QFrame):
     def _refresh_batch_buttons(self) -> None:
         entries = self.selected_entries()
         has_selection = bool(entries)
-        self._download_selected_button.setEnabled(any(entry.downloadable for entry in entries))
+        downloadable = [entry for entry in entries if entry.downloadable]
+        self._download_selected_button.setEnabled(bool(downloadable))
+        if any("表达矩阵" in entry.missing_content or "补充" in entry.status for entry in downloadable):
+            self._download_selected_button.setText("下载补充文件")
+        else:
+            self._download_selected_button.setText("下载所选")
         self._delete_selected_button.setEnabled(has_selection)
         self._continue_selected_button.setEnabled(any(entry.ready_for_recognition for entry in entries))
 
@@ -1361,6 +1379,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._refresh_candidate_registration_buttons()
             self._refresh_candidate_status_cells()
         self.source_registered.emit(result.acquisition_summary)
+        self._refresh_open_geo_detail(accession_or_project)
         if result.success and result.downloaded_files:
             report = run_project_recognition(self._project_root)
             file_count = len(report.get("files", []) or []) if isinstance(report, dict) else 0
@@ -1394,6 +1413,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._refresh_candidate_registration_buttons()
             self._refresh_candidate_status_cells()
         self.source_registered.emit(result.acquisition_summary)
+        self._refresh_open_geo_detail(accession_or_project)
         if result.success and result.downloaded_files:
             recognition = run_project_recognition(self._project_root)
             readiness = run_project_readiness(self._project_root)
@@ -1407,6 +1427,17 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status(result.message or "未下载到补充文件，请检查 manifest。", error=True)
         return result
 
+    def _refresh_open_geo_detail(self, accession_or_project: str) -> None:
+        current = self._geo_dataset_detail_panel.current_candidate()
+        if current is None or current.accession_or_project != accession_or_project:
+            return
+        self._geo_dataset_detail_panel.show_candidate(
+            current,
+            project_root=self._project_root,
+            summary_payload=self._geo_brief_cache.get(accession_or_project),
+            saved=_is_geo_saved_to_download_list(self._project_root, accession_or_project),
+        )
+
     def generate_geo_chinese_brief(self, accession_or_project: str) -> dict[str, object] | None:
         candidate = self._candidates.get(("geo", accession_or_project))
         if candidate is None:
@@ -1415,11 +1446,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if self._geo_dataset_detail_panel.current_candidate() is None or self._geo_dataset_detail_panel.current_candidate().accession_or_project != accession_or_project:
             self._show_geo_candidate_detail(candidate)
         cached = self._geo_brief_cache.get(accession_or_project)
-        if cached is not None:
+        if cached is not None and str(cached.get("status") or "") == "completed":
             self._geo_dataset_detail_panel.render_summary(candidate, cached)
             self._set_status("已显示中文简介。")
             return cached
-        self._geo_dataset_detail_panel.set_busy_text("正在生成中文翻译与一句话简介，请稍候。")
+        busy_text = "正在重新生成中文翻译与一句话简介，请稍候。" if cached is not None else "正在生成中文翻译与一句话简介，请稍候。"
+        self._geo_dataset_detail_panel.set_busy_text(busy_text)
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
         summary = self._text_summary_service.summarize(
@@ -1642,6 +1674,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_dataset_detail_panel.save_requested.connect(self._save_geo_candidate_from_detail)
             self._geo_dataset_detail_panel.ignore_requested.connect(self._ignore_geo_candidate_from_detail)
             self._geo_dataset_detail_panel.remove_requested.connect(self._remove_geo_candidate_from_detail)
+            self._geo_dataset_detail_panel.download_assets_requested.connect(lambda candidate: self.download_geo_supplementary_assets(candidate.accession_or_project))
             self._geo_dataset_detail_panel.translate_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
             self._geo_dataset_detail_panel.brief_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
             layout.addWidget(self._geo_dataset_detail_panel)
@@ -2417,6 +2450,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._pre_recognition_table,
             [[row.source_type, row.source_label, row.location, row.status] for row in rows],
         )
+        _set_table_widths(self._pre_recognition_table, [140, 210, 210, 240])
         for row_index, row in enumerate(rows):
             item = self._pre_recognition_table.item(row_index, 2)
             if item is not None and row.location_tooltip:
@@ -2530,7 +2564,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
             self._status_label.setText("请先创建或打开生信分析项目。")
             return False
         normalized = _normalize_missing_input(kind)
-        if normalized not in {"sample_metadata", "clinical_metadata", "expression_matrix"}:
+        if normalized not in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config"}:
             self._status_label.setText("当前缺失项暂不支持在本页补充。")
             return False
         if normalized == "expression_matrix" and mode == "manual":
@@ -2568,18 +2602,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
                 )
                 if not ok:
                     return False
-            supplement_dir = self._project_root / "raw_data" / "local_import" / "manual_supplements"
-            supplement_dir.mkdir(parents=True, exist_ok=True)
-            target = supplement_dir / f"{normalized}_manual.tsv"
-            target.write_text((text or _template_text_for_missing_input(normalized)).strip() + "\n", encoding="utf-8")
-            register_acquisition(
-                self._project_root,
-                source_type=f"manual_supplement_{normalized}",
-                source_label=f"手动补充{_missing_input_label(normalized)}",
-                strategy="reference",
-                selected_paths=[target],
-                metadata={"supplement_kind": normalized, "ui_stage": "UI-07", "manual_input": True},
-            )
+            _save_manual_supplement(self._project_root, normalized, text or _template_text_for_missing_input(normalized))
             self._status_label.setText(f"已保存手动补充的{_missing_input_label(normalized)}。")
             self.save_and_rerun_readiness()
             return True
@@ -2591,7 +2614,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
         normalized = _normalize_missing_input(kind)
-        if normalized not in {"sample_metadata", "clinical_metadata"}:
+        if normalized not in {"sample_metadata", "clinical_metadata", "comparison_config"}:
             self._status_label.setText("当前缺失项暂无模板。")
             return None
         target = self._project_root / "templates" / f"{normalized}_template.tsv"
@@ -2646,6 +2669,9 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._clinical_manual_button = _button("手动输入临床信息", "secondaryButton", lambda: self.supplement_missing_info("clinical_metadata", mode="manual"))
         self._clinical_template_button = _button("下载临床信息模板", "secondaryButton", lambda: self.create_missing_info_template("clinical_metadata"))
         self._expression_file_button = _button("选择表达矩阵文件", "secondaryButton", lambda: self.supplement_missing_info("expression_matrix", mode="file"))
+        self._comparison_file_button = _button("选择比较组配置", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="file"))
+        self._comparison_manual_button = _button("设置比较组", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="manual"))
+        self._comparison_template_button = _button("下载比较组模板", "secondaryButton", lambda: self.create_missing_info_template("comparison_config"))
         for index, button in enumerate(
             [
                 self._sample_file_button,
@@ -2655,6 +2681,9 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
                 self._clinical_manual_button,
                 self._clinical_template_button,
                 self._expression_file_button,
+                self._comparison_file_button,
+                self._comparison_manual_button,
+                self._comparison_template_button,
             ]
         ):
             supplement_grid.addWidget(button, index // 3, index % 3)
@@ -2713,6 +2742,9 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._clinical_manual_button.setVisible("clinical_metadata" in missing)
         self._clinical_template_button.setVisible("clinical_metadata" in missing)
         self._expression_file_button.setVisible("expression_matrix" in missing)
+        self._comparison_file_button.setVisible("comparison_config" in missing)
+        self._comparison_manual_button.setVisible("comparison_config" in missing)
+        self._comparison_template_button.setVisible("comparison_config" in missing)
         if not missing:
             for button in (
                 self._sample_file_button,
@@ -2722,6 +2754,9 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
                 self._clinical_manual_button,
                 self._clinical_template_button,
                 self._expression_file_button,
+                self._comparison_file_button,
+                self._comparison_manual_button,
+                self._comparison_template_button,
             ):
                 button.setVisible(False)
 
@@ -2967,6 +3002,27 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._records.setPlainText(_json({"任务记录": [task.__dict__ | {"record_path": str(task.record_path)}]}))
         return task
 
+    def configure_comparison_groups(self, manual_text: str | None = None) -> bool:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return False
+        text = manual_text
+        if text is None:
+            text, ok = QInputDialog.getMultiLineText(
+                self,
+                "设置比较组",
+                "请按 TSV 格式输入比较组；group_column 应对应样本信息中的分组列。",
+                _template_text_for_missing_input("comparison_config"),
+            )
+            if not ok:
+                return False
+        _save_manual_supplement(self._project_root, "comparison_config", text or _template_text_for_missing_input("comparison_config"))
+        run_project_recognition(self._project_root)
+        run_project_readiness(self._project_root)
+        self.refresh_task_center()
+        self._status_label.setText("已保存比较组设置，并重新检查分析任务。")
+        return True
+
     def continue_to_results(self) -> None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -2990,6 +3046,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._task_type_input = QLineEdit()
         self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
         actions.addWidget(self._task_type_input)
+        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
         actions.addStretch(1)
         root.addLayout(actions)
@@ -3594,8 +3651,17 @@ def _dataset_source_label(row: RegisteredSourceRow, metadata: dict[str, object])
         return "中文检索"
     return "当前项目"
 
-
 def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], metadata: dict[str, object]) -> str:
+    if row.source_type_key in GEO_SOURCE_TYPES or str(metadata.get("source") or "") == "geo":
+        asset_summary = metadata.get("asset_manifest_summary")
+        if isinstance(asset_summary, dict):
+            expression_status = str(asset_summary.get("expression_matrix_status") or "")
+            if expression_status == "downloaded":
+                return "已下载"
+            if asset_summary.get("metadata_downloaded"):
+                return "元数据已下载"
+            if payload.get("strategy") == "plan_only":
+                return "未下载"
     if _record_ready_for_recognition(payload, metadata):
         if row.source_type_key == "local_import":
             return "已导入"
@@ -3616,7 +3682,7 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
         return "待识别"
     assets: list[str] = []
     raw_status = row.status
-    if "表达矩阵" in raw_status:
+    if "表达矩阵已下载" in raw_status:
         assets.append("表达矩阵")
     if "metadata" in raw_status or "元数据" in raw_status:
         assets.append("样本信息")
@@ -3634,7 +3700,7 @@ def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: di
         return "无" if status in {"已导入", "待识别"} else "待识别确认"
     raw_status = row.status
     missing: list[str] = []
-    if "表达矩阵待确认" in raw_status or status == "未下载":
+    if "表达矩阵待确认" in raw_status or "表达矩阵待下载" in raw_status or status == "未下载":
         missing.append("表达矩阵")
     if "平台" not in raw_status and not metadata.get("platform_accessions") and row.source_type_key in GEO_SOURCE_TYPES:
         missing.append("平台注释")
@@ -3689,7 +3755,7 @@ def _dataset_technical_info(project_root: Path, row: RegisteredSourceRow, payloa
 
 def _dataset_is_downloadable(row: RegisteredSourceRow, payload: dict[str, object], metadata: dict[str, object]) -> bool:
     if row.source_type_key in GEO_SOURCE_TYPES:
-        return payload.get("strategy") == "plan_only" or "表达矩阵待确认" in row.status or "已发现补充文件" in row.status
+        return payload.get("strategy") == "plan_only" or "表达矩阵待确认" in row.status or "表达矩阵待下载" in row.status or "已发现补充文件" in row.status
     return False
 
 
@@ -3954,9 +4020,9 @@ def _geo_download_assets_text(status: str) -> str:
 
 
 def _geo_download_missing_text(status: str) -> str:
-    if "可进入识别" in status and "表达矩阵待确认" not in status:
+    if "可进入识别" in status and "表达矩阵待确认" not in status and "表达矩阵待下载" not in status:
         return "无明确缺失"
-    if "表达矩阵待确认" in status or "已发现补充文件" in status:
+    if "表达矩阵待确认" in status or "表达矩阵待下载" in status or "已发现补充文件" in status:
         return "表达矩阵/补充文件"
     if "元数据待下载" in status or "待下载" in status:
         return "元数据、表达矩阵"
@@ -4221,7 +4287,7 @@ def _registered_source_location(payload: dict[str, object], metadata: dict[str, 
     for key in ("registered_files", "referenced_paths", "copied_files"):
         values = payload.get(key)
         if isinstance(values, list) and values:
-            return _compact_path(str(values[0]), max_chars=48)
+            return _compact_path(str(values[0]), max_chars=36)
     source = str(metadata.get("source") or "")
     if source == "geo" or payload.get("source_type") in {"geo_gse", "geo_accession"}:
         return "GEO"
@@ -4250,7 +4316,7 @@ def _registered_status_text(payload: dict[str, object]) -> str:
             if asset_status:
                 return asset_status
         if ready == "ready" and download_status == "geo_metadata_downloaded":
-            return "元数据已下载 / 表达矩阵待确认 / 可进入识别"
+            return "元数据已下载 / 表达矩阵待下载 / 可进入识别"
         if ready == "ready" or download_status == "downloaded":
             return "已下载，待识别"
         if download_status.startswith("registered_pending") or ready.startswith("pending") or metadata.get("registration_status") == "registered_as_planned_source":
@@ -4271,7 +4337,7 @@ def _geo_asset_status_text(metadata: dict[str, object]) -> str:
     if summary.get("expression_matrix_status") == "downloaded":
         parts.append("表达矩阵已下载")
     elif summary.get("series_matrix_discovered") or summary.get("expression_candidate_count"):
-        parts.append("表达矩阵待确认")
+        parts.append("表达矩阵待下载")
     elif summary.get("download_status") == "downloaded":
         parts.append("表达矩阵待确认")
     elif summary:
@@ -4835,7 +4901,7 @@ def _geo_asset_detail_text(project_root: Path | None, accession: str) -> str:
         supplementary_text = f"已发现 {len(supplementary)} 个"
     else:
         supplementary_text = "未发现"
-    expression_status = "已识别" if summary.get("expression_matrix_status") == "downloaded" else ("已发现" if summary.get("series_matrix_discovered") or summary.get("expression_candidate_count") else "未确认")
+    expression_status = "已识别" if summary.get("expression_matrix_status") == "downloaded" else ("待下载" if summary.get("series_matrix_discovered") or summary.get("expression_candidate_count") else "未确认")
     sample_status = "已识别" if summary.get("metadata_downloaded") else "未确认"
     platform_status = "已识别" if summary.get("metadata_downloaded") else "未确认"
     current = _geo_asset_status_text({"asset_manifest_summary": summary}) or "仅元数据"
@@ -5005,10 +5071,10 @@ def _candidate_detail_text(candidate: UnifiedDatasetCandidate, project_root: Pat
 
 
 def _candidate_next_action_text(candidate: UnifiedDatasetCandidate, status: str) -> str:
-    if "可进入识别" in status and "待确认" not in status:
+    if "可进入识别" in status and "待确认" not in status and "待下载" not in status:
         return "可进入数据识别。"
     if candidate.source == "geo":
-        if "已发现补充文件" in status or "表达矩阵待确认" in status:
+        if "已发现补充文件" in status or "表达矩阵待确认" in status or "表达矩阵待下载" in status:
             return "下载补充文件或 Series Matrix 后再进入数据识别。"
         return "先下载并添加 GEO 元数据。"
     if candidate.source in {"tcga_gdc", "gtex"}:
@@ -5017,7 +5083,7 @@ def _candidate_next_action_text(candidate: UnifiedDatasetCandidate, status: str)
 
 
 def _candidate_risk_text(candidate: UnifiedDatasetCandidate, status: str) -> str:
-    if candidate.source == "geo" and "表达矩阵待确认" in status:
+    if candidate.source == "geo" and ("表达矩阵待确认" in status or "表达矩阵待下载" in status):
         return "当前可能只有 family SOFT metadata，仍需确认表达矩阵或补充文件。"
     if candidate.source in {"tcga_gdc", "gtex"}:
         return "本地映射仅表示候选项目/组织匹配，不代表数据文件已下载。"
@@ -5075,9 +5141,9 @@ def _registered_existing_assets(row: RegisteredSourceRow, status: str | None = N
 
 def _registered_missing_assets(row: RegisteredSourceRow, status: str | None = None) -> str:
     status = status or row.status
-    if "可进入识别" in status and "待确认" not in status:
+    if "可进入识别" in status and "待确认" not in status and "待下载" not in status:
         return "无明确缺失"
-    if "表达矩阵待确认" in status:
+    if "表达矩阵待确认" in status or "表达矩阵待下载" in status:
         return "表达矩阵"
     if "待下载" in status:
         return "数据文件"
@@ -5086,9 +5152,9 @@ def _registered_missing_assets(row: RegisteredSourceRow, status: str | None = No
 
 def _registered_next_step(row: RegisteredSourceRow, status: str | None = None) -> str:
     status = status or row.status
-    if "可进入识别" in status:
+    if "可进入识别" in status and "表达矩阵待下载" not in status and "表达矩阵待确认" not in status:
         return "进入数据识别"
-    if "表达矩阵待确认" in status or "已发现补充文件" in status:
+    if "表达矩阵待确认" in status or "表达矩阵待下载" in status or "已发现补充文件" in status:
         return "下载补充文件"
     if "待下载" in status:
         return "补全数据文件"
@@ -5274,7 +5340,7 @@ def _missing_readiness_inputs(readiness: dict[str, object], matrix: dict[str, ob
     for row in rows:
         for item in row.get("missing_inputs", []) or []:
             normalized = _normalize_missing_input(str(item))
-            if normalized in {"sample_metadata", "clinical_metadata", "expression_matrix"}:
+            if normalized in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config"}:
                 missing.add(normalized)
     for warning in readiness.get("warnings", []) or []:
         text = str(warning)
@@ -5303,6 +5369,11 @@ def _normalize_missing_input(value: str) -> str:
         "raw_count_matrix": "expression_matrix",
         "表达矩阵": "expression_matrix",
         "基因表达数据": "expression_matrix",
+        "comparison": "comparison_config",
+        "comparison_config": "comparison_config",
+        "contrast": "comparison_config",
+        "比较组": "comparison_config",
+        "分组比较": "comparison_config",
     }
     return mapping.get(text, text)
 
@@ -5313,6 +5384,7 @@ def _missing_input_label(value: str) -> str:
         "sample_metadata": "样本信息",
         "clinical_metadata": "临床信息",
         "expression_matrix": "表达矩阵",
+        "comparison_config": "比较组设置",
     }.get(normalized, "其他缺失资产")
 
 
@@ -5321,6 +5393,7 @@ def _friendly_readiness_text(text: str) -> str:
         text.replace("无表达矩阵。", "缺少表达矩阵")
         .replace("样本信息缺失。", "缺少样本信息")
         .replace("临床信息缺失。", "缺少临床信息")
+        .replace("comparison_config", "比较组设置")
         .replace("。", "")
     )
 
@@ -5331,7 +5404,25 @@ def _template_text_for_missing_input(kind: str) -> str:
         return "sample_id\tgroup\nsample_1\tcase\nsample_2\tcontrol\n"
     if normalized == "clinical_metadata":
         return "sample_id\tsurvival_time\tsurvival_status\tage\nsample_1\t未记录\t未记录\t未记录\n"
+    if normalized == "comparison_config":
+        return "comparison_id\tgroup_column\tcase_group\tcontrol_group\ncomparison_1\tgroup\tcase\tcontrol\n"
     return "gene\tsample_1\tsample_2\nTP53\t1\t2\n"
+
+
+def _save_manual_supplement(project_root: Path, normalized: str, text: str) -> Path:
+    supplement_dir = project_root / "raw_data" / "local_import" / "manual_supplements"
+    supplement_dir.mkdir(parents=True, exist_ok=True)
+    target = supplement_dir / f"{normalized}_manual.tsv"
+    target.write_text((text or _template_text_for_missing_input(normalized)).strip() + "\n", encoding="utf-8")
+    register_acquisition(
+        project_root,
+        source_type=f"manual_supplement_{normalized}",
+        source_label=f"手动补充{_missing_input_label(normalized)}",
+        strategy="reference",
+        selected_paths=[target],
+        metadata={"supplement_kind": normalized, "ui_stage": "UI-07", "manual_input": True},
+    )
+    return target
 
 
 def _standardization_user_summary(registry: dict[str, object], manifest: dict[str, object]) -> str:

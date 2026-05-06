@@ -46,6 +46,7 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
                     in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "gmt_gene_set"},
                 }
             )
+    assets = _dedupe_standardized_assets(assets)
     readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
     usable = [
         str(row.get("label"))
@@ -100,6 +101,18 @@ def _asset_types_for_standardization(item: dict[str, object]) -> list[str]:
     if primary in EXCLUDED_STANDARDIZATION_TYPES:
         return []
     return [primary]
+
+
+def _dedupe_standardized_assets(assets: list[dict[str, object]]) -> list[dict[str, object]]:
+    deduped: dict[tuple[str, str], dict[str, object]] = {}
+    for asset in assets:
+        asset_type = str(asset.get("asset_type") or "")
+        source_file = str(asset.get("source_file") or asset.get("file_path") or "")
+        path = Path(source_file).expanduser()
+        key_path = str(path.resolve()) if path.exists() else source_file
+        key = (asset_type, key_path)
+        deduped.setdefault(key, asset)
+    return list(deduped.values())
 
 
 def _processing_tasks_from_assets(assets: list[dict[str, object]]) -> list[dict[str, object]]:

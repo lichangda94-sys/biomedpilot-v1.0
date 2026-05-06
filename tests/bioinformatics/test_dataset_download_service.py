@@ -102,7 +102,7 @@ class _FakeGeoAssetDiscoverer:
                 "expression_matrix_status": "remote_discovered",
                 "recognition_ready": True,
             },
-            "ui_status_parts": ["元数据已下载", "表达矩阵待确认", "已发现补充文件", "可进入识别"],
+            "ui_status_parts": ["元数据已下载", "表达矩阵待下载", "已发现补充文件", "可进入识别"],
             "warnings": [],
         }
 
@@ -326,5 +326,6 @@ def test_geo_text_summary_service_falls_back_when_local_model_unavailable() -> N
     summary = service.summarize(GeoStudyTextInput(accession="GSE33630", title_en="Glioma expression profile"))
 
     assert summary.status == "local_model_unavailable"
-    assert summary.brief_zh == ""
+    assert summary.brief_zh
+    assert "需人工确认" in "；".join(summary.quality_warnings)
     assert "不可用" in summary.error_message

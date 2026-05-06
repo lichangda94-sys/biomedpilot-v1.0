@@ -778,7 +778,7 @@ def _geo_asset_ui_status_parts(manifest: dict[str, Any] | None) -> list[str]:
     if summary.get("expression_matrix_status") == "downloaded":
         parts.append("表达矩阵已下载")
     elif summary.get("series_matrix_discovered") or summary.get("expression_candidate_count"):
-        parts.append("表达矩阵待确认")
+        parts.append("表达矩阵待下载")
     else:
         parts.append("表达矩阵待确认")
     if summary.get("supplementary_files_downloaded"):

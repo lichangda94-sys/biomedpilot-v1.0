@@ -116,26 +116,38 @@ class GeoTextSummaryService:
     def summarize(self, text: GeoStudyTextInput) -> GeoStudyTextSummary:
         model_status = self.model_availability()
         if model_status.get("translate_model_status") != "available" or model_status.get("brief_model_status") != "available":
+            fallback = _fallback_summary_fields(text)
             return GeoStudyTextSummary(
                 accession=text.accession,
                 status="local_model_unavailable",
+                title_zh=fallback["title_zh"],
+                summary_zh=fallback["summary_zh"],
+                overall_design_zh=fallback["overall_design_zh"],
+                brief_zh=fallback["brief_zh"],
                 translate_model=self.translate_model,
                 brief_model=self.brief_model,
                 error_message=_model_status_error(model_status),
                 model_status=model_status,
+                quality_warnings=("本地模型暂不可用，已使用英文原文生成保守 fallback，需人工确认。",),
             )
         try:
             translated = self._translate_fields(text)
             brief, warnings = self._build_brief(text, translated)
             warnings = (*_translation_quality_warnings(text, translated), *warnings, *_brief_quality_warnings(text, translated, brief))
         except Exception as exc:
+            fallback = _fallback_summary_fields(text)
             return GeoStudyTextSummary(
                 accession=text.accession,
                 status="failed",
+                title_zh=fallback["title_zh"],
+                summary_zh=fallback["summary_zh"],
+                overall_design_zh=fallback["overall_design_zh"],
+                brief_zh=fallback["brief_zh"],
                 translate_model=self.translate_model,
                 brief_model=self.brief_model,
                 error_message=str(exc),
                 model_status=model_status,
+                quality_warnings=("本地模型调用失败，已使用英文原文生成保守 fallback，需人工确认。",),
             )
         return GeoStudyTextSummary(
             accession=text.accession,
@@ -313,3 +325,16 @@ def _fallback_brief(text: GeoStudyTextInput, translated: dict[str, str]) -> str:
             return brief
     english = _clean_one_line_brief(text.overall_design_en or text.summary_en or text.title_en)
     return english or "该 GEO 数据集的中文简介暂未生成，请查看英文标题和摘要。"
+
+
+def _fallback_summary_fields(text: GeoStudyTextInput) -> dict[str, str]:
+    title = _clean_one_line_brief(text.title_en)
+    summary = _clean_one_line_brief(text.summary_en)
+    design = _clean_one_line_brief(text.overall_design_en)
+    translated_like = {
+        "title_zh": f"英文原题：{title}" if title else "",
+        "summary_zh": f"英文摘要待人工翻译：{summary}" if summary else "英文摘要缺失，需人工确认。",
+        "overall_design_zh": f"实验设计待人工翻译：{design}" if design else "",
+    }
+    translated_like["brief_zh"] = _fallback_brief(text, translated_like)
+    return translated_like

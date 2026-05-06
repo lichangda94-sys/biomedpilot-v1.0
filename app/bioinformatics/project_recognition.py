@@ -152,6 +152,8 @@ def classify_file_details(path: Path) -> RecognitionClassification:
         geo_series = _classify_geo_series_matrix(path)
         if geo_series is not None:
             return geo_series
+    if any(token in name for token in ("comparison", "contrast")):
+        return _classification("comparison_config", "文件名包含分组比较配置提示。", 0.74)
     if _is_tabular_text_path(path):
         tabular = _classify_tabular_text(path)
         if tabular is not None:
@@ -1111,9 +1113,22 @@ def _candidate_files(root: Path) -> list[Path]:
     paths: list[Path] = []
     for base in (root / "raw_data", root / "acquisition"):
         if base.exists():
-            paths.extend(path for path in base.rglob("*") if path.is_file() and path.suffix.lower() not in {".json"})
+            paths.extend(path for path in base.rglob("*") if _is_recognition_candidate_file(path, root))
     paths.extend(_registered_reference_files(root))
     return sorted(set(paths))
+
+
+def _is_recognition_candidate_file(path: Path, root: Path) -> bool:
+    if not path.is_file() or path.suffix.lower() in {".json"}:
+        return False
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        relative = path
+    parts = relative.parts
+    if len(parts) >= 3 and parts[0] == "raw_data" and parts[1] == "geo" and parts[2] == "organized":
+        return False
+    return True
 
 
 def _registered_reference_files(root: Path) -> list[Path]:
@@ -1137,7 +1152,7 @@ def _registered_reference_files(root: Path) -> list[Path]:
                 if candidate.is_file():
                     paths.append(candidate.resolve())
                 elif candidate.is_dir():
-                    paths.extend(path.resolve() for path in candidate.rglob("*") if path.is_file() and path.suffix.lower() not in {".json"})
+                    paths.extend(path.resolve() for path in candidate.rglob("*") if _is_recognition_candidate_file(path, root))
     return paths
 
 
