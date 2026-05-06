@@ -12,7 +12,7 @@ No Meta Analysis workflow should be presented as production-ready. Connected fea
 
 The current testing chain is:
 
-1. Protocol / PICO / PICOS / PECO draft
+1. PICO / PICOS / PECO Workspace v2 draft and reviewer-confirmed protocol
 2. Search strategy draft generation
 3. Reviewer-confirmed PubMed execution
 4. PubMed literature candidates preview and reviewer-selected handoff
@@ -32,6 +32,7 @@ The current testing chain is:
 
 - Literature Import supports NBIB / RIS / CSV smoke testing and registers imported literature records.
 - Protocol supports testing-level research question, PICO, PICOS, and PECO draft capture.
+- PICO / PICOS / PECO Workspace v2 generates editable Chinese research-question drafts, separates draft and confirmed protocol artifacts, records draft/edit/confirm events in audit and research governance, and keeps meta-analysis type as a candidate until reviewer confirmation.
 - `app/meta_analysis/search/` is the active Meta-owned search layer for literature query strategy drafts.
 - Search strategy generation builds PubMed, Web of Science, Embase, and CNKI query drafts from shared medical-language translation with `target_context="meta_analysis"`.
 - PubMed draft queries support MeSH and `tiab` terms.
@@ -60,6 +61,7 @@ The current testing chain is:
 - PubMed search results are not automatically imported into the literature library; reviewer selection is required before PubMed candidates are imported.
 - PubMed search results are not automatically merged or silently deduplicated; selected imports only prepare a dedup review queue.
 - PubMed search results are not automatically moved into title/abstract screening or PRISMA counting.
+- PICO / PICOS / PECO Workspace v2 does not automatically confirm the final research question, execute PubMed, generate final search strategy, create screening decisions, or update PRISMA counts.
 - Literature library import does not automatically create title/abstract screening decisions and does not update PRISMA artifacts.
 - Duplicate Review v2 does not automatically delete records, merge records, create screening artifacts, or update PRISMA counts.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.

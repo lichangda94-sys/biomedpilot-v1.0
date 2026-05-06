@@ -13,9 +13,12 @@ try:
 
     from app.meta_analysis.workflow_pages import (
         ProtocolPage,
+        build_pico_workspace_draft,
         build_protocol_search_strategy_draft,
+        confirm_pico_workspace_protocol,
         execute_protocol_pubmed_search,
         protocol_page_state_from_project,
+        render_pico_workspace_draft_summary,
         render_pubmed_search_execution_summary,
         render_search_strategy_summary,
         write_pubmed_search_execution_artifacts,
@@ -100,6 +103,38 @@ def test_meta_protocol_search_strategy_summary_displays_database_drafts() -> Non
     assert "当前仅生成检索式草稿，尚未执行在线检索。" in summary
 
 
+def test_meta_pico_workspace_v2_summary_requires_human_confirmation(tmp_path: Path) -> None:
+    draft = build_pico_workspace_draft(tmp_path, "肥胖暴露与甲状腺癌风险是否相关？", pico_mode="auto")
+    summary = render_pico_workspace_draft_summary(draft)
+    state = protocol_page_state_from_project(tmp_path)
+
+    assert "PICO/PICOS/PECO draft" in summary
+    assert "mode=peco" in summary
+    assert "需要人工确认" in summary
+    assert "不会自动执行检索、筛选或 PRISMA。" in summary
+    assert state.pico_workspace_status == "draft"
+    assert state.pico_mode == "peco"
+    assert state.confirmed_protocol_summary == "需要人工确认"
+
+
+def test_meta_pico_workspace_v2_confirmed_state_is_separate_from_draft(tmp_path: Path) -> None:
+    draft = build_pico_workspace_draft(tmp_path, "成人肺炎患者使用糖皮质激素能否降低死亡率？", pico_mode="pico")
+    confirmed = confirm_pico_workspace_protocol(
+        tmp_path,
+        actor="reviewer",
+        confirmed_meta_type="treatment_comparative_meta",
+    )
+    state = protocol_page_state_from_project(tmp_path)
+
+    assert confirmed.source_draft_id == draft.protocol_id
+    assert state.pico_workspace_status == "confirmed"
+    assert state.pico_workspace_draft is not None
+    assert state.confirmed_protocol is not None
+    assert state.pico_workspace_draft.protocol_id != state.confirmed_protocol.confirmed_protocol_id
+    assert "已确认" in state.confirmed_protocol_summary
+    assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+
+
 def test_meta_protocol_search_strategy_artifacts_are_draft_only_without_execution_report(tmp_path: Path) -> None:
     draft = build_protocol_search_strategy_draft(_values())
     paths = write_protocol_search_strategy_artifacts(tmp_path, draft)
@@ -153,6 +188,30 @@ def test_meta_protocol_page_saves_and_displays_search_strategy_draft(qt_app, tmp
     assert "PubMed query draft" in state.search_strategy_summary
     assert state.search_execution_status == "draft_only"
     assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+
+
+def test_meta_protocol_page_generates_and_confirms_pico_workspace_v2(qt_app, tmp_path: Path) -> None:
+    widget = ProtocolPage()
+    widget.set_protocol_inputs(
+        project_dir=tmp_path,
+        project_title="肥胖与甲状腺癌发病风险 Meta 分析",
+        review_question="肥胖暴露是否增加甲状腺癌发病风险？",
+        pico="甲状腺癌人群; 肥胖; 非肥胖; 发病风险; systematic review; meta-analysis",
+        method_profile="TREATMENT_EFFECT_META",
+        pico_mode="peco",
+    )
+
+    draft = widget.generate_pico_workspace_draft()
+    draft_summary = widget.pico_workspace_summary_text()
+    confirmed = widget.confirm_research_question(confirmed_meta_type="exposure_disease_risk_meta")
+    confirmed_summary = widget.pico_workspace_summary_text()
+
+    assert draft.pico_mode == "peco"
+    assert "需要人工确认" in draft_summary
+    assert confirmed.source_draft_id == draft.protocol_id
+    assert "已确认" in confirmed_summary
+    assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+    assert not (tmp_path / "screening").exists()
 
 
 def test_meta_page_displays_pubmed_query_draft() -> None:

@@ -14,6 +14,13 @@ from app.meta_analysis.search import (
     build_meta_search_strategy_draft,
 )
 from app.meta_analysis.services.protocol_service import PROTOCOL_RELATIVE_PATHS, ProjectProtocolService
+from app.meta_analysis.services.pico_workspace_service import (
+    CONFIRMED_PROTOCOL_SCHEMA_VERSION,
+    PICO_PROTOCOL_DRAFT_SCHEMA_VERSION,
+    ConfirmedPICOProtocolV2,
+    PICOProtocolDraftV2,
+    PICOWorkspaceService,
+)
 from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
 
 
@@ -43,6 +50,15 @@ class ProtocolPageState:
     search_strategy_summary: str
     search_execution_status: str
     local_model_status: str
+    pico_workspace_schema_version: str = PICO_PROTOCOL_DRAFT_SCHEMA_VERSION
+    pico_workspace_status: str = "not_started"
+    pico_mode: str = ""
+    pico_workspace_draft: PICOProtocolDraftV2 | None = None
+    confirmed_protocol: ConfirmedPICOProtocolV2 | None = None
+    confirmed_protocol_schema_version: str = CONFIRMED_PROTOCOL_SCHEMA_VERSION
+    confirmed_protocol_summary: str = ""
+    draft_protocol_path: str = ""
+    confirmed_protocol_path: str = ""
 
 
 def initial_protocol_page_state(project_dir: Path | None = None) -> ProtocolPageState:
@@ -68,6 +84,7 @@ def initial_protocol_page_state(project_dir: Path | None = None) -> ProtocolPage
         search_strategy_summary="",
         search_execution_status="draft_only",
         local_model_status="not_available",
+        pico_workspace_status="not_started",
     )
 
 
@@ -86,9 +103,33 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
         "search_strategy_user_confirmed": str(project_dir / SEARCH_STRATEGY_CONFIRMED_RELATIVE_PATH),
         "search_execution_report": str(project_dir / SEARCH_EXECUTION_REPORT_RELATIVE_PATH),
     }
+    pico_workspace = PICOWorkspaceService()
+    pico_draft = pico_workspace.load_draft(project_dir)
+    confirmed_protocol = pico_workspace.load_confirmed(project_dir)
+    output_paths.update(
+        {
+            "pico_workspace_draft": str(pico_workspace.draft_path(project_dir)),
+            "pico_workspace_draft_versions": str(pico_workspace.draft_versions_path(project_dir)),
+            "pico_workspace_confirmed": str(pico_workspace.confirmed_path(project_dir)),
+            "pico_workspace_confirmed_versions": str(pico_workspace.confirmed_versions_path(project_dir)),
+            "pico_workspace_manifest": str(pico_workspace.manifest_path(project_dir)),
+        }
+    )
     if protocol is None:
         state = initial_protocol_page_state(project_dir)
-        return ProtocolPageState(**{**state.__dict__, "output_paths": output_paths})
+        return ProtocolPageState(
+            **{
+                **state.__dict__,
+                "output_paths": output_paths,
+                "pico_workspace_status": "confirmed" if confirmed_protocol else ("draft" if pico_draft else "not_started"),
+                "pico_mode": pico_draft.pico_mode if pico_draft else "",
+                "pico_workspace_draft": pico_draft,
+                "confirmed_protocol": confirmed_protocol,
+                "confirmed_protocol_summary": _confirmed_protocol_summary(confirmed_protocol),
+                "draft_protocol_path": output_paths["pico_workspace_draft"],
+                "confirmed_protocol_path": output_paths["pico_workspace_confirmed"],
+            }
+        )
     preview_path = Path(paths.search_strategy_preview)
     preview = preview_path.read_text(encoding="utf-8") if preview_path.exists() else ""
     search_draft_path = project_dir / SEARCH_STRATEGY_DRAFT_RELATIVE_PATH
@@ -118,7 +159,37 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
         search_strategy_summary=search_summary,
         search_execution_status=str(search_payload.get("search_execution_status") or "draft_only"),
         local_model_status=str(search_payload.get("local_model_status") or "not_available"),
+        pico_workspace_status="confirmed" if confirmed_protocol else ("draft" if pico_draft else "not_started"),
+        pico_mode=pico_draft.pico_mode if pico_draft else "",
+        pico_workspace_draft=pico_draft,
+        confirmed_protocol=confirmed_protocol,
+        confirmed_protocol_summary=_confirmed_protocol_summary(confirmed_protocol),
+        draft_protocol_path=output_paths["pico_workspace_draft"],
+        confirmed_protocol_path=output_paths["pico_workspace_confirmed"],
     )
+
+
+def build_pico_workspace_draft(
+    project_dir: Path,
+    research_question: str,
+    *,
+    pico_mode: str = "auto",
+    service: PICOWorkspaceService | None = None,
+) -> PICOProtocolDraftV2:
+    service = service or PICOWorkspaceService()
+    return service.generate_draft(project_dir, research_question, pico_mode=pico_mode)
+
+
+def confirm_pico_workspace_protocol(
+    project_dir: Path,
+    *,
+    actor: str,
+    confirmed_meta_type: str,
+    service: PICOWorkspaceService | None = None,
+    user_notes: str = "",
+) -> ConfirmedPICOProtocolV2:
+    service = service or PICOWorkspaceService()
+    return service.confirm_protocol(project_dir, actor=actor, confirmed_meta_type=confirmed_meta_type, user_notes=user_notes)
 
 
 def build_protocol_search_strategy_draft(values: dict[str, object]) -> MetaSearchStrategyDraft:
@@ -315,6 +386,28 @@ def render_search_strategy_summary(draft: MetaSearchStrategyDraft) -> str:
     )
 
 
+def render_pico_workspace_draft_summary(draft: PICOProtocolDraftV2) -> str:
+    meta_types = [str(item.get("meta_type", "")) for item in draft.meta_type_candidates[:3]]
+    return "\n".join(
+        [
+            "PICO/PICOS/PECO draft",
+            f"schema_version={draft.schema_version}",
+            f"status={draft.status}",
+            f"mode={draft.pico_mode}",
+            f"population={draft.population}",
+            f"intervention={draft.intervention}",
+            f"exposure={draft.exposure}",
+            f"comparator={draft.comparator}",
+            f"outcome={draft.outcome}",
+            f"study_design={draft.study_design}",
+            f"meta_type_candidates={', '.join(meta_types)}",
+            f"warnings={', '.join(draft.warnings) if draft.warnings else 'none'}",
+            "需要人工确认",
+            "不会自动执行检索、筛选或 PRISMA。",
+        ]
+    )
+
+
 def _search_question_from_values(values: dict[str, object]) -> str:
     fields = (
         values.get("review_question"),
@@ -327,6 +420,14 @@ def _search_question_from_values(values: dict[str, object]) -> str:
         values.get("study_design"),
     )
     return " ".join(str(value).strip() for value in fields if str(value).strip())
+
+
+def _first_meta_type_candidate(draft: PICOProtocolDraftV2) -> str:
+    for item in draft.meta_type_candidates:
+        meta_type = str(item.get("meta_type", ""))
+        if meta_type and meta_type != "network_meta_coming_soon":
+            return meta_type
+    return "treatment_comparative_meta"
 
 
 def _search_strategy_summary_from_payload(payload: dict[str, object]) -> str:
@@ -374,6 +475,20 @@ def _search_strategy_summary_from_payload(payload: dict[str, object]) -> str:
     )
 
 
+def _confirmed_protocol_summary(protocol: ConfirmedPICOProtocolV2 | None) -> str:
+    if protocol is None:
+        return "需要人工确认"
+    return "\n".join(
+        [
+            "已确认",
+            f"mode={protocol.confirmed_pico_mode}",
+            f"meta_type={protocol.confirmed_meta_type}",
+            f"locked_for_search_strategy={protocol.locked_for_search_strategy}",
+            "不会自动执行检索、筛选或 PRISMA。",
+        ]
+    )
+
+
 def _load_json_object(path: Path) -> dict[str, object]:
     if not path.exists():
         return {}
@@ -417,6 +532,7 @@ if QWidget is not None:
         def __init__(self) -> None:
             super().__init__()
             self._service = ProjectProtocolService()
+            self._pico_workspace = PICOWorkspaceService()
             self._state = initial_protocol_page_state()
             root = QVBoxLayout(self)
             title = QLabel(f"{self._state.title} · {self._state.status_label}")
@@ -442,12 +558,23 @@ if QWidget is not None:
             self._method_profile = QLineEdit()
             self._method_profile.setPlaceholderText("Method profile, e.g. TREATMENT_EFFECT_META")
             root.addWidget(self._method_profile)
-            save = QPushButton("Save Protocol Draft")
+            self._pico_mode = QLineEdit()
+            self._pico_mode.setPlaceholderText("PICO / PICOS / PECO，留空自动判断")
+            root.addWidget(self._pico_mode)
+            save = QPushButton("生成 PICO 草稿")
             save.clicked.connect(self._save)
             root.addWidget(save)
+            confirm_protocol = QPushButton("确认研究问题")
+            confirm_protocol.clicked.connect(self._confirm_research_question)
+            root.addWidget(confirm_protocol)
             self._summary = QLabel(self._state.empty_state)
             self._summary.setWordWrap(True)
             root.addWidget(self._summary)
+            self._pico_workspace_summary = QTextEdit()
+            self._pico_workspace_summary.setObjectName("metaPicoWorkspaceDraftPreview")
+            self._pico_workspace_summary.setReadOnly(True)
+            self._pico_workspace_summary.setPlaceholderText("PICO/PICOS/PECO draft will appear here. 需要人工确认。")
+            root.addWidget(self._pico_workspace_summary)
             self._search_strategy_summary = QTextEdit()
             self._search_strategy_summary.setObjectName("metaSearchStrategyDraftPreview")
             self._search_strategy_summary.setReadOnly(True)
@@ -477,6 +604,7 @@ if QWidget is not None:
             self._last_candidate_preview_id = ""
 
         def _save(self) -> None:
+            self.generate_pico_workspace_draft()
             self.save_protocol_draft()
 
         def _execute_pubmed(self) -> None:
@@ -484,6 +612,45 @@ if QWidget is not None:
 
         def _import_selected_pubmed_candidates(self) -> None:
             self.import_selected_pubmed_candidates()
+
+        def _confirm_research_question(self) -> None:
+            self.confirm_research_question()
+
+        def generate_pico_workspace_draft(self) -> PICOProtocolDraftV2:
+            project_dir = Path(self._project_dir.text()).expanduser()
+            draft = self._pico_workspace.generate_draft(
+                project_dir,
+                self._review_question.toPlainText(),
+                pico_mode=self._pico_mode.text() or "auto",
+            )
+            self._pico_workspace_summary.setPlainText(render_pico_workspace_draft_summary(draft))
+            return draft
+
+        def confirm_research_question(
+            self,
+            *,
+            confirmed_meta_type: str = "",
+            actor: str = "reviewer",
+        ) -> ConfirmedPICOProtocolV2:
+            project_dir = Path(self._project_dir.text()).expanduser()
+            draft = self._pico_workspace.load_draft(project_dir) or self.generate_pico_workspace_draft()
+            meta_type = confirmed_meta_type or _first_meta_type_candidate(draft)
+            confirmed = self._pico_workspace.confirm_protocol(
+                project_dir,
+                actor=actor,
+                confirmed_meta_type=meta_type,
+                user_notes="Confirmed from Protocol page.",
+            )
+            self._pico_workspace_summary.setPlainText(_confirmed_protocol_summary(confirmed))
+            self._summary.setText(
+                "已确认研究问题\n"
+                f"confirmed_protocol: {self._pico_workspace.confirmed_path(project_dir)}\n"
+                f"mode={confirmed.confirmed_pico_mode}\n"
+                f"meta_type={confirmed.confirmed_meta_type}\n"
+                "下一步：生成检索策略\n"
+                "不会自动执行检索、筛选或 PRISMA。"
+            )
+            return confirmed
 
         def save_protocol_draft(self) -> MetaSearchStrategyDraft:
             project_dir = Path(self._project_dir.text()).expanduser()
@@ -584,12 +751,14 @@ if QWidget is not None:
             review_question: str,
             pico: str,
             method_profile: str,
+            pico_mode: str = "",
         ) -> None:
             self._project_dir.setText(str(project_dir))
             self._project_title.setText(project_title)
             self._review_question.setPlainText(review_question)
             self._pico.setPlainText(pico)
             self._method_profile.setText(method_profile)
+            self._pico_mode.setText(pico_mode)
 
         def search_strategy_summary_text(self) -> str:
             return self._search_strategy_summary.toPlainText()
@@ -599,6 +768,9 @@ if QWidget is not None:
 
         def pubmed_handoff_summary_text(self) -> str:
             return self._pubmed_handoff_summary.toPlainText()
+
+        def pico_workspace_summary_text(self) -> str:
+            return self._pico_workspace_summary.toPlainText()
 
 else:
 
