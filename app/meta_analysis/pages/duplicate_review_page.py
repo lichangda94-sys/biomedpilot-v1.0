@@ -5,7 +5,15 @@ from dataclasses import dataclass
 from app.meta_analysis.models.dedup import DedupDecision, DedupResult, DuplicateGroup, MergePreview
 from app.meta_analysis.pages.warning_severity import WarningSeverityItem, classify_warning_severity, warning_severity_counts
 from app.meta_analysis.services.dedup_decision_service import DedupDecisionService
+from app.meta_analysis.services.dedup_review_v2_service import (
+    RISK_GRAY,
+    RISK_GREEN,
+    RISK_RED,
+    RISK_YELLOW,
+    DedupReviewV2Service,
+)
 from app.meta_analysis.services.duplicate_review_service import DuplicateReviewResult, DuplicateReviewService
+from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
 from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
     DUPLICATE_DECISION_ZH,
@@ -66,6 +74,8 @@ class DuplicateGroupSummary:
     master_candidate_id: str
     merge_preview_available: bool
     status: str
+    risk_level: str = ""
+    risk_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -106,6 +116,11 @@ class DuplicateReviewPageState:
     testing_limitations: tuple[str, ...] = ()
     warning_severity_items: tuple[WarningSeverityItem, ...] = ()
     warning_severity_counts: dict[str, int] | None = None
+    risk_level_counts: dict[str, int] | None = None
+    v2_review_queue_path: str = ""
+    v2_schema_version: str = ""
+    auto_delete_enabled: bool = False
+    auto_merge_enabled: bool = False
     title_zh: str = DUPLICATE_REVIEW_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = DUPLICATE_REVIEW_DESCRIPTION_ZH
@@ -144,6 +159,69 @@ def initial_duplicate_review_state() -> DuplicateReviewPageState:
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
         description_zh=DUPLICATE_REVIEW_DESCRIPTION_ZH,
         decision_option_labels_zh=tuple(DUPLICATE_DECISION_ZH[item] for item in ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")),
+        risk_level_counts={RISK_RED: 0, RISK_YELLOW: 0, RISK_GRAY: 0, RISK_GREEN: 0},
+        v2_schema_version="meta_duplicate_review_queue.v2",
+    )
+
+
+def duplicate_review_v2_state_from_project(project_dir) -> DuplicateReviewPageState:
+    from pathlib import Path
+
+    project_dir = Path(project_dir).expanduser().resolve()
+    service = DedupReviewV2Service()
+    result = service.build_review_queue(project_dir)
+    record_count = len(LiteratureLibraryService().list_records(project_dir))
+    groups = result.groups
+    current = groups[0] if groups else None
+    summaries = tuple(
+        DuplicateGroupSummary(
+            group_id=group.group_id,
+            record_ids=group.record_ids,
+            duplicate_type="exact" if group.risk_level == RISK_RED else "suspected",
+            duplicate_type_zh="高度重复" if group.risk_level == RISK_RED else "疑似重复",
+            reason=group.match_reason,
+            confidence=group.confidence,
+            master_candidate_id=group.retain_candidate_id,
+            merge_preview_available=bool(group.merge_preview),
+            status=group.status,
+            risk_level=group.risk_level,
+            risk_label=group.risk_label,
+        )
+        for group in groups
+    )
+    return DuplicateReviewPageState(
+        title="文献去重",
+        description="基于统一 LiteratureLibraryService 的 Duplicate Review v2，只生成重复组、风险等级、merge preview 和人工决策入口。",
+        status_label="测试中",
+        input_summary="输入：literature/literature_records.json normalized records。",
+        output_summary="输出：duplicate_groups_v2、merge preview、dedup_decisions_v2；不自动删除、不自动 merge。",
+        next_step="人工确认 dedup decisions 后生成 deduplicated literature set。",
+        empty_state="未发现重复候选组。",
+        warning_summary="红/黄/灰风险均需 reviewer 复核；绿色仅表示未发现重复组。",
+        original_record_count=record_count,
+        duplicate_group_count=len(groups),
+        current_group=None,
+        current_group_records=tuple(_record_summary(record) for record in (current.records if current else ())),
+        group_summaries=summaries,
+        exact_duplicate_group_count=len([group for group in groups if group.risk_level == RISK_RED]),
+        suspected_duplicate_group_count=len([group for group in groups if group.risk_level in {RISK_YELLOW, RISK_GRAY}]),
+        risk_level_counts=dict(result.risk_level_counts),
+        v2_review_queue_path=result.output_path,
+        v2_schema_version="meta_duplicate_review_queue.v2",
+        auto_delete_enabled=False,
+        auto_merge_enabled=False,
+        decision_options=("keep_both", "mark_not_duplicate", "merge", "set_master_record", "exclude_duplicate", "skip", "undo"),
+        interactive_decision_options=("keep_both", "mark_not_duplicate", "merge", "set_master_record", "exclude_duplicate", "undo"),
+        interaction_warning="Duplicate Review v2 不会自动删除或合并；merge 必须由 reviewer 确认。",
+        panel_help=initial_duplicate_review_state().panel_help,
+        testing_limitations=(
+            "Duplicate Review v2 只生成风险分组和 merge preview。",
+            "任何 merge / not duplicate / exclude decision 都必须人工确认并写 audit。",
+        ),
+        title_zh=DUPLICATE_REVIEW_TITLE_ZH,
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+        description_zh="基于统一文献库的去重复核，显示红/黄/灰风险、字段差异和 merge preview。",
+        decision_option_labels_zh=tuple(DUPLICATE_DECISION_ZH.get(item, item) for item in ("keep_both", "mark_not_duplicate", "exclude_duplicate", "merge")),
     )
 
 

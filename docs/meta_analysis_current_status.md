@@ -46,6 +46,7 @@ The current testing chain is:
 - Literature library query helpers support listing records, record lookup, and filtering by source type, PMID, DOI, title keyword, and import batch.
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
+- Duplicate Review v2 reads the unified Literature Library v2, generates `meta_duplicate_review_queue.v2` duplicate groups, assigns red/yellow/gray risk levels, builds merge previews, records reviewer dedup decisions, and can export a separate deduplicated literature set without changing the source library.
 - Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
 - Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, CSV export, and advanced method outcome structures for prevalence, correlation, and diagnostic basic data.
@@ -60,6 +61,7 @@ The current testing chain is:
 - PubMed search results are not automatically merged or silently deduplicated; selected imports only prepare a dedup review queue.
 - PubMed search results are not automatically moved into title/abstract screening or PRISMA counting.
 - Literature library import does not automatically create title/abstract screening decisions and does not update PRISMA artifacts.
+- Duplicate Review v2 does not automatically delete records, merge records, create screening artifacts, or update PRISMA counts.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
