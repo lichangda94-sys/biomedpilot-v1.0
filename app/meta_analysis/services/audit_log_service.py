@@ -22,6 +22,8 @@ AUDIT_EVENT_TYPES = (
     "screening_decision",
     "extraction_updated",
     "analysis_run_completed",
+    "analysis_profile_config_saved",
+    "task_lifecycle_changed",
     "report_exported",
 )
 
