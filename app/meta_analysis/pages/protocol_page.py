@@ -11,6 +11,9 @@ from app.meta_analysis.search import (
     PubMedCandidatesHandoffService,
     PubMedSearchExecution,
     PubMedSearchService,
+    SearchStrategyBuilderResultV2,
+    SearchStrategyBuilderService,
+    SearchStrategyDraftV2,
     build_meta_search_strategy_draft,
 )
 from app.meta_analysis.services.protocol_service import PROTOCOL_RELATIVE_PATHS, ProjectProtocolService
@@ -59,6 +62,9 @@ class ProtocolPageState:
     confirmed_protocol_summary: str = ""
     draft_protocol_path: str = ""
     confirmed_protocol_path: str = ""
+    search_strategy_v2_status: str = "not_started"
+    search_strategy_v2_drafts: tuple[SearchStrategyDraftV2, ...] = ()
+    search_strategy_v2_summary: str = ""
 
 
 def initial_protocol_page_state(project_dir: Path | None = None) -> ProtocolPageState:
@@ -115,6 +121,17 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
             "pico_workspace_manifest": str(pico_workspace.manifest_path(project_dir)),
         }
     )
+    search_strategy_v2 = SearchStrategyBuilderService()
+    search_strategy_v2_drafts = search_strategy_v2.load_drafts(project_dir)
+    output_paths.update(
+        {
+            "search_strategy_v2_drafts": str(search_strategy_v2.draft_set_path(project_dir)),
+            "search_strategy_v2_confirmed": str(search_strategy_v2.confirmed_set_path(project_dir)),
+            "search_strategy_v2_manifest": str(search_strategy_v2.manifest_path(project_dir)),
+            "search_strategy_v2_markdown": str(search_strategy_v2.markdown_export_path(project_dir)),
+            "search_strategy_v2_text": str(search_strategy_v2.text_export_path(project_dir)),
+        }
+    )
     if protocol is None:
         state = initial_protocol_page_state(project_dir)
         return ProtocolPageState(
@@ -128,6 +145,9 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
                 "confirmed_protocol_summary": _confirmed_protocol_summary(confirmed_protocol),
                 "draft_protocol_path": output_paths["pico_workspace_draft"],
                 "confirmed_protocol_path": output_paths["pico_workspace_confirmed"],
+                "search_strategy_v2_status": "draft" if search_strategy_v2_drafts else "not_started",
+                "search_strategy_v2_drafts": search_strategy_v2_drafts,
+                "search_strategy_v2_summary": render_search_strategy_v2_summary(search_strategy_v2_drafts),
             }
         )
     preview_path = Path(paths.search_strategy_preview)
@@ -166,6 +186,9 @@ def protocol_page_state_from_project(project_dir: Path, *, service: ProjectProto
         confirmed_protocol_summary=_confirmed_protocol_summary(confirmed_protocol),
         draft_protocol_path=output_paths["pico_workspace_draft"],
         confirmed_protocol_path=output_paths["pico_workspace_confirmed"],
+        search_strategy_v2_status="draft" if search_strategy_v2_drafts else "not_started",
+        search_strategy_v2_drafts=search_strategy_v2_drafts,
+        search_strategy_v2_summary=render_search_strategy_v2_summary(search_strategy_v2_drafts),
     )
 
 
@@ -190,6 +213,25 @@ def confirm_pico_workspace_protocol(
 ) -> ConfirmedPICOProtocolV2:
     service = service or PICOWorkspaceService()
     return service.confirm_protocol(project_dir, actor=actor, confirmed_meta_type=confirmed_meta_type, user_notes=user_notes)
+
+
+def build_search_strategy_v2_from_confirmed_protocol(
+    project_dir: Path,
+    *,
+    service: SearchStrategyBuilderService | None = None,
+) -> SearchStrategyBuilderResultV2:
+    service = service or SearchStrategyBuilderService()
+    return service.generate_from_confirmed_protocol(project_dir)
+
+
+def confirm_search_strategy_v2(
+    project_dir: Path,
+    *,
+    actor: str,
+    service: SearchStrategyBuilderService | None = None,
+):
+    service = service or SearchStrategyBuilderService()
+    return service.confirm_strategies(project_dir, actor=actor)
 
 
 def build_protocol_search_strategy_draft(values: dict[str, object]) -> MetaSearchStrategyDraft:
@@ -408,6 +450,30 @@ def render_pico_workspace_draft_summary(draft: PICOProtocolDraftV2) -> str:
     )
 
 
+def render_search_strategy_v2_summary(drafts: tuple[SearchStrategyDraftV2, ...]) -> str:
+    if not drafts:
+        return "尚未生成检索策略"
+    lines = [
+        "Search Strategy Builder v2",
+        "仅生成草稿",
+        "PubMed 可执行",
+        "其他数据库需手动检索",
+        "",
+    ]
+    for draft in drafts:
+        lines.extend(
+            [
+                f"[{draft.database}] {draft.database_family}",
+                f"schema_version={draft.schema_version}",
+                f"status={draft.search_execution_status}",
+                draft.boolean_query or "empty",
+                "",
+            ]
+        )
+    lines.append("不自动联网、不导入文献、不推进 PRISMA。")
+    return "\n".join(lines)
+
+
 def _search_question_from_values(values: dict[str, object]) -> str:
     fields = (
         values.get("review_question"),
@@ -567,6 +633,12 @@ if QWidget is not None:
             confirm_protocol = QPushButton("确认研究问题")
             confirm_protocol.clicked.connect(self._confirm_research_question)
             root.addWidget(confirm_protocol)
+            build_strategy_v2 = QPushButton("生成检索策略")
+            build_strategy_v2.clicked.connect(self._build_search_strategy_v2)
+            root.addWidget(build_strategy_v2)
+            confirm_strategy_v2 = QPushButton("确认检索式")
+            confirm_strategy_v2.clicked.connect(self._confirm_search_strategy_v2)
+            root.addWidget(confirm_strategy_v2)
             self._summary = QLabel(self._state.empty_state)
             self._summary.setWordWrap(True)
             root.addWidget(self._summary)
@@ -580,6 +652,11 @@ if QWidget is not None:
             self._search_strategy_summary.setReadOnly(True)
             self._search_strategy_summary.setPlaceholderText("Search strategy draft will appear after saving the protocol.")
             root.addWidget(self._search_strategy_summary)
+            self._search_strategy_v2_summary = QTextEdit()
+            self._search_strategy_v2_summary.setObjectName("metaSearchStrategyV2DraftPreview")
+            self._search_strategy_v2_summary.setReadOnly(True)
+            self._search_strategy_v2_summary.setPlaceholderText("多数据库检索策略草稿将在 confirmed protocol 后生成。")
+            root.addWidget(self._search_strategy_v2_summary)
             execute_pubmed = QPushButton("确认并检索 PubMed")
             execute_pubmed.clicked.connect(self._execute_pubmed)
             root.addWidget(execute_pubmed)
@@ -616,6 +693,12 @@ if QWidget is not None:
         def _confirm_research_question(self) -> None:
             self.confirm_research_question()
 
+        def _build_search_strategy_v2(self) -> None:
+            self.build_search_strategy_v2()
+
+        def _confirm_search_strategy_v2(self) -> None:
+            self.confirm_search_strategy_v2()
+
         def generate_pico_workspace_draft(self) -> PICOProtocolDraftV2:
             project_dir = Path(self._project_dir.text()).expanduser()
             draft = self._pico_workspace.generate_draft(
@@ -649,6 +732,29 @@ if QWidget is not None:
                 f"meta_type={confirmed.confirmed_meta_type}\n"
                 "下一步：生成检索策略\n"
                 "不会自动执行检索、筛选或 PRISMA。"
+            )
+            return confirmed
+
+        def build_search_strategy_v2(self) -> SearchStrategyBuilderResultV2:
+            project_dir = Path(self._project_dir.text()).expanduser()
+            result = SearchStrategyBuilderService().generate_from_confirmed_protocol(project_dir, actor="system")
+            self._search_strategy_v2_summary.setPlainText(render_search_strategy_v2_summary(result.drafts))
+            self._summary.setText(
+                "已生成检索策略\n"
+                f"drafts: {result.draft_path}\n"
+                f"markdown: {result.export_markdown_path}\n"
+                f"txt: {result.export_text_path}\n"
+                "仅生成草稿；不自动联网、不导入文献、不推进 PRISMA。"
+            )
+            return result
+
+        def confirm_search_strategy_v2(self, *, actor: str = "reviewer"):
+            project_dir = Path(self._project_dir.text()).expanduser()
+            confirmed = SearchStrategyBuilderService().confirm_strategies(project_dir, actor=actor)
+            self._summary.setText(
+                f"已确认检索式：{len(confirmed)} 个数据库\n"
+                "PubMed 可执行；其他数据库需手动检索。\n"
+                "确认不会自动联网、导入文献或推进 PRISMA。"
             )
             return confirmed
 
@@ -762,6 +868,9 @@ if QWidget is not None:
 
         def search_strategy_summary_text(self) -> str:
             return self._search_strategy_summary.toPlainText()
+
+        def search_strategy_v2_summary_text(self) -> str:
+            return self._search_strategy_v2_summary.toPlainText()
 
         def pubmed_execution_summary_text(self) -> str:
             return self._pubmed_execution_summary.toPlainText()

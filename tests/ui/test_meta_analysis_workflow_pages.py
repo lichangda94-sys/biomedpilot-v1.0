@@ -14,13 +14,16 @@ try:
     from app.meta_analysis.workflow_pages import (
         ProtocolPage,
         build_pico_workspace_draft,
+        build_search_strategy_v2_from_confirmed_protocol,
         build_protocol_search_strategy_draft,
         confirm_pico_workspace_protocol,
+        confirm_search_strategy_v2,
         execute_protocol_pubmed_search,
         protocol_page_state_from_project,
         render_pico_workspace_draft_summary,
         render_pubmed_search_execution_summary,
         render_search_strategy_summary,
+        render_search_strategy_v2_summary,
         write_pubmed_search_execution_artifacts,
         write_protocol_search_strategy_artifacts,
     )
@@ -135,6 +138,32 @@ def test_meta_pico_workspace_v2_confirmed_state_is_separate_from_draft(tmp_path:
     assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
 
 
+def test_meta_search_strategy_v2_summary_from_confirmed_protocol(tmp_path: Path) -> None:
+    build_pico_workspace_draft(tmp_path, "肥胖暴露与甲状腺癌风险是否相关？", pico_mode="peco")
+    confirm_pico_workspace_protocol(
+        tmp_path,
+        actor="reviewer",
+        confirmed_meta_type="exposure_disease_risk_meta",
+    )
+
+    result = build_search_strategy_v2_from_confirmed_protocol(tmp_path)
+    summary = render_search_strategy_v2_summary(result.drafts)
+    confirmed = confirm_search_strategy_v2(tmp_path, actor="reviewer")
+    state = protocol_page_state_from_project(tmp_path)
+
+    assert result.draft_count == 7
+    assert "Search Strategy Builder v2" in summary
+    assert "仅生成草稿" in summary
+    assert "PubMed 可执行" in summary
+    assert "其他数据库需手动检索" in summary
+    assert "pubmed" in summary
+    assert "vip" in summary
+    assert len(confirmed) == 7
+    assert state.search_strategy_v2_status == "draft"
+    assert len(state.search_strategy_v2_drafts) == 7
+    assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+
+
 def test_meta_protocol_search_strategy_artifacts_are_draft_only_without_execution_report(tmp_path: Path) -> None:
     draft = build_protocol_search_strategy_draft(_values())
     paths = write_protocol_search_strategy_artifacts(tmp_path, draft)
@@ -211,6 +240,33 @@ def test_meta_protocol_page_generates_and_confirms_pico_workspace_v2(qt_app, tmp
     assert confirmed.source_draft_id == draft.protocol_id
     assert "已确认" in confirmed_summary
     assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+    assert not (tmp_path / "screening").exists()
+
+
+def test_meta_protocol_page_builds_search_strategy_v2_after_confirmed_protocol(qt_app, tmp_path: Path) -> None:
+    widget = ProtocolPage()
+    widget.set_protocol_inputs(
+        project_dir=tmp_path,
+        project_title="肥胖与甲状腺癌发病风险 Meta 分析",
+        review_question="肥胖暴露是否增加甲状腺癌发病风险？",
+        pico="甲状腺癌人群; 肥胖; 非肥胖; 发病风险; observational study",
+        method_profile="EXPOSURE_RISK_META",
+        pico_mode="peco",
+    )
+
+    widget.generate_pico_workspace_draft()
+    widget.confirm_research_question(confirmed_meta_type="exposure_disease_risk_meta")
+    result = widget.build_search_strategy_v2()
+    summary = widget.search_strategy_v2_summary_text()
+    confirmed = widget.confirm_search_strategy_v2(actor="reviewer")
+
+    assert result.draft_count == 7
+    assert "Search Strategy Builder v2" in summary
+    assert "cnki" in summary
+    assert "vip" in summary
+    assert len(confirmed) == 7
+    assert not (tmp_path / "protocol" / "search_execution_report.json").exists()
+    assert not (tmp_path / "literature").exists()
     assert not (tmp_path / "screening").exists()
 
 
