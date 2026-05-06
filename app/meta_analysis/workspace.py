@@ -11,6 +11,11 @@ from app.shared.storage import default_storage_root
 from app.version import APP_VERSION
 
 from app.meta_analysis.ui_text import INTERNAL_BETA_STATUS_ZH
+from app.meta_analysis.pages.workflow_integration_page import (
+    MetaWorkflowStepState,
+    meta_workflow_integration_state_from_project,
+    workflow_navigation_items,
+)
 
 
 def meta_analysis_features() -> list[FeatureItem]:
@@ -84,32 +89,23 @@ class MetaWorkspaceLayoutState:
 
 def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
     version_status = f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}"
+    workflow_items = tuple(
+        MetaWorkspaceNavigationItem(
+            str(item["step_id"]),
+            str(item["title_zh"]),
+            "Meta Analysis 中文工作流步骤；显示状态、artifact 摘要、warning 和下一步。",
+            str(item["route_key"]),
+            status_label="Testing / Developer Preview",
+            status_label_zh="内部测试",
+        )
+        for item in workflow_navigation_items()
+    )
     return MetaWorkspaceLayoutState(
         title="Meta 分析模块",
         status_label=version_status,
-        description="用中文组织 Meta 分析主流程入口：查看当前步骤、下一步建议、需要复核的问题和内部测试限制。",
-        navigation_items=(
-            MetaWorkspaceNavigationItem("workflow_dashboard", "流程总控 Workflow Dashboard", "查看项目全流程状态、需要复核的问题和下一步建议。", "workflow_dashboard"),
-            MetaWorkspaceNavigationItem("protocol", "研究问题 / PICO-PICOS", "记录研究问题、PICO/PICOS 和检索策略草稿。", "protocol"),
-            MetaWorkspaceNavigationItem("literature_import", "文献导入 Literature Import", "导入 RIS / NBIB / CSV 并查看导入诊断。", "literature_import"),
-            MetaWorkspaceNavigationItem("import_quality", "导入质量 Import Quality", "查看最近导入批次和导入质量摘要。", "import_quality"),
-            MetaWorkspaceNavigationItem("literature_library", "文献库 Literature Library", "查看文献表、重复风险和流程状态标签。", "literature_library"),
-            MetaWorkspaceNavigationItem("prepare_screening", "筛选准备 Prepare Screening", "生成筛选准备数据并保留旧链路兼容入口。", "prepare_screening"),
-            MetaWorkspaceNavigationItem("duplicate_review", "去重审核 Duplicate Review", "查看重复候选组、合并预览和决策入口。", "duplicate_review"),
-            MetaWorkspaceNavigationItem("criteria", "纳入与排除标准 Criteria", "维护纳入标准和排除标准。", "criteria"),
-            MetaWorkspaceNavigationItem("screening", "标题摘要筛选 Screening", "执行 title/abstract screening。", "screening"),
-            MetaWorkspaceNavigationItem("attachment", "全文 / 附件管理 Full-text", "管理附件、缺失全文和 link/copy 状态。", "attachment"),
-            MetaWorkspaceNavigationItem("fulltext_eligibility", "全文筛选 Full-text Screening", "完成全文资格审查和最终纳入清单。", "fulltext_eligibility"),
-            MetaWorkspaceNavigationItem("extraction", "数据提取 Data Extraction", "录入结构化提取数据、草稿和完整性检查。", "extraction"),
-            MetaWorkspaceNavigationItem("extraction_schema", "提取 Schema Registry", "查看 M12 提取 schema、字段、校验规则和 testing 边界。", "extraction_schema"),
-            MetaWorkspaceNavigationItem("manual_extraction", "人工提取 Effect Rows", "测试 M13 逐篇文献、study unit、effect row 和 evidence 草稿工作区。", "manual_extraction"),
-            MetaWorkspaceNavigationItem("quality", "质量评价 Quality Assessment", "填写质量评价并导出 quality table。", "quality"),
-            MetaWorkspaceNavigationItem("analysis", "统计分析 Meta-analysis", "构建 dataset、运行 testing meta-analysis 并查看 warnings。", "analysis"),
-            MetaWorkspaceNavigationItem("reporting", "结果报告 Reporting", "生成 PRISMA、报告、导出和复现包。", "reporting"),
-            MetaWorkspaceNavigationItem("ai_suggestions", "AI 建议审核队列", "查看 AI/model suggestion 必须人工 accept / reject / edit 的治理入口。", "ai_suggestions"),
-            MetaWorkspaceNavigationItem("audit", "审计日志 Audit", "查看 audit log 和 review log 导出状态。", "audit"),
-        ),
-        default_page_key="workflow_dashboard",
+        description="用中文串联 Meta 分析主流程：状态可见、按钮清楚、下一步明确；未完成能力保持 testing-level / 待开发。",
+        navigation_items=workflow_items,
+        default_page_key="workflow_home",
         testing_notice="当前 Meta 分析模块仍为内部测试版；所有结果需要人工复核，不能作为正式临床、投稿或 production 结论。",
         version_status_label=version_status,
     )
@@ -377,21 +373,25 @@ if QWidget is not None:
 
 
     def _workspace_pages() -> dict[str, QWidget]:
+        project_dir = default_storage_root() / "projects" / "manual-meta-ui-test" / "meta_analysis"
+        workflow_state = meta_workflow_integration_state_from_project(project_dir)
+        workflow_pages = {"workflow_home": _workflow_home_panel(workflow_state)}
+        workflow_pages.update({step.route_key: _workflow_step_panel(step) for step in workflow_state.steps if step.route_key != "workflow_home"})
         return {
+            **workflow_pages,
+            # Existing detailed pages remain available to tests and internal callers, but the visible
+            # navigation above uses the compact M16.5 workflow route keys.
             "workflow_dashboard": WorkflowDashboardPage(),
             "protocol": ProtocolPage(),
             "literature_import": LiteratureImportPage(),
             "import_quality": _import_quality_dashboard(),
-            "literature_library": LiteratureLibraryPage(),
             "prepare_screening": PrepareScreeningPage(),
-            "duplicate_review": DuplicateReviewPage(),
             "criteria": CriteriaPage(),
             "screening": ScreeningPage(),
             "attachment": AttachmentPage(),
             "fulltext_eligibility": FullTextEligibilityPage(),
             "extraction": ExtractionPage(),
             "extraction_schema": _extraction_schema_registry_panel(),
-            "manual_extraction": _manual_extraction_effect_row_panel(),
             "quality": _quality_page_panel(),
             "analysis": AnalysisPage(),
             "reporting": ReportingPage(),
@@ -405,6 +405,81 @@ if QWidget is not None:
         scroll.setWidgetResizable(True)
         scroll.setWidget(widget)
         return scroll
+
+
+    def _workflow_home_panel(state) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("metaWorkflowHomePanel")
+        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        title = QLabel(f"{state.title_zh} · {state.status_label_zh}")
+        title.setStyleSheet("font-weight: 700; font-size: 18px;")
+        layout.addWidget(title)
+        summary = QLabel(
+            "\n".join(
+                [
+                    f"项目目录：{state.project_dir}",
+                    f"步骤数：{state.step_count}",
+                    f"下一步：{state.next_recommended_step_id}",
+                    "边界：不自动运行统计，不生成最终图表或正式报告，不推进 PRISMA。",
+                ]
+            )
+        )
+        summary.setWordWrap(True)
+        layout.addWidget(summary)
+        for step in state.steps:
+            layout.addWidget(_workflow_step_card(step))
+        layout.addStretch(1)
+        return frame
+
+
+    def _workflow_step_panel(step: MetaWorkflowStepState) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName(f"metaWorkflowStepPanel_{step.route_key}")
+        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        title = QLabel(f"{step.order}. {step.title_zh}")
+        title.setStyleSheet("font-weight: 700; font-size: 18px;")
+        layout.addWidget(title)
+        layout.addWidget(_workflow_step_card(step))
+        actions = QHBoxLayout()
+        primary = QPushButton(step.primary_action_zh)
+        primary.setToolTip("本阶段按钮用于流程入口展示；研究判断仍需人工确认。")
+        next_button = QPushButton(step.next_action_zh)
+        next_button.setToolTip(f"下一步：{step.next_step_id or '无'}")
+        actions.addWidget(primary)
+        actions.addWidget(next_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        if step.placeholder:
+            placeholder = QLabel("待开发 / testing-level / 暂不可用")
+            placeholder.setStyleSheet("color: #8A4B00; font-weight: 600;")
+            layout.addWidget(placeholder)
+        layout.addStretch(1)
+        return frame
+
+
+    def _workflow_step_card(step: MetaWorkflowStepState) -> QFrame:
+        card = QFrame()
+        card.setStyleSheet("QFrame { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        layout = QVBoxLayout(card)
+        lines = [
+            f"当前状态：{step.status}",
+            f"artifact 数量：{step.artifact_count}",
+            f"artifact 摘要：{step.artifact_summary}",
+            f"最近更新时间：{step.updated_at or '暂无'}",
+            f"warning 数量：{step.warning_count}",
+            f"主操作：{step.primary_action_zh}",
+            f"下一步：{step.next_action_zh}",
+        ]
+        if step.artifact_paths:
+            lines.append("路径：" + "；".join(step.artifact_paths[:3]))
+        if step.warnings:
+            lines.append("Warnings：" + "；".join(step.warnings[:4]))
+        body = QLabel("\n".join(lines))
+        body.setWordWrap(True)
+        layout.addWidget(body)
+        return card
 
 
     def _quality_page_panel() -> QFrame:

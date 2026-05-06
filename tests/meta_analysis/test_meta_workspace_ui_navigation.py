@@ -30,10 +30,24 @@ def test_meta_workspace_layout_state_defines_internal_beta_navigation() -> None:
     assert "0.1.0-internal-beta" in state.status_label
     assert "内部测试版 / Developer Preview / testing" in state.status_label
     assert state.title == "Meta 分析模块"
-    assert state.default_page_key == "workflow_dashboard"
+    assert state.default_page_key == "workflow_home"
     page_keys = [item.page_key for item in state.navigation_items]
-    assert page_keys[:4] == ["workflow_dashboard", "protocol", "literature_import", "import_quality"]
-    assert {"extraction", "extraction_schema", "manual_extraction", "quality", "analysis", "reporting", "ai_suggestions", "audit"} <= set(page_keys)
+    assert page_keys == [
+        "workflow_home",
+        "pico_workspace",
+        "search_strategy",
+        "pubmed_handoff",
+        "literature_library",
+        "dedup_review",
+        "fulltext_management",
+        "manual_extraction",
+        "ai_extraction",
+        "quality_assessment",
+        "analysis_plan",
+        "statistics_analysis",
+        "figure_results",
+        "report_export",
+    ]
     assert "不能作为正式临床" in state.testing_notice
 
 
@@ -44,9 +58,9 @@ def test_meta_workspace_navigation_has_one_page_key_per_item() -> None:
     page_keys = [item.page_key for item in state.navigation_items]
     assert len(labels) == len(page_keys)
     assert len(set(page_keys)) == len(page_keys)
-    assert "质量评价 Quality Assessment" in " ".join(labels)
-    assert "结果报告 Reporting" in " ".join(labels)
-    assert "人工提取 Effect Rows" in " ".join(labels)
+    assert "质量评价" in " ".join(labels)
+    assert "报告导出" in " ".join(labels)
+    assert "数据提取" in " ".join(labels)
 
 
 def test_meta_workspace_widget_mounts_current_development_pages(qt_app) -> None:
@@ -55,6 +69,6 @@ def test_meta_workspace_widget_mounts_current_development_pages(qt_app) -> None:
     widget = MetaAnalysisWorkspaceWidget()
     page_keys = widget.page_keys()
 
-    assert "extraction_schema" in page_keys
     assert "manual_extraction" in page_keys
-    assert "ai_suggestions" in page_keys
+    assert "ai_extraction" in page_keys
+    assert "statistics_analysis" in page_keys
