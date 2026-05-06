@@ -2656,9 +2656,12 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         artifacts = load_readiness_artifacts(self._project_root)
         if artifacts.get("readiness_report") is None:
             self._last_artifacts = {}
-            self._status_label.setText("尚未运行 Ready 检查。")
-            self._warning_chips.setText("关键警告：尚未运行")
-            self._supplement_hint.setText("补充缺失信息会在运行 Ready 检查后按缺失项显示。")
+            self._status_label.setText("暂不能继续：尚未运行数据准备检查。")
+            self._recognized_inputs_label.setText("已识别到的数据：尚未检查")
+            self._missing_inputs_label.setText("仍需补充的数据：尚未检查")
+            self._next_step_label.setText("下一步建议：点击“重新检查”，让系统读取最新的数据识别结果。")
+            self._warning_chips.setText("提示：尚未运行数据准备检查。")
+            self._render_todo_items(set())
             self._matrix.setRowCount(0)
             self._details.setPlainText("")
         else:
@@ -2689,11 +2692,11 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
             self._status_label.setText("请先创建或打开生信分析项目。")
             return False
         normalized = _normalize_missing_input(kind)
-        if normalized not in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config"}:
+        if normalized not in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config", "gmt_gene_set"}:
             self._status_label.setText("当前缺失项暂不支持在本页补充。")
             return False
-        if normalized == "expression_matrix" and mode == "manual":
-            self._status_label.setText("表达矩阵仅支持选择本地文件补充。")
+        if normalized in {"expression_matrix", "gmt_gene_set"} and mode == "manual":
+            self._status_label.setText(f"{_missing_input_label(normalized)}仅支持选择本地文件补充。")
             return False
         if mode == "file":
             if path is None:
@@ -2760,73 +2763,75 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("数据准备状态", "Developer Preview / 本地测试版", back_text="返回数据识别", back_signal=self.back_requested))
-        actions = QHBoxLayout()
-        actions.addWidget(_button("运行 Ready 检查", "primaryButton", self.run_readiness_check))
-        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_status))
-        actions.addStretch(1)
-        root.addLayout(actions)
+        root.addWidget(_header("数据准备状态", "检查当前数据能否进入标准化和后续分析。", back_text="返回数据识别", back_signal=self.back_requested))
 
-        status_bar = QFrame()
-        status_bar.setObjectName("readinessCompactStatusBar")
-        status_layout = QHBoxLayout(status_bar)
-        status_layout.setContentsMargins(SPACING["lg"], SPACING["sm"], SPACING["lg"], SPACING["sm"])
-        self._status_label = _status_label("尚未运行 Ready 检查。")
+        status_card, status_layout = _card("数据准备概览")
+        status_card.setObjectName("readinessStatusCard")
+        self._status_label = _status_label("暂不能继续：尚未运行数据准备检查。")
         self._status_label.setObjectName("readinessStatusBadge")
-        self._warning_chips = QLabel("关键警告：尚未运行")
+        self._recognized_inputs_label = _muted("已识别到的数据：尚未检查")
+        self._recognized_inputs_label.setObjectName("readinessRecognizedInputs")
+        self._missing_inputs_label = _muted("仍需补充的数据：尚未检查")
+        self._missing_inputs_label.setObjectName("readinessMissingInputs")
+        self._next_step_label = _muted("下一步建议：点击“重新检查”，让系统读取最新的数据识别结果。")
+        self._next_step_label.setObjectName("readinessNextStep")
+        self._warning_chips = _muted("提示：尚未运行数据准备检查。")
         self._warning_chips.setObjectName("readinessWarningChips")
-        self._warning_chips.setWordWrap(True)
-        status_layout.addWidget(self._status_label, 0)
-        status_layout.addWidget(self._warning_chips, 1)
-        root.addWidget(status_bar)
+        status_layout.addWidget(self._status_label)
+        status_layout.addWidget(self._recognized_inputs_label)
+        status_layout.addWidget(self._missing_inputs_label)
+        status_layout.addWidget(self._next_step_label)
+        status_layout.addWidget(self._warning_chips)
+        root.addWidget(status_card)
 
-        supplement_card, supplement_layout = _card("补充缺失信息")
-        supplement_card.setObjectName("readinessSupplementCard")
-        self._supplement_hint = _muted("运行 Ready 检查后，这里会显示需要补充的样本信息、临床信息或表达矩阵。")
-        supplement_layout.addWidget(self._supplement_hint)
-        supplement_grid = QGridLayout()
-        supplement_grid.setHorizontalSpacing(SPACING["sm"])
-        supplement_grid.setVerticalSpacing(SPACING["sm"])
-        self._sample_file_button = _button("选择样本信息文件", "secondaryButton", lambda: self.supplement_missing_info("sample_metadata", mode="file"))
+        todo_card, todo_layout = _card("待办清单")
+        todo_card.setObjectName("readinessTodoCard")
+        self._todo_empty_label = _muted("当前没有必须补充的信息。")
+        self._todo_empty_label.setObjectName("readinessTodoEmpty")
+        todo_layout.addWidget(self._todo_empty_label)
+        self._todo_rows: dict[str, QFrame] = {}
+        self._sample_file_button = _button("上传样本信息", "secondaryButton", lambda: self.supplement_missing_info("sample_metadata", mode="file"))
         self._sample_manual_button = _button("手动输入样本信息", "secondaryButton", lambda: self.supplement_missing_info("sample_metadata", mode="manual"))
         self._sample_template_button = _button("下载样本信息模板", "secondaryButton", lambda: self.create_missing_info_template("sample_metadata"))
-        self._clinical_file_button = _button("选择临床信息文件", "secondaryButton", lambda: self.supplement_missing_info("clinical_metadata", mode="file"))
+        self._clinical_file_button = _button("上传临床表", "secondaryButton", lambda: self.supplement_missing_info("clinical_metadata", mode="file"))
+        self._clinical_defer_button = _button("暂不做相关分析", "secondaryButton", lambda: self._defer_optional_analysis("clinical_metadata"))
         self._clinical_manual_button = _button("手动输入临床信息", "secondaryButton", lambda: self.supplement_missing_info("clinical_metadata", mode="manual"))
         self._clinical_template_button = _button("下载临床信息模板", "secondaryButton", lambda: self.create_missing_info_template("clinical_metadata"))
-        self._expression_file_button = _button("选择表达矩阵文件", "secondaryButton", lambda: self.supplement_missing_info("expression_matrix", mode="file"))
-        self._comparison_file_button = _button("选择比较组配置", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="file"))
+        self._clinical_manual_button.setVisible(False)
+        self._clinical_template_button.setVisible(False)
+        self._expression_file_button = _button("上传表达矩阵", "secondaryButton", lambda: self.supplement_missing_info("expression_matrix", mode="file"))
         self._comparison_manual_button = _button("设置比较组", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="manual"))
+        self._comparison_file_button = _button("导入比较组表", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="file"))
         self._comparison_template_button = _button("下载比较组模板", "secondaryButton", lambda: self.create_missing_info_template("comparison_config"))
-        for index, button in enumerate(
-            [
-                self._sample_file_button,
-                self._sample_manual_button,
-                self._sample_template_button,
-                self._clinical_file_button,
-                self._clinical_manual_button,
-                self._clinical_template_button,
-                self._expression_file_button,
-                self._comparison_file_button,
-                self._comparison_manual_button,
-                self._comparison_template_button,
-            ]
-        ):
-            supplement_grid.addWidget(button, index // 3, index % 3)
-        supplement_layout.addLayout(supplement_grid)
-        root.addWidget(supplement_card)
+        self._gmt_file_button = _button("上传 GMT 文件", "secondaryButton", lambda: self.supplement_missing_info("gmt_gene_set", mode="file"))
+        self._gmt_defer_button = _button("暂不做 GSEA", "secondaryButton", lambda: self._defer_optional_analysis("gmt_gene_set"))
+        todo_items = [
+            ("expression_matrix", "表达矩阵", "用途：后续标准化、差异表达、富集和相关性分析的核心输入。", "当前状态：未提供。", [self._expression_file_button]),
+            ("sample_metadata", "样本信息", "用途：识别样本分组、组织来源和实验条件。", "当前状态：未提供。", [self._sample_file_button, self._sample_manual_button, self._sample_template_button]),
+            ("clinical_metadata", "临床信息", "用途：用于生存分析和临床变量关联。", "当前状态：未提供。", [self._clinical_file_button, self._clinical_defer_button]),
+            ("comparison_config", "比较分组", "用途：用于差异表达分析，例如 control vs treatment。", "当前状态：未设置。", [self._comparison_manual_button, self._comparison_file_button, self._comparison_template_button]),
+            ("gmt_gene_set", "GMT 基因集", "用途：用于 GSEA。", "当前状态：未提供。", [self._gmt_file_button, self._gmt_defer_button]),
+        ]
+        for key, title, purpose, state, buttons in todo_items:
+            row = _readiness_todo_row(title, purpose, state, buttons)
+            row.setObjectName(f"readinessTodo_{key}")
+            row.setVisible(False)
+            self._todo_rows[key] = row
+            todo_layout.addWidget(row)
+        root.addWidget(todo_card)
 
-        self._matrix = _table(["分析", "是否可运行", "已有输入", "缺失输入", "警告", "下一步建议"])
+        self._matrix = _table(["分析项目", "当前状态", "还需要什么", "建议操作"])
         self._matrix.setObjectName("readinessCapabilityTable")
-        self._matrix.setMinimumHeight(260)
+        self._matrix.setMinimumHeight(380)
         root.addWidget(self._matrix)
 
         self._details = _text_preview(130)
         self._details.setVisible(False)
-        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._details)))
+        root.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._details)))
         root.addWidget(self._details)
         bottom_actions = QHBoxLayout()
-        bottom_actions.addWidget(_button("保存并重新检查", "secondaryButton", self.save_and_rerun_readiness))
-        bottom_actions.addWidget(_button("继续：标准化资产", "primaryButton", self.continue_to_standardization))
+        bottom_actions.addWidget(_button("重新检查", "secondaryButton", self.save_and_rerun_readiness))
+        bottom_actions.addWidget(_button("继续：标准化数据", "primaryButton", self.continue_to_standardization))
         bottom_actions.addStretch(1)
         root.addLayout(bottom_actions)
 
@@ -2834,56 +2839,51 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._last_artifacts = artifacts
         readiness = artifacts.get("readiness_report") or {}
         matrix = artifacts.get("capability_matrix") or {}
-        status = str(readiness.get("overall_status") or "unavailable") if isinstance(readiness, dict) else "unavailable"
-        self._status_label.setText(f"当前 Ready 状态：{readiness_status_zh(status)}")
-        warning_text = _readiness_warning_chips(readiness if isinstance(readiness, dict) else {}, matrix if isinstance(matrix, dict) else {})
-        self._warning_chips.setText(warning_text)
-        self._supplement_hint.setText(_supplement_hint_text(readiness if isinstance(readiness, dict) else {}, matrix if isinstance(matrix, dict) else {}))
-        self._update_supplement_buttons(readiness if isinstance(readiness, dict) else {}, matrix if isinstance(matrix, dict) else {})
-        self._details.setPlainText(_json({"readiness_report": readiness, "analysis_capability_matrix": matrix}))
+        readiness_payload = readiness if isinstance(readiness, dict) else {}
+        matrix_payload = matrix if isinstance(matrix, dict) else {}
+        missing = _missing_readiness_inputs(readiness_payload, matrix_payload)
+        self._status_label.setText(_readiness_overall_summary(readiness_payload, matrix_payload, missing))
+        self._recognized_inputs_label.setText(_readiness_recognized_inputs_text(readiness_payload))
+        self._missing_inputs_label.setText(_readiness_missing_inputs_text(missing))
+        self._next_step_label.setText(_readiness_next_step_text(readiness_payload, matrix_payload, missing))
+        self._warning_chips.setText(_readiness_default_warning_summary(readiness_payload, matrix_payload, missing))
+        self._render_todo_items(missing)
+        self._details.setPlainText(
+            _json(
+                {
+                    "readiness_report": readiness,
+                    "analysis_capability_matrix": matrix,
+                    "readiness_report_path": artifacts.get("readiness_path"),
+                    "capability_matrix_path": artifacts.get("matrix_path"),
+                }
+            )
+        )
         rows = matrix.get("rows", []) if isinstance(matrix, dict) else []
         _fill_table(
             self._matrix,
             [
                 [
-                    row.get("label", ""),
-                    "可运行" if row.get("can_run") else "不可运行",
-                    "、".join(str(item) for item in row.get("available_inputs", []) or []),
-                    "、".join(str(item) for item in row.get("missing_inputs", []) or []) or "无",
-                    "、".join(str(item) for item in row.get("warnings", []) or []),
-                    row.get("next_step", ""),
+                    str(row.get("label", "")),
+                    _analysis_readiness_status_label(row),
+                    _analysis_missing_text(row),
+                    _analysis_suggested_action(row),
                 ]
                 for row in rows
                 if isinstance(row, dict)
             ],
         )
+        _set_table_widths(self._matrix, [190, 170, 240, 280])
+        self._matrix.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
-    def _update_supplement_buttons(self, readiness: dict[str, object], matrix: dict[str, object]) -> None:
-        missing = _missing_readiness_inputs(readiness, matrix)
-        self._sample_file_button.setVisible("sample_metadata" in missing)
-        self._sample_manual_button.setVisible("sample_metadata" in missing)
-        self._sample_template_button.setVisible("sample_metadata" in missing)
-        self._clinical_file_button.setVisible("clinical_metadata" in missing)
-        self._clinical_manual_button.setVisible("clinical_metadata" in missing)
-        self._clinical_template_button.setVisible("clinical_metadata" in missing)
-        self._expression_file_button.setVisible("expression_matrix" in missing)
-        self._comparison_file_button.setVisible("comparison_config" in missing)
-        self._comparison_manual_button.setVisible("comparison_config" in missing)
-        self._comparison_template_button.setVisible("comparison_config" in missing)
-        if not missing:
-            for button in (
-                self._sample_file_button,
-                self._sample_manual_button,
-                self._sample_template_button,
-                self._clinical_file_button,
-                self._clinical_manual_button,
-                self._clinical_template_button,
-                self._expression_file_button,
-                self._comparison_file_button,
-                self._comparison_manual_button,
-                self._comparison_template_button,
-            ):
-                button.setVisible(False)
+    def _render_todo_items(self, missing: set[str]) -> None:
+        visible = {key for key in missing if key in self._todo_rows}
+        self._todo_empty_label.setVisible(not visible)
+        for key, row in self._todo_rows.items():
+            row.setVisible(key in visible)
+
+    def _defer_optional_analysis(self, kind: str) -> None:
+        label = _missing_input_label(kind)
+        self._status_label.setText(f"已标记：本次暂不处理{label}。这不会改动项目数据。")
 
 
 class BioinformaticsStandardizedAssetsWidget(QWidget):
@@ -3543,6 +3543,25 @@ def _card(title: str) -> tuple[QFrame, QVBoxLayout]:
     label.setObjectName("bioProjectCardTitle")
     layout.addWidget(label)
     return frame, layout
+
+
+def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPushButton]) -> QFrame:
+    frame = QFrame()
+    frame.setObjectName("readinessTodoRow")
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
+    layout.setSpacing(SPACING["xs"])
+    title_label = QLabel(title)
+    title_label.setObjectName("bioProjectCardTitle")
+    layout.addWidget(title_label)
+    layout.addWidget(_muted(purpose))
+    layout.addWidget(_muted(state))
+    actions = QHBoxLayout()
+    for button in buttons:
+        actions.addWidget(button)
+    actions.addStretch(1)
+    layout.addLayout(actions)
+    return frame
 
 
 def _button(text: str, object_name: str, callback: Callable[..., Any]) -> QPushButton:
@@ -5682,19 +5701,120 @@ def _readiness_user_summary(readiness: dict[str, object], matrix: dict[str, obje
 
 
 def _readiness_warning_chips(readiness: dict[str, object], matrix: dict[str, object]) -> str:
-    warnings = [_friendly_readiness_text(str(item)) for item in readiness.get("warnings", []) or []]
-    missing = [_missing_input_label(item) for item in _missing_readiness_inputs(readiness, matrix)]
-    chips = list(dict.fromkeys([*warnings, *[f"缺少{item}" for item in missing]]))
-    if not chips:
-        return "关键警告：无"
-    return "关键警告：" + "  ".join(f"【{chip}】" for chip in chips[:5])
+    return _readiness_default_warning_summary(readiness, matrix, _missing_readiness_inputs(readiness, matrix))
 
 
 def _supplement_hint_text(readiness: dict[str, object], matrix: dict[str, object]) -> str:
     missing = [_missing_input_label(item) for item in _missing_readiness_inputs(readiness, matrix)]
     if not missing:
-        return "关键输入已基本满足。可以继续生成标准化资产；如仍有警告，可先处理后再继续。"
-    return "检测到缺失信息：" + "、".join(missing) + "。请补充后点击“保存并重新检查”。"
+        return "当前没有必须补充的信息。可以继续生成标准化数据。"
+    return "检测到缺失信息：" + "、".join(missing) + "。请在待办清单中处理后点击“重新检查”。"
+
+
+def _readiness_overall_summary(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
+    has_core_input = bool(readiness.get("has_core_input"))
+    rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
+    runnable = [row for row in rows if row.get("can_run") and row.get("analysis_type") != "reporting"]
+    if not has_core_input:
+        return "暂不能继续：还没有可用的表达矩阵。"
+    if runnable and not missing:
+        return "可以继续：关键输入已基本满足。"
+    if runnable:
+        return "基本可继续，但有信息需要补充。"
+    return "暂不能继续：关键输入还不完整。"
+
+
+def _readiness_recognized_inputs_text(readiness: dict[str, object]) -> str:
+    available = {str(item) for item in readiness.get("available_inputs", []) or []}
+    labels = []
+    for key in ("expression_matrix", "sample_metadata", "clinical_metadata", "platform_annotation", "gene_annotation", "gmt_gene_set"):
+        if key == "expression_matrix" and available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+            labels.append("表达矩阵")
+        elif key in available:
+            labels.append(_missing_input_label(key))
+    return "已识别到的数据：" + ("、".join(dict.fromkeys(labels)) if labels else "尚未识别到关键数据")
+
+
+def _readiness_missing_inputs_text(missing: set[str]) -> str:
+    if not missing:
+        return "仍需补充的数据：无"
+    labels = [_missing_input_label(key) for key in _ordered_missing_inputs(missing)]
+    return "仍需补充的数据：" + "、".join(labels)
+
+
+def _readiness_next_step_text(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
+    has_core_input = bool(readiness.get("has_core_input"))
+    available = {str(item) for item in readiness.get("available_inputs", []) or []}
+    if "expression_matrix" in missing or not has_core_input:
+        return "下一步建议：请返回数据导入页面补充表达矩阵文件。"
+    if "comparison_config" in missing and "sample_metadata" not in missing:
+        return "下一步建议：建议先设置比较组，以便进行差异表达分析；也可以先进入标准化，之后再补充分组信息。"
+    if "sample_metadata" in missing:
+        return "下一步建议：请补充样本信息；如果暂时只做表达矩阵清洗，也可以先进入标准化。"
+    if missing == {"gmt_gene_set"}:
+        return "下一步建议：GSEA 需要 GMT 基因集文件；不做 GSEA 时可暂时忽略。"
+    if "clinical_metadata" in missing and missing <= {"clinical_metadata", "gmt_gene_set"}:
+        return "下一步建议：临床信息只影响生存分析和临床变量关联；不做这些分析时可以先进入标准化。"
+    if available:
+        return "下一步建议：可以先进入标准化数据；后续再按分析目标补充待办项。"
+    return "下一步建议：请先补充关键数据文件。"
+
+
+def _readiness_default_warning_summary(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
+    warnings = [str(item) for item in readiness.get("warnings", []) or []]
+    technical_warnings = [
+        warning
+        for warning in warnings
+        if any(token in warning.lower() for token in ("numeric density", "sample-like", "payload", "asset_manifest", "manifest.json", "too few columns"))
+    ]
+    blocking = [label for label in (_missing_input_label(item) for item in _ordered_missing_inputs(missing)) if label]
+    if technical_warnings and readiness.get("has_core_input"):
+        return f"提示：有 {len(technical_warnings)} 条文件识别提示已放入技术详情。当前已找到可用表达矩阵时，这类提示通常不影响继续。"
+    if blocking:
+        return "提示：会影响部分分析的待办项：" + "、".join(blocking) + "。"
+    if warnings:
+        return f"提示：有 {len(warnings)} 条需注意信息，详情可在“技术详情”中查看。"
+    return "提示：默认区域未发现需要处理的警告。"
+
+
+def _ordered_missing_inputs(missing: set[str]) -> list[str]:
+    order = ["expression_matrix", "sample_metadata", "comparison_config", "gmt_gene_set", "clinical_metadata"]
+    return [key for key in order if key in missing] + sorted(key for key in missing if key not in order)
+
+
+def _analysis_readiness_status_label(row: dict[str, object]) -> str:
+    if row.get("can_run"):
+        return "可继续，但需注意" if row.get("warnings") else "可继续"
+    missing = [str(item) for item in row.get("missing_inputs", []) or []]
+    if missing:
+        return "需要补充信息"
+    if row.get("analysis_type") == "reporting":
+        return "暂不可用"
+    return "暂不建议"
+
+
+def _analysis_missing_text(row: dict[str, object]) -> str:
+    missing = [_missing_input_label(str(item)) for item in row.get("missing_inputs", []) or []]
+    return "、".join(dict.fromkeys(missing)) if missing else "无"
+
+
+def _analysis_suggested_action(row: dict[str, object]) -> str:
+    missing = {_normalize_missing_input(str(item)) for item in row.get("missing_inputs", []) or []}
+    if "expression_matrix" in missing:
+        return "返回数据导入页面补充表达矩阵"
+    if "sample_metadata" in missing:
+        return "上传样本信息"
+    if "comparison_config" in missing:
+        return "设置比较组"
+    if "gmt_gene_set" in missing:
+        return "上传 GMT 文件，或暂不做 GSEA"
+    if "clinical_metadata" in missing:
+        return "上传临床信息，或暂不做相关分析"
+    if row.get("can_run"):
+        return "可直接继续"
+    if row.get("analysis_type") == "reporting":
+        return "先生成分析结果"
+    return "查看说明"
 
 
 def _missing_readiness_inputs(readiness: dict[str, object], matrix: dict[str, object]) -> set[str]:
@@ -5705,7 +5825,7 @@ def _missing_readiness_inputs(readiness: dict[str, object], matrix: dict[str, ob
     for row in rows:
         for item in row.get("missing_inputs", []) or []:
             normalized = _normalize_missing_input(str(item))
-            if normalized in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config"}:
+            if normalized in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config", "gmt_gene_set"}:
                 missing.add(normalized)
     for warning in readiness.get("warnings", []) or []:
         text = str(warning)
@@ -5732,8 +5852,13 @@ def _normalize_missing_input(value: str) -> str:
         "expression": "expression_matrix",
         "expression_matrix": "expression_matrix",
         "raw_count_matrix": "expression_matrix",
+        "normalized_expression_matrix": "expression_matrix",
         "表达矩阵": "expression_matrix",
         "基因表达数据": "expression_matrix",
+        "gmt": "gmt_gene_set",
+        "gmt_gene_set": "gmt_gene_set",
+        "gmt 基因集": "gmt_gene_set",
+        "基因集": "gmt_gene_set",
         "comparison": "comparison_config",
         "comparison_config": "comparison_config",
         "contrast": "comparison_config",
@@ -5749,7 +5874,10 @@ def _missing_input_label(value: str) -> str:
         "sample_metadata": "样本信息",
         "clinical_metadata": "临床信息",
         "expression_matrix": "表达矩阵",
-        "comparison_config": "比较组设置",
+        "comparison_config": "比较分组",
+        "gmt_gene_set": "GMT 基因集",
+        "platform_annotation": "平台注释",
+        "gene_annotation": "基因注释",
     }.get(normalized, "其他缺失资产")
 
 
@@ -5758,7 +5886,8 @@ def _friendly_readiness_text(text: str) -> str:
         text.replace("无表达矩阵。", "缺少表达矩阵")
         .replace("样本信息缺失。", "缺少样本信息")
         .replace("临床信息缺失。", "缺少临床信息")
-        .replace("comparison_config", "比较组设置")
+        .replace("comparison_config", "比较分组")
+        .replace("gmt_gene_set", "GMT 基因集")
         .replace("。", "")
     )
 
@@ -5912,7 +6041,7 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         source_note = "当前版本会扫描项目 raw_data 中所有已选择文件，因此历史导入副本也可能显示在识别结果中。"
     else:
         source_note = f"当前有效数据来源文件：{effective_count} 个。"
-    next_step = "如果已识别到表达矩阵或原始计数矩阵，可以继续 Ready 检查；否则请返回数据来源补充文件。"
+    next_step = "如果已识别到表达矩阵或原始计数矩阵，可以继续数据准备检查；否则请返回数据来源补充文件。"
     return "\n".join(
         [
             f"识别文件总数：{len(files)}",
@@ -5958,10 +6087,10 @@ def _can_continue_from_readiness(project_root: Path) -> tuple[bool, str]:
     artifacts = load_readiness_artifacts(project_root)
     readiness = artifacts.get("readiness_report")
     if not isinstance(readiness, dict):
-        return False, "尚未运行 Ready 检查。"
+        return False, "尚未运行数据准备检查。"
     status = str(readiness.get("overall_status") or "unavailable")
     if status in {"not_ready", "unavailable"} or not readiness.get("has_core_input"):
-        return False, f"当前 Ready 状态为“{readiness_status_zh(status)}”。"
+        return False, f"当前数据准备状态为“{readiness_status_zh(status)}”。"
     return True, ""
 
 

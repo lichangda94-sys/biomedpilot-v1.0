@@ -1234,7 +1234,7 @@ def test_recognition_readiness_standardization_pages(qt_app, project_summary) ->
     readiness.refresh_project(project_summary)
     artifacts = readiness.run_readiness_check()
     assert artifacts is not None
-    assert "当前 Ready 状态" in readiness.status_message()
+    assert "继续" in readiness.status_message()
 
     standardization = BioinformaticsStandardizedAssetsWidget()
     standardization.refresh_project(project_summary)
@@ -1321,12 +1321,16 @@ def test_readiness_page_uses_compact_status_and_warning_chips(qt_app, project_su
     readiness.refresh_project(project_summary)
     readiness.run_readiness_check()
 
-    assert readiness.findChild(QFrame, "readinessCompactStatusBar") is not None
+    assert readiness.findChild(QFrame, "readinessStatusCard") is not None
     chips = readiness.findChild(QLabel, "readinessWarningChips")
     assert chips is not None
-    assert "缺少样本信息" in chips.text()
-    assert "缺少临床信息" in chips.text()
-    assert readiness.findChild(QTableWidget, "readinessCapabilityTable").horizontalHeaderItem(4).text() == "警告"
+    assert "待办项" in chips.text() or "提示" in chips.text()
+    assert "已识别到的数据：表达矩阵" in readiness.findChild(QLabel, "readinessRecognizedInputs").text()
+    assert "比较分组" in readiness.findChild(QLabel, "readinessMissingInputs").text()
+    assert "下一步建议" in readiness.findChild(QLabel, "readinessNextStep").text()
+    table = readiness.findChild(QTableWidget, "readinessCapabilityTable")
+    assert [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())] == ["分析项目", "当前状态", "还需要什么", "建议操作"]
+    assert table.minimumHeight() >= 360
     assert readiness._details.isHidden()
 
 
@@ -1340,15 +1344,17 @@ def test_readiness_missing_info_entry_and_templates(qt_app, project_summary) -> 
     readiness.refresh_project(project_summary)
     readiness.run_readiness_check()
 
-    assert "补充缺失信息" in readiness.findChild(QFrame, "readinessSupplementCard").findChild(QLabel).text()
+    todo_card = readiness.findChild(QFrame, "readinessTodoCard")
+    assert todo_card is not None
+    assert not readiness.findChild(QFrame, "readinessTodo_sample_metadata").isHidden()
+    assert not readiness.findChild(QFrame, "readinessTodo_comparison_config").isHidden()
+    assert not readiness.findChild(QFrame, "readinessTodo_gmt_gene_set").isHidden()
     assert not readiness._sample_file_button.isHidden()
     assert not readiness._sample_manual_button.isHidden()
-    assert not readiness._clinical_file_button.isHidden()
-    assert not readiness._clinical_manual_button.isHidden()
     assert not readiness._comparison_file_button.isHidden()
     assert not readiness._comparison_manual_button.isHidden()
     assert not readiness._comparison_template_button.isHidden()
-    assert readiness._expression_file_button.isHidden()
+    assert readiness.findChild(QFrame, "readinessTodo_expression_matrix").isHidden()
 
     template = readiness.create_missing_info_template("sample_metadata")
     assert template is not None
@@ -1357,6 +1363,61 @@ def test_readiness_missing_info_entry_and_templates(qt_app, project_summary) -> 
     comparison_template = readiness.create_missing_info_template("comparison_config")
     assert comparison_template is not None
     assert "case_group" in comparison_template.read_text(encoding="utf-8")
+
+
+def test_readiness_default_view_hides_technical_warnings(qt_app, project_summary) -> None:
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness.refresh_project(project_summary)
+    readiness._render(
+        {
+            "readiness_report": {
+                "overall_status": "partially_ready",
+                "has_core_input": True,
+                "available_inputs": ["expression_matrix", "sample_metadata"],
+                "warnings": [
+                    "numeric density is too low for expression payload: asset_manifest.json",
+                    "sample-like columns are insufficient for expression payload",
+                ],
+            },
+            "capability_matrix": {
+                "rows": [
+                    {
+                        "analysis_type": "differential_expression",
+                        "label": "差异表达分析",
+                        "can_run": False,
+                        "available_inputs": ["expression_matrix", "sample_metadata"],
+                        "missing_inputs": ["comparison_config"],
+                        "warnings": [],
+                        "next_step": "请补充缺失输入或返回前序页面。",
+                    }
+                ]
+            },
+            "readiness_path": str(project_summary.project_root / "logs/readiness/readiness_report.json"),
+            "matrix_path": str(project_summary.project_root / "manifests/analysis_capability_matrix.json"),
+        }
+    )
+
+    default_text = "\n".join(label.text() for label in readiness.findChildren(QLabel))
+    assert "numeric density" not in default_text
+    assert "sample-like columns" not in default_text
+    assert "asset_manifest.json" not in default_text
+    assert "比较分组" in default_text
+    assert readiness._details.isHidden()
+    readiness._details.setVisible(True)
+    assert "numeric density" in readiness._details.toPlainText()
+
+
+def test_readiness_main_buttons_are_simplified(qt_app, project_summary) -> None:
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness.refresh_project(project_summary)
+    button_texts = [button.text() for button in readiness.findChildren(QPushButton)]
+
+    assert "重新检查" in button_texts
+    assert "继续：标准化数据" in button_texts
+    assert "运行 Ready 检查" not in button_texts
+    assert "刷新状态" not in button_texts
+    assert "保存并重新检查" not in button_texts
+    assert "继续：标准化资产" not in button_texts
 
 
 def test_readiness_supplement_manual_and_file_then_rerun(qt_app, project_summary, tmp_path: Path) -> None:
