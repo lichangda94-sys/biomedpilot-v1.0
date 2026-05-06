@@ -9,6 +9,11 @@ from app.meta_analysis.models.analysis_dataset import AnalysisReadyDataset
 from app.meta_analysis.models.analysis_result import AnalysisResult
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
+from app.meta_analysis.services.analysis_plan_service import (
+    ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION,
+    CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
+    AnalysisPlanService,
+)
 from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.analysis_setup_service import BLOCKED_ADVANCED_METHODS, AnalysisSetupService
 from app.meta_analysis.services.analysis_service import AnalysisPreflightResult, AnalysisPreflightService
@@ -146,6 +151,33 @@ class AnalysisSetupPageState:
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
+@dataclass(frozen=True)
+class AnalysisPlanBuilderPageState:
+    title: str
+    status_label: str
+    description: str
+    project_dir: str
+    draft_schema_version: str
+    confirmed_schema_version: str
+    draft_path: str
+    confirmed_path: str
+    manifest_path: str
+    confirmed_protocol_status: str
+    draft_status: str
+    confirmed_status: str
+    meta_type: str
+    effect_measure: str
+    model_default: str
+    included_candidate_count: int
+    excluded_candidate_count: int
+    warnings: tuple[str, ...]
+    primary_actions: tuple[str, ...]
+    safety_flags: dict[str, bool]
+    title_zh: str = "分析计划"
+    status_label_zh: str = "内部测试"
+    description_zh: str = "从 confirmed protocol、提取行和质量评价摘要生成分析计划草稿；确认后仍不运行统计。"
+
+
 def initial_analysis_state() -> AnalysisPageState:
     feature = get_feature("meta-analysis")
     return AnalysisPageState(
@@ -240,6 +272,53 @@ def analysis_setup_state_from_project(
     )
 
 
+def analysis_plan_builder_state_from_project(
+    project_dir: Path,
+    *,
+    service: AnalysisPlanService | None = None,
+) -> AnalysisPlanBuilderPageState:
+    project_dir = project_dir.expanduser().resolve()
+    plan_service = service or AnalysisPlanService()
+    draft = plan_service.load_draft(project_dir)
+    confirmed = plan_service.load_confirmed(project_dir)
+    confirmed_protocol_path = project_dir / "protocol" / "pico_workspace_confirmed.json"
+    warnings: list[str] = []
+    if not confirmed_protocol_path.exists():
+        warnings.append("confirmed_protocol_missing")
+    if not draft:
+        warnings.append("analysis_plan_draft_missing")
+    return AnalysisPlanBuilderPageState(
+        title="Analysis Plan Builder v1",
+        status_label="Draft-first / Developer Preview",
+        description="根据 confirmed protocol、extraction effect rows 和 quality summary 生成分析计划草稿；用户确认前不能用于运行统计。",
+        project_dir=str(project_dir),
+        draft_schema_version=ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION,
+        confirmed_schema_version=CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
+        draft_path=str(plan_service.draft_path(project_dir)),
+        confirmed_path=str(plan_service.confirmed_path(project_dir)),
+        manifest_path=str(plan_service.manifest_path(project_dir)),
+        confirmed_protocol_status="confirmed" if confirmed_protocol_path.exists() else "missing",
+        draft_status=str(draft.get("status", "missing")) if draft else "missing",
+        confirmed_status="confirmed" if confirmed else "not_confirmed",
+        meta_type=str(draft.get("meta_type", "")) if draft else "",
+        effect_measure=str(draft.get("effect_measure", "")) if draft else "",
+        model_default=str(draft.get("model_default", "")) if draft else "",
+        included_candidate_count=len(draft.get("included_effect_row_candidates", [])) if isinstance(draft.get("included_effect_row_candidates"), list) else 0,
+        excluded_candidate_count=len(draft.get("excluded_effect_row_candidates", [])) if isinstance(draft.get("excluded_effect_row_candidates"), list) else 0,
+        warnings=tuple(_dedupe([*warnings, *(str(item) for item in draft.get("warnings", []) if item)])) if draft else tuple(warnings),
+        primary_actions=("生成分析计划草稿", "查看候选效应量", "确认分析计划", "暂不运行统计"),
+        safety_flags={
+            "auto_confirms_analysis_plan": False,
+            "creates_analysis_ready_dataset": False,
+            "runs_statistics": False,
+            "creates_final_analysis_result": False,
+            "advances_prisma": False,
+            "generates_medical_interpretation": False,
+        },
+        status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
+    )
+
+
 def _analysis_alias_summary(path: Path, payload_key: str) -> dict[str, object]:
     if not path.exists():
         return {"status": "missing", "path": str(path)}
@@ -305,6 +384,7 @@ if QWidget is not None:
             self._dataset_service = dataset_service or AnalysisDatasetService()
             self._run_service = run_service or AnalysisRunService(dataset_service=self._dataset_service)
             self._figure_service = figure_service or FigureResultService(analysis_run_service=self._run_service)
+            self._analysis_plan_service = AnalysisPlanService()
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -328,6 +408,27 @@ if QWidget is not None:
             run_button = QPushButton("运行 Analysis 预检")
             run_button.clicked.connect(self._run_preflight)
             root.addWidget(run_button)
+
+            plan_title = QLabel("Analysis Plan Builder v1（草稿优先）")
+            plan_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(plan_title)
+            plan_hint = QLabel("从 confirmed protocol、extraction effect rows 和 quality summary 生成分析计划；确认计划也不会运行统计。")
+            plan_hint.setWordWrap(True)
+            root.addWidget(plan_hint)
+            plan_buttons = QHBoxLayout()
+            draft_plan_button = QPushButton("生成分析计划草稿")
+            draft_plan_button.clicked.connect(self._build_analysis_plan_draft)
+            confirm_plan_button = QPushButton("确认分析计划")
+            confirm_plan_button.clicked.connect(self._confirm_analysis_plan)
+            hold_button = QPushButton("暂不运行统计")
+            hold_button.setEnabled(False)
+            plan_buttons.addWidget(draft_plan_button)
+            plan_buttons.addWidget(confirm_plan_button)
+            plan_buttons.addWidget(hold_button)
+            root.addLayout(plan_buttons)
+            self._analysis_plan_label = QLabel("分析计划草稿和候选效应量会显示在这里。")
+            self._analysis_plan_label.setWordWrap(True)
+            root.addWidget(self._analysis_plan_label)
 
             dataset_title = QLabel("Analysis-ready Dataset（测试中）")
             dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
@@ -444,6 +545,44 @@ if QWidget is not None:
                 self._status_label.setText("分析状态：预检失败")
                 self._summary_label.setText("没有生成 Analysis 预检结果。")
                 self._error_label.setText(result.message)
+
+        def _build_analysis_plan_draft(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                result = self._analysis_plan_service.generate_draft(project_dir, actor="reviewer")
+                self._analysis_plan_label.setText(
+                    f"Draft ID：{result.plan_id}\n"
+                    f"Meta type：{result.payload.get('meta_type', '')}\n"
+                    f"Effect measure：{result.payload.get('effect_measure', '')}\n"
+                    f"Model default：{result.payload.get('model_default', '')}\n"
+                    f"Included candidates：{len(result.payload.get('included_effect_row_candidates', []))}\n"
+                    f"Excluded candidates：{len(result.payload.get('excluded_effect_row_candidates', []))}\n"
+                    f"Warnings：{', '.join(result.warnings) or '无'}\n"
+                    f"输出：{result.output_path}\n"
+                    "暂不运行统计。"
+                )
+                self._error_label.setText("")
+            except Exception as exc:
+                self._analysis_plan_label.setText("没有生成分析计划草稿。")
+                self._error_label.setText(f"分析计划草稿生成失败：{exc}")
+
+        def _confirm_analysis_plan(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                result = self._analysis_plan_service.confirm_plan(project_dir, actor="reviewer")
+                self._analysis_plan_label.setText(
+                    f"Confirmed plan ID：{result.plan_id}\n"
+                    f"Effect measure：{result.payload.get('confirmed_effect_measure', '')}\n"
+                    f"Model：{result.payload.get('confirmed_model', '')}\n"
+                    f"Primary rows：{len(result.payload.get('confirmed_primary_effect_rows', []))}\n"
+                    f"Secondary rows：{len(result.payload.get('confirmed_secondary_effect_rows', []))}\n"
+                    f"输出：{result.output_path}\n"
+                    "确认完成；仍未运行统计。"
+                )
+                self._error_label.setText("")
+            except Exception as exc:
+                self._analysis_plan_label.setText("没有确认分析计划。")
+                self._error_label.setText(f"分析计划确认失败：{exc}")
 
         def _build_dataset(self) -> None:
             project_dir = Path(self._project_dir_input.text()).expanduser()

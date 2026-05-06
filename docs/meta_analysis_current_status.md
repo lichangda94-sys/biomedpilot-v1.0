@@ -25,10 +25,11 @@ The current testing chain is:
 11. Extraction Pool
 12. Manual Data Extraction UI v1 draft workspace
 13. Quality Assessment Framework v1
-14. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
-15. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
-16. AI Suggestions Queue
-17. AI-assisted Extraction Queue v1 suggestion workflow
+14. Analysis Plan Builder v1 draft and reviewer-confirmed plan
+15. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
+16. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
+17. AI Suggestions Queue
+18. AI-assisted Extraction Queue v1 suggestion workflow
 
 ## Implemented Testing Capabilities
 
@@ -61,6 +62,9 @@ The current testing chain is:
 - Supported quality tools include ROB2, ROBINS-I, Newcastle-Ottawa Scale / NOS, QUADAS-2, JBI prevalence checklist, AHRQ cross-sectional checklist, Cochrane RoB generic, and GRADE summary placeholder.
 - Quality ratings must be saved or completed by a reviewer. Tool recommendations and overall judgement helpers are suggestion-only and do not write final risk-of-bias conclusions.
 - GRADE is a placeholder / summary draft only; no automated evidence certainty or final GRADE conclusion is generated.
+- Analysis Plan Builder v1 reads reviewer-confirmed protocol, extraction schema defaults, manual extraction effect-row candidates, and quality assessment summary to generate `meta_analysis_plan_draft.v1` artifacts.
+- Analysis Plan Builder v1 separates draft and reviewer-confirmed analysis plans, records audit/governance events, tracks included/excluded candidate effect rows, and warns on missing fields, multiple primary candidates, mixed effect measures, mixed adjusted/unadjusted effects, inconsistent outcome/timepoint, incomplete quality assessment, and low study count for Egger/funnel.
+- Confirmed analysis plans are locked for later analysis-run consumption but do not automatically create analysis-ready datasets, run statistics, create final analysis results, update PRISMA, or generate medical interpretation.
 - Full-text Management v1 can create a manual retrieval registry from reviewer screening decisions, bind local PDFs, record DOI / PubMed / PMCID / publisher links, mark full text unavailable with a reason, and write audit/governance records. It does not fetch PDFs automatically, parse PDFs, or create full-text screening decisions.
 - PDF / Full-text Parsing v1 can run testing-level local PDF text extraction, save extracted text, parse diagnostics, initial title / DOI / PMID candidates, and coarse abstract / methods / results / tables / references text sections. These artifacts are auxiliary and do not write final extraction, quality, analysis, or report conclusions.
 - Data Extraction Schema Registry v1 provides ten testing-level extraction schema templates for binary, continuous, survival, prevalence/incidence, diagnostic 2x2, exposure-risk, biomarker difference, correlation, prognostic-factor, and dose-response Meta types. It stores required/optional fields, validation rules, effect-size mapping, analysis defaults, quality-tool recommendations, and report-template mapping.
@@ -90,6 +94,7 @@ The current testing chain is:
 - Manual Data Extraction UI v1 does not create analysis-ready datasets, does not run statistical analysis, does not promote AI/PDF parsing suggestions into final values, and does not update PRISMA counts. CSV import is draft-only and reports conflicts instead of silently overwriting existing rows.
 - AI-assisted Extraction Queue v1 does not automatically write final extraction values. Pending, rejected, or edited suggestions cannot be applied. Accepted suggestions still apply only as manual extraction draft rows and require later reviewer confirmation before analysis use.
 - Quality Assessment Framework v1 does not automatically score risk of bias, does not automatically determine GRADE certainty, does not create analysis-ready datasets, does not run statistical analysis, and does not update PRISMA counts.
+- Analysis Plan Builder v1 does not automatically confirm analysis plans, does not create analysis-ready datasets, does not run statistical analysis, does not create final results, does not update PRISMA, and does not write medical discussion/conclusion text.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
