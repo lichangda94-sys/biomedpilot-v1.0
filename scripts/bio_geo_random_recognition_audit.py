@@ -870,6 +870,14 @@ def _result_metrics(result: GseAuditResult) -> dict[str, object]:
         "blocked_by_sample_id_mismatch": readiness.get("comparison_group_status") == "confirmed_sample_mismatch",
         "blocked_by_unsupported_modality": profile.get("analysis_potential_level") == "不建议",
         "possible_misclassification": _possible_misclassification(result, roles),
+        "suspected_group_misclassification_count": len(_suspected_group_misclassification_warnings(result)),
+        "cell_line_as_group_warnings": _cell_line_group_warnings(result),
+        "numeric_or_timepoint_group_warnings": _numeric_or_timepoint_group_warnings(result),
+        "low_confidence_group_count": _comparison_confidence_count(profile, "low"),
+        "high_confidence_group_count": _comparison_confidence_count(profile, "high"),
+        "supplementary_high_priority_count": _supplementary_count(profile, priority="高"),
+        "expression_candidate_supplementary_count": _supplementary_count(profile, predicted_type="expression_matrix"),
+        "recommended_expression_supplementary_files": _recommended_expression_supplementary_files(profile),
     }
 
 
@@ -879,6 +887,113 @@ def _missing_inputs(result: GseAuditResult) -> set[str]:
         if isinstance(row, dict):
             values.update(str(item) for item in row.get("missing_inputs", []) or [])
     return values
+
+
+def _comparison_confidence_count(profile: dict[str, object], confidence: str) -> int:
+    comparisons = profile.get("candidate_comparisons") if isinstance(profile.get("candidate_comparisons"), list) else []
+    return sum(1 for item in comparisons if isinstance(item, dict) and str(item.get("confidence") or "") == confidence)
+
+
+def _supplementary_count(profile: dict[str, object], *, priority: str | None = None, predicted_type: str | None = None) -> int:
+    files = profile.get("supplementary_file_preview") if isinstance(profile.get("supplementary_file_preview"), list) else []
+    count = 0
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        if priority is not None and str(item.get("download_priority") or "") != priority:
+            continue
+        if predicted_type is not None and str(item.get("predicted_type") or "") != predicted_type:
+            continue
+        count += 1
+    return count
+
+
+def _recommended_expression_supplementary_files(profile: dict[str, object]) -> list[str]:
+    files = profile.get("supplementary_file_preview") if isinstance(profile.get("supplementary_file_preview"), list) else []
+    selected = []
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("predicted_type") or "") != "expression_matrix":
+            continue
+        if str(item.get("download_priority") or "") != "高":
+            continue
+        if not bool(item.get("should_default_select")):
+            continue
+        selected.append(str(item.get("file_name") or ""))
+    return list(dict.fromkeys(item for item in selected if item))
+
+
+def _suspected_group_misclassification_warnings(result: GseAuditResult) -> list[str]:
+    warnings = [*_cell_line_group_warnings(result), *_numeric_or_timepoint_group_warnings(result)]
+    profile = result.profile or {}
+    comparisons = profile.get("candidate_comparisons") if isinstance(profile.get("candidate_comparisons"), list) else []
+    for comparison in comparisons:
+        if not isinstance(comparison, dict):
+            continue
+        if str(comparison.get("confidence") or "") == "low" and comparison.get("group_sizes"):
+            warnings.append(f"low_confidence:{comparison.get('label')}")
+    return list(dict.fromkeys(warnings))
+
+
+def _cell_line_group_warnings(result: GseAuditResult) -> list[str]:
+    labels = _all_group_labels(result)
+    return [f"cell_line_as_group:{label}" for label in labels if _contains_cell_line(label)]
+
+
+def _numeric_or_timepoint_group_warnings(result: GseAuditResult) -> list[str]:
+    labels = _all_group_labels(result)
+    return [f"numeric_or_timepoint_group:{label}" for label in labels if _is_numeric_or_timepoint_label(label)]
+
+
+def _all_group_labels(result: GseAuditResult) -> list[str]:
+    labels: list[str] = []
+    profile = result.profile or {}
+    comparisons = profile.get("candidate_comparisons") if isinstance(profile.get("candidate_comparisons"), list) else []
+    for comparison in comparisons:
+        if isinstance(comparison, dict) and isinstance(comparison.get("group_sizes"), dict):
+            labels.extend(str(key) for key in comparison["group_sizes"])
+    group_preview = (result.recognition_report or {}).get("group_preview")
+    if isinstance(group_preview, dict) and isinstance(group_preview.get("group_sizes"), dict):
+        labels.extend(str(key) for key in group_preview["group_sizes"])
+    return list(dict.fromkeys(label for label in labels if label))
+
+
+def _contains_cell_line(text: str) -> bool:
+    lowered = str(text or "").lower()
+    compact = re.sub(r"[^a-z0-9]", "", lowered)
+    cell_lines = (
+        "a375",
+        "cal62",
+        "tpc1",
+        "bcpap",
+        "8505c",
+        "k1",
+        "sw1736",
+        "ftc133",
+        "mdamb231",
+        "mcf7",
+        "a549",
+        "h1299",
+        "hct116",
+        "ht29",
+        "hela",
+        "hek293",
+        "jurkat",
+        "u87",
+        "u251",
+        "ln229",
+        "t47d",
+    )
+    return any(value in compact for value in cell_lines)
+
+
+def _is_numeric_or_timepoint_label(text: str) -> bool:
+    value = str(text or "").lower().replace("μ", "u")
+    return bool(
+        re.fullmatch(r"\d+(?:\.\d+)?", value)
+        or re.search(r"\b\d+(?:\.\d+)?\s*(nm|um|mm|mg/kg|h|hr|hours|day|week)\b", value)
+    )
 
 
 def _possible_misclassification(result: GseAuditResult, roles: set[str]) -> bool:
@@ -899,6 +1014,13 @@ def _overall_stats(results: list[GseAuditResult]) -> dict[str, int]:
         "candidate comparisons 成功数": sum(1 for item in results if _result_metrics(item)["candidate_comparison_count"]),
         "group preview 成功数": sum(1 for item in results if _result_metrics(item)["group_count"]),
         "readiness 可继续数": sum(1 for item in results if _readiness_can_continue(item)),
+        "suspected_group_misclassification_count": sum(int(_result_metrics(item)["suspected_group_misclassification_count"]) for item in results),
+        "cell_line_as_group_warnings": sum(len(_result_metrics(item)["cell_line_as_group_warnings"]) for item in results),
+        "numeric_or_timepoint_group_warnings": sum(len(_result_metrics(item)["numeric_or_timepoint_group_warnings"]) for item in results),
+        "low_confidence_group_count": sum(int(_result_metrics(item)["low_confidence_group_count"]) for item in results),
+        "high_confidence_group_count": sum(int(_result_metrics(item)["high_confidence_group_count"]) for item in results),
+        "supplementary_high_priority_count": sum(int(_result_metrics(item)["supplementary_high_priority_count"]) for item in results),
+        "expression_candidate_supplementary_count": sum(int(_result_metrics(item)["expression_candidate_supplementary_count"]) for item in results),
     }
 
 
@@ -938,6 +1060,8 @@ def _manual_review_lines(item: GseAuditResult) -> list[str]:
         f"- sample title examples: {_sample_field_examples(samples, 'sample_title')}",
         f"- characteristics examples: {_characteristics_examples(samples)}",
         f"- software candidate groups: {_comparison_examples(comparisons)}",
+        f"- suspected group warnings: {'; '.join(_suspected_group_misclassification_warnings(item)) or '无'}",
+        f"- recommended expression supplementary: {', '.join(_recommended_expression_supplementary_files(profile)) or '无'}",
         f"- downloaded files: {', '.join(Path(path).name for path in item.downloaded_files) or '无'}",
         f"- recognized file types: {', '.join(str(record.get('recognized_type')) for record in files) or '无'}",
         f"- warnings: {'; '.join(item.warnings) or '无'}",

@@ -15,6 +15,7 @@ GROUP_FIELD_PRIORITY = (
     "group",
     "condition",
     "treatment",
+    "response",
     "disease_state",
     "phenotype",
     "benign_malignant",
@@ -27,8 +28,6 @@ GROUP_FIELD_PRIORITY = (
     "tissue",
     "sample_type",
     "source_name_ch1",
-    "cell_line",
-    "time_point",
     "title_pattern",
     "characteristics_ch1",
 )
@@ -49,6 +48,8 @@ EXCLUDED_GROUP_FIELDS = {
     "run",
     "run_accession",
     "library_strategy",
+    "cell_line",
+    "time_point",
     "extract_protocol_ch1",
     "growth_protocol_ch1",
     "data_processing",
@@ -57,6 +58,50 @@ EXCLUDED_GROUP_FIELDS = {
     "age",
 }
 SAMPLE_ID_FIELDS = ("sample_id", "sample", "geo_accession", "sample_geo_accession", "gsm")
+CELL_LINE_PATTERNS = (
+    "a375",
+    "cal-62",
+    "cal62",
+    "tpc-1",
+    "tpc1",
+    "bcpap",
+    "8505c",
+    "k1",
+    "sw1736",
+    "ftc-133",
+    "ftc133",
+    "mda-mb-231",
+    "mdamb231",
+    "mcf-7",
+    "mcf7",
+    "a549",
+    "h1299",
+    "hct116",
+    "ht29",
+    "hela",
+    "hek293",
+    "jurkat",
+    "u87",
+    "u251",
+    "ln229",
+    "t47d",
+)
+SEMANTIC_GROUP_LABELS = {
+    "normal",
+    "control",
+    "treated",
+    "tumor",
+    "case",
+    "resistant",
+    "sensitive",
+    "mutant",
+    "wild_type",
+    "knockout",
+    "metastatic",
+    "primary",
+    "benign",
+    "malignant",
+}
 
 
 def build_group_preview_report(project_root: str | Path, recognition_records: list[dict[str, object]]) -> dict[str, object]:
@@ -228,7 +273,9 @@ def _preview_geo_family_soft(path: Path) -> dict[str, object]:
                         metadata_fields.setdefault("title_pattern", []).append(title_group)
                 elif normalized in {"sample_source_name_ch1", "sample_treatment_protocol_ch1"}:
                     field = normalized.replace("sample_", "")
-                    metadata_fields.setdefault(field, []).append(_clean_group_value(value))
+                    group = _clean_group_value(value)
+                    if group:
+                        metadata_fields.setdefault(field, []).append(group)
                     coarse = _coarse_group_from_text(value)
                     if coarse:
                         metadata_fields.setdefault("title_pattern", []).append(coarse)
@@ -277,10 +324,16 @@ def _collect_characteristics(fields: dict[str, list[str]], values: list[str]) ->
                 parsed_any = True
                 field = _normalize(label)
                 if _is_group_candidate_field(field):
-                    fields.setdefault(field, []).append(_clean_group_value(content))
-                fields.setdefault("characteristics_ch1", []).append(part)
+                    group = _clean_group_value(content)
+                    if group:
+                        fields.setdefault(field, []).append(group)
+                group = _clean_group_value(part)
+                if group:
+                    fields.setdefault("characteristics_ch1", []).append(group)
         if not parsed_any:
-            fields.setdefault("characteristics_ch1", []).append(raw)
+            group = _clean_group_value(raw)
+            if group:
+                fields.setdefault("characteristics_ch1", []).append(group)
 
 
 def _preview_metadata_table(path: Path) -> dict[str, object]:
@@ -300,7 +353,9 @@ def _preview_metadata_table(path: Path) -> dict[str, object]:
             if field in SAMPLE_ID_FIELDS:
                 sample_ids.append(value)
             if _is_group_candidate_field(field):
-                fields.setdefault(field, []).append(_clean_group_value(value))
+                group = _clean_group_value(value)
+                if group:
+                    fields.setdefault(field, []).append(group)
             elif field == "characteristics_ch1":
                 _collect_characteristics(fields, [value])
     return _preview_from_fields(
@@ -354,14 +409,15 @@ def _preview_from_fields(
     default_confidence: str,
     reason: str,
 ) -> dict[str, object]:
-    candidates: list[tuple[str, dict[str, int]]] = []
+    candidates: list[tuple[str, dict[str, int], str, list[str]]] = []
     for field in _ordered_fields(fields):
         values = fields.get(field, [])
         if metadata_sample_count and len(values) != metadata_sample_count:
             continue
         group_sizes = _valid_group_sizes(values)
         if group_sizes:
-            candidates.append((field, group_sizes))
+            confidence, warnings = _preview_confidence_for_field(field, group_sizes, default_confidence)
+            candidates.append((field, group_sizes, confidence, warnings))
     expression_sample_count = len(expression_samples)
     sample_count = max(metadata_sample_count, expression_sample_count, len(metadata_sample_ids))
     if not candidates:
@@ -375,13 +431,13 @@ def _preview_from_fields(
             }
         )
         return preview
-    selected_field, group_sizes = candidates[0]
+    selected_field, group_sizes, confidence, confidence_warnings = candidates[0]
     selected_values = [_clean_group_value(value) for value in fields.get(selected_field, [])]
     sample_group_assignments = (
         {
             sample_id: group
             for sample_id, group in zip(metadata_sample_ids, selected_values, strict=False)
-            if sample_id and group
+            if sample_id and group and group in group_sizes
         }
         if metadata_sample_ids and len(metadata_sample_ids) == len(selected_values)
         else {}
@@ -391,14 +447,14 @@ def _preview_from_fields(
         "expression_sample_count": expression_sample_count,
         "metadata_sample_count": metadata_sample_count,
         "sample_id_match_status": _sample_id_match_status(expression_samples, metadata_sample_ids),
-        "candidate_group_fields": [field for field, _sizes in candidates],
+        "candidate_group_fields": [field for field, _sizes, _confidence, _warnings in candidates],
         "selected_preview_field": selected_field,
         "group_count": len(group_sizes),
         "group_sizes": group_sizes,
         "sample_group_assignments": sample_group_assignments,
-        "confidence": default_confidence,
+        "confidence": confidence,
         "status": "preview_only",
-        "warnings": ["检测到多个可能分组字段，请选择用于分析的比较组。"] if len(candidates) > 1 else [],
+        "warnings": [*(["检测到多个可能分组字段，请选择用于分析的比较组。"] if len(candidates) > 1 else []), *confidence_warnings],
         "source_file": "",
         "missing_group_reason": "",
     }
@@ -410,6 +466,7 @@ def _ordered_fields(fields: dict[str, list[str]]) -> list[str]:
 
 def _valid_group_sizes(values: list[str]) -> dict[str, int]:
     clean_values = [_clean_group_value(value) for value in values if _clean_group_value(value)]
+    clean_values = [value for value in clean_values if not _is_invalid_group_value(value)]
     if not clean_values:
         return {}
     counts = Counter(clean_values)
@@ -417,7 +474,59 @@ def _valid_group_sizes(values: list[str]) -> dict[str, int]:
         return {}
     if len(counts) == len(clean_values) and len(counts) > 2:
         return {}
+    if not _has_semantic_group(counts):
+        return {}
     return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _preview_confidence_for_field(field: str, group_sizes: dict[str, int], default_confidence: str) -> tuple[str, list[str]]:
+    warnings: list[str] = []
+    confidence = default_confidence
+    if field in {"title_pattern", "source_name_ch1", "description"} and confidence == "high":
+        confidence = "medium"
+    if field in {"expression_column_pattern"}:
+        confidence = "low"
+    total = sum(group_sizes.values())
+    if any(size < 2 for size in group_sizes.values()) and total > 4:
+        confidence = "low"
+        warnings.append("部分候选组样本数过少，只能作为可能分组。")
+    if any(_is_low_confidence_group_value(value) for value in group_sizes):
+        confidence = "low"
+        warnings.append("候选组包含细胞系、剂量、时间点或技术标签，只能作为可能分组。")
+    if not _has_clear_experimental_pair(set(group_sizes)):
+        confidence = "low" if confidence != "high" else "medium"
+        warnings.append("候选组标签不是明确医学或实验设计分组，正式分析前需人工确认。")
+    return confidence, list(dict.fromkeys(warnings))
+
+
+def _has_semantic_group(values: Counter[str] | dict[str, int]) -> bool:
+    labels = set(values.keys())
+    return bool(labels & SEMANTIC_GROUP_LABELS) or _has_clear_experimental_pair(labels)
+
+
+def _has_clear_experimental_pair(labels: set[str]) -> bool:
+    pairs = (
+        {"tumor", "normal"},
+        {"treated", "control"},
+        {"resistant", "sensitive"},
+        {"mutant", "wild_type"},
+        {"malignant", "benign"},
+        {"tumor", "benign"},
+        {"metastatic", "primary"},
+    )
+    return any(pair <= labels for pair in pairs)
+
+
+def _is_invalid_group_value(value: str) -> bool:
+    lowered = str(value or "").strip().lower()
+    if not lowered:
+        return True
+    return _is_accession_or_technical_label(lowered) or _is_cell_line_label(lowered) or _is_numeric_dose_or_time_label(lowered) or _is_replicate_or_batch_label(lowered)
+
+
+def _is_low_confidence_group_value(value: str) -> bool:
+    lowered = str(value or "").strip().lower()
+    return _is_invalid_group_value(lowered) or _contains_cell_line(lowered) or _is_numeric_dose_or_time_label(lowered) or _is_replicate_or_batch_label(lowered)
 
 
 def _sample_id_match_status(expression_samples: list[str], metadata_sample_ids: list[str]) -> str:
@@ -506,7 +615,19 @@ def _clean_cell(value: object) -> str:
 def _clean_group_value(value: object) -> str:
     text = _clean_cell(value)
     text = re.sub(r"\s+", " ", text)
-    return text.strip().lower()
+    cleaned = text.strip().lower().replace("μ", "u")
+    if not cleaned:
+        return ""
+    canonical = _canonical_semantic_group(cleaned)
+    if canonical:
+        return canonical
+    cleaned = _strip_cell_line_tokens(cleaned)
+    cleaned = re.sub(r"\b(rep|replicate|biological replicate|technical replicate)[ _.-]?\d+\b", " ", cleaned)
+    cleaned = re.sub(r"\b\d+(?:\.\d+)?\s*(nm|um|mm|ug/ml|mg/ml|mg/kg|h|hr|hrs|hour|hours|day|days|week|weeks)\b", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" _.-")
+    if _is_invalid_group_value(cleaned):
+        return ""
+    return cleaned
 
 
 def _normalize(value: object) -> str:
@@ -515,6 +636,104 @@ def _normalize(value: object) -> str:
 
 def _normalize_sample_id(value: object) -> str:
     return _clean_cell(value).strip().strip('"').upper()
+
+
+def _canonical_semantic_group(text: str) -> str:
+    normalized = _normalize_group_text(text)
+    phrase_map = (
+        ("adjacent normal", "normal"),
+        ("para cancer", "normal"),
+        ("para-cancer", "normal"),
+        ("wild type", "wild_type"),
+        ("knockout", "knockout"),
+        ("resistant", "resistant"),
+        ("sensitive", "sensitive"),
+        ("metastatic", "metastatic"),
+        ("recurrent", "recurrent"),
+        ("primary", "primary"),
+        ("malignant", "malignant"),
+        ("benign", "benign"),
+        ("normal", "normal"),
+        ("healthy", "normal"),
+        ("vehicle", "control"),
+        ("dmso", "control"),
+        ("mock", "control"),
+        ("untreated", "control"),
+        ("control", "control"),
+        ("treated", "treated"),
+        ("treatment", "treated"),
+        ("mutant", "mutant"),
+        ("mutated", "mutant"),
+        ("tumour", "tumor"),
+        ("tumor", "tumor"),
+        ("cancer", "tumor"),
+        ("carcinoma", "tumor"),
+        ("case", "case"),
+        ("disease", "case"),
+    )
+    for phrase, label in phrase_map:
+        if _token_in_text(phrase, normalized):
+            return label
+    return ""
+
+
+def _normalize_group_text(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text or "").lower().replace("_", " ").strip())
+
+
+def _token_in_text(token: str, text: str) -> bool:
+    return re.search(rf"(^|[^a-z0-9]){re.escape(token.lower())}([^a-z0-9]|$)", text.lower()) is not None
+
+
+def _is_accession_or_technical_label(text: str) -> bool:
+    value = text.strip()
+    if re.fullmatch(r"(gsm|gse|gpl|srr|srx|srs|err|drx)\w+", value, flags=re.IGNORECASE):
+        return True
+    return any(_token_in_text(token, value) for token in ("batch", "lane", "run", "library", "barcode", "platform"))
+
+
+def _contains_cell_line(text: str) -> bool:
+    normalized = _normalize_group_text(text)
+    compact = normalized.replace("-", "").replace("_", "").replace(" ", "")
+    for pattern in CELL_LINE_PATTERNS:
+        compact_pattern = pattern.replace("-", "").replace("_", "").replace(" ", "")
+        if re.search(rf"(^|[^a-z0-9]){re.escape(pattern)}([^a-z0-9]|$)", normalized) or compact_pattern in compact:
+            return True
+    return False
+
+
+def _strip_cell_line_tokens(text: str) -> str:
+    cleaned = _normalize_group_text(text)
+    for pattern in CELL_LINE_PATTERNS:
+        cleaned = re.sub(rf"(^|[^a-z0-9]){re.escape(pattern)}([^a-z0-9]|$)", " ", cleaned)
+        cleaned = cleaned.replace(pattern.replace("-", ""), " ")
+    cleaned = re.sub(r"\b(cell|cells|cell line|line)\b", " ", cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _is_cell_line_label(text: str) -> bool:
+    if not _contains_cell_line(text):
+        return False
+    stripped = _strip_cell_line_tokens(text)
+    return not stripped
+
+
+def _is_numeric_dose_or_time_label(text: str) -> bool:
+    value = _normalize_group_text(text).replace("μ", "u")
+    if re.fullmatch(r"\d+(?:\.\d+)?", value):
+        return True
+    if re.fullmatch(r"\d+(?:\.\d+)?\s*(nm|um|mm|ug/ml|mg/ml|mg/kg|h|hr|hrs|hour|hours|day|days|week|weeks)", value):
+        return True
+    if re.search(r"\b\d+(?:\.\d+)?\s*(nm|um|mm|mg/kg|h|hr|hrs|hours|day|week)\b", value):
+        return _canonical_semantic_group(value) == ""
+    return False
+
+
+def _is_replicate_or_batch_label(text: str) -> bool:
+    value = _normalize_group_text(text)
+    if re.fullmatch(r"(rep|replicate|biological replicate)[ _.-]?\d+", value):
+        return True
+    return any(_token_in_text(token, value) for token in ("replicate", "biological replicate", "technical replicate", "batch", "lane", "barcode"))
 
 
 def _looks_like_sample_id(value: str) -> bool:
@@ -542,13 +761,15 @@ def _group_from_sample_column(value: str) -> str:
 
 
 def _coarse_group_from_text(value: str) -> str:
-    normalized = _normalize(value)
+    normalized = _normalize_group_text(value)
     if not normalized:
         return ""
     token_map = (
         ("normal", "normal"),
         ("control", "control"),
         ("healthy", "normal"),
+        ("dmso", "control"),
+        ("mock", "control"),
         ("vehicle", "control"),
         ("untreated", "control"),
         ("treated", "treated"),
@@ -560,7 +781,9 @@ def _coarse_group_from_text(value: str) -> str:
         ("case", "case"),
         ("disease", "case"),
     )
-    matches = [label for token, label in token_map if token in normalized]
+    if _contains_cell_line(normalized) and not any(_token_in_text(token, normalized) for token, _label in token_map):
+        return ""
+    matches = [label for token, label in token_map if _token_in_text(token, normalized)]
     unique = list(dict.fromkeys(matches))
     if len(unique) == 1:
         return unique[0]

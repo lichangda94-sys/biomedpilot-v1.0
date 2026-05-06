@@ -85,6 +85,43 @@ def test_geo_profile_detects_resistant_sensitive_from_characteristics(tmp_path: 
     assert profile.candidate_comparisons[0].group_sizes == {"resistant": 2, "sensitive": 2}
 
 
+def test_geo_profile_does_not_promote_cell_lines_as_groups(tmp_path: Path) -> None:
+    source = tmp_path / "GSE1010_family.soft.gz"
+    _write_family_soft(
+        source,
+        title="cell line expression",
+        samples=[
+            ("GSM1", "A375 replicate 1", "A375", ["cell line: A375"]),
+            ("GSM2", "A375 replicate 2", "A375", ["cell line: A375"]),
+            ("GSM3", "Cal-62 replicate 1", "Cal-62", ["cell line: Cal-62"]),
+            ("GSM4", "Cal-62 replicate 2", "Cal-62", ["cell line: Cal-62"]),
+        ],
+    )
+
+    profile = GeoDatasetProfileService().build_profile(accession="GSE1010", family_soft_path=source)
+
+    assert profile.candidate_comparisons == ()
+    assert profile.sample_structure_preview["status"] == "no_group_detected"
+
+
+def test_geo_profile_keeps_dose_and_timepoint_labels_low_or_absent(tmp_path: Path) -> None:
+    source = tmp_path / "GSE1011_family.soft.gz"
+    _write_family_soft(
+        source,
+        title="time course expression",
+        samples=[
+            ("GSM1", "0h rep1", "A549", ["condition: 0h"]),
+            ("GSM2", "0h rep2", "A549", ["condition: 0h"]),
+            ("GSM3", "24h rep1", "A549", ["condition: 24h"]),
+            ("GSM4", "24h rep2", "A549", ["condition: 24h"]),
+        ],
+    )
+
+    profile = GeoDatasetProfileService().build_profile(accession="GSE1011", family_soft_path=source)
+
+    assert not profile.candidate_comparisons or profile.candidate_comparisons[0].confidence == "low"
+
+
 def test_geo_profile_keeps_multiple_candidate_comparisons_preview_only(tmp_path: Path) -> None:
     source = tmp_path / "GSE1003-GPL570_series_matrix.txt"
     source.write_text(
@@ -243,6 +280,64 @@ def test_geo_profile_supplementary_preview_flags_large_raw_file() -> None:
     assert preview.predicted_type == "raw_data"
     assert preview.risk_level == "高"
     assert "确认后下载" in preview.recommendation
+
+
+def test_geo_profile_supplementary_prioritizes_expression_tables() -> None:
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE1012",
+        asset_manifest={
+            "assets": [
+                {
+                    "asset_type": "supplementary_file",
+                    "file_name": "GSE1012_gene_counts_TPM.txt.gz",
+                    "remote_url": "https://example.test/GSE1012_gene_counts_TPM.txt.gz",
+                    "status": "remote_discovered",
+                    "size_bytes": 3 * 1024 * 1024,
+                },
+                {
+                    "asset_type": "supplementary_file",
+                    "file_name": "GSE1012_sample_annotation.tsv",
+                    "remote_url": "https://example.test/GSE1012_sample_annotation.tsv",
+                    "status": "remote_discovered",
+                    "size_bytes": 1024,
+                },
+                {
+                    "asset_type": "supplementary_file",
+                    "file_name": "GSE1012_RAW.tar",
+                    "remote_url": "https://example.test/GSE1012_RAW.tar",
+                    "status": "remote_discovered",
+                    "size_bytes": 40 * 1024 * 1024,
+                },
+                {
+                    "asset_type": "supplementary_file",
+                    "file_name": "GSE1012_reads.fastq.gz",
+                    "remote_url": "https://example.test/GSE1012_reads.fastq.gz",
+                    "status": "remote_discovered",
+                    "size_bytes": 30 * 1024 * 1024,
+                },
+                {
+                    "asset_type": "supplementary_file",
+                    "file_name": "GSE1012_diffexpr-results.csv.gz",
+                    "remote_url": "https://example.test/GSE1012_diffexpr-results.csv.gz",
+                    "status": "remote_discovered",
+                    "size_bytes": 1024,
+                },
+            ],
+            "summary": {},
+        },
+    )
+
+    by_name = {item.file_name: item for item in profile.supplementary_file_preview}
+
+    assert by_name["GSE1012_gene_counts_TPM.txt.gz"].predicted_type == "expression_matrix"
+    assert by_name["GSE1012_gene_counts_TPM.txt.gz"].download_priority == "高"
+    assert by_name["GSE1012_gene_counts_TPM.txt.gz"].should_default_select is True
+    assert by_name["GSE1012_sample_annotation.tsv"].download_priority == "中"
+    assert by_name["GSE1012_RAW.tar"].download_priority == "不建议"
+    assert by_name["GSE1012_reads.fastq.gz"].should_default_select is False
+    assert by_name["GSE1012_diffexpr-results.csv.gz"].predicted_type == "differential_result_table"
+    assert by_name["GSE1012_diffexpr-results.csv.gz"].should_default_select is False
+    assert profile.suggested_download_files[0] == "GSE1012_gene_counts_TPM.txt.gz"
 
 
 def test_geo_profile_chinese_brief_does_not_create_groups() -> None:

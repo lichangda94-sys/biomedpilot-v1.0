@@ -6,7 +6,53 @@ import re
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
+
+
+CELL_LINE_PATTERNS = (
+    "a375",
+    "cal-62",
+    "cal62",
+    "tpc-1",
+    "tpc1",
+    "bcpap",
+    "8505c",
+    "k1",
+    "sw1736",
+    "ftc-133",
+    "ftc133",
+    "mda-mb-231",
+    "mdamb231",
+    "mcf-7",
+    "mcf7",
+    "a549",
+    "h1299",
+    "hct116",
+    "ht29",
+    "hela",
+    "hek293",
+    "jurkat",
+    "u87",
+    "u251",
+    "ln229",
+    "t47d",
+)
+EXPLICIT_DESIGN_GROUPS = {
+    "normal",
+    "control",
+    "treated",
+    "tumor",
+    "resistant",
+    "sensitive",
+    "mutant",
+    "wild_type",
+    "knockout",
+    "metastatic",
+    "recurrent",
+    "primary",
+    "benign",
+    "malignant",
+}
 
 
 @dataclass(frozen=True)
@@ -75,7 +121,10 @@ class GeoSupplementaryFile:
     file_name: str
     file_size: int | None = None
     predicted_type: str = "unknown"
+    download_priority: str = "低"
+    should_default_select: bool = False
     recommendation: str = "按需查看。"
+    recommendation_reason: str = ""
     risk_level: str = "低"
     reason: str = ""
     remote_url: str = ""
@@ -497,15 +546,16 @@ def _candidate_comparisons(
         by_sample: dict[str, GeoSampleGroupAssignment] = {}
         for assignment in assignments:
             by_sample.setdefault(assignment.sample_accession, assignment)
-        sizes = dict(Counter(item.assigned_group for item in by_sample.values()))
+        sizes = _clean_group_sizes(dict(Counter(item.assigned_group for item in by_sample.values())))
         if not _valid_group_sizes(sizes):
             continue
-        confidence = _field_confidence(field, tuple(by_sample.values()))
+        clean_assignments = tuple(item for item in by_sample.values() if item.assigned_group in sizes)
+        confidence = _field_confidence(field, clean_assignments)
         comparisons.append(
             _comparison_from_assignments(
                 field,
                 sizes,
-                tuple(by_sample.values()),
+                clean_assignments,
                 evidence=(f"{field} 中识别到重复分组标签", *_matching_text_evidence(summary, overall_design, sizes)),
                 confidence=confidence,
             )
@@ -787,40 +837,66 @@ def _supplementary_preview_from_values(
     text = " ".join([file_name, role, asset_type, description]).lower()
     if asset_type == "family_soft":
         predicted = "metadata_container"
+        priority = "中"
+        should_default_select = True
         recommendation = "元数据容器，用于读取标题、样本和平台信息。"
         reason = "family SOFT 是 GEO 元数据容器。"
-    elif any(token in text for token in ("fastq", "sra", "raw", ".cel", " cel")):
+    elif _is_raw_or_heavy_supplement(text, file_name):
         predicted = "raw_data"
+        priority = "不建议"
+        should_default_select = False
         recommendation = "可能是原始数据，文件较大，建议确认后下载。"
         reason = "文件名或链接提示 raw/SRA/FASTQ/CEL。"
-    elif asset_type == "series_matrix" or any(token in text for token in ("series_matrix", "expression", "matrix", "count", "counts", "cpm", "fpkm", "tpm", "normalized")):
+    elif _looks_like_differential_result(text, file_name):
+        predicted = "differential_result_table"
+        priority = "低"
+        should_default_select = False
+        recommendation = "看起来是已发表差异结果表，不作为表达矩阵默认下载。"
+        reason = "文件名提示 differential/diffexpr/DE results。"
+    elif asset_type == "series_matrix" or _looks_like_expression_supplement(text, file_name):
         predicted = "expression_matrix"
+        priority = "中" if asset_type == "series_matrix" else "高"
+        should_default_select = asset_type != "series_matrix"
         recommendation = "建议优先查看，可能包含表达矩阵。"
-        reason = "文件名或角色包含 expression/matrix/count 等关键词。"
+        reason = "文件名或角色包含 count/TPM/FPKM/normalized/expression/matrix 等关键词。"
     elif any(token in text for token in ("sample", "clinical", "phenotype", "metadata", "group")):
         predicted = "sample_metadata"
+        priority = "中"
+        should_default_select = False
         recommendation = "建议查看，可能包含样本或分组信息。"
         reason = "文件名或角色包含 sample/clinical/metadata 等关键词。"
     elif any(token in text for token in ("annotation", "annot", "platform", "probe", "gene")):
         predicted = "platform_annotation"
+        priority = "中"
+        should_default_select = False
         recommendation = "可作为基因或平台注释参考。"
         reason = "文件名或角色包含 annotation/platform/probe/gene 等关键词。"
     else:
         predicted = "unknown"
+        priority = "低"
+        should_default_select = False
         recommendation = "按需查看。"
         reason = "仅能根据文件名轻量预览，类型不明确。"
     risk = "低"
     lowered_name = file_name.lower()
     if predicted == "raw_data" or any(lowered_name.endswith(suffix) for suffix in (".tar", ".tar.gz", ".tgz", ".zip")):
         risk = "中"
+        if priority != "不建议":
+            priority = "低"
+        should_default_select = False
     if file_size is not None and file_size > 500 * 1024 * 1024:
         risk = "高"
+        priority = "不建议"
+        should_default_select = False
         recommendation = "文件较大，建议确认后下载。"
     return GeoSupplementaryFile(
         file_name=file_name,
         file_size=file_size,
         predicted_type=predicted,
+        download_priority=priority,
+        should_default_select=should_default_select,
         recommendation=recommendation,
+        recommendation_reason=reason,
         risk_level=risk,
         reason=reason,
         remote_url=remote_url,
@@ -842,11 +918,20 @@ def _suggested_download_files(files: list[GeoSupplementaryFile]) -> tuple[str, .
         for item in files
         if item.asset_type != "family_soft"
         and item.status != "downloaded"
-        and item.predicted_type in {"expression_matrix", "sample_metadata", "platform_annotation"}
-        and item.risk_level != "高"
+        and item.should_default_select
+        and item.download_priority == "高"
+        and item.risk_level not in {"高", "中"}
     ]
     if not prioritized:
-        prioritized = [item.file_name for item in files if item.asset_type == "series_matrix" and item.status != "downloaded" and item.risk_level != "高"]
+        prioritized = [
+            item.file_name
+            for item in files
+            if item.asset_type != "family_soft"
+            and item.status != "downloaded"
+            and item.download_priority in {"高", "中"}
+            and item.predicted_type in {"expression_matrix", "sample_metadata", "platform_annotation"}
+            and item.risk_level != "高"
+        ]
     return tuple(dict.fromkeys(prioritized[:6]))
 
 
@@ -943,6 +1028,15 @@ def _recognition_has_comparison_config(report: dict[str, Any]) -> bool:
 
 
 def _field_confidence(field: str, assignments: tuple[GeoSampleGroupAssignment, ...]) -> str:
+    labels = [item.assigned_group for item in assignments]
+    if not _has_explicit_design_labels(labels) or any(_is_low_confidence_group_label(label) for label in labels):
+        return "low"
+    if not _has_clear_experimental_pair(set(labels)):
+        return "low" if field in {"sample_title", "source_name_ch1", "description"} else "medium"
+    sizes = Counter(labels)
+    total = sum(sizes.values())
+    if any(value < 2 for value in sizes.values()) and total > 4:
+        return "low"
     if field in {"sample_title", "source_name_ch1", "description"}:
         return "medium"
     if field.endswith("protocol_ch1"):
@@ -964,7 +1058,7 @@ def _matching_text_evidence(summary: str, overall_design: str, sizes: dict[str, 
 def _group_sizes_from_text(text: str) -> dict[str, int]:
     lowered = text.lower()
     labels = []
-    for token in ("adjacent normal", "normal", "control", "vehicle", "untreated", "tumor", "tumour", "cancer", "carcinoma", "treated", "resistant", "sensitive", "mutant", "wild type", "wt", "metastatic", "primary"):
+    for token in ("adjacent normal", "normal", "control", "vehicle", "untreated", "tumor", "tumour", "cancer", "carcinoma", "treated", "resistant", "sensitive", "mutated", "mutant", "wild type", "wt", "metastatic", "primary"):
         if token in lowered:
             labels.append(_canonical_group(token))
     labels = list(dict.fromkeys(label for label in labels if label))
@@ -974,15 +1068,22 @@ def _group_sizes_from_text(text: str) -> dict[str, int]:
     for label in labels:
         size = _number_near_label(lowered, label)
         sizes[label] = size if size > 0 else 1
+    sizes = _clean_group_sizes(sizes)
     return sizes if _valid_group_sizes(sizes) else {}
 
 
 def _group_label_from_text(text: object) -> str:
     lowered = str(text or "").lower()
+    if not lowered or _looks_like_accession_or_technical_label(lowered):
+        return ""
+    if _contains_only_cell_line_or_technical_context(lowered):
+        return ""
     for phrase in (
         "adjacent normal",
         "para-cancer",
         "normal",
+        "dmso",
+        "mock",
         "vehicle",
         "untreated",
         "control",
@@ -992,6 +1093,7 @@ def _group_label_from_text(text: object) -> str:
         "treatment",
         "wild type",
         "wt",
+        "mutated",
         "mutant",
         "knockout",
         "metastatic",
@@ -1014,6 +1116,8 @@ def _canonical_group(token: str) -> str:
     mapping = {
         "adjacent normal": "normal",
         "para-cancer": "normal",
+        "dmso": "control",
+        "mock": "control",
         "vehicle": "control",
         "untreated": "control",
         "treatment": "treated",
@@ -1023,6 +1127,7 @@ def _canonical_group(token: str) -> str:
         "malignant": "tumor",
         "wild type": "wild_type",
         "wt": "wild_type",
+        "mutated": "mutant",
     }
     return mapping.get(token, token.replace(" ", "_"))
 
@@ -1055,8 +1160,138 @@ def _excluded_field(field: str) -> bool:
 
 
 def _valid_group_sizes(sizes: dict[str, int]) -> bool:
-    clean = {key: int(value) for key, value in sizes.items() if key and int(value) > 0}
-    return 2 <= len(clean) <= 8
+    clean = {
+        key: int(value)
+        for key, value in sizes.items()
+        if key and int(value) > 0 and not _is_invalid_group_label(key)
+    }
+    if not (2 <= len(clean) <= 8):
+        return False
+    if not _has_explicit_design_labels(clean):
+        return False
+    return True
+
+
+def _clean_group_sizes(sizes: dict[str, int]) -> dict[str, int]:
+    return {
+        str(key): int(value)
+        for key, value in sizes.items()
+        if str(key).strip() and int(value) > 0 and not _is_invalid_group_label(str(key))
+    }
+
+
+def _has_explicit_design_labels(labels: Iterable[str] | dict[str, int]) -> bool:
+    values = labels.keys() if isinstance(labels, dict) else labels
+    canonical = {_canonical_group(str(label)) for label in values}
+    return bool(canonical & EXPLICIT_DESIGN_GROUPS)
+
+
+def _has_clear_experimental_pair(labels: set[str]) -> bool:
+    canonical = {_canonical_group(label) for label in labels}
+    pairs = (
+        {"tumor", "normal"},
+        {"treated", "control"},
+        {"resistant", "sensitive"},
+        {"mutant", "wild_type"},
+        {"malignant", "benign"},
+        {"tumor", "benign"},
+        {"metastatic", "primary"},
+    )
+    return any(pair <= canonical for pair in pairs)
+
+
+def _is_invalid_group_label(label: str) -> bool:
+    lowered = str(label or "").strip().lower()
+    if not lowered:
+        return True
+    return (
+        _looks_like_accession_or_technical_label(lowered)
+        or _is_cell_line_label(lowered)
+        or _is_numeric_dose_or_time_label(lowered)
+        or _is_replicate_or_batch_label(lowered)
+    )
+
+
+def _is_low_confidence_group_label(label: str) -> bool:
+    lowered = str(label or "").strip().lower()
+    return (
+        _is_invalid_group_label(lowered)
+        or _contains_cell_line(lowered)
+        or _is_numeric_dose_or_time_label(lowered)
+        or _is_replicate_or_batch_label(lowered)
+    )
+
+
+def _contains_only_cell_line_or_technical_context(text: str) -> bool:
+    cleaned = _normalize_group_text(text)
+    if not cleaned:
+        return True
+    has_semantic = any(_token_in_text(token, cleaned) for token in ("normal", "control", "vehicle", "dmso", "mock", "untreated", "treated", "treatment", "tumor", "tumour", "cancer", "carcinoma", "resistant", "sensitive", "mutant", "wild type", "wt", "metastatic", "primary", "benign", "malignant"))
+    if has_semantic:
+        return False
+    return _contains_cell_line(cleaned) or _is_numeric_dose_or_time_label(cleaned) or _is_replicate_or_batch_label(cleaned)
+
+
+def _looks_like_accession_or_technical_label(text: str) -> bool:
+    value = text.strip()
+    if re.fullmatch(r"(gsm|gse|gpl|srr|srx|srs|err|drx)\w+", value, flags=re.IGNORECASE):
+        return True
+    return any(_token_in_text(token, value) for token in ("batch", "lane", "run", "library", "barcode", "platform"))
+
+
+def _contains_cell_line(text: str) -> bool:
+    normalized = _normalize_group_text(text)
+    compact = normalized.replace("-", "").replace("_", "").replace(" ", "")
+    for pattern in CELL_LINE_PATTERNS:
+        pattern_compact = pattern.replace("-", "").replace("_", "").replace(" ", "")
+        if re.search(rf"(^|[^a-z0-9]){re.escape(pattern)}([^a-z0-9]|$)", normalized) or pattern_compact in compact:
+            return True
+    return False
+
+
+def _is_cell_line_label(text: str) -> bool:
+    normalized = _normalize_group_text(text)
+    if not _contains_cell_line(normalized):
+        return False
+    stripped = _strip_cell_line_tokens(normalized)
+    stripped = re.sub(r"\b(cell|cells|cell line|line)\b", " ", stripped)
+    stripped = re.sub(r"\s+", " ", stripped).strip()
+    return not stripped
+
+
+def _strip_cell_line_tokens(text: str) -> str:
+    cleaned = _normalize_group_text(text)
+    for pattern in CELL_LINE_PATTERNS:
+        cleaned = re.sub(rf"(^|[^a-z0-9]){re.escape(pattern)}([^a-z0-9]|$)", " ", cleaned)
+        cleaned = cleaned.replace(pattern.replace("-", ""), " ")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _is_numeric_dose_or_time_label(text: str) -> bool:
+    value = text.strip().lower().replace("μ", "u")
+    if re.fullmatch(r"\d+(?:\.\d+)?", value):
+        return True
+    if re.fullmatch(r"\d+(?:\.\d+)?\s*(nm|um|mm|µm|ug/ml|mg/ml|mg/kg|h|hr|hrs|hour|hours|day|days|week|weeks)", value):
+        return True
+    if re.search(r"\b\d+(?:\.\d+)?\s*(nm|um|mm|µm|mg/kg|h|hr|hrs|hours|day|week)\b", value):
+        semantic = any(_token_in_text(token, value) for token in ("control", "vehicle", "dmso", "mock", "treated", "treatment", "resistant", "sensitive", "tumor", "normal"))
+        return not semantic
+    return False
+
+
+def _is_replicate_or_batch_label(text: str) -> bool:
+    value = text.strip().lower()
+    if re.fullmatch(r"(rep|replicate|biological replicate)[ _.-]?\d+", value):
+        return True
+    return any(_token_in_text(token, value) for token in ("replicate", "biological replicate", "technical replicate", "batch", "lane", "barcode"))
+
+
+def _token_in_text(token: str, text: str) -> bool:
+    return re.search(rf"(^|[^a-z0-9]){re.escape(token.lower())}([^a-z0-9]|$)", text.lower()) is not None
+
+
+def _normalize_group_text(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text or "").lower().replace("_", " ").strip())
 
 
 def _control_group(sizes: dict[str, int]) -> str:
@@ -1083,14 +1318,27 @@ def _confidence_rank(value: str) -> int:
 def _number_near_label(text: str, label: str) -> int:
     label_text = label.replace("_", " ")
     patterns = (
-        rf"(\d+)\s+(?:\w+\s+){{0,3}}{re.escape(label_text)}",
-        rf"{re.escape(label_text)}(?:\s+\w+){{0,3}}\s+(\d+)",
+        rf"(?<![A-Za-z0-9])(\d+)(?![A-Za-z0-9])\s+(?:\w+\s+){{0,3}}{re.escape(label_text)}",
+        rf"{re.escape(label_text)}(?:\s+\w+){{0,3}}\s+(?<![A-Za-z0-9])(\d+)(?![A-Za-z0-9])",
     )
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
+            if _number_has_dose_or_time_unit(text, match.group(1)):
+                continue
             return int(match.group(1))
     return 0
+
+
+def _number_has_dose_or_time_unit(text: str, number: str) -> bool:
+    return (
+        re.search(
+            rf"\b{re.escape(number)}\s*(?:nm|um|µm|mm|mg/kg|ug/ml|mg/ml|h|hr|hrs|hour|hours|day|days|week|weeks)\b",
+            text,
+            flags=re.IGNORECASE,
+        )
+        is not None
+    )
 
 
 def _sample_count(records: tuple[GeoSampleRecord, ...], fallback: object) -> int | str:
@@ -1135,6 +1383,55 @@ def _infer_experiment_type(*values: object) -> str:
 def _manifest_has_expression_candidate(manifest: dict[str, Any]) -> bool:
     summary = manifest.get("summary") if isinstance(manifest, dict) else {}
     return bool(isinstance(summary, dict) and (summary.get("expression_candidate_count") or summary.get("series_matrix_discovered")))
+
+
+def _looks_like_expression_supplement(text: str, file_name: str) -> bool:
+    lowered = " ".join([text, file_name]).lower()
+    expression_tokens = (
+        "raw_counts",
+        "readcount",
+        "read_count",
+        "gene_counts",
+        "gene count",
+        "gene_expression",
+        "gene expression",
+        "normalized",
+        "expression",
+        "expr",
+        "matrix",
+        "counts",
+        "count",
+        "tpm",
+        "fpkm",
+        "rpkm",
+    )
+    extension_ok = lowered.endswith((".txt", ".tsv", ".csv", ".xlsx", ".txt.gz", ".tsv.gz", ".csv.gz"))
+    return extension_ok and any(token in lowered for token in expression_tokens)
+
+
+def _looks_like_differential_result(text: str, file_name: str) -> bool:
+    lowered = " ".join([text, file_name]).lower()
+    return any(token in lowered for token in ("diffexpr", "diff_expr", "differential", "deg", "de_results", "de-result", "de_result"))
+
+
+def _is_raw_or_heavy_supplement(text: str, file_name: str) -> bool:
+    lowered = " ".join([text, file_name]).lower()
+    raw_tokens = (
+        "fastq",
+        ".fq",
+        ".bam",
+        ".cram",
+        ".sra",
+        ".cel",
+        " cel",
+        "_raw.tar",
+        "raw.tar",
+        ".tar.gz",
+        ".tgz",
+        "image",
+        ".pdf",
+    )
+    return any(token in lowered for token in raw_tokens)
 
 
 def _role_from_name(name: str) -> str:

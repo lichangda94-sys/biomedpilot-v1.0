@@ -129,7 +129,21 @@ def test_report_generation_writes_markdown_and_jsonl(tmp_path: Path, monkeypatch
         selected=True,
         selection_reason="test",
         analysis_potential_level="高",
-        profile={"title": "Title", "summary": "Summary", "overall_design": "Design", "metadata_sample_count": 2, "candidate_comparisons": [{"label": "tumor vs normal", "group_sizes": {"tumor": 1, "normal": 1}, "requires_user_confirmation": True}]},
+        profile={
+            "title": "Title",
+            "summary": "Summary",
+            "overall_design": "Design",
+            "metadata_sample_count": 2,
+            "candidate_comparisons": [{"label": "tumor vs normal", "group_sizes": {"tumor": 1, "normal": 1}, "confidence": "high", "requires_user_confirmation": True}],
+            "supplementary_file_preview": [
+                {
+                    "file_name": "GSE1_gene_counts_TPM.txt.gz",
+                    "predicted_type": "expression_matrix",
+                    "download_priority": "高",
+                    "should_default_select": True,
+                }
+            ],
+        },
         recognition_report={"files": [{"recognized_type": "expression_matrix", "recognized_roles": ["expression_matrix", "sample_metadata"]}], "group_preview": {"group_count": 2, "group_sizes": {"tumor": 1, "normal": 1}, "confidence": "high"}},
         readiness_report={"overall_status": "partially_ready"},
         downloaded_files=[str(tmp_path / "a.tsv")],
@@ -144,7 +158,10 @@ def test_report_generation_writes_markdown_and_jsonl(tmp_path: Path, monkeypatch
     assert "测试配置" in md.read_text(encoding="utf-8")
     assert "GSE1" in md.read_text(encoding="utf-8")
     assert "错误类型归纳" in md.read_text(encoding="utf-8")
+    assert "suspected_group_misclassification_count" in md.read_text(encoding="utf-8")
+    assert "recommended expression supplementary" in md.read_text(encoding="utf-8")
     assert '"accession": "GSE1"' in jsonl.read_text(encoding="utf-8")
+    assert '"supplementary_high_priority_count": 1' in jsonl.read_text(encoding="utf-8")
 
 
 def test_collect_geo_candidates_continues_after_query_failure() -> None:

@@ -20,20 +20,27 @@
 - expression matrix 识别成功数: 2
 - sample metadata 识别成功数: 8
 - candidate comparisons 成功数: 5
-- group preview 成功数: 8
+- group preview 成功数: 6
 - readiness 可继续数: 2
+- suspected_group_misclassification_count: 4
+- cell_line_as_group_warnings: 0
+- numeric_or_timepoint_group_warnings: 0
+- low_confidence_group_count: 4
+- high_confidence_group_count: 1
+- supplementary_high_priority_count: 18
+- expression_candidate_supplementary_count: 26
 
 ## 每个 GSE 结果表
 
 | GSE | query | 推荐等级 | 样本数 | 候选分组 | 表达矩阵 | 样本注释 | 基因/平台注释 | 是否可继续 | 主要失败原因 |
 |---|---|---|---:|---|---|---|---|---|---|
 | GSE217851 | thyroid cancer | 中 | 4 | control:1, tumor:1 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
-| GSE221088 | thyroid cancer | 不建议 | 160 | follicular thyroid carcinoma:84, follicular thyroid adenoma:76 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
-| GSE231733 | breast cancer | 中 | 2 | ad5 transduction:1, ad5 transduction and expression of sars-cov-2 nucleocapsid:1 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
-| GSE173882 | breast cancer | 不建议 | 6 | t47d sielf5:3, t47d sinc:3 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
-| GSE236879 | lung cancer | 高 | 6 | nsclc brain metastatic tumor tissue:3, nsclc primary tumor tissue:3 | 是 | 是 | 是 | 是 | 无 |
-| GSE287799 | lung cancer | 不建议 | 6 | jq1:3, mock:3 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
-| GSE315960 | melanoma | 中 | 27 | 1 um vemurafenib:9, 20 nm trametinib:9, dmso:9 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
+| GSE221088 | thyroid cancer | 不建议 | 160 | tumor:84, follicular thyroid adenoma:76 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
+| GSE231733 | breast cancer | 中 | 2 | 无 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
+| GSE173882 | breast cancer | 不建议 | 6 | 无 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
+| GSE236879 | lung cancer | 高 | 6 | metastatic:3, primary:3 | 是 | 是 | 是 | 是 | 无 |
+| GSE287799 | lung cancer | 不建议 | 6 | control:3, jq1:3 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
+| GSE315960 | melanoma | 中 | 27 | control:9, trametinib:9, vemurafenib:9 | 否 | 是 | 是 | 否 | 缺表达矩阵 |
 | GSE238207 | melanoma | 中 | 26 | normal:10, melanoma pt:6, comonnevus:5, dysplasticnevus:5 | 是 | 是 | 是 | 是 | 无 |
 
 ## 错误类型归纳
@@ -52,6 +59,8 @@
 - sample title examples: Contral replication 1；Contral replication 2；replication 1 of colony 1 knocking down METTL3 in cells；replication 1 of colony 3 knocking down METTL3 in cells
 - characteristics examples: 无
 - software candidate groups: tumor vs control {'control': 1, 'tumor': 1}
+- suspected group warnings: low_confidence:tumor vs control
+- recommended expression supplementary: GSE217851_expression_matrix.xlsx
 - downloaded files: GSE217851_family.soft.gz, GSE217851_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -65,6 +74,8 @@
 - sample title examples: FTC-1-EV-Small-RNA；FTC-2-EV-Small-RNA；FTC-3-EV-Small-RNA；FTC-4-EV-Small-RNA；FTC-5-EV-Small-RNA
 - characteristics examples: 无
 - software candidate groups: 无
+- suspected group warnings: 无
+- recommended expression supplementary: GSE221088_CF_longRNA_count_matrix.txt.gz, GSE221088_CF_miRNA_count_matrix.txt.gz, GSE221088_EV_longRNA_count_matrix.txt.gz, GSE221088_EV_miRNA_count_matrix.txt.gz
 - downloaded files: GSE221088_family.soft.gz, GSE221088_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -78,6 +89,8 @@
 - sample title examples: A549 transduced with Ad5 empty vector；A549 transduced with Ad5 expressing SARS-CcV-2 nucleocapsid
 - characteristics examples: 无
 - software candidate groups: 无
+- suspected group warnings: 无
+- recommended expression supplementary: GSE231733_gene_fpkm.xlsx
 - downloaded files: GSE231733_family.soft.gz, GSE231733_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -91,6 +104,8 @@
 - sample title examples: T47D siNC rep1；T47D siNC rep2；T47D siNC rep3；T47D siELF5 rep1；T47D siELF5 rep2
 - characteristics examples: 无
 - software candidate groups: 无
+- suspected group warnings: 无
+- recommended expression supplementary: 无
 - downloaded files: GSE173882_family.soft.gz, GSE173882_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -104,6 +119,8 @@
 - sample title examples: RNAs_NSCLCBM_PT1；RNAs_NSCLCBM_PT2；RNAs_NSCLCBM_PT3；RNAs_NSCLCBM_BM1；RNAs_NSCLCBM_BM2
 - characteristics examples: 无
 - software candidate groups: metastatic vs primary {'metastatic': 3, 'primary': 3}
+- suspected group warnings: 无
+- recommended expression supplementary: GSE236879_Normalized_Data.txt.gz
 - downloaded files: GSE236879_family.soft.gz, GSE236879_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -117,6 +134,8 @@
 - sample title examples: L197-JQ1；L197-MOCK；L204-JQ1；L204-Mock；L210-JQ1
 - characteristics examples: 无
 - software candidate groups: tumor vs primary {'primary': 1, 'treated': 1, 'tumor': 1}
+- suspected group warnings: low_confidence:tumor vs primary
+- recommended expression supplementary: GSE287799_JQ1_CD3.reverse.readcount.txt.gz
 - downloaded files: GSE287799_family.soft.gz, GSE287799_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -129,7 +148,9 @@
 - overall design: RNA-seq profiling was performed on A375 control cells or TADA2BKO cells treated with DMSO, 1 μM vemurafenib, or 20 nM trametinib for 24 hours.
 - sample title examples: A375_GFPsg_DMSO_rep1；A375_GFPsg_DMSO_rep2；A375_GFPsg_DMSO_rep3；A375_GFPsg_Tram_rep1；A375_GFPsg_Tram_rep2
 - characteristics examples: 无
-- software candidate groups: tumor vs control {'control': 375, 'treated': 1, 'tumor': 1}
+- software candidate groups: tumor vs control {'control': 1, 'treated': 1, 'tumor': 1}
+- suspected group warnings: low_confidence:tumor vs control
+- recommended expression supplementary: GSE315960_htseq_count.txt.gz
 - downloaded files: GSE315960_family.soft.gz, GSE315960_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无
@@ -143,6 +164,8 @@
 - sample title examples: Normal.DER-1；Normal.DER-2；Normal.DER-3；Normal.DER-4；Normal.DER-5
 - characteristics examples: 无
 - software candidate groups: tumor vs primary {'primary': 1, 'tumor': 1}
+- suspected group warnings: low_confidence:tumor vs primary
+- recommended expression supplementary: 无
 - downloaded files: GSE238207_family.soft.gz, GSE238207_series_matrix.txt.gz
 - recognized file types: geo_soft_container, geo_series_matrix_container
 - warnings: 无

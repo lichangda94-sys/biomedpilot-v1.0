@@ -142,8 +142,8 @@ def test_geo_family_soft_characteristics_detects_tumor_normal_groups(tmp_path: P
     assert report["expression_sample_count"] == 4
     assert report["metadata_sample_count"] == 4
     assert report["selected_preview_field"] == "tissue"
-    assert report["group_sizes"] == {"normal thyroid": 2, "tumor": 2}
-    assert report["sample_group_assignments"] == {"GSM1": "normal thyroid", "GSM2": "normal thyroid", "GSM3": "tumor", "GSM4": "tumor"}
+    assert report["group_sizes"] == {"normal": 2, "tumor": 2}
+    assert report["sample_group_assignments"] == {"GSM1": "normal", "GSM2": "normal", "GSM3": "tumor", "GSM4": "tumor"}
     assert report["sample_id_match_status"] == "matched"
 
 
@@ -157,6 +157,40 @@ def test_sample_metadata_condition_detects_two_groups(tmp_path: Path) -> None:
     assert report["selected_preview_field"] == "condition"
     assert report["group_sizes"] == {"control": 2, "treated": 2}
     assert report["confidence"] == "high"
+
+
+def test_cell_line_names_do_not_become_high_confidence_groups(tmp_path: Path) -> None:
+    source = tmp_path / "cell_lines.tsv"
+    source.write_text("sample_id\tcondition\ns1\tA375\ns2\tA375\ns3\tCal-62\ns4\tCal-62\n", encoding="utf-8")
+
+    report = build_group_preview_report(tmp_path, [_record(source, "sample_metadata", ["sample_metadata"])])
+
+    assert report["status"] == "no_group_detected"
+    assert report["group_count"] == 0
+    assert report["confidence"] == "low"
+
+
+def test_thyroid_cell_lines_do_not_stand_alone_as_groups(tmp_path: Path) -> None:
+    source = tmp_path / "thyroid_cell_lines.tsv"
+    source.write_text("sample_id\tcondition\ns1\tTPC-1\ns2\tTPC-1\ns3\tBCPAP\ns4\t8505C\n", encoding="utf-8")
+
+    report = build_group_preview_report(tmp_path, [_record(source, "sample_metadata", ["sample_metadata"])])
+
+    assert report["status"] == "no_group_detected"
+    assert report["candidate_group_fields"] == []
+
+
+def test_numeric_timepoint_and_replicate_labels_are_not_high_confidence_groups(tmp_path: Path) -> None:
+    source = tmp_path / "timepoints.tsv"
+    source.write_text("sample_id\tcondition\ns1\t0h\ns2\t0h\ns3\t24h\ns4\t24h\n", encoding="utf-8")
+    replicate = tmp_path / "replicate.tsv"
+    replicate.write_text("sample_id\tgroup\ns1\treplicate 1\ns2\treplicate 1\ns3\treplicate 2\ns4\treplicate 2\n", encoding="utf-8")
+
+    time_report = build_group_preview_report(tmp_path, [_record(source, "sample_metadata", ["sample_metadata"])])
+    replicate_report = build_group_preview_report(tmp_path, [_record(replicate, "sample_metadata", ["sample_metadata"])])
+
+    assert time_report["status"] == "no_group_detected"
+    assert replicate_report["status"] == "no_group_detected"
 
 
 def test_expression_matrix_column_pattern_is_low_confidence(tmp_path: Path) -> None:
