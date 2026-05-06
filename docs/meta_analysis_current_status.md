@@ -24,7 +24,7 @@ The current testing chain is:
 10. Full-text eligibility
 11. Extraction Pool
 12. Manual Data Extraction UI v1 draft workspace
-13. Quality assessment
+13. Quality Assessment Framework v1
 14. Analysis Preflight / Analysis-ready Dataset / Basic Testing Meta Analysis / Result Artifacts
 15. Reporting Test Summary / PRISMA Summary / Formal Markdown/HTML/DOCX Report Draft / Reproducibility Exports
 16. AI Suggestions Queue
@@ -56,7 +56,11 @@ The current testing chain is:
 - Title / Abstract Screening v2 stores reviewer decisions as include / exclude / uncertain / needs review, requires structured exclusion reasons for exclusions, writes research-governance audit records, and keeps AI/model suggestions separate from final reviewer decisions.
 - Exclusion Criteria Library v1 provides built-in project-level exclusion reasons with Chinese/English labels, title/abstract vs full-text applicability, user-selectable/custom reasons, and PRISMA reason mapping. It guides reviewer decisions but does not automatically exclude records.
 - The older Screening service still supports minimal include / exclude / maybe testing decisions for compatibility.
-- Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
+- Full-text workflows support testing registries and full-text exclusion CSV export.
+- Quality Assessment Framework v1 provides a Meta-owned quality tool registry, suggestion-only tool recommendations by Meta type / study design, study-level quality assessment records, domain-level ratings, reviewer notes/rationale, reviewer-completed status, CSV/JSON exports, audit/governance records, and a report-readable quality summary.
+- Supported quality tools include ROB2, ROBINS-I, Newcastle-Ottawa Scale / NOS, QUADAS-2, JBI prevalence checklist, AHRQ cross-sectional checklist, Cochrane RoB generic, and GRADE summary placeholder.
+- Quality ratings must be saved or completed by a reviewer. Tool recommendations and overall judgement helpers are suggestion-only and do not write final risk-of-bias conclusions.
+- GRADE is a placeholder / summary draft only; no automated evidence certainty or final GRADE conclusion is generated.
 - Full-text Management v1 can create a manual retrieval registry from reviewer screening decisions, bind local PDFs, record DOI / PubMed / PMCID / publisher links, mark full text unavailable with a reason, and write audit/governance records. It does not fetch PDFs automatically, parse PDFs, or create full-text screening decisions.
 - PDF / Full-text Parsing v1 can run testing-level local PDF text extraction, save extracted text, parse diagnostics, initial title / DOI / PMID candidates, and coarse abstract / methods / results / tables / references text sections. These artifacts are auxiliary and do not write final extraction, quality, analysis, or report conclusions.
 - Data Extraction Schema Registry v1 provides ten testing-level extraction schema templates for binary, continuous, survival, prevalence/incidence, diagnostic 2x2, exposure-risk, biomarker difference, correlation, prognostic-factor, and dose-response Meta types. It stores required/optional fields, validation rules, effect-size mapping, analysis defaults, quality-tool recommendations, and report-template mapping.
@@ -85,11 +89,12 @@ The current testing chain is:
 - Data Extraction Schema Registry v1 does not write final extraction values, does not validate real study data by itself, and does not create analysis-ready datasets.
 - Manual Data Extraction UI v1 does not create analysis-ready datasets, does not run statistical analysis, does not promote AI/PDF parsing suggestions into final values, and does not update PRISMA counts. CSV import is draft-only and reports conflicts instead of silently overwriting existing rows.
 - AI-assisted Extraction Queue v1 does not automatically write final extraction values. Pending, rejected, or edited suggestions cannot be applied. Accepted suggestions still apply only as manual extraction draft rows and require later reviewer confirmation before analysis use.
+- Quality Assessment Framework v1 does not automatically score risk of bias, does not automatically determine GRADE certainty, does not create analysis-ready datasets, does not run statistical analysis, and does not update PRISMA counts.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
 - Automatic full-text acquisition, production PDF parsing, OCR, PDF table extraction, and automated full-text data extraction are not complete.
-- Production risk of bias, automated GRADE judgement, and related evidence-certainty workflow are not complete.
+- Production risk of bias, automated GRADE judgement, multi-reviewer quality adjudication, and related production evidence-certainty workflow are not complete.
 - Production-grade online adapters for all planned literature databases are not complete.
 - Multi-source Literature Import v2 is file-import oriented; it does not implement WOS, Embase, CNKI, WanFang, VIP, or Cochrane online execution clients.
 - Autonomous AI-assisted review, automatic final screening, automatic final extraction, and automatic final conclusions.

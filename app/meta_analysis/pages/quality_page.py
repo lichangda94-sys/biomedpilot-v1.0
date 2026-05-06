@@ -5,6 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.services.quality_service import QualityAssessmentService
+from app.meta_analysis.services.quality_service import (
+    GRADE_PLACEHOLDER_SCHEMA_VERSION,
+    QUALITY_ASSESSMENT_RECORD_V1_SCHEMA_VERSION,
+    QUALITY_ASSESSMENT_STATUSES,
+    QUALITY_ASSESSMENT_SUMMARY_V1_SCHEMA_VERSION,
+    QUALITY_TOOL_REGISTRY_V1_SCHEMA_VERSION,
+    QUALITY_RATING_OPTIONS,
+)
 from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
     INTERNAL_BETA_STATUS_ZH,
@@ -66,6 +74,15 @@ class QualityFormFlowState:
     output_paths: dict[str, str]
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    record_schema_version: str = QUALITY_ASSESSMENT_RECORD_V1_SCHEMA_VERSION
+    summary_schema_version: str = QUALITY_ASSESSMENT_SUMMARY_V1_SCHEMA_VERSION
+    tool_registry_schema_version: str = QUALITY_TOOL_REGISTRY_V1_SCHEMA_VERSION
+    assessment_status_options: tuple[str, ...] = QUALITY_ASSESSMENT_STATUSES
+    rating_options: tuple[str, ...] = QUALITY_RATING_OPTIONS
+    tool_recommendations: tuple[dict[str, object], ...] = ()
+    grade_placeholder_schema_version: str = GRADE_PLACEHOLDER_SCHEMA_VERSION
+    grade_placeholder_status: str = "placeholder_only_no_auto_grade"
+    safety_flags: dict[str, bool] | None = None
     title_zh: str = QUALITY_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = QUALITY_DESCRIPTION_ZH
@@ -84,14 +101,14 @@ def initial_quality_state(service: QualityAssessmentService | None = None) -> Qu
     service = service or QualityAssessmentService()
     return QualityPageState(
         title="Quality Assessment / 质量评价",
-        description="NOS / QUADAS-2 / RoB2 simplified 质量评价表单处于 testing 状态，支持 domain-level notes 和非强制 overall judgement 建议。",
+        description="ROB2 / ROBINS-I / NOS / QUADAS-2 / JBI / AHRQ / Cochrane RoB / GRADE placeholder 处于 testing 状态；工具推荐和 overall judgement 都只作为 suggestion，最终评分必须人工完成。",
         status_label="测试中",
         tool_options=tuple(service.list_quality_tools()),
         form_sections=("study_selector", "tool_selector", "domain_judgements", "domain_notes", "overall_judgement", "reviewer_notes"),
         domain_note_support=True,
-        overall_judgement_suggestion="根据 domain judgements 自动建议，但不强制覆盖人工判断。",
+        overall_judgement_suggestion="根据 domain judgements 生成建议，但不强制覆盖人工判断，也不写最终 risk-of-bias 结论。",
         completeness_summary_fields=("expected_study_count", "assessed_study_count", "missing_study_ids", "completeness_score"),
-        output_summary="输出：quality_assessments、quality_assessment_table，并进入 report manifest。",
+        output_summary="输出：quality_assessment_records_v1、quality_assessment_summary_v1、quality table 和 report draft input；不创建 analysis-ready dataset。",
         next_step="下一步：Analysis 或 Reporting。",
         empty_state="没有 included studies 时显示空状态，不要求编辑 JSON。",
         title_zh=QUALITY_TITLE_ZH,
@@ -133,6 +150,7 @@ def quality_state_from_project(
     metadata = service.quality_form_metadata(tool_name)
     sample_domains = {domain: metadata["judgement_options"][0] for domain in metadata["domains"]} if metadata.get("judgement_options") else {}
     completeness = service.quality_completeness_summary(project_dir, expected_study_ids=[row.study_id for row in rows])
+    tool_recommendations = tuple(service.recommend_quality_tools(meta_type=profile_type, study_design=rows[0].study_design if rows else ""))
     warnings: list[str] = []
     if not rows:
         warnings.append("no_included_studies_for_quality_assessment")
@@ -153,6 +171,8 @@ def quality_state_from_project(
         suggested_overall_judgement=service.suggest_overall_judgement(tool_name, sample_domains),
         completeness_summary=completeness,
         output_paths={
+            "quality_assessment_records_v1": str(project_dir / "quality" / "quality_assessment_records_v1.json"),
+            "quality_assessment_summary_v1": str(project_dir / "quality" / "quality_assessment_summary_v1.json"),
             "quality_assessments": str(project_dir / "quality" / "quality_assessments.json"),
             "quality_assessment": str(project_dir / "quality" / "quality_assessment.json"),
             "quality_assessment_table": str(project_dir / "exports" / "quality_assessment_table.csv"),
@@ -165,6 +185,21 @@ def quality_state_from_project(
             "overall judgement suggestion 只作为建议，用户必须人工确认。",
             "GRADE placeholder 不是正式 GRADE evidence profile。",
         ),
+        record_schema_version=QUALITY_ASSESSMENT_RECORD_V1_SCHEMA_VERSION,
+        summary_schema_version=QUALITY_ASSESSMENT_SUMMARY_V1_SCHEMA_VERSION,
+        tool_registry_schema_version=QUALITY_TOOL_REGISTRY_V1_SCHEMA_VERSION,
+        assessment_status_options=QUALITY_ASSESSMENT_STATUSES,
+        rating_options=QUALITY_RATING_OPTIONS,
+        tool_recommendations=tool_recommendations,
+        grade_placeholder_schema_version=GRADE_PLACEHOLDER_SCHEMA_VERSION,
+        grade_placeholder_status="placeholder_only_no_auto_grade",
+        safety_flags={
+            "auto_quality_scoring": False,
+            "auto_grade_conclusion": False,
+            "creates_analysis_ready_dataset": False,
+            "runs_statistics": False,
+            "advances_prisma": False,
+        },
         title_zh=QUALITY_TITLE_ZH,
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
         description_zh=QUALITY_DESCRIPTION_ZH,

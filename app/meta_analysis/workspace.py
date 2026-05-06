@@ -422,6 +422,10 @@ if QWidget is not None:
         sections.setWordWrap(True)
         output = QLabel(state.output_summary)
         output.setWordWrap(True)
+        governance = QLabel("人工评价：保存草稿 / 完成人工评分都会写 audit 和 research governance。")
+        governance.setWordWrap(True)
+        safety = QLabel("边界：不自动生成 GRADE 结论，不创建 analysis-ready dataset，不运行统计，不推进 PRISMA。")
+        safety.setWordWrap(True)
         next_step = QLabel(state.next_step)
         next_step.setWordWrap(True)
         layout.addWidget(title)
@@ -429,6 +433,8 @@ if QWidget is not None:
         layout.addWidget(tools)
         layout.addWidget(sections)
         layout.addWidget(output)
+        layout.addWidget(governance)
+        layout.addWidget(safety)
         layout.addWidget(next_step)
         return frame
 
