@@ -7,6 +7,16 @@ from pathlib import Path
 
 from app.meta_analysis.services.criteria_service import CriteriaBuilderService
 from app.meta_analysis.services.screening_service import ScreeningQueueResult, ScreeningService
+from app.meta_analysis.services.title_abstract_screening_v2_service import (
+    DECISION_EXCLUDE,
+    DECISION_INCLUDE,
+    DECISION_NEEDS_REVIEW,
+    DECISION_NOT_SCREENED,
+    DECISION_UNCERTAIN,
+    DEFAULT_EXCLUSION_REASONS,
+    TITLE_ABSTRACT_SCREENING_QUEUE_SCHEMA_VERSION,
+    TitleAbstractScreeningV2Service,
+)
 from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
     INTERNAL_BETA_STATUS_ZH,
@@ -94,6 +104,30 @@ class TitleAbstractScreeningUXState:
     empty_state_zh: str = "没有可筛选记录。请先生成 screening queue。"
     warning_summary_zh: str = "缺少 queue、空 queue 或排除原因缺失时需要人工处理。"
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
+
+
+@dataclass(frozen=True)
+class TitleAbstractScreeningV2PageState:
+    title: str
+    status_label: str
+    queue_path: str
+    decisions_path: str
+    compatible_decisions_path: str
+    schema_version: str
+    source_type: str
+    total_records: int
+    queue_records: tuple[TitleAbstractScreeningRecordView, ...]
+    decision_counts: dict[str, int]
+    decision_options: tuple[str, ...]
+    decision_option_labels_zh: tuple[str, ...]
+    exclusion_reason_options: tuple[str, ...]
+    warnings: tuple[str, ...]
+    next_step: str
+    testing_limitations: tuple[str, ...]
+    output_summary: str
+    empty_state: str
+    title_zh: str = "标题摘要初筛 v2"
+    status_label_zh: str = "Developer Preview / 需要人工确认"
 
 
 def initial_screening_state() -> ScreeningPageState:
@@ -185,6 +219,57 @@ def title_abstract_screening_state_from_queue(
     )
 
 
+def title_abstract_screening_v2_state_from_project(
+    project_dir: Path,
+    *,
+    service: TitleAbstractScreeningV2Service | None = None,
+) -> TitleAbstractScreeningV2PageState:
+    project_dir = project_dir.expanduser().resolve()
+    service = service or TitleAbstractScreeningV2Service()
+    queue_payload = service.load_queue(project_dir)
+    records = tuple(_v2_record_view(item) for item in queue_payload.get("queue_records", []) if isinstance(item, dict))
+    decisions_payload = _load_json(Path(service.decisions_path(project_dir)))
+    decisions = [dict(item) for item in decisions_payload.get("screening_records", []) if isinstance(item, dict)]
+    counts = {
+        "include": 0,
+        "exclude": 0,
+        "uncertain": 0,
+        "needs_review": 0,
+        "not_screened": max(len(records) - len(decisions), 0),
+        "total": len(records),
+    }
+    for item in decisions:
+        decision = str(item.get("decision") or "needs_review")
+        counts[decision] = counts.get(decision, 0) + 1
+    warnings = list(str(item) for item in queue_payload.get("warnings", []) if str(item))
+    if not records:
+        warnings.append("empty_title_abstract_screening_queue_v2")
+    return TitleAbstractScreeningV2PageState(
+        title="Title / Abstract Screening v2",
+        status_label="Developer Preview / reviewer decisions required",
+        queue_path=str(service.queue_path(project_dir)),
+        decisions_path=str(service.decisions_path(project_dir)),
+        compatible_decisions_path=str(service.compatible_decisions_path(project_dir)),
+        schema_version=str(queue_payload.get("schema_version") or TITLE_ABSTRACT_SCREENING_QUEUE_SCHEMA_VERSION),
+        source_type=str(queue_payload.get("source_type") or ""),
+        total_records=len(records),
+        queue_records=records,
+        decision_counts=counts,
+        decision_options=(DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN, DECISION_NEEDS_REVIEW),
+        decision_option_labels_zh=("纳入", "排除", "不确定", "需要复核"),
+        exclusion_reason_options=DEFAULT_EXCLUSION_REASONS,
+        warnings=tuple(dict.fromkeys(warnings)),
+        next_step="下一步：仅 reviewer 决策为 include / uncertain 的记录可进入全文候选。",
+        testing_limitations=(
+            "生成队列不是筛选决定，不会自动纳入或排除文献。",
+            "AI/model 输出只能作为 suggestion，不能直接写最终筛选结果。",
+            "PRISMA screened / excluded 数字只应来自 reviewer 保存的真实决策记录。",
+        ),
+        output_summary="输出：title_abstract_queue_v2.json、title_abstract_decisions_v2.json 和兼容 screening_decisions.json。",
+        empty_state="没有可筛选记录。请先完成文献导入和去重复核。" if not records else "",
+    )
+
+
 def export_title_abstract_screening_artifacts(queue_path: Path, project_dir: Path) -> dict[str, str]:
     state = title_abstract_screening_state_from_queue(queue_path, project_dir=project_dir)
     project_dir = project_dir.expanduser().resolve()
@@ -234,6 +319,36 @@ def _record_view(item: dict[str, object]) -> TitleAbstractScreeningRecordView:
         source_link_labels_zh=tuple(label for label, link in (("打开 DOI", _doi_link(doi)), ("打开 PubMed", _pmid_link(pmid))) if link),
         decision=str(item.get("decision") or "pending"),
         decision_zh=SCREENING_DECISION_ZH.get(str(item.get("decision") or "pending"), str(item.get("decision") or "pending")),
+        exclusion_reason_text=str(item.get("exclusion_reason_text") or ""),
+        notes=str(item.get("notes") or ""),
+    )
+
+
+def _v2_record_view(item: dict[str, object]) -> TitleAbstractScreeningRecordView:
+    doi = str(item.get("doi") or "")
+    pmid = str(item.get("pmid") or "")
+    decision = str(item.get("decision") or DECISION_NOT_SCREENED)
+    decision_zh = {
+        DECISION_INCLUDE: "纳入",
+        DECISION_EXCLUDE: "排除",
+        DECISION_UNCERTAIN: "不确定",
+        DECISION_NEEDS_REVIEW: "需要复核",
+        DECISION_NOT_SCREENED: "未筛选",
+    }.get(decision, decision)
+    return TitleAbstractScreeningRecordView(
+        screening_record_id=str(item.get("record_id", "")),
+        record_id=str(item.get("record_id", "")),
+        title=str(item.get("title", "")),
+        abstract=str(item.get("abstract", "")),
+        authors=_join_text(item.get("authors") or item.get("authors_text")),
+        journal=str(item.get("journal") or ""),
+        year=str(item.get("year") or ""),
+        doi=doi,
+        pmid=pmid,
+        source_links=tuple(link for link in (_doi_link(doi), _pmid_link(pmid)) if link),
+        source_link_labels_zh=tuple(label for label, link in (("打开 DOI", _doi_link(doi)), ("打开 PubMed", _pmid_link(pmid))) if link),
+        decision=decision,
+        decision_zh=decision_zh,
         exclusion_reason_text=str(item.get("exclusion_reason_text") or ""),
         notes=str(item.get("notes") or ""),
     )

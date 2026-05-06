@@ -50,7 +50,9 @@ The current testing chain is:
 - Prepare Screening reads Literature Import output and writes normalized screening-ready records.
 - Duplicate Review detects candidate duplicate groups and supports minimal manual deduplication decisions.
 - Duplicate Review v2 reads the unified Literature Library v2, generates `meta_duplicate_review_queue.v2` duplicate groups, assigns red/yellow/gray risk levels, builds merge previews, records reviewer dedup decisions, and can export a separate deduplicated literature set without changing the source library.
-- Screening creates a title/abstract screening queue and supports minimal include / exclude / maybe decisions.
+- Title / Abstract Screening v2 can build a reviewer queue from the deduplicated literature set, or fall back to the normalized literature library when no deduplicated set exists. Queue creation is preview-only and does not count as a screening decision.
+- Title / Abstract Screening v2 stores reviewer decisions as include / exclude / uncertain / needs review, requires structured exclusion reasons for exclusions, writes research-governance audit records, and keeps AI/model suggestions separate from final reviewer decisions.
+- The older Screening service still supports minimal include / exclude / maybe testing decisions for compatibility.
 - Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, CSV export, and advanced method outcome structures for prevalence, correlation, and diagnostic basic data.
 - Analysis runs readiness preflight, builds testing-level analysis-ready datasets from structured extraction records, supports basic testing pooled effects, prevalence / incidence proportion effects, Fisher z correlation effects, diagnostic basic 2x2 metrics, subgroup analysis, leave-one-out sensitivity analysis, basic Egger publication-bias testing, and exports forest/funnel plot PNG plus result table CSV.
@@ -67,6 +69,7 @@ The current testing chain is:
 - Search Strategy Builder v2 does not run database searches, import literature, create screening artifacts, or update PRISMA counts. PubMed confirmation only marks the strategy as eligible for the existing explicit PubMed execution entry.
 - Literature library import does not automatically create title/abstract screening decisions and does not update PRISMA artifacts.
 - Duplicate Review v2 does not automatically delete records, merge records, create screening artifacts, or update PRISMA counts.
+- Title / Abstract Screening v2 does not automatically include or exclude records. AI/model screening suggestions do not write final decisions, and queue creation alone does not update PRISMA screened / included / excluded counts.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
@@ -82,11 +85,11 @@ The current testing chain is:
 - The current Analysis step has a basic testing statistics core, several advanced method MVP calculations, and common add-on analyses, but it is not production-grade statistical software.
 - The current Reporting step exports Markdown/HTML/DOCX testing drafts and ZIP packages; production PDF reporting is not complete, and publication-ready reporting remains incomplete.
 - ExtractionRecord form integration, analysis-ready dataset builder, basic pooled effects, forest plot PNG, and result table CSV exist at testing level only.
-- Screening and Duplicate Review provide minimal testing decisions, not a complete systematic review adjudication workflow.
+- Screening and Duplicate Review remain testing-level workflows. Title / Abstract Screening v2 adds reviewer-confirmed decisions and audit, but multi-reviewer adjudication and production screening operations are not complete.
 - PubMed execution is reviewer-confirmed and auditable. Its results can hand off to the literature library only after explicit reviewer candidate selection, and they still do not automatically enter screening or PRISMA included/screened/full-text counts.
 - WOS, Embase, and CNKI are still query drafts only.
 - Full-text, quality, publication export, reproducibility package, and AI suggestion workflows are testing-level only.
 
 ## Next Priority
 
-The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, normalized literature library v2, dedup review v2, and production-readiness audit rather than marking workflows production-ready.
+The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, exclusion criteria library v1, full-text management, and production-readiness audit rather than marking workflows production-ready.
