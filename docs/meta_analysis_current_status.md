@@ -52,6 +52,7 @@ The current testing chain is:
 - Duplicate Review v2 reads the unified Literature Library v2, generates `meta_duplicate_review_queue.v2` duplicate groups, assigns red/yellow/gray risk levels, builds merge previews, records reviewer dedup decisions, and can export a separate deduplicated literature set without changing the source library.
 - Title / Abstract Screening v2 can build a reviewer queue from the deduplicated literature set, or fall back to the normalized literature library when no deduplicated set exists. Queue creation is preview-only and does not count as a screening decision.
 - Title / Abstract Screening v2 stores reviewer decisions as include / exclude / uncertain / needs review, requires structured exclusion reasons for exclusions, writes research-governance audit records, and keeps AI/model suggestions separate from final reviewer decisions.
+- Exclusion Criteria Library v1 provides built-in project-level exclusion reasons with Chinese/English labels, title/abstract vs full-text applicability, user-selectable/custom reasons, and PRISMA reason mapping. It guides reviewer decisions but does not automatically exclude records.
 - The older Screening service still supports minimal include / exclude / maybe testing decisions for compatibility.
 - Full-text and Quality workflows support testing registries, full-text exclusion CSV export, quality tool registry, and quality assessment table export.
 - Extraction creates an extraction pool from included screening records and now supports testing-level structured ExtractionRecord save, validation, CSV export, and advanced method outcome structures for prevalence, correlation, and diagnostic basic data.
@@ -70,6 +71,7 @@ The current testing chain is:
 - Literature library import does not automatically create title/abstract screening decisions and does not update PRISMA artifacts.
 - Duplicate Review v2 does not automatically delete records, merge records, create screening artifacts, or update PRISMA counts.
 - Title / Abstract Screening v2 does not automatically include or exclude records. AI/model screening suggestions do not write final decisions, and queue creation alone does not update PRISMA screened / included / excluded counts.
+- Exclusion Criteria Library v1 does not automatically create screening or full-text exclusion decisions. PRISMA reason counts still require real reviewer decision records.
 - Production-level statistical validation, advanced diagnostic bivariate / HSROC models, network meta-analysis, meta-regression, trim-and-fill, and publication-ready result interpretation.
 - Current pooled effects, prevalence/incidence, Fisher z, diagnostic 2x2, subgroup, leave-one-out, Egger, forest/funnel plot, and CSV outputs are testing-level implementations, not a production statistical platform.
 - PRISMA diagram generation, production PDF reports, and publication-ready report packages are not complete.
@@ -92,4 +94,4 @@ The current testing chain is:
 
 ## Next Priority
 
-The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, exclusion criteria library v1, full-text management, and production-readiness audit rather than marking workflows production-ready.
+The current staged roadmap is implemented at Developer Preview / testing level. Next priorities should be stabilization, boundary hardening, UX hardening, statistical validation review, full-text management, PDF parsing, and production-readiness audit rather than marking workflows production-ready.

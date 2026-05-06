@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.services.criteria_service import CriteriaBuilderService
+from app.meta_analysis.services.exclusion_criteria_library_service import ExclusionCriteriaLibraryService
 from app.meta_analysis.services.screening_service import ScreeningQueueResult, ScreeningService
 from app.meta_analysis.services.title_abstract_screening_v2_service import (
     DECISION_EXCLUDE,
@@ -223,9 +224,11 @@ def title_abstract_screening_v2_state_from_project(
     project_dir: Path,
     *,
     service: TitleAbstractScreeningV2Service | None = None,
+    exclusion_library_service: ExclusionCriteriaLibraryService | None = None,
 ) -> TitleAbstractScreeningV2PageState:
     project_dir = project_dir.expanduser().resolve()
     service = service or TitleAbstractScreeningV2Service()
+    exclusion_library_service = exclusion_library_service or ExclusionCriteriaLibraryService()
     queue_payload = service.load_queue(project_dir)
     records = tuple(_v2_record_view(item) for item in queue_payload.get("queue_records", []) if isinstance(item, dict))
     decisions_payload = _load_json(Path(service.decisions_path(project_dir)))
@@ -244,6 +247,10 @@ def title_abstract_screening_v2_state_from_project(
     warnings = list(str(item) for item in queue_payload.get("warnings", []) if str(item))
     if not records:
         warnings.append("empty_title_abstract_screening_queue_v2")
+    exclusion_options = tuple(
+        reason.english_label
+        for reason in exclusion_library_service.list_reasons(project_dir, stage="title_abstract", enabled_only=True)
+    ) or DEFAULT_EXCLUSION_REASONS
     return TitleAbstractScreeningV2PageState(
         title="Title / Abstract Screening v2",
         status_label="Developer Preview / reviewer decisions required",
@@ -257,7 +264,7 @@ def title_abstract_screening_v2_state_from_project(
         decision_counts=counts,
         decision_options=(DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN, DECISION_NEEDS_REVIEW),
         decision_option_labels_zh=("纳入", "排除", "不确定", "需要复核"),
-        exclusion_reason_options=DEFAULT_EXCLUSION_REASONS,
+        exclusion_reason_options=exclusion_options,
         warnings=tuple(dict.fromkeys(warnings)),
         next_step="下一步：仅 reviewer 决策为 include / uncertain 的记录可进入全文候选。",
         testing_limitations=(

@@ -5,6 +5,10 @@ from pathlib import Path
 
 from app.meta_analysis.models.criteria import CriteriaSet
 from app.meta_analysis.services.criteria_service import CRITERIA_PATHS, CriteriaBuilderService
+from app.meta_analysis.services.exclusion_criteria_library_service import (
+    EXCLUSION_CRITERIA_LIBRARY_SCHEMA_VERSION,
+    ExclusionCriteriaLibraryService,
+)
 from app.meta_analysis.ui_text import (
     CRITERIA_DESCRIPTION_ZH,
     CRITERIA_READINESS_STATUS_ZH,
@@ -35,6 +39,11 @@ class CriteriaPageState:
     screening_hints: tuple[str, ...]
     fulltext_hints: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    exclusion_library_schema_version: str = ""
+    exclusion_library_status: str = "not_started"
+    exclusion_library_reason_count: int = 0
+    exclusion_library_enabled_count: int = 0
+    prisma_reason_map_path: str = ""
     title_zh: str = CRITERIA_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = CRITERIA_DESCRIPTION_ZH
@@ -71,6 +80,8 @@ def initial_criteria_page_state(project_dir: Path | None = None) -> CriteriaPage
             "Criteria 只作为 reviewer 决策提示，不自动纳入或排除文献。",
             "Developer Preview：PRISMA reason counts 仍依赖后续 screening/full-text decisions。",
         ),
+        exclusion_library_schema_version=EXCLUSION_CRITERIA_LIBRARY_SCHEMA_VERSION,
+        prisma_reason_map_path=str(project_dir.expanduser().resolve() / "criteria" / "prisma_reason_map_v1.json") if project_dir else "",
         title_zh=CRITERIA_TITLE_ZH,
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
         description_zh=CRITERIA_DESCRIPTION_ZH,
@@ -78,13 +89,29 @@ def initial_criteria_page_state(project_dir: Path | None = None) -> CriteriaPage
     )
 
 
-def criteria_page_state_from_project(project_dir: Path, *, service: CriteriaBuilderService | None = None) -> CriteriaPageState:
+def criteria_page_state_from_project(
+    project_dir: Path,
+    *,
+    service: CriteriaBuilderService | None = None,
+    exclusion_library_service: ExclusionCriteriaLibraryService | None = None,
+) -> CriteriaPageState:
     service = service or CriteriaBuilderService()
+    exclusion_library_service = exclusion_library_service or ExclusionCriteriaLibraryService()
     project_dir = project_dir.expanduser().resolve()
     criteria = service.load_criteria(project_dir)
+    library = exclusion_library_service.load_library(project_dir)
     output_paths = _output_paths(project_dir)
     if criteria is None:
-        return initial_criteria_page_state(project_dir)
+        base = initial_criteria_page_state(project_dir)
+        return CriteriaPageState(
+            **{
+                **base.__dict__,
+                "exclusion_library_status": library.status if library else "not_started",
+                "exclusion_library_reason_count": len(library.reasons) if library else 0,
+                "exclusion_library_enabled_count": len([reason for reason in library.reasons if reason.enabled]) if library else 0,
+                "prisma_reason_map_path": str(exclusion_library_service.prisma_reason_map_path(project_dir)),
+            }
+        )
     return CriteriaPageState(
         title="Criteria Builder",
         status_label="Testing / Developer Preview",
@@ -105,7 +132,13 @@ def criteria_page_state_from_project(project_dir: Path, *, service: CriteriaBuil
         testing_limitations=(
             "Criteria 不会自动修改 screening_decisions 或 fulltext decisions。",
             "如 criteria 与 protocol 不一致，必须由 reviewer 人工修订。",
+            "Exclusion Criteria Library v1 只提供结构化原因和 PRISMA mapping，不自动排除文献。",
         ),
+        exclusion_library_schema_version=EXCLUSION_CRITERIA_LIBRARY_SCHEMA_VERSION,
+        exclusion_library_status=library.status if library else "not_started",
+        exclusion_library_reason_count=len(library.reasons) if library else 0,
+        exclusion_library_enabled_count=len([reason for reason in library.reasons if reason.enabled]) if library else 0,
+        prisma_reason_map_path=str(exclusion_library_service.prisma_reason_map_path(project_dir)),
         title_zh=CRITERIA_TITLE_ZH,
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
         description_zh=CRITERIA_DESCRIPTION_ZH,
