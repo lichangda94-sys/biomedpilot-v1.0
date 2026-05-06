@@ -896,7 +896,7 @@ def _remote_geo_asset_role(asset_type: str, file_name: str) -> str:
     lowered = file_name.lower()
     if asset_type == "series_matrix":
         return "expression_matrix_candidate"
-    if any(token in lowered for token in ("count", "counts", "expression", "expr", "matrix", "tpm", "fpkm", "rpkm", "normalized")):
+    if any(token in lowered for token in ("count", "counts", "expression", "expr", "matrix", "tpm", "fpkm", "rpkm", "cpm", "normalized")) or re.search(r"(?:^|[_\-.])exp(?:[_\-.]|$)", lowered):
         return "supplementary_expression_candidate"
     if any(token in lowered for token in ("clinical", "clinic", "survival", "phenotype", "pheno", "sample", "metadata")):
         return "supplementary_sample_metadata_candidate"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.bioinformatics.download import dataset_download_service
 from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.search_center.models import UnifiedDatasetCandidate
 
@@ -253,6 +254,11 @@ def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:
     assert gtex.downloaded_files == ()
     assert "真实下载待接入" in tcga.message
     assert "真实下载待接入" in gtex.message
+
+
+def test_geo_supplementary_role_detects_cpm_and_exp_workbooks() -> None:
+    assert dataset_download_service._remote_geo_asset_role("supplementary_file", "GSE317461_Thy.8505C.cells.cpm.csv.gz") == "supplementary_expression_candidate"
+    assert dataset_download_service._remote_geo_asset_role("supplementary_file", "GSE315375_exp_tyroid_controlX5.xlsx") == "supplementary_expression_candidate"
 
 
 def test_geo_text_summary_service_uses_local_models_when_available() -> None:

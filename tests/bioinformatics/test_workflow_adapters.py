@@ -35,6 +35,10 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
         ["ENSMUSG00000026193", 195458, 215969, 197661],
         ["ENSMUSG00000064351", 160365, 142505, 129666],
     ]
+    return _write_xlsx_rows(path, rows)
+
+
+def _write_xlsx_rows(path: Path, rows: list[list[object]]) -> Path:
     sheet_rows: list[str] = []
     for row_index, row in enumerate(rows, start=1):
         cells: list[str] = []
@@ -205,7 +209,31 @@ def test_recognition_classifies_xlsx_gene_count_matrix(project_root: Path) -> No
     assert recognition["files"][0]["file_name"] == "GSE236866_Processed_data_tau_with_inhibitors.xlsx"  # type: ignore[index]
     assert recognition["files"][0]["recognized_type"] == "raw_count_matrix"  # type: ignore[index]
     assert recognition["files"][0]["recognized_type_zh"] == "原始计数矩阵"  # type: ignore[index]
-    assert "count 样本列" in recognition["files"][0]["reason"]  # type: ignore[index]
+    assert recognition["files"][0]["content_profile"]["possible_table_role"] == "raw_count_matrix"  # type: ignore[index]
+
+
+def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "geo" / "GSE315375" / "supplementary" / "GSE315375_exp_tyroid_controlX5.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    _write_xlsx_rows(
+        raw_file,
+        [
+            ["Genes", "", "Control", "Tumor", "control+1", "tumor+1", "FC", "Log2FC"],
+            ["MALAT1", "", 10.2, 16.1, 9.8, 15.9, 1.58, 0.66],
+            ["GAPDH", "", 7.5, 7.7, 7.6, 7.4, 1.01, 0.01],
+            ["ACTB", "", 8.3, 8.9, 8.1, 8.8, 1.07, 0.1],
+        ],
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    assets = _asset_by_role(record)  # type: ignore[arg-type]
+
+    assert record["recognized_type"] == "normalized_expression_matrix"
+    assert record["container_format"] == "xlsx_workbook"
+    assert assets["normalized_expression_matrix"]["input_eligible"] is True
+    assert record["content_profile"]["delimiter"] == "xlsx"  # type: ignore[index]
+    assert "differential_result_table" not in record["recognized_roles"]  # type: ignore[operator]
 
 
 def test_reference_acquisition_is_scanned_by_recognition(project_root: Path, tmp_path: Path) -> None:
@@ -223,6 +251,26 @@ def test_reference_acquisition_is_scanned_by_recognition(project_root: Path, tmp
 
     assert recognition["files"][0]["original_path"] == str(source.resolve())  # type: ignore[index]
     assert recognition["files"][0]["recognized_type"] == "expression_matrix"  # type: ignore[index]
+
+
+def test_recognition_dedupes_raw_file_also_registered_by_reference(project_root: Path) -> None:
+    source = project_root / "raw_data" / "geo" / "GSE1001" / "supplementary" / "expression_matrix.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\tGSM1\tGSM2\nTP53\t1.2\t1.5\nEGFR\t2.4\t2.1\n", encoding="utf-8")
+    register_acquisition(
+        project_root,
+        source_type="geo_accession",
+        source_label="GSE1001",
+        strategy="reference",
+        selected_paths=[source],
+    )
+
+    recognition = run_project_recognition(project_root)
+    matching_records = [record for record in recognition["files"] if record["file_name"] == "expression_matrix.tsv"]  # type: ignore[index]
+
+    assert len(matching_records) == 1
+    assert matching_records[0]["original_path"] == str(source.resolve())
+    assert not any("numeric density" in warning for warning in recognition["warnings"])  # type: ignore[operator]
 
 
 def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Path) -> None:

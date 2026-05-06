@@ -10,9 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
-from app.bioinformatics.legacy.geo_processing.detector.dataset_detector import detect_dataset
-
-
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
 
 TYPE_LABELS = {
@@ -111,13 +108,7 @@ def run_project_recognition(project_root: str | Path) -> dict[str, object]:
                 "route_path": str(root / "recognized_data" / kind / path.name),
             }
         )
-    try:
-        geo_root = root / "raw_data" / "geo"
-        if geo_root.exists() and any(geo_root.rglob("*")):
-            detection = detect_dataset("GSE_LOCAL", str(geo_root))
-            warnings.extend(str(item) for item in detection.warnings)
-    except Exception as exc:
-        warnings.append(f"legacy GEO 检测未完成：{exc.__class__.__name__}")
+    warnings.extend(_recognition_warnings(records))
     report = {
         "schema_version": "biomedpilot.recognition_report.v1",
         "generated_at": _now(),
@@ -133,6 +124,17 @@ def run_project_recognition(project_root: str | Path) -> dict[str, object]:
 def load_recognition_report(project_root: str | Path) -> dict[str, object] | None:
     path = Path(project_root).expanduser().resolve() / RECOGNITION_REPORT
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
+def _recognition_warnings(records: list[dict[str, object]]) -> list[str]:
+    expression_records = [
+        record
+        for record in records
+        if any(role in set(record.get("recognized_roles", []) or []) for role in ("expression_matrix", "normalized_expression_matrix", "raw_count_matrix"))
+    ]
+    if len(expression_records) > 1:
+        return ["multiple expression candidates detected; manual review may be required"]
+    return []
 
 
 def classify_file(path: Path) -> tuple[str, str, float]:
@@ -200,25 +202,13 @@ def _classification(
 
 
 def _classify_xlsx_table(path: Path) -> RecognitionClassification | None:
-    try:
-        headers = _xlsx_first_row(path)
-    except Exception:
+    profile = _profile_xlsx_table(path)
+    if not profile:
         return None
-    if len(headers) < 3:
+    classification = _classification_from_table_profile(profile, source_format="xlsx_workbook", container_format="xlsx_workbook")
+    if classification is None:
         return None
-    normalized = [_normalize_header(header) for header in headers]
-    first_header = normalized[0]
-    has_gene_column = any(token in first_header for token in ("gene", "ensembl", "probe", "symbol", "id"))
-    numeric_sample_like = sum(
-        1
-        for header in normalized[1:]
-        if header and any(token in header for token in ("count", "counts", "sample", "gsm", "srr", "tcga", "tpm", "fpkm"))
-    )
-    if has_gene_column and numeric_sample_like >= 2:
-        if any("count" in header for header in normalized[1:]):
-            return _classification("raw_count_matrix", "XLSX 首行包含 gene/probe/id 列和多个 count 样本列。", 0.82)
-        return _classification("expression_matrix", "XLSX 首行包含 gene/probe/id 列和多个样本表达列。", 0.78)
-    return None
+    return classification
 
 
 def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
@@ -343,6 +333,15 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
     profile = _profile_tabular_text(path)
     if not profile:
         return None
+    return _classification_from_table_profile(profile, source_format="tabular_text", container_format="tabular_text")
+
+
+def _classification_from_table_profile(
+    profile: dict[str, object],
+    *,
+    source_format: str,
+    container_format: str,
+) -> RecognitionClassification | None:
     primary = str(profile.get("possible_table_role") or "unknown")
     if primary == "unknown":
         return None
@@ -357,7 +356,7 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
                 confidence=0.88,
                 reason="表头包含 logFC、P 值和校正 P/FDR 字段，属于差异分析结果表。",
                 source_section="tabular_header",
-                source_format="tabular_text",
+                source_format=source_format,
                 input_eligible=False,
                 evidence=tuple(evidence),
                 location={"header_line": header_line},
@@ -371,7 +370,7 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
                 confidence=confidence,
                 reason="表格第一列像基因/探针 ID，后续多列为高比例数值样本列。",
                 source_section="tabular_matrix",
-                source_format="tabular_text",
+                source_format=source_format,
                 input_eligible=True,
                 evidence=tuple(evidence),
                 location={"header_line": header_line},
@@ -390,7 +389,7 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
                     confidence=0.68,
                     reason="表达矩阵中同时包含 gene symbol、ENTREZ、ENSEMBL 或 chromosome 等注释列。",
                     source_section="tabular_annotation_columns",
-                    source_format="tabular_text",
+                    source_format=source_format,
                     input_eligible=True,
                     evidence=tuple(profile.get("annotation_evidence", []) or ()),
                     location={"header_line": header_line},
@@ -410,7 +409,7 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
                     confidence=0.8 if role == "sample_metadata" else 0.76,
                     reason=role_reason,
                     source_section="tabular_metadata",
-                    source_format="tabular_text",
+                    source_format=source_format,
                     input_eligible=True,
                     evidence=tuple(evidence),
                     location={"header_line": header_line},
@@ -426,7 +425,7 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
                     confidence=0.78,
                     reason=_tabular_role_reason(role),
                     source_section="tabular_header",
-                    source_format="tabular_text",
+                    source_format=source_format,
                     input_eligible=input_eligible,
                     evidence=tuple(evidence),
                     location={"header_line": header_line},
@@ -443,7 +442,7 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
         max(float(asset.get("confidence_score") or 0.7) for asset in assets),
         roles=normalized_roles,
         detected_assets=tuple(assets),
-        container_format="tabular_text",
+        container_format=container_format,
         content_profile={key: value for key, value in profile.items() if key not in {"evidence", "extra_roles", "annotation_evidence"}},
     )
 
@@ -704,6 +703,25 @@ def _profile_tabular_text(path: Path, *, max_rows: int = 250) -> dict[str, objec
         parsed = [_clean_cell(cell) for cell in _split_delimited_line(line, delimiter)]
         if len(parsed) >= 2:
             rows.append(parsed)
+    return _profile_table_from_rows(header=header, rows=rows, delimiter=_delimiter_name(delimiter), header_line=header_line)
+
+
+def _profile_xlsx_table(path: Path, *, max_rows: int = 250) -> dict[str, object] | None:
+    try:
+        rows = _xlsx_rows(path, max_rows=max_rows)
+    except Exception:
+        return None
+    rows = [[_clean_cell(cell) for cell in row] for row in rows if any(_clean_cell(cell) for cell in row)]
+    if not rows:
+        return None
+    header = rows[0]
+    if len(header) < 2:
+        return None
+    data_rows = [row for row in rows[1:] if len(row) >= 2]
+    return _profile_table_from_rows(header=header, rows=data_rows, delimiter="xlsx", header_line=1)
+
+
+def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimiter: str, header_line: int) -> dict[str, object]:
     normalized_header = [_normalize_header(column) for column in header]
     data_column_count = max(len(header) - 1, 0)
     numeric_by_column: dict[int, int] = {index: 0 for index in range(1, len(header))}
@@ -744,7 +762,7 @@ def _profile_tabular_text(path: Path, *, max_rows: int = 250) -> dict[str, objec
     numeric_ratio = numeric_cells / total_cells if total_cells else 0.0
     integer_numeric_ratio = integer_cells / numeric_cells if numeric_cells else 0.0
     non_negative_integer_ratio = non_negative_integer_cells / numeric_cells if numeric_cells else 0.0
-    evidence: list[str] = [f"delimiter={_delimiter_name(delimiter)}", f"columns={len(header)}", f"sampled_rows={sampled_row_count}"]
+    evidence: list[str] = [f"delimiter={delimiter}", f"columns={len(header)}", f"sampled_rows={sampled_row_count}"]
     extra_roles: list[str] = []
     possible_role = "unknown"
     has_embedded_annotation = False
@@ -782,7 +800,7 @@ def _profile_tabular_text(path: Path, *, max_rows: int = 250) -> dict[str, objec
         possible_role = "platform_annotation" if any("probe" in item or item == "id_ref" for item in normalized_header) else "gene_annotation"
         evidence.extend(["annotation header keywords"])
     return {
-        "delimiter": _delimiter_name(delimiter),
+        "delimiter": delimiter,
         "header_line": header_line,
         "column_count": len(header),
         "sampled_row_count": sampled_row_count,
@@ -1053,6 +1071,11 @@ def _confidence_label(value: float) -> str:
 
 
 def _xlsx_first_row(path: Path, *, max_cells: int = 200) -> list[str]:
+    rows = _xlsx_rows(path, max_rows=1, max_cells=max_cells)
+    return rows[0] if rows else []
+
+
+def _xlsx_rows(path: Path, *, max_rows: int = 250, max_cells: int = 500) -> list[list[str]]:
     with zipfile.ZipFile(path) as archive:
         names = set(archive.namelist())
         worksheet_name = "xl/worksheets/sheet1.xml"
@@ -1060,16 +1083,15 @@ def _xlsx_first_row(path: Path, *, max_cells: int = 200) -> list[str]:
             return []
         shared_strings = _xlsx_shared_strings(archive, names)
         worksheet = ElementTree.fromstring(archive.read(worksheet_name))
-        first_row = worksheet.find(".//{*}sheetData/{*}row")
-        if first_row is None:
-            return []
-        values_by_column: dict[int, str] = {}
-        for cell in list(first_row.findall("{*}c"))[:max_cells]:
-            column_index = _xlsx_column_index(str(cell.attrib.get("r", "")))
-            values_by_column[column_index] = _xlsx_cell_value(cell, shared_strings)
-        if not values_by_column:
-            return []
-        return [values_by_column.get(index, "") for index in range(max(values_by_column) + 1)]
+        parsed_rows: list[list[str]] = []
+        for row in worksheet.findall(".//{*}sheetData/{*}row")[:max_rows]:
+            values_by_column: dict[int, str] = {}
+            for cell in list(row.findall("{*}c"))[:max_cells]:
+                column_index = _xlsx_column_index(str(cell.attrib.get("r", "")))
+                values_by_column[column_index] = _xlsx_cell_value(cell, shared_strings)
+            if values_by_column:
+                parsed_rows.append([values_by_column.get(index, "") for index in range(max(values_by_column) + 1)])
+        return parsed_rows
 
 
 def _xlsx_shared_strings(archive: zipfile.ZipFile, names: set[str]) -> list[str]:
@@ -1115,7 +1137,11 @@ def _candidate_files(root: Path) -> list[Path]:
         if base.exists():
             paths.extend(path for path in base.rglob("*") if _is_recognition_candidate_file(path, root))
     paths.extend(_registered_reference_files(root))
-    return sorted(set(paths))
+    deduped: dict[str, Path] = {}
+    for path in paths:
+        key = str(path.resolve()) if path.exists() else str(path)
+        deduped.setdefault(key, path.resolve() if path.exists() else path)
+    return sorted(deduped.values())
 
 
 def _is_recognition_candidate_file(path: Path, root: Path) -> bool:
