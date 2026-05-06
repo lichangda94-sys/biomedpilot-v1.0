@@ -8,10 +8,22 @@ from app.meta_analysis.extraction.schema_registry import list_extraction_schema_
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.extraction_form_service import ExtractionFormService
 from app.meta_analysis.services.extraction_schema_registry_v1_service import (
+    BINARY_OUTCOME_META,
+    CONTINUOUS_OUTCOME_META,
+    DIAGNOSTIC_ACCURACY_META_V1,
     EXTRACTION_SCHEMA_REGISTRY_V1_SCHEMA_VERSION,
     ExtractionSchemaRegistryV1Service,
+    SURVIVAL_OUTCOME_META,
 )
 from app.meta_analysis.services.extraction_service import ExtractionPoolResult, ExtractionService
+from app.meta_analysis.services.manual_extraction_effect_row_service import (
+    ANALYSIS_ROLES,
+    DATA_INPUT_MODES,
+    EXTRACTION_STATUSES,
+    MANUAL_EXTRACTION_MANIFEST_SCHEMA_VERSION,
+    ManualExtractionEffectRowService,
+    VALIDATION_STATUSES,
+)
 from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
     EXTRACTION_DESCRIPTION_ZH,
@@ -124,6 +136,78 @@ class SimplifiedExtractionPageState:
     outcome_type_labels_zh: dict[str, str] | None = None
     export_ready_zh: str = ""
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
+
+
+@dataclass(frozen=True)
+class ManualExtractionOverviewState:
+    current_meta_type: str
+    current_extraction_schema: str
+    included_literature_count: int
+    study_unit_count: int
+    effect_row_count: int
+    missing_required_fields_count: int
+    analysis_candidate_row_count: int
+
+
+@dataclass(frozen=True)
+class ManualExtractionLiteratureListItem:
+    record_id: str
+    first_author: str
+    year: str
+    title: str
+    full_text_status: str
+    extraction_status: str
+    effect_row_count: int
+    missing_required_fields_count: int
+
+
+@dataclass(frozen=True)
+class ManualExtractionEffectRowListItem:
+    effect_row_id: str
+    study_unit_label: str
+    comparison_label: str
+    outcome_name: str
+    timepoint: str
+    data_input_mode: str
+    effect_measure: str
+    validation_status: str
+    analysis_role: str
+
+
+@dataclass(frozen=True)
+class ManualExtractionEditorState:
+    study_unit_fields: tuple[str, ...]
+    comparison_outcome_fields: tuple[str, ...]
+    data_input_mode_options: tuple[str, ...]
+    dynamic_data_fields: tuple[str, ...]
+    source_evidence_fields: tuple[str, ...]
+    role_and_status_fields: tuple[str, ...]
+    analysis_role_options: tuple[str, ...]
+    extraction_status_options: tuple[str, ...]
+    validation_status_options: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ManualExtractionEffectRowWorkspaceState:
+    title: str
+    status_label: str
+    project_dir: str
+    manifest_schema_version: str
+    manifest_path: str
+    study_units_path: str
+    effect_rows_path: str
+    evidence_refs_path: str
+    validation_report_path: str
+    extraction_audit_path: str
+    overview: ManualExtractionOverviewState
+    literature_items: tuple[ManualExtractionLiteratureListItem, ...]
+    effect_row_items: tuple[ManualExtractionEffectRowListItem, ...]
+    editor: ManualExtractionEditorState
+    primary_actions: tuple[str, ...]
+    csv_actions: tuple[str, ...]
+    warnings: tuple[str, ...]
+    safety_flags: dict[str, bool]
+    next_step: str
 
 
 def initial_extraction_state() -> ExtractionPageState:
@@ -337,6 +421,99 @@ def simplified_extraction_state_from_project(
     )
 
 
+def manual_extraction_effect_row_state_from_project(
+    project_dir: Path,
+    *,
+    service: ManualExtractionEffectRowService | None = None,
+    schema_registry_service: ExtractionSchemaRegistryV1Service | None = None,
+) -> ManualExtractionEffectRowWorkspaceState:
+    project_dir = project_dir.expanduser().resolve()
+    service = service or ManualExtractionEffectRowService()
+    schema_registry_service = schema_registry_service or ExtractionSchemaRegistryV1Service()
+    manifest = service.read_manifest(project_dir)
+    units = service.load_study_units(project_dir)
+    effect_rows = service.load_effect_rows(project_dir)
+    literature_records = service.literature_records_for_extraction(project_dir)
+    validation = _load_json_file(service.validation_report_path(project_dir))
+    current_meta_type = _selected_extraction_meta_type(project_dir, schema_registry_service)
+    selected_schema = schema_registry_service.get_schema(project_dir, current_meta_type)
+    warnings = list(validation.get("warnings", []) if isinstance(validation.get("warnings"), list) else [])
+    if not literature_records:
+        warnings.append("没有纳入文献可供人工提取。")
+    if not units:
+        warnings.append("尚未创建 study unit。")
+    return ManualExtractionEffectRowWorkspaceState(
+        title="Manual Data Extraction / 人工数据提取",
+        status_label="Draft-only · 需要人工确认",
+        project_dir=str(project_dir),
+        manifest_schema_version=str(manifest.get("schema_version") or MANUAL_EXTRACTION_MANIFEST_SCHEMA_VERSION),
+        manifest_path=str(service.manifest_path(project_dir)),
+        study_units_path=str(service.study_units_path(project_dir)),
+        effect_rows_path=str(service.effect_rows_path(project_dir)),
+        evidence_refs_path=str(service.evidence_refs_path(project_dir)),
+        validation_report_path=str(service.validation_report_path(project_dir)),
+        extraction_audit_path=str(service.extraction_audit_path(project_dir)),
+        overview=ManualExtractionOverviewState(
+            current_meta_type=current_meta_type,
+            current_extraction_schema=selected_schema.display_name if selected_schema is not None else current_meta_type,
+            included_literature_count=len(literature_records),
+            study_unit_count=len(units),
+            effect_row_count=len(effect_rows),
+            missing_required_fields_count=int(manifest.get("missing_required_fields_count", validation.get("missing_required_fields_count", 0))),
+            analysis_candidate_row_count=int(manifest.get("analysis_candidate_row_count", 0)),
+        ),
+        literature_items=tuple(_manual_literature_items(literature_records, units, effect_rows)),
+        effect_row_items=tuple(_manual_effect_row_items(effect_rows)),
+        editor=ManualExtractionEditorState(
+            study_unit_fields=(
+                "study_unit_label",
+                "cohort_name",
+                "country_or_region",
+                "study_design",
+                "sample_size",
+                "population_description",
+                "is_independent",
+            ),
+            comparison_outcome_fields=(
+                "comparison_label",
+                "group_1_label",
+                "group_2_label",
+                "outcome_name",
+                "outcome_domain",
+                "timepoint",
+                "subgroup_label",
+            ),
+            data_input_mode_options=DATA_INPUT_MODES,
+            dynamic_data_fields=_dynamic_extraction_fields(current_meta_type),
+            source_evidence_fields=("source_page", "source_table", "source_figure", "source_quote", "evidence_note"),
+            role_and_status_fields=("analysis_role", "extraction_status", "validation_status", "analysis_eligibility"),
+            analysis_role_options=ANALYSIS_ROLES,
+            extraction_status_options=EXTRACTION_STATUSES,
+            validation_status_options=VALIDATION_STATUSES,
+        ),
+        primary_actions=(
+            "新建 study unit",
+            "新建提取行",
+            "复制当前提取行",
+            "保存草稿",
+            "标记缺失数据",
+            "完成本行提取",
+            "完成本篇提取",
+            "下一篇",
+        ),
+        csv_actions=("导出空模板 CSV", "导出当前提取数据 CSV", "从 CSV 导入新草稿"),
+        warnings=tuple(dict.fromkeys(warnings)),
+        safety_flags={
+            "creates_analysis_ready_dataset": False,
+            "runs_statistics": False,
+            "advances_prisma": False,
+            "ai_pdf_suggestions_write_final_values": False,
+            "completed_by_user_is_analysis_ready": False,
+        },
+        next_step="完成本阶段只代表人工提取草稿完成；后续仍需 analysis plan 人工确认。",
+    )
+
+
 def _outcome_templates(base: ExtractionPageState) -> tuple[ExtractionOutcomeRowTemplate, ...]:
     required = tuple(base.required_fields["outcome_common"])
     return (
@@ -420,6 +597,90 @@ def _study_rows_from_final_included(rows: list[dict[str, object]]) -> list[Extra
         )
         for item in rows
     ]
+
+
+def _manual_literature_items(
+    literature_records: list[dict[str, object]],
+    units: list[dict[str, object]],
+    effect_rows: list[dict[str, object]],
+) -> list[ManualExtractionLiteratureListItem]:
+    rows: list[ManualExtractionLiteratureListItem] = []
+    for record in literature_records:
+        record_id = str(record.get("record_id", ""))
+        unit_ids = {str(unit.get("study_unit_id", "")) for unit in units if str(unit.get("record_id", "")) == record_id}
+        record_effect_rows = [row for row in effect_rows if str(row.get("study_unit_id", "")) in unit_ids or str(row.get("record_id", "")) == record_id]
+        missing_count = sum(len(row.get("diagnostics", [])) for row in record_effect_rows if isinstance(row.get("diagnostics", []), list))
+        rows.append(
+            ManualExtractionLiteratureListItem(
+                record_id=record_id,
+                first_author=str(record.get("first_author", "")),
+                year=str(record.get("year", "")),
+                title=str(record.get("title", "")),
+                full_text_status=str(record.get("full_text_status") or record.get("fulltext_status") or ""),
+                extraction_status=_record_extraction_status(record_effect_rows),
+                effect_row_count=len(record_effect_rows),
+                missing_required_fields_count=missing_count,
+            )
+        )
+    return rows
+
+
+def _manual_effect_row_items(effect_rows: list[dict[str, object]]) -> list[ManualExtractionEffectRowListItem]:
+    items: list[ManualExtractionEffectRowListItem] = []
+    for row in effect_rows:
+        reported = dict(row.get("reported_effect_size", {}) if isinstance(row.get("reported_effect_size"), dict) else {})
+        items.append(
+            ManualExtractionEffectRowListItem(
+                effect_row_id=str(row.get("effect_row_id", "")),
+                study_unit_label=str(row.get("study_unit_label", "")),
+                comparison_label=str(row.get("comparison_label", "")),
+                outcome_name=str(row.get("outcome_name", "")),
+                timepoint=str(row.get("timepoint", "")),
+                data_input_mode=str(row.get("data_input_mode", "")),
+                effect_measure=str(reported.get("effect_measure") or row.get("effect_measure") or ""),
+                validation_status=str(row.get("validation_status", "")),
+                analysis_role=str(row.get("analysis_role", "")),
+            )
+        )
+    return items
+
+
+def _record_extraction_status(effect_rows: list[dict[str, object]]) -> str:
+    if not effect_rows:
+        return "not_started"
+    statuses = {str(row.get("extraction_status", "")) for row in effect_rows}
+    if statuses == {"completed_by_user"}:
+        return "completed_by_user"
+    if "missing_data" in statuses:
+        return "missing_data"
+    return "draft"
+
+
+def _dynamic_extraction_fields(meta_type: str) -> tuple[str, ...]:
+    if meta_type == CONTINUOUS_OUTCOME_META:
+        return ("group_1_n", "group_1_mean", "group_1_sd", "group_2_n", "group_2_mean", "group_2_sd", "unit")
+    if meta_type == SURVIVAL_OUTCOME_META:
+        return ("effect_measure", "effect_value", "ci_low", "ci_high", "adjusted_or_unadjusted", "adjusted_variables")
+    if meta_type == DIAGNOSTIC_ACCURACY_META_V1:
+        return ("tp", "fp", "fn", "tn")
+    if meta_type == BINARY_OUTCOME_META:
+        return ("group_1_n", "group_1_events", "group_2_n", "group_2_events")
+    return ("effect_measure", "effect_value", "ci_low", "ci_high", "p_value", "manual_note")
+
+
+def _selected_extraction_meta_type(project_dir: Path, schema_registry_service: ExtractionSchemaRegistryV1Service) -> str:
+    selection = _load_json_file(schema_registry_service.selection_path(project_dir))
+    return str(selection.get("selected_meta_type", "") or BINARY_OUTCOME_META)
+
+
+def _load_json_file(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 try:
@@ -529,6 +790,21 @@ if QWidget is not None:
             self._validation_label.setWordWrap(True)
             form_layout.addWidget(self._validation_label)
             root.addWidget(form_card)
+
+            m13_card = QFrame()
+            m13_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            m13_layout = QVBoxLayout(m13_card)
+            m13_title = QLabel("人工提取行工作区（M13 草稿）")
+            m13_title.setStyleSheet("font-weight: 700;")
+            m13_layout.addWidget(m13_title)
+            m13_hint = QLabel(
+                "逐篇文献 → study unit → effect row → evidence；完成提取不生成 analysis-ready dataset，不运行统计，不推进 PRISMA。"
+            )
+            m13_hint.setWordWrap(True)
+            m13_layout.addWidget(m13_hint)
+            m13_layout.addWidget(QLabel("主操作：新建 study unit / 新建提取行 / 保存草稿 / 标记缺失数据 / 完成本行提取"))
+            m13_layout.addWidget(QLabel("CSV：导出空模板 / 导出当前数据 / 导入新草稿（冲突只生成 diagnostics，不覆盖）"))
+            root.addWidget(m13_card)
 
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
