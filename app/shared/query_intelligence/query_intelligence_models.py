@@ -81,6 +81,7 @@ class SearchTranslationDraft:
     local_model_used: bool
     search_execution_status: str
     audit: dict[str, Any]
+    candidate_terms: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

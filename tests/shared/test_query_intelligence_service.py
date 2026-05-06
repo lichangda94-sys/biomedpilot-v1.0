@@ -288,6 +288,79 @@ def test_sqlite_optional_index_preserves_bio_and_meta_boundaries() -> None:
     assert "neurodegenerative disease" in " ".join([*meta.main_concepts_en, *meta.disease_terms_en]).lower()
 
 
+def test_unknown_term_local_model_candidates_do_not_enter_final_query(monkeypatch) -> None:
+    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+    payload = {
+        "main_concepts_zh": ["未知中文疾病"],
+        "main_concepts_en": ["glioma", "imaginary disease"],
+        "modifier_terms_zh": [],
+        "modifier_terms_en": [],
+        "data_type_terms_en": ["RNA-seq"],
+        "pubmed_query_candidates": ['"glioma"[tiab]'],
+        "geo_query_candidates": ['"glioma" AND "RNA-seq"'],
+        "candidate_terms": ["glioma", "imaginary disease", "TCGA-THCA"],
+        "uncertainty": [],
+        "notes": [],
+    }
+    monkeypatch.setattr(
+        local_model_bridge.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
+    )
+
+    draft = build_search_translation_draft(
+        "未知中文疾病",
+        target_context="bioinformatics",
+        target_database="geo",
+        config=LocalModelConfig(enabled=True),
+        use_local_model=True,
+    )
+
+    assert draft.local_model_status == "called_success"
+    assert draft.candidate_terms == ["glioma"]
+    assert draft.main_concepts_en == []
+    assert draft.geo_query_candidates == []
+    assert "glioma" not in " ".join([*draft.main_concepts_en, *draft.geo_query_candidates, *draft.database_terms]).lower()
+    assert not draft.audit.get("tcga_project_candidates")
+    assert not draft.audit.get("gtex_tissue_candidates")
+    assert draft.audit["local_model"]["candidate_policy"] == "unknown_term_candidates_only_not_final_query"
+
+
+def test_unknown_term_meta_candidates_keep_bio_fields_filtered(monkeypatch) -> None:
+    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+    payload = {
+        "main_concepts_zh": ["未知中文疾病"],
+        "main_concepts_en": ["thyroid cancer"],
+        "modifier_terms_zh": [],
+        "modifier_terms_en": [],
+        "data_type_terms_en": [],
+        "pubmed_query_candidates": ['"thyroid cancer"[tiab]'],
+        "geo_query_candidates": ["TCGA-THCA AND RNA-seq"],
+        "candidate_terms": ["thyroid cancer", "TCGA-THCA", "GTEx Thyroid"],
+        "uncertainty": [],
+        "notes": [],
+    }
+    monkeypatch.setattr(
+        local_model_bridge.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
+    )
+
+    draft = build_search_translation_draft(
+        "未知中文疾病",
+        target_context="meta_analysis",
+        target_database="pubmed",
+        config=LocalModelConfig(enabled=True),
+        use_local_model=True,
+    )
+
+    assert draft.candidate_terms == ["thyroid cancer"]
+    assert draft.pubmed_query_candidates == []
+    assert draft.geo_query_candidates == []
+    assert not draft.audit.get("tcga_project_candidates")
+    assert not draft.audit.get("gtex_tissue_candidates")
+
+
 def test_bioinformatics_context_filters_literature_candidates() -> None:
     draft = build_search_translation_draft(
         "甲状腺癌相关数据集",

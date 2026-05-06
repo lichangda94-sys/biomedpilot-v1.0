@@ -25,6 +25,8 @@ Rules:
 5. Do not execute search.
 6. Do not decide final query.
 7. Generate editable query candidates only.
+8. If the local vocabulary has no match, output candidate English terms only as suggestions.
+9. Do not decide TCGA, GTEx, GEO, or final database mappings.
 
 Return JSON with fields:
 {{
@@ -35,6 +37,7 @@ Return JSON with fields:
   "data_type_terms_en": [],
   "pubmed_query_candidates": [],
   "geo_query_candidates": [],
+  "candidate_terms": [],
   "uncertainty": [],
   "notes": []
 }}
@@ -184,7 +187,12 @@ def generate_search_translation_candidates(
         raw_output=call_result.raw_output,
         parsed_json=parsed,
         candidate_zh_terms=[*parsed["main_concepts_zh"], *parsed["modifier_terms_zh"]],
-        candidate_en_terms=[*parsed["main_concepts_en"], *parsed["modifier_terms_en"], *parsed["data_type_terms_en"]],
+        candidate_en_terms=[
+            *parsed["main_concepts_en"],
+            *parsed["modifier_terms_en"],
+            *parsed["data_type_terms_en"],
+            *parsed.get("candidate_terms", []),
+        ],
         candidate_synonyms=[],
         candidate_pubmed_queries=list(parsed["pubmed_query_candidates"]),
         candidate_geo_queries=list(parsed["geo_query_candidates"]),
@@ -213,6 +221,9 @@ def _validate_translation_schema(payload: dict[str, object]) -> str:
         value = payload.get(key, [])
         if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
             return f"Model JSON field {key} must be a list of strings when present."
+    value = payload.get("candidate_terms", [])
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        return "Model JSON field candidate_terms must be a list of strings when present."
     return ""
 
 

@@ -84,6 +84,7 @@ def build_search_translation_draft(
     warnings = list(intelligence.warnings)
     warnings.extend(term_lookup.warnings)
     rejected_terms: list[str] = []
+    candidate_terms: list[str] = []
     local_model_status = "fallback_registry_only"
     local_model_used = False
     model_translation = None
@@ -111,13 +112,26 @@ def build_search_translation_draft(
         }
         warnings.extend(model_translation.warnings)
         if model_translation.status == "called_success":
-            registry["main_concepts_zh"] = _unique([*registry["main_concepts_zh"], *model_translation.parsed_json.get("main_concepts_zh", [])])
-            registry["main_concepts_en"] = _unique([*registry["main_concepts_en"], *model_translation.parsed_json.get("main_concepts_en", [])])
-            registry["modifier_terms_zh"] = _unique([*registry["modifier_terms_zh"], *model_translation.parsed_json.get("modifier_terms_zh", [])])
-            registry["modifier_terms_en"] = _unique([*registry["modifier_terms_en"], *model_translation.parsed_json.get("modifier_terms_en", [])])
-            registry["data_type_terms_en"] = _unique([*registry["data_type_terms_en"], *model_translation.parsed_json.get("data_type_terms_en", [])])
-            registry["pubmed_query_candidates"] = _unique([*registry["pubmed_query_candidates"], *model_translation.candidate_pubmed_queries])
-            registry["geo_query_candidates"] = _unique([*registry["geo_query_candidates"], *model_translation.candidate_geo_queries])
+            if _has_authoritative_vocabulary_match(term_lookup):
+                registry["main_concepts_zh"] = _unique([*registry["main_concepts_zh"], *model_translation.parsed_json.get("main_concepts_zh", [])])
+                registry["main_concepts_en"] = _unique([*registry["main_concepts_en"], *model_translation.parsed_json.get("main_concepts_en", [])])
+                registry["modifier_terms_zh"] = _unique([*registry["modifier_terms_zh"], *model_translation.parsed_json.get("modifier_terms_zh", [])])
+                registry["modifier_terms_en"] = _unique([*registry["modifier_terms_en"], *model_translation.parsed_json.get("modifier_terms_en", [])])
+                registry["data_type_terms_en"] = _unique([*registry["data_type_terms_en"], *model_translation.parsed_json.get("data_type_terms_en", [])])
+                registry["pubmed_query_candidates"] = _unique([*registry["pubmed_query_candidates"], *model_translation.candidate_pubmed_queries])
+                registry["geo_query_candidates"] = _unique([*registry["geo_query_candidates"], *model_translation.candidate_geo_queries])
+            else:
+                candidate_terms = _validated_model_candidate_terms(
+                    original_question,
+                    [
+                        *model_translation.parsed_json.get("main_concepts_en", []),
+                        *model_translation.parsed_json.get("candidate_terms", []),
+                    ],
+                    target_context,
+                )
+                audit["local_model"]["candidate_terms"] = candidate_terms
+                audit["local_model"]["candidate_policy"] = "unknown_term_candidates_only_not_final_query"
+                warnings.append("本地模型仅生成未知词候选；候选未直接写入最终检索式。")
 
     registry = _suppress_bound_modifier_disease_terms(original_question, registry, term_lookup.modifier_terms_en)
 
@@ -185,7 +199,52 @@ def build_search_translation_draft(
         local_model_used=local_model_used,
         search_execution_status="draft_only",
         audit=audit,
+        candidate_terms=candidate_terms,
     )
+
+
+def _validated_model_candidate_terms(
+    original_question: str,
+    candidate_terms: list[str],
+    target_context: str,
+) -> list[str]:
+    payload = {
+        "main_concepts_zh": [],
+        "main_concepts_en": _unique(candidate_terms),
+        "modifier_terms_zh": [],
+        "modifier_terms_en": [],
+        "data_type_terms_en": [],
+        "pubmed_query_candidates": [],
+        "geo_query_candidates": [],
+    }
+    guarded = _apply_disease_guard(original_question, payload)
+    validated: list[str] = []
+    for term in guarded["main_concepts_en"]:
+        if _is_forbidden_candidate_term(term):
+            continue
+        lookup = lookup_medical_terms(term, target_context=target_context)
+        if _has_authoritative_vocabulary_match(lookup):
+            validated.append(term)
+    return _unique(validated)
+
+
+def _has_authoritative_vocabulary_match(term_lookup: object) -> bool:
+    return bool(
+        getattr(term_lookup, "matched_zh_terms", [])
+        or getattr(term_lookup, "disease_terms_en", [])
+        or getattr(term_lookup, "tissue_terms", [])
+        or getattr(term_lookup, "mesh_terms", [])
+        or getattr(term_lookup, "exposure_terms", [])
+        or getattr(term_lookup, "outcome_terms", [])
+        or getattr(term_lookup, "study_design_terms", [])
+        or getattr(term_lookup, "publication_type_terms", [])
+        or getattr(term_lookup, "concept_ids", [])
+    )
+
+
+def _is_forbidden_candidate_term(term: str) -> bool:
+    lowered = term.lower()
+    return any(token in lowered for token in ("tcga", "gtex", "geo", "gse"))
 
 
 def _terms_by_semantic_group(intelligence: QueryIntelligenceResult, semantic_group: str, language: str) -> list[str]:
