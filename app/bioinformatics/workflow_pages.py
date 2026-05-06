@@ -1160,12 +1160,32 @@ class BioinformaticsDataSourceWidget(QWidget):
         delete_button = QPushButton("删除缓存")
         add_button.clicked.connect(lambda checked=False, item=entry: self._add_history_cache_to_project(item))
         view_button.clicked.connect(lambda checked=False, path=entry["path"]: _open_path(Path(path)))
-        delete_button.clicked.connect(lambda checked=False: self._set_status("删除缓存需要二次确认；当前未执行文件删除。", error=True))
+        delete_button.clicked.connect(lambda checked=False, item=entry: self._delete_history_cache_entry(item))
         layout.addWidget(add_button)
         layout.addWidget(view_button)
         layout.addWidget(delete_button)
         layout.addStretch(1)
         return widget
+
+    def _delete_history_cache_entry(self, entry: dict[str, str]) -> bool:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return False
+        response = QMessageBox.question(
+            self,
+            "确认删除缓存？",
+            "这将删除该历史缓存数据，并从历史缓存列表中移除。不会删除当前项目已选择的数据，也不会删除你手动导入的原始文件。",
+            QMessageBox.Cancel | QMessageBox.Yes,
+            QMessageBox.Cancel,
+        )
+        if response != QMessageBox.Yes:
+            self._show_data_source_status("已取消删除缓存。")
+            return False
+        target = Path(entry.get("path", ""))
+        ok, message = _delete_historical_cache_path(self._project_root, target, entry.get("name", ""))
+        self._refresh_history_cache()
+        self._show_data_source_status(message, error=not ok)
+        return ok
 
     def _add_history_cache_to_project(self, entry: dict[str, str]) -> AcquisitionSummary | None:
         path = Path(entry["path"])
@@ -1245,6 +1265,11 @@ class BioinformaticsDataSourceWidget(QWidget):
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
         self._status_label.setText(text if error else "先添加数据，下一步进入数据识别。")
+        self._status_label.setProperty("status", "error" if error else "ok")
+        _refresh_style(self._status_label)
+
+    def _show_data_source_status(self, text: str, *, error: bool = False) -> None:
+        self._status_label.setText(text)
         self._status_label.setProperty("status", "error" if error else "ok")
         _refresh_style(self._status_label)
 
@@ -4237,9 +4262,57 @@ def _historical_cache_entries(project_root: Path | None) -> list[dict[str, str]]
                 continue
             key = f"geo:{child.name.upper()}"
             child_path = str(child.resolve()) if child.exists() else str(child)
-            if key not in selected and child_path not in bound_paths:
+            if key not in selected and not _path_matches_any_bound_path(child, bound_paths):
                 entries.append({"name": child.name, "path": str(child)})
     return entries
+
+
+def _delete_historical_cache_path(project_root: Path, target: Path, name: str = "") -> tuple[bool, str]:
+    root = project_root.expanduser().resolve()
+    geo_cache_root = (root / "raw_data" / "geo").resolve()
+    try:
+        resolved = target.expanduser().resolve()
+    except OSError as exc:
+        return False, f"缓存删除失败：{exc}"
+    if not _is_path_inside(resolved, geo_cache_root) or resolved == geo_cache_root:
+        return False, "缓存删除失败：路径不在允许删除的缓存目录内。"
+    expected_key = f"geo:{(name or resolved.name).upper()}"
+    selected = {entry.key for entry in _current_project_dataset_entries(root)}
+    if expected_key in selected or _path_matches_any_bound_path(resolved, _current_project_bound_paths(root)):
+        return False, "该数据已加入当前项目，不能作为历史缓存删除。如需移除，请在待处理数据集中删除所选。"
+    if not resolved.exists():
+        return True, "缓存文件已不存在，已从列表移除。"
+    try:
+        if resolved.is_dir():
+            shutil.rmtree(resolved)
+        else:
+            resolved.unlink()
+    except OSError as exc:
+        return False, f"缓存删除失败：{exc}"
+    return True, "缓存已删除。"
+
+
+def _path_matches_any_bound_path(path: Path, bound_paths: set[str]) -> bool:
+    try:
+        resolved = path.expanduser().resolve()
+    except OSError:
+        resolved = path.expanduser()
+    for raw in bound_paths:
+        try:
+            bound = Path(raw).expanduser().resolve()
+        except OSError:
+            bound = Path(raw).expanduser()
+        if resolved == bound or _is_path_inside(bound, resolved) or _is_path_inside(resolved, bound):
+            return True
+    return False
+
+
+def _is_path_inside(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def _current_project_bound_paths(project_root: Path) -> set[str]:

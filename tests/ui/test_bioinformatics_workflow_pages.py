@@ -628,6 +628,87 @@ def test_data_source_keeps_history_cache_separate_until_user_adds(qt_app, projec
     assert widget.status_message() == "已加入当前项目"
 
 
+def test_history_cache_delete_button_confirms_before_deleting(qt_app, project_summary, monkeypatch: pytest.MonkeyPatch) -> None:
+    cache_dir = project_summary.project_root / "raw_data" / "geo" / "GSE88888"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "GSE88888_family.soft").write_text("^SERIES = GSE88888\n", encoding="utf-8")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    delete_button = [button for button in widget._history_cache_table.cellWidget(0, 2).findChildren(QPushButton) if button.text() == "删除缓存"][0]
+
+    monkeypatch.setattr(workflow_pages.QMessageBox, "question", lambda *args, **kwargs: workflow_pages.QMessageBox.Cancel)
+    delete_button.click()
+
+    assert cache_dir.exists()
+    assert widget._history_cache_table.rowCount() == 1
+    assert widget.status_message() == "已取消删除缓存。"
+
+
+def test_history_cache_delete_removes_allowed_cache_and_refreshes(qt_app, project_summary, monkeypatch: pytest.MonkeyPatch) -> None:
+    cache_dir = project_summary.project_root / "raw_data" / "geo" / "GSE77777"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "GSE77777_family.soft").write_text("^SERIES = GSE77777\n", encoding="utf-8")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    monkeypatch.setattr(workflow_pages.QMessageBox, "question", lambda *args, **kwargs: workflow_pages.QMessageBox.Yes)
+
+    ok = widget._delete_history_cache_entry({"name": "GSE77777", "path": str(cache_dir)})
+
+    assert ok is True
+    assert not cache_dir.exists()
+    assert widget._history_cache_table.isHidden()
+    assert widget._history_cache_hint.text() == "暂无历史缓存数据。"
+    assert widget.status_message() == "缓存已删除。"
+
+
+def test_history_cache_delete_cleans_missing_cache_from_list(qt_app, project_summary, monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = project_summary.project_root / "raw_data" / "geo" / "GSE40404"
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    monkeypatch.setattr(workflow_pages.QMessageBox, "question", lambda *args, **kwargs: workflow_pages.QMessageBox.Yes)
+
+    ok = widget._delete_history_cache_entry({"name": "GSE40404", "path": str(missing)})
+
+    assert ok is True
+    assert widget.status_message() == "缓存文件已不存在，已从列表移除。"
+
+
+def test_history_cache_delete_refuses_project_bound_cache(qt_app, project_summary, monkeypatch: pytest.MonkeyPatch) -> None:
+    cache_dir = project_summary.project_root / "raw_data" / "geo" / "GSE66666"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "GSE66666_family.soft").write_text("^SERIES = GSE66666\n", encoding="utf-8")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    summary = widget._add_history_cache_to_project({"name": "GSE66666", "path": str(cache_dir)})
+    monkeypatch.setattr(workflow_pages.QMessageBox, "question", lambda *args, **kwargs: workflow_pages.QMessageBox.Yes)
+
+    ok = widget._delete_history_cache_entry({"name": "GSE66666", "path": str(cache_dir)})
+
+    assert summary is not None
+    assert ok is False
+    assert cache_dir.exists()
+    assert "该数据已加入当前项目" in widget.status_message()
+
+
+def test_history_cache_delete_refuses_external_or_traversal_paths(qt_app, project_summary, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    external = tmp_path / "manual_import.tsv"
+    external.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    traversal = project_summary.project_root / "raw_data" / "geo" / ".." / "local_import"
+    traversal.mkdir(parents=True, exist_ok=True)
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    monkeypatch.setattr(workflow_pages.QMessageBox, "question", lambda *args, **kwargs: workflow_pages.QMessageBox.Yes)
+
+    external_ok = widget._delete_history_cache_entry({"name": "manual_import.tsv", "path": str(external)})
+    traversal_ok = widget._delete_history_cache_entry({"name": "local_import", "path": str(traversal)})
+
+    assert external_ok is False
+    assert traversal_ok is False
+    assert external.exists()
+    assert traversal.exists()
+    assert "路径不在允许删除的缓存目录内" in widget.status_message()
+
+
 def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     widget = BioinformaticsChineseDatasetSearchWidget()
 
