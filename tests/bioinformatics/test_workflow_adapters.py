@@ -9,6 +9,7 @@ from xml.sax.saxutils import escape
 import pytest
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center
+from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
@@ -350,6 +351,9 @@ def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
     assert assets["sample_metadata"]["input_eligible"] is True
     assert assets["platform_reference_hint"]["input_eligible"] is False
     assert assets["platform_reference_hint"]["platform_id"] == "GPL570"
+    assert recognition["group_preview"]["status"] == "preview_only"  # type: ignore[index]
+    assert recognition["group_preview"]["selected_preview_field"] == "tissue"  # type: ignore[index]
+    assert (project_root / GROUP_PREVIEW_REPORT).exists()
 
 
 def test_csv_expression_matrix_content_profile(project_root: Path) -> None:
@@ -391,6 +395,24 @@ def test_csv_sample_metadata_content_profile(project_root: Path) -> None:
 
     assert record["recognized_type"] == "sample_metadata"
     assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+    assert recognition["group_preview"]["selected_preview_field"] == "group"  # type: ignore[index]
+
+
+def test_group_preview_does_not_create_comparison_config(project_root: Path) -> None:
+    expression = project_root / "raw_data" / "local_import" / "expression.tsv"
+    sample = project_root / "raw_data" / "local_import" / "samples.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text("gene\tGSM1\tGSM2\tGSM3\tGSM4\nTP53\t1\t2\t3\t4\n", encoding="utf-8")
+    sample.write_text("sample_id\tcondition\nGSM1\tcontrol\nGSM2\tcontrol\nGSM3\ttreated\nGSM4\ttreated\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert recognition["group_preview"]["status"] == "preview_only"  # type: ignore[index]
+    assert "comparison_config" not in readiness["readiness_report"]["available_inputs"]  # type: ignore[index]
+    assert diff_row["can_run"] is False
+    assert "comparison_config" in diff_row["missing_inputs"]
 
 
 def test_csv_clinical_survival_metadata_content_profile(project_root: Path) -> None:

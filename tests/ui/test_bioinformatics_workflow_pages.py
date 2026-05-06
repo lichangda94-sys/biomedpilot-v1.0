@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -1418,6 +1418,56 @@ def test_readiness_main_buttons_are_simplified(qt_app, project_summary) -> None:
     assert "刷新状态" not in button_texts
     assert "保存并重新检查" not in button_texts
     assert "继续：标准化资产" not in button_texts
+
+
+def test_recognition_page_shows_group_preview(qt_app, project_summary) -> None:
+    expression = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
+    samples = project_summary.project_root / "raw_data" / "local_import" / "sample_metadata.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text("gene\tGSM1\tGSM2\tGSM3\tGSM4\nTP53\t1\t2\t3\t4\n", encoding="utf-8")
+    samples.write_text("sample_id\tcondition\nGSM1\tcontrol\nGSM2\tcontrol\nGSM3\ttreated\nGSM4\ttreated\n", encoding="utf-8")
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    preview = recognition.findChild(QTextEdit, "recognitionGroupPreviewReport")
+
+    assert preview is not None
+    text = preview.toPlainText()
+    assert "样本数：4" in text
+    assert "识别到的候选分组：condition" in text
+    assert "分组数量：2 组" in text
+    assert "control 2" in text
+    assert "treated 2" in text
+    assert "正式比较组需由你确认" in text
+
+
+def test_readiness_confirms_group_preview_before_comparison_config(qt_app, project_summary) -> None:
+    expression = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
+    samples = project_summary.project_root / "raw_data" / "local_import" / "sample_metadata.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text("gene\tGSM1\tGSM2\tGSM3\tGSM4\nTP53\t1\t2\t3\t4\n", encoding="utf-8")
+    samples.write_text("sample_id\tcondition\nGSM1\tcontrol\nGSM2\tcontrol\nGSM3\ttreated\nGSM4\ttreated\n", encoding="utf-8")
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness.refresh_project(project_summary)
+    table = readiness.findChild(QTableWidget, "readinessCapabilityTable")
+    row_text = " ".join(table.item(0, column).text() for column in range(table.columnCount()))
+    assert "候选分组待确认" in row_text
+    assert not readiness.findChild(QFrame, "readinessTodo_comparison_config").isHidden()
+
+    assert readiness.confirm_group_preview_as_comparison(skip_dialog=True) is True
+
+    comparison_file = project_summary.project_root / "raw_data" / "local_import" / "manual_supplements" / "comparison_config_manual.tsv"
+    audit_log = project_summary.project_root / "logs" / "readiness" / "comparison_group_confirmation_log.jsonl"
+    artifacts = workflow_pages.load_readiness_artifacts(project_summary.project_root)
+    assert comparison_file.exists()
+    assert audit_log.exists()
+    assert "condition" in comparison_file.read_text(encoding="utf-8")
+    assert "comparison_config" in artifacts["readiness_report"]["available_inputs"]
+    assert "已确认候选分组" in readiness.status_message()
 
 
 def test_readiness_supplement_manual_and_file_then_rerun(qt_app, project_summary, tmp_path: Path) -> None:

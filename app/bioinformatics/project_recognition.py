@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT, build_group_preview_report
+
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
 
 TYPE_LABELS = {
@@ -129,15 +131,18 @@ def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[st
             }
         )
     warnings.extend(_recognition_warnings(records))
+    group_preview = build_group_preview_report(root, records)
     report = {
         "schema_version": "biomedpilot.recognition_report.v1",
         "generated_at": _now(),
         "project_root": str(root),
         "files": records,
         "type_counts": _type_counts(records),
+        "group_preview": group_preview,
         "warnings": warnings,
     }
     _write_json(root / RECOGNITION_REPORT, report)
+    _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
     return report
 
 

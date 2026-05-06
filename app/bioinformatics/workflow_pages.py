@@ -2386,6 +2386,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._set_status("尚未生成数据识别报告。")
             self._table.setRowCount(0)
             self._counts.setPlainText("")
+            self._group_preview.setPlainText("")
             self._technical_details.setPlainText("")
             return
         self._render_report(report)
@@ -2472,6 +2473,12 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._counts = _read_only_report_view(130)
         self._counts.setObjectName("recognitionSummaryReport")
         root.addWidget(self._counts)
+        group_card, group_layout = _card("样本与分组预览")
+        group_card.setObjectName("recognitionGroupPreviewCard")
+        self._group_preview = _read_only_report_view(130)
+        self._group_preview.setObjectName("recognitionGroupPreviewReport")
+        group_layout.addWidget(self._group_preview)
+        root.addWidget(group_card)
         self._technical_details = _text_preview(180)
         self._technical_details.setVisible(False)
         root.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._technical_details)), alignment=Qt.AlignLeft)
@@ -2498,6 +2505,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._set_status(f"已读取识别报告：{len(annotated)} 个文件，{len(warnings)} 条 warning。")
         self._fill_recognition_table(files)
         self._counts.setPlainText(_recognition_user_summary(report, annotated, warnings, self._project_root))
+        self._group_preview.setPlainText(_group_preview_user_summary(report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}))
         self._technical_details.setPlainText(
             _json(
                 {
@@ -2737,6 +2745,33 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._status_label.setText("未知补充方式。")
         return False
 
+    def confirm_group_preview_as_comparison(self, manual_text: str | None = None, *, skip_dialog: bool = False) -> bool:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return False
+        preview = _project_group_preview(self._project_root)
+        if not _group_preview_has_candidate(preview):
+            self._status_label.setText("尚未检测到可确认的候选分组，请手动设置比较组。")
+            return False
+        text = manual_text or _comparison_config_text_from_group_preview(preview)
+        if manual_text is None and not skip_dialog:
+            text, ok = QInputDialog.getMultiLineText(
+                self,
+                "确认比较组",
+                "请确认候选分组是否符合研究设计。确认后才会写入正式比较组设置。",
+                text,
+            )
+            if not ok:
+                self._status_label.setText("已取消确认比较组。")
+                return False
+        _save_manual_supplement(self._project_root, "comparison_config", text)
+        _append_comparison_confirmation_audit(self._project_root, preview, text)
+        run_project_recognition(self._project_root)
+        artifacts = run_project_readiness(self._project_root)
+        self._render(artifacts)
+        self._status_label.setText("已确认候选分组为正式比较组，并重新检查数据准备状态。")
+        return True
+
     def create_missing_info_template(self, kind: str) -> Path | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -2800,7 +2835,8 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._clinical_manual_button.setVisible(False)
         self._clinical_template_button.setVisible(False)
         self._expression_file_button = _button("上传表达矩阵", "secondaryButton", lambda: self.supplement_missing_info("expression_matrix", mode="file"))
-        self._comparison_manual_button = _button("设置比较组", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="manual"))
+        self._comparison_preview_button = _button("使用候选分组创建比较组", "secondaryButton", self.confirm_group_preview_as_comparison)
+        self._comparison_manual_button = _button("手动设置比较组", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="manual"))
         self._comparison_file_button = _button("导入比较组表", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="file"))
         self._comparison_template_button = _button("下载比较组模板", "secondaryButton", lambda: self.create_missing_info_template("comparison_config"))
         self._gmt_file_button = _button("上传 GMT 文件", "secondaryButton", lambda: self.supplement_missing_info("gmt_gene_set", mode="file"))
@@ -2809,14 +2845,16 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
             ("expression_matrix", "表达矩阵", "用途：后续标准化、差异表达、富集和相关性分析的核心输入。", "当前状态：未提供。", [self._expression_file_button]),
             ("sample_metadata", "样本信息", "用途：识别样本分组、组织来源和实验条件。", "当前状态：未提供。", [self._sample_file_button, self._sample_manual_button, self._sample_template_button]),
             ("clinical_metadata", "临床信息", "用途：用于生存分析和临床变量关联。", "当前状态：未提供。", [self._clinical_file_button, self._clinical_defer_button]),
-            ("comparison_config", "比较分组", "用途：用于差异表达分析，例如 control vs treatment。", "当前状态：未设置。", [self._comparison_manual_button, self._comparison_file_button, self._comparison_template_button]),
+            ("comparison_config", "比较分组", "用途：用于差异表达分析，例如 control vs treatment。", "当前状态：未设置。", [self._comparison_preview_button, self._comparison_manual_button, self._comparison_file_button, self._comparison_template_button]),
             ("gmt_gene_set", "GMT 基因集", "用途：用于 GSEA。", "当前状态：未提供。", [self._gmt_file_button, self._gmt_defer_button]),
         ]
+        self._todo_state_labels: dict[str, QLabel] = {}
         for key, title, purpose, state, buttons in todo_items:
-            row = _readiness_todo_row(title, purpose, state, buttons)
+            row, state_label = _readiness_todo_row(title, purpose, state, buttons)
             row.setObjectName(f"readinessTodo_{key}")
             row.setVisible(False)
             self._todo_rows[key] = row
+            self._todo_state_labels[key] = state_label
             todo_layout.addWidget(row)
         root.addWidget(todo_card)
 
@@ -2841,13 +2879,14 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         matrix = artifacts.get("capability_matrix") or {}
         readiness_payload = readiness if isinstance(readiness, dict) else {}
         matrix_payload = matrix if isinstance(matrix, dict) else {}
+        group_preview = _project_group_preview(self._project_root)
         missing = _missing_readiness_inputs(readiness_payload, matrix_payload)
         self._status_label.setText(_readiness_overall_summary(readiness_payload, matrix_payload, missing))
         self._recognized_inputs_label.setText(_readiness_recognized_inputs_text(readiness_payload))
-        self._missing_inputs_label.setText(_readiness_missing_inputs_text(missing))
-        self._next_step_label.setText(_readiness_next_step_text(readiness_payload, matrix_payload, missing))
+        self._missing_inputs_label.setText(_readiness_missing_inputs_text(missing, group_preview))
+        self._next_step_label.setText(_readiness_next_step_text(readiness_payload, matrix_payload, missing, group_preview))
         self._warning_chips.setText(_readiness_default_warning_summary(readiness_payload, matrix_payload, missing))
-        self._render_todo_items(missing)
+        self._render_todo_items(missing, group_preview)
         self._details.setPlainText(
             _json(
                 {
@@ -2865,8 +2904,8 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
                 [
                     str(row.get("label", "")),
                     _analysis_readiness_status_label(row),
-                    _analysis_missing_text(row),
-                    _analysis_suggested_action(row),
+                    _analysis_missing_text(row, group_preview),
+                    _analysis_suggested_action(row, group_preview),
                 ]
                 for row in rows
                 if isinstance(row, dict)
@@ -2875,11 +2914,19 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         _set_table_widths(self._matrix, [190, 170, 240, 280])
         self._matrix.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
-    def _render_todo_items(self, missing: set[str]) -> None:
+    def _render_todo_items(self, missing: set[str], group_preview: dict[str, object] | None = None) -> None:
         visible = {key for key in missing if key in self._todo_rows}
         self._todo_empty_label.setVisible(not visible)
         for key, row in self._todo_rows.items():
             row.setVisible(key in visible)
+        comparison_state = self._todo_state_labels.get("comparison_config")
+        if comparison_state is not None:
+            if "comparison_config" in missing and _group_preview_has_candidate(group_preview):
+                comparison_state.setText("当前状态：候选分组待确认。")
+                self._comparison_preview_button.setVisible(True)
+            else:
+                comparison_state.setText("当前状态：未设置。")
+                self._comparison_preview_button.setVisible(False)
 
     def _defer_optional_analysis(self, kind: str) -> None:
         label = _missing_input_label(kind)
@@ -3545,7 +3592,7 @@ def _card(title: str) -> tuple[QFrame, QVBoxLayout]:
     return frame, layout
 
 
-def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPushButton]) -> QFrame:
+def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPushButton]) -> tuple[QFrame, QLabel]:
     frame = QFrame()
     frame.setObjectName("readinessTodoRow")
     layout = QVBoxLayout(frame)
@@ -3555,13 +3602,14 @@ def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPus
     title_label.setObjectName("bioProjectCardTitle")
     layout.addWidget(title_label)
     layout.addWidget(_muted(purpose))
-    layout.addWidget(_muted(state))
+    state_label = _muted(state)
+    layout.addWidget(state_label)
     actions = QHBoxLayout()
     for button in buttons:
         actions.addWidget(button)
     actions.addStretch(1)
     layout.addLayout(actions)
-    return frame
+    return frame, state_label
 
 
 def _button(text: str, object_name: str, callback: Callable[..., Any]) -> QPushButton:
@@ -5735,18 +5783,30 @@ def _readiness_recognized_inputs_text(readiness: dict[str, object]) -> str:
     return "已识别到的数据：" + ("、".join(dict.fromkeys(labels)) if labels else "尚未识别到关键数据")
 
 
-def _readiness_missing_inputs_text(missing: set[str]) -> str:
+def _readiness_missing_inputs_text(missing: set[str], group_preview: dict[str, object] | None = None) -> str:
     if not missing:
         return "仍需补充的数据：无"
-    labels = [_missing_input_label(key) for key in _ordered_missing_inputs(missing)]
+    labels = []
+    for key in _ordered_missing_inputs(missing):
+        if key == "comparison_config" and _group_preview_has_candidate(group_preview):
+            labels.append("比较分组（候选分组待确认）")
+        else:
+            labels.append(_missing_input_label(key))
     return "仍需补充的数据：" + "、".join(labels)
 
 
-def _readiness_next_step_text(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
+def _readiness_next_step_text(
+    readiness: dict[str, object],
+    matrix: dict[str, object],
+    missing: set[str],
+    group_preview: dict[str, object] | None = None,
+) -> str:
     has_core_input = bool(readiness.get("has_core_input"))
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
     if "expression_matrix" in missing or not has_core_input:
         return "下一步建议：请返回数据导入页面补充表达矩阵文件。"
+    if "comparison_config" in missing and _group_preview_has_candidate(group_preview):
+        return "下一步建议：已检测到候选分组，请确认比较组；也可以先进入标准化，之后再确认。"
     if "comparison_config" in missing and "sample_metadata" not in missing:
         return "下一步建议：建议先设置比较组，以便进行差异表达分析；也可以先进入标准化，之后再补充分组信息。"
     if "sample_metadata" in missing:
@@ -5793,17 +5853,25 @@ def _analysis_readiness_status_label(row: dict[str, object]) -> str:
     return "暂不建议"
 
 
-def _analysis_missing_text(row: dict[str, object]) -> str:
-    missing = [_missing_input_label(str(item)) for item in row.get("missing_inputs", []) or []]
+def _analysis_missing_text(row: dict[str, object], group_preview: dict[str, object] | None = None) -> str:
+    missing = []
+    for item in row.get("missing_inputs", []) or []:
+        normalized = _normalize_missing_input(str(item))
+        if normalized == "comparison_config" and _group_preview_has_candidate(group_preview):
+            missing.append("候选分组待确认")
+        else:
+            missing.append(_missing_input_label(str(item)))
     return "、".join(dict.fromkeys(missing)) if missing else "无"
 
 
-def _analysis_suggested_action(row: dict[str, object]) -> str:
+def _analysis_suggested_action(row: dict[str, object], group_preview: dict[str, object] | None = None) -> str:
     missing = {_normalize_missing_input(str(item)) for item in row.get("missing_inputs", []) or []}
     if "expression_matrix" in missing:
         return "返回数据导入页面补充表达矩阵"
     if "sample_metadata" in missing:
         return "上传样本信息"
+    if "comparison_config" in missing and _group_preview_has_candidate(group_preview):
+        return "确认比较组"
     if "comparison_config" in missing:
         return "设置比较组"
     if "gmt_gene_set" in missing:
@@ -5815,6 +5883,87 @@ def _analysis_suggested_action(row: dict[str, object]) -> str:
     if row.get("analysis_type") == "reporting":
         return "先生成分析结果"
     return "查看说明"
+
+
+def _project_group_preview(project_root: Path | None) -> dict[str, object]:
+    if project_root is None:
+        return {}
+    report = load_recognition_report(project_root)
+    if not isinstance(report, dict):
+        return {}
+    preview = report.get("group_preview")
+    return preview if isinstance(preview, dict) else {}
+
+
+def _group_preview_has_candidate(preview: dict[str, object] | None) -> bool:
+    if not isinstance(preview, dict):
+        return False
+    return str(preview.get("status") or "") == "preview_only" and int(preview.get("group_count") or 0) >= 2 and bool(preview.get("selected_preview_field"))
+
+
+def _group_preview_user_summary(preview: dict[str, object]) -> str:
+    if not preview:
+        return "尚未生成样本与分组预览。"
+    status = str(preview.get("status") or "")
+    if status == "confirmed_comparison_exists":
+        status_line = "状态：已存在正式比较组设置。"
+    elif _group_preview_has_candidate(preview):
+        status_line = "状态：已生成候选分组，正式比较组需由你确认。"
+    else:
+        reason = str(preview.get("missing_group_reason") or "未识别到明确分组，请在下一步手动设置比较组。")
+        return "\n".join(
+            [
+                f"样本数：{int(preview.get('sample_count') or 0)}",
+                "识别到的候选分组：无",
+                "分组数量：0 组",
+                "置信度：低",
+                f"状态说明：{reason}",
+                "这是系统根据样本信息生成的分组预览，正式比较组需由你确认。",
+            ]
+        )
+    group_sizes = preview.get("group_sizes") if isinstance(preview.get("group_sizes"), dict) else {}
+    size_text = "，".join(f"{key} {value}" for key, value in group_sizes.items()) if group_sizes else "未统计"
+    fields = "、".join(str(item) for item in preview.get("candidate_group_fields", []) or []) or "未识别"
+    return "\n".join(
+        [
+            f"样本数：{int(preview.get('sample_count') or 0)}",
+            f"识别到的候选分组：{fields}",
+            f"分组数量：{int(preview.get('group_count') or 0)} 组",
+            f"每组样本数：{size_text}",
+            f"置信度：{_group_preview_confidence_zh(str(preview.get('confidence') or 'low'))}",
+            status_line,
+            "这是系统根据样本信息生成的分组预览，正式比较组需由你确认。",
+        ]
+    )
+
+
+def _group_preview_confidence_zh(value: str) -> str:
+    return {"high": "高", "medium": "中", "low": "低"}.get(value, "低")
+
+
+def _comparison_config_text_from_group_preview(preview: dict[str, object]) -> str:
+    field = str(preview.get("selected_preview_field") or "group")
+    group_sizes = preview.get("group_sizes") if isinstance(preview.get("group_sizes"), dict) else {}
+    groups = [str(key) for key in group_sizes]
+    control = next((group for group in groups if any(token in group.lower() for token in ("control", "normal", "vehicle", "untreated"))), groups[0] if groups else "control")
+    case = next((group for group in groups if group != control), groups[1] if len(groups) > 1 else "case")
+    return f"comparison_id\tgroup_column\tcase_group\tcontrol_group\ncase_vs_control\t{field}\t{case}\t{control}\n"
+
+
+def _append_comparison_confirmation_audit(project_root: Path, preview: dict[str, object], comparison_text: str) -> Path:
+    path = project_root / "logs" / "readiness" / "comparison_group_confirmation_log.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "created_at": _utc_now_iso(),
+        "action": "confirm_group_preview_as_comparison",
+        "selected_preview_field": preview.get("selected_preview_field"),
+        "group_sizes": preview.get("group_sizes"),
+        "source_file": preview.get("source_file"),
+        "comparison_text": comparison_text,
+    }
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+    return path
 
 
 def _missing_readiness_inputs(readiness: dict[str, object], matrix: dict[str, object]) -> set[str]:
