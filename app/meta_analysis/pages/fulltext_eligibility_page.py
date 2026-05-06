@@ -10,6 +10,11 @@ from app.meta_analysis.services.fulltext_eligibility_service import (
     FullTextEligibilityCandidate,
     FullTextEligibilityService,
 )
+from app.meta_analysis.services.fulltext_management_service import (
+    FULLTEXT_MANAGEMENT_REGISTRY_SCHEMA_VERSION,
+    FULLTEXT_MANAGEMENT_STATUSES,
+    FullTextManagementService,
+)
 from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
     FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH,
@@ -40,6 +45,10 @@ class FullTextEligibilityPageState:
     criteria_hints: tuple[str, ...]
     warnings: tuple[str, ...]
     testing_limitations: tuple[str, ...]
+    fulltext_management_record_count: int = 0
+    fulltext_management_status_counts: dict[str, int] | None = None
+    fulltext_management_registry_path: str = ""
+    fulltext_management_schema_version: str = FULLTEXT_MANAGEMENT_REGISTRY_SCHEMA_VERSION
     title_zh: str = FULLTEXT_ELIGIBILITY_TITLE_ZH
     status_label_zh: str = "内部测试"
     description_zh: str = FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH
@@ -69,6 +78,9 @@ def initial_fulltext_eligibility_state(project_dir: Path | None = None) -> FullT
         status_options=FULLTEXT_ELIGIBILITY_STATUSES,
         exclusion_reason_options=FULLTEXT_EXCLUSION_REASONS,
         decision_counts={},
+        fulltext_management_record_count=0,
+        fulltext_management_status_counts={},
+        fulltext_management_registry_path=str(project_dir / "fulltext" / "fulltext_management_registry_v1.json") if project_dir is not None else "",
         output_paths=_output_paths(project_dir) if project_dir is not None else {},
         criteria_summary_path=str(project_dir / "criteria" / "criteria_summary.md") if project_dir is not None else "",
         criteria_hints=(),
@@ -90,14 +102,18 @@ def fulltext_eligibility_state_from_project(
     project_dir: Path,
     *,
     service: FullTextEligibilityService | None = None,
+    fulltext_management_service: FullTextManagementService | None = None,
     criteria_service: CriteriaBuilderService | None = None,
 ) -> FullTextEligibilityPageState:
     project_dir = project_dir.expanduser().resolve()
     service = service or FullTextEligibilityService()
+    fulltext_management_service = fulltext_management_service or FullTextManagementService()
     criteria_service = criteria_service or CriteriaBuilderService()
     base = initial_fulltext_eligibility_state(project_dir)
     candidates = service.build_candidates_from_screening(project_dir)
+    management_records = fulltext_management_service.list_records(project_dir)
     decision_counts = _decision_counts(candidates)
+    management_counts = _management_counts(management_records)
     warnings: list[str] = []
     if not candidates:
         warnings.append("empty_fulltext_candidate_list")
@@ -120,6 +136,10 @@ def fulltext_eligibility_state_from_project(
         status_options=base.status_options,
         exclusion_reason_options=base.exclusion_reason_options,
         decision_counts=decision_counts,
+        fulltext_management_record_count=len(management_records),
+        fulltext_management_status_counts=management_counts,
+        fulltext_management_registry_path=str(fulltext_management_service.registry_path(project_dir)),
+        fulltext_management_schema_version=FULLTEXT_MANAGEMENT_REGISTRY_SCHEMA_VERSION,
         output_paths=_output_paths(project_dir),
         criteria_summary_path=str(project_dir / "criteria" / "criteria_summary.md"),
         criteria_hints=criteria_service.criteria_hints(project_dir, stage="full_text"),
@@ -137,7 +157,8 @@ def _output_paths(project_dir: Path | None) -> dict[str, str]:
     if project_dir is None:
         return {}
     return {
-        "fulltext_eligibility_decisions": str(project_dir / "fulltext" / "fulltext_eligibility_decisions.json"),
+            "fulltext_eligibility_decisions": str(project_dir / "fulltext" / "fulltext_eligibility_decisions.json"),
+        "fulltext_management_registry": str(project_dir / "fulltext" / "fulltext_management_registry_v1.json"),
         "fulltext_exclusion_report": str(project_dir / "fulltext" / "fulltext_exclusion_report.csv"),
         "compatibility_exclusion_report": str(project_dir / "reports" / "full_text_exclusion_report.csv"),
         "final_included_studies": str(project_dir / "fulltext" / "final_included_studies.json"),
@@ -149,6 +170,16 @@ def _decision_counts(candidates: tuple[FullTextEligibilityCandidate, ...]) -> di
     counts: dict[str, int] = {"total": len(candidates)}
     for candidate in candidates:
         counts[candidate.fulltext_status] = counts.get(candidate.fulltext_status, 0) + 1
+    return counts
+
+
+def _management_counts(records: tuple[object, ...]) -> dict[str, int]:
+    counts = {"total": len(records)}
+    for record in records:
+        status = getattr(record, "fulltext_status", "needs_manual_retrieval")
+        counts[status] = counts.get(status, 0) + 1
+    for status in FULLTEXT_MANAGEMENT_STATUSES:
+        counts.setdefault(status, 0)
     return counts
 
 
