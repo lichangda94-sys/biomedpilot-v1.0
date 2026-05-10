@@ -298,3 +298,82 @@ Conclusion:
 
 - `dev/meta-analysis` consolidation is complete for the reviewed Meta branches.
 - Next consolidation work can move to `dev/bioinformatics`, starting with the low-risk `codex/bio-geo-real-download-test` branch.
+
+### Bioinformatics Round 1
+
+Completed on `dev/bioinformatics`.
+
+- Reviewed `codex/bio-geo-real-download-test` against `dev/bioinformatics`.
+- Branch-only commit reported by `git log dev/bioinformatics..codex/bio-geo-real-download-test`:
+  - `a90a2a1 feat(bio): harden GEO asset recognition and DEG runner`
+- Branch-only file scope was limited to allowed Bioinformatics paths:
+  - `app/bioinformatics/download/dataset_download_service.py`
+  - `app/bioinformatics/project_recognition.py`
+  - `app/bioinformatics/services/geo_differential_expression_runner.py`
+  - `tests/bioinformatics/test_dataset_download_service.py`
+  - `tests/bioinformatics/test_geo_differential_expression_runner.py`
+  - `tests/bioinformatics/test_workflow_adapters.py`
+- No Meta Analysis, shared query intelligence, AI Gateway, shell, main app, or packaging paths were touched by the branch diff.
+- No code was cherry-picked. Current `dev/bioinformatics` already has the same capabilities in newer form:
+  - GEO real download and manifest audit handling.
+  - GEO asset recognition hardening for family SOFT, Series Matrix, and supplementary assets.
+  - Series Matrix expression table parsing.
+  - Incomplete `.part` download handling through atomic partial download replacement and cleanup.
+  - GEO differential expression runner.
+  - Group preview support.
+  - Enrichment and correlation runners.
+  - Random GEO recognition audit script.
+  - Supplementary expression candidate prioritization.
+  - GSE invalid accession handling in the current download service.
+- Recommendation: treat `codex/bio-geo-real-download-test` as covered by current `dev/bioinformatics`; keep it temporarily as an archive/reference candidate. Do not merge the whole branch.
+- Did not process `codex/bio-search-ui-main`.
+- Did not process `codex/bioinformatics-safe-stage2`.
+
+Validation passed before this log update:
+
+```bash
+python3 -m pytest tests/bioinformatics -q
+python3 -m compileall -q app tests scripts
+```
+
+Result:
+
+- `tests/bioinformatics`: 215 passed
+- `compileall`: passed
+
+### Bioinformatics Round 2
+
+Completed on `dev/bioinformatics`.
+
+- Reviewed `codex/bio-search-ui-main` against `dev/bioinformatics` in read-only mode.
+- Audit report: `docs/bio_search_ui_main_gap_audit.md`.
+- Ahead / behind from `dev/bioinformatics` to `codex/bio-search-ui-main`: `73 30`.
+- Branch-only commits reviewed: 30.
+- No code was merged, cherry-picked, copied, or manually migrated.
+- The branch contains a large older Bioinformatics search/download/UI line. Current `dev/bioinformatics` already covers the substantive functionality in newer form:
+  - Chinese dataset search and GSE accession search.
+  - Dataset detail, notes, pending list, cache actions, selected recognition, and readiness flow.
+  - GEO download manifests, supplementary prioritization, metadata profiles, candidate comparisons, group preview, and random GEO recognition audit.
+  - GEO DEG, enrichment, and correlation runners.
+- High-risk content identified:
+  - Cross-module changes under `app/shared/query_intelligence/` and `tests/shared/`.
+  - Old direct Ollama calls in `app/bioinformatics/download/geo_text_summary_service.py`.
+- Recommendation: do not merge or cherry-pick `codex/bio-search-ui-main`. Treat it as historical reference. At most, manually review UI copy or test-case ideas later.
+- Did not process `codex/bioinformatics-safe-stage2`.
+
+### Bioinformatics Round 3
+
+Completed on `dev/bioinformatics`.
+
+- Reviewed `codex/bioinformatics-safe-stage2` against `dev/bioinformatics` in read-only mode.
+- Audit report: `docs/bioinformatics_safe_stage2_gap_audit.md`.
+- Ahead / behind from `dev/bioinformatics` to `codex/bioinformatics-safe-stage2`: `141 61`.
+- Branch-only commits reviewed: 61.
+- No code was merged, cherry-picked, copied, or manually migrated.
+- The branch is an old large Bioinformatics architecture line. It adds or changes project workspace contracts, acquisition center, recognition/readiness/standardization layers, analysis task center, result manager, report builder, local venv packaging, examples, and broad tests.
+- High-risk content identified:
+  - Cross-cutting app and shell changes under `app/main.py` and `app/shell/theme.py`.
+  - Packaging/dependency changes under `scripts/package_app.py`, `pyproject.toml`, `requirements.txt`, and `requirements-dev.txt`.
+  - Shared storage/feature availability changes under `app/shared/`.
+- Current `dev/bioinformatics` already covers the core workflow in a newer form through current workspace pages, search/download, metadata profile, group preview, project recognition/readiness/standardization, project analysis tasks, result/report surfaces, and AI Gateway boundaries.
+- Recommendation: keep `codex/bioinformatics-safe-stage2` only as a historical architecture reference. Do not merge or cherry-pick it. If future work needs it, extract design ideas manually from the audit report.
