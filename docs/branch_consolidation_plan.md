@@ -199,3 +199,33 @@ Result:
 
 - `tests/meta_analysis`: 451 passed
 - Meta UI/navigation subset: 26 passed
+
+### Meta Analysis Round 2
+
+Completed on `dev/meta-analysis`.
+
+- Reviewed `codex/meta-search-ui-main` against `dev/meta-analysis`.
+- Branch-only commits reported by `git log dev/meta-analysis..codex/meta-search-ui-main`:
+  - `8e323ae feat(meta): connect search strategy draft to workflow page`
+  - `b026f9d feat(meta): execute confirmed PubMed search`
+- `git merge-tree` reported text conflicts in:
+  - `app/meta_analysis/pages/protocol_page.py`
+  - `app/meta_analysis/search/__init__.py`
+- The conflicting branch content is older than the current `dev/meta-analysis` implementation:
+  - PubMed execution service and report writing already exist.
+  - Search strategy concept blocks already include `role`.
+  - Embase drafts already use `ti,ab,kw`.
+  - Current `dev/meta-analysis` also includes the newer PubMed candidate handoff path from `codex/meta-workflow-ui` consolidation.
+- No commits were cherry-picked from `codex/meta-search-ui-main`.
+- Recommendation: treat `codex/meta-search-ui-main` as represented by current `dev/meta-analysis`; do not directly merge. Keep temporarily as an archive/reference candidate until final branch cleanup.
+- Did not process high-risk `codex/ai-gateway-call-isolation-audit`.
+
+Validation passed before this log update:
+
+```bash
+python3 -m pytest tests/meta_analysis/test_meta_pubmed_search_service.py tests/meta_analysis/test_pubmed_candidates_handoff.py tests/ui/test_meta_analysis_workflow_pages.py -q
+```
+
+Result:
+
+- PubMed service / handoff / Meta workflow UI subset: 29 passed
