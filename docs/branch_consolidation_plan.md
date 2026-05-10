@@ -229,3 +229,49 @@ python3 -m pytest tests/meta_analysis/test_meta_pubmed_search_service.py tests/m
 Result:
 
 - PubMed service / handoff / Meta workflow UI subset: 29 passed
+
+### Meta Analysis Final Review
+
+Completed on `dev/meta-analysis`.
+
+- Current HEAD: `e9e6d00 docs(repo): record meta search branch consolidation`.
+- `dev/meta-analysis` is 3 commits ahead of `stable/mainline` and 0 commits behind.
+- Current branch-only commits:
+  - `df411c3 feat(meta): connect workflow ui later stages`
+  - `4db1286 docs(repo): record meta workflow branch consolidation`
+  - `e9e6d00 docs(repo): record meta search branch consolidation`
+- Current branch-only file changes are limited to:
+  - `app/meta_analysis/workspace.py`
+  - `tests/meta_analysis/test_meta_workspace_ui_navigation.py`
+  - `docs/meta_ui_06_18_implementation_plan.md`
+  - `docs/branch_consolidation_plan.md`
+- No Bioinformatics, shared query intelligence, AI Gateway, medical vocabulary data, Bio scripts, or packaging script changes were found in the branch diff against `stable/mainline`.
+
+Meta branch handling status:
+
+- `codex/meta-workflow-ui`: integrated by cherry-picking its workflow UI change as `df411c3`.
+- `codex/meta-search-ui-main`: not cherry-picked during consolidation because its remaining branch commits are already covered by the newer current Meta implementation and conflict with the newer PubMed candidate handoff UI.
+- `codex/ai-gateway-call-isolation-audit`: high-risk revert-of-revert branch. Do not integrate automatically. It touches `app/shell/` and broad Meta UI/test files and requires separate human review if anything is needed.
+
+Validation passed:
+
+```bash
+python3 -m pytest tests/meta_analysis -q
+python3 -m pytest tests/ui/test_meta_analysis_workflow_pages.py -q
+python3 -m compileall -q app tests scripts
+QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test
+python3 scripts/run_tests.py
+```
+
+Result:
+
+- `tests/meta_analysis`: 451 passed
+- Meta workflow UI tests: 21 passed
+- `compileall`: passed
+- App smoke test: passed
+- `scripts/run_tests.py`: 979 passed
+
+Conclusion:
+
+- `dev/meta-analysis` consolidation is complete for the reviewed Meta branches.
+- Next consolidation work can move to `dev/bioinformatics`, starting with the low-risk `codex/bio-geo-real-download-test` branch.
