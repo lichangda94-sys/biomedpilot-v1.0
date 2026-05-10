@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QListWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QTextEdit
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -81,6 +81,35 @@ def test_meta_workspace_widget_mounts_current_development_pages(qt_app) -> None:
     assert "statistics_analysis" in page_keys
     assert "literature_acquisition" in page_keys
     assert "reproducibility_package" in page_keys
+
+
+def test_meta_workspace_mounts_ui_07_to_ui_18_pages_without_auto_outputs(qt_app, tmp_path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(tmp_path)
+
+    expected_pages = {
+        "metaExclusionCriteriaPage",
+        "metaTitleAbstractScreeningPage",
+        "metaFulltextManagementPage",
+        "metaManualExtractionPage",
+        "metaAIExtractionPage",
+        "metaQualityAssessmentPage",
+        "metaAnalysisPlanPage",
+        "metaStatisticsAnalysisPage",
+        "metaFigureResultsPage",
+        "metaPrismaPage",
+        "metaReportExportPage",
+        "metaReproducibilityPackagePage",
+    }
+    mounted_pages = {frame.objectName() for frame in widget.findChildren(QFrame)}
+
+    assert expected_pages <= mounted_pages
+    assert not (tmp_path / "analysis" / "runs").exists()
+    assert not (tmp_path / "analysis" / "results").exists()
+    assert not (tmp_path / "reports" / "formal_meta_report.md").exists()
+    assert not list((tmp_path / "exports").glob("reproducibility_package_*.zip"))
 
 
 def test_meta_workspace_dedup_page_shows_groups_and_merge_preview(qt_app, tmp_path) -> None:
