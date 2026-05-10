@@ -235,3 +235,20 @@ Completed on `dev/bioinformatics`.
   - Old direct Ollama calls in `app/bioinformatics/download/geo_text_summary_service.py`.
 - Recommendation: do not merge or cherry-pick `codex/bio-search-ui-main`. Treat it as historical reference. At most, manually review UI copy or test-case ideas later.
 - Did not process `codex/bioinformatics-safe-stage2`.
+
+### Bioinformatics Round 3
+
+Completed on `dev/bioinformatics`.
+
+- Reviewed `codex/bioinformatics-safe-stage2` against `dev/bioinformatics` in read-only mode.
+- Audit report: `docs/bioinformatics_safe_stage2_gap_audit.md`.
+- Ahead / behind from `dev/bioinformatics` to `codex/bioinformatics-safe-stage2`: `141 61`.
+- Branch-only commits reviewed: 61.
+- No code was merged, cherry-picked, copied, or manually migrated.
+- The branch is an old large Bioinformatics architecture line. It adds or changes project workspace contracts, acquisition center, recognition/readiness/standardization layers, analysis task center, result manager, report builder, local venv packaging, examples, and broad tests.
+- High-risk content identified:
+  - Cross-cutting app and shell changes under `app/main.py` and `app/shell/theme.py`.
+  - Packaging/dependency changes under `scripts/package_app.py`, `pyproject.toml`, `requirements.txt`, and `requirements-dev.txt`.
+  - Shared storage/feature availability changes under `app/shared/`.
+- Current `dev/bioinformatics` already covers the core workflow in a newer form through current workspace pages, search/download, metadata profile, group preview, project recognition/readiness/standardization, project analysis tasks, result/report surfaces, and AI Gateway boundaries.
+- Recommendation: keep `codex/bioinformatics-safe-stage2` only as a historical architecture reference. Do not merge or cherry-pick it. If future work needs it, extract design ideas manually from the audit report.
