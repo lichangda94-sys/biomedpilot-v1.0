@@ -7,6 +7,7 @@
 - Bioinformatics GEO dataset details can request a Chinese translation and one-sentence refinement draft with `task_type=bio_translate_dataset_detail`.
 - Bioinformatics Chinese research topics can generate an editable dataset query draft with `task_type=bio_generate_dataset_query_draft`.
 - Confirming a query draft records a lightweight draft status only. It does not run GEO, TCGA/GDC, or GTEx search.
+- Real Bioinformatics dataset search is available only through explicit per-database actions: online GEO/GSE search, TCGA/GDC project asset check, and GTEx tissue reference check.
 
 ## Current Non-Support
 
@@ -15,7 +16,7 @@
 - No token relay, payment, public registration, or commercial token distribution exists.
 - No sensitive content is uploaded by default.
 - AI output is not written into final analysis results.
-- User confirmation does not automatically execute database retrieval.
+- User confirmation does not automatically execute database retrieval. Users must explicitly click an online search/check action.
 
 ## Privacy Boundary
 
@@ -44,7 +45,7 @@ Disabling local AI restores a disabled provider and `allow_network=false`. The U
 
 ## Bioinformatics Boundaries
 
-Bioinformatics uses only `bio_` task types. The local query draft can include GEO query text, TCGA project hints, and GTEx tissue hints. It must not generate PubMed, Embase, Web of Science, or CNKI search strings.
+Bioinformatics uses only `bio_` task types. The local query draft can include GEO query text, TCGA project hints, and GTEx tissue hints. It must not generate PubMed, Embase, Web of Science, or CNKI search strings. Online retrieval remains limited to Bioinformatics databases and is not triggered by draft confirmation alone.
 
 GEO dataset translation/refinement prompts contain dataset title, summary, and overall design only. User notes do not enter model input.
 

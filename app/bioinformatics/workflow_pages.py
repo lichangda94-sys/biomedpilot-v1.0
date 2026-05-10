@@ -1373,14 +1373,66 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
     def search_candidates(self, *, online_enabled: bool = False) -> BioinformaticsSearchCenterResult | None:
         return self.confirm_query_draft() if online_enabled else self.generate_terms()
 
-    def search_geo_candidates(self) -> AIDraftRecord | None:
-        return self.confirm_query_draft()
+    def search_geo_candidates(self) -> BioinformaticsSearchCenterResult | None:
+        draft = self._ensure_draft_result()
+        if draft is None:
+            return None
+        self._set_status("正在在线检索 GEO/GSE 候选数据集，请稍候。")
+        QApplication.processEvents()
+        geo_result = GeoSearchAdapter().search(draft.query, online_enabled=True, limit=20)
+        result = _merge_source_search_result(draft, "geo", geo_result, online_enabled=True)
+        self._last_result = result
+        self._render_result(result, searched=True)
+        geo_result = result.source_results.get("geo")
+        if geo_result is None:
+            self._set_status("未生成 GEO/GSE 检索草稿。", error=True)
+        elif geo_result.search_status == "search_failed":
+            self._set_status("GEO/GSE 在线检索失败，请检查网络或稍后重试。", error=True)
+        elif geo_result.displayed_count == 0:
+            self._set_status("未检索到符合条件的 GEO/GSE 数据集。")
+        else:
+            self._set_status("已完成 GEO/GSE 在线检索。")
+        return result
 
-    def search_tcga_candidates(self) -> AIDraftRecord | None:
-        return self.confirm_query_draft()
+    def search_tcga_candidates(self) -> BioinformaticsSearchCenterResult | None:
+        draft = self._ensure_draft_result()
+        if draft is None:
+            return None
+        self._set_status("正在在线检查 TCGA/GDC 项目资产，请稍候。")
+        QApplication.processEvents()
+        tcga_result = TcgaGdcSearchAdapter().search(draft.query, online_enabled=True, limit=20)
+        if not tcga_result.candidates and draft.source_results.get("tcga_gdc") is not None:
+            tcga_result = draft.source_results["tcga_gdc"]
+        result = _merge_source_search_result(draft, "tcga_gdc", tcga_result, online_enabled=True)
+        self._last_result = result
+        self._render_result(result, searched=False)
+        candidates = [candidate for candidate in result.candidates if candidate.source == "tcga_gdc"]
+        self._set_status(
+            "已完成 TCGA/GDC 在线检查，可创建 GDC 文件清单。"
+            if candidates
+            else "未生成 TCGA/GDC 项目候选。"
+        )
+        return result
 
-    def search_gtex_candidates(self) -> AIDraftRecord | None:
-        return self.confirm_query_draft()
+    def search_gtex_candidates(self) -> BioinformaticsSearchCenterResult | None:
+        draft = self._ensure_draft_result()
+        if draft is None:
+            return None
+        self._set_status("正在在线检查 GTEx 组织参考，请稍候。")
+        QApplication.processEvents()
+        gtex_result = GtexSearchAdapter().search(draft.query, online_enabled=True, limit=20)
+        if not gtex_result.candidates and draft.source_results.get("gtex") is not None:
+            gtex_result = draft.source_results["gtex"]
+        result = _merge_source_search_result(draft, "gtex", gtex_result, online_enabled=True)
+        self._last_result = result
+        self._render_result(result, searched=False)
+        candidates = [candidate for candidate in result.candidates if candidate.source == "gtex"]
+        self._set_status(
+            "已完成 GTEx 在线检查，可创建组织参考清单。"
+            if candidates
+            else "未生成 GTEx 组织候选。"
+        )
+        return result
 
     def confirm_query_draft(self) -> AIDraftRecord | None:
         draft = self._ensure_draft_result()
@@ -1401,7 +1453,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._query_draft_record = record
         if self._project_root is not None:
             save_ai_draft_record(self._project_root, record, filename_hint="bio_generate_dataset_query_draft")
-        self._set_status("已确认检索草稿。本阶段不会执行真实 GEO、TCGA/GDC 或 GTEx 检索。")
+        self._set_status("已确认检索草稿。确认本身不联网；如需联网请点击在线检索/在线检查。")
         return record
 
     def register_candidate(self, source: str, accession_or_project: str) -> AcquisitionSummary | None:
@@ -1694,7 +1746,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             draft_title="GEO/GSE 检索草稿",
             draft_placeholder="暂无 GEO/GSE 检索草稿",
             copy_source="geo",
-            search_text="确认草稿",
+            search_text="在线检索 GEO/GSE",
             search_callback=self.search_geo_candidates,
             candidate_headers=["操作", "GSE 编号", "标题", "样本数", "数据类型/平台", "分析潜力", "资产状态"],
             selected_empty="尚未选择 GEO/GSE 数据源。",
@@ -1704,7 +1756,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             draft_title="TCGA/GDC 项目草稿",
             draft_placeholder="暂无 TCGA/GDC 项目草稿",
             copy_source="tcga",
-            search_text="确认草稿",
+            search_text="在线检查 TCGA/GDC",
             search_callback=self.search_tcga_candidates,
             candidate_headers=["操作", "项目代码", "癌种/项目名称", "样本类型", "数据类型", "状态"],
             selected_empty="尚未选择 TCGA/GDC 项目。",
@@ -1715,7 +1767,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             draft_title="GTEx 组织草稿",
             draft_placeholder="暂无 GTEx 组织草稿",
             copy_source="gtex",
-            search_text="确认草稿",
+            search_text="在线检查 GTEx",
             search_callback=self.search_gtex_candidates,
             candidate_headers=["操作", "组织", "样本数", "表达类型", "状态"],
             selected_empty="尚未选择 GTEx 组织参考。",
@@ -1793,6 +1845,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         draft_actions = QHBoxLayout()
         draft_actions.addWidget(toggle_button)
         draft_actions.addWidget(_button("复制", "secondaryButton", lambda checked=False, s=copy_source: self.copy_query(s)))
+        draft_actions.addWidget(_button("确认草稿", "secondaryButton", lambda checked=False: self.confirm_query_draft()))
         draft_actions.addWidget(_button(search_text, "secondaryButton", lambda checked=False, callback=search_callback: callback()))
         draft_actions.addStretch(1)
         draft_layout.addLayout(draft_actions)

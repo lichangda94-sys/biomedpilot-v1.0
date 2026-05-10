@@ -726,6 +726,9 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert widget._mapping_log.isHidden()
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
     assert button_texts.count("确认草稿") == 3
+    assert "在线检索 GEO/GSE" in button_texts
+    assert "在线检查 TCGA/GDC" in button_texts
+    assert "在线检查 GTEx" in button_texts
     assert "查看完整检索词" in button_texts
     assert "检索候选数据集" not in button_texts
     assert "GEO/GSE" == widget._tabs.tabText(0)
@@ -810,6 +813,68 @@ def test_glioma_tcga_gtex_candidates_displayed(qt_app) -> None:
     assert "正常组织 RNA 表达" in gtex_card
 
 
+def test_chinese_dataset_search_online_buttons_execute_explicit_search(qt_app, monkeypatch) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    def geo_search(self, query, *, online_enabled=False, limit=20, **kwargs):
+        calls.append(("geo", online_enabled))
+        return workflow_pages.SourceSearchResult(
+            source="geo",
+            search_status="completed",
+            executed_query=query.geo_query_candidates[0],
+            total_found=1,
+            returned_count=1,
+            displayed_count=1,
+            candidates=(_geo_candidate(),),
+            warnings=(),
+            database_source="NCBI GEO",
+        )
+
+    def tcga_search(self, query, *, online_enabled=False, limit=20, **kwargs):
+        calls.append(("tcga_gdc", online_enabled))
+        return workflow_pages.SourceSearchResult(
+            source="tcga_gdc",
+            search_status="completed",
+            executed_query="TCGA-THCA",
+            total_found=1,
+            returned_count=1,
+            displayed_count=1,
+            candidates=(workflow_pages.UnifiedDatasetCandidate("tcga_gdc", "TCGA-THCA", "Thyroid Carcinoma", "Homo sapiens", "thyroid cancer", "thyroid", "RNA-seq", 500, True, True, True, False, ("survival",), True, 95, (), {}),),
+            warnings=(),
+            database_source="GDC",
+        )
+
+    def gtex_search(self, query, *, online_enabled=False, limit=20, **kwargs):
+        calls.append(("gtex", online_enabled))
+        return workflow_pages.SourceSearchResult(
+            source="gtex",
+            search_status="completed",
+            executed_query="Thyroid",
+            total_found=1,
+            returned_count=1,
+            displayed_count=1,
+            candidates=(workflow_pages.UnifiedDatasetCandidate("gtex", "GTEX-THYROID", "Thyroid", "Homo sapiens", "normal reference", "Thyroid", "TPM", 653, True, True, False, False, ("reference",), True, 85, (), {}),),
+            warnings=(),
+            database_source="GTEx",
+        )
+
+    monkeypatch.setattr(workflow_pages.GeoSearchAdapter, "search", geo_search)
+    monkeypatch.setattr(workflow_pages.TcgaGdcSearchAdapter, "search", tcga_search)
+    monkeypatch.setattr(workflow_pages.GtexSearchAdapter, "search", gtex_search)
+
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.set_query_text("甲状腺癌")
+    widget.generate_terms()
+    calls.clear()
+
+    widget.search_geo_candidates()
+    widget.search_tcga_candidates()
+    widget.search_gtex_candidates()
+
+    assert calls == [("geo", True), ("tcga_gdc", True), ("gtex", True)]
+    assert "已完成 GTEx 在线检查" in widget.status_message()
+
+
 def test_chinese_dataset_search_confirm_draft_does_not_run_real_search(qt_app, project_summary, monkeypatch) -> None:
     widget = BioinformaticsChineseDatasetSearchWidget()
     widget.refresh_project(project_summary)
@@ -827,7 +892,7 @@ def test_chinese_dataset_search_confirm_draft_does_not_run_real_search(qt_app, p
 
     assert record is not None
     assert record.status == "confirmed"
-    assert widget.status_message() == "已确认检索草稿。本阶段不会执行真实 GEO、TCGA/GDC 或 GTEx 检索。"
+    assert widget.status_message() == "已确认检索草稿。确认本身不联网；如需联网请点击在线检索/在线检查。"
     saved = list((project_summary.project_root / "ai_drafts").glob("*bio_generate_dataset_query_draft.json"))
     assert saved
     payload = json.loads(saved[0].read_text(encoding="utf-8"))
