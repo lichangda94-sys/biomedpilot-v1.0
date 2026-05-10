@@ -26,6 +26,8 @@ Findings:
 - No `/api/chat` references were found.
 - No exact `localhost:11434` references were found; active HTTP callers use `http://127.0.0.1:11434`.
 - Existing real Ollama paths are split between subprocess-based shared query intelligence and HTTP-based Bioinformatics GEO metadata summarization.
+- `app/shared/ai_gateway/` currently has no Ollama direct call or provider implementation.
+- `app/meta_analysis/` currently has no direct Ollama call; Meta Analysis only consumes shared query-intelligence drafts with local model disabled in active paths.
 
 ## Existing Call Inventory
 
@@ -59,6 +61,29 @@ Tests covering existing behavior:
   - covers `GeoTextSummaryService` with injected generators, model availability aliases, missing model fallback, empty brief fallback, and local-model-unavailable fallback.
   - uses dependency injection; it does not require real HTTP calls.
 - UI tests assert local model status text, but do not call Ollama.
+- `tests/shared/test_ai_gateway_ollama_migration_audit.py`
+  - records the complete current direct-call inventory.
+  - asserts active direct Ollama calls remain limited to shared query intelligence and Bioinformatics GEO metadata summarization.
+  - asserts Meta Analysis and AI Gateway contain no direct Ollama calls at this stage.
+
+## Active Isolation Guard
+
+Until an `OllamaProvider` exists inside AI Gateway, active direct Ollama-capable code must remain limited to:
+
+- `app/shared/query_intelligence/local_model_bridge.py`
+- `app/bioinformatics/download/geo_text_summary_service.py`
+- `app/bioinformatics/workflow_pages.py`
+
+Legacy direct-call files are documented but should not be used as new integration points:
+
+- `app/bioinformatics/legacy/geo_tool/geo_text_processor.py`
+- `app/bioinformatics/legacy/geo_tool/bootstrap_geo_tool.sh`
+
+The migration guard test intentionally fails if:
+
+- Meta Analysis adds a direct Ollama call.
+- AI Gateway adds a direct Ollama call outside a reviewed provider migration.
+- new active `app/` code calls `/api/generate`, `/api/tags`, `ollama run`, or checks `shutil.which("ollama")` without updating the audit and migration plan.
 
 ## Current Behavior
 

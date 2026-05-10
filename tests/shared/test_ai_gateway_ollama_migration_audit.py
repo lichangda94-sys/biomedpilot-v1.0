@@ -25,6 +25,17 @@ EXPECTED_DIRECT_OLLAMA_FILES = {
     "archive/legacy_sources/bioinformatics_project/geo_tool/bootstrap_geo_tool.sh",
 }
 
+ACTIVE_APP_DIRECT_OLLAMA_FILES = {
+    "app/shared/query_intelligence/local_model_bridge.py",
+    "app/bioinformatics/download/geo_text_summary_service.py",
+    "app/bioinformatics/workflow_pages.py",
+}
+
+LEGACY_APP_DIRECT_OLLAMA_FILES = {
+    "app/bioinformatics/legacy/geo_tool/geo_text_processor.py",
+    "app/bioinformatics/legacy/geo_tool/bootstrap_geo_tool.sh",
+}
+
 
 def test_ollama_existing_call_audit_records_all_direct_call_files() -> None:
     documented = AUDIT_DOC.read_text(encoding="utf-8")
@@ -34,6 +45,14 @@ def test_ollama_existing_call_audit_records_all_direct_call_files() -> None:
 
     discovered = _direct_ollama_files()
     assert discovered == EXPECTED_DIRECT_OLLAMA_FILES
+
+
+def test_active_direct_ollama_calls_remain_isolated_from_meta_analysis_and_gateway() -> None:
+    active_app_direct_calls = _direct_ollama_files(REPO_ROOT / "app") - LEGACY_APP_DIRECT_OLLAMA_FILES
+
+    assert active_app_direct_calls == ACTIVE_APP_DIRECT_OLLAMA_FILES
+    assert _direct_ollama_files(REPO_ROOT / "app" / "meta_analysis") == set()
+    assert _direct_ollama_files(REPO_ROOT / "app" / "shared" / "ai_gateway") == set()
 
 
 def test_ollama_existing_call_audit_includes_required_sections() -> None:
@@ -59,8 +78,12 @@ def test_no_qwen_or_ollama_chat_integration_exists() -> None:
     assert "/api/chat" not in text
 
 
-def _direct_ollama_files() -> set[str]:
-    roots = (REPO_ROOT / "app", REPO_ROOT / "archive")
+def _direct_ollama_files(*roots: Path) -> set[str]:
+    scan_roots = roots or (REPO_ROOT / "app", REPO_ROOT / "archive")
+    return _direct_ollama_files_in_roots(tuple(scan_roots))
+
+
+def _direct_ollama_files_in_roots(roots: tuple[Path, ...]) -> set[str]:
     found: set[str] = set()
     for root in roots:
         if not root.exists():
