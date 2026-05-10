@@ -171,3 +171,47 @@ python3 scripts/package_app.py --output-dir /Users/changdali/Desktop --app-name 
   - Meta Analysis uses `meta_` task types.
   - Direct Ollama calls remain isolated to `app/shared/ai_gateway/providers/ollama_provider.py`.
 - Rebuild `/Users/changdali/Desktop/BioMedPilot.app` only from `stable/mainline` or an explicitly approved release branch.
+
+## 8. Consolidation Log
+
+### Bioinformatics Round 1
+
+Completed on `dev/bioinformatics`.
+
+- Reviewed `codex/bio-geo-real-download-test` against `dev/bioinformatics`.
+- Branch-only commit reported by `git log dev/bioinformatics..codex/bio-geo-real-download-test`:
+  - `a90a2a1 feat(bio): harden GEO asset recognition and DEG runner`
+- Branch-only file scope was limited to allowed Bioinformatics paths:
+  - `app/bioinformatics/download/dataset_download_service.py`
+  - `app/bioinformatics/project_recognition.py`
+  - `app/bioinformatics/services/geo_differential_expression_runner.py`
+  - `tests/bioinformatics/test_dataset_download_service.py`
+  - `tests/bioinformatics/test_geo_differential_expression_runner.py`
+  - `tests/bioinformatics/test_workflow_adapters.py`
+- No Meta Analysis, shared query intelligence, AI Gateway, shell, main app, or packaging paths were touched by the branch diff.
+- No code was cherry-picked. Current `dev/bioinformatics` already has the same capabilities in newer form:
+  - GEO real download and manifest audit handling.
+  - GEO asset recognition hardening for family SOFT, Series Matrix, and supplementary assets.
+  - Series Matrix expression table parsing.
+  - Incomplete `.part` download handling through atomic partial download replacement and cleanup.
+  - GEO differential expression runner.
+  - Group preview support.
+  - Enrichment and correlation runners.
+  - Random GEO recognition audit script.
+  - Supplementary expression candidate prioritization.
+  - GSE invalid accession handling in the current download service.
+- Recommendation: treat `codex/bio-geo-real-download-test` as covered by current `dev/bioinformatics`; keep it temporarily as an archive/reference candidate. Do not merge the whole branch.
+- Did not process `codex/bio-search-ui-main`.
+- Did not process `codex/bioinformatics-safe-stage2`.
+
+Validation passed before this log update:
+
+```bash
+python3 -m pytest tests/bioinformatics -q
+python3 -m compileall -q app tests scripts
+```
+
+Result:
+
+- `tests/bioinformatics`: 215 passed
+- `compileall`: passed
