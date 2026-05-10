@@ -24,9 +24,9 @@ Findings:
 
 - No `qwen` references were found.
 - No `/api/chat` references were found.
-- No exact `localhost:11434` references were found; active HTTP callers use `http://127.0.0.1:11434`.
+- Before AI-2B, no exact `localhost:11434` references were found; the AI Gateway `OllamaProvider` now uses `http://localhost:11434` as its disabled-by-default base URL, while legacy active HTTP callers use `http://127.0.0.1:11434`.
 - Existing real Ollama paths are split between subprocess-based shared query intelligence and HTTP-based Bioinformatics GEO metadata summarization.
-- `app/shared/ai_gateway/` currently has no Ollama direct call or provider implementation.
+- `app/shared/ai_gateway/providers/ollama_provider.py` is now the reviewed AI Gateway Ollama call point. It remains disabled unless explicitly enabled in AI Gateway provider config.
 - `app/meta_analysis/` currently has no direct Ollama call; Meta Analysis only consumes shared query-intelligence drafts with local model disabled in active paths.
 
 ## Existing Call Inventory
@@ -36,6 +36,7 @@ Findings:
 | shared | `app/shared/query_intelligence/local_model_bridge.py` | `detect_local_model_status()`, `describe_local_model_components()`, `detect_ollama_status()` | active status detection | `shutil.which("ollama")` only |
 | shared | `app/shared/query_intelligence/local_model_bridge.py` | `call_ollama_json()` | active direct model call when explicitly enabled | `subprocess.run(["ollama", "run", model], input=prompt, ...)` |
 | shared | `app/shared/query_intelligence/local_model_bridge.py` | `generate_search_translation_candidates()` | active wrapper around `call_ollama_json()` | builds prompt and requires JSON |
+| shared AI Gateway | `app/shared/ai_gateway/providers/ollama_provider.py` | `OllamaProvider.detect_ollama_status()`, `OllamaProvider.generate()` | formal Gateway provider, disabled by default | HTTP GET `/api/tags`, POST `/api/generate` against `http://localhost:11434` only when enabled |
 | shared | `app/shared/query_intelligence/query_intelligence_service.py` | `analyze_medical_question()` | active status reporting only | detects Ollama availability, no model call |
 | shared | `app/shared/query_intelligence/query_intelligence_service.py` | `build_search_translation_draft()` | active conditional caller | calls shared local model bridge only when `use_local_model=True` and `LocalModelConfig.enabled=True` |
 | shared | `app/shared/query_intelligence/query_intelligence_models.py` | `LocalModelConfig`, `LocalModelCallResult`, `LocalModelSearchTranslation` | active config/result models | defaults to disabled Ollama config |
@@ -63,14 +64,15 @@ Tests covering existing behavior:
 - UI tests assert local model status text, but do not call Ollama.
 - `tests/shared/test_ai_gateway_ollama_migration_audit.py`
   - records the complete current direct-call inventory.
-  - asserts active direct Ollama calls remain limited to shared query intelligence and Bioinformatics GEO metadata summarization.
-  - asserts Meta Analysis and AI Gateway contain no direct Ollama calls at this stage.
+  - asserts active direct Ollama calls remain limited to shared query intelligence, AI Gateway `OllamaProvider`, and Bioinformatics GEO metadata summarization.
+  - asserts Meta Analysis contains no direct Ollama calls and AI Gateway contains no direct call outside the reviewed provider.
 
 ## Active Isolation Guard
 
-Until an `OllamaProvider` exists inside AI Gateway, active direct Ollama-capable code must remain limited to:
+With AI-2B, active direct Ollama-capable code must remain limited to:
 
 - `app/shared/query_intelligence/local_model_bridge.py`
+- `app/shared/ai_gateway/providers/ollama_provider.py`
 - `app/bioinformatics/download/geo_text_summary_service.py`
 - `app/bioinformatics/workflow_pages.py`
 
@@ -82,7 +84,7 @@ Legacy direct-call files are documented but should not be used as new integratio
 The migration guard test intentionally fails if:
 
 - Meta Analysis adds a direct Ollama call.
-- AI Gateway adds a direct Ollama call outside a reviewed provider migration.
+- AI Gateway adds a direct Ollama call outside `app/shared/ai_gateway/providers/ollama_provider.py`.
 - new active `app/` code calls `/api/generate`, `/api/tags`, `ollama run`, or checks `shutil.which("ollama")` without updating the audit and migration plan.
 
 ## Current Behavior

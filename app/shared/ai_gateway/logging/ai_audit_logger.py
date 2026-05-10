@@ -64,6 +64,9 @@ class AIAuditLogger:
         }
         if response.error_message:
             entry["error_message"] = response.error_message
+        warnings = response.metadata.get("warnings")
+        if isinstance(warnings, list):
+            entry["warnings"] = [str(item) for item in warnings if str(item).strip()]
         if config.store_raw_prompts:
             entry["raw_prompt"] = request.prompt
             entry["raw_context"] = asdict(request).get("context", {})

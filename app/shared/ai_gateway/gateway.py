@@ -21,7 +21,7 @@ class AIGateway:
         audit_logger: AIAuditLogger | None = None,
     ) -> None:
         self.config = config if config is not None else load_ai_gateway_config(config_path)
-        self.provider_registry = provider_registry or default_provider_registry()
+        self.provider_registry = provider_registry or default_provider_registry(self.config)
         self.audit_logger = audit_logger or AIAuditLogger.from_config(self.config)
 
     def generate(self, request: AIGatewayRequest) -> AIGatewayResponse:

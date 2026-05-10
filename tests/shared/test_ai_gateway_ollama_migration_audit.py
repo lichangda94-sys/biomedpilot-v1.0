@@ -12,11 +12,13 @@ DIRECT_OLLAMA_PATTERNS = (
     "/api/tags",
     'shutil.which("ollama")',
     "command -v ollama",
+    "localhost:11434",
     "127.0.0.1:11434",
 )
 
 EXPECTED_DIRECT_OLLAMA_FILES = {
     "app/shared/query_intelligence/local_model_bridge.py",
+    "app/shared/ai_gateway/providers/ollama_provider.py",
     "app/bioinformatics/download/geo_text_summary_service.py",
     "app/bioinformatics/workflow_pages.py",
     "app/bioinformatics/legacy/geo_tool/geo_text_processor.py",
@@ -27,6 +29,7 @@ EXPECTED_DIRECT_OLLAMA_FILES = {
 
 ACTIVE_APP_DIRECT_OLLAMA_FILES = {
     "app/shared/query_intelligence/local_model_bridge.py",
+    "app/shared/ai_gateway/providers/ollama_provider.py",
     "app/bioinformatics/download/geo_text_summary_service.py",
     "app/bioinformatics/workflow_pages.py",
 }
@@ -52,7 +55,9 @@ def test_active_direct_ollama_calls_remain_isolated_from_meta_analysis_and_gatew
 
     assert active_app_direct_calls == ACTIVE_APP_DIRECT_OLLAMA_FILES
     assert _direct_ollama_files(REPO_ROOT / "app" / "meta_analysis") == set()
-    assert _direct_ollama_files(REPO_ROOT / "app" / "shared" / "ai_gateway") == set()
+    assert _direct_ollama_files(REPO_ROOT / "app" / "shared" / "ai_gateway") == {
+        "app/shared/ai_gateway/providers/ollama_provider.py"
+    }
 
 
 def test_ollama_existing_call_audit_includes_required_sections() -> None:
