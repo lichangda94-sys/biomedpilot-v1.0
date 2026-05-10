@@ -215,3 +215,23 @@ Result:
 
 - `tests/bioinformatics`: 215 passed
 - `compileall`: passed
+
+### Bioinformatics Round 2
+
+Completed on `dev/bioinformatics`.
+
+- Reviewed `codex/bio-search-ui-main` against `dev/bioinformatics` in read-only mode.
+- Audit report: `docs/bio_search_ui_main_gap_audit.md`.
+- Ahead / behind from `dev/bioinformatics` to `codex/bio-search-ui-main`: `73 30`.
+- Branch-only commits reviewed: 30.
+- No code was merged, cherry-picked, copied, or manually migrated.
+- The branch contains a large older Bioinformatics search/download/UI line. Current `dev/bioinformatics` already covers the substantive functionality in newer form:
+  - Chinese dataset search and GSE accession search.
+  - Dataset detail, notes, pending list, cache actions, selected recognition, and readiness flow.
+  - GEO download manifests, supplementary prioritization, metadata profiles, candidate comparisons, group preview, and random GEO recognition audit.
+  - GEO DEG, enrichment, and correlation runners.
+- High-risk content identified:
+  - Cross-module changes under `app/shared/query_intelligence/` and `tests/shared/`.
+  - Old direct Ollama calls in `app/bioinformatics/download/geo_text_summary_service.py`.
+- Recommendation: do not merge or cherry-pick `codex/bio-search-ui-main`. Treat it as historical reference. At most, manually review UI copy or test-case ideas later.
+- Did not process `codex/bioinformatics-safe-stage2`.
