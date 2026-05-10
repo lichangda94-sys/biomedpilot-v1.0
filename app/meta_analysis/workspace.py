@@ -288,6 +288,13 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
     from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCandidatesHandoffService
     from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
+    from app.meta_analysis.services.dedup_review_v2_service import (
+        DECISION_KEEP_BOTH,
+        DECISION_MARK_NOT_DUPLICATE,
+        DECISION_MERGE,
+        DECISION_SET_MASTER_RECORD,
+        DedupReviewV2Service,
+    )
     from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
     from app.meta_analysis.services.multisource_literature_import_service import MultiSourceLiteratureImportService
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
@@ -436,6 +443,8 @@ if QWidget is not None:
                 return _literature_acquisition_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("literature_library"))
             if step.route_key == "literature_library":
                 return _literature_library_page(project_dir)
+            if step.route_key == "dedup_review":
+                return _dedup_review_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("exclusion_criteria"))
             return _placeholder_step_page(step)
 
     def _feature_row(feature: FeatureAvailability) -> QFrame:
@@ -867,6 +876,157 @@ if QWidget is not None:
         return frame
 
 
+    def _dedup_review_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = DedupReviewV2Service()
+        queue = service.load_queue(project_dir)
+        groups = list(queue.groups)
+        decisions_payload = _load_json_object(service.decisions_path(project_dir))
+        decisions = _items_from_payload(decisions_payload, "decisions")
+        frame = QFrame()
+        frame.setObjectName("metaDedupReviewPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("去重复核", "显示重复组、merge preview 和人工决定。", "人工复核"))
+        risk_counts: dict[str, int] = {}
+        for group in groups:
+            risk_counts[group.risk_level] = risk_counts.get(group.risk_level, 0) + 1
+        layout.addWidget(
+            _info_card(
+                "去重摘要",
+                [
+                    f"duplicate groups：{len(groups)}",
+                    f"risk levels：{risk_counts}",
+                    f"已保存决定：{len(decisions)}",
+                    "不会自动删除，不会自动 merge，不创建 screening artifact，不推进 PRISMA。",
+                ],
+                object_name="metaDedupSummary",
+            )
+        )
+
+        actions = _card("主操作")
+        action_layout = actions.layout()
+        build_queue = QPushButton("生成重复组")
+        build_queue.setObjectName("metaPrimaryButton")
+        save_decision = QPushButton("保存人工决定")
+        save_decision.setObjectName("metaPrimaryButton")
+        next_button = QPushButton("下一步：排除标准")
+        next_button.setObjectName("metaSecondaryButton")
+        action_row = QHBoxLayout()
+        action_row.addWidget(build_queue)
+        action_row.addWidget(save_decision)
+        action_row.addWidget(next_button)
+        action_row.addStretch(1)
+        action_layout.addLayout(action_row)
+        layout.addWidget(actions)
+
+        content_row = QHBoxLayout()
+        group_list = QListWidget()
+        group_list.setObjectName("metaDedupGroupList")
+        group_list.setMinimumWidth(320)
+        for group in groups:
+            item = QListWidgetItem(f"{_risk_label(group.risk_level)} · {group.group_id}\n{group.duplicate_rule} · {len(group.record_ids)} records")
+            item.setData(Qt.ItemDataRole.UserRole, group.group_id)
+            group_list.addItem(item)
+        content_row.addWidget(group_list, 1)
+
+        right_panel = QFrame()
+        right_panel.setObjectName("metaCard")
+        right_layout = QVBoxLayout(right_panel)
+        detail = QTextEdit()
+        detail.setObjectName("metaDedupGroupDetail")
+        detail.setReadOnly(True)
+        preview = QTextEdit()
+        preview.setObjectName("metaDedupMergePreview")
+        preview.setReadOnly(True)
+        record_selector = QComboBox()
+        record_selector.setObjectName("metaDedupRecordSelector")
+        decision_selector = QComboBox()
+        decision_selector.setObjectName("metaDedupDecisionSelector")
+        for label, value in (
+            ("确认 merge", DECISION_MERGE),
+            ("保留全部", DECISION_KEEP_BOTH),
+            ("不是重复", DECISION_MARK_NOT_DUPLICATE),
+            ("设为保留候选", DECISION_SET_MASTER_RECORD),
+        ):
+            decision_selector.addItem(label, value)
+        note = QPlainTextEdit()
+        note.setObjectName("metaDedupDecisionNote")
+        note.setPlaceholderText("人工决定备注")
+        note.setMaximumHeight(80)
+        right_layout.addWidget(QLabel("重复组详情"))
+        right_layout.addWidget(detail)
+        right_layout.addWidget(QLabel("Merge preview"))
+        right_layout.addWidget(preview)
+        right_layout.addWidget(QLabel("保留候选"))
+        right_layout.addWidget(record_selector)
+        right_layout.addWidget(QLabel("人工决定"))
+        right_layout.addWidget(decision_selector)
+        right_layout.addWidget(note)
+        content_row.addWidget(right_panel, 2)
+        layout.addLayout(content_row)
+        layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
+        layout.addStretch(1)
+
+        def selected_group_id() -> str:
+            item = group_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def refresh_group_detail(index: int = 0) -> None:
+            record_selector.clear()
+            if index < 0 or index >= len(groups):
+                detail.setPlainText("暂无重复组。")
+                preview.setPlainText("请先生成重复组。")
+                return
+            group = groups[index]
+            for record_id in group.record_ids:
+                record_selector.addItem(record_id, record_id)
+            detail.setPlainText(_dedup_group_detail(group.to_dict()))
+            preview_payload = service.preview_merge(project_dir, group_id=group.group_id, selected_record_id=str(record_selector.currentData() or ""))
+            preview.setPlainText(json.dumps(preview_payload, ensure_ascii=False, indent=2))
+
+        def update_preview(_index: int = 0) -> None:
+            group_id = selected_group_id()
+            if not group_id:
+                return
+            preview_payload = service.preview_merge(project_dir, group_id=group_id, selected_record_id=str(record_selector.currentData() or ""))
+            preview.setPlainText(json.dumps(preview_payload, ensure_ascii=False, indent=2))
+
+        def do_build_queue() -> None:
+            result = service.build_review_queue(project_dir, project_id=project_dir.name)
+            _show_message(result.message)
+            on_refresh()
+
+        def do_save_decision() -> None:
+            group_id = selected_group_id()
+            if not group_id:
+                _show_message("请选择重复组")
+                return
+            decision = str(decision_selector.currentData() or DECISION_KEEP_BOTH)
+            merged_record = {}
+            if decision in {DECISION_MERGE, DECISION_SET_MASTER_RECORD}:
+                merged_record = service.preview_merge(project_dir, group_id=group_id, selected_record_id=str(record_selector.currentData() or ""))
+            service.save_decision(
+                project_dir,
+                group_id=group_id,
+                decision=decision,
+                actor="reviewer",
+                selected_record_id=str(record_selector.currentData() or ""),
+                merged_record=merged_record,
+                note=note.toPlainText(),
+            )
+            _show_message("已保存人工去重决定；未自动删除或 merge。")
+            on_refresh()
+
+        group_list.currentRowChanged.connect(refresh_group_detail)
+        record_selector.currentIndexChanged.connect(update_preview)
+        build_queue.clicked.connect(do_build_queue)
+        save_decision.clicked.connect(do_save_decision)
+        next_button.clicked.connect(on_next)
+        group_list.setCurrentRow(0 if groups else -1)
+        refresh_group_detail(group_list.currentRow())
+        return frame
+
+
     def _placeholder_step_page(step: MetaWorkflowStepState) -> QFrame:
         frame = QFrame()
         frame.setObjectName(f"metaPlaceholder_{step.route_key}")
@@ -991,6 +1151,46 @@ if QWidget is not None:
                 f"摘要：{record.get('abstract', '')}",
             ]
         )
+
+
+    def _dedup_group_detail(group: dict[str, object]) -> str:
+        records = group.get("records", [])
+        record_lines: list[str] = []
+        if isinstance(records, list):
+            for record in records:
+                if isinstance(record, dict):
+                    record_lines.append(
+                        f"- {record.get('record_id', '')} · {record.get('title', '')} · DOI {record.get('doi', '-') or '-'} · PMID {record.get('pmid', '-') or '-'}"
+                    )
+        differences = group.get("field_differences", [])
+        diff_lines: list[str] = []
+        if isinstance(differences, list):
+            for item in differences[:8]:
+                if isinstance(item, dict):
+                    diff_lines.append(f"- {item.get('field', '')}: {item.get('values', item)}")
+        return "\n".join(
+            [
+                f"Group：{group.get('group_id', '')}",
+                f"风险：{_risk_label(str(group.get('risk_level', '')))}",
+                f"规则：{group.get('duplicate_rule', '')}",
+                f"原因：{group.get('match_reason', '')}",
+                f"置信度：{group.get('confidence', '')}",
+                f"推荐保留：{group.get('retain_candidate_id', '')}",
+                "记录：",
+                *(record_lines or ["- 暂无记录"]),
+                "字段差异：",
+                *(diff_lines or ["- 暂无字段差异"]),
+            ]
+        )
+
+
+    def _risk_label(risk: str) -> str:
+        return {
+            "red": "红色：高度重复",
+            "yellow": "黄色：疑似重复",
+            "gray": "灰色：轻度疑似",
+            "green": "绿色：暂未发现重复",
+        }.get(risk, risk or "未知风险")
 
 
     def _state_debug_text(state) -> str:
