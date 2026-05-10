@@ -182,17 +182,15 @@ class GeoDatasetDetailPanel(QFrame):
         self._english_text.setObjectName("geoDatasetEnglishMetadata")
         layout.addWidget(self._english_text)
 
-        layout.addWidget(_muted("中文翻译与精炼"))
+        layout.addWidget(_muted("中文摘要"))
         translate_actions = QHBoxLayout()
-        self._translate_button = _button("生成中文翻译", "secondaryButton", lambda: self._emit_translate())
-        self._brief_button = _button("生成一句话简介", "secondaryButton", lambda: self._emit_brief())
-        translate_actions.addWidget(self._translate_button)
-        translate_actions.addWidget(self._brief_button)
+        self._summary_button = _button("生成中文摘要", "secondaryButton", lambda: self._emit_translate())
+        translate_actions.addWidget(self._summary_button)
         translate_actions.addStretch(1)
         layout.addLayout(translate_actions)
-        self._translation_text = _text_preview(150)
+        self._translation_text = _text_preview(140)
         self._translation_text.setObjectName("geoDatasetChineseSummary")
-        self._translation_text.setPlainText("尚未生成中文翻译。")
+        self._translation_text.setPlainText("尚未生成中文摘要。")
         layout.addWidget(self._translation_text)
 
         layout.addWidget(_muted("样本结构与下载建议"))
@@ -254,7 +252,7 @@ class GeoDatasetDetailPanel(QFrame):
         if summary_payload:
             self.render_summary(candidate, summary_payload)
         else:
-            self._translation_text.setPlainText("尚未生成中文翻译。")
+            self._translation_text.setPlainText("尚未生成中文摘要。")
 
     def set_saved(self, saved: bool) -> None:
         self._saved_status.setText("已在待处理数据集中。" if saved else "尚未加入待处理数据集。")
@@ -1029,9 +1027,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         cached = self._geo_brief_cache.get(candidate.accession_or_project)
         if cached is not None:
             self._gse_geo_detail_panel.render_summary(candidate, cached)
-            self._set_status("已显示中文简介。")
+            self._set_status("已显示中文摘要。")
             return cached
-        self._gse_geo_detail_panel.set_busy_text("正在生成中文翻译与一句话简介，请稍候。")
+        self._gse_geo_detail_panel.set_busy_text("正在生成中文摘要，请稍候。")
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
         summary = self._text_summary_service.summarize(
@@ -1045,7 +1043,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         payload = summary.to_dict()
         self._geo_brief_cache[candidate.accession_or_project] = payload
         self._gse_geo_detail_panel.render_summary(candidate, payload)
-        self._set_status("已生成中文翻译与一句话简介。" if summary.status == "completed" else "中文简介需人工确认。")
+        self._set_status("已生成中文摘要。" if summary.status == "completed" else "中文摘要需人工确认。")
         return payload
 
     def _confirm_gse_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
@@ -1580,9 +1578,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         cached = self._geo_brief_cache.get(accession_or_project)
         if cached is not None and str(cached.get("status") or "") == "completed":
             self._geo_dataset_detail_panel.render_summary(candidate, cached)
-            self._set_status("已显示中文简介。")
+            self._set_status("已显示中文摘要。")
             return cached
-        busy_text = "正在重新生成中文翻译与一句话简介，请稍候。" if cached is not None else "正在生成中文翻译与一句话简介，请稍候。"
+        busy_text = "正在重新生成中文摘要，请稍候。" if cached is not None else "正在生成中文摘要，请稍候。"
         self._geo_dataset_detail_panel.set_busy_text(busy_text)
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
@@ -1598,9 +1596,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._geo_brief_cache[accession_or_project] = payload
         self._geo_dataset_detail_panel.render_summary(candidate, payload)
         if summary.status == "completed":
-            self._set_status("已生成中文翻译与一句话简介。")
+            self._set_status("已生成中文摘要。")
         else:
-            self._set_status("中文简介需人工确认。")
+            self._set_status("中文摘要需人工确认。")
         return payload
 
     def _confirm_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
@@ -1816,13 +1814,13 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         detail_title = _status_label("候选详情")
         detail_text = _text_preview(140)
         detail_text.setObjectName(f"{source_key}CandidateDetailText")
-        detail_text.setPlainText("点击候选结果的“详情”查看标题、中文简介、匹配原因、资产状态和下载建议。")
+        detail_text.setPlainText("点击候选结果的“详情”查看标题、中文摘要、匹配原因、资产状态和下载建议。")
         detail_layout.addWidget(detail_title)
         detail_layout.addWidget(detail_text)
         detail_actions = QHBoxLayout()
         select_button = _button("选择", "secondaryButton", self._select_current_candidate)
         download_button = _button("下载并添加" if source_key == "geo" else "创建下载任务", "secondaryButton", self._download_current_candidate)
-        brief_button = _button("生成中文简介", "secondaryButton", self._brief_current_candidate)
+        brief_button = _button("生成中文摘要", "secondaryButton", self._brief_current_candidate)
         select_button.setEnabled(False)
         download_button.setEnabled(False)
         brief_button.setEnabled(False)
@@ -5788,23 +5786,39 @@ def _asset_type_status(assets: list[dict[str, object]], asset_type: str) -> str:
 
 
 def _geo_text_summary_user_display(candidate: UnifiedDatasetCandidate, summary: dict[str, object]) -> str:
-    status = str(summary.get("status") or "")
-    warnings = [str(item) for item in summary.get("quality_warnings", []) or []] if isinstance(summary.get("quality_warnings"), list) else list(summary.get("quality_warnings", ()) or ())
-    topic_match = _geo_topic_match_label(summary, status=status, warnings=warnings)
-    risk = "未发现明显风险。" if topic_match == "是" else "翻译或主题匹配判断不完整，需人工确认后再用于筛选决策。"
-    reliable = "可作为初筛参考" if topic_match == "是" else "不可标记为可靠结论"
+    metadata = candidate.source_specific_metadata
+    title_en = str(metadata.get("title_en") or candidate.display_title or "").strip()
+    summary_en = str(metadata.get("summary_en") or "").strip()
+    title_zh = str(summary.get("title_zh") or "").strip() or "未生成"
+    if summary_en:
+        summary_zh = str(summary.get("summary_zh") or "").strip() or "未生成"
+        brief_zh = str(summary.get("brief_zh") or "").strip() or "未生成"
+    else:
+        subject = _geo_summary_subject(title_zh=title_zh, title_en=title_en, accession=candidate.accession_or_project)
+        summary_zh = "原始摘要未记录。当前只能根据标题和 GEO 基本信息判断该数据集的大致研究方向。"
+        brief_zh = f"这是一个与 {subject} 相关的 GEO 数据集，具体研究设计需要查看样本信息或原始 GEO 页面。"
     return "\n".join(
         [
             f"GSE 编号：{candidate.accession_or_project}",
-            f"中文标题：{summary.get('title_zh') or '未生成'}",
-            f"中文摘要：{summary.get('summary_zh') or '未生成'}",
-            f"一句话简介：{summary.get('brief_zh') or '未生成'}",
-            f"与检索主题匹配：{topic_match}",
-            f"推荐等级：{_candidate_recommendation(candidate)}",
-            f"可靠性：{reliable}",
-            f"风险提示：{summary.get('error_message') or '；'.join(warnings) or risk}",
+            "",
+            "中文标题：",
+            title_zh,
+            "",
+            "中文摘要：",
+            summary_zh,
+            "",
+            "一句话介绍：",
+            brief_zh,
         ]
     )
+
+
+def _geo_summary_subject(*, title_zh: str, title_en: str, accession: str) -> str:
+    for value in (title_zh, title_en, accession):
+        cleaned = re.sub(r"\s+", " ", str(value or "").strip())
+        if cleaned and cleaned != "未生成":
+            return cleaned[:80]
+    return "该数据集标题"
 
 
 def _geo_topic_match_label(summary: dict[str, object], *, status: str, warnings: list[str]) -> str:
