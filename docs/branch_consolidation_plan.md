@@ -171,3 +171,31 @@ python3 scripts/package_app.py --output-dir /Users/changdali/Desktop --app-name 
   - Meta Analysis uses `meta_` task types.
   - Direct Ollama calls remain isolated to `app/shared/ai_gateway/providers/ollama_provider.py`.
 - Rebuild `/Users/changdali/Desktop/BioMedPilot.app` only from `stable/mainline` or an explicitly approved release branch.
+
+## 8. Consolidation Log
+
+### Meta Analysis Round 1
+
+Completed on `dev/meta-analysis`.
+
+- Reviewed `codex/meta-workflow-ui` against `dev/meta-analysis`.
+- Branch-only commit: `8b6d0b6 feat(meta): connect workflow ui later stages`.
+- Scope: Meta workspace page routing, UI-07 to UI-18 developer preview pages, navigation tests, and `docs/meta_ui_06_18_implementation_plan.md`.
+- `git merge-tree` reported no text conflicts.
+- Required Meta service imports already existed on `dev/meta-analysis`.
+- Cherry-picked `8b6d0b6` into `dev/meta-analysis`.
+- Did not process `codex/meta-search-ui-main`.
+- Did not process high-risk `codex/ai-gateway-call-isolation-audit`.
+
+Validation passed before this log update:
+
+```bash
+python3 -m pytest tests/meta_analysis -q
+python3 -m pytest tests/ui/test_meta_analysis_workflow_pages.py tests/meta_analysis/test_meta_workspace_ui_navigation.py -q
+QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test
+```
+
+Result:
+
+- `tests/meta_analysis`: 451 passed
+- Meta UI/navigation subset: 26 passed
