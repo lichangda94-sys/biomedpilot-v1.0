@@ -114,7 +114,10 @@ def test_pubmed_handoff_uses_unified_library_schema_and_manifest(tmp_path: Path)
     assert record["provenance"]["candidate_preview_id"] == preview.preview_id
     assert record["screening_status"] == "not_started"
     assert manifest["source_counts"] == {"pubmed_confirmed_candidates": 1}
-    assert "222" not in json.dumps(library)
+    assert len(library["records"]) == 1
+    imported_identifiers = _literature_record_identifier_values(library["records"])
+    assert {"lit-pubmed-111", "111", "10.1000/demo111", "pcand-111"} <= imported_identifiers
+    assert imported_identifiers.isdisjoint({"lit-pubmed-222", "222", "10.1000/demo222", "pcand-222"})
 
 
 def test_nbib_ris_csv_import_bridge_writes_unified_library(tmp_path: Path) -> None:
@@ -198,3 +201,31 @@ def _execution() -> PubMedSearchExecution:
             ),
         ),
     )
+
+
+def _literature_record_identifier_values(records: list[dict[str, object]]) -> set[str]:
+    identifier_keys = {
+        "record_id",
+        "source_record_id",
+        "pmid",
+        "doi",
+        "pmcid",
+        "candidate_id",
+        "user_decision_event",
+    }
+    values: set[str] = set()
+
+    def collect(value: object, *, key: str = "") -> None:
+        if isinstance(value, dict):
+            for child_key, child_value in value.items():
+                collect(child_value, key=str(child_key))
+            return
+        if isinstance(value, list | tuple):
+            for item in value:
+                collect(item, key=key)
+            return
+        if key in identifier_keys and value:
+            values.add(str(value))
+
+    collect(records)
+    return values

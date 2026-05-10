@@ -121,6 +121,7 @@ class MainWindow(QMainWindow):
         if record.project_type == "bioinformatics":
             self.show_bioinformatics()
         else:
+            self._meta_analysis_page.set_project_record(record)
             self.show_meta_analysis()
 
     def current_workspace_key(self) -> str:

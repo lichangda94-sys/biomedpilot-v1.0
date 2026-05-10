@@ -136,8 +136,8 @@ def test_meta_module_card_mentions_current_workflow(qt_app, local_session: Local
 
     descriptions = [label.text() for label in widget.findChildren(QLabel, "moduleDescription")]
 
-    assert any("中文 14 步工作流" in text for text in descriptions)
-    assert any("PubMed 候选确认" in text for text in descriptions)
+    assert any("中文 18 步工作流" in text for text in descriptions)
+    assert any("文献获取" in text for text in descriptions)
     assert any("testing-level / 待开发" in text for text in descriptions)
 
 
@@ -190,5 +190,28 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
         "workflow_home",
         "pico_workspace",
         "search_strategy",
-        "pubmed_handoff",
+        "literature_acquisition",
     )
+
+
+def test_main_window_open_meta_project_binds_workspace_project_dir(qt_app, tmp_path) -> None:
+    from app.shared.project_center.service import ProjectRecord
+    from app.shell.main_window import MainWindow
+
+    record = ProjectRecord(
+        project_id="meta-test",
+        project_name="Meta UI Test",
+        project_type="meta_analysis",
+        created_at="2026-05-10T00:00:00+08:00",
+        updated_at="2026-05-10T00:00:00+08:00",
+        project_dir=str(tmp_path / "meta_project"),
+        current_stage="created",
+        status="active",
+    )
+    window = MainWindow()
+    window._login_page.set_credentials("researcher", "local-password")
+    window._login_page.attempt_login()
+    window.open_project_record(record)
+
+    assert window.current_workspace_key() == "meta_analysis"
+    assert window._meta_analysis_page.current_project_dir() == (tmp_path / "meta_project").resolve()

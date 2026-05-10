@@ -115,7 +115,7 @@ class ModuleSelectionWidget(QWidget):
             self._module_card(
                 title="Meta 分析模块",
                 english_title="Meta Analysis Module",
-                description="按中文 14 步工作流测试 PICO、检索策略、PubMed 候选确认、文献库、去重、全文、提取、质量评价和分析计划；统计、图表、正式报告保持 testing-level / 待开发。",
+                description="按中文 18 步工作流测试 PICO、检索策略、文献获取、文献库、去重、全文、提取、质量评价和分析计划；统计、图表、正式报告保持 testing-level / 待开发。",
                 button_text="进入 Meta 分析模块",
                 object_name="metaModuleButton",
                 icon_key="meta_analysis",
