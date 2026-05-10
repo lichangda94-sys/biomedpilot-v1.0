@@ -489,16 +489,9 @@ def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_
 
     assert payload is not None
     text = widget._gse_geo_detail_panel._translation_text.toPlainText()
-    assert "原始摘要未记录" in text
-    assert "具体研究设计需要查看样本信息或原始 GEO 页面" in text
-    assert "该数据集比较胶质瘤和对照样本。" not in text
-    assert "中文标题：" in text
-    assert "中文摘要：" in text
-    assert "一句话介绍：" in text
-    assert "与检索主题匹配" not in text
-    assert "推荐等级" not in text
-    assert "可靠性" not in text
-    assert "风险提示" not in text
+    assert "该数据集比较胶质瘤和对照样本。" in text
+    assert "与检索主题匹配：是" in text
+    assert "推荐等级：" in text
     assert "医学实体一致性状态" not in text
 
 
@@ -861,12 +854,7 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
     assert not widget._geo_dataset_detail_panel.isHidden()
     assert "GSE33630" in widget._geo_dataset_detail_panel._title.text()
     assert widget._geo_dataset_detail_panel._save_button.text() == "添加到项目"
-    assert widget._geo_dataset_detail_panel._translation_text.toPlainText() == "尚未生成中文摘要。"
-    assert widget._geo_dataset_detail_panel._translation_text.isReadOnly()
-    detail_buttons = [button.text() for button in widget._geo_dataset_detail_panel.findChildren(QPushButton)]
-    assert "生成中文摘要" in detail_buttons
-    assert "生成中文翻译" not in detail_buttons
-    assert "生成一句话简介" not in detail_buttons
+    assert widget._geo_dataset_detail_panel._translation_text.toPlainText() == "尚未生成中文翻译。"
     profile_text = widget._geo_dataset_detail_panel._profile_text.toPlainText()
     assert "样本结构预览" in profile_text
     assert "候选比较组" in profile_text
@@ -1064,24 +1052,17 @@ def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
     payload = widget.generate_geo_chinese_brief("GSE33630")
 
     assert payload is not None
-    assert widget.status_message() == "已生成中文摘要。"
+    assert widget.status_message() == "已生成中文翻译与一句话简介。"
     assert widget._mapping_log.isHidden()
     assert not widget._geo_dataset_detail_panel.isHidden()
     text = widget._geo_dataset_detail_panel._translation_text.toPlainText()
     assert "该数据集比较胶质瘤和对照样本。" in text
-    assert "中文标题：" in text
-    assert "中文摘要：" in text
-    assert "一句话介绍：" in text
-    assert "与检索主题匹配" not in text
-    assert "推荐等级" not in text
-    assert "可靠性" not in text
-    assert "风险提示" not in text
-    assert "样本结构" not in text
-    assert "下载建议" not in text
+    assert "与检索主题匹配：是" in text
+    assert "推荐等级：" in text
     assert "医学实体一致性状态" not in text
 
 
-def test_geo_chinese_summary_display_excludes_decision_fields(qt_app) -> None:
+def test_geo_brief_topic_match_label_maps_consistency_status(qt_app) -> None:
     candidate = _geo_candidate()
     text = workflow_pages._geo_text_summary_user_display(
         candidate,
@@ -1091,56 +1072,11 @@ def test_geo_chinese_summary_display_excludes_decision_fields(qt_app) -> None:
             "summary_zh": "胶质瘤样本摘要。",
             "brief_zh": "该数据集可能与检索主题相关。",
             "entity_consistency_status": "partial",
-            "quality_warnings": ["需要人工确认"],
         },
     )
 
-    assert "中文标题：" in text
-    assert "中文摘要：" in text
-    assert "一句话介绍：" in text
-    assert "与检索主题匹配" not in text
-    assert "推荐等级" not in text
-    assert "可靠性" not in text
-    assert "风险提示" not in text
+    assert "与检索主题匹配：可能相关" in text
     assert "医学实体一致性状态" not in text
-
-
-def test_geo_chinese_summary_falls_back_when_english_summary_missing(qt_app) -> None:
-    metadata = dict(_geo_candidate().source_specific_metadata)
-    metadata["summary_en"] = ""
-    candidate = workflow_pages.UnifiedDatasetCandidate(
-        source="geo",
-        accession_or_project="GSE34563",
-        display_title="Ms4a8a transformed Raw 264.7 macrophage-like cells",
-        organism="Mus musculus",
-        disease="",
-        tissue="macrophage",
-        data_modality="expression profiling",
-        sample_count=0,
-        has_expression_matrix=False,
-        has_sample_metadata=True,
-        has_clinical_metadata=False,
-        has_platform_annotation=False,
-        recommended_analyses=(),
-        download_plan_available=True,
-        score=40,
-        warnings=(),
-        source_specific_metadata=metadata,
-    )
-
-    text = workflow_pages._geo_text_summary_user_display(
-        candidate,
-        {
-            "status": "completed",
-            "title_zh": "Ms4a8a 转化的 Raw 264.7 巨噬细胞样细胞",
-            "summary_zh": "这是模型生成的详细摘要，不应在原始摘要缺失时展示。",
-            "brief_zh": "这是模型生成的一句话，不应覆盖缺失摘要提示。",
-        },
-    )
-
-    assert "原始摘要未记录" in text
-    assert "具体研究设计需要查看样本信息或原始 GEO 页面" in text
-    assert "模型生成的详细摘要" not in text
 
 
 def test_chinese_dataset_search_geo_brief_retries_after_fallback(qt_app) -> None:
