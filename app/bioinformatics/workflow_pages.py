@@ -83,6 +83,18 @@ from app.bioinformatics.search_center import (
     UnifiedDatasetCandidate,
 )
 from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
+from app.shared.ai_gateway import (
+    create_ai_draft_record,
+    desktop_local_ollama_config,
+    load_ai_gateway_config,
+    mark_ai_draft_status,
+    save_ai_draft_record,
+    save_ai_gateway_config,
+)
+from app.shared.ai_gateway.drafts import AIDraftRecord
+from app.shared.ai_gateway.models import AIProviderStatus
+from app.shared.ai_gateway.providers.ollama_provider import DEFAULT_OLLAMA_BASE_URL, DEFAULT_OLLAMA_MODEL, OllamaProvider
+from app.shared.query_intelligence import LocalModelConfig
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
 
@@ -184,10 +196,9 @@ class GeoDatasetDetailPanel(QFrame):
 
         layout.addWidget(_muted("中文翻译与精炼"))
         translate_actions = QHBoxLayout()
-        self._translate_button = _button("生成中文翻译", "secondaryButton", lambda: self._emit_translate())
-        self._brief_button = _button("生成一句话简介", "secondaryButton", lambda: self._emit_brief())
+        self._translate_button = _button("中文翻译与提炼", "secondaryButton", lambda: self._emit_translate())
+        self._brief_button = self._translate_button
         translate_actions.addWidget(self._translate_button)
-        translate_actions.addWidget(self._brief_button)
         translate_actions.addStretch(1)
         layout.addLayout(translate_actions)
         self._translation_text = _text_preview(150)
@@ -1031,21 +1042,24 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._gse_geo_detail_panel.render_summary(candidate, cached)
             self._set_status("已显示中文简介。")
             return cached
-        self._gse_geo_detail_panel.set_busy_text("正在生成中文翻译与一句话简介，请稍候。")
+        self._gse_geo_detail_panel.set_busy_text("正在生成中文翻译与提炼，请稍候。")
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
-        summary = self._text_summary_service.summarize(
-            GeoStudyTextInput(
-                accession=candidate.accession_or_project,
-                title_en=str(metadata.get("title_en") or candidate.display_title),
-                summary_en=str(metadata.get("summary_en") or ""),
-                overall_design_en=str(metadata.get("overall_design_en") or ""),
-            )
+        text_input = GeoStudyTextInput(
+            accession=candidate.accession_or_project,
+            title_en=str(metadata.get("title_en") or candidate.display_title),
+            summary_en=str(metadata.get("summary_en") or ""),
+            overall_design_en=str(metadata.get("overall_design_en") or ""),
         )
+        summary = self._text_summary_service.summarize(text_input)
         payload = summary.to_dict()
+        draft_record = _geo_text_summary_draft_record(text_input, payload)
+        payload["ai_draft"] = draft_record.to_dict()
+        if self._project_root is not None:
+            save_ai_draft_record(self._project_root, draft_record, filename_hint=f"bio_translate_dataset_detail_{candidate.accession_or_project}")
         self._geo_brief_cache[candidate.accession_or_project] = payload
         self._gse_geo_detail_panel.render_summary(candidate, payload)
-        self._set_status("已生成中文翻译与一句话简介。" if summary.status == "completed" else "中文简介需人工确认。")
+        self._set_status("已生成中文翻译与提炼草稿。" if summary.status == "completed" else "中文提炼草稿需人工确认。")
         return payload
 
     def _confirm_gse_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
@@ -1307,6 +1321,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._source_recommendation_widgets: dict[str, QWidget] = {}
         self._source_recommendation_layouts: dict[str, QVBoxLayout] = {}
         self._candidate_status_labels: dict[tuple[str, str], QLabel] = {}
+        self._query_draft_record: AIDraftRecord | None = None
         self._download_service = DatasetDownloadService()
         self._text_summary_service = GeoTextSummaryService(timeout=20)
         self.setObjectName("bioinformaticsChineseDatasetSearchPage")
@@ -1336,86 +1351,58 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         if not query:
             self._set_status("请输入中文研究主题。", error=True)
             return None
-        result = BioinformaticsSourceRouter().search(query, online_enabled=False, limit=20)
+        local_model_config = _desktop_local_model_config()
+        result = BioinformaticsSourceRouter().search(
+            query,
+            online_enabled=False,
+            limit=20,
+            use_local_model=local_model_config.enabled,
+            local_model_config=local_model_config,
+            gateway_module="bioinformatics",
+            gateway_task_type="bio_generate_dataset_query_draft",
+        )
         self._last_result = result
         self._render_result(result, searched=False)
+        self._query_draft_record = self._create_query_draft_record(result, status="suggested")
         if result.query.broad_query_guard:
             self._set_status("请补充明确疾病或组织主题后再检索候选数据集。", error=True)
         else:
-            self._set_status("已生成检索草稿。请确认后检索候选数据集。")
+            self._set_status("已生成检索草稿。确认前不会执行真实数据库检索。")
         return result
 
     def search_candidates(self, *, online_enabled: bool = False) -> BioinformaticsSearchCenterResult | None:
-        query = self._query_input.text().strip()
-        if not query:
-            self._set_status("请输入中文研究主题。", error=True)
-            return None
-        self._set_status("检索中")
-        result = BioinformaticsSourceRouter().search(query, online_enabled=online_enabled, limit=20)
-        self._last_result = result
-        self._render_result(result, searched=True)
-        self._set_status("已完成候选数据集检索。")
-        return result
+        return self.confirm_query_draft() if online_enabled else self.generate_terms()
 
-    def search_geo_candidates(self) -> BioinformaticsSearchCenterResult | None:
+    def search_geo_candidates(self) -> AIDraftRecord | None:
+        return self.confirm_query_draft()
+
+    def search_tcga_candidates(self) -> AIDraftRecord | None:
+        return self.confirm_query_draft()
+
+    def search_gtex_candidates(self) -> AIDraftRecord | None:
+        return self.confirm_query_draft()
+
+    def confirm_query_draft(self) -> AIDraftRecord | None:
         draft = self._ensure_draft_result()
         if draft is None:
             return None
-        self._set_status("检索中")
-        geo_result = GeoSearchAdapter().search(draft.query, online_enabled=True, limit=20)
-        result = _merge_source_search_result(draft, "geo", geo_result, online_enabled=True)
-        self._last_result = result
-        self._render_result(result, searched=True)
-        geo_result = result.source_results.get("geo")
-        if geo_result is None:
-            self._set_status("未生成 GEO/GSE 检索草稿。", error=True)
-        elif geo_result.search_status == "search_failed":
-            self._set_status("GEO/GSE 在线检索失败，请检查网络或稍后重试。", error=True)
-        elif geo_result.displayed_count == 0:
-            self._set_status("未检索到符合条件的 GEO/GSE 数据集。")
-        else:
-            self._set_status("已检索到 GEO/GSE 候选数据集。")
-        return result
-
-    def search_tcga_candidates(self) -> BioinformaticsSearchCenterResult | None:
-        draft = self._ensure_draft_result()
-        if draft is None:
-            return None
-        self._set_status("正在检查 TCGA/GDC 项目资产，请稍候。")
-        QApplication.processEvents()
-        tcga_result = TcgaGdcSearchAdapter().search(draft.query, online_enabled=True, limit=20)
-        if not tcga_result.candidates and draft.source_results.get("tcga_gdc") is not None:
-            tcga_result = draft.source_results["tcga_gdc"]
-        result = _merge_source_search_result(draft, "tcga_gdc", tcga_result, online_enabled=True)
-        self._last_result = result
-        self._render_result(result, searched=False)
-        candidates = [candidate for candidate in result.candidates if candidate.source == "tcga_gdc"]
-        self._set_status(
-            "已匹配 TCGA/GDC 项目，可创建 GDC 文件清单。"
-            if candidates
-            else "未生成 TCGA/GDC 项目候选。"
+        editable_output = "\n".join(
+            [
+                self._geo_query_box.toPlainText().strip(),
+                self._tcga_query_box.toPlainText().strip(),
+                self._gtex_query_box.toPlainText().strip(),
+            ]
         )
-        return result
-
-    def search_gtex_candidates(self) -> BioinformaticsSearchCenterResult | None:
-        draft = self._ensure_draft_result()
-        if draft is None:
-            return None
-        self._set_status("正在检查 GTEx 组织参考，请稍候。")
-        QApplication.processEvents()
-        gtex_result = GtexSearchAdapter().search(draft.query, online_enabled=True, limit=20)
-        if not gtex_result.candidates and draft.source_results.get("gtex") is not None:
-            gtex_result = draft.source_results["gtex"]
-        result = _merge_source_search_result(draft, "gtex", gtex_result, online_enabled=True)
-        self._last_result = result
-        self._render_result(result, searched=False)
-        candidates = [candidate for candidate in result.candidates if candidate.source == "gtex"]
-        self._set_status(
-            "已匹配 GTEx 组织参考，可创建组织下载清单。"
-            if candidates
-            else "未生成 GTEx 组织候选。"
-        )
-        return result
+        record = self._query_draft_record or self._create_query_draft_record(draft, status="suggested")
+        generated_output = _query_draft_output_text(draft)
+        if editable_output and editable_output != generated_output:
+            record = mark_ai_draft_status(record, "user_edited", output_text=editable_output, summary=_query_draft_summary(draft, editable_output=editable_output))
+        record = mark_ai_draft_status(record, "confirmed", output_text=editable_output or generated_output, summary=_query_draft_summary(draft, editable_output=editable_output))
+        self._query_draft_record = record
+        if self._project_root is not None:
+            save_ai_draft_record(self._project_root, record, filename_hint="bio_generate_dataset_query_draft")
+        self._set_status("已确认检索草稿。本阶段不会执行真实 GEO、TCGA/GDC 或 GTEx 检索。")
+        return record
 
     def register_candidate(self, source: str, accession_or_project: str) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -1582,25 +1569,28 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_dataset_detail_panel.render_summary(candidate, cached)
             self._set_status("已显示中文简介。")
             return cached
-        busy_text = "正在重新生成中文翻译与一句话简介，请稍候。" if cached is not None else "正在生成中文翻译与一句话简介，请稍候。"
+        busy_text = "正在重新生成中文翻译与提炼，请稍候。" if cached is not None else "正在生成中文翻译与提炼，请稍候。"
         self._geo_dataset_detail_panel.set_busy_text(busy_text)
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
-        summary = self._text_summary_service.summarize(
-            GeoStudyTextInput(
-                accession=accession_or_project,
-                title_en=str(metadata.get("title_en") or candidate.display_title),
-                summary_en=str(metadata.get("summary_en") or ""),
-                overall_design_en=str(metadata.get("overall_design_en") or ""),
-            )
+        text_input = GeoStudyTextInput(
+            accession=accession_or_project,
+            title_en=str(metadata.get("title_en") or candidate.display_title),
+            summary_en=str(metadata.get("summary_en") or ""),
+            overall_design_en=str(metadata.get("overall_design_en") or ""),
         )
+        summary = self._text_summary_service.summarize(text_input)
         payload = summary.to_dict()
+        draft_record = _geo_text_summary_draft_record(text_input, payload)
+        payload["ai_draft"] = draft_record.to_dict()
+        if self._project_root is not None:
+            save_ai_draft_record(self._project_root, draft_record, filename_hint=f"bio_translate_dataset_detail_{accession_or_project}")
         self._geo_brief_cache[accession_or_project] = payload
         self._geo_dataset_detail_panel.render_summary(candidate, payload)
         if summary.status == "completed":
-            self._set_status("已生成中文翻译与一句话简介。")
+            self._set_status("已生成中文翻译与提炼草稿。")
         else:
-            self._set_status("中文简介需人工确认。")
+            self._set_status("中文提炼草稿需人工确认。")
         return payload
 
     def _confirm_geo_profile_comparison(self, candidate: UnifiedDatasetCandidate) -> bool:
@@ -1653,6 +1643,29 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._set_status("已复制草稿。")
         return True
 
+    def _create_query_draft_record(self, result: BioinformaticsSearchCenterResult, *, status: str) -> AIDraftRecord:
+        query = result.query
+        provider = str(query.metadata.get("local_model_status") or "disabled")
+        draft = query.metadata.get("search_translation_draft")
+        model = ""
+        if draft is not None:
+            audit = getattr(draft, "audit", {})
+            local_model = audit.get("local_model") if isinstance(audit, dict) else None
+            if isinstance(local_model, dict):
+                provider = str(local_model.get("provider_name") or provider)
+                model = str(local_model.get("model_name") or "")
+        return create_ai_draft_record(
+            module="bioinformatics",
+            task_type="bio_generate_dataset_query_draft",
+            provider=provider,
+            model=model,
+            input_text=query.original_query_zh,
+            output_text=_query_draft_output_text(result),
+            warnings=query.warnings,
+            summary=_query_draft_summary(result),
+            status=status,
+        )
+
     def _build_ui(self) -> None:
         root = _scroll_root(self, max_width=1080)
         root.addWidget(_header("中文研究问题检索", "输入中文研究方向，选择 GEO、TCGA/GDC、GTEx 数据源后进入数据识别。", back_text="返回数据来源", back_signal=self.back_requested))
@@ -1664,7 +1677,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._query_input.setMinimumHeight(44)
         input_layout.addWidget(self._query_input)
         action_row = QHBoxLayout()
-        action_row.addWidget(_button("开始检索", "primaryButton", self.generate_terms))
+        action_row.addWidget(_button("生成草稿", "primaryButton", self.generate_terms))
         action_row.addStretch(1)
         input_layout.addLayout(action_row)
         self._status_label = _status_label("未生成检索词")
@@ -1681,7 +1694,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             draft_title="GEO/GSE 检索草稿",
             draft_placeholder="暂无 GEO/GSE 检索草稿",
             copy_source="geo",
-            search_text="检索 GEO/GSE 候选数据集",
+            search_text="确认草稿",
             search_callback=self.search_geo_candidates,
             candidate_headers=["操作", "GSE 编号", "标题", "样本数", "数据类型/平台", "分析潜力", "资产状态"],
             selected_empty="尚未选择 GEO/GSE 数据源。",
@@ -1691,7 +1704,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             draft_title="TCGA/GDC 项目草稿",
             draft_placeholder="暂无 TCGA/GDC 项目草稿",
             copy_source="tcga",
-            search_text="检索 TCGA/GDC 项目",
+            search_text="确认草稿",
             search_callback=self.search_tcga_candidates,
             candidate_headers=["操作", "项目代码", "癌种/项目名称", "样本类型", "数据类型", "状态"],
             selected_empty="尚未选择 TCGA/GDC 项目。",
@@ -1702,7 +1715,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             draft_title="GTEx 组织草稿",
             draft_placeholder="暂无 GTEx 组织草稿",
             copy_source="gtex",
-            search_text="检索 GTEx 组织",
+            search_text="确认草稿",
             search_callback=self.search_gtex_candidates,
             candidate_headers=["操作", "组织", "样本数", "表达类型", "状态"],
             selected_empty="尚未选择 GTEx 组织参考。",
@@ -3600,9 +3613,38 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         if not text:
             self._preview.setPlainText("请输入中文研究问题。")
             return ""
-        terms = _placeholder_terms(text)
+        result = BioinformaticsSourceRouter().search(text, online_enabled=False, limit=20)
+        terms = _query_draft_output_text(result)
         self._preview.setPlainText(terms)
         return terms
+
+    def save_local_ai_settings(self) -> str:
+        enabled = self._local_ai_enabled.isChecked()
+        config = desktop_local_ollama_config(
+            enabled=enabled,
+            base_url=self._ollama_base_url_input.text().strip() or DEFAULT_OLLAMA_BASE_URL,
+            default_model=self._ollama_model_input.text().strip() or DEFAULT_OLLAMA_MODEL,
+            timeout_seconds=20,
+        )
+        save_ai_gateway_config(config)
+        self._refresh_ai_status(config)
+        message = "本地 AI 已启用，仅允许本机 Ollama，经 AI Gateway 调用。" if enabled else "本地 AI 已关闭，已恢复安全默认配置。"
+        self._ai_status.setText(message)
+        return message
+
+    def test_local_ai_connection(self) -> str:
+        config = desktop_local_ollama_config(
+            enabled=self._local_ai_enabled.isChecked(),
+            base_url=self._ollama_base_url_input.text().strip() or DEFAULT_OLLAMA_BASE_URL,
+            default_model=self._ollama_model_input.text().strip() or DEFAULT_OLLAMA_MODEL,
+            timeout_seconds=20,
+        )
+        provider = OllamaProvider.from_provider_config(config.provider_configs.get("ollama", {}))
+        status = provider.detect_ollama_status()
+        label = _ai_provider_status_label(status)
+        self._connection_status.setText(f"连接状态：{label}")
+        self._refresh_ai_status(config, detected_status=status)
+        return status.value
 
     def run_geo_legacy_environment_check(self) -> str:
         result = run_geo_environment_check()
@@ -3628,6 +3670,22 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
 
     def status_message(self) -> str:
         return self._ai_status.text()
+
+    def _refresh_ai_status(self, config: object | None = None, *, detected_status: AIProviderStatus | None = None) -> None:
+        config = config or load_ai_gateway_config()
+        if not getattr(config, "allow_network", False) or getattr(config, "default_provider", "disabled") != "ollama":
+            self._ai_mode.setText("当前 AI 模式：关闭")
+            self._connection_status.setText("连接状态：未启用")
+            return
+        provider_config = getattr(config, "provider_configs", {}).get("ollama", {})
+        enabled = isinstance(provider_config, dict) and provider_config.get("enabled") is True
+        if not enabled:
+            self._ai_mode.setText("当前 AI 模式：fallback")
+            self._connection_status.setText("连接状态：未启用")
+            return
+        self._ai_mode.setText("当前 AI 模式：本地 Ollama")
+        if detected_status is not None:
+            self._connection_status.setText(f"连接状态：{_ai_provider_status_label(detected_status)}")
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
@@ -3658,24 +3716,42 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         root.addWidget(defaults_card)
 
         ai_card, ai_layout = _card("本地 AI 检索助手")
-        self._ai_status = _status_label(
-            "未检测到本地 AI 服务，当前可使用规则占位模式。"
-            if shutil.which("ollama") is None
-            else "本地 AI：检测到 Ollama 命令；Translator / Media 模型状态仍为占位。"
-        )
+        config = load_ai_gateway_config()
+        provider_config = config.provider_configs.get("ollama", {})
+        self._ai_status = _status_label("AI 默认关闭；启用本地 AI 前请确认不会上传敏感数据。")
         ai_layout.addWidget(self._ai_status)
-        ai_layout.addWidget(_muted("Translator 模型状态：占位。Media 模型状态：占位。"))
+        self._ai_mode = _status_label("当前 AI 模式：关闭")
+        self._connection_status = _status_label("连接状态：未启用")
+        ai_layout.addWidget(self._ai_mode)
+        self._local_ai_enabled = QCheckBox("启用本地 AI")
+        self._local_ai_enabled.setChecked(config.default_provider == "ollama" and config.allow_network and isinstance(provider_config, dict) and provider_config.get("enabled") is True)
+        ai_layout.addWidget(self._local_ai_enabled)
+        self._ollama_base_url_input = QLineEdit(str(provider_config.get("base_url") or DEFAULT_OLLAMA_BASE_URL) if isinstance(provider_config, dict) else DEFAULT_OLLAMA_BASE_URL)
+        self._ollama_base_url_input.setPlaceholderText("Ollama 地址")
+        self._ollama_model_input = QLineEdit(str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL) if isinstance(provider_config, dict) else DEFAULT_OLLAMA_MODEL)
+        self._ollama_model_input.setPlaceholderText("默认模型名称")
+        ai_layout.addWidget(_muted("Ollama 地址"))
+        ai_layout.addWidget(self._ollama_base_url_input)
+        ai_layout.addWidget(_muted("默认模型名称"))
+        ai_layout.addWidget(self._ollama_model_input)
+        ai_layout.addWidget(self._connection_status)
+        settings_row = QHBoxLayout()
+        settings_row.addWidget(_button("保存 AI 设置", "secondaryButton", self.save_local_ai_settings))
+        settings_row.addWidget(_button("测试连接", "secondaryButton", self.test_local_ai_connection))
+        settings_row.addStretch(1)
+        ai_layout.addLayout(settings_row)
+        ai_layout.addWidget(_muted("隐私：AI 默认关闭；启用外部模型前请确认不会上传敏感数据。本版本外部 API 仅为后续版本预留，不提供 API Key 输入。"))
         self._question_input = QLineEdit()
         self._question_input.setPlaceholderText("输入中文研究问题")
         ai_layout.addWidget(self._question_input)
         row = QHBoxLayout()
-        row.addWidget(_button("生成英文医学词", "secondaryButton", self.generate_placeholder_terms))
-        row.addWidget(_button("生成 GEO 检索关键词", "secondaryButton", self.generate_placeholder_terms))
+        row.addWidget(_button("生成本地词库草稿", "secondaryButton", self.generate_placeholder_terms))
         row.addStretch(1)
         ai_layout.addLayout(row)
         self._preview = _text_preview(120)
         self._preview.setPlainText("本地 AI 仅用于翻译、关键词扩展和检索辅助；不参与统计分析，不生成科研结论，不替代人工判断。")
         ai_layout.addWidget(self._preview)
+        self._refresh_ai_status(config)
         root.addWidget(ai_card)
 
 
@@ -5790,21 +5866,100 @@ def _asset_type_status(assets: list[dict[str, object]], asset_type: str) -> str:
 def _geo_text_summary_user_display(candidate: UnifiedDatasetCandidate, summary: dict[str, object]) -> str:
     status = str(summary.get("status") or "")
     warnings = [str(item) for item in summary.get("quality_warnings", []) or []] if isinstance(summary.get("quality_warnings"), list) else list(summary.get("quality_warnings", ()) or ())
-    topic_match = _geo_topic_match_label(summary, status=status, warnings=warnings)
-    risk = "未发现明显风险。" if topic_match == "是" else "翻译或主题匹配判断不完整，需人工确认后再用于筛选决策。"
-    reliable = "可作为初筛参考" if topic_match == "是" else "不可标记为可靠结论"
+    lines = [
+        "AI 草稿：中文翻译与提炼，需人工确认。",
+        f"中文标题：{summary.get('title_zh') or '未生成'}",
+        f"中文摘要：{summary.get('summary_zh') or '未生成'}",
+        f"一句话介绍：{summary.get('brief_zh') or '未生成'}",
+    ]
+    if status != "completed" or warnings or summary.get("error_message"):
+        lines.append(f"提示：{summary.get('error_message') or '；'.join(warnings) or 'AI 不可用，已生成 fallback 文案。'}")
+    return "\n".join(lines)
+
+
+def _desktop_local_model_config() -> LocalModelConfig:
+    config = load_ai_gateway_config()
+    provider_config = config.provider_configs.get("ollama", {})
+    enabled = (
+        config.default_provider == "ollama"
+        and config.allow_network
+        and isinstance(provider_config, dict)
+        and provider_config.get("enabled") is True
+    )
+    return LocalModelConfig(
+        enabled=enabled,
+        provider="ollama",
+        base_url=str(provider_config.get("base_url") or ""),
+        medical_model=str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL),
+        translator_model=str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL),
+        timeout_seconds=int(provider_config.get("timeout_seconds") or 20) if isinstance(provider_config.get("timeout_seconds") or 20, int) else 20,
+    )
+
+
+def _query_draft_output_text(result: BioinformaticsSearchCenterResult) -> str:
+    query = result.query
     return "\n".join(
         [
-            f"GSE 编号：{candidate.accession_or_project}",
-            f"中文标题：{summary.get('title_zh') or '未生成'}",
-            f"中文摘要：{summary.get('summary_zh') or '未生成'}",
-            f"一句话简介：{summary.get('brief_zh') or '未生成'}",
-            f"与检索主题匹配：{topic_match}",
-            f"推荐等级：{_candidate_recommendation(candidate)}",
-            f"可靠性：{reliable}",
-            f"风险提示：{summary.get('error_message') or '；'.join(warnings) or risk}",
+            "识别到的中文概念：" + ("、".join(query.disease_terms_zh) or "未识别"),
+            "英文候选词：" + ("; ".join([*query.disease_terms_en, *query.synonyms, *query.data_modalities]) or "未生成"),
+            "GEO query draft：" + ("\n".join(query.geo_query_candidates) or "未生成"),
+            "TCGA project hint：" + (", ".join(query.tcga_project_ids) or "未生成"),
+            "GTEx tissue hint：" + (", ".join(query.gtex_tissues) or "未生成"),
         ]
     )
+
+
+def _query_draft_summary(result: BioinformaticsSearchCenterResult, *, editable_output: str = "") -> dict[str, object]:
+    query = result.query
+    summary: dict[str, object] = {
+        "recognized_zh_concepts": list(query.disease_terms_zh),
+        "english_candidate_terms": list(dict.fromkeys([*query.disease_terms_en, *query.synonyms, *query.data_modalities])),
+        "geo_query_draft": list(query.geo_query_candidates),
+        "tcga_project_hint": list(query.tcga_project_ids),
+        "gtex_tissue_hint": list(query.gtex_tissues),
+        "confirmed_draft_text_hash_only": bool(editable_output),
+        "search_executed": False,
+    }
+    return summary
+
+
+def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, object]) -> AIDraftRecord:
+    output_text = "\n".join(
+        [
+            str(payload.get("title_zh") or ""),
+            str(payload.get("summary_zh") or ""),
+            str(payload.get("brief_zh") or ""),
+        ]
+    )
+    input_text = "\n".join([text.title_en, text.summary_en, text.overall_design_en])
+    status = "suggested" if payload.get("status") == "completed" else "suggested"
+    return create_ai_draft_record(
+        module="bioinformatics",
+        task_type="bio_translate_dataset_detail",
+        provider="ollama" if payload.get("status") == "completed" else "disabled",
+        model=" / ".join(str(payload.get(key) or "") for key in ("translate_model", "brief_model")).strip(" / "),
+        input_text=input_text,
+        output_text=output_text,
+        warnings=tuple(str(item) for item in payload.get("quality_warnings", ()) or ()),
+        summary={
+            "accession": text.accession,
+            "status": str(payload.get("status") or ""),
+            "title_zh": str(payload.get("title_zh") or ""),
+            "summary_zh": str(payload.get("summary_zh") or ""),
+            "brief_zh": str(payload.get("brief_zh") or ""),
+        },
+        status=status,
+    )
+
+
+def _ai_provider_status_label(status: AIProviderStatus) -> str:
+    if status == AIProviderStatus.AVAILABLE:
+        return "可用"
+    if status == AIProviderStatus.DISABLED:
+        return "未启用"
+    if status == AIProviderStatus.ERROR:
+        return "错误"
+    return "不可用"
 
 
 def _geo_topic_match_label(summary: dict[str, object], *, status: str, warnings: list[str]) -> str:

@@ -42,6 +42,8 @@ class BioinformaticsSourceRouter:
         timeout: int = 8,
         use_local_model: bool = False,
         local_model_config: LocalModelConfig | None = None,
+        gateway_module: str = "bioinformatics",
+        gateway_task_type: str = "bio_generate_dataset_query_draft",
         geo_fetcher_cls: type[Any] | None | object = ...,
         confirmed_geo_queries: tuple[str, ...] | list[str] | None = None,
         allow_broad_geo_query: bool = False,
@@ -53,6 +55,8 @@ class BioinformaticsSourceRouter:
                 str(query),
                 use_local_model=use_local_model,
                 local_model_config=local_model_config,
+                gateway_module=gateway_module,
+                gateway_task_type=gateway_task_type,
             )
         )
         source_results: dict[str, SourceSearchResult] = {}

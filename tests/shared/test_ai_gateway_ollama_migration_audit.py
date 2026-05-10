@@ -18,8 +18,6 @@ DIRECT_OLLAMA_PATTERNS = (
 
 EXPECTED_DIRECT_OLLAMA_FILES = {
     "app/shared/ai_gateway/providers/ollama_provider.py",
-    "app/bioinformatics/download/geo_text_summary_service.py",
-    "app/bioinformatics/workflow_pages.py",
     "app/bioinformatics/legacy/geo_tool/geo_text_processor.py",
     "app/bioinformatics/legacy/geo_tool/bootstrap_geo_tool.sh",
     "archive/legacy_sources/bioinformatics_project/geo_tool/geo_text_processor.py",
@@ -28,8 +26,6 @@ EXPECTED_DIRECT_OLLAMA_FILES = {
 
 ACTIVE_APP_DIRECT_OLLAMA_FILES = {
     "app/shared/ai_gateway/providers/ollama_provider.py",
-    "app/bioinformatics/download/geo_text_summary_service.py",
-    "app/bioinformatics/workflow_pages.py",
 }
 
 LEGACY_APP_DIRECT_OLLAMA_FILES = {

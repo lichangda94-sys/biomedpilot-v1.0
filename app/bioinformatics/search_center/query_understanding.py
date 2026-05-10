@@ -13,6 +13,8 @@ class QueryUnderstandingLayer:
         *,
         use_local_model: bool = False,
         local_model_config: LocalModelConfig | None = None,
+        gateway_module: str = "bioinformatics",
+        gateway_task_type: str = "bio_generate_dataset_query_draft",
     ) -> StructuredBioinformaticsQuery:
         cleaned = query.strip()
         draft = build_search_translation_draft(
@@ -22,6 +24,8 @@ class QueryUnderstandingLayer:
             use_local_model=use_local_model,
             allow_network=False,
             config=local_model_config,
+            gateway_module=gateway_module if use_local_model else "",
+            gateway_task_type=gateway_task_type if use_local_model else "",
         )
         draft = filter_search_translation_draft_by_context(draft, BIOINFORMATICS_SEARCH_CONTEXT)
         lookup = _lookup_payload(draft)

@@ -490,8 +490,9 @@ def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_
     assert payload is not None
     text = widget._gse_geo_detail_panel._translation_text.toPlainText()
     assert "该数据集比较胶质瘤和对照样本。" in text
-    assert "与检索主题匹配：是" in text
-    assert "推荐等级：" in text
+    assert "AI 草稿：中文翻译与提炼，需人工确认。" in text
+    assert "与检索主题匹配：" not in text
+    assert "推荐等级：" not in text
     assert "医学实体一致性状态" not in text
 
 
@@ -724,9 +725,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert not widget._gtex_empty_label.isHidden()
     assert widget._mapping_log.isHidden()
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
-    assert "检索 GEO/GSE 候选数据集" in button_texts
-    assert "检索 TCGA/GDC 项目" in button_texts
-    assert "检索 GTEx 组织" in button_texts
+    assert button_texts.count("确认草稿") == 3
     assert "查看完整检索词" in button_texts
     assert "检索候选数据集" not in button_texts
     assert "GEO/GSE" == widget._tabs.tabText(0)
@@ -738,7 +737,7 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     result = widget.generate_terms()
 
     assert result is not None
-    assert widget.status_message() == "已生成检索草稿。请确认后检索候选数据集。"
+    assert widget.status_message() == "已生成检索草稿。确认前不会执行真实数据库检索。"
     assert "thyroid cancer" in widget._geo_query_box.toPlainText()
     assert "thyroid cancer" in widget._geo_draft_summary.text()
     assert "TCGA-THCA" in widget._tcga_query_box.toPlainText()
@@ -809,6 +808,38 @@ def test_glioma_tcga_gtex_candidates_displayed(qt_app) -> None:
     assert "Brain" in gtex_card
     assert "脑组织" in gtex_card
     assert "正常组织 RNA 表达" in gtex_card
+
+
+def test_chinese_dataset_search_confirm_draft_does_not_run_real_search(qt_app, project_summary, monkeypatch) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    widget.set_query_text("甲状腺癌")
+    widget.generate_terms()
+
+    def fail_search(*args, **kwargs):
+        raise AssertionError("confirm draft must not execute database search")
+
+    monkeypatch.setattr(workflow_pages.GeoSearchAdapter, "search", fail_search)
+    monkeypatch.setattr(workflow_pages.TcgaGdcSearchAdapter, "search", fail_search)
+    monkeypatch.setattr(workflow_pages.GtexSearchAdapter, "search", fail_search)
+
+    record = widget.confirm_query_draft()
+
+    assert record is not None
+    assert record.status == "confirmed"
+    assert widget.status_message() == "已确认检索草稿。本阶段不会执行真实 GEO、TCGA/GDC 或 GTEx 检索。"
+    saved = list((project_summary.project_root / "ai_drafts").glob("*bio_generate_dataset_query_draft.json"))
+    assert saved
+    payload = json.loads(saved[0].read_text(encoding="utf-8"))
+    assert payload["status"] == "confirmed"
+    assert payload["summary"]["search_executed"] is False
+    assert "raw_prompt" not in payload
+    assert "raw_response" not in payload
+    dumped = json.dumps(payload, ensure_ascii=False)
+    assert "PubMed" not in dumped
+    assert "Embase" not in dumped
+    assert "WOS" not in dumped
+    assert "CNKI" not in dumped
 
 
 def test_no_generic_tcga_mapping_label(qt_app) -> None:
@@ -1052,13 +1083,14 @@ def test_chinese_dataset_search_geo_brief_uses_summary_service(qt_app) -> None:
     payload = widget.generate_geo_chinese_brief("GSE33630")
 
     assert payload is not None
-    assert widget.status_message() == "已生成中文翻译与一句话简介。"
+    assert widget.status_message() == "已生成中文翻译与提炼草稿。"
     assert widget._mapping_log.isHidden()
     assert not widget._geo_dataset_detail_panel.isHidden()
     text = widget._geo_dataset_detail_panel._translation_text.toPlainText()
     assert "该数据集比较胶质瘤和对照样本。" in text
-    assert "与检索主题匹配：是" in text
-    assert "推荐等级：" in text
+    assert "AI 草稿：中文翻译与提炼，需人工确认。" in text
+    assert "与检索主题匹配：" not in text
+    assert "推荐等级：" not in text
     assert "医学实体一致性状态" not in text
 
 
@@ -1075,7 +1107,9 @@ def test_geo_brief_topic_match_label_maps_consistency_status(qt_app) -> None:
         },
     )
 
-    assert "与检索主题匹配：可能相关" in text
+    assert "AI 草稿：中文翻译与提炼，需人工确认。" in text
+    assert "一句话介绍：该数据集可能与检索主题相关。" in text
+    assert "与检索主题匹配：" not in text
     assert "医学实体一致性状态" not in text
 
 
@@ -2021,7 +2055,7 @@ def test_workflow_task_results_report_and_settings_pages(qt_app, project_summary
     settings = BioinformaticsSettingsAndLocalAIWidget()
     settings._question_input.setText("甲状腺癌淋巴结转移")
     terms = settings.generate_placeholder_terms()
-    assert "placeholder" in terms
+    assert "GEO query draft" in terms
     assert "本地 AI" in settings.status_message()
 
 

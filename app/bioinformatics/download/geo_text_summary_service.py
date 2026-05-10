@@ -4,8 +4,10 @@ import json
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Callable
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+from app.shared.ai_gateway import AIGateway, AIGatewayConfig, AIGatewayRequest, load_ai_gateway_config
+from app.shared.ai_gateway.models import AIProviderStatus
+from app.shared.ai_gateway.providers.ollama_provider import OllamaProvider
 
 
 @dataclass(frozen=True)
@@ -45,13 +47,15 @@ class GeoTextSummaryService:
     def __init__(
         self,
         *,
-        base_url: str = "http://127.0.0.1:11434",
+        base_url: str = "",
         translate_model: str = "translategemma",
         brief_model: str = "medgemma:4b",
         timeout: int = 30,
         generator: Callable[[str, str], str] | None = None,
         availability_checker: Callable[[], bool] | None = None,
         model_names_provider: Callable[[], tuple[str, ...] | list[str] | set[str]] | None = None,
+        ai_gateway: AIGateway | None = None,
+        ai_gateway_config: AIGatewayConfig | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.translate_model = translate_model
@@ -60,6 +64,8 @@ class GeoTextSummaryService:
         self._generator = generator
         self._availability_checker = availability_checker
         self._model_names_provider = model_names_provider
+        self._ai_gateway = ai_gateway
+        self._ai_gateway_config = ai_gateway_config
 
     def is_available(self) -> bool:
         status = self.model_availability()
@@ -77,6 +83,9 @@ class GeoTextSummaryService:
             }
         names = self._available_model_names()
         if names is None:
+            gateway_status = self._gateway_model_status()
+            if gateway_status.get("ollama") == "available":
+                return gateway_status
             return {
                 "ollama": "unavailable",
                 "translate_model": self.translate_model,
@@ -97,21 +106,31 @@ class GeoTextSummaryService:
     def _available_model_names(self) -> set[str] | None:
         if self._model_names_provider is not None:
             return {str(name).strip() for name in self._model_names_provider() if str(name).strip()}
-        request = Request(f"{self.base_url}/api/tags", method="GET")
-        try:
-            with urlopen(request, timeout=min(self.timeout, 5)) as response:  # nosec B310 - user-configured local model endpoint.
-                if not 200 <= int(response.status) < 300:
-                    return None
-                payload = json.loads(response.read().decode("utf-8"))
-        except (OSError, HTTPError, URLError, json.JSONDecodeError):
-            return None
-        names: set[str] = set()
-        for item in payload.get("models", []) if isinstance(payload, dict) else []:
-            if isinstance(item, dict):
-                name = str(item.get("name") or item.get("model") or "").strip()
-                if name:
-                    names.add(name)
-        return names
+        return None
+
+    def _gateway_model_status(self) -> dict[str, str]:
+        if self._ai_gateway is not None:
+            return {
+                "ollama": "available",
+                "translate_model": self.translate_model,
+                "translate_model_status": "available",
+                "brief_model": self.brief_model,
+                "brief_model_status": "available",
+            }
+        config = self._ai_gateway_config or load_ai_gateway_config()
+        provider_config = dict(config.provider_configs.get("ollama", {}))
+        if self.base_url and "base_url" not in provider_config:
+            provider_config["base_url"] = self.base_url
+        provider = OllamaProvider.from_provider_config(provider_config)
+        status = provider.detect_ollama_status() if config.default_provider == "ollama" and config.allow_network else AIProviderStatus.DISABLED
+        availability = "available" if status == AIProviderStatus.AVAILABLE else "unavailable"
+        return {
+            "ollama": status.value,
+            "translate_model": self.translate_model,
+            "translate_model_status": availability,
+            "brief_model": self.brief_model,
+            "brief_model_status": availability,
+        }
 
     def summarize(self, text: GeoStudyTextInput) -> GeoStudyTextSummary:
         model_status = self.model_availability()
@@ -214,29 +233,25 @@ class GeoTextSummaryService:
     def _generate(self, model: str, prompt: str) -> str:
         if self._generator is not None:
             return self._generator(model, prompt).strip()
-        body = json.dumps(
-            {
-                "model": model,
-                "prompt": prompt,
-                "stream": False,
-                "keep_alive": 0,
-                "options": {"temperature": 0.1},
-            }
-        ).encode("utf-8")
-        request = Request(
-            f"{self.base_url}/api/generate",
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
+        if self._ai_gateway is not None:
+            gateway = self._ai_gateway
+        elif self._ai_gateway_config is not None:
+            gateway = AIGateway(config=self._ai_gateway_config)
+        else:
+            gateway = AIGateway()
+        response = gateway.generate(
+            AIGatewayRequest(
+                module="bioinformatics",
+                task_type="bio_translate_dataset_detail",
+                prompt=prompt,
+                requires_network=True,
+                metadata={"model": model, "output_format": "json", "timeout_seconds": self.timeout},
+            )
         )
-        try:
-            with urlopen(request, timeout=self.timeout) as response:  # nosec B310 - user-configured local model endpoint.
-                payload = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            raise RuntimeError(f"本地模型请求失败：{exc}") from exc
-        generated = str(payload.get("response") or "").strip()
-        if not generated:
-            raise RuntimeError(f"本地模型 {model} 返回空内容。")
+        generated = response.content.strip()
+        if response.status != "success" or response.fallback_used or not generated:
+            detail = response.error_message or "; ".join(str(item) for item in response.metadata.get("warnings", []) if str(item).strip())
+            raise RuntimeError(detail or f"本地模型 {model} 未返回可用内容。")
         return generated
 
 

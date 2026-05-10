@@ -97,19 +97,20 @@ AI-2C migrated shared query intelligence to call local models through AI Gateway
 
 This path now requires explicit `gateway_module` and `gateway_task_type` from the caller before it can call a provider. Its audit stores provider/status/fallback/warnings plus output length and hash, not raw model output.
 
-The remaining direct Ollama-capable paths are intentionally unchanged until later stages:
+The Desktop Local AI Loop stage also migrated Bioinformatics GEO metadata translation/refinement and desktop local AI status checks through AI Gateway or Gateway provider helpers:
 
 - `app/bioinformatics/download/geo_text_summary_service.py`
 - `app/bioinformatics/workflow_pages.py`
-- legacy Bioinformatics GEO tool files
 
-The migration audit test allows `app/shared/ai_gateway/providers/ollama_provider.py` as the only formal shared Gateway Ollama call point while still blocking direct Meta Analysis calls and unreviewed new direct callers.
+Legacy Bioinformatics GEO tool files still contain direct Ollama-capable code, but they are archived/legacy paths and are not active new integration points.
+
+The migration audit test allows `app/shared/ai_gateway/providers/ollama_provider.py` as the only active Gateway Ollama call point while still blocking direct Bioinformatics, Meta Analysis, shared query-intelligence, and unreviewed new direct callers.
 
 ## Next Migration Stage
 
 Recommended next stage:
 
-1. Add task-specific prompt wrappers for `bio_query_help`, `bio_geo_metadata_summary`, and `meta_query_help`.
-2. Wrap Bioinformatics GEO metadata summarization behind Gateway requests.
+1. Keep task-specific prompt wrappers limited to reviewed `bio_` and `meta_` tasks.
+2. Migrate remaining legacy/archive GEO tool users only if they are reactivated.
 3. Keep legacy GEO tool code isolated until it is removed or fully retired.
 4. Add tests proving no active non-Gateway code calls Ollama directly after each migration step.

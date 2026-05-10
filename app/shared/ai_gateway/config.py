@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 from app.shared.ai_gateway.models import AIGatewayConfig
@@ -20,6 +21,61 @@ def load_ai_gateway_config(config_path: str | Path | None = None) -> AIGatewayCo
     if not isinstance(payload, dict):
         return AIGatewayConfig()
     return _config_from_mapping(payload)
+
+
+def save_ai_gateway_config(config: AIGatewayConfig, config_path: str | Path | None = None) -> Path:
+    path = Path(config_path) if config_path is not None else DEFAULT_CONFIG_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = _safe_config_payload(config)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
+def desktop_local_ollama_config(
+    *,
+    enabled: bool,
+    base_url: str,
+    default_model: str,
+    timeout_seconds: int = 20,
+    audit_log_path: str | None = None,
+) -> AIGatewayConfig:
+    defaults = AIGatewayConfig()
+    clean_base_url = base_url.strip()
+    clean_model = default_model.strip()
+    provider_config: dict[str, object] = {
+        "enabled": bool(enabled),
+        "timeout_seconds": timeout_seconds if timeout_seconds > 0 else 20,
+    }
+    if clean_base_url:
+        provider_config["base_url"] = clean_base_url
+    if clean_model:
+        provider_config["default_model"] = clean_model
+    return AIGatewayConfig(
+        allow_network=bool(enabled),
+        allow_external_model=False,
+        allow_sensitive_upload=False,
+        store_raw_prompts=False,
+        store_raw_responses=False,
+        default_provider="ollama" if enabled else "disabled",
+        audit_log_path=audit_log_path or defaults.audit_log_path,
+        allowed_task_prefixes=defaults.allowed_task_prefixes,
+        provider_configs={"ollama": provider_config},
+    )
+
+
+def _safe_config_payload(config: AIGatewayConfig) -> dict[str, object]:
+    payload = asdict(config)
+    payload["allow_external_model"] = False
+    payload["allow_sensitive_upload"] = False
+    payload["store_raw_prompts"] = False
+    payload["store_raw_responses"] = False
+    provider_configs = payload.get("provider_configs")
+    if isinstance(provider_configs, dict):
+        for provider_config in provider_configs.values():
+            if isinstance(provider_config, dict):
+                for secret_key in ("api_key", "token", "secret", "password"):
+                    provider_config.pop(secret_key, None)
+    return payload
 
 
 def _config_from_mapping(payload: dict[str, object]) -> AIGatewayConfig:

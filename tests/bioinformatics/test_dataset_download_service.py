@@ -6,6 +6,7 @@ from pathlib import Path
 from app.bioinformatics.download import dataset_download_service
 from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.search_center.models import UnifiedDatasetCandidate
+from app.shared.ai_gateway.models import AIGatewayResponse
 
 
 def _candidate(source: str = "geo", accession: str = "GSE33630") -> UnifiedDatasetCandidate:
@@ -353,6 +354,43 @@ def test_geo_text_summary_service_uses_local_models_when_available() -> None:
     assert summary.brief_zh == "该数据集比较胶质瘤样本和正常脑组织对照。"
     assert summary.model_status["translate_model_status"] == "available"
     assert summary.model_status["brief_model_status"] == "available"
+
+
+def test_geo_text_summary_service_routes_default_generation_through_ai_gateway() -> None:
+    prompts: list[str] = []
+
+    class _FakeGateway:
+        def generate(self, request):
+            prompts.append(request.prompt)
+            if request.metadata["model"] == "translategemma":
+                content = '{"title_zh":"胶质瘤表达谱","summary_zh":"胶质瘤样本摘要。","overall_design_zh":"肿瘤和正常对照。"}'
+            else:
+                content = '{"brief_zh":"该数据集比较胶质瘤样本和正常脑组织对照。","covered_terms":[],"missing_or_uncertain":[]}'
+            return AIGatewayResponse(
+                request_id=request.request_id,
+                module=request.module,
+                task_type=request.task_type,
+                status="success",
+                content=content,
+                provider_name="ollama",
+                model_name=str(request.metadata["model"]),
+            )
+
+    service = GeoTextSummaryService(ai_gateway=_FakeGateway())  # type: ignore[arg-type]
+    summary = service.summarize(
+        GeoStudyTextInput(
+            accession="GSE33630",
+            title_en="Glioma expression profile",
+            summary_en="Glioma and normal brain samples.",
+            overall_design_en="Tumor versus normal control.",
+        )
+    )
+
+    assert summary.status == "completed"
+    assert summary.title_zh == "胶质瘤表达谱"
+    assert summary.brief_zh == "该数据集比较胶质瘤样本和正常脑组织对照。"
+    assert prompts
+    assert all("用户备注" not in prompt and "project notes" not in prompt.lower() for prompt in prompts)
 
 
 def test_geo_text_summary_service_accepts_latest_translate_model_alias() -> None:
