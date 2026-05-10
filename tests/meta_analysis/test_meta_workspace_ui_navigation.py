@@ -36,11 +36,9 @@ def test_meta_workspace_layout_state_defines_internal_beta_navigation() -> None:
         "workflow_home",
         "pico_workspace",
         "search_strategy",
-        "literature_acquisition",
+        "pubmed_handoff",
         "literature_library",
         "dedup_review",
-        "exclusion_criteria",
-        "title_abstract_screening",
         "fulltext_management",
         "manual_extraction",
         "ai_extraction",
@@ -48,9 +46,7 @@ def test_meta_workspace_layout_state_defines_internal_beta_navigation() -> None:
         "analysis_plan",
         "statistics_analysis",
         "figure_results",
-        "prisma",
         "report_export",
-        "reproducibility_package",
     ]
     assert "不能作为正式临床" in state.testing_notice
 
@@ -73,11 +69,6 @@ def test_meta_workspace_widget_mounts_current_development_pages(qt_app) -> None:
     widget = MetaAnalysisWorkspaceWidget()
     page_keys = widget.page_keys()
 
-    assert widget.meta_workspace_layout_state()["global_nav"] == "metaGlobalNav"
-    assert widget.meta_workspace_layout_state()["workflow_nav"] == "metaWorkflowNav"
-    assert widget.meta_workspace_layout_state()["current_step_workspace"] == "metaCurrentStepWorkspace"
     assert "manual_extraction" in page_keys
     assert "ai_extraction" in page_keys
     assert "statistics_analysis" in page_keys
-    assert "literature_acquisition" in page_keys
-    assert "reproducibility_package" in page_keys

@@ -72,13 +72,13 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
         "title_zh": "检索策略",
         "route_key": "search_strategy",
         "primary_action_zh": "生成检索策略",
-        "next_action_zh": "进入文献获取",
-        "next_step_id": "literature_acquisition",
+        "next_action_zh": "确认 PubMed 检索式",
+        "next_step_id": "pubmed_handoff",
     },
     {
-        "step_id": "literature_acquisition",
-        "title_zh": "文献获取",
-        "route_key": "literature_acquisition",
+        "step_id": "pubmed_handoff",
+        "title_zh": "PubMed 检索结果确认 / 文献导入",
+        "route_key": "pubmed_handoff",
         "primary_action_zh": "导入选中文献",
         "next_action_zh": "查看文献库",
         "next_step_id": "literature_library",
@@ -96,28 +96,12 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
         "title_zh": "去重复核",
         "route_key": "dedup_review",
         "primary_action_zh": "查看重复组",
-        "next_action_zh": "配置排除标准",
-        "next_step_id": "exclusion_criteria",
-    },
-    {
-        "step_id": "exclusion_criteria",
-        "title_zh": "排除标准",
-        "route_key": "exclusion_criteria",
-        "primary_action_zh": "查看排除理由",
-        "next_action_zh": "进入标题摘要筛选",
-        "next_step_id": "title_abstract_screening",
-    },
-    {
-        "step_id": "title_abstract_screening",
-        "title_zh": "标题摘要筛选",
-        "route_key": "title_abstract_screening",
-        "primary_action_zh": "查看筛选占位",
-        "next_action_zh": "进入全文管理",
+        "next_action_zh": "人工确认后进入全文管理",
         "next_step_id": "fulltext_management",
     },
     {
         "step_id": "fulltext_management",
-        "title_zh": "全文管理与全文筛选",
+        "title_zh": "全文管理",
         "route_key": "fulltext_management",
         "primary_action_zh": "查看全文状态",
         "next_action_zh": "进入数据提取",
@@ -168,15 +152,7 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
         "title_zh": "图表结果",
         "route_key": "figure_results",
         "primary_action_zh": "查看图表占位",
-        "next_action_zh": "进入 PRISMA",
-        "next_step_id": "prisma",
-    },
-    {
-        "step_id": "prisma",
-        "title_zh": "PRISMA",
-        "route_key": "prisma",
-        "primary_action_zh": "查看 PRISMA 占位",
-        "next_action_zh": "进入报告导出",
+        "next_action_zh": "等待图表输出接入",
         "next_step_id": "report_export",
     },
     {
@@ -184,15 +160,7 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
         "title_zh": "报告导出",
         "route_key": "report_export",
         "primary_action_zh": "查看报告占位",
-        "next_action_zh": "进入可复现项目包",
-        "next_step_id": "reproducibility_package",
-    },
-    {
-        "step_id": "reproducibility_package",
-        "title_zh": "可复现项目包",
-        "route_key": "reproducibility_package",
-        "primary_action_zh": "查看导出占位",
-        "next_action_zh": "等待可复现包接入",
+        "next_action_zh": "等待正式报告接入",
         "next_step_id": "",
     },
 )
@@ -232,16 +200,12 @@ def _step_state(project_dir: Path, order: int, definition: dict[str, str]) -> Me
         return _pico_state(project_dir, order, definition)
     if step_id == "search_strategy":
         return _search_strategy_state(project_dir, order, definition)
-    if step_id == "literature_acquisition":
+    if step_id == "pubmed_handoff":
         return _pubmed_handoff_state(project_dir, order, definition)
     if step_id == "literature_library":
         return _literature_library_state(project_dir, order, definition)
     if step_id == "dedup_review":
         return _dedup_state(project_dir, order, definition)
-    if step_id == "exclusion_criteria":
-        return _placeholder_state(project_dir, order, definition, "排除标准页面将在 UI-07 接入；本轮不执行筛选")
-    if step_id == "title_abstract_screening":
-        return _placeholder_state(project_dir, order, definition, "标题摘要筛选将在 UI-08 接入；本轮不创建筛选决定")
     if step_id == "fulltext_management":
         return _fulltext_state(project_dir, order, definition)
     if step_id == "manual_extraction":
@@ -256,12 +220,8 @@ def _step_state(project_dir: Path, order: int, definition: dict[str, str]) -> Me
         return _statistics_placeholder_state(project_dir, order, definition)
     if step_id == "figure_results":
         return _placeholder_state(project_dir, order, definition, "图表输出将在 M18 接入")
-    if step_id == "prisma":
-        return _placeholder_state(project_dir, order, definition, "PRISMA 引擎将在 UI-16 接入；数字必须来自真实流程记录")
     if step_id == "report_export":
         return _placeholder_state(project_dir, order, definition, "正式报告将在 M20 接入")
-    if step_id == "reproducibility_package":
-        return _placeholder_state(project_dir, order, definition, "可复现项目包将在 UI-18 接入")
     return _base_state(project_dir, order, definition, status="待开发", artifact_summary="暂不可用")
 
 

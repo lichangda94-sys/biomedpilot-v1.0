@@ -20,29 +20,25 @@ def step_by_id(project_dir: Path) -> dict[str, object]:
     return {step.step_id: step for step in state.steps}
 
 
-def test_meta_workflow_integration_state_has_eighteen_chinese_steps(tmp_path: Path) -> None:
+def test_meta_workflow_integration_state_has_fourteen_chinese_steps(tmp_path: Path) -> None:
     state = meta_workflow_integration_state_from_project(tmp_path)
 
-    assert state.step_count == 18
+    assert state.step_count == 14
     assert [step.title_zh for step in state.steps] == [
         "Meta 项目首页",
         "中文研究问题 / PICO",
         "检索策略",
-        "文献获取",
+        "PubMed 检索结果确认 / 文献导入",
         "文献库",
         "去重复核",
-        "排除标准",
-        "标题摘要筛选",
-        "全文管理与全文筛选",
+        "全文管理",
         "数据提取",
         "AI 辅助提取",
         "质量评价",
         "分析计划",
         "统计分析",
         "图表结果",
-        "PRISMA",
         "报告导出",
-        "可复现项目包",
     ]
     for step in state.steps:
         assert step.status
@@ -114,8 +110,8 @@ def test_literature_pubmed_dedup_extraction_quality_and_analysis_plan_summaries(
 
     steps = step_by_id(tmp_path)
 
-    assert "previews=1" in steps["literature_acquisition"].artifact_summary
-    assert "selected=1" in steps["literature_acquisition"].artifact_summary
+    assert "previews=1" in steps["pubmed_handoff"].artifact_summary
+    assert "selected=1" in steps["pubmed_handoff"].artifact_summary
     assert "records=1" in steps["literature_library"].artifact_summary
     assert "duplicate_groups=1" in steps["dedup_review"].artifact_summary
     assert "fulltext_records=1" in steps["fulltext_management"].artifact_summary
@@ -136,9 +132,7 @@ def test_placeholder_pages_do_not_generate_statistics_figures_reports_or_prisma(
     assert steps["statistics_analysis"].safety_flags["runs_statistics"] is False
     assert "不自动运行统计" in steps["statistics_analysis"].artifact_summary
     assert steps["figure_results"].placeholder is True
-    assert steps["prisma"].placeholder is True
     assert steps["report_export"].placeholder is True
-    assert steps["reproducibility_package"].placeholder is True
     assert not (tmp_path / "analysis" / "runs").exists()
     assert not (tmp_path / "analysis" / "results").exists()
     assert not (tmp_path / "figures").exists()
