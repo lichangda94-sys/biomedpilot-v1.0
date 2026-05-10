@@ -171,3 +171,28 @@ python3 scripts/package_app.py --output-dir /Users/changdali/Desktop --app-name 
   - Meta Analysis uses `meta_` task types.
   - Direct Ollama calls remain isolated to `app/shared/ai_gateway/providers/ollama_provider.py`.
 - Rebuild `/Users/changdali/Desktop/BioMedPilot.app` only from `stable/mainline` or an explicitly approved release branch.
+
+## 8. Consolidation Log
+
+### Shared Vocabulary Round 1
+
+Completed on `dev/shared-vocabulary`.
+
+- `stable/mainline` has incorporated the branch consolidation plan originally created as `a44144b`.
+- `dev/shared-vocabulary`, `dev/meta-analysis`, and `dev/bioinformatics` were fast-forwarded to `stable/mainline`.
+- `dev/shared-vocabulary` cherry-picked `b778543 docs(shared): isolate medical vocabulary worktree`.
+- `codex/vocab-line-stabilization` is now an archive candidate, but it was not deleted in this round.
+
+Validation passed:
+
+```bash
+python3 -m pytest tests/shared -q
+python3 -m compileall -q app tests scripts
+QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test
+python3 scripts/run_tests.py
+```
+
+Result:
+
+- `tests/shared`: 154 passed
+- `scripts/run_tests.py`: 978 passed
