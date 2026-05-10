@@ -25,7 +25,8 @@ Findings:
 - No `qwen` references were found.
 - No `/api/chat` references were found.
 - Before AI-2B, no exact `localhost:11434` references were found; the AI Gateway `OllamaProvider` now uses `http://localhost:11434` as its disabled-by-default base URL, while legacy active HTTP callers use `http://127.0.0.1:11434`.
-- Existing real Ollama paths are split between subprocess-based shared query intelligence and HTTP-based Bioinformatics GEO metadata summarization.
+- AI-2C migrated shared query intelligence off the direct `ollama run` subprocess path and into AI Gateway.
+- Remaining direct Ollama paths are the formal AI Gateway `OllamaProvider`, Bioinformatics GEO metadata summarization, and legacy/archive GEO tool files.
 - `app/shared/ai_gateway/providers/ollama_provider.py` is now the reviewed AI Gateway Ollama call point. It remains disabled unless explicitly enabled in AI Gateway provider config.
 - `app/meta_analysis/` currently has no direct Ollama call; Meta Analysis only consumes shared query-intelligence drafts with local model disabled in active paths.
 
@@ -33,9 +34,9 @@ Findings:
 
 | Area | File | Function / class | Current status | Invocation |
 | --- | --- | --- | --- | --- |
-| shared | `app/shared/query_intelligence/local_model_bridge.py` | `detect_local_model_status()`, `describe_local_model_components()`, `detect_ollama_status()` | active status detection | `shutil.which("ollama")` only |
-| shared | `app/shared/query_intelligence/local_model_bridge.py` | `call_ollama_json()` | active direct model call when explicitly enabled | `subprocess.run(["ollama", "run", model], input=prompt, ...)` |
-| shared | `app/shared/query_intelligence/local_model_bridge.py` | `generate_search_translation_candidates()` | active wrapper around `call_ollama_json()` | builds prompt and requires JSON |
+| shared | `app/shared/query_intelligence/local_model_bridge.py` | `detect_local_model_status()`, `describe_local_model_components()`, `detect_ollama_status()` | gateway-managed status reporting | no direct command or HTTP call |
+| shared | `app/shared/query_intelligence/local_model_bridge.py` | `call_ai_gateway_json()` | active Gateway caller when explicitly enabled and module/task are provided | `AIGateway.generate()` |
+| shared | `app/shared/query_intelligence/local_model_bridge.py` | `generate_search_translation_candidates()` | active wrapper around AI Gateway response parsing | builds prompt and requires JSON |
 | shared AI Gateway | `app/shared/ai_gateway/providers/ollama_provider.py` | `OllamaProvider.detect_ollama_status()`, `OllamaProvider.generate()` | formal Gateway provider, disabled by default | HTTP GET `/api/tags`, POST `/api/generate` against `http://localhost:11434` only when enabled |
 | shared | `app/shared/query_intelligence/query_intelligence_service.py` | `analyze_medical_question()` | active status reporting only | detects Ollama availability, no model call |
 | shared | `app/shared/query_intelligence/query_intelligence_service.py` | `build_search_translation_draft()` | active conditional caller | calls shared local model bridge only when `use_local_model=True` and `LocalModelConfig.enabled=True` |
@@ -56,22 +57,21 @@ Findings:
 Tests covering existing behavior:
 
 - `tests/shared/test_query_intelligence_service.py`
-  - covers Ollama unavailable fallback, default not-called behavior, successful mocked JSON, invalid JSON fallback, disease guard filtering, and bio/meta context filtering.
-  - monkeypatches `shutil.which` and `subprocess.run`; it does not require a real Ollama process.
+  - covers Gateway fallback, default not-called behavior, successful mocked Gateway JSON, invalid JSON fallback, disease guard filtering, and bio/meta context filtering.
+  - uses mocked AI Gateway providers; it does not require a real Ollama process.
 - `tests/bioinformatics/test_dataset_download_service.py`
   - covers `GeoTextSummaryService` with injected generators, model availability aliases, missing model fallback, empty brief fallback, and local-model-unavailable fallback.
   - uses dependency injection; it does not require real HTTP calls.
 - UI tests assert local model status text, but do not call Ollama.
 - `tests/shared/test_ai_gateway_ollama_migration_audit.py`
   - records the complete current direct-call inventory.
-  - asserts active direct Ollama calls remain limited to shared query intelligence, AI Gateway `OllamaProvider`, and Bioinformatics GEO metadata summarization.
+  - asserts active direct Ollama calls remain limited to AI Gateway `OllamaProvider` and Bioinformatics GEO metadata summarization.
   - asserts Meta Analysis contains no direct Ollama calls and AI Gateway contains no direct call outside the reviewed provider.
 
 ## Active Isolation Guard
 
-With AI-2B, active direct Ollama-capable code must remain limited to:
+With AI-2C, active direct Ollama-capable code must remain limited to:
 
-- `app/shared/query_intelligence/local_model_bridge.py`
 - `app/shared/ai_gateway/providers/ollama_provider.py`
 - `app/bioinformatics/download/geo_text_summary_service.py`
 - `app/bioinformatics/workflow_pages.py`
@@ -97,12 +97,13 @@ Shared query intelligence defaults to safe local rules:
 - `build_search_translation_draft(..., use_local_model=False)` by default
 - `allow_network` is accepted by `build_search_translation_draft()` and recorded in audit, but it is not the switch that gates the local model call.
 
-An Ollama subprocess call only occurs when both are true:
+An AI Gateway local-model call only occurs when all are true:
 
 - caller passes `use_local_model=True`
 - caller passes or resolves `LocalModelConfig(enabled=True)`
+- caller explicitly provides AI Gateway `module` and `task_type`
 
-The subprocess path uses `ollama run <model>` with prompt on stdin. It does not use `base_url`, `/api/generate`, or `/api/chat`.
+The shared path no longer invokes `ollama run`, `/api/generate`, or `/api/chat` directly. It sends an `AIGatewayRequest` and relies on Gateway module/privacy/provider policy.
 
 ### Bioinformatics GEO metadata summarization
 
@@ -123,31 +124,27 @@ Meta Analysis currently has no direct Ollama call. It consumes shared query inte
 
 ### Direct AI Gateway bypass
 
-Yes. All existing Ollama-capable paths bypass `app/shared/ai_gateway/` because they predate Stage AI-1:
+Partially. AI-2C removes the shared query-intelligence bypass, but Bioinformatics GEO metadata summarization and legacy GEO code still predate Gateway:
 
-- shared query intelligence calls `ollama run` directly when enabled
 - Bioinformatics GEO metadata summarization calls the local HTTP endpoint directly
 - legacy GEO tool calls the local HTTP endpoint directly
 
-This is expected for AI-2A but should not continue after an Ollama provider is introduced.
-
 ### Raw prompt storage
 
-No active path intentionally persists raw prompts. Prompts are built in memory and sent to the subprocess or local HTTP endpoint.
+No active shared query-intelligence path intentionally persists raw prompts. Prompts are built in memory and sent through AI Gateway when explicitly enabled.
 
 ### Raw response storage
 
-Partially unsafe:
+Improved in AI-2C:
 
-- shared query intelligence stores model raw output in `LocalModelCallResult.raw_output`, `LocalModelSearchTranslation.raw_output`, and `SearchTranslationDraft.audit["local_model"]["raw_output"]`.
+- shared query intelligence no longer writes raw model output into `SearchTranslationDraft.audit["local_model"]`.
+- shared query intelligence now records local-model status, provider, fallback flag, output length, output hash, and warnings.
 - Bioinformatics `GeoTextSummaryService` does not include raw model responses in `GeoStudyTextSummary.to_dict()`.
 - legacy `GeoTextProcessor` returns parsed text and raises exceptions, but does not define a redacted audit boundary.
 
-The shared raw-output audit field should be removed, redacted, or moved behind an explicit `store_raw_responses` policy before routing through AI Gateway.
-
 ### Sensitive upload control
 
-No existing Ollama caller has a sensitive-content gate equivalent to `AIGatewayRequest.contains_sensitive_content` plus `AIGatewayConfig.allow_sensitive_upload`.
+Shared query intelligence now goes through AI Gateway policy when local model use is explicitly enabled. Bioinformatics GEO metadata summarization and legacy GEO code still do not have an AI Gateway sensitive-content gate.
 
 Current prompts may include:
 
@@ -159,12 +156,12 @@ Because the current endpoint is local Ollama, this is lower risk than external u
 
 ### Network / local endpoint control
 
-Mixed:
+Mixed, with shared query intelligence improved:
 
-- shared query intelligence uses `ollama run`, so no HTTP base URL is configured.
+- shared query intelligence uses AI Gateway and no longer owns a direct Ollama command or HTTP endpoint.
 - Bioinformatics GEO metadata summarization uses `http://127.0.0.1:11434`.
-- `allow_network=False` is passed in several query-intelligence calls but is not a hard gate for the subprocess local model path.
-- no single config controls provider mode, base URL, model names, timeout, enabled flag, and raw storage policy.
+- `allow_network=False` is still recorded by shared query intelligence for draft provenance, while AI Gateway privacy policy governs provider calls.
+- Bioinformatics GEO summarization still lacks a single Gateway config for provider mode, base URL, model names, timeout, enabled flag, and raw storage policy.
 
 ### Module boundary
 
@@ -173,19 +170,19 @@ Mostly safe in final outputs, with one audit caveat:
 - Bioinformatics final `SearchTranslationDraft` clears `pubmed_query_candidates`.
 - Meta Analysis final `SearchTranslationDraft` clears `geo_query_candidates` and excludes TCGA/GTEx/GEO context fields.
 - `app/shared/search_context.py` adds an additional context filter for Bioinformatics and Meta Analysis.
-- The shared local-model prompt asks for both PubMed and GEO candidates regardless of `target_context`, then filters later. If raw model output remains in audit, out-of-context candidates may still be visible in `audit["local_model"]["raw_output"]`.
+- The shared local-model prompt asks for both PubMed and GEO candidates regardless of `target_context`, then filters later. AI-2C removes raw output from audit so out-of-context raw model candidates are not retained there.
 
 ### Fallback behavior
 
-Shared subprocess path:
+Shared AI Gateway path:
 
-- Ollama command missing: returns unavailable / registry fallback.
-- model missing or subprocess nonzero: returns `called_failed_fallback_registry`.
-- timeout: returns `called_failed_fallback_registry`.
+- missing Gateway module/task type: returns registry fallback without calling a provider.
+- disabled config: returns `disabled_by_config`.
+- provider unavailable, model missing, timeout, or provider error: returns `called_failed_fallback_registry`.
 - invalid JSON: returns `invalid_model_output_fallback_registry`.
 - JSON root not object: returns `invalid_model_output_fallback_registry`.
 - schema mismatch: returns `invalid_model_output_fallback_registry`.
-- empty stdout: treated as invalid JSON and falls back.
+- empty content: Gateway provider fallback, then shared registry fallback.
 
 Bioinformatics HTTP summary path:
 
@@ -207,8 +204,7 @@ Legacy HTTP path:
 Good candidates for `OllamaProvider`:
 
 - `LocalModelConfig` defaults: `enabled`, `medical_model`, `translator_model`, `timeout_seconds`, `require_json`, fallback semantics.
-- `detect_ollama_status()` and command detection from `local_model_bridge.py`.
-- subprocess error mapping from `call_ollama_json()`.
+- AI-2C Gateway response mapping from `local_model_bridge.py`.
 - JSON-object validation and schema checks from `local_model_bridge.py`.
 - `/api/tags` model availability logic from `GeoTextSummaryService`.
 - `/api/generate` request shape from `GeoTextSummaryService`:
@@ -227,68 +223,45 @@ Pieces that should not be reused unchanged:
 
 ## Migration Plan
 
-1. Add a Gateway `OllamaProvider` behind disabled-by-default config.
-2. Keep AI Gateway default provider as `disabled`; do not change Stage AI-1 default behavior.
-3. Define task-specific request types before enabling any call:
+Completed:
+
+1. Added a Gateway `OllamaProvider` behind disabled-by-default config.
+2. Kept AI Gateway default provider as `disabled`.
+3. Routed shared query intelligence local-model calls through `AIGateway.generate()`.
+4. Removed shared query-intelligence raw model output from audit payloads.
+5. Updated direct-call isolation tests so shared query intelligence is no longer an active direct Ollama caller.
+
+Remaining:
+
+1. Define task-specific request wrappers before enabling production callers:
    - `bio_query_help`
    - `bio_geo_metadata_summary`
    - `meta_query_help`
    - future tasks only after explicit allowlist review
-4. Use AI Gateway module policy as the first boundary:
+2. Use AI Gateway module policy as the first boundary:
    - Bioinformatics calls only `bio_` tasks.
    - Meta Analysis calls only `meta_` tasks.
-5. Move shared local model calls behind Gateway request metadata:
-   - no raw prompt/response logging by default
-   - record prompt/response hash and lengths only
-   - map current statuses into `AIGatewayResponse.status`
-6. Decide provider transport:
-   - prefer `ollama run` for local-only no-HTTP mode, or
-   - support local loopback HTTP only with explicit provider config and audit labeling
-7. Wrap `GeoTextSummaryService` with a Gateway adapter instead of calling `/api/generate` directly.
-8. Keep legacy files untouched until their callers are confirmed unused; if retained, mark them as legacy/direct and exclude from new UI paths.
-9. Add migration tests that prove no active `app/` code calls `ollama run` or `/api/generate` except the provider implementation and legacy excluded paths.
+3. Wrap `GeoTextSummaryService` with a Gateway adapter instead of calling `/api/generate` directly.
+4. Keep legacy files untouched until their callers are confirmed unused; if retained, mark them as legacy/direct and exclude from new UI paths.
+5. Add migration tests after each step proving no active `app/` code calls Ollama directly except reviewed provider or legacy-excluded paths.
 
 ## Risks
 
-- Two Ollama systems could coexist if `OllamaProvider` is added without migrating `local_model_bridge.py` and `GeoTextSummaryService`.
-- Shared query intelligence currently can preserve raw model responses in audit payloads.
-- Existing `allow_network` arguments can look like policy enforcement but do not govern the subprocess path.
+- Two Ollama systems still coexist because Bioinformatics GEO metadata summarization is not migrated yet.
+- Existing shared `allow_network` arguments are provenance metadata; AI Gateway policy is the enforcement point for provider calls.
 - Local HTTP endpoint usage may be mistaken for "no network"; it still sends full prompts to a service over HTTP.
-- Bioinformatics and Meta Analysis final outputs are filtered, but raw local-model output can contain cross-module candidates before filtering.
+- Bioinformatics and Meta Analysis final outputs are filtered, but shared prompt templates can still request both PubMed and GEO candidate fields before filtering.
 - UI-level optional GEO summarization can send GEO metadata to Ollama without an AI Gateway sensitive-content decision.
 - Legacy code raises exceptions rather than using the new normalized `AIGatewayResponse` contract.
 
 ## Recommended Next Stage
 
-Stage AI-2B should implement a disabled-by-default `OllamaProvider` inside `app/shared/ai_gateway/providers/` without changing callers.
+Stage AI-2D should migrate Bioinformatics GEO metadata summarization to AI Gateway without changing default-off behavior.
 
-Recommended design:
+Recommended scope:
 
-- Provider name: `ollama`
-- Default status: unavailable unless config explicitly enables it.
-- Transport: start with subprocess `ollama run` to avoid introducing a local HTTP base URL into the first provider, or add local HTTP as an explicit config field with audit labeling.
-- Config fields:
-  - `enabled`
-  - `transport`
-  - `base_url`
-  - `model`
-  - `timeout_seconds`
-  - `require_json`
-  - `temperature`
-  - `keep_alive`
-- Safety:
-  - no external model
-  - no API key
-  - no raw prompt/response storage by default
-  - explicit sensitive-content blocking via Gateway privacy policy
-  - task-specific prompt templates, not one shared all-context prompt
-- Tests:
-  - default disabled behavior remains unchanged
-  - command missing fallback
-  - model failure fallback
-  - timeout fallback
-  - invalid JSON fallback
-  - empty response fallback
-  - audit log redaction
-  - Bioinformatics cannot call `meta_` tasks
-  - Meta Analysis cannot call `bio_` tasks
+- Keep default provider disabled.
+- Preserve existing GEO summary UI fallback behavior.
+- Route Bioinformatics GEO summary calls through `AIGateway.generate()` with a `bio_` task type.
+- Keep Meta Analysis free of GEO/TCGA/GTEx imports.
+- Continue to avoid raw prompt/response audit storage.

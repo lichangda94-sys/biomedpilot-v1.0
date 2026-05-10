@@ -4,7 +4,7 @@
 
 `OllamaProvider` is the first real provider implementation inside `app/shared/ai_gateway/`. It is a local-only provider for future BioMedPilot AI features that need a unified gateway boundary before calling an Ollama model.
 
-This stage only adds the provider. It does not migrate existing shared query intelligence calls or Bioinformatics GEO summary calls, and it does not change Bioinformatics or Meta Analysis workflows.
+AI-2B added the provider. AI-2C routes shared query intelligence local-model calls through the provider boundary. Bioinformatics GEO summary calls remain intentionally unchanged until a later stage.
 
 ## Default State
 
@@ -91,22 +91,25 @@ Sensitive input must be marked on `AIGatewayRequest.contains_sensitive_content`.
 
 ## Relationship To Existing Calls
 
-Existing direct Ollama-capable paths remain unchanged in this stage:
+AI-2C migrated shared query intelligence to call local models through AI Gateway:
 
 - `app/shared/query_intelligence/local_model_bridge.py`
+
+This path now requires explicit `gateway_module` and `gateway_task_type` from the caller before it can call a provider. Its audit stores provider/status/fallback/warnings plus output length and hash, not raw model output.
+
+The remaining direct Ollama-capable paths are intentionally unchanged until later stages:
+
 - `app/bioinformatics/download/geo_text_summary_service.py`
 - `app/bioinformatics/workflow_pages.py`
 - legacy Bioinformatics GEO tool files
 
-They are intentionally not migrated in AI-2B. The migration audit test now allows `app/shared/ai_gateway/providers/ollama_provider.py` as the only formal AI Gateway Ollama call point while still blocking direct Meta Analysis calls and unreviewed new direct callers.
+The migration audit test allows `app/shared/ai_gateway/providers/ollama_provider.py` as the only formal shared Gateway Ollama call point while still blocking direct Meta Analysis calls and unreviewed new direct callers.
 
 ## Next Migration Stage
 
 Recommended next stage:
 
 1. Add task-specific prompt wrappers for `bio_query_help`, `bio_geo_metadata_summary`, and `meta_query_help`.
-2. Route shared query intelligence through `AIGateway.generate()` while preserving existing default-off behavior.
-3. Remove raw model output from shared query-intelligence audit payloads.
-4. Wrap Bioinformatics GEO metadata summarization behind Gateway requests.
-5. Keep legacy GEO tool code isolated until it is removed or fully retired.
-6. Add tests proving no active non-Gateway code calls Ollama directly after each migration step.
+2. Wrap Bioinformatics GEO metadata summarization behind Gateway requests.
+3. Keep legacy GEO tool code isolated until it is removed or fully retired.
+4. Add tests proving no active non-Gateway code calls Ollama directly after each migration step.

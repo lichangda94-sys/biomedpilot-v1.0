@@ -17,6 +17,7 @@ class QueryIntelligenceInput:
 class LocalModelConfig:
     enabled: bool = False
     provider: str = "ollama"
+    base_url: str = ""
     translator_model: str = "translategemma"
     medical_model: str = "medgemma:4b"
     timeout_seconds: int = 20
@@ -49,6 +50,11 @@ class LocalModelSearchTranslation:
     candidate_geo_queries: list[str]
     rejected_terms: list[str]
     warnings: list[str]
+    provider_name: str = ""
+    gateway_status: str = ""
+    fallback_used: bool = False
+    output_char_count: int = 0
+    output_sha256: str = ""
 
 
 @dataclass(frozen=True)

@@ -17,7 +17,6 @@ DIRECT_OLLAMA_PATTERNS = (
 )
 
 EXPECTED_DIRECT_OLLAMA_FILES = {
-    "app/shared/query_intelligence/local_model_bridge.py",
     "app/shared/ai_gateway/providers/ollama_provider.py",
     "app/bioinformatics/download/geo_text_summary_service.py",
     "app/bioinformatics/workflow_pages.py",
@@ -28,7 +27,6 @@ EXPECTED_DIRECT_OLLAMA_FILES = {
 }
 
 ACTIVE_APP_DIRECT_OLLAMA_FILES = {
-    "app/shared/query_intelligence/local_model_bridge.py",
     "app/shared/ai_gateway/providers/ollama_provider.py",
     "app/bioinformatics/download/geo_text_summary_service.py",
     "app/bioinformatics/workflow_pages.py",

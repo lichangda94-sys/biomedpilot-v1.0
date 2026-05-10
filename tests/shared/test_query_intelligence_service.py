@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 
+from app.shared.ai_gateway import AIGateway, AIGatewayConfig
+from app.shared.ai_gateway.models import AIGatewayRequest, AIGatewayResponse, AIProviderStatus
+from app.shared.ai_gateway.provider_registry import AIProviderRegistry
+from app.shared.ai_gateway.providers.base import AIProvider
 from app.shared.query_intelligence import (
     LocalModelConfig,
     QueryIntelligenceInput,
     analyze_medical_question,
     build_search_translation_draft,
 )
-from app.shared.query_intelligence import local_model_bridge
 
 
 def test_chinese_question_maps_to_shared_medical_concepts() -> None:
@@ -32,9 +34,7 @@ def test_chinese_question_maps_to_shared_medical_concepts() -> None:
     assert "Thyroid Neoplasms" in result.mesh_terms
 
 
-def test_ollama_unavailable_falls_back_to_registry(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: None)
-
+def test_ollama_unavailable_falls_back_to_registry() -> None:
     result = analyze_medical_question(
         QueryIntelligenceInput("肥胖与甲状腺癌发病的关系", target_context="meta_analysis")
     )
@@ -44,9 +44,7 @@ def test_ollama_unavailable_falls_back_to_registry(monkeypatch) -> None:
     assert "thyroid cancer" in result.en_terms
 
 
-def test_ollama_unavailable_fallback_registry(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: None)
-
+def test_local_model_missing_gateway_context_fallback_registry() -> None:
     draft = build_search_translation_draft(
         "低分化食管鳞癌相关数据集",
         config=LocalModelConfig(enabled=True),
@@ -54,26 +52,23 @@ def test_ollama_unavailable_fallback_registry(monkeypatch) -> None:
     )
 
     assert draft.local_model_status == "fallback_registry_only"
+    assert draft.audit["local_model"]["status"] == "missing_gateway_context_fallback_registry"
     assert any(term in draft.main_concepts_en for term in ["esophageal squamous cell carcinoma", "ESCC"])
     assert draft.geo_query_candidates
 
 
-def test_ollama_available_not_called_by_default(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
-
-    def fail_run(*_args, **_kwargs):  # pragma: no cover - should never run
-        raise AssertionError("subprocess.run should not be called when config disables local model")
-
-    monkeypatch.setattr(local_model_bridge.subprocess, "run", fail_run)
-
+def test_ollama_available_not_called_by_default() -> None:
+    provider = _GatewayJSONProvider({})
     draft = build_search_translation_draft(
         "低分化食管鳞癌相关数据集",
         config=LocalModelConfig(enabled=False),
+        ai_gateway=_gateway_with_provider(provider),
     )
 
-    assert draft.local_model_status in {"available_not_called", "disabled_by_config"}
+    assert draft.local_model_status in {"fallback_registry_only", "disabled_by_config"}
     assert draft.local_model_used is False
     assert "esophageal squamous cell carcinoma" in draft.main_concepts_en
+    assert provider.requests == []
 
 
 def test_local_model_defaults_use_installed_translate_and_medical_names() -> None:
@@ -83,8 +78,7 @@ def test_local_model_defaults_use_installed_translate_and_medical_names() -> Non
     assert config.medical_model == "medgemma:4b"
 
 
-def test_ollama_called_success_json(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+def test_ollama_called_success_json() -> None:
     payload = {
         "main_concepts_zh": ["食管鳞癌"],
         "main_concepts_en": ["esophageal squamous cell carcinoma", "ESCC"],
@@ -96,36 +90,38 @@ def test_ollama_called_success_json(monkeypatch) -> None:
         "uncertainty": [],
         "notes": [],
     }
-    monkeypatch.setattr(
-        local_model_bridge.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
-    )
+    provider = _GatewayJSONProvider(payload)
 
     draft = build_search_translation_draft(
         "低分化食管鳞癌相关数据集",
-        config=LocalModelConfig(enabled=True),
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
         use_local_model=True,
+        gateway_module="bioinformatics",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
     )
 
     assert draft.local_model_status == "called_success"
+    assert provider.requests[0].module == "bioinformatics"
+    assert provider.requests[0].task_type == "bio_zh_topic_to_dataset_queries"
     assert "esophageal squamous cell carcinoma" in draft.main_concepts_en or "ESCC" in draft.main_concepts_en
     assert "poorly differentiated" in draft.modifier_terms_en
     assert draft.geo_query_candidates
+    assert "raw_output" not in draft.audit["local_model"]
+    assert draft.audit["local_model"]["output_char_count"] > 0
+    assert draft.audit["local_model"]["output_sha256"]
 
 
-def test_ollama_invalid_json_fallback(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
-    monkeypatch.setattr(
-        local_model_bridge.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout="not json", stderr=""),
-    )
+def test_ollama_invalid_json_fallback() -> None:
+    provider = _GatewayTextProvider("not json")
 
     draft = build_search_translation_draft(
         "低分化食管鳞癌相关数据集",
-        config=LocalModelConfig(enabled=True),
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
         use_local_model=True,
+        gateway_module="bioinformatics",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
     )
 
     assert draft.local_model_status == "invalid_model_output_fallback_registry"
@@ -133,8 +129,7 @@ def test_ollama_invalid_json_fallback(monkeypatch) -> None:
     assert draft.geo_query_candidates
 
 
-def test_disease_guard_filters_thyroid_from_escc(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+def test_disease_guard_filters_thyroid_from_escc() -> None:
     payload = {
         "main_concepts_zh": ["食管鳞癌"],
         "main_concepts_en": ["esophageal squamous cell carcinoma", "thyroid cancer", "PTC", "TCGA-THCA"],
@@ -146,16 +141,15 @@ def test_disease_guard_filters_thyroid_from_escc(monkeypatch) -> None:
         "uncertainty": [],
         "notes": [],
     }
-    monkeypatch.setattr(
-        local_model_bridge.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
-    )
+    provider = _GatewayJSONProvider(payload)
 
     draft = build_search_translation_draft(
         "低分化食管鳞癌相关数据集",
-        config=LocalModelConfig(enabled=True),
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
         use_local_model=True,
+        gateway_module="bioinformatics",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
     )
     final_text = " ".join([*draft.main_concepts_en, *draft.pubmed_query_candidates, *draft.geo_query_candidates])
 
@@ -167,8 +161,7 @@ def test_disease_guard_filters_thyroid_from_escc(monkeypatch) -> None:
     assert "TCGA-THCA" not in final_text
 
 
-def test_disease_guard_filters_escc_from_thyroid(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+def test_disease_guard_filters_escc_from_thyroid() -> None:
     payload = {
         "main_concepts_zh": ["甲状腺癌"],
         "main_concepts_en": ["thyroid cancer", "ESCC", "esophageal cancer"],
@@ -180,16 +173,15 @@ def test_disease_guard_filters_escc_from_thyroid(monkeypatch) -> None:
         "uncertainty": [],
         "notes": [],
     }
-    monkeypatch.setattr(
-        local_model_bridge.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
-    )
+    provider = _GatewayJSONProvider(payload)
 
     draft = build_search_translation_draft(
         "低分化甲状腺癌相关数据集",
-        config=LocalModelConfig(enabled=True),
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
         use_local_model=True,
+        gateway_module="bioinformatics",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
     )
     final_text = " ".join([*draft.main_concepts_en, *draft.pubmed_query_candidates, *draft.geo_query_candidates])
 
@@ -288,8 +280,7 @@ def test_sqlite_optional_index_preserves_bio_and_meta_boundaries() -> None:
     assert "neurodegenerative disease" in " ".join([*meta.main_concepts_en, *meta.disease_terms_en]).lower()
 
 
-def test_unknown_term_local_model_candidates_do_not_enter_final_query(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+def test_unknown_term_local_model_candidates_do_not_enter_final_query() -> None:
     payload = {
         "main_concepts_zh": ["未知中文疾病"],
         "main_concepts_en": ["glioma", "imaginary disease"],
@@ -302,18 +293,17 @@ def test_unknown_term_local_model_candidates_do_not_enter_final_query(monkeypatc
         "uncertainty": [],
         "notes": [],
     }
-    monkeypatch.setattr(
-        local_model_bridge.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
-    )
+    provider = _GatewayJSONProvider(payload)
 
     draft = build_search_translation_draft(
         "未知中文疾病",
         target_context="bioinformatics",
         target_database="geo",
-        config=LocalModelConfig(enabled=True),
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
         use_local_model=True,
+        gateway_module="bioinformatics",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
     )
 
     assert draft.local_model_status == "called_success"
@@ -326,8 +316,7 @@ def test_unknown_term_local_model_candidates_do_not_enter_final_query(monkeypatc
     assert draft.audit["local_model"]["candidate_policy"] == "unknown_term_candidates_only_not_final_query"
 
 
-def test_unknown_term_meta_candidates_keep_bio_fields_filtered(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: "/usr/local/bin/ollama")
+def test_unknown_term_meta_candidates_keep_bio_fields_filtered() -> None:
     payload = {
         "main_concepts_zh": ["未知中文疾病"],
         "main_concepts_en": ["thyroid cancer"],
@@ -340,18 +329,17 @@ def test_unknown_term_meta_candidates_keep_bio_fields_filtered(monkeypatch) -> N
         "uncertainty": [],
         "notes": [],
     }
-    monkeypatch.setattr(
-        local_model_bridge.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr=""),
-    )
+    provider = _GatewayJSONProvider(payload)
 
     draft = build_search_translation_draft(
         "未知中文疾病",
         target_context="meta_analysis",
         target_database="pubmed",
-        config=LocalModelConfig(enabled=True),
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
         use_local_model=True,
+        gateway_module="meta_analysis",
+        gateway_task_type="meta_generate_search_strategy",
+        ai_gateway=_gateway_with_provider(provider),
     )
 
     assert draft.candidate_terms == ["thyroid cancer"]
@@ -374,11 +362,128 @@ def test_bioinformatics_context_filters_literature_candidates() -> None:
     assert draft.audit["context_output_policy"]["blocks"]
 
 
-def test_registry_fallback_generates_geo_queries(monkeypatch) -> None:
-    monkeypatch.setattr(local_model_bridge.shutil, "which", lambda _name: None)
-
+def test_registry_fallback_generates_geo_queries() -> None:
     draft = build_search_translation_draft("低分化食管鳞癌相关数据集")
     text = " ".join([*draft.main_concepts_en, *draft.geo_query_candidates])
 
     assert "esophageal squamous cell carcinoma" in text or "ESCC" in text
     assert any(term in text for term in ["RNA-seq", "microarray", "expression profiling"])
+
+
+def test_gateway_module_policy_blocks_cross_context_local_model_call() -> None:
+    payload = {
+        "main_concepts_zh": ["甲状腺癌"],
+        "main_concepts_en": ["thyroid cancer"],
+        "modifier_terms_zh": [],
+        "modifier_terms_en": [],
+        "data_type_terms_en": [],
+        "pubmed_query_candidates": ['"thyroid cancer"[tiab]'],
+        "geo_query_candidates": [],
+        "uncertainty": [],
+        "notes": [],
+    }
+    provider = _GatewayJSONProvider(payload)
+
+    draft = build_search_translation_draft(
+        "甲状腺癌 Meta 分析",
+        target_context="meta_analysis",
+        target_database="pubmed",
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
+        use_local_model=True,
+        gateway_module="meta_analysis",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
+    )
+
+    assert draft.local_model_status == "called_failed_fallback_registry"
+    assert provider.requests == []
+    assert draft.pubmed_query_candidates
+
+
+def test_shared_query_intelligence_audit_does_not_store_raw_model_output() -> None:
+    secret = "SECRET_MODEL_OUTPUT_SHOULD_NOT_BE_STORED"
+    payload = {
+        "main_concepts_zh": ["食管鳞癌"],
+        "main_concepts_en": ["esophageal squamous cell carcinoma"],
+        "modifier_terms_zh": [],
+        "modifier_terms_en": [],
+        "data_type_terms_en": ["RNA-seq"],
+        "pubmed_query_candidates": [],
+        "geo_query_candidates": ["ESCC AND RNA-seq"],
+        "uncertainty": [],
+        "notes": [],
+        "private_raw": secret,
+    }
+    provider = _GatewayJSONProvider(payload)
+
+    draft = build_search_translation_draft(
+        "食管鳞癌相关数据集",
+        config=LocalModelConfig(enabled=True, provider="test_gateway"),
+        use_local_model=True,
+        gateway_module="bioinformatics",
+        gateway_task_type="bio_zh_topic_to_dataset_queries",
+        ai_gateway=_gateway_with_provider(provider),
+    )
+
+    audit_text = json.dumps(draft.audit, ensure_ascii=False)
+    assert "raw_output" not in draft.audit["local_model"]
+    assert secret not in audit_text
+    assert draft.audit["local_model"]["output_char_count"] > 0
+    assert draft.audit["local_model"]["output_sha256"]
+
+
+class _GatewayJSONProvider(AIProvider):
+    name = "test_gateway"
+    model_name = "mock-local-model"
+    status = AIProviderStatus.AVAILABLE
+    uses_network = False
+    external_model = False
+
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.payload = payload
+        self.requests: list[AIGatewayRequest] = []
+
+    def generate(self, request: AIGatewayRequest) -> AIGatewayResponse:
+        self.requests.append(request)
+        return AIGatewayResponse(
+            request_id=request.request_id,
+            module=request.module,
+            task_type=request.task_type,
+            status="success",
+            content=json.dumps(self.payload, ensure_ascii=False),
+            provider_name=self.name,
+            model_name=self.model_name,
+        )
+
+
+class _GatewayTextProvider(_GatewayJSONProvider):
+    def __init__(self, content: str) -> None:
+        super().__init__({})
+        self.content = content
+
+    def generate(self, request: AIGatewayRequest) -> AIGatewayResponse:
+        self.requests.append(request)
+        return AIGatewayResponse(
+            request_id=request.request_id,
+            module=request.module,
+            task_type=request.task_type,
+            status="success",
+            content=self.content,
+            provider_name=self.name,
+            model_name=self.model_name,
+        )
+
+
+def _gateway_with_provider(provider: AIProvider) -> AIGateway:
+    registry = AIProviderRegistry()
+    registry.register(provider)
+    return AIGateway(
+        config=AIGatewayConfig(default_provider=provider.name),
+        provider_registry=registry,
+        audit_logger=_NoopAuditLogger(),
+    )
+
+
+class _NoopAuditLogger:
+    def write(self, *_args, **_kwargs) -> None:
+        return None

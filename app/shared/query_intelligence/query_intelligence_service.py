@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.shared.ai_gateway import AIGateway
 from app.shared.query_intelligence.local_model_bridge import (
     describe_local_model_components,
     generate_search_translation_candidates,
@@ -55,6 +56,9 @@ def build_search_translation_draft(
     use_local_model: bool = False,
     allow_network: bool = False,
     config: LocalModelConfig | None = None,
+    gateway_module: str = "",
+    gateway_task_type: str = "",
+    ai_gateway: AIGateway | None = None,
 ) -> SearchTranslationDraft:
     resolved_config = config or LocalModelConfig()
     intelligence = analyze_medical_question(
@@ -101,14 +105,26 @@ def build_search_translation_draft(
             target_context,
             target_database,
             resolved_config,
+            gateway_module=gateway_module,
+            gateway_task_type=gateway_task_type,
+            ai_gateway=ai_gateway,
         )
-        local_model_status = "fallback_registry_only" if model_translation.status == "unavailable" else model_translation.status
+        local_model_status = (
+            "fallback_registry_only"
+            if model_translation.status in {"unavailable", "missing_gateway_context_fallback_registry"}
+            else model_translation.status
+        )
         local_model_used = model_translation.status == "called_success"
         audit["local_model"] = {
             "model_name": model_translation.model_name,
+            "provider_name": model_translation.provider_name or resolved_config.provider,
             "status": model_translation.status,
             "resolved_status": local_model_status,
-            "raw_output": model_translation.raw_output,
+            "gateway_status": model_translation.gateway_status,
+            "fallback_used": model_translation.fallback_used,
+            "output_char_count": model_translation.output_char_count,
+            "output_sha256": model_translation.output_sha256,
+            "warnings": list(model_translation.warnings),
         }
         warnings.extend(model_translation.warnings)
         if model_translation.status == "called_success":
