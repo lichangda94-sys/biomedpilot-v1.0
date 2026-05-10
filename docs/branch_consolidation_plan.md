@@ -377,3 +377,43 @@ Completed on `dev/bioinformatics`.
   - Shared storage/feature availability changes under `app/shared/`.
 - Current `dev/bioinformatics` already covers the core workflow in a newer form through current workspace pages, search/download, metadata profile, group preview, project recognition/readiness/standardization, project analysis tasks, result/report surfaces, and AI Gateway boundaries.
 - Recommendation: keep `codex/bioinformatics-safe-stage2` only as a historical architecture reference. Do not merge or cherry-pick it. If future work needs it, extract design ideas manually from the audit report.
+
+## 9. Merge-back Completion
+
+Completed on `stable/mainline`.
+
+- Added merge-back strategy document: `docs/branch_consolidation_mergeback_strategy.md`.
+- Merged `dev/shared-vocabulary` back into `stable/mainline`.
+- Merged `dev/meta-analysis` back into `stable/mainline`.
+- Merged `dev/bioinformatics` back into `stable/mainline`.
+- Merge conflicts occurred only in `docs/branch_consolidation_plan.md`.
+- Conflict resolution kept the shared vocabulary, Meta Analysis, and Bioinformatics consolidation logs.
+- Old branches were not deleted and remain archive candidates pending a separate cleanup pass.
+
+Validation passed during merge-back:
+
+```bash
+python3 -m pytest tests/shared -q
+python3 -m pytest tests/meta_analysis -q
+python3 -m pytest tests/ui/test_meta_analysis_workflow_pages.py -q
+python3 -m pytest tests/bioinformatics -q
+python3 -m pytest tests/ui/test_bioinformatics_workflow_pages.py -q
+python3 -m compileall -q app tests scripts
+QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test
+python3 scripts/run_tests.py
+python3 scripts/package_app.py --output-dir /Users/changdali/Desktop --app-name BioMedPilot --smoke-test
+```
+
+Result:
+
+- `tests/shared`: 154 passed
+- `tests/meta_analysis`: 451 passed
+- Meta workflow UI tests: 21 passed
+- `tests/bioinformatics`: 215 passed
+- Bioinformatics workflow UI tests: 72 passed
+- `compileall`: passed
+- Stable smoke test: passed
+- `scripts/run_tests.py`: 979 passed
+- Desktop app packaged at `/Users/changdali/Desktop/BioMedPilot.app`
+- Packaged app `BUILD_INFO.json` source root: `/Users/changdali/Documents/BioMedPilot`
+- Packaged app `BUILD_INFO.json` git head: `79a4498`
