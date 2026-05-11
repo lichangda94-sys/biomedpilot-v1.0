@@ -152,6 +152,7 @@ class DatasetListEntry:
 class GseDatasetPreview:
     gse_id: str
     title: str = "未记录"
+    organism: str = "未记录"
     platform: str = "未记录"
     sample_count: str = "未记录"
     status: str = "尚未添加"
@@ -599,6 +600,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_preview = GseDatasetPreview(
             gse_id=preview.gse_id,
             title=preview.title,
+            organism=preview.organism,
             platform=preview.platform,
             sample_count=preview.sample_count,
             status="已选择",
@@ -778,7 +780,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addLayout(gse_actions)
         self._gse_status_label = _status_label("尚未检索 GSE 数据集。")
         layout.addWidget(self._gse_status_label)
-        self._gse_summary_table = _table(["GSE 编号", "数据集标题", "平台", "样本数量", "数据状态"])
+        self._gse_summary_table = _table(["GSE 编号", "数据集标题", "物种", "平台", "样本数量", "数据状态"])
         self._gse_summary_table.setObjectName("gseDatasetSummaryTable")
         self._gse_summary_table.setMaximumHeight(120)
         self._gse_summary_table.setVisible(False)
@@ -958,13 +960,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_summary_table.setVisible(False)
         _fill_table(
             self._gse_summary_table,
-            [[preview.gse_id, preview.title, preview.platform, preview.sample_count, preview.status]],
+            [[preview.gse_id, preview.title, preview.organism, preview.platform, preview.sample_count, preview.status]],
         )
         self._gse_search_details.setPlainText(
             _json(
                 {
                     "GSE 编号": preview.gse_id,
                     "数据集标题": preview.title,
+                    "物种": preview.organism,
                     "平台": preview.platform,
                     "样本数量": preview.sample_count,
                     "数据状态": preview.status,
@@ -4758,7 +4761,7 @@ def _geo_candidate_from_download_entry(project_root: Path | None, accession: str
             source="geo",
             accession_or_project=normalized,
             display_title=title,
-            organism=str(metadata.get("organism") or "Homo sapiens"),
+            organism=str(metadata.get("organism") or "未记录"),
             disease="",
             tissue="",
             data_modality=str(metadata.get("data_modality") or "GEO dataset"),
@@ -5309,6 +5312,7 @@ def _gse_preview_from_metadata(gse_id: str, metadata_text: str) -> GseDatasetPre
         title=values.get("数据集标题", "未记录"),
         platform=values.get("平台信息", "未记录"),
         sample_count=values.get("样本数", "未记录"),
+        organism=values.get("物种", "未记录"),
         status="尚未添加",
     )
 
@@ -5320,7 +5324,7 @@ def _geo_candidate_from_gse_preview(preview: GseDatasetPreview) -> UnifiedDatase
         source="geo",
         accession_or_project=preview.gse_id,
         display_title=preview.title,
-        organism="Homo sapiens",
+        organism="" if preview.organism == "未记录" else preview.organism,
         disease="",
         tissue="",
         data_modality="GEO dataset",

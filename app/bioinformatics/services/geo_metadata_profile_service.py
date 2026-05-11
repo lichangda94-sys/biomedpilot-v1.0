@@ -145,6 +145,7 @@ class GeoMetadataProfile:
     summary: str = ""
     overall_design: str = ""
     organism: str = ""
+    species_group: str = "unknown"
     platform_ids: tuple[str, ...] = ()
     experiment_type: str = ""
     sample_records: tuple[GeoSampleRecord, ...] = ()
@@ -243,7 +244,8 @@ class GeoMetadataProfileService:
         title = _first_text(metadata.get("title_en"), metadata.get("title"), metadata.get("display_title"), parsed.title)
         summary = _first_text(metadata.get("summary_en"), metadata.get("summary"), parsed.summary)
         overall_design = _first_text(metadata.get("overall_design_en"), metadata.get("overall_design"), parsed.overall_design)
-        organism = _first_text(metadata.get("organism"), parsed.organism)
+        organism = _resolve_organism(metadata, parsed)
+        species_group = _species_group_from_organism(organism)
         platform_ids = tuple(dict.fromkeys([*_as_text_list(metadata.get("platform_accessions")), *parsed.platform_ids]))
         sample_records = tuple(parsed.sample_records)
         geo_sample_count = _sample_count(sample_records, metadata.get("sample_count"))
@@ -277,6 +279,7 @@ class GeoMetadataProfileService:
             summary=summary,
             overall_design=overall_design,
             organism=organism,
+            species_group=species_group,
             experiment_type=experiment_type,
             geo_sample_count=geo_sample_count,
             metadata_sample_count=metadata_sample_count,
@@ -311,6 +314,7 @@ class GeoMetadataProfileService:
             summary=summary,
             overall_design=overall_design,
             organism=organism,
+            species_group=species_group,
             platform_ids=platform_ids,
             experiment_type=experiment_type,
             sample_records=sample_records,
@@ -434,6 +438,8 @@ def _parse_family_soft(path: Path) -> _ParsedGeoMetadata:
                     current["treatment_protocol_ch1"] = _append_text(str(current.get("treatment_protocol_ch1") or ""), value)
                 elif normalized == "sample_extract_protocol_ch1":
                     current["extract_protocol_ch1"] = _append_text(str(current.get("extract_protocol_ch1") or ""), value)
+                elif normalized in {"sample_organism_ch1", "sample_organism", "organism_ch1", "organism"}:
+                    parsed.organism = parsed.organism or value
                 elif normalized in {"sample_supplementary_file", "sample_relation"} and _looks_raw_link(value):
                     current.setdefault("raw_links", []).append(value)
                     parsed.supplementary_urls.append(value)
@@ -466,8 +472,11 @@ def _parse_series_matrix(path: Path) -> _ParsedGeoMetadata:
                     parsed.overall_design = _append_text(parsed.overall_design, " ".join(values))
                 elif normalized == "series_platform_id":
                     parsed.platform_ids.extend(values)
-                elif normalized in {"series_organism", "series_sample_organism"}:
+                elif normalized in {"series_organism", "series_sample_organism", "organism"}:
                     parsed.organism = parsed.organism or _first_text(*values)
+                elif normalized in {"sample_organism_ch1", "sample_organism", "organism_ch1"}:
+                    parsed.organism = parsed.organism or _first_text(*values)
+                    sample_fields.setdefault(normalized, []).extend(values)
                 elif normalized == "sample_characteristics_ch1":
                     for index, value in enumerate(values):
                         if value:
@@ -627,12 +636,106 @@ def _sample_structure_preview(
     }
 
 
+def _resolve_organism(metadata: dict[str, Any], parsed: _ParsedGeoMetadata) -> str:
+    parsed_organism = _clean_organism(parsed.organism)
+    if parsed_organism:
+        return parsed_organism
+    priority_keys = (
+        "organism",
+        "organism_ch1",
+        "sample_organism",
+        "sample_organism_ch1",
+        "series_organism",
+        "series_sample_organism",
+        "sample organism",
+        "series organism",
+        "taxon",
+    )
+    normalized_priority = {_normalize_key(key) for key in priority_keys}
+    for key in priority_keys:
+        value = _metadata_value(metadata, key)
+        organism = _clean_organism(value)
+        if organism:
+            return organism
+    for key, value in metadata.items():
+        if _normalize_key(key) in normalized_priority:
+            organism = _clean_organism(value)
+            if organism:
+                return organism
+    return ""
+
+
+def _metadata_value(metadata: dict[str, Any], key: str) -> object:
+    if key in metadata:
+        return metadata.get(key)
+    normalized = _normalize_key(key)
+    for item_key, value in metadata.items():
+        if _normalize_key(item_key) == normalized:
+            return value
+    return ""
+
+
+def _clean_organism(value: object) -> str:
+    text = _first_text(value)
+    if not text:
+        return ""
+    text = re.sub(r"\s+", " ", text).strip()
+    if text.lower() in {"未记录", "unknown", "not recorded", "na", "n/a", "none"}:
+        return ""
+    parts = [part.strip() for part in re.split(r"[;,|]", text) if part.strip()]
+    normalized_parts = [_canonical_organism(part) for part in parts] if parts else [_canonical_organism(text)]
+    normalized_parts = [part for part in normalized_parts if part]
+    if not normalized_parts:
+        return ""
+    return "; ".join(dict.fromkeys(normalized_parts))
+
+
+def _canonical_organism(value: str) -> str:
+    lowered = value.lower().strip()
+    if not lowered:
+        return ""
+    if lowered in {"homo sapiens", "human", "humans"}:
+        return "Homo sapiens"
+    if lowered in {"mus musculus", "mouse", "mice"}:
+        return "Mus musculus"
+    if lowered in {"rattus norvegicus", "rat", "rats"}:
+        return "Rattus norvegicus"
+    return value.strip()
+
+
+def _species_group_from_organism(organism: str) -> str:
+    lowered = organism.lower()
+    if "homo sapiens" in lowered or re.search(r"\bhuman(s)?\b", lowered):
+        return "human"
+    if "mus musculus" in lowered or re.search(r"\b(mouse|mice)\b", lowered):
+        return "mouse"
+    if "rattus norvegicus" in lowered or re.search(r"\brat(s)?\b", lowered):
+        return "rat"
+    if organism:
+        return "animal_model"
+    return "unknown"
+
+
+def _expression_type_reason(experiment_type: str, text: str) -> str:
+    lowered = " ".join([experiment_type, text]).lower()
+    if "array" in lowered or "microarray" in lowered:
+        return "数据类型为表达芯片"
+    if "rna-seq" in lowered or "rna seq" in lowered:
+        return "数据类型为 RNA-seq 表达数据"
+    return "数据类型可能适合表达分析"
+
+
+def _looks_like_age_study(text: str) -> bool:
+    return any(token in text for token in ("young", "middle-aged", "middle aged", "old mice", "month-old", "months-old", "age", "aging"))
+
+
 def _analysis_potential(
     *,
     title: str,
     summary: str,
     overall_design: str,
     organism: str,
+    species_group: str,
     experiment_type: str,
     geo_sample_count: int | str,
     metadata_sample_count: int,
@@ -646,10 +749,16 @@ def _analysis_potential(
     unsupported = any(token in text for token in ("single-cell", "single cell", "scrna", "spatial", "methylation", "atac", "chip-seq", "mirna"))
     if any(token in text for token in ("expression", "transcriptome", "microarray", "rna-seq", "rna seq")):
         score += 25
-        reasons.append("数据类型可能适合表达分析")
-    if organism.lower().startswith("homo sapiens") or "human" in organism.lower():
+        reasons.append(_expression_type_reason(experiment_type, text))
+    if organism:
+        reasons.append(f"样本物种为 {organism}")
+    else:
+        reasons.append("样本物种未识别")
+    if species_group == "human":
         score += 15
-        reasons.append("样本物种为人类或疑似人类")
+    elif species_group in {"mouse", "rat", "animal_model"}:
+        score += 8
+        reasons.append("属于动物模型数据集，适合方法验证或动物模型分析")
     if comparisons and comparisons[0].sample_assignments:
         score += 25
         reasons.append(f"sample-level metadata 支持候选分组：{comparisons[0].label}")
@@ -662,7 +771,9 @@ def _analysis_potential(
     count = max(_int_or_zero(geo_sample_count), metadata_sample_count)
     if count >= 6:
         score += 10
-        reasons.append(f"元数据样本数为 {count}")
+        reasons.append(f"样本数 {count}")
+    if species_group == "mouse" and _looks_like_age_study(text):
+        reasons.append("属于小鼠年龄比较研究")
     if unsupported:
         score -= 45
         reasons.append("数据类型可能不是常规 bulk expression")
@@ -670,7 +781,10 @@ def _analysis_potential(
         score = min(score, 65)
         reasons.append("分组线索未达到 sample-level 证据，分析潜力不标为高")
     score = max(0, min(100, score))
-    if unsupported and score < 50:
+    if species_group in {"mouse", "rat", "animal_model"} and not unsupported:
+        level = "动物模型 / 方法验证潜力"
+        reasons.append("可用于差异分析和通路分析，但不适合直接进入人类临床转化分析流程")
+    elif unsupported and score < 50:
         level = "不建议"
     elif score >= 75:
         level = "高"
@@ -1373,7 +1487,7 @@ def _infer_experiment_type(*values: object) -> str:
         return "ATAC-seq"
     if "rna-seq" in text or "rna seq" in text or "transcriptome" in text:
         return "RNA-seq / transcriptome"
-    if "microarray" in text or "gpl" in text:
+    if "microarray" in text or "array" in text or "gpl" in text:
         return "microarray / expression profiling"
     if "expression" in text:
         return "expression profiling"

@@ -283,6 +283,31 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
     assert widget.objectName() == "bioinformaticsDataSourcePage"
 
 
+def test_gse_preview_preserves_geo_organism_for_detail_profile(qt_app) -> None:
+    metadata_text = "\n".join(
+        [
+            "当前 GSE 编号：GSE5078",
+            "数据集标题：Hippocampal transcript profile in young and middle-aged mice",
+            "样本数：23",
+            "平台信息：GPL1261",
+            "物种：Mus musculus",
+        ]
+    )
+
+    preview = workflow_pages._gse_preview_from_metadata("GSE5078", metadata_text)
+    candidate = workflow_pages._geo_candidate_from_gse_preview(preview)
+    rows = workflow_pages._geo_detail_basic_rows(candidate)
+    profile = workflow_pages._build_geo_detail_profile(None, candidate)
+    row_map = {str(row[0]): str(row[1]) for row in rows}
+
+    assert preview.organism == "Mus musculus"
+    assert candidate.organism == "Mus musculus"
+    assert row_map["物种"] == "Mus musculus"
+    assert profile.organism == "Mus musculus"
+    assert profile.species_group == "mouse"
+    assert "人类或疑似人类" not in profile.analysis_potential_reason
+
+
 def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
     card_titles = [
