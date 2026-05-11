@@ -52,6 +52,14 @@ def _widget(session: LocalSession | None = None, **callbacks) -> ModuleSelection
     )
 
 
+def _dispose_window(window) -> None:
+    window.close()
+    window.deleteLater()
+    app = QApplication.instance()
+    if app is not None:
+        app.processEvents()
+
+
 def test_module_selection_widget_instantiates(qt_app) -> None:
     widget = _widget()
     assert widget.objectName() == "moduleSelectionPage"
@@ -155,43 +163,48 @@ def test_main_window_logout_returns_to_login_and_clears_session(qt_app) -> None:
     from app.shell.main_window import MainWindow
 
     window = MainWindow()
-    assert window.minimumWidth() <= 860
-    assert window.minimumHeight() <= 560
-    window._login_page.set_credentials("researcher", "local-password")
-    window._login_page.attempt_login()
+    try:
+        assert window.minimumWidth() <= 860
+        assert window.minimumHeight() <= 560
+        window._login_page.set_credentials("researcher", "local-password")
+        window._login_page.attempt_login()
 
-    assert window.current_workspace_key() == "dashboard"
-    assert window.current_session() is not None
+        assert window.current_workspace_key() == "dashboard"
+        assert window.current_session() is not None
 
-    logout_button = window._dashboard_page.findChild(QPushButton, "logoutButton")
-    logout_button.click()
+        logout_button = window._dashboard_page.findChild(QPushButton, "logoutButton")
+        logout_button.click()
 
-    assert window.current_workspace_key() == "login"
-    assert window.current_session() is None
-    assert window._login_page.session() is None
+        assert window.current_workspace_key() == "login"
+        assert window.current_session() is None
+        assert window._login_page.session() is None
+    finally:
+        _dispose_window(window)
 
 
 def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
     from app.shell.main_window import MainWindow
 
     window = MainWindow()
-    window._login_page.set_credentials("researcher", "local-password")
-    window._login_page.attempt_login()
+    try:
+        window._login_page.set_credentials("researcher", "local-password")
+        window._login_page.attempt_login()
 
-    bio_button = window._dashboard_page.findChild(QPushButton, "bioModuleButton")
-    bio_button.click()
-    assert window.current_workspace_key() == "bioinformatics"
+        bio_button = window._dashboard_page.findChild(QPushButton, "bioModuleButton")
+        bio_button.click()
+        assert window.current_workspace_key() == "bioinformatics"
 
-    window.show_dashboard()
-    meta_button = window._dashboard_page.findChild(QPushButton, "metaModuleButton")
-    meta_button.click()
-    assert window.current_workspace_key() == "meta_analysis"
-    assert window._meta_analysis_page.page_keys()[:4] == (
-        "workflow_home",
-        "pico_workspace",
-        "search_strategy",
-        "title_abstract_screening",
-    )
+        window.show_dashboard()
+        meta_button = window._dashboard_page.findChild(QPushButton, "metaModuleButton")
+        meta_button.click()
+        assert window.current_workspace_key() == "meta_analysis"
+        assert window._meta_analysis_page.page_keys() == (
+            "workflow_home",
+            "project_contract",
+            "dev_branch",
+        )
+    finally:
+        _dispose_window(window)
 
 
 def test_main_window_open_meta_project_binds_workspace_project_dir(qt_app, tmp_path) -> None:
@@ -209,9 +222,12 @@ def test_main_window_open_meta_project_binds_workspace_project_dir(qt_app, tmp_p
         status="active",
     )
     window = MainWindow()
-    window._login_page.set_credentials("researcher", "local-password")
-    window._login_page.attempt_login()
-    window.open_project_record(record)
+    try:
+        window._login_page.set_credentials("researcher", "local-password")
+        window._login_page.attempt_login()
+        window.open_project_record(record)
 
-    assert window.current_workspace_key() == "meta_analysis"
-    assert window._meta_analysis_page.current_project_dir() == (tmp_path / "meta_project").resolve()
+        assert window.current_workspace_key() == "meta_analysis"
+        assert window._meta_analysis_page.current_project_dir() == (tmp_path / "meta_project").resolve()
+    finally:
+        _dispose_window(window)
