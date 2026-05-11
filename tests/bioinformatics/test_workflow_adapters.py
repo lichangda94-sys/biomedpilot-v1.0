@@ -251,6 +251,20 @@ def test_recognition_ignores_partial_download_files(project_root: Path) -> None:
     assert "expression.tsv" in names
 
 
+def test_recognition_ignores_macos_ds_store(project_root: Path) -> None:
+    raw_root = project_root / "raw_data" / "local_import"
+    raw_root.mkdir(parents=True, exist_ok=True)
+    (raw_root / ".DS_Store").write_text("garbage", encoding="utf-8")
+    expression = raw_root / "expression.tsv"
+    expression.write_text("gene\tcontrol_1\ttreated_1\nTP53\t1.0\t2.0\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    names = [str(record["file_name"]) for record in recognition["files"]]  # type: ignore[index]
+
+    assert ".DS_Store" not in names
+    assert "expression.tsv" in names
+
+
 def test_reference_acquisition_is_scanned_by_recognition(project_root: Path, tmp_path: Path) -> None:
     source = tmp_path / "expression_matrix.tsv"
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")

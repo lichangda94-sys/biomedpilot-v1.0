@@ -1203,6 +1203,8 @@ def _expand_selected_candidate_paths(root: Path, selected_paths: list[str | Path
 
 
 def _is_recognition_candidate_file(path: Path, root: Path) -> bool:
+    if path.name == ".DS_Store":
+        return False
     if not path.is_file() or path.suffix.lower() in {".json"}:
         return False
     if path.name.lower().endswith((".part", ".tmp", ".download", ".partial")):
