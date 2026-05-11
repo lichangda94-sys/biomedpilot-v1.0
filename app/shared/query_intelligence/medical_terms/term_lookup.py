@@ -15,6 +15,8 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     warnings: list[str] = []
     if normalized in {"scc", "rcc"}:
         warnings.append("检测到高歧义肿瘤缩写；需要补充部位或亚型后再做强疾病扩展。")
+    if normalized in {"cad", "chd", "mi", "ph", "af", "vt", "vf", "pe", "ldl", "hdl", "crp", "bnp", "ef"}:
+        warnings.append("检测到高歧义心血管缩写；仅按精确缩写和当前上下文解释。")
     if target_context == "meta_analysis" and normalized in {"pr", "sd", "pd"}:
         warnings.append("检测到高歧义 Meta 缩写；需要结合结局、受体或疾病上下文解释。")
     suppress_exact_meta_short_token = target_context == "bioinformatics" and _is_exact_meta_short_token(query)
@@ -192,7 +194,9 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     if not overrides and not index_matches and not registry_matches:
         warnings.append("未在医学词库索引中匹配到明确术语。")
 
-    if not disease_terms and tissue_terms:
+    if not disease_terms and exposure_terms:
+        warnings.append("识别到暴露、表型或生物标志物，未识别到明确疾病词。")
+    elif not disease_terms and tissue_terms:
         warnings.append("仅识别到组织词，未识别到明确疾病词。")
     if not disease_terms and not tissue_terms and data_modalities:
         warnings.append("识别到数据类型，但未识别到明确疾病概念。")
@@ -482,6 +486,49 @@ def _should_skip_contextual_false_positive_concept(concept: TermConcept, normali
     if concept.concept_id == "mini:meta_analysis_risk" and normalized_query in {"风险比", "危险比", "风险率"}:
         return True
     if concept.concept_id == "mini:parkinson_disease" and normalized_query == "pd":
+        return True
+    if concept.concept_id == "mini:hypertension" and normalized_query in {
+        "pulmonary hypertension",
+        "肺动脉高压",
+        "肺高压",
+        "pulmonary arterial hypertension",
+    }:
+        return True
+    if concept.concept_id == "mini:cardiovascular_disease_core" and normalized_query in {
+        "myocardial infarction",
+        "heart attack",
+        "acute myocardial infarction",
+        "acute coronary syndrome",
+        "hypertension",
+        "pulmonary hypertension",
+        "essential hypertension",
+        "secondary hypertension",
+        "isolated systolic hypertension",
+        "atherosclerosis",
+        "arteriosclerosis",
+        "stroke",
+        "ischemic stroke",
+        "hemorrhagic stroke",
+        "cerebral infarction",
+        "心肌梗死",
+        "心梗",
+        "急性心肌梗死",
+        "急性心梗",
+        "急性冠脉综合征",
+        "高血压",
+        "肺动脉高压",
+        "肺高压",
+        "原发性高血压",
+        "继发性高血压",
+        "单纯收缩期高血压",
+        "动脉粥样硬化",
+        "动脉硬化",
+        "脑卒中",
+        "中风",
+        "缺血性脑卒中",
+        "脑梗死",
+        "出血性脑卒中",
+    }:
         return True
     return False
 
