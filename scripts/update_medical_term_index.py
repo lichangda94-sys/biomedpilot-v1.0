@@ -51,11 +51,6 @@ class IndexConcept:
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
-    exposure_terms: list[str] = field(default_factory=list)
-    intervention_terms: list[str] = field(default_factory=list)
-    outcome_terms: list[str] = field(default_factory=list)
-    study_design_terms: list[str] = field(default_factory=list)
-    publication_type_terms: list[str] = field(default_factory=list)
     pico_terms: list[str] = field(default_factory=list)
     effect_measures: list[str] = field(default_factory=list)
     diagnostic_accuracy_terms: list[str] = field(default_factory=list)
@@ -495,11 +490,6 @@ def _insert_synonyms(conn: sqlite3.Connection, term_id: int, concept: IndexConce
         ("assay", concept.assay_terms, "en"),
         ("platform", concept.platform_candidates, "en"),
         ("modifier", concept.modifier_terms_en, "en"),
-        ("exposure", concept.exposure_terms, "en"),
-        ("intervention", concept.intervention_terms, "en"),
-        ("outcome", concept.outcome_terms, "en"),
-        ("study_design", concept.study_design_terms, "en"),
-        ("publication_type", concept.publication_type_terms, "en"),
         ("pico", concept.pico_terms, "en"),
         ("effect_measure", concept.effect_measures, "en"),
         ("diagnostic_accuracy", concept.diagnostic_accuracy_terms, "en"),
@@ -552,11 +542,6 @@ def _insert_search_values(conn: sqlite3.Connection, term_id: int, concept: Index
             *concept.data_modality_terms,
             *concept.assay_terms,
             *concept.platform_candidates,
-            *concept.exposure_terms,
-            *concept.intervention_terms,
-            *concept.outcome_terms,
-            *concept.study_design_terms,
-            *concept.publication_type_terms,
             *concept.pico_terms,
             *concept.effect_measures,
             *concept.diagnostic_accuracy_terms,
@@ -710,11 +695,6 @@ def _defaults() -> dict[str, object]:
         "assay_terms": [],
         "platform_candidates": [],
         "modifier_terms_en": [],
-        "exposure_terms": [],
-        "intervention_terms": [],
-        "outcome_terms": [],
-        "study_design_terms": [],
-        "publication_type_terms": [],
         "pico_terms": [],
         "effect_measures": [],
         "diagnostic_accuracy_terms": [],

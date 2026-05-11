@@ -21,11 +21,6 @@ class TermConcept:
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
-    exposure_terms: list[str] = field(default_factory=list)
-    intervention_terms: list[str] = field(default_factory=list)
-    outcome_terms: list[str] = field(default_factory=list)
-    study_design_terms: list[str] = field(default_factory=list)
-    publication_type_terms: list[str] = field(default_factory=list)
     pico_terms: list[str] = field(default_factory=list)
     effect_measures: list[str] = field(default_factory=list)
     diagnostic_accuracy_terms: list[str] = field(default_factory=list)
@@ -61,11 +56,6 @@ class TermConcept:
             assay_terms=_list(payload.get("assay_terms")),
             platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
-            exposure_terms=_list(payload.get("exposure_terms")),
-            intervention_terms=_list(payload.get("intervention_terms")),
-            outcome_terms=_list(payload.get("outcome_terms")),
-            study_design_terms=_list(payload.get("study_design_terms")),
-            publication_type_terms=_list(payload.get("publication_type_terms")),
             pico_terms=_list(payload.get("pico_terms")),
             effect_measures=_list(payload.get("effect_measures")),
             diagnostic_accuracy_terms=_list(payload.get("diagnostic_accuracy_terms")),
