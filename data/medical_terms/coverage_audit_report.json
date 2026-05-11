@@ -1,10 +1,312 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-11T13:56:39.103621+00:00",
+  "generated_at": "2026-05-11T14:21:25.325231+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
     "reference_checklists": "data/medical_terms/reference_checklists"
+  },
+  "release_summary": {
+    "release_name": "shared_medical_vocabulary_core_v1",
+    "version": "core_v1.0.0",
+    "latest_audit_date": "2026-05-11T14:21:25.325231+00:00",
+    "included_core_packages": [
+      {
+        "checklist_id": "oncology_core",
+        "title": "Oncology Core Vocabulary v1 Checklist",
+        "total": 68,
+        "covered": 68,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      },
+      {
+        "checklist_id": "endocrine_metabolic_core",
+        "title": "Endocrine and Metabolic Core Vocabulary v1",
+        "total": 75,
+        "covered": 75,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      },
+      {
+        "checklist_id": "anatomy_tissue_core",
+        "title": "Anatomy and Tissue Core Vocabulary v1",
+        "total": 68,
+        "covered": 68,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      },
+      {
+        "checklist_id": "bioinformatics_modality_core",
+        "title": "Bioinformatics Modality Core Vocabulary v1",
+        "total": 65,
+        "covered": 65,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      },
+      {
+        "checklist_id": "meta_analysis_terms_core",
+        "title": "Meta Analysis Terms Core Vocabulary v1",
+        "total": 108,
+        "covered": 108,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      },
+      {
+        "checklist_id": "cardiovascular_core",
+        "title": "Shared Medical Vocabulary Cardiovascular Core v1",
+        "total": 80,
+        "covered": 80,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      },
+      {
+        "checklist_id": "immune_inflammatory_core",
+        "title": "Shared Medical Vocabulary Immune & Inflammatory Core v1",
+        "total": 69,
+        "covered": 69,
+        "missing": 0,
+        "coverage_percentage": 1.0,
+        "quality_gate_status": "pass"
+      }
+    ],
+    "coverage_summary": {
+      "total_checklist_terms": 621,
+      "total_covered": 621,
+      "overall_coverage": 1.0,
+      "core_checklist_terms": 533,
+      "core_covered": 533,
+      "core_coverage": 1.0
+    },
+    "runtime_vocabulary_total_concepts": 572,
+    "zh_overrides_total_mappings": 1094,
+    "high_risk_ambiguity_terms_total": 98,
+    "short_token_risk_terms": [
+      "PTC",
+      "SCC",
+      "RCC",
+      "CRC",
+      "HCC",
+      "GBM",
+      "LGG",
+      "RA",
+      "SLE",
+      "IBD",
+      "MS",
+      "CRP",
+      "IL-6",
+      "TNF",
+      "IFN",
+      "ANA",
+      "RF",
+      "ANCA",
+      "T3",
+      "T4",
+      "TSH",
+      "PTH",
+      "BMI",
+      "HDL",
+      "LDL",
+      "OS",
+      "HR",
+      "OR",
+      "RR",
+      "CI",
+      "MD",
+      "SMD",
+      "PR",
+      "SD",
+      "PD",
+      "WGS",
+      "WES",
+      "RNA",
+      "DNA",
+      "CNV",
+      "SNP"
+    ],
+    "governance_conflict_audit": {
+      "duplicate_concept_ids": [],
+      "watched_terms": [
+        {
+          "term": "CRP",
+          "matched_concept_ids": [
+            "mini:cardiovascular_c_reactive_protein"
+          ],
+          "primary_concept_ids": [],
+          "categories": [
+            "cardiovascular"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "Hashimoto thyroiditis",
+          "matched_concept_ids": [
+            "mini:hashimoto_thyroiditis"
+          ],
+          "primary_concept_ids": [
+            "mini:hashimoto_thyroiditis"
+          ],
+          "categories": [
+            "endocrine_metabolic"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "Graves disease",
+          "matched_concept_ids": [
+            "mini:graves_disease"
+          ],
+          "primary_concept_ids": [
+            "mini:graves_disease"
+          ],
+          "categories": [
+            "endocrine_metabolic"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "obesity",
+          "matched_concept_ids": [
+            "mini:obesity"
+          ],
+          "primary_concept_ids": [
+            "mini:obesity"
+          ],
+          "categories": [
+            "endocrine_metabolic"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "diabetes",
+          "matched_concept_ids": [
+            "mini:diabetes_mellitus"
+          ],
+          "primary_concept_ids": [],
+          "categories": [
+            "endocrine_metabolic"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "dyslipidemia",
+          "matched_concept_ids": [
+            "mini:dyslipidemia"
+          ],
+          "primary_concept_ids": [
+            "mini:dyslipidemia"
+          ],
+          "categories": [
+            "endocrine_metabolic"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "thyroid nodule",
+          "matched_concept_ids": [
+            "mini:thyroid_nodule"
+          ],
+          "primary_concept_ids": [
+            "mini:thyroid_nodule"
+          ],
+          "categories": [
+            "endocrine_metabolic"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "inflammation",
+          "matched_concept_ids": [
+            "mini:cardiovascular_inflammation"
+          ],
+          "primary_concept_ids": [
+            "mini:cardiovascular_inflammation"
+          ],
+          "categories": [
+            "cardiovascular"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "adipose tissue",
+          "matched_concept_ids": [
+            "mini:anatomy_adipose_tissue",
+            "mini:anatomy_subcutaneous_adipose_tissue",
+            "mini:anatomy_visceral_adipose_tissue"
+          ],
+          "primary_concept_ids": [
+            "mini:anatomy_adipose_tissue"
+          ],
+          "categories": [
+            "anatomy_or_tissue"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "blood",
+          "matched_concept_ids": [
+            "mini:anatomy_whole_blood",
+            "mini:anatomy_ebv_transformed_lymphocytes"
+          ],
+          "primary_concept_ids": [],
+          "categories": [
+            "anatomy_or_tissue"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "whole blood",
+          "matched_concept_ids": [
+            "mini:anatomy_whole_blood"
+          ],
+          "primary_concept_ids": [
+            "mini:anatomy_whole_blood"
+          ],
+          "categories": [
+            "anatomy_or_tissue"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "heart",
+          "matched_concept_ids": [
+            "mini:anatomy_heart",
+            "mini:anatomy_heart_atrial_appendage",
+            "mini:anatomy_heart_left_ventricle"
+          ],
+          "primary_concept_ids": [
+            "mini:anatomy_heart"
+          ],
+          "categories": [
+            "anatomy_or_tissue"
+          ],
+          "status": "pass"
+        },
+        {
+          "term": "artery",
+          "matched_concept_ids": [
+            "mini:anatomy_artery",
+            "mini:anatomy_aorta",
+            "mini:anatomy_coronary_artery",
+            "mini:anatomy_tibial_artery"
+          ],
+          "primary_concept_ids": [
+            "mini:anatomy_artery"
+          ],
+          "categories": [
+            "anatomy_or_tissue"
+          ],
+          "status": "pass"
+        }
+      ],
+      "status": "pass"
+    },
+    "quality_gate_overall_status": "pass"
   },
   "overall": {
     "total_checklist_items": 621,
@@ -17,10 +319,10 @@
     "core_covered": 533,
     "core_missing": 0,
     "core_coverage_rate": 1.0,
-    "total_runtime_concepts": 575,
+    "total_runtime_concepts": 572,
     "total_zh_overrides": 1094,
     "total_high_risk_ambiguity_terms": 98,
-    "corpus_records": 1669,
+    "corpus_records": 1666,
     "quality_gate_status": "pass"
   },
   "core_checklist_summary": {

@@ -14,7 +14,10 @@ CHECKLIST_DIR = MEDICAL_TERMS_DIR / "reference_checklists"
 MINI_INDEX_PATH = MEDICAL_TERMS_DIR / "mini_medical_terms_index.json"
 ZH_OVERRIDES_PATH = MEDICAL_TERMS_DIR / "zh_term_overrides.json"
 JSON_REPORT_PATH = MEDICAL_TERMS_DIR / "coverage_audit_report.json"
+SOURCE_METADATA_PATH = MEDICAL_TERMS_DIR / "source_metadata.json"
 MARKDOWN_REPORT_PATH = REPO_ROOT / "docs" / "stage_2_3_medical_vocabulary_reference_audit.md"
+RELEASE_NAME = "shared_medical_vocabulary_core_v1"
+RELEASE_VERSION = "core_v1.0.0"
 CORE_CHECKLIST_IDS = (
     "oncology_core",
     "endocrine_metabolic_core",
@@ -23,6 +26,28 @@ CORE_CHECKLIST_IDS = (
     "meta_analysis_terms_core",
     "cardiovascular_core",
     "immune_inflammatory_core",
+)
+SHORT_TOKEN_RISK_TERMS = (
+    "PTC", "SCC", "RCC", "CRC", "HCC", "GBM", "LGG",
+    "RA", "SLE", "IBD", "MS", "CRP", "IL-6", "TNF", "IFN", "ANA", "RF", "ANCA",
+    "T3", "T4", "TSH", "PTH", "BMI", "HDL", "LDL",
+    "OS", "HR", "OR", "RR", "CI", "MD", "SMD", "PR", "SD", "PD",
+    "WGS", "WES", "RNA", "DNA", "CNV", "SNP",
+)
+GOVERNANCE_WATCH_TERMS = (
+    "CRP",
+    "Hashimoto thyroiditis",
+    "Graves disease",
+    "obesity",
+    "diabetes",
+    "dyslipidemia",
+    "thyroid nodule",
+    "inflammation",
+    "adipose tissue",
+    "blood",
+    "whole blood",
+    "heart",
+    "artery",
 )
 
 
@@ -41,8 +66,10 @@ def main() -> int:
     report = build_coverage_audit_report()
     JSON_REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     MARKDOWN_REPORT_PATH.write_text(render_markdown_report(report), encoding="utf-8")
+    _write_release_metadata(report)
     print(f"wrote {JSON_REPORT_PATH.relative_to(REPO_ROOT)}")
     print(f"wrote {MARKDOWN_REPORT_PATH.relative_to(REPO_ROOT)}")
+    print(f"updated {SOURCE_METADATA_PATH.relative_to(REPO_ROOT)}")
     return 0
 
 
@@ -79,14 +106,17 @@ def build_coverage_audit_report() -> dict[str, Any]:
     quality_gates = _quality_gates(sections, gaps)
     overall = _overall_summary(sections, corpus, checklists)
     overall["quality_gate_status"] = quality_gates["status"]
+    generated_at = _now()
+    release_summary = _release_summary(overall, sections, quality_gates, generated_at)
     return {
         "schema_version": "medical_vocabulary_coverage_audit.v1",
-        "generated_at": _now(),
+        "generated_at": generated_at,
         "inputs": {
             "mini_index": str(MINI_INDEX_PATH.relative_to(REPO_ROOT)),
             "zh_overrides": str(ZH_OVERRIDES_PATH.relative_to(REPO_ROOT)),
             "reference_checklists": str(CHECKLIST_DIR.relative_to(REPO_ROOT)),
         },
+        "release_summary": release_summary,
         "overall": overall,
         "core_checklist_summary": _core_checklist_summary(sections, quality_gates),
         "sections": sections,
@@ -803,6 +833,118 @@ def _core_checklist_summary(sections: dict[str, Any], quality_gates: dict[str, A
     return result
 
 
+def _release_summary(
+    overall: dict[str, Any],
+    sections: dict[str, Any],
+    quality_gates: dict[str, Any],
+    generated_at: str,
+) -> dict[str, Any]:
+    core_packages = []
+    for checklist_id in CORE_CHECKLIST_IDS:
+        section = sections.get(checklist_id)
+        if not section:
+            continue
+        core_packages.append(
+            {
+                "checklist_id": checklist_id,
+                "title": section["title"],
+                "total": section["total_checklist_items"],
+                "covered": section["covered"],
+                "missing": section["missing"],
+                "coverage_percentage": section["coverage_rate"],
+                "quality_gate_status": _core_quality_status(checklist_id, quality_gates),
+            }
+        )
+    return {
+        "release_name": RELEASE_NAME,
+        "version": RELEASE_VERSION,
+        "latest_audit_date": generated_at,
+        "included_core_packages": core_packages,
+        "coverage_summary": {
+            "total_checklist_terms": overall["total_checklist_items"],
+            "total_covered": overall["covered"],
+            "overall_coverage": overall["coverage_rate"],
+            "core_checklist_terms": overall["core_checklist_items"],
+            "core_covered": overall["core_covered"],
+            "core_coverage": overall["core_coverage_rate"],
+        },
+        "runtime_vocabulary_total_concepts": overall["total_runtime_concepts"],
+        "zh_overrides_total_mappings": overall["total_zh_overrides"],
+        "high_risk_ambiguity_terms_total": overall["total_high_risk_ambiguity_terms"],
+        "short_token_risk_terms": list(SHORT_TOKEN_RISK_TERMS),
+        "governance_conflict_audit": _governance_conflict_audit(),
+        "quality_gate_overall_status": quality_gates["status"],
+    }
+
+
+def _core_quality_status(checklist_id: str, quality_gates: dict[str, Any]) -> str:
+    gate_status = {
+        str(gate["gate_id"]): str(gate["status"])
+        for gate in quality_gates["gates"]
+    }
+    gates = {
+        gate_id: status
+        for gate_id, status in gate_status.items()
+        if gate_id.startswith(checklist_id) or gate_id.startswith(checklist_id.replace("_core", ""))
+    }
+    return "pass" if gates and all(status == "pass" for status in gates.values()) else quality_gates["status"]
+
+
+def _governance_conflict_audit() -> dict[str, Any]:
+    records = _load_json_list(MINI_INDEX_PATH)
+    concept_ids = [str(record.get("concept_id") or "") for record in records]
+    duplicate_concept_ids = sorted({concept_id for concept_id in concept_ids if concept_id and concept_ids.count(concept_id) > 1})
+    watched_terms = []
+    for term in GOVERNANCE_WATCH_TERMS:
+        matches = _exact_term_record_matches(term, records)
+        primary_matches = [
+            match
+            for match in matches
+            if _norm(str(match.get("preferred_label_en") or match.get("preferred_en") or "")) == _norm(term)
+            or _norm(str(match.get("preferred_zh") or "")) == _norm(term)
+        ]
+        categories = sorted({str(match.get("category") or "legacy") for match in matches})
+        watched_terms.append(
+            {
+                "term": term,
+                "matched_concept_ids": [str(match.get("concept_id")) for match in matches],
+                "primary_concept_ids": [str(match.get("concept_id")) for match in primary_matches],
+                "categories": categories,
+                "status": "pass" if len(primary_matches) <= 1 and len(categories) <= 1 else "review",
+            }
+        )
+    return {
+        "duplicate_concept_ids": duplicate_concept_ids,
+        "watched_terms": watched_terms,
+        "status": "pass"
+        if not duplicate_concept_ids and all(item["status"] == "pass" for item in watched_terms)
+        else "review",
+    }
+
+
+def _exact_term_record_matches(term: str, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized = _norm(term)
+    matches = []
+    fields = (
+        "preferred_label_en",
+        "preferred_en",
+        "preferred_zh",
+        "synonyms_en",
+        "en_synonyms",
+        "abbreviations",
+        "normalized_terms",
+        "zh_terms",
+        "zh_synonyms",
+    )
+    for record in records:
+        values: list[str] = []
+        for field in fields:
+            values.extend(_nested_values(record.get(field)))
+        if any(_norm(value) == normalized for value in values):
+            matches.append(record)
+    return matches
+
+
 def _prioritized_gaps(sections: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
     gaps: dict[str, list[dict[str, str]]] = {"P0": [], "P1": [], "P2": []}
     for section_id, section in sections.items():
@@ -1034,6 +1176,34 @@ def _source_notes(checklists: list[dict[str, Any]]) -> list[dict[str, str]]:
         }
         for checklist in checklists
     ]
+
+
+def _write_release_metadata(report: dict[str, Any]) -> None:
+    if SOURCE_METADATA_PATH.exists():
+        payload = json.loads(SOURCE_METADATA_PATH.read_text(encoding="utf-8"))
+    else:
+        payload = {}
+    payload.setdefault("schema_version", "biomedpilot.medical_terms.source_metadata.v2")
+    payload.setdefault("medical_terms_index_scope", "BioMedPilot shared medical vocabulary")
+    payload.setdefault("runtime_strategy", "sqlite_first_optional_with_json_mini_fallback")
+    payload["shared_vocabulary_release"] = {
+        "release_name": report["release_summary"]["release_name"],
+        "version": report["release_summary"]["version"],
+        "included_core_packages": [
+            item["checklist_id"]
+            for item in report["release_summary"]["included_core_packages"]
+        ],
+        "total_runtime_concepts": report["release_summary"]["runtime_vocabulary_total_concepts"],
+        "total_zh_overrides": report["release_summary"]["zh_overrides_total_mappings"],
+        "total_checklist_terms": report["release_summary"]["coverage_summary"]["total_checklist_terms"],
+        "coverage_summary": report["release_summary"]["coverage_summary"],
+        "latest_audit_date": report["release_summary"]["latest_audit_date"],
+        "quality_gate_status": report["release_summary"]["quality_gate_overall_status"],
+        "high_risk_ambiguity_terms_total": report["release_summary"]["high_risk_ambiguity_terms_total"],
+        "short_token_risk_terms": report["release_summary"]["short_token_risk_terms"],
+        "governance_conflict_audit_status": report["release_summary"]["governance_conflict_audit"]["status"],
+    }
+    SOURCE_METADATA_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _build_corpus() -> VocabularyCorpus:

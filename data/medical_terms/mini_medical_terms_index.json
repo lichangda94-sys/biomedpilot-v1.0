@@ -4511,7 +4511,6 @@
       "血脂升高"
     ],
     "synonyms_en": [
-      "dyslipidemia",
       "hyperlipidaemia"
     ],
     "exact_synonyms_en": [
@@ -4547,11 +4546,9 @@
     "confidence": 0.94,
     "normalized_terms": [
       "hyperlipidemia",
-      "dyslipidemia",
       "hyperlipidaemia",
       "HLD",
       "高脂血症",
-      "血脂异常",
       "血脂升高",
       "Hyperlipidemias"
     ],
@@ -4586,6 +4583,9 @@
     "gtex_tissue_candidates": [
       "Liver",
       "Whole Blood"
+    ],
+    "related_concepts": [
+      "mini:dyslipidemia"
     ]
   },
   {
@@ -6273,45 +6273,6 @@
     ]
   },
   {
-    "concept_id": "mini:blood_tissue",
-    "source_vocabulary": "mini",
-    "source_id": "blood_tissue",
-    "preferred_label_en": "blood",
-    "zh_terms": [
-      "血液"
-    ],
-    "synonyms_en": [
-      "whole blood"
-    ],
-    "exact_synonyms_en": [
-      "blood"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Blood"
-    ],
-    "disease_group": "",
-    "concept_type": "tissue",
-    "parent_terms": [
-      "tissue"
-    ],
-    "cross_refs": {
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.9,
-    "normalized_terms": [
-      "blood",
-      "whole blood",
-      "血液"
-    ]
-  },
-  {
     "concept_id": "mini:bone_marrow_tissue",
     "source_vocabulary": "mini",
     "source_id": "bone_marrow_tissue",
@@ -6396,45 +6357,6 @@
     }
   },
   {
-    "concept_id": "mini:adipose_tissue",
-    "source_vocabulary": "mini",
-    "source_id": "adipose_tissue",
-    "preferred_label_en": "adipose tissue",
-    "zh_terms": [
-      "脂肪组织"
-    ],
-    "synonyms_en": [
-      "fat tissue"
-    ],
-    "exact_synonyms_en": [
-      "adipose tissue"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Adipose Tissue"
-    ],
-    "disease_group": "",
-    "concept_type": "tissue",
-    "parent_terms": [
-      "tissue"
-    ],
-    "cross_refs": {
-      "gtex": [
-        "Adipose Tissue"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.9,
-    "normalized_terms": [
-      "adipose tissue",
-      "fat tissue",
-      "脂肪组织"
-    ]
-  },
-  {
     "concept_id": "mini:muscle_tissue",
     "source_vocabulary": "mini",
     "source_id": "muscle_tissue",
@@ -6471,47 +6393,6 @@
       "muscle",
       "skeletal muscle",
       "肌肉"
-    ]
-  },
-  {
-    "concept_id": "mini:heart_tissue",
-    "source_vocabulary": "mini",
-    "source_id": "heart_tissue",
-    "preferred_label_en": "heart",
-    "zh_terms": [
-      "心脏"
-    ],
-    "synonyms_en": [
-      "cardiac tissue",
-      "myocardium"
-    ],
-    "exact_synonyms_en": [
-      "heart"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Heart"
-    ],
-    "disease_group": "",
-    "concept_type": "tissue",
-    "parent_terms": [
-      "tissue"
-    ],
-    "cross_refs": {
-      "gtex": [
-        "Heart"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.9,
-    "normalized_terms": [
-      "heart",
-      "cardiac tissue",
-      "myocardium",
-      "心脏"
     ]
   },
   {
@@ -11092,7 +10973,8 @@
       "Whole Blood"
     ],
     "related_concepts": [
-      "mini:dyslipidemia"
+      "mini:dyslipidemia",
+      "mini:hyperlipidemia"
     ]
   },
   {
@@ -15518,6 +15400,12 @@
     "zh_terms": [
       "脂肪组织",
       "脂肪"
+    ],
+    "deprecated_alias_concept_ids": [
+      "mini:adipose_tissue"
+    ],
+    "related_concepts": [
+      "mini:adipose_tissue"
     ]
   },
   {
@@ -17117,6 +17005,12 @@
     "zh_terms": [
       "心脏",
       "心肌"
+    ],
+    "deprecated_alias_concept_ids": [
+      "mini:heart_tissue"
+    ],
+    "related_concepts": [
+      "mini:heart_tissue"
     ]
   },
   {
@@ -18991,6 +18885,12 @@
       "血液",
       "全血",
       "外周血"
+    ],
+    "deprecated_alias_concept_ids": [
+      "mini:blood_tissue"
+    ],
+    "related_concepts": [
+      "mini:blood_tissue"
     ]
   },
   {
