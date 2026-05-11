@@ -89,12 +89,6 @@ def build_search_translation_draft(
         "tissue_terms": term_lookup.tissue_terms if target_context == "bioinformatics" else [],
         "assay_terms": term_lookup.assay_terms,
         "platform_candidates": term_lookup.platform_candidates if target_context == "bioinformatics" else [],
-        "pico_terms": term_lookup.pico_terms if target_context == "meta_analysis" else [],
-        "effect_measures": term_lookup.effect_measures if target_context == "meta_analysis" else [],
-        "diagnostic_accuracy_terms": term_lookup.diagnostic_accuracy_terms if target_context == "meta_analysis" else [],
-        "exclusion_type_terms": term_lookup.exclusion_type_terms if target_context == "meta_analysis" else [],
-        "quality_assessment_terms": term_lookup.quality_assessment_terms if target_context == "meta_analysis" else [],
-        "pubmed_query_terms": term_lookup.pubmed_query_terms if target_context == "meta_analysis" else [],
     }
     warnings = list(intelligence.warnings)
     warnings.extend(term_lookup.warnings)
@@ -227,12 +221,6 @@ def build_search_translation_draft(
         search_execution_status="draft_only",
         audit=audit,
         candidate_terms=candidate_terms,
-        pico_terms=term_lookup.pico_terms if target_context == "meta_analysis" else [],
-        effect_measures=term_lookup.effect_measures if target_context == "meta_analysis" else [],
-        diagnostic_accuracy_terms=term_lookup.diagnostic_accuracy_terms if target_context == "meta_analysis" else [],
-        exclusion_type_terms=term_lookup.exclusion_type_terms if target_context == "meta_analysis" else [],
-        quality_assessment_terms=term_lookup.quality_assessment_terms if target_context == "meta_analysis" else [],
-        pubmed_query_terms=term_lookup.pubmed_query_terms if target_context == "meta_analysis" else [],
     )
 
 
@@ -422,12 +410,6 @@ def _term_lookup_audit_for_context(payload: dict[str, object], target_context: s
             "outcome_terms",
             "study_design_terms",
             "publication_type_terms",
-            "pico_terms",
-            "effect_measures",
-            "diagnostic_accuracy_terms",
-            "exclusion_type_terms",
-            "quality_assessment_terms",
-            "pubmed_query_terms",
         ):
             result.pop(key, None)
     elif target_context == "meta_analysis":
@@ -477,12 +459,6 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "outcome_terms",
                 "study_design_terms",
                 "publication_type_terms",
-                "pico_terms",
-                "effect_measures",
-                "diagnostic_accuracy_terms",
-                "exclusion_type_terms",
-                "quality_assessment_terms",
-                "pubmed_query_terms",
             ],
             "blocks": [
                 "tcga_project_candidates",

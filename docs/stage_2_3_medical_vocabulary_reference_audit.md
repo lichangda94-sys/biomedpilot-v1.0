@@ -4,7 +4,7 @@
 
 | Section | Total | Covered | Partial | Missing | Coverage | Weighted |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| overall | 472 | 472 | 0 | 0 | 1.000 | 1.000 |
+| overall | 364 | 364 | 0 | 0 | 1.000 | 1.000 |
 
 ## TCGA Projects Covered/Missing
 
@@ -459,131 +459,6 @@
 - missing term details: none
 - high-risk ambiguity terms: RNA-seq, scRNA-seq, ATAC-seq, ChIP-seq, WGS, WES, proteomics, metabolomics, 芯片, 表达谱, 测序
 
-## Meta Analysis Terms Core Covered/Missing
-
-| Item | Priority | Status | Evidence |
-| --- | --- | --- | --- |
-| population | P0 | covered | matched_terms: population, study population, participants, 研究人群, 人群, 目标人群; subcategory: pico_framework |
-| patient | P0 | covered | matched_terms: patient, patients, participant, 患者, 病人, 受试者; subcategory: pico_framework |
-| intervention | P0 | covered | matched_terms: intervention, intervention arm, treatment intervention, 干预, 治疗干预, 干预措施; subcategory: pico_framework |
-| exposure | P0 | covered | matched_terms: exposure, risk factor, exposure factor, 暴露, 风险因素, 暴露因素; subcategory: pico_framework |
-| comparator | P0 | covered | matched_terms: comparator, comparison group, reference group, 对照组, 比较组, 参照组; subcategory: pico_framework |
-| control | P0 | covered | matched_terms: control, control group, controls, 控制组, 对照, 空白对照; subcategory: pico_framework |
-| outcome | P0 | covered | matched_terms: outcome, clinical outcome, endpoint outcome, 结局, 研究结局, 终点结局; subcategory: pico_framework |
-| study design | P0 | covered | matched_terms: study design, study type, research design, 研究设计, 研究类型, 设计类型; subcategory: pico_framework |
-| setting | P0 | covered | matched_terms: setting, study setting, clinical setting, 研究场景, 研究环境, 医疗场景; subcategory: pico_framework |
-| follow-up | P0 | covered | matched_terms: follow-up, follow up, follow-up period, 随访, 随访时间, 随访期; subcategory: pico_framework |
-| subgroup | P0 | covered | matched_terms: subgroup, subgroup population, stratum, 亚组, 亚组分析人群, 分层人群; subcategory: pico_framework |
-| endpoint | P0 | covered | matched_terms: endpoint, clinical endpoint, study endpoint, 终点, 研究终点, 临床终点; subcategory: pico_framework |
-| randomized controlled trial | P0 | covered | matched_terms: randomized controlled trial, randomised controlled trial, controlled clinical trial, RCT, 随机对照试验, 随机临床试验, RCT研究; subcategory: study_design |
-| clinical trial | P0 | covered | matched_terms: clinical trial, clinical study, trial, 临床试验, 临床研究试验; subcategory: study_design |
-| cohort study | P0 | covered | matched_terms: cohort study, cohort, longitudinal cohort study, 队列研究, 队列; subcategory: study_design |
-| prospective cohort | P1 | covered | matched_terms: prospective cohort, prospective cohort study, 前瞻性队列, 前瞻性队列研究; subcategory: study_design |
-| retrospective cohort | P1 | covered | matched_terms: retrospective cohort, retrospective cohort study, 回顾性队列, 回顾性队列研究; subcategory: study_design |
-| case-control study | P0 | covered | matched_terms: case-control study, case control study, 病例对照研究, 病例-对照研究; subcategory: study_design |
-| cross-sectional study | P0 | covered | matched_terms: cross-sectional study, cross sectional study, 横断面研究, 横截面研究; subcategory: study_design |
-| nested case-control study | P1 | covered | matched_terms: nested case-control study, nested case control study, 巢式病例对照研究, 嵌套病例对照研究; subcategory: study_design |
-| case-cohort study | P1 | covered | matched_terms: case-cohort study, case cohort study, 病例队列研究, 病例-队列研究; subcategory: study_design |
-| diagnostic accuracy study | P0 | covered | matched_terms: diagnostic accuracy study, diagnostic test accuracy study, DTA, 诊断准确性研究, 诊断试验准确性研究; subcategory: study_design |
-| prognostic study | P0 | covered | matched_terms: prognostic study, prognosis study, 预后研究, 预后因素研究; subcategory: study_design |
-| observational study | P0 | covered | matched_terms: observational study, observational research, 观察性研究, 观察研究; subcategory: study_design |
-| real-world study | P1 | covered | matched_terms: real-world study, real world study, real-world evidence study, RWS, RWE, 真实世界研究, 真实世界证据研究; subcategory: study_design |
-| registry study | P1 | covered | matched_terms: registry study, registry-based study, registry based study, 登记研究, 注册登记研究; subcategory: study_design |
-| hazard ratio | P0 | covered | matched_terms: hazard ratio, hazard rate ratio, HR, 风险比, 危险比, 风险率; subcategory: effect_measure |
-| odds ratio | P0 | covered | matched_terms: odds ratio, OR, 优势比, 比值比, 胜算比; subcategory: effect_measure |
-| risk ratio | P0 | covered | matched_terms: risk ratio, relative risk ratio, RR, 风险比值, 相对风险比; subcategory: effect_measure |
-| relative risk | P0 | covered | matched_terms: relative risk, risk ratio, RR, 相对危险度, 相对风险; subcategory: effect_measure |
-| risk difference | P1 | covered | matched_terms: risk difference, absolute risk difference, RD, 风险差, 绝对风险差; subcategory: effect_measure |
-| mean difference | P0 | covered | matched_terms: mean difference, mean difference estimate, MD, 均数差, 平均差; subcategory: effect_measure |
-| standardized mean difference | P0 | covered | matched_terms: standardized mean difference, standardised mean difference, SMD, 标准化均数差, 标准化平均差; subcategory: effect_measure |
-| weighted mean difference | P0 | covered | matched_terms: weighted mean difference, weighted mean difference estimate, WMD, 加权均数差, 加权平均差; subcategory: effect_measure |
-| correlation coefficient | P1 | covered | matched_terms: correlation coefficient, correlation estimate, 相关系数, 相关性系数; subcategory: effect_measure |
-| beta coefficient | P1 | covered | matched_terms: beta coefficient, regression coefficient, beta estimate, beta, 回归系数, β系数; subcategory: effect_measure |
-| confidence interval | P0 | covered | matched_terms: confidence interval, CI, 置信区间, 可信区间; subcategory: effect_measure |
-| standard error | P1 | covered | matched_terms: standard error, standard error of the mean, SE, 标准误, 标准误差; subcategory: effect_measure |
-| p value | P1 | covered | matched_terms: p value, P-value, probability value, P值, 显著性P值; subcategory: effect_measure |
-| overall survival | P0 | covered | matched_terms: overall survival, survival overall, OS, 总生存, 总生存期; subcategory: survival_oncology_outcome |
-| progression-free survival | P0 | covered | matched_terms: progression-free survival, progression free survival, PFS, 无进展生存, 无进展生存期; subcategory: survival_oncology_outcome |
-| disease-free survival | P0 | covered | matched_terms: disease-free survival, disease free survival, DFS, 无病生存, 无病生存期; subcategory: survival_oncology_outcome |
-| recurrence-free survival | P0 | covered | matched_terms: recurrence-free survival, recurrence free survival, RFS, 无复发生存, 无复发生存期; subcategory: survival_oncology_outcome |
-| event-free survival | P1 | covered | matched_terms: event-free survival, event free survival, EFS, 无事件生存, 无事件生存期; subcategory: survival_oncology_outcome |
-| cancer-specific survival | P1 | covered | matched_terms: cancer-specific survival, cancer specific survival, CSS, 癌症特异性生存, 肿瘤特异性生存; subcategory: survival_oncology_outcome |
-| disease-specific survival | P1 | covered | matched_terms: disease-specific survival, disease specific survival, DSS, 疾病特异性生存, 疾病特异性生存期; subcategory: survival_oncology_outcome |
-| objective response rate | P0 | covered | matched_terms: objective response rate, objective response, ORR, 客观缓解率, 客观反应率; subcategory: survival_oncology_outcome |
-| complete response | P1 | covered | matched_terms: complete response, complete remission, CR, 完全缓解, 完全反应; subcategory: survival_oncology_outcome |
-| partial response | P1 | covered | matched_terms: partial response, partial remission, PR, 部分缓解, 部分反应; subcategory: survival_oncology_outcome |
-| stable disease | P1 | covered | matched_terms: stable disease, stable response, SD, 疾病稳定, 病情稳定; subcategory: survival_oncology_outcome |
-| progressive disease | P1 | covered | matched_terms: progressive disease, disease progression, PD, 疾病进展, 病情进展; subcategory: survival_oncology_outcome |
-| recurrence | P0 | covered | matched_terms: recurrence, relapse, recurrent event, 复发, 复发事件; subcategory: survival_oncology_outcome |
-| metastasis | P0 | covered | matched_terms: metastasis, metastatic event, distant metastasis, 转移, 远处转移; subcategory: survival_oncology_outcome |
-| mortality | P0 | covered | matched_terms: mortality, death rate, 死亡率, 病死率; subcategory: survival_oncology_outcome |
-| incidence | P1 | covered | matched_terms: incidence, incident rate, 发病率, 发生率; subcategory: general_clinical_outcome |
-| prevalence | P1 | covered | matched_terms: prevalence, prevalence rate, 患病率, 流行率; subcategory: general_clinical_outcome |
-| risk | P1 | covered | matched_terms: risk, disease risk, 风险, 发生风险; subcategory: general_clinical_outcome |
-| hospitalization | P1 | covered | matched_terms: hospitalization, hospitalisation, hospital admission, 住院, 住院率; subcategory: general_clinical_outcome |
-| adverse event | P1 | covered | matched_terms: adverse event, adverse events, AE, 不良事件, 不良反应; subcategory: general_clinical_outcome |
-| serious adverse event | P1 | covered | matched_terms: serious adverse event, serious adverse events, SAE, 严重不良事件, 严重不良反应; subcategory: general_clinical_outcome |
-| quality of life | P1 | covered | matched_terms: quality of life, health-related quality of life, 生活质量, 生命质量; subcategory: general_clinical_outcome |
-| symptom score | P1 | covered | matched_terms: symptom score, symptom scale score, 症状评分, 症状量表评分; subcategory: general_clinical_outcome |
-| treatment response | P1 | covered | matched_terms: treatment response, response to treatment, 治疗反应, 疗效反应; subcategory: general_clinical_outcome |
-| complication | P1 | covered | matched_terms: complication, complications, 并发症, 并发事件; subcategory: general_clinical_outcome |
-| sensitivity | P0 | covered | matched_terms: sensitivity, true positive rate, 敏感性, 灵敏度; subcategory: diagnostic_accuracy |
-| specificity | P0 | covered | matched_terms: specificity, true negative rate, 特异性, 特异度; subcategory: diagnostic_accuracy |
-| area under the curve | P0 | covered | matched_terms: area under the curve, area under curve, AUC, 曲线下面积, AUC值; subcategory: diagnostic_accuracy |
-| receiver operating characteristic | P0 | covered | matched_terms: receiver operating characteristic, ROC curve, ROC, 受试者工作特征曲线, ROC曲线; subcategory: diagnostic_accuracy |
-| diagnostic odds ratio | P0 | covered | matched_terms: diagnostic odds ratio, diagnostic OR, DOR, 诊断优势比, 诊断比值比; subcategory: diagnostic_accuracy |
-| positive likelihood ratio | P0 | covered | matched_terms: positive likelihood ratio, PLR, LR+, 阳性似然比, 阳性似然率; subcategory: diagnostic_accuracy |
-| negative likelihood ratio | P0 | covered | matched_terms: negative likelihood ratio, NLR, LR-, 阴性似然比, 阴性似然率; subcategory: diagnostic_accuracy |
-| positive predictive value | P0 | covered | matched_terms: positive predictive value, PPV, 阳性预测值, 阳性预报值; subcategory: diagnostic_accuracy |
-| negative predictive value | P0 | covered | matched_terms: negative predictive value, NPV, 阴性预测值, 阴性预报值; subcategory: diagnostic_accuracy |
-| heterogeneity | P1 | covered | matched_terms: heterogeneity, between-study heterogeneity, 异质性, 研究异质性; subcategory: heterogeneity_statistics |
-| I-squared | P1 | covered | matched_terms: I-squared, I squared, I2, I方, I²; subcategory: heterogeneity_statistics |
-| tau-squared | P1 | covered | matched_terms: tau-squared, tau squared, tau2, tau方, τ²; subcategory: heterogeneity_statistics |
-| random-effects model | P1 | covered | matched_terms: random-effects model, random effects model, 随机效应模型, 随机效应; subcategory: heterogeneity_statistics |
-| fixed-effect model | P1 | covered | matched_terms: fixed-effect model, fixed effect model, 固定效应模型, 固定效应; subcategory: heterogeneity_statistics |
-| subgroup analysis | P1 | covered | matched_terms: subgroup analysis, subgroup analyses, 亚组分析, 分层分析; subcategory: heterogeneity_statistics |
-| sensitivity analysis | P1 | covered | matched_terms: sensitivity analysis, robustness analysis, 敏感性分析, 稳健性分析; subcategory: heterogeneity_statistics |
-| meta-regression | P1 | covered | matched_terms: meta-regression, meta regression, Meta回归, 元回归; subcategory: heterogeneity_statistics |
-| publication bias | P1 | covered | matched_terms: publication bias, reporting bias, 发表偏倚, 出版偏倚; subcategory: heterogeneity_statistics |
-| funnel plot | P1 | covered | matched_terms: funnel plot, funnel-plot, 漏斗图, 漏斗图分析; subcategory: heterogeneity_statistics |
-| Egger test | P1 | covered | matched_terms: Egger test, Egger regression test, Egger检验, Egger回归检验; subcategory: heterogeneity_statistics |
-| Begg test | P1 | covered | matched_terms: Begg test, Begg rank correlation test, Begg检验, Begg秩相关检验; subcategory: heterogeneity_statistics |
-| leave-one-out analysis | P1 | covered | matched_terms: leave-one-out analysis, leave one out analysis, 逐一剔除分析, 留一法分析; subcategory: heterogeneity_statistics |
-| systematic review | P0 | covered | matched_terms: systematic review, systematic literature review, 系统综述, 系统评价; subcategory: publication_type |
-| meta-analysis | P0 | covered | matched_terms: meta-analysis, meta analysis, Meta分析, 荟萃分析; subcategory: publication_type |
-| review | P0 | covered | matched_terms: review, review article, 综述, 综述文章; subcategory: publication_type |
-| case report | P0 | covered | matched_terms: case report, case reports, 病例报告, 个案报告; subcategory: publication_type |
-| letter | P1 | covered | matched_terms: letter, letter to editor, 信件, 读者来信; subcategory: publication_type |
-| editorial | P1 | covered | matched_terms: editorial, editorial article, 社论, 编辑部文章; subcategory: publication_type |
-| comment | P1 | covered | matched_terms: comment, commentary, 评论, 评论文章; subcategory: publication_type |
-| conference abstract | P1 | covered | matched_terms: conference abstract, meeting abstract, 会议摘要, 会议论文摘要; subcategory: publication_type |
-| protocol | P1 | covered | matched_terms: protocol, study protocol, review protocol, 研究方案, 试验方案; subcategory: exclusion_type |
-| animal study | P0 | covered | matched_terms: animal study, animal experiment, animal-only study, 动物研究, 动物实验; subcategory: exclusion_type |
-| in vitro study | P0 | covered | matched_terms: in vitro study, cell experiment, in-vitro study, 体外研究, 细胞实验; subcategory: exclusion_type |
-| non-human study | P1 | covered | matched_terms: non-human study, nonhuman study, 非人类研究, 非人体研究; subcategory: exclusion_type |
-| Cochrane Risk of Bias | P1 | covered | matched_terms: Cochrane Risk of Bias, Cochrane risk-of-bias tool, Risk of Bias 2, RoB 2, RoB, Cochrane偏倚风险工具, Cochrane风险偏倚; subcategory: quality_assessment |
-| ROBINS-I | P1 | covered | matched_terms: ROBINS-I, Risk Of Bias In Non-randomized Studies of Interventions, ROBINS-I工具, 非随机研究偏倚风险工具; subcategory: quality_assessment |
-| Newcastle-Ottawa Scale | P1 | covered | matched_terms: Newcastle-Ottawa Scale, Newcastle Ottawa Scale, NOS, Newcastle-Ottawa量表, NOS量表, 纽卡斯尔渥太华量表; subcategory: quality_assessment |
-| QUADAS-2 | P1 | covered | matched_terms: QUADAS-2, Quality Assessment of Diagnostic Accuracy Studies 2, QUADAS-2工具, 诊断准确性质量评价工具; subcategory: quality_assessment |
-| JBI critical appraisal | P1 | covered | matched_terms: JBI critical appraisal, Joanna Briggs Institute critical appraisal, JBI, JBI质量评价, JBI评价工具; subcategory: quality_assessment |
-| AHRQ checklist | P1 | covered | matched_terms: AHRQ checklist, Agency for Healthcare Research and Quality checklist, AHRQ, AHRQ清单, AHRQ评价清单; subcategory: quality_assessment |
-| GRADE | P1 | covered | matched_terms: GRADE, Grading of Recommendations Assessment Development and Evaluation, GRADE证据评价, GRADE分级; subcategory: quality_assessment |
-| preprint | P1 | covered | matched_terms: preprint, preprint article, 预印本, 预印本论文; subcategory: exclusion_type |
-| duplicate publication | P1 | covered | matched_terms: duplicate publication, duplicate report, 重复发表, 重复出版; subcategory: exclusion_type |
-| diagnostic accuracy | P0 | covered | matched_terms: diagnostic accuracy, diagnostic test accuracy, 诊断准确性, 诊断准确度; subcategory: diagnostic_accuracy |
-
-## Meta Analysis Terms Core Summary
-
-- meta analysis terms checklist total count: 108
-- covered count: 108
-- missing count: 0
-- coverage percentage: 1.000
-- missing terms: 0
-- quality gate status: pass
-- subcategory coverage: diagnostic_accuracy 10/10, effect_measure 13/13, exclusion_type 6/6, general_clinical_outcome 10/10, heterogeneity_statistics 13/13, pico_framework 12/12, publication_type 8/8, quality_assessment 7/7, study_design 14/14, survival_oncology_outcome 15/15
-- missing term details: none
-- high-risk ambiguity terms: OR, OS, HR, PR, SD, PD, CI, MD, SMD, SE, RR
-
 ## P0 Gaps
 
 No P0 gaps detected.
@@ -613,8 +488,6 @@ No P2 gaps detected.
 | anatomy_tissue_missing_tcga_primary_sites | 0 | 0 | pass |
 | bioinformatics_modality_core_coverage | 1.0 | 0.95 | pass |
 | bioinformatics_modality_missing_terms | 0 | 0 | pass |
-| meta_analysis_terms_core_coverage | 1.0 | 0.95 | pass |
-| meta_analysis_terms_missing_terms | 0 | 0 | pass |
 | missing_items | 0 | 0 | pass |
 | p0_gaps | 0 | 0 | pass |
 | audit_cross_context_pollution | 0 | 0 | pass |
@@ -628,7 +501,6 @@ No P2 gaps detected.
 - common_diseases: WHO noncommunicable diseases and major disease categories (Curated major disease category checklist, 2026-05)
 - endocrine_metabolic_core: project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist (2026-05-11 curated v1)
 - gtex_tissues: GTEx Portal tissue groups (GTEx tissue group checklist, curated access 2026-05)
-- meta_analysis_terms_core: BioMedPilot curated shared medical vocabulary checklist (meta_analysis_terms_core_v1)
 - meta_terms: Cochrane-style Meta-analysis retrieval strategy term categories (Curated Meta retrieval checklist, 2026-05)
 - oncology_core: BioMedPilot curated oncology core based on TCGA/GDC project labels, common translational oncology concepts, and MeSH heading names (oncology_core_v1_2026-05-11)
 - tcga_projects: NCI GDC TCGA Study Abbreviations (TCGA project abbreviations list, curated access 2026-05)

@@ -104,14 +104,7 @@ def test_meta_outcome_terms_enter_search_translation_draft() -> None:
         target_context="meta_analysis",
         target_database="pubmed",
     )
-    text = " ".join(
-        [
-            *draft.outcome_terms_en,
-            *draft.diagnostic_accuracy_terms,
-            *draft.mesh_terms,
-            *draft.pubmed_query_candidates,
-        ]
-    )
+    text = " ".join([*draft.outcome_terms_en, *draft.mesh_terms, *draft.pubmed_query_candidates])
 
     assert "overall survival" in text
     assert "progression-free survival" in text

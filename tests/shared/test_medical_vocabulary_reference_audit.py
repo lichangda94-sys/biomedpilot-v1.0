@@ -23,7 +23,6 @@ def test_reference_checklists_exist() -> None:
         "endocrine_metabolic_core_checklist.json",
         "anatomy_tissue_core_checklist.json",
         "bioinformatics_modality_core_checklist.json",
-        "meta_analysis_terms_core_checklist.json",
     }
 
     assert expected <= {path.name for path in CHECKLIST_DIR.glob("*.json")}
@@ -48,7 +47,6 @@ def test_audit_script_runs() -> None:
         "endocrine_metabolic_core",
         "anatomy_tissue_core",
         "bioinformatics_modality_core",
-        "meta_analysis_terms_core",
     } <= set(report["sections"])
 
 
@@ -93,8 +91,6 @@ def test_audit_report_contains_coverage_sections() -> None:
         "Anatomy Tissue Core Summary",
         "Bioinformatics Modality Core Covered/Missing",
         "Bioinformatics Modality Core Summary",
-        "Meta Analysis Terms Core Covered/Missing",
-        "Meta Analysis Terms Core Summary",
         "P0 Gaps",
         "P1 Gaps",
         "P2 Gaps",
@@ -147,8 +143,6 @@ def test_stage_v7_quality_gates_pass() -> None:
     assert gates["anatomy_tissue_missing_tcga_primary_sites"]["observed"] == 0
     assert gates["bioinformatics_modality_core_coverage"]["observed"] >= 0.95
     assert gates["bioinformatics_modality_missing_terms"]["observed"] == 0
-    assert gates["meta_analysis_terms_core_coverage"]["observed"] >= 0.95
-    assert gates["meta_analysis_terms_missing_terms"]["observed"] == 0
     assert gates["missing_items"]["observed"] == 0
     assert gates["p0_gaps"]["observed"] == 0
     assert gates["audit_cross_context_pollution"]["observed"] == 0

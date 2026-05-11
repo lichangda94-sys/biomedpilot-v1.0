@@ -103,14 +103,7 @@ def test_systematic_meta_outcome_mapping(
     required_abbreviation: str,
 ) -> None:
     result = lookup_medical_terms(term, target_context="meta_analysis")
-    text = " ".join(
-        [
-            *result.outcome_terms,
-            *result.effect_measures,
-            *result.diagnostic_accuracy_terms,
-            *result.abbreviations,
-        ]
-    )
+    text = " ".join([*result.outcome_terms, *result.abbreviations])
 
     assert required_term in text
     if required_abbreviation:
@@ -227,9 +220,8 @@ def test_stage_2_4_gap_driven_meta_effect_size_terms(
 ) -> None:
     result = lookup_medical_terms(term, target_context="meta_analysis")
 
-    assert required_term in " ".join(result.effect_measures)
+    assert required_term in " ".join(result.outcome_terms)
     assert required_abbreviation in result.abbreviations
-    assert result.outcome_terms == []
     assert result.tcga_project_candidates == []
     assert result.gtex_tissue_candidates == []
 
@@ -247,7 +239,7 @@ def test_stage_2_4_gap_driven_meta_effect_size_terms(
 def test_stage_2_4_gap_driven_publication_exclusion_terms(term: str, required_term: str) -> None:
     result = lookup_medical_terms(term, target_context="meta_analysis")
 
-    assert required_term in " ".join([*result.publication_type_terms, *result.exclusion_type_terms])
+    assert required_term in " ".join(result.publication_type_terms)
     assert result.tcga_project_candidates == []
     assert result.gtex_tissue_candidates == []
 
