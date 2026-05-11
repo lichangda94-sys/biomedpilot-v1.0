@@ -1878,6 +1878,16 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
 
     task_center = BioinformaticsAnalysisTaskCenterWidget()
     task_center.refresh_project(project_summary)
+    grouped = task_center.findChild(QTextEdit, "analysisCapabilityGroupedSummary")
+    assert grouped is not None
+    grouped_text = grouped.toPlainText()
+    assert "可直接使用已有结果" in grouped_text
+    assert "查看差异基因结果" in grouped_text
+    assert "需要确认分组后运行" in grouped_text
+    assert "表达数据探索" in grouped_text
+    assert "小鼠数据：适合动物模型分析" in grouped_text
+    assert "TCGA" not in grouped_text
+    assert "GTEx" not in grouped_text
     task_text = " ".join(
         task_center._tasks.item(row, column).text()
         for row in range(task_center._tasks.rowCount())
@@ -1901,6 +1911,15 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
     assert preview.horizontalHeaderItem(2).text() == "log2FC"
     assert preview.horizontalHeaderItem(4).text() == "adjusted p value"
     assert preview.rowCount() == 2
+    summary = results.findChild(QTextEdit, "importedDegSummary")
+    assert summary is not None
+    summary_text = summary.toPlainText()
+    assert "差异结果来源：导入表格中的已有结果" in summary_text
+    assert "当前比较：PFFvsPBS" in summary_text
+    assert "significant genes 2" in summary_text
+    assert "upregulated 1" in summary_text
+    assert "downregulated 1" in summary_text
+    assert "富集物种：mouse / Mus musculus" in summary_text
     details = results._details.toPlainText()
     assert "imported_deg_result" in details
     assert "mouse" in details
@@ -2163,7 +2182,72 @@ def test_recognition_table_prefers_semantic_type_label(qt_app, project_summary, 
     widget._render_report(report)
     table = widget.findChild(QTableWidget, "recognitionResultTable")
 
-    assert table.item(0, 2).text() == "RNA-seq 综合表达结果表（底层：表格文本文件）"
+    assert table.item(0, 2).text() == "RNA-seq 综合表达结果表"
+
+
+def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "integrated_rnaseq_results.xlsx"
+    source.write_text("placeholder", encoding="utf-8")
+    comparisons = [
+        {"comparison_name": name, "log2fc_column": f"{name}_log2FoldChange", "pvalue_column": f"{name}_pvalue", "padj_column": f"{name}_padj", "is_complete": True}
+        for name in ("PFFvsPBS", "MMP3vsPBS", "MK2206vsPBS", "PI103vsPBS", "PDTCvsPBS", "PF271vsPBS", "MK2206vsPFF", "PI103vsPFF", "PDTCvsPFF", "PF271vsPFF")
+    ]
+    report = {
+        "schema_version": "biomedpilot.recognition_report.v1",
+        "files": [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "tabular_text_file",
+                "recognized_type_zh": "表格文本文件",
+                "semantic_type": "rna_seq_integrated_result_table",
+                "semantic_type_zh": "RNA-seq 综合表达结果表",
+                "species": "Mus musculus",
+                "species_group": "mouse",
+                "gene_id_type": "ensembl_mouse_gene_id",
+                "content_blocks": [
+                    {"block_type": "gene_identifier", "gene_id_type": "ensembl_mouse_gene_id", "species": "Mus musculus", "species_group": "mouse", "example_values": ["ENSMUSG00000026193"]},
+                    {"block_type": "count_expression_matrix", "sample_count": 21, "sample_columns": [f"A{i}_count" for i in range(1, 4)], "inferred_groups": ["A", "B", "C", "D", "E", "F", "H"], "replicate_count_by_group": {"A": 3, "B": 3, "C": 3, "D": 3, "E": 3, "F": 3, "H": 3}},
+                    {"block_type": "fpkm_expression_matrix", "sample_count": 21, "sample_columns": [f"A{i}_fpkm" for i in range(1, 4)], "matches_count_sample_ids": True},
+                    {"block_type": "deg_comparisons", "comparison_count": 10, "complete_comparison_count": 10, "comparisons": comparisons},
+                    {"block_type": "gene_annotation", "annotation_fields": ["gene_name", "gene_chr", "gene_start", "gene_end", "gene_length", "gene_biotype", "gene_description", "tf_family"]},
+                ],
+                "content_profile": {"sample_columns": [f"A{i}_count" for i in range(1, 4)] + [f"A{i}_fpkm" for i in range(1, 4)]},
+                "detected_assets": [],
+                "confidence": 0.92,
+                "file_size": 1,
+                "reason": "integrated",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+        "type_counts": {"tabular_text_file": 1},
+        "warnings": [],
+    }
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    widget._render_report(report)
+    summary = widget.findChild(QTextEdit, "recognitionAssetSummary")
+
+    assert summary is not None
+    text = summary.toPlainText()
+    assert "文件类型：RNA-seq 综合表达结果表" in text
+    assert "物种：Mus musculus" in text
+    assert "基因 ID：Ensembl mouse gene ID" in text
+    assert "表达数据：count 矩阵 21 列；FPKM 矩阵 21 列" in text
+    assert "差异比较：10 个完整比较" in text
+    assert "基因注释：已包含" in text
+    assert "Count 矩阵：21 列，7 组，每组约 3 个重复" in text
+    assert "FPKM 矩阵：21 列，与 count 样本匹配" in text
+    assert "PFFvsPBS" in text
+    assert "另有 6 个比较" in text
+    assert "差异分析建议使用 count" in text
+    assert "小鼠数据" in text
+    assert "tabular_text_file" not in text
+    assert "PFFvsPBS_log2FoldChange" not in text
+    assert "gene_start" not in text
+    assert "Homo sapiens" not in text
 
 
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:

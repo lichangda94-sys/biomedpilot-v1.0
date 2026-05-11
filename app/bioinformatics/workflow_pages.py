@@ -2629,6 +2629,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._last_report = None
         self._table.setRowCount(0)
         self._counts.setPlainText("旧识别结果已清理。raw_data 中的原始导入文件未删除。")
+        self._asset_summary.setPlainText("")
         self._technical_details.setPlainText("")
         self._render_recognition_history()
         self._set_status("旧识别结果已清理；原始数据文件未删除。请点击“重新识别”重新扫描。")
@@ -2693,6 +2694,9 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._counts = _read_only_report_view(130)
         self._counts.setObjectName("recognitionSummaryReport")
         result_layout.addWidget(self._counts)
+        self._asset_summary = _read_only_report_view(190)
+        self._asset_summary.setObjectName("recognitionAssetSummary")
+        result_layout.addWidget(self._asset_summary)
         group_card, group_layout = _card("样本与分组预览")
         group_card.setObjectName("recognitionGroupPreviewCard")
         self._group_preview = _read_only_report_view(130)
@@ -2736,6 +2740,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._set_status(f"已读取识别报告：{len(annotated)} 个文件，{len(warnings)} 条 warning。")
         self._fill_recognition_table(files)
         self._counts.setPlainText(_recognition_user_summary(report, annotated, warnings, self._project_root))
+        self._asset_summary.setPlainText(_recognition_asset_summary(files))
         self._group_preview.setPlainText(_group_preview_user_summary(report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}))
         self._technical_details.setPlainText(
             _json(
@@ -2757,6 +2762,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._current_result_hint.setVisible(True)
         self._table.setRowCount(0)
         self._counts.setPlainText("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
+        self._asset_summary.setPlainText("")
         self._group_preview.setPlainText("")
         self._technical_details.setPlainText("")
 
@@ -3567,6 +3573,9 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
         actions.addStretch(1)
         root.addLayout(actions)
+        self._capability_summary = _read_only_report_view(150)
+        self._capability_summary.setObjectName("analysisCapabilityGroupedSummary")
+        root.addWidget(self._capability_summary)
         self._tasks = _table(["任务", "是否可运行", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
         root.addWidget(self._tasks)
         self._records = _text_preview(120)
@@ -3576,6 +3585,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     def _render(self, center: dict[str, object]) -> None:
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
         self._status_label.setText(f"分析任务中心：{len(tasks)} 个任务模板。不可运行任务将显示缺失输入。")
+        self._capability_summary.setPlainText(_analysis_task_group_summary(center))
         _fill_table(
             self._tasks,
             [
@@ -3648,13 +3658,16 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         actions.addStretch(1)
         root.addLayout(actions)
         comparison_row = QHBoxLayout()
-        comparison_row.addWidget(_muted("Imported DEG comparison："))
+        comparison_row.addWidget(_muted("已有 DEG 比较："))
         self._imported_deg_selector = QComboBox()
         self._imported_deg_selector.setObjectName("importedDegComparisonSelector")
         self._imported_deg_selector.currentIndexChanged.connect(self._render_selected_imported_deg)
         comparison_row.addWidget(self._imported_deg_selector)
         comparison_row.addStretch(1)
         root.addLayout(comparison_row)
+        self._imported_deg_summary = _read_only_report_view(120)
+        self._imported_deg_summary.setObjectName("importedDegSummary")
+        root.addWidget(self._imported_deg_summary)
         self._results = _table(["结果名称", "分析类型", "文件类型", "创建时间", "路径", "状态", "warning"])
         root.addWidget(self._results)
         self._deg_preview = _table(["gene_id", "gene_name", "log2FC", "p value", "adjusted p value", "gene_biotype", "gene_description"])
@@ -3703,6 +3716,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def _render_selected_imported_deg(self) -> None:
         if self._project_root is None or self._imported_deg_selector.count() == 0:
             self._deg_preview.setRowCount(0)
+            self._imported_deg_summary.setPlainText("")
             return
         item = self._imported_deg_selector.currentData()
         if not isinstance(item, dict):
@@ -3728,6 +3742,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 for row in rows[:100]
             ],
         )
+        self._imported_deg_summary.setPlainText(_imported_deg_user_summary(view))
         self._details.setPlainText(_json({"imported_deg_view": {key: value for key, value in view.items() if key != "rows"}, "preview_row_count": min(len(rows), 100)}))
 
 
@@ -6916,7 +6931,18 @@ def _standardization_user_summary(registry: dict[str, object], manifest: dict[st
     warnings = [str(item) for item in registry.get("warnings", []) or []] + [str(item) for item in manifest.get("warnings", []) or []]
     usable = [str(item) for item in manifest.get("usable_analyses", []) or []]
     missing = [str(item) for item in manifest.get("missing_assets", []) or []]
-    return "\n".join(
+    asset_types = {str(item.get("asset_type") or "") for item in assets}
+    lines: list[str] = []
+    if {"count_matrix", "normalized_expression_matrix", "deg_result_table", "gene_annotation"} <= asset_types:
+        lines.extend(
+            [
+                "检测到一个综合 RNA-seq 表。",
+                "系统已拆分为 count 矩阵、FPKM 矩阵、差异分析结果和基因注释。",
+                "标准化资产：count matrix、FPKM / normalized expression matrix、imported DEG result table、gene annotation、gene identifier metadata",
+                "提示：重新差异分析建议使用 count；表达展示、热图和相关性可使用 FPKM。",
+            ]
+        )
+    lines.extend(
         [
             f"注册资产：{len(assets)} 个",
             f"analysis-ready 资产：{len(ready_assets)} 个",
@@ -6926,6 +6952,7 @@ def _standardization_user_summary(registry: dict[str, object], manifest: dict[st
             "说明：当前为资产注册和轻量校验，不等于正式 biological normalization。",
         ]
     )
+    return "\n".join(lines)
 
 
 def _format_confidence(value: object) -> str:
@@ -6941,12 +6968,182 @@ def _recognition_type_text(item: dict[str, object]) -> str:
     primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
     semantic_label = str(item.get("semantic_type_zh") or "")
     if semantic_label:
-        return f"{semantic_label}（底层：{primary_label}）"
+        return semantic_label
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != primary]
     if not roles:
         return primary_label
     role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
     return f"{primary_label}（含：{'、'.join(role_labels)}）" if role_labels else primary_label
+
+
+def _recognition_asset_summary(files: list[dict[str, object]]) -> str:
+    if not files:
+        return ""
+    summaries = []
+    for item in files:
+        if item.get("semantic_type") == "rna_seq_integrated_result_table":
+            summaries.append(_integrated_rnaseq_asset_summary(item))
+        else:
+            label = _recognition_type_text(item)
+            name = str(item.get("file_name") or "未命名文件")
+            summaries.append(f"文件：{name}\n文件类型：{label}")
+    return "\n\n".join(summaries)
+
+
+def _integrated_rnaseq_asset_summary(item: dict[str, object]) -> str:
+    blocks = _content_blocks_by_type(item)
+    gene_block = blocks.get("gene_identifier", {})
+    count_block = blocks.get("count_expression_matrix", {})
+    fpkm_block = blocks.get("fpkm_expression_matrix", {})
+    deg_block = blocks.get("deg_comparisons", {})
+    annotation_block = blocks.get("gene_annotation", {})
+    count_sample_count = int(count_block.get("sample_count") or len(count_block.get("sample_columns", []) or []))
+    fpkm_sample_count = int(fpkm_block.get("sample_count") or len(fpkm_block.get("sample_columns", []) or []))
+    comparison_count = int(deg_block.get("complete_comparison_count") or deg_block.get("comparison_count") or len(deg_block.get("comparisons", []) or []))
+    gene_id_type = str(item.get("gene_id_type") or gene_block.get("gene_id_type") or "")
+    gene_prefix = _gene_id_prefix(gene_id_type, gene_block)
+    comparison_names = [str(comparison.get("comparison_name") or "") for comparison in deg_block.get("comparisons", []) or [] if isinstance(comparison, dict) and str(comparison.get("comparison_name") or "")]
+    annotation_fields = [str(field) for field in annotation_block.get("annotation_fields", []) or [] if str(field)]
+    group_text = _expression_group_summary(count_block)
+    comparison_preview = _preview_list(comparison_names, limit=4, more_label="比较")
+    annotation_preview = _preview_list(_preferred_annotation_fields(annotation_fields), limit=3, more_label="字段")
+    lines = [
+        "文件类型：RNA-seq 综合表达结果表",
+        "包含 count、FPKM、差异分析结果和基因注释。",
+        f"物种：{item.get('species') or gene_block.get('species') or '未识别'}",
+        f"基因 ID：{_gene_id_type_label(gene_id_type)}",
+        f"表达数据：count 矩阵 {count_sample_count} 列；FPKM 矩阵 {fpkm_sample_count} 列",
+        f"差异比较：{comparison_count} 个完整比较",
+        f"基因注释：{'已包含' if annotation_fields else '未识别'}",
+        "状态：可进入标准化",
+        "数据内容：",
+        f"基因标识：{gene_prefix} / {_gene_id_type_label(gene_id_type)}",
+        f"Count 矩阵：{count_sample_count} 列{group_text}",
+        f"FPKM 矩阵：{fpkm_sample_count} 列{_fpkm_match_text(fpkm_block)}",
+        f"差异比较：{comparison_preview or '未识别'}",
+        f"注释字段：{annotation_preview or '未识别'}",
+        "提醒：",
+        "检测到 count 与 FPKM。差异分析建议使用 count；表达展示可使用 FPKM。",
+    ]
+    if comparison_count:
+        lines.append("文件已包含差异分析结果，可用于结果浏览和富集分析；如需重新计算差异分析，请确认分组配置。")
+    if str(item.get("species_group") or gene_block.get("species_group") or "") == "mouse":
+        lines.append("该数据集为小鼠数据，适合动物模型分析、机制探索和方法验证，不应直接按人类临床队列解释。")
+    return "\n".join(lines)
+
+
+def _content_blocks_by_type(item: dict[str, object]) -> dict[str, dict[str, object]]:
+    blocks = item.get("content_blocks")
+    if not isinstance(blocks, list):
+        profile = item.get("content_profile")
+        blocks = profile.get("content_blocks") if isinstance(profile, dict) else []
+    result: dict[str, dict[str, object]] = {}
+    for block in blocks or []:
+        if isinstance(block, dict):
+            result[str(block.get("block_type") or "")] = block
+    return result
+
+
+def _gene_id_type_label(value: str) -> str:
+    return {
+        "ensembl_mouse_gene_id": "Ensembl mouse gene ID",
+        "ensembl_human_gene_id": "Ensembl human gene ID",
+        "ensembl_mouse_transcript_id": "Ensembl mouse transcript ID",
+        "ensembl_id": "Ensembl ID",
+    }.get(value, value or "未识别")
+
+
+def _gene_id_prefix(gene_id_type: str, gene_block: dict[str, object]) -> str:
+    examples = [str(value) for value in gene_block.get("example_values", []) or [] if str(value)]
+    if examples:
+        match = re.match(r"([A-Z]+)", examples[0])
+        if match:
+            return match.group(1)
+    return {
+        "ensembl_mouse_gene_id": "ENSMUSG",
+        "ensembl_human_gene_id": "ENSG",
+        "ensembl_mouse_transcript_id": "ENSMUST",
+    }.get(gene_id_type, "gene_id")
+
+
+def _expression_group_summary(block: dict[str, object]) -> str:
+    groups = [str(group) for group in block.get("inferred_groups", []) or [] if str(group)]
+    replicate_counts = block.get("replicate_count_by_group") if isinstance(block.get("replicate_count_by_group"), dict) else {}
+    if not groups:
+        return ""
+    counts = [int(value) for value in replicate_counts.values() if isinstance(value, (int, float))]
+    replicate_text = f"，每组约 {round(sum(counts) / len(counts))} 个重复" if counts else ""
+    return f"，{len(groups)} 组{replicate_text}"
+
+
+def _fpkm_match_text(block: dict[str, object]) -> str:
+    if block.get("matches_count_sample_ids") is True:
+        return "，与 count 样本匹配"
+    if block.get("matches_count_sample_ids") is False:
+        return "，与 count 样本不完全匹配"
+    return ""
+
+
+def _preview_list(values: list[str], *, limit: int, more_label: str) -> str:
+    clean = [value for value in values if value]
+    if not clean:
+        return ""
+    shown = "、".join(clean[:limit])
+    remaining = len(clean) - limit
+    return f"{shown}；另有 {remaining} 个{more_label}" if remaining > 0 else shown
+
+
+def _preferred_annotation_fields(fields: list[str]) -> list[str]:
+    preferred = ["gene_name", "gene_biotype", "gene_description", "tf_family"]
+    result = [field for field in preferred if field in fields]
+    result.extend(field for field in fields if field not in result)
+    return result
+
+
+def _analysis_task_group_summary(center: dict[str, object]) -> str:
+    capabilities = [item for item in center.get("capabilities", []) or [] if isinstance(item, dict)]
+    available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection"}}
+    lines: list[str] = []
+    groups = [
+        ("可直接使用已有结果", [("deg_result_browse", "查看差异基因结果"), ("deg_filtering", "DEG 筛选"), ("volcano_plot", "火山图"), ("enrichment_from_deg", "富集分析输入")]),
+        ("需要确认分组后运行", [("differential_expression_recompute", "重新差异表达分析"), ("qc", "样本 QC"), ("normalization", "count 矩阵标准化")]),
+        ("表达数据探索", [("heatmap", "表达热图"), ("correlation", "样本相关性"), ("gene_expression_browse", "候选基因表达查看")]),
+        ("注释与报告", [("gene_annotation_display", "gene annotation 浏览"), ("protein_coding_filter", "protein-coding 筛选"), ("report_annotation", "报告注释")]),
+    ]
+    for title, tasks in groups:
+        labels = [label for task_id, label in tasks if task_id in available]
+        if labels:
+            lines.append(f"{title}：{'、'.join(labels)}")
+    count_capability = available.get("differential_expression_recompute")
+    if count_capability and count_capability.get("status") == "ready_with_group_confirmation":
+        lines.append(str(count_capability.get("reason") or "检测到推断分组，请确认实验分组后重新差异分析。"))
+    mouse_capability = next((item for item in capabilities if item.get("task_id") == "human_cohort_integration" and item.get("status") == "not_available"), None)
+    if mouse_capability:
+        lines.append("小鼠数据：适合动物模型分析、机制探索和方法验证；不推荐人类队列整合。")
+    return "\n".join(lines) if lines else "尚未生成可用分析任务。"
+
+
+def _imported_deg_user_summary(view: dict[str, object]) -> str:
+    stats = view.get("statistics") if isinstance(view.get("statistics"), dict) else {}
+    thresholds = view.get("selected_thresholds") if isinstance(view.get("selected_thresholds"), dict) else {}
+    gene_lists = view.get("gene_lists") if isinstance(view.get("gene_lists"), dict) else {}
+    enrichment_species = str(view.get("enrichment_species") or "unknown")
+    species = str(view.get("species") or "")
+    species_text = f"{enrichment_species} / {species}" if species and species != enrichment_species else enrichment_species
+    lines = [
+        "差异结果来源：导入表格中的已有结果",
+        f"当前比较：{view.get('comparison_name') or '未选择'}",
+        f"筛选阈值：padj < {thresholds.get('padj', 0.05)}；abs(log2FC) > {thresholds.get('abs_log2fc', 1.0)}",
+        f"统计：total genes {stats.get('total_genes', 0)}；significant genes {stats.get('significant_genes', 0)}；upregulated {stats.get('upregulated', 0)}；downregulated {stats.get('downregulated', 0)}",
+        f"富集物种：{species_text}",
+        f"Gene list：up genes {len(gene_lists.get('up_genes', []) or [])}；down genes {len(gene_lists.get('down_genes', []) or [])}；all significant genes {len(gene_lists.get('all_significant_genes', []) or [])}。优先使用 gene_name / gene symbol。",
+    ]
+    warnings = [str(item) for item in view.get("warnings", []) or [] if str(item)]
+    if warnings:
+        lines.append("提醒：" + "；".join(warnings))
+    if view.get("gene_id_type") and not any(gene_lists.get(key) for key in ("up_genes", "down_genes", "all_significant_genes")):
+        lines.append("若仅有 Ensembl ID，需要先做 ID 转换再进入富集分析。")
+    return "\n".join(lines)
 
 
 def _recognition_roles_tooltip(item: dict[str, object]) -> str:
