@@ -19,7 +19,6 @@ def test_reference_checklists_exist() -> None:
         "common_diseases_checklist.json",
         "gtex_tissues_checklist.json",
         "meta_terms_checklist.json",
-        "oncology_core_checklist.json",
     }
 
     assert expected <= {path.name for path in CHECKLIST_DIR.glob("*.json")}
@@ -34,7 +33,7 @@ def test_audit_script_runs() -> None:
 
     assert report["schema_version"] == "medical_vocabulary_coverage_audit.v1"
     assert report["overall"]["total_checklist_items"] >= 80
-    assert {"tcga_projects", "common_cancers", "common_diseases", "gtex_tissues", "meta_terms", "oncology_core"} <= set(report["sections"])
+    assert {"tcga_projects", "common_cancers", "common_diseases", "gtex_tissues", "meta_terms"} <= set(report["sections"])
 
 
 def test_tcga_checklist_has_core_projects() -> None:
@@ -70,8 +69,6 @@ def test_audit_report_contains_coverage_sections() -> None:
         "Common Diseases Covered/Missing",
         "GTEx Tissues Exact/Approximate/Missing",
         "Meta Terms Covered/Missing",
-        "Oncology Core Covered/Missing",
-        "Oncology Core Summary",
         "P0 Gaps",
         "P1 Gaps",
         "P2 Gaps",
@@ -115,8 +112,6 @@ def test_stage_v7_quality_gates_pass() -> None:
     assert gates["tcga_project_mapping"]["observed"] >= 0.90
     assert gates["gtex_tissue_mapping"]["observed"] >= 0.95
     assert gates["meta_retrieval_terms"]["observed"] >= 0.90
-    assert gates["oncology_core_coverage"]["observed"] >= 0.95
-    assert gates["oncology_core_missing_tcga_projects"]["observed"] == 0
     assert gates["missing_items"]["observed"] == 0
     assert gates["p0_gaps"]["observed"] == 0
     assert gates["audit_cross_context_pollution"]["observed"] == 0

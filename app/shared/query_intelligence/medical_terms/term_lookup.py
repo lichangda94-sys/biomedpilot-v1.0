@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import re
-
 from app.shared.query_intelligence.biomedical_term_registry import match_registry_concepts
 
 from .term_index_loader import load_full_term_index, load_mini_term_index
@@ -11,10 +9,8 @@ from .zh_overrides_loader import load_zh_overrides
 
 
 def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> TermLookupResult:
-    normalized = normalize_en_term(query) if query.isascii() else normalize_zh_term(query)
+    normalized = normalize_zh_term(query)
     warnings: list[str] = []
-    if normalized in {"scc", "rcc"}:
-        warnings.append("检测到高歧义肿瘤缩写；需要补充部位或亚型后再做强疾病扩展。")
     matched_zh_terms: list[str] = []
     disease_terms: list[str] = []
     synonyms: list[str] = []
@@ -175,22 +171,10 @@ def _matched_index_concepts(normalized_query: str, concepts: tuple[TermConcept, 
         terms = [concept.preferred_label_en, *concept.normalized_terms, *concept.synonyms_en, *concept.exact_synonyms_en]
         for term in terms:
             normalized = normalize_zh_term(term) if not term.isascii() else normalize_en_term(term)
-            if _term_matches_query(normalized, normalized_query, term):
+            if normalized and (normalized == normalized_query or normalized in normalized_query):
                 candidates.append(concept)
                 break
     return _rank_concept_matches(candidates)
-
-
-def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: str) -> bool:
-    if not normalized_term:
-        return False
-    if normalized_term == normalized_query:
-        return True
-    if not raw_term.isascii():
-        return normalized_term in normalized_query
-    if len(normalized_term) <= 4:
-        return re.search(rf"(?<![a-z0-9]){re.escape(normalized_term)}(?![a-z0-9])", normalized_query) is not None
-    return normalized_term in normalized_query
 
 
 def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[ChineseTermOverride]:

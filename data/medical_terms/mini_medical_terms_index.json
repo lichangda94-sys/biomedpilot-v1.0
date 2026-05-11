@@ -11,6 +11,9 @@
     "synonyms_en": [
       "glioma",
       "brain glioma",
+      "glioblastoma",
+      "lower grade glioma",
+      "glioblastoma multiforme",
       "brain tumor",
       "brain neoplasm"
     ],
@@ -57,18 +60,15 @@
     "normalized_terms": [
       "brain glioma",
       "glioma",
+      "glioblastoma",
+      "glioblastoma multiforme",
       "brain tumor",
       "brain neoplasm",
+      "lower grade glioma",
+      "GBM",
+      "LGG",
       "脑胶质瘤",
       "胶质瘤"
-    ],
-    "child_concepts": [
-      "mini:glioblastoma",
-      "mini:lower_grade_glioma"
-    ],
-    "avoid_expansion_to": [
-      "GBM exact query",
-      "LGG exact query"
     ]
   },
   {
@@ -652,7 +652,8 @@
     ],
     "synonyms_en": [
       "non small cell lung cancer",
-      "non-small-cell lung carcinoma"
+      "non-small-cell lung carcinoma",
+      "lung cancer"
     ],
     "exact_synonyms_en": [
       "non-small cell lung cancer"
@@ -696,15 +697,10 @@
     "normalized_terms": [
       "non-small cell lung cancer",
       "non-small-cell lung carcinoma",
+      "lung cancer",
       "non small cell lung cancer",
       "NSCLC",
       "非小细胞肺癌"
-    ],
-    "parent_concepts": [
-      "mini:lung_cancer"
-    ],
-    "avoid_expansion_to": [
-      "small cell lung cancer"
     ]
   },
   {
@@ -716,7 +712,8 @@
       "肺腺癌"
     ],
     "synonyms_en": [
-      "adenocarcinoma of lung"
+      "adenocarcinoma of lung",
+      "lung cancer"
     ],
     "exact_synonyms_en": [
       "lung adenocarcinoma"
@@ -742,9 +739,7 @@
     "disease_group": "thoracic tumor",
     "concept_type": "disease",
     "parent_terms": [
-      "thoracic tumor",
-      "lung cancer",
-      "non-small cell lung cancer"
+      "thoracic tumor"
     ],
     "cross_refs": {
       "tcga": [
@@ -760,12 +755,10 @@
     "confidence": 0.95,
     "normalized_terms": [
       "lung adenocarcinoma",
+      "lung cancer",
       "adenocarcinoma of lung",
       "LUAD",
       "肺腺癌"
-    ],
-    "avoid_expansion_to": [
-      "lung squamous cell carcinoma"
     ]
   },
   {
@@ -779,7 +772,8 @@
     ],
     "synonyms_en": [
       "squamous cell carcinoma of lung",
-      "squamous cell lung carcinoma"
+      "squamous cell lung carcinoma",
+      "lung cancer"
     ],
     "exact_synonyms_en": [
       "lung squamous cell carcinoma"
@@ -805,9 +799,7 @@
     "disease_group": "thoracic tumor",
     "concept_type": "disease",
     "parent_terms": [
-      "thoracic tumor",
-      "lung cancer",
-      "non-small cell lung cancer"
+      "thoracic tumor"
     ],
     "cross_refs": {
       "tcga": [
@@ -824,13 +816,11 @@
     "normalized_terms": [
       "lung squamous cell carcinoma",
       "squamous cell lung carcinoma",
+      "lung cancer",
       "squamous cell carcinoma of lung",
       "LUSC",
       "肺鳞癌",
       "肺鳞状细胞癌"
-    ],
-    "avoid_expansion_to": [
-      "lung adenocarcinoma"
     ]
   },
   {
@@ -901,9 +891,14 @@
     "preferred_label_en": "colorectal cancer",
     "zh_terms": [
       "结直肠癌",
-      "结肠直肠癌"
+      "结肠直肠癌",
+      "肠癌"
     ],
     "synonyms_en": [
+      "colon adenocarcinoma",
+      "rectum adenocarcinoma",
+      "colon cancer",
+      "rectal cancer",
       "colorectal carcinoma"
     ],
     "exact_synonyms_en": [
@@ -911,7 +906,9 @@
     ],
     "related_synonyms_en": [],
     "abbreviations": [
-      "CRC"
+      "CRC",
+      "COAD",
+      "READ"
     ],
     "mesh_terms": [
       "Colorectal Neoplasms",
@@ -949,21 +946,18 @@
     "confidence": 0.93,
     "normalized_terms": [
       "colorectal cancer",
+      "colon cancer",
+      "rectal cancer",
       "colorectal carcinoma",
+      "colon adenocarcinoma",
+      "rectum adenocarcinoma",
       "CRC",
+      "COAD",
+      "READ",
       "结直肠癌",
-      "结肠直肠癌"
-    ],
-    "parent_concepts": [],
-    "child_concepts": [
-      "mini:colon_cancer",
-      "mini:rectal_cancer"
-    ],
-    "avoid_expansion_to": [
-      "colon cancer alone",
-      "rectal cancer alone"
-    ],
-    "ambiguity_notes": "CRC or explicit colorectal cancer may map to COAD and READ; isolated colon cancer or rectal cancer should use subtype-specific records."
+      "结肠直肠癌",
+      "肠癌"
+    ]
   },
   {
     "concept_id": "mini:hepatocellular_carcinoma",
@@ -1027,9 +1021,6 @@
       "LIHC",
       "肝细胞癌",
       "肝癌"
-    ],
-    "avoid_expansion_to": [
-      "cholangiocarcinoma"
     ]
   },
   {
@@ -1413,7 +1404,9 @@
     ],
     "synonyms_en": [
       "renal cell carcinoma",
-      "renal carcinoma"
+      "renal carcinoma",
+      "clear cell renal cell carcinoma",
+      "papillary renal cell carcinoma"
     ],
     "exact_synonyms_en": [
       "kidney cancer"
@@ -1462,21 +1455,19 @@
       "kidney cancer",
       "renal cell carcinoma",
       "renal carcinoma",
+      "clear cell renal cell carcinoma",
+      "papillary renal cell carcinoma",
+      "RCC",
+      "KIRC",
+      "KIRP",
+      "KICH",
       "肾癌",
       "肾细胞癌",
       "肾肿瘤"
     ],
     "gtex_mapping_status": {
       "Kidney": "approximate_candidate"
-    },
-    "child_concepts": [
-      "mini:kidney_clear_cell_carcinoma",
-      "mini:kidney_papillary_cell_carcinoma",
-      "mini:kidney_chromophobe_carcinoma"
-    ],
-    "avoid_expansion_to": [
-      "RCC abbreviation alone"
-    ]
+    }
   },
   {
     "concept_id": "mini:bladder_cancer",
@@ -2872,7 +2863,8 @@
     ],
     "synonyms_en": [
       "small-cell lung carcinoma",
-      "oat cell lung cancer"
+      "oat cell lung cancer",
+      "lung cancer"
     ],
     "exact_synonyms_en": [
       "small cell lung cancer"
@@ -2913,19 +2905,9 @@
       "small cell lung cancer",
       "small-cell lung carcinoma",
       "oat cell lung cancer",
+      "lung cancer",
       "SCLC",
       "小细胞肺癌"
-    ],
-    "en_synonyms": [
-      "small-cell lung carcinoma",
-      "oat cell lung cancer"
-    ],
-    "parent_concepts": [
-      "mini:lung_cancer"
-    ],
-    "avoid_expansion_to": [
-      "lung adenocarcinoma",
-      "lung squamous cell carcinoma"
     ]
   },
   {
@@ -2998,7 +2980,8 @@
     ],
     "synonyms_en": [
       "colon adenocarcinoma",
-      "colonic neoplasm"
+      "colonic neoplasm",
+      "colorectal cancer"
     ],
     "exact_synonyms_en": [
       "colon cancer"
@@ -3041,11 +3024,9 @@
       "colon cancer",
       "colon adenocarcinoma",
       "colonic neoplasm",
+      "colorectal cancer",
       "COAD",
       "结肠癌"
-    ],
-    "avoid_expansion_to": [
-      "rectal cancer unless colorectal context is explicit"
     ]
   },
   {
@@ -3058,7 +3039,8 @@
     ],
     "synonyms_en": [
       "rectum adenocarcinoma",
-      "rectal neoplasm"
+      "rectal neoplasm",
+      "colorectal cancer"
     ],
     "exact_synonyms_en": [
       "rectal cancer"
@@ -3101,18 +3083,13 @@
       "rectal cancer",
       "rectum adenocarcinoma",
       "rectal neoplasm",
+      "colorectal cancer",
+      "READ",
       "直肠癌"
     ],
     "gtex_mapping_status": {
       "Colon": "approximate_candidate"
-    },
-    "avoid_expansion_to": [
-      "colon cancer",
-      "colon cancer unless colorectal context is explicit",
-      "colorectal cancer",
-      "read count"
-    ],
-    "ambiguity_notes": "READ is a TCGA project code but also a common English word; do not use READ alone as a disease synonym."
+    }
   },
   {
     "concept_id": "mini:cholangiocarcinoma",
@@ -3178,10 +3155,7 @@
     ],
     "gtex_mapping_status": {
       "Liver": "approximate_candidate"
-    },
-    "avoid_expansion_to": [
-      "hepatocellular carcinoma"
-    ]
+    }
   },
   {
     "concept_id": "mini:pancreatic_ductal_adenocarcinoma",
@@ -3317,8 +3291,7 @@
     ],
     "synonyms_en": [
       "clear cell renal cell carcinoma",
-      "kidney renal clear cell carcinoma",
-      "clear cell RCC"
+      "kidney renal clear cell carcinoma"
     ],
     "exact_synonyms_en": [
       "kidney clear cell carcinoma"
@@ -3345,9 +3318,7 @@
     "disease_group": "urinary system tumor",
     "concept_type": "disease",
     "parent_terms": [
-      "urinary system tumor",
-      "kidney cancer",
-      "renal cell carcinoma"
+      "urinary system tumor"
     ],
     "cross_refs": {
       "tcga": [
@@ -3368,16 +3339,11 @@
       "ccRCC",
       "KIRC",
       "肾透明细胞癌",
-      "透明细胞肾细胞癌",
-      "clear cell RCC"
+      "透明细胞肾细胞癌"
     ],
     "gtex_mapping_status": {
       "Kidney": "approximate_candidate"
-    },
-    "avoid_expansion_to": [
-      "papillary renal cell carcinoma",
-      "kidney chromophobe carcinoma"
-    ]
+    }
   },
   {
     "concept_id": "mini:kidney_papillary_cell_carcinoma",
@@ -3390,8 +3356,7 @@
     ],
     "synonyms_en": [
       "papillary renal cell carcinoma",
-      "kidney renal papillary cell carcinoma",
-      "papillary RCC"
+      "kidney renal papillary cell carcinoma"
     ],
     "exact_synonyms_en": [
       "kidney papillary cell carcinoma"
@@ -3418,9 +3383,7 @@
     "disease_group": "urinary system tumor",
     "concept_type": "disease",
     "parent_terms": [
-      "urinary system tumor",
-      "kidney cancer",
-      "renal cell carcinoma"
+      "urinary system tumor"
     ],
     "cross_refs": {
       "tcga": [
@@ -3441,16 +3404,11 @@
       "pRCC",
       "KIRP",
       "肾乳头状细胞癌",
-      "乳头状肾细胞癌",
-      "papillary RCC"
+      "乳头状肾细胞癌"
     ],
     "gtex_mapping_status": {
       "Kidney": "approximate_candidate"
-    },
-    "avoid_expansion_to": [
-      "clear cell renal cell carcinoma",
-      "kidney chromophobe carcinoma"
-    ]
+    }
   },
   {
     "concept_id": "mini:leukemia",
@@ -6632,2462 +6590,6 @@
       "自身免疫病",
       "自身免疫性疾病",
       "自体免疫疾病"
-    ]
-  },
-  {
-    "concept_id": "mini:follicular_thyroid_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "follicular_thyroid_carcinoma",
-    "preferred_label_en": "follicular thyroid carcinoma",
-    "zh_terms": [
-      "滤泡性甲状腺癌",
-      "甲状腺滤泡癌"
-    ],
-    "synonyms_en": [
-      "follicular thyroid cancer"
-    ],
-    "exact_synonyms_en": [
-      "follicular thyroid carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "FTC"
-    ],
-    "mesh_terms": [
-      "Thyroid Neoplasms"
-    ],
-    "tissue_terms": [
-      "thyroid"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "endocrine tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "thyroid cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-THCA"
-      ],
-      "gtex": [
-        "Thyroid"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "follicular thyroid carcinoma",
-      "follicular thyroid cancer",
-      "滤泡性甲状腺癌",
-      "甲状腺滤泡癌"
-    ],
-    "category": "oncology",
-    "subcategory": "thyroid_tumor",
-    "preferred_zh": "滤泡性甲状腺癌",
-    "zh_synonyms": [
-      "滤泡性甲状腺癌",
-      "甲状腺滤泡癌"
-    ],
-    "preferred_en": "follicular thyroid carcinoma",
-    "en_synonyms": [
-      "follicular thyroid cancer"
-    ],
-    "parent_concepts": [
-      "thyroid cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "thyroid"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-THCA"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "papillary thyroid carcinoma",
-      "medullary thyroid carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:medullary_thyroid_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "medullary_thyroid_carcinoma",
-    "preferred_label_en": "medullary thyroid carcinoma",
-    "zh_terms": [
-      "髓样甲状腺癌",
-      "甲状腺髓样癌"
-    ],
-    "synonyms_en": [
-      "medullary thyroid cancer"
-    ],
-    "exact_synonyms_en": [
-      "medullary thyroid carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "MTC"
-    ],
-    "mesh_terms": [
-      "Thyroid Neoplasms"
-    ],
-    "tissue_terms": [
-      "thyroid"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "endocrine tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "thyroid cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-THCA"
-      ],
-      "gtex": [
-        "Thyroid"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "medullary thyroid carcinoma",
-      "medullary thyroid cancer",
-      "髓样甲状腺癌",
-      "甲状腺髓样癌"
-    ],
-    "category": "oncology",
-    "subcategory": "thyroid_tumor",
-    "preferred_zh": "髓样甲状腺癌",
-    "zh_synonyms": [
-      "髓样甲状腺癌",
-      "甲状腺髓样癌"
-    ],
-    "preferred_en": "medullary thyroid carcinoma",
-    "en_synonyms": [
-      "medullary thyroid cancer"
-    ],
-    "parent_concepts": [
-      "thyroid cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "thyroid"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-THCA"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "papillary thyroid carcinoma",
-      "follicular thyroid carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:kidney_chromophobe_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "kidney_chromophobe_carcinoma",
-    "preferred_label_en": "kidney chromophobe carcinoma",
-    "zh_terms": [
-      "肾嫌色细胞癌",
-      "嫌色细胞肾癌"
-    ],
-    "synonyms_en": [
-      "chromophobe renal cell carcinoma",
-      "chromophobe RCC",
-      "kidney chromophobe"
-    ],
-    "exact_synonyms_en": [
-      "kidney chromophobe carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "chRCC",
-      "KICH"
-    ],
-    "mesh_terms": [
-      "Kidney Neoplasms",
-      "Carcinoma, Renal Cell"
-    ],
-    "tissue_terms": [
-      "kidney"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "urinary system tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "kidney cancer",
-      "renal cell carcinoma"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-KICH"
-      ],
-      "gtex": [
-        "Kidney"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "kidney chromophobe carcinoma",
-      "chromophobe renal cell carcinoma",
-      "chromophobe RCC",
-      "kidney chromophobe",
-      "肾嫌色细胞癌",
-      "嫌色细胞肾癌"
-    ],
-    "category": "oncology",
-    "subcategory": "kidney_tumor",
-    "preferred_zh": "肾嫌色细胞癌",
-    "zh_synonyms": [
-      "肾嫌色细胞癌",
-      "嫌色细胞肾癌"
-    ],
-    "preferred_en": "kidney chromophobe carcinoma",
-    "en_synonyms": [
-      "chromophobe renal cell carcinoma",
-      "chromophobe RCC",
-      "kidney chromophobe"
-    ],
-    "parent_concepts": [
-      "kidney cancer",
-      "renal cell carcinoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "kidney"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-KICH"
-    ],
-    "gtex_tissue_candidates": [
-      "Kidney"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "clear cell renal cell carcinoma",
-      "papillary renal cell carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:bladder_urothelial_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "bladder_urothelial_carcinoma",
-    "preferred_label_en": "bladder urothelial carcinoma",
-    "zh_terms": [
-      "膀胱尿路上皮癌",
-      "膀胱移行细胞癌"
-    ],
-    "synonyms_en": [
-      "urothelial carcinoma of bladder",
-      "bladder transitional cell carcinoma"
-    ],
-    "exact_synonyms_en": [
-      "bladder urothelial carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "BLCA"
-    ],
-    "mesh_terms": [
-      "Urinary Bladder Neoplasms",
-      "Carcinoma, Transitional Cell"
-    ],
-    "tissue_terms": [
-      "bladder"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "urinary system tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "bladder cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-BLCA"
-      ],
-      "gtex": [
-        "Bladder"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "bladder urothelial carcinoma",
-      "urothelial carcinoma of bladder",
-      "bladder transitional cell carcinoma",
-      "膀胱尿路上皮癌",
-      "膀胱移行细胞癌"
-    ],
-    "category": "oncology",
-    "subcategory": "bladder_tumor",
-    "preferred_zh": "膀胱尿路上皮癌",
-    "zh_synonyms": [
-      "膀胱尿路上皮癌",
-      "膀胱移行细胞癌"
-    ],
-    "preferred_en": "bladder urothelial carcinoma",
-    "en_synonyms": [
-      "urothelial carcinoma of bladder",
-      "bladder transitional cell carcinoma"
-    ],
-    "parent_concepts": [
-      "bladder cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "bladder"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-BLCA"
-    ],
-    "gtex_tissue_candidates": [
-      "Bladder"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:breast_invasive_ductal_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "breast_invasive_ductal_carcinoma",
-    "preferred_label_en": "breast invasive ductal carcinoma",
-    "zh_terms": [
-      "乳腺浸润性导管癌",
-      "浸润性导管乳腺癌"
-    ],
-    "synonyms_en": [
-      "invasive ductal carcinoma of breast",
-      "ductal breast carcinoma"
-    ],
-    "exact_synonyms_en": [
-      "breast invasive ductal carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "IDC"
-    ],
-    "mesh_terms": [
-      "Breast Neoplasms"
-    ],
-    "tissue_terms": [
-      "breast"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "breast tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "breast cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-BRCA"
-      ],
-      "gtex": [
-        "Breast"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "breast invasive ductal carcinoma",
-      "invasive ductal carcinoma of breast",
-      "ductal breast carcinoma",
-      "乳腺浸润性导管癌",
-      "浸润性导管乳腺癌"
-    ],
-    "category": "oncology",
-    "subcategory": "breast_tumor",
-    "preferred_zh": "乳腺浸润性导管癌",
-    "zh_synonyms": [
-      "乳腺浸润性导管癌",
-      "浸润性导管乳腺癌"
-    ],
-    "preferred_en": "breast invasive ductal carcinoma",
-    "en_synonyms": [
-      "invasive ductal carcinoma of breast",
-      "ductal breast carcinoma"
-    ],
-    "parent_concepts": [
-      "breast cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "breast"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-BRCA"
-    ],
-    "gtex_tissue_candidates": [
-      "Breast"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "invasive lobular breast carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:invasive_lobular_breast_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "invasive_lobular_breast_carcinoma",
-    "preferred_label_en": "invasive lobular breast carcinoma",
-    "zh_terms": [
-      "乳腺浸润性小叶癌",
-      "浸润性小叶乳腺癌"
-    ],
-    "synonyms_en": [
-      "lobular breast carcinoma"
-    ],
-    "exact_synonyms_en": [
-      "invasive lobular breast carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "ILC"
-    ],
-    "mesh_terms": [
-      "Breast Neoplasms"
-    ],
-    "tissue_terms": [
-      "breast"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "breast tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "breast cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-BRCA"
-      ],
-      "gtex": [
-        "Breast"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "invasive lobular breast carcinoma",
-      "lobular breast carcinoma",
-      "乳腺浸润性小叶癌",
-      "浸润性小叶乳腺癌"
-    ],
-    "category": "oncology",
-    "subcategory": "breast_tumor",
-    "preferred_zh": "乳腺浸润性小叶癌",
-    "zh_synonyms": [
-      "乳腺浸润性小叶癌",
-      "浸润性小叶乳腺癌"
-    ],
-    "preferred_en": "invasive lobular breast carcinoma",
-    "en_synonyms": [
-      "lobular breast carcinoma"
-    ],
-    "parent_concepts": [
-      "breast cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "breast"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-BRCA"
-    ],
-    "gtex_tissue_candidates": [
-      "Breast"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "breast invasive ductal carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:ovarian_serous_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "ovarian_serous_carcinoma",
-    "preferred_label_en": "ovarian serous carcinoma",
-    "zh_terms": [
-      "卵巢浆液性癌",
-      "高级别浆液性卵巢癌"
-    ],
-    "synonyms_en": [
-      "high-grade serous ovarian carcinoma",
-      "serous ovarian cancer"
-    ],
-    "exact_synonyms_en": [
-      "ovarian serous carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "HGSOC"
-    ],
-    "mesh_terms": [
-      "Ovarian Neoplasms"
-    ],
-    "tissue_terms": [
-      "ovary"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "gynecologic tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "ovarian cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-OV"
-      ],
-      "gtex": [
-        "Ovary"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "ovarian serous carcinoma",
-      "high-grade serous ovarian carcinoma",
-      "serous ovarian cancer",
-      "卵巢浆液性癌",
-      "高级别浆液性卵巢癌"
-    ],
-    "category": "oncology",
-    "subcategory": "ovarian_tumor",
-    "preferred_zh": "卵巢浆液性癌",
-    "zh_synonyms": [
-      "卵巢浆液性癌",
-      "高级别浆液性卵巢癌"
-    ],
-    "preferred_en": "ovarian serous carcinoma",
-    "en_synonyms": [
-      "high-grade serous ovarian carcinoma",
-      "serous ovarian cancer"
-    ],
-    "parent_concepts": [
-      "ovarian cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "ovary"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-OV"
-    ],
-    "gtex_tissue_candidates": [
-      "Ovary"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:cervical_squamous_cell_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "cervical_squamous_cell_carcinoma",
-    "preferred_label_en": "cervical squamous cell carcinoma",
-    "zh_terms": [
-      "宫颈鳞癌",
-      "宫颈鳞状细胞癌"
-    ],
-    "synonyms_en": [
-      "squamous cell carcinoma of cervix"
-    ],
-    "exact_synonyms_en": [
-      "cervical squamous cell carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Uterine Cervical Neoplasms",
-      "Carcinoma, Squamous Cell"
-    ],
-    "tissue_terms": [
-      "cervix"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "gynecologic tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "cervical cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-CESC"
-      ],
-      "gtex": [
-        "Uterus"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "cervical squamous cell carcinoma",
-      "squamous cell carcinoma of cervix",
-      "宫颈鳞癌",
-      "宫颈鳞状细胞癌"
-    ],
-    "category": "oncology",
-    "subcategory": "cervical_tumor",
-    "preferred_zh": "宫颈鳞癌",
-    "zh_synonyms": [
-      "宫颈鳞癌",
-      "宫颈鳞状细胞癌"
-    ],
-    "preferred_en": "cervical squamous cell carcinoma",
-    "en_synonyms": [
-      "squamous cell carcinoma of cervix"
-    ],
-    "parent_concepts": [
-      "cervical cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "cervix"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-CESC"
-    ],
-    "gtex_tissue_candidates": [
-      "Uterus"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "endocervical adenocarcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:endocervical_adenocarcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "endocervical_adenocarcinoma",
-    "preferred_label_en": "endocervical adenocarcinoma",
-    "zh_terms": [
-      "宫颈腺癌",
-      "子宫颈腺癌"
-    ],
-    "synonyms_en": [
-      "cervical adenocarcinoma"
-    ],
-    "exact_synonyms_en": [
-      "endocervical adenocarcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Uterine Cervical Neoplasms",
-      "Adenocarcinoma"
-    ],
-    "tissue_terms": [
-      "cervix"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "gynecologic tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "cervical cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-CESC"
-      ],
-      "gtex": [
-        "Uterus"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "endocervical adenocarcinoma",
-      "cervical adenocarcinoma",
-      "宫颈腺癌",
-      "子宫颈腺癌"
-    ],
-    "category": "oncology",
-    "subcategory": "cervical_tumor",
-    "preferred_zh": "宫颈腺癌",
-    "zh_synonyms": [
-      "宫颈腺癌",
-      "子宫颈腺癌"
-    ],
-    "preferred_en": "endocervical adenocarcinoma",
-    "en_synonyms": [
-      "cervical adenocarcinoma"
-    ],
-    "parent_concepts": [
-      "cervical cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "cervix"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-CESC"
-    ],
-    "gtex_tissue_candidates": [
-      "Uterus"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "cervical squamous cell carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:prostate_adenocarcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "prostate_adenocarcinoma",
-    "preferred_label_en": "prostate adenocarcinoma",
-    "zh_terms": [
-      "前列腺腺癌"
-    ],
-    "synonyms_en": [
-      "adenocarcinoma of prostate"
-    ],
-    "exact_synonyms_en": [
-      "prostate adenocarcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "PRAD"
-    ],
-    "mesh_terms": [
-      "Prostatic Neoplasms",
-      "Adenocarcinoma"
-    ],
-    "tissue_terms": [
-      "prostate"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "urinary system tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "prostate cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-PRAD"
-      ],
-      "gtex": [
-        "Prostate"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "prostate adenocarcinoma",
-      "adenocarcinoma of prostate",
-      "前列腺腺癌"
-    ],
-    "category": "oncology",
-    "subcategory": "prostate_tumor",
-    "preferred_zh": "前列腺腺癌",
-    "zh_synonyms": [
-      "前列腺腺癌"
-    ],
-    "preferred_en": "prostate adenocarcinoma",
-    "en_synonyms": [
-      "adenocarcinoma of prostate"
-    ],
-    "parent_concepts": [
-      "prostate cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "prostate"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-PRAD"
-    ],
-    "gtex_tissue_candidates": [
-      "Prostate"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:lung_large_cell_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "lung_large_cell_carcinoma",
-    "preferred_label_en": "large cell lung carcinoma",
-    "zh_terms": [
-      "肺大细胞癌"
-    ],
-    "synonyms_en": [
-      "large cell carcinoma of lung"
-    ],
-    "exact_synonyms_en": [
-      "large cell lung carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "LCLC"
-    ],
-    "mesh_terms": [
-      "Lung Neoplasms",
-      "Carcinoma, Large Cell"
-    ],
-    "tissue_terms": [
-      "lung"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "thoracic tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "lung cancer",
-      "non-small cell lung cancer"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Lung"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "large cell lung carcinoma",
-      "large cell carcinoma of lung",
-      "肺大细胞癌"
-    ],
-    "category": "oncology",
-    "subcategory": "lung_tumor",
-    "preferred_zh": "肺大细胞癌",
-    "zh_synonyms": [
-      "肺大细胞癌"
-    ],
-    "preferred_en": "large cell lung carcinoma",
-    "en_synonyms": [
-      "large cell carcinoma of lung"
-    ],
-    "parent_concepts": [
-      "lung cancer",
-      "non-small cell lung cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "lung"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Lung"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "lung adenocarcinoma",
-      "lung squamous cell carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:lung_carcinoid_tumor",
-    "source_vocabulary": "mini",
-    "source_id": "lung_carcinoid_tumor",
-    "preferred_label_en": "lung carcinoid tumor",
-    "zh_terms": [
-      "肺类癌",
-      "支气管类癌"
-    ],
-    "synonyms_en": [
-      "bronchial carcinoid tumor",
-      "pulmonary carcinoid"
-    ],
-    "exact_synonyms_en": [
-      "lung carcinoid tumor"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Lung Neoplasms",
-      "Carcinoid Tumor"
-    ],
-    "tissue_terms": [
-      "lung"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "thoracic tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "lung cancer"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Lung"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "lung carcinoid tumor",
-      "bronchial carcinoid tumor",
-      "pulmonary carcinoid",
-      "肺类癌",
-      "支气管类癌"
-    ],
-    "category": "oncology",
-    "subcategory": "lung_tumor",
-    "preferred_zh": "肺类癌",
-    "zh_synonyms": [
-      "肺类癌",
-      "支气管类癌"
-    ],
-    "preferred_en": "lung carcinoid tumor",
-    "en_synonyms": [
-      "bronchial carcinoid tumor",
-      "pulmonary carcinoid"
-    ],
-    "parent_concepts": [
-      "lung cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "lung"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Lung"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "small cell lung cancer"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:intrahepatic_cholangiocarcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "intrahepatic_cholangiocarcinoma",
-    "preferred_label_en": "intrahepatic cholangiocarcinoma",
-    "zh_terms": [
-      "肝内胆管癌"
-    ],
-    "synonyms_en": [
-      "intrahepatic bile duct carcinoma"
-    ],
-    "exact_synonyms_en": [
-      "intrahepatic cholangiocarcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "iCCA"
-    ],
-    "mesh_terms": [
-      "Cholangiocarcinoma",
-      "Bile Duct Neoplasms"
-    ],
-    "tissue_terms": [
-      "bile duct",
-      "liver"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "gastrointestinal tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "cholangiocarcinoma"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-CHOL"
-      ],
-      "gtex": [
-        "Liver"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "intrahepatic cholangiocarcinoma",
-      "intrahepatic bile duct carcinoma",
-      "肝内胆管癌"
-    ],
-    "category": "oncology",
-    "subcategory": "biliary_tumor",
-    "preferred_zh": "肝内胆管癌",
-    "zh_synonyms": [
-      "肝内胆管癌"
-    ],
-    "preferred_en": "intrahepatic cholangiocarcinoma",
-    "en_synonyms": [
-      "intrahepatic bile duct carcinoma"
-    ],
-    "parent_concepts": [
-      "cholangiocarcinoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "bile duct",
-      "liver"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-CHOL"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "hepatocellular carcinoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:colorectal_adenocarcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "colorectal_adenocarcinoma",
-    "preferred_label_en": "colorectal adenocarcinoma",
-    "zh_terms": [
-      "结直肠腺癌"
-    ],
-    "synonyms_en": [
-      "colon and rectal adenocarcinoma"
-    ],
-    "exact_synonyms_en": [
-      "colorectal adenocarcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "CRC"
-    ],
-    "mesh_terms": [
-      "Colorectal Neoplasms",
-      "Adenocarcinoma"
-    ],
-    "tissue_terms": [
-      "colon",
-      "rectum"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "gastrointestinal tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "colorectal cancer"
-    ],
-    "cross_refs": {
-      "tcga": [
-        "TCGA-COAD",
-        "TCGA-READ"
-      ],
-      "gtex": [
-        "Colon"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "colorectal adenocarcinoma",
-      "colon and rectal adenocarcinoma",
-      "结直肠腺癌"
-    ],
-    "category": "oncology",
-    "subcategory": "colorectal_tumor",
-    "preferred_zh": "结直肠腺癌",
-    "zh_synonyms": [
-      "结直肠腺癌"
-    ],
-    "preferred_en": "colorectal adenocarcinoma",
-    "en_synonyms": [
-      "colon and rectal adenocarcinoma"
-    ],
-    "parent_concepts": [
-      "colorectal cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "colon",
-      "rectum"
-    ],
-    "tcga_project_candidates": [
-      "TCGA-COAD",
-      "TCGA-READ"
-    ],
-    "gtex_tissue_candidates": [
-      "Colon"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:acute_lymphoblastic_leukemia",
-    "source_vocabulary": "mini",
-    "source_id": "acute_lymphoblastic_leukemia",
-    "preferred_label_en": "acute lymphoblastic leukemia",
-    "zh_terms": [
-      "急性淋巴细胞白血病",
-      "急性淋巴母细胞白血病"
-    ],
-    "synonyms_en": [
-      "acute lymphocytic leukemia"
-    ],
-    "exact_synonyms_en": [
-      "acute lymphoblastic leukemia"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "ALL"
-    ],
-    "mesh_terms": [
-      "Precursor Cell Lymphoblastic Leukemia-Lymphoma"
-    ],
-    "tissue_terms": [
-      "blood",
-      "bone marrow"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "hematologic malignancy",
-    "concept_type": "disease",
-    "parent_terms": [
-      "leukemia"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "acute lymphoblastic leukemia",
-      "acute lymphocytic leukemia",
-      "急性淋巴细胞白血病",
-      "急性淋巴母细胞白血病"
-    ],
-    "category": "oncology",
-    "subcategory": "leukemia",
-    "preferred_zh": "急性淋巴细胞白血病",
-    "zh_synonyms": [
-      "急性淋巴细胞白血病",
-      "急性淋巴母细胞白血病"
-    ],
-    "preferred_en": "acute lymphoblastic leukemia",
-    "en_synonyms": [
-      "acute lymphocytic leukemia"
-    ],
-    "parent_concepts": [
-      "leukemia"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "blood",
-      "bone marrow"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "ALL is an oncology abbreviation but should be treated cautiously outside hematology context.",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:chronic_lymphocytic_leukemia",
-    "source_vocabulary": "mini",
-    "source_id": "chronic_lymphocytic_leukemia",
-    "preferred_label_en": "chronic lymphocytic leukemia",
-    "zh_terms": [
-      "慢性淋巴细胞白血病"
-    ],
-    "synonyms_en": [
-      "B-cell chronic lymphocytic leukemia"
-    ],
-    "exact_synonyms_en": [
-      "chronic lymphocytic leukemia"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "CLL"
-    ],
-    "mesh_terms": [
-      "Leukemia, Lymphocytic, Chronic, B-Cell"
-    ],
-    "tissue_terms": [
-      "blood",
-      "bone marrow"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "hematologic malignancy",
-    "concept_type": "disease",
-    "parent_terms": [
-      "leukemia"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "chronic lymphocytic leukemia",
-      "B-cell chronic lymphocytic leukemia",
-      "慢性淋巴细胞白血病"
-    ],
-    "category": "oncology",
-    "subcategory": "leukemia",
-    "preferred_zh": "慢性淋巴细胞白血病",
-    "zh_synonyms": [
-      "慢性淋巴细胞白血病"
-    ],
-    "preferred_en": "chronic lymphocytic leukemia",
-    "en_synonyms": [
-      "B-cell chronic lymphocytic leukemia"
-    ],
-    "parent_concepts": [
-      "leukemia"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "blood",
-      "bone marrow"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:chronic_myeloid_leukemia",
-    "source_vocabulary": "mini",
-    "source_id": "chronic_myeloid_leukemia",
-    "preferred_label_en": "chronic myeloid leukemia",
-    "zh_terms": [
-      "慢性髓系白血病",
-      "慢性粒细胞白血病"
-    ],
-    "synonyms_en": [
-      "chronic myelogenous leukemia"
-    ],
-    "exact_synonyms_en": [
-      "chronic myeloid leukemia"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "CML"
-    ],
-    "mesh_terms": [
-      "Leukemia, Myelogenous, Chronic, BCR-ABL Positive"
-    ],
-    "tissue_terms": [
-      "blood",
-      "bone marrow"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "hematologic malignancy",
-    "concept_type": "disease",
-    "parent_terms": [
-      "leukemia"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "chronic myeloid leukemia",
-      "chronic myelogenous leukemia",
-      "慢性髓系白血病",
-      "慢性粒细胞白血病"
-    ],
-    "category": "oncology",
-    "subcategory": "leukemia",
-    "preferred_zh": "慢性髓系白血病",
-    "zh_synonyms": [
-      "慢性髓系白血病",
-      "慢性粒细胞白血病"
-    ],
-    "preferred_en": "chronic myeloid leukemia",
-    "en_synonyms": [
-      "chronic myelogenous leukemia"
-    ],
-    "parent_concepts": [
-      "leukemia"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "blood",
-      "bone marrow"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:hodgkin_lymphoma",
-    "source_vocabulary": "mini",
-    "source_id": "hodgkin_lymphoma",
-    "preferred_label_en": "Hodgkin lymphoma",
-    "zh_terms": [
-      "霍奇金淋巴瘤"
-    ],
-    "synonyms_en": [
-      "Hodgkin disease"
-    ],
-    "exact_synonyms_en": [
-      "Hodgkin lymphoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "HL"
-    ],
-    "mesh_terms": [
-      "Hodgkin Disease"
-    ],
-    "tissue_terms": [
-      "lymph node",
-      "blood"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "hematologic malignancy",
-    "concept_type": "disease",
-    "parent_terms": [
-      "lymphoma"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "Hodgkin lymphoma",
-      "Hodgkin disease",
-      "霍奇金淋巴瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "lymphoma",
-    "preferred_zh": "霍奇金淋巴瘤",
-    "zh_synonyms": [
-      "霍奇金淋巴瘤"
-    ],
-    "preferred_en": "Hodgkin lymphoma",
-    "en_synonyms": [
-      "Hodgkin disease"
-    ],
-    "parent_concepts": [
-      "lymphoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "lymph node",
-      "blood"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "non-Hodgkin lymphoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:follicular_lymphoma",
-    "source_vocabulary": "mini",
-    "source_id": "follicular_lymphoma",
-    "preferred_label_en": "follicular lymphoma",
-    "zh_terms": [
-      "滤泡性淋巴瘤"
-    ],
-    "synonyms_en": [
-      "follicular non-Hodgkin lymphoma"
-    ],
-    "exact_synonyms_en": [
-      "follicular lymphoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "FL"
-    ],
-    "mesh_terms": [
-      "Lymphoma, Follicular"
-    ],
-    "tissue_terms": [
-      "lymph node",
-      "blood"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "hematologic malignancy",
-    "concept_type": "disease",
-    "parent_terms": [
-      "lymphoma"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "follicular lymphoma",
-      "follicular non-Hodgkin lymphoma",
-      "滤泡性淋巴瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "lymphoma",
-    "preferred_zh": "滤泡性淋巴瘤",
-    "zh_synonyms": [
-      "滤泡性淋巴瘤"
-    ],
-    "preferred_en": "follicular lymphoma",
-    "en_synonyms": [
-      "follicular non-Hodgkin lymphoma"
-    ],
-    "parent_concepts": [
-      "lymphoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "lymph node",
-      "blood"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:mantle_cell_lymphoma",
-    "source_vocabulary": "mini",
-    "source_id": "mantle_cell_lymphoma",
-    "preferred_label_en": "mantle cell lymphoma",
-    "zh_terms": [
-      "套细胞淋巴瘤"
-    ],
-    "synonyms_en": [
-      "mantle-zone lymphoma"
-    ],
-    "exact_synonyms_en": [
-      "mantle cell lymphoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "MCL"
-    ],
-    "mesh_terms": [
-      "Lymphoma, Mantle-Cell"
-    ],
-    "tissue_terms": [
-      "lymph node",
-      "blood"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "hematologic malignancy",
-    "concept_type": "disease",
-    "parent_terms": [
-      "lymphoma"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Whole Blood"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "mantle cell lymphoma",
-      "mantle-zone lymphoma",
-      "套细胞淋巴瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "lymphoma",
-    "preferred_zh": "套细胞淋巴瘤",
-    "zh_synonyms": [
-      "套细胞淋巴瘤"
-    ],
-    "preferred_en": "mantle cell lymphoma",
-    "en_synonyms": [
-      "mantle-zone lymphoma"
-    ],
-    "parent_concepts": [
-      "lymphoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "lymph node",
-      "blood"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:medulloblastoma",
-    "source_vocabulary": "mini",
-    "source_id": "medulloblastoma",
-    "preferred_label_en": "medulloblastoma",
-    "zh_terms": [
-      "髓母细胞瘤"
-    ],
-    "synonyms_en": [
-      "cerebellar medulloblastoma"
-    ],
-    "exact_synonyms_en": [
-      "medulloblastoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Medulloblastoma"
-    ],
-    "tissue_terms": [
-      "brain",
-      "cerebellum"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "central nervous system tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "brain tumor"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Brain"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "medulloblastoma",
-      "cerebellar medulloblastoma",
-      "髓母细胞瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "cns_tumor",
-    "preferred_zh": "髓母细胞瘤",
-    "zh_synonyms": [
-      "髓母细胞瘤"
-    ],
-    "preferred_en": "medulloblastoma",
-    "en_synonyms": [
-      "cerebellar medulloblastoma"
-    ],
-    "parent_concepts": [
-      "brain tumor"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "brain",
-      "cerebellum"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Brain"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "glioblastoma"
-    ],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:neuroblastoma",
-    "source_vocabulary": "mini",
-    "source_id": "neuroblastoma",
-    "preferred_label_en": "neuroblastoma",
-    "zh_terms": [
-      "神经母细胞瘤"
-    ],
-    "synonyms_en": [
-      "neuroblastic tumor"
-    ],
-    "exact_synonyms_en": [
-      "neuroblastoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "NB"
-    ],
-    "mesh_terms": [
-      "Neuroblastoma"
-    ],
-    "tissue_terms": [
-      "adrenal gland",
-      "sympathetic nervous system"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "neuroendocrine tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "neuroblastic tumor"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Adrenal Gland"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "neuroblastoma",
-      "neuroblastic tumor",
-      "神经母细胞瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "pediatric_solid_tumor",
-    "preferred_zh": "神经母细胞瘤",
-    "zh_synonyms": [
-      "神经母细胞瘤"
-    ],
-    "preferred_en": "neuroblastoma",
-    "en_synonyms": [
-      "neuroblastic tumor"
-    ],
-    "parent_concepts": [
-      "neuroblastic tumor"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "adrenal gland",
-      "sympathetic nervous system"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:cutaneous_squamous_cell_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "cutaneous_squamous_cell_carcinoma",
-    "preferred_label_en": "cutaneous squamous cell carcinoma",
-    "zh_terms": [
-      "皮肤鳞癌",
-      "皮肤鳞状细胞癌"
-    ],
-    "synonyms_en": [
-      "skin squamous cell carcinoma",
-      "squamous cell carcinoma of skin"
-    ],
-    "exact_synonyms_en": [
-      "cutaneous squamous cell carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Skin Neoplasms",
-      "Carcinoma, Squamous Cell"
-    ],
-    "tissue_terms": [
-      "skin"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "skin tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "skin cancer"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Skin"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "cutaneous squamous cell carcinoma",
-      "skin squamous cell carcinoma",
-      "squamous cell carcinoma of skin",
-      "皮肤鳞癌",
-      "皮肤鳞状细胞癌"
-    ],
-    "category": "oncology",
-    "subcategory": "skin_tumor",
-    "preferred_zh": "皮肤鳞癌",
-    "zh_synonyms": [
-      "皮肤鳞癌",
-      "皮肤鳞状细胞癌"
-    ],
-    "preferred_en": "cutaneous squamous cell carcinoma",
-    "en_synonyms": [
-      "skin squamous cell carcinoma",
-      "squamous cell carcinoma of skin"
-    ],
-    "parent_concepts": [
-      "skin cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "skin"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Skin"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [
-      "head and neck squamous cell carcinoma",
-      "lung squamous cell carcinoma"
-    ],
-    "ambiguity_notes": "SCC alone is ambiguous and should not strongly expand without an anatomic site.",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:basal_cell_carcinoma",
-    "source_vocabulary": "mini",
-    "source_id": "basal_cell_carcinoma",
-    "preferred_label_en": "basal cell carcinoma",
-    "zh_terms": [
-      "基底细胞癌",
-      "皮肤基底细胞癌"
-    ],
-    "synonyms_en": [
-      "basal cell skin cancer"
-    ],
-    "exact_synonyms_en": [
-      "basal cell carcinoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "BCC"
-    ],
-    "mesh_terms": [
-      "Carcinoma, Basal Cell"
-    ],
-    "tissue_terms": [
-      "skin"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "skin tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "skin cancer"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Skin"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "basal cell carcinoma",
-      "basal cell skin cancer",
-      "基底细胞癌",
-      "皮肤基底细胞癌"
-    ],
-    "category": "oncology",
-    "subcategory": "skin_tumor",
-    "preferred_zh": "基底细胞癌",
-    "zh_synonyms": [
-      "基底细胞癌",
-      "皮肤基底细胞癌"
-    ],
-    "preferred_en": "basal cell carcinoma",
-    "en_synonyms": [
-      "basal cell skin cancer"
-    ],
-    "parent_concepts": [
-      "skin cancer"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "skin"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Skin"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:gastrointestinal_stromal_tumor",
-    "source_vocabulary": "mini",
-    "source_id": "gastrointestinal_stromal_tumor",
-    "preferred_label_en": "gastrointestinal stromal tumor",
-    "zh_terms": [
-      "胃肠道间质瘤"
-    ],
-    "synonyms_en": [
-      "GIST"
-    ],
-    "exact_synonyms_en": [
-      "gastrointestinal stromal tumor"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [
-      "GIST"
-    ],
-    "mesh_terms": [
-      "Gastrointestinal Stromal Tumors"
-    ],
-    "tissue_terms": [
-      "stomach",
-      "small intestine"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "gastrointestinal tumor",
-    "concept_type": "disease",
-    "parent_terms": [
-      "sarcoma"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": [
-        "Stomach"
-      ]
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "gastrointestinal stromal tumor",
-      "GIST",
-      "胃肠道间质瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "sarcoma",
-    "preferred_zh": "胃肠道间质瘤",
-    "zh_synonyms": [
-      "胃肠道间质瘤"
-    ],
-    "preferred_en": "gastrointestinal stromal tumor",
-    "en_synonyms": [
-      "GIST"
-    ],
-    "parent_concepts": [
-      "sarcoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "stomach",
-      "small intestine"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [
-      "Stomach"
-    ],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:osteosarcoma",
-    "source_vocabulary": "mini",
-    "source_id": "osteosarcoma",
-    "preferred_label_en": "osteosarcoma",
-    "zh_terms": [
-      "骨肉瘤"
-    ],
-    "synonyms_en": [
-      "osteogenic sarcoma"
-    ],
-    "exact_synonyms_en": [
-      "osteosarcoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Osteosarcoma"
-    ],
-    "tissue_terms": [
-      "bone"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "sarcoma",
-    "concept_type": "disease",
-    "parent_terms": [
-      "sarcoma"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": []
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "osteosarcoma",
-      "osteogenic sarcoma",
-      "骨肉瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "bone_tumor",
-    "preferred_zh": "骨肉瘤",
-    "zh_synonyms": [
-      "骨肉瘤"
-    ],
-    "preferred_en": "osteosarcoma",
-    "en_synonyms": [
-      "osteogenic sarcoma"
-    ],
-    "parent_concepts": [
-      "sarcoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "bone"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
-    ]
-  },
-  {
-    "concept_id": "mini:ewing_sarcoma",
-    "source_vocabulary": "mini",
-    "source_id": "ewing_sarcoma",
-    "preferred_label_en": "Ewing sarcoma",
-    "zh_terms": [
-      "尤文肉瘤"
-    ],
-    "synonyms_en": [
-      "Ewing tumor"
-    ],
-    "exact_synonyms_en": [
-      "Ewing sarcoma"
-    ],
-    "related_synonyms_en": [],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Sarcoma, Ewing"
-    ],
-    "tissue_terms": [
-      "bone",
-      "soft tissue"
-    ],
-    "data_modality_terms": [
-      "expression profiling",
-      "transcriptome",
-      "RNA-seq",
-      "microarray"
-    ],
-    "modifier_terms_en": [],
-    "disease_group": "sarcoma",
-    "concept_type": "disease",
-    "parent_terms": [
-      "sarcoma"
-    ],
-    "cross_refs": {
-      "tcga": [],
-      "gtex": []
-    },
-    "license": "project-local-curated",
-    "version": "oncology-core-v1-2026-05-11",
-    "term_source": "oncology_core_v1_curated",
-    "confidence": 0.92,
-    "normalized_terms": [
-      "Ewing sarcoma",
-      "Ewing tumor",
-      "尤文肉瘤"
-    ],
-    "category": "oncology",
-    "subcategory": "bone_tumor",
-    "preferred_zh": "尤文肉瘤",
-    "zh_synonyms": [
-      "尤文肉瘤"
-    ],
-    "preferred_en": "Ewing sarcoma",
-    "en_synonyms": [
-      "Ewing tumor"
-    ],
-    "parent_concepts": [
-      "sarcoma"
-    ],
-    "child_concepts": [],
-    "related_organs": [],
-    "related_tissues": [
-      "bone",
-      "soft tissue"
-    ],
-    "tcga_project_candidates": [],
-    "gtex_tissue_candidates": [],
-    "contexts": [
-      "bioinformatics",
-      "meta_analysis"
-    ],
-    "avoid_expansion_to": [],
-    "ambiguity_notes": "",
-    "sources": [
-      "TCGA/GDC project labels where applicable",
-      "MeSH heading names where applicable",
-      "project-local oncology core curation"
     ]
   }
 ]
