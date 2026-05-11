@@ -336,6 +336,36 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     assert "登记为数据源" not in button_texts
 
 
+def test_local_import_strategy_copy_uses_user_friendly_copy(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    combo = widget._local_strategy_combo
+    hint = widget.findChild(QLabel, "localImportStrategyHint")
+
+    assert combo.currentText() == "复制到项目文件夹（推荐）"
+    assert combo.itemText(0) == "复制到项目文件夹（推荐）"
+    assert combo.itemText(1) == "使用原文件位置"
+    assert hint is not None
+    assert hint.text() == "把数据文件复制到当前项目，便于后续复用、迁移和归档。"
+    all_text = "\n".join(
+        [hint.text(), combo.itemText(0), combo.itemText(1), *[label.text() for label in widget.findChildren(QLabel)]]
+    )
+    assert "仅记录路径" not in all_text
+
+
+def test_local_import_strategy_reference_updates_hint(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    combo = widget._local_strategy_combo
+    hint = widget.findChild(QLabel, "localImportStrategyHint")
+
+    combo.setCurrentText("使用原文件位置")
+
+    assert hint is not None
+    assert "不复制文件" in hint.text()
+    assert "后续分析将从原位置读取" in hint.text()
+    assert "请勿移动或删除" in hint.text()
+    assert "项目可能无法继续读取该数据" in hint.text()
+
+
 def test_data_source_registers_local_reference_strategy(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "sample_metadata.tsv"
     source.write_text("sample\tgroup\ns1\tcase\n", encoding="utf-8")

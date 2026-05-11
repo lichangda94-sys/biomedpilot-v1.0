@@ -746,8 +746,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(_muted("导入本地表达矩阵、GEO Series Matrix、样本信息、临床表或注释文件。"))
         self._local_strategy_combo = QComboBox()
         self._local_strategy_combo.setObjectName("localImportStrategyCombo")
-        self._local_strategy_combo.addItems(["复制到项目（推荐）", "保留原位置，仅记录路径"])
+        self._local_strategy_combo.addItems(["复制到项目文件夹（推荐）", "使用原文件位置"])
+        self._local_strategy_combo.currentIndexChanged.connect(self._update_local_strategy_hint)
         layout.addWidget(self._local_strategy_combo)
+        self._local_strategy_hint = _muted("")
+        self._local_strategy_hint.setObjectName("localImportStrategyHint")
+        self._local_strategy_hint.setWordWrap(True)
+        layout.addWidget(self._local_strategy_hint)
+        self._update_local_strategy_hint()
         select_button = _button("选择本地数据", "primaryButton", self._choose_local_files)
         select_button.setMinimumHeight(44)
         folder_button = _button("选择本地文件夹", "secondaryButton", self._choose_local_folder)
@@ -759,6 +765,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addLayout(actions)
         layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地数据。", detail_button_text="查看导入详情"))
         return card
+
+    def _update_local_strategy_hint(self) -> None:
+        if not hasattr(self, "_local_strategy_hint"):
+            return
+        if _strategy_from_combo(self._local_strategy_combo) == "copy":
+            self._local_strategy_hint.setText("把数据文件复制到当前项目，便于后续复用、迁移和归档。")
+        else:
+            self._local_strategy_hint.setText("不复制文件；后续分析将从原位置读取，请勿移动或删除。原文件移动或删除后，项目可能无法继续读取该数据。")
 
     def _gse_card(self) -> QFrame:
         card, layout = _card("GSE 编号检索")
