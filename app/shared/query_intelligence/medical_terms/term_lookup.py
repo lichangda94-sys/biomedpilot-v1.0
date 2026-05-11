@@ -101,24 +101,24 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
             _extend_unique(synonyms, concept.related_synonyms_en)
         elif concept.concept_type == "exposure":
             _append_unique(exposure_terms, concept.preferred_label_en)
-            _extend_unique(exposure_terms, concept.synonyms_en)
+            _extend_unique(exposure_terms, concept.exposure_terms or concept.synonyms_en)
         elif concept.concept_type in {"intervention", "treatment"}:
             _append_unique(intervention_terms, concept.preferred_label_en)
-            _extend_unique(intervention_terms, concept.synonyms_en)
+            _extend_unique(intervention_terms, concept.intervention_terms or concept.synonyms_en)
         elif concept.concept_type in {"biomarker", "hormone", "laboratory_marker", "phenotype"}:
             _append_unique(exposure_terms, concept.preferred_label_en)
             _extend_unique(exposure_terms, concept.synonyms_en)
         elif concept.concept_type == "outcome":
             _append_unique(outcome_terms, concept.preferred_label_en)
-            _extend_unique(outcome_terms, concept.synonyms_en)
+            _extend_unique(outcome_terms, concept.outcome_terms or concept.synonyms_en)
             _extend_unique(outcome_terms, concept.pubmed_query_terms)
         elif concept.concept_type == "study_design":
             _append_unique(study_design_terms, concept.preferred_label_en)
-            _extend_unique(study_design_terms, concept.synonyms_en)
+            _extend_unique(study_design_terms, concept.study_design_terms or concept.synonyms_en)
             _extend_unique(study_design_terms, concept.pubmed_query_terms)
         elif concept.concept_type == "publication_type":
             _append_unique(publication_type_terms, concept.preferred_label_en)
-            _extend_unique(publication_type_terms, concept.synonyms_en)
+            _extend_unique(publication_type_terms, concept.publication_type_terms or concept.synonyms_en)
             _extend_unique(publication_type_terms, concept.pubmed_query_terms)
         elif concept.concept_type == "pico_term":
             _append_unique(pico_terms, concept.preferred_label_en)
@@ -152,6 +152,11 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(assay_terms, concept.assay_terms)
         _extend_unique(platform_candidates, concept.platform_candidates)
         _extend_unique(modifier_terms, concept.modifier_terms_en)
+        _extend_unique(exposure_terms, concept.exposure_terms)
+        _extend_unique(intervention_terms, concept.intervention_terms)
+        _extend_unique(outcome_terms, concept.outcome_terms)
+        _extend_unique(study_design_terms, concept.study_design_terms)
+        _extend_unique(publication_type_terms, concept.publication_type_terms)
         _extend_unique(pico_terms, concept.pico_terms)
         _extend_unique(effect_measures, concept.effect_measures)
         _extend_unique(diagnostic_accuracy_terms, concept.diagnostic_accuracy_terms)
@@ -475,6 +480,8 @@ def _should_skip_contextual_false_positive_concept(concept: TermConcept, normali
     if concept.concept_id == "mini:meta_analysis_recurrence" and "发表" in normalized_query:
         return True
     if concept.concept_id == "mini:meta_analysis_risk" and normalized_query in {"风险比", "危险比", "风险率"}:
+        return True
+    if concept.concept_id == "mini:parkinson_disease" and normalized_query == "pd":
         return True
     return False
 

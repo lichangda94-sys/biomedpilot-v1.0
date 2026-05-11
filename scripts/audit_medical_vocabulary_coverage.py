@@ -15,6 +15,13 @@ MINI_INDEX_PATH = MEDICAL_TERMS_DIR / "mini_medical_terms_index.json"
 ZH_OVERRIDES_PATH = MEDICAL_TERMS_DIR / "zh_term_overrides.json"
 JSON_REPORT_PATH = MEDICAL_TERMS_DIR / "coverage_audit_report.json"
 MARKDOWN_REPORT_PATH = REPO_ROOT / "docs" / "stage_2_3_medical_vocabulary_reference_audit.md"
+CORE_CHECKLIST_IDS = (
+    "oncology_core",
+    "endocrine_metabolic_core",
+    "anatomy_tissue_core",
+    "bioinformatics_modality_core",
+    "meta_analysis_terms_core",
+)
 
 
 @dataclass(frozen=True)
@@ -64,6 +71,8 @@ def build_coverage_audit_report() -> dict[str, Any]:
         sections[str(checklist.get("checklist_id"))] = section
     gaps = _prioritized_gaps(sections)
     quality_gates = _quality_gates(sections, gaps)
+    overall = _overall_summary(sections, corpus, checklists)
+    overall["quality_gate_status"] = quality_gates["status"]
     return {
         "schema_version": "medical_vocabulary_coverage_audit.v1",
         "generated_at": _now(),
@@ -72,7 +81,8 @@ def build_coverage_audit_report() -> dict[str, Any]:
             "zh_overrides": str(ZH_OVERRIDES_PATH.relative_to(REPO_ROOT)),
             "reference_checklists": str(CHECKLIST_DIR.relative_to(REPO_ROOT)),
         },
-        "overall": _overall_summary(sections),
+        "overall": overall,
+        "core_checklist_summary": _core_checklist_summary(sections, quality_gates),
         "sections": sections,
         "prioritized_gaps": gaps,
         "quality_gates": quality_gates,
@@ -590,11 +600,21 @@ def _detail(item: dict[str, Any], status: str, **extra: Any) -> dict[str, Any]:
     return payload
 
 
-def _overall_summary(sections: dict[str, Any]) -> dict[str, Any]:
+def _overall_summary(sections: dict[str, Any], corpus: VocabularyCorpus, checklists: list[dict[str, Any]]) -> dict[str, Any]:
     total = sum(section["total_checklist_items"] for section in sections.values())
     covered = sum(section["covered"] for section in sections.values())
     partial = sum(section["partially_covered"] for section in sections.values())
     missing = sum(section["missing"] for section in sections.values())
+    high_risk_terms = [
+        item
+        for checklist in checklists
+        if str(checklist.get("checklist_id")) in CORE_CHECKLIST_IDS
+        for item in checklist.get("ambiguity_terms", [])
+    ]
+    core_sections = {key: sections[key] for key in CORE_CHECKLIST_IDS if key in sections}
+    core_total = sum(section["total_checklist_items"] for section in core_sections.values())
+    core_covered = sum(section["covered"] for section in core_sections.values())
+    core_missing = sum(section["missing"] for section in core_sections.values())
     return {
         "total_checklist_items": total,
         "covered": covered,
@@ -602,7 +622,41 @@ def _overall_summary(sections: dict[str, Any]) -> dict[str, Any]:
         "missing": missing,
         "coverage_rate": round(covered / total, 3) if total else 0,
         "weighted_coverage_rate": round((covered + partial * 0.5) / total, 3) if total else 0,
+        "core_checklist_items": core_total,
+        "core_covered": core_covered,
+        "core_missing": core_missing,
+        "core_coverage_rate": round(core_covered / core_total, 3) if core_total else 0,
+        "total_runtime_concepts": len(_load_json_list(MINI_INDEX_PATH)),
+        "total_zh_overrides": len(_load_json_list(ZH_OVERRIDES_PATH)),
+        "total_high_risk_ambiguity_terms": len(high_risk_terms),
+        "corpus_records": len(corpus.records),
     }
+
+
+def _core_checklist_summary(sections: dict[str, Any], quality_gates: dict[str, Any]) -> dict[str, Any]:
+    gate_status = {str(gate["gate_id"]): str(gate["status"]) for gate in quality_gates["gates"]}
+    result: dict[str, Any] = {}
+    for checklist_id in CORE_CHECKLIST_IDS:
+        section = sections.get(checklist_id)
+        if not section:
+            continue
+        gates = {
+            gate_id: status
+            for gate_id, status in gate_status.items()
+            if gate_id.startswith(checklist_id) or gate_id.startswith(checklist_id.replace("_core", ""))
+        }
+        result[checklist_id] = {
+            "total": section["total_checklist_items"],
+            "covered": section["covered"],
+            "missing": section["missing"],
+            "coverage_percentage": section["coverage_rate"],
+            "high_risk_ambiguity_terms": section.get("high_risk_ambiguity_terms", []),
+            "p0_gaps": [item for item in section["details"] if item["priority"] == "P0" and item["status"] != "covered"],
+            "p1_gaps": [item for item in section["details"] if item["priority"] == "P1" and item["status"] != "covered"],
+            "p2_gaps": [item for item in section["details"] if item["priority"] == "P2" and item["status"] != "covered"],
+            "quality_gate_status": "pass" if gates and all(status == "pass" for status in gates.values()) else quality_gates["status"],
+        }
+    return result
 
 
 def _prioritized_gaps(sections: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
