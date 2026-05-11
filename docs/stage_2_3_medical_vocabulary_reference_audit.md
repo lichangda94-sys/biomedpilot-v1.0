@@ -4,7 +4,7 @@
 
 | Section | Total | Covered | Partial | Missing | Coverage | Weighted |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| overall | 231 | 231 | 0 | 0 | 1.000 | 1.000 |
+| overall | 299 | 299 | 0 | 0 | 1.000 | 1.000 |
 
 ## TCGA Projects Covered/Missing
 
@@ -293,6 +293,91 @@
 - missing term details: none
 - high-risk ambiguity terms: T1D, T2D, PCOS, TSH, T3, T4, PTH, BMI, HDL, LDL, NAFLD, NASH, MASLD
 
+## Anatomy Tissue Core Covered/Missing
+
+| Item | Priority | Status | Evidence |
+| --- | --- | --- | --- |
+| adipose tissue | P0 | covered | matched_terms: adipose tissue, 脂肪组织, 脂肪, fat tissue, Adipose Tissue, adipose tissue; matched_gtex_tissues: Adipose Tissue; matched_tcga_primary_sites: adipose tissue |
+| subcutaneous adipose tissue | P0 | covered | matched_terms: subcutaneous adipose tissue, 皮下脂肪, 皮下脂肪组织, subcutaneous fat, Adipose - Subcutaneous, Adipose - Subcutaneous, Adipose Tissue, adipose tissue; matched_gtex_tissues: Adipose - Subcutaneous, Adipose Tissue; matched_tcga_primary_sites: adipose tissue |
+| visceral adipose tissue | P0 | covered | matched_terms: visceral adipose tissue, 内脏脂肪, 内脏脂肪组织, 网膜脂肪, visceral fat, omental adipose tissue, Adipose - Visceral (Omentum), Adipose - Visceral, Adipose - Visceral (Omentum), Adipose Tissue, adipose tissue; matched_gtex_tissues: Adipose - Visceral, Adipose - Visceral (Omentum), Adipose Tissue; matched_tcga_primary_sites: adipose tissue |
+| adrenal gland | P0 | covered | matched_terms: adrenal gland, 肾上腺, 肾上腺组织, adrenal gland tissue, Adrenal Gland, adrenal gland; matched_gtex_tissues: Adrenal Gland; matched_tcga_primary_sites: adrenal gland |
+| artery | P0 | covered | matched_terms: artery, 动脉, 动脉组织, arterial tissue, Artery - Aorta, Artery - Coronary, Artery - Tibial, artery; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial; matched_tcga_primary_sites: artery |
+| aorta | P0 | covered | matched_terms: aorta, 主动脉, 大动脉, aortic artery, Artery - Aorta, Artery - Aorta, artery; matched_gtex_tissues: Artery - Aorta; matched_tcga_primary_sites: artery |
+| coronary artery | P0 | covered | matched_terms: coronary artery, 冠状动脉, 冠脉, coronary arterial tissue, Artery - Coronary, Artery - Coronary, artery; matched_gtex_tissues: Artery - Coronary; matched_tcga_primary_sites: artery |
+| tibial artery | P0 | covered | matched_terms: tibial artery, 胫动脉, 胫骨动脉, Artery - Tibial, Artery - Tibial, artery; matched_gtex_tissues: Artery - Tibial; matched_tcga_primary_sites: artery |
+| breast mammary tissue | P0 | covered | matched_terms: breast mammary tissue, 乳腺, 乳房, 乳腺组织, breast tissue, mammary tissue, Breast - Mammary Tissue, Breast, breast; matched_gtex_tissues: Breast - Mammary Tissue, Breast; matched_tcga_primary_sites: breast |
+| breast | P0 | covered | matched_terms: breast, 乳房, 乳房组织, breast tissue, mammary tissue, Breast - Mammary Tissue, Breast, breast; matched_gtex_tissues: Breast - Mammary Tissue, Breast; matched_tcga_primary_sites: breast |
+| colon | P0 | covered | matched_terms: colon, 结肠, 结肠组织, colonic tissue, Colon, Colon - Sigmoid, Colon - Transverse, colon; matched_gtex_tissues: Colon, Colon - Sigmoid, Colon - Transverse; matched_tcga_primary_sites: colon |
+| sigmoid colon | P0 | covered | matched_terms: sigmoid colon, 乙状结肠, 乙状结肠组织, sigmoid colonic tissue, Colon - Sigmoid, Colon - Sigmoid, Colon, colon; matched_gtex_tissues: Colon - Sigmoid, Colon; matched_tcga_primary_sites: colon |
+| transverse colon | P0 | covered | matched_terms: transverse colon, 横结肠, 横结肠组织, transverse colonic tissue, Colon - Transverse, Colon - Transverse, Colon, colon; matched_gtex_tissues: Colon - Transverse, Colon; matched_tcga_primary_sites: colon |
+| rectum | P0 | covered | matched_terms: rectum, 直肠, 直肠组织, rectal tissue, rectum; matched_tcga_primary_sites: rectum |
+| colorectal tissue | P0 | covered | matched_terms: colorectal tissue, 结直肠, 结肠直肠, colorectal tissue, colorectum, Colon, Colon - Sigmoid, Colon - Transverse, colon, rectum; matched_gtex_tissues: Colon, Colon - Sigmoid, Colon - Transverse; matched_tcga_primary_sites: colon, rectum |
+| esophagus | P0 | covered | matched_terms: esophagus, 食管, 食道, 食管组织, oesophagus, esophageal tissue, Esophagus - Gastroesophageal Junction, Esophagus - Mucosa, Esophagus - Muscularis, esophagus; matched_gtex_tissues: Esophagus - Gastroesophageal Junction, Esophagus - Mucosa, Esophagus - Muscularis; matched_tcga_primary_sites: esophagus |
+| esophagus gastroesophageal junction | P0 | covered | matched_terms: esophagus gastroesophageal junction, 胃食管交界, 食管胃交界, 贲门交界, gastroesophageal junction, GEJ, Esophagus - Gastroesophageal Junction, Esophagus - Gastroesophageal Junction, esophagus; matched_gtex_tissues: Esophagus - Gastroesophageal Junction; matched_tcga_primary_sites: esophagus |
+| esophagus mucosa | P0 | covered | matched_terms: esophagus mucosa, 食管黏膜, 食道黏膜, esophageal mucosa, Esophagus - Mucosa, Esophagus - Mucosa, esophagus; matched_gtex_tissues: Esophagus - Mucosa; matched_tcga_primary_sites: esophagus |
+| esophagus muscularis | P0 | covered | matched_terms: esophagus muscularis, 食管肌层, 食道肌层, esophageal muscularis, Esophagus - Muscularis, Esophagus - Muscularis, esophagus; matched_gtex_tissues: Esophagus - Muscularis; matched_tcga_primary_sites: esophagus |
+| heart | P0 | covered | matched_terms: heart, 心脏, 心肌, cardiac tissue, heart tissue, Heart - Atrial Appendage, Heart - Left Ventricle, heart; matched_gtex_tissues: Heart - Atrial Appendage, Heart - Left Ventricle; matched_tcga_primary_sites: heart |
+| heart atrial appendage | P0 | covered | matched_terms: heart atrial appendage, 心耳, 心房耳, atrial appendage, Heart - Atrial Appendage, Heart - Atrial Appendage, heart; matched_gtex_tissues: Heart - Atrial Appendage; matched_tcga_primary_sites: heart |
+| heart left ventricle | P0 | covered | matched_terms: heart left ventricle, 左心室, 左室, left ventricular tissue, Heart - Left Ventricle, Heart - Left Ventricle, heart; matched_gtex_tissues: Heart - Left Ventricle; matched_tcga_primary_sites: heart |
+| kidney | P0 | covered | matched_terms: kidney, 肾脏, 肾, 肾组织, renal tissue, Kidney, Kidney - Cortex, kidney; matched_gtex_tissues: Kidney, Kidney - Cortex; matched_tcga_primary_sites: kidney |
+| kidney cortex | P0 | covered | matched_terms: kidney cortex, 肾皮质, 肾脏皮质, renal cortex, Kidney - Cortex, Kidney - Cortex, Kidney, kidney; matched_gtex_tissues: Kidney - Cortex, Kidney; matched_tcga_primary_sites: kidney |
+| liver | P0 | covered | matched_terms: liver, 肝脏, 肝, 肝组织, hepatic tissue, Liver, liver; matched_gtex_tissues: Liver; matched_tcga_primary_sites: liver |
+| lung | P0 | covered | matched_terms: lung, 肺, 肺部, 肺组织, pulmonary tissue, lung tissue, Lung, lung; matched_gtex_tissues: Lung; matched_tcga_primary_sites: lung |
+| skeletal muscle | P0 | covered | matched_terms: skeletal muscle, 骨骼肌, 肌肉, 骨骼肌组织, Muscle - Skeletal, skeletal muscle tissue, Muscle - Skeletal, soft tissue; matched_gtex_tissues: Muscle - Skeletal; matched_tcga_primary_sites: soft tissue |
+| tibial nerve | P0 | covered | matched_terms: tibial nerve, 胫神经, 胫骨神经, Nerve - Tibial, tibial nerve tissue, Nerve - Tibial, nerve; matched_gtex_tissues: Nerve - Tibial; matched_tcga_primary_sites: nerve |
+| ovary | P0 | covered | matched_terms: ovary, 卵巢, 卵巢组织, ovarian tissue, Ovary, ovary; matched_gtex_tissues: Ovary; matched_tcga_primary_sites: ovary |
+| pancreas | P0 | covered | matched_terms: pancreas, 胰腺, 胰腺组织, pancreatic tissue, Pancreas, pancreas; matched_gtex_tissues: Pancreas; matched_tcga_primary_sites: pancreas |
+| pituitary | P0 | covered | matched_terms: pituitary, 垂体, 脑垂体, pituitary gland, pituitary tissue, Pituitary, pituitary; matched_gtex_tissues: Pituitary; matched_tcga_primary_sites: pituitary |
+| prostate | P0 | covered | matched_terms: prostate, 前列腺, 前列腺组织, prostatic tissue, Prostate, prostate; matched_gtex_tissues: Prostate; matched_tcga_primary_sites: prostate |
+| skin | P0 | covered | matched_terms: skin, 皮肤, 皮肤组织, cutaneous tissue, Skin, Skin - Not Sun Exposed, Skin - Not Sun Exposed (Suprapubic), Skin - Sun Exposed, Skin - Sun Exposed (Lower leg), skin; matched_gtex_tissues: Skin, Skin - Not Sun Exposed, Skin - Not Sun Exposed (Suprapubic), Skin - Sun Exposed, Skin - Sun Exposed (Lower leg); matched_tcga_primary_sites: skin |
+| not sun exposed skin | P0 | covered | matched_terms: not sun exposed skin, 非日晒皮肤, 未日晒皮肤, Skin - Not Sun Exposed (Suprapubic), suprapubic skin, Skin - Not Sun Exposed, Skin - Not Sun Exposed (Suprapubic), Skin, skin; matched_gtex_tissues: Skin - Not Sun Exposed, Skin - Not Sun Exposed (Suprapubic), Skin; matched_tcga_primary_sites: skin |
+| sun exposed skin | P0 | covered | matched_terms: sun exposed skin, 日晒皮肤, 日光暴露皮肤, Skin - Sun Exposed (Lower leg), lower leg skin, Skin - Sun Exposed, Skin - Sun Exposed (Lower leg), Skin, skin; matched_gtex_tissues: Skin - Sun Exposed, Skin - Sun Exposed (Lower leg), Skin; matched_tcga_primary_sites: skin |
+| small intestine terminal ileum | P0 | covered | matched_terms: small intestine terminal ileum, 回肠末端, 小肠末端, 末端回肠, 小肠, terminal ileum, Small Intestine - Terminal Ileum, ileum, Small Intestine - Terminal Ileum, small intestine; matched_gtex_tissues: Small Intestine - Terminal Ileum; matched_tcga_primary_sites: small intestine |
+| spleen | P0 | covered | matched_terms: spleen, 脾脏, 脾, splenic tissue, Spleen, spleen; matched_gtex_tissues: Spleen; matched_tcga_primary_sites: spleen |
+| stomach | P0 | covered | matched_terms: stomach, 胃, 胃组织, gastric tissue, Stomach, stomach; matched_gtex_tissues: Stomach; matched_tcga_primary_sites: stomach |
+| testis | P0 | covered | matched_terms: testis, 睾丸, 睾丸组织, testicular tissue, Testis, testis; matched_gtex_tissues: Testis; matched_tcga_primary_sites: testis |
+| thyroid | P0 | covered | matched_terms: thyroid, 甲状腺, 甲状腺组织, thyroid tissue, thyroid gland, Thyroid, thyroid; matched_gtex_tissues: Thyroid; matched_tcga_primary_sites: thyroid |
+| uterus | P0 | covered | matched_terms: uterus, 子宫, 子宫组织, uterine tissue, Uterus, uterus; matched_gtex_tissues: Uterus; matched_tcga_primary_sites: uterus |
+| vagina | P0 | covered | matched_terms: vagina, 阴道, 阴道组织, vaginal tissue, Vagina, vagina; matched_gtex_tissues: Vagina; matched_tcga_primary_sites: vagina |
+| whole blood | P0 | covered | matched_terms: whole blood, 血液, 全血, 外周血, blood, peripheral blood, whole blood, Whole Blood, blood; matched_gtex_tissues: Whole Blood; matched_tcga_primary_sites: blood |
+| minor salivary gland | P0 | covered | matched_terms: minor salivary gland, 小唾液腺, 唾液腺, salivary gland, minor salivary gland tissue, Minor Salivary Gland, head and neck; matched_gtex_tissues: Minor Salivary Gland; matched_tcga_primary_sites: head and neck |
+| cultured fibroblasts | P0 | covered | matched_terms: cultured fibroblasts, 培养成纤维细胞, 成纤维细胞, fibroblasts, Cells - Cultured fibroblasts, Cells - Cultured fibroblasts, soft tissue; matched_gtex_tissues: Cells - Cultured fibroblasts; matched_tcga_primary_sites: soft tissue |
+| EBV-transformed lymphocytes | P0 | covered | matched_terms: EBV-transformed lymphocytes, EBV转化淋巴细胞, EBV转化B细胞, EBV-transformed lymphocytes, lymphoblastoid cell line, Cells - EBV-transformed lymphocytes, Cells - EBV-transformed lymphocytes, blood; matched_gtex_tissues: Cells - EBV-transformed lymphocytes; matched_tcga_primary_sites: blood |
+| cervix | P0 | covered | matched_terms: cervix, 宫颈, 子宫颈, cervical tissue, uterine cervix, cervix; matched_tcga_primary_sites: cervix |
+| endometrium | P0 | covered | matched_terms: endometrium, 子宫内膜, 内膜, endometrial tissue, endometrium, uterus; matched_tcga_primary_sites: endometrium, uterus |
+| bladder | P0 | covered | matched_terms: bladder, 膀胱, 膀胱组织, urinary bladder, bladder tissue, Bladder, bladder; matched_gtex_tissues: Bladder; matched_tcga_primary_sites: bladder |
+| bile duct | P0 | covered | matched_terms: bile duct, 胆管, 胆道, biliary tract, biliary duct, bile duct; matched_tcga_primary_sites: bile duct |
+| head and neck tissue | P0 | covered | matched_terms: head and neck tissue, 头颈部组织, 头颈组织, head and neck, upper aerodigestive tract, head and neck; matched_tcga_primary_sites: head and neck |
+| bone marrow | P0 | covered | matched_terms: bone marrow, 骨髓, 骨髓组织, marrow, bone marrow tissue, bone marrow; matched_tcga_primary_sites: bone marrow |
+| lymph node | P0 | covered | matched_terms: lymph node, 淋巴结, 淋巴组织, lymphatic tissue, lymph node tissue, lymph node; matched_tcga_primary_sites: lymph node |
+| soft tissue | P0 | covered | matched_terms: soft tissue, 软组织, 软组织来源, connective soft tissue, Muscle - Skeletal, soft tissue; matched_gtex_tissues: Muscle - Skeletal; matched_tcga_primary_sites: soft tissue |
+| brain | P0 | covered | matched_terms: brain, 脑, 脑组织, brain tissue, Brain, brain; matched_gtex_tissues: Brain; matched_tcga_primary_sites: brain |
+| brain amygdala | P0 | covered | matched_terms: brain amygdala, 杏仁核, 脑杏仁核, amygdala, Brain - Amygdala, Brain - Amygdala, brain; matched_gtex_tissues: Brain - Amygdala; matched_tcga_primary_sites: brain |
+| brain anterior cingulate cortex | P0 | covered | matched_terms: brain anterior cingulate cortex, 前扣带皮层, 前扣带回皮层, anterior cingulate cortex, Brain - Anterior cingulate cortex (BA24), Brain - Anterior cingulate cortex, brain; matched_gtex_tissues: Brain - Anterior cingulate cortex; matched_tcga_primary_sites: brain |
+| brain caudate | P0 | covered | matched_terms: brain caudate, 尾状核, 脑尾状核, caudate nucleus, Brain - Caudate (basal ganglia), Brain - Caudate, brain; matched_gtex_tissues: Brain - Caudate; matched_tcga_primary_sites: brain |
+| brain cerebellar hemisphere | P0 | covered | matched_terms: brain cerebellar hemisphere, 小脑半球, 小脑半球组织, cerebellar hemisphere, Brain - Cerebellar Hemisphere, Brain - Cerebellar Hemisphere, brain; matched_gtex_tissues: Brain - Cerebellar Hemisphere; matched_tcga_primary_sites: brain |
+| brain cerebellum | P0 | covered | matched_terms: brain cerebellum, 小脑, 小脑组织, cerebellum, Brain - Cerebellum, Brain - Cerebellum, brain; matched_gtex_tissues: Brain - Cerebellum; matched_tcga_primary_sites: brain |
+| brain cortex | P0 | covered | matched_terms: brain cortex, 大脑皮层, 脑皮层, cerebral cortex, Brain - Cortex, Brain - Cortex, brain; matched_gtex_tissues: Brain - Cortex; matched_tcga_primary_sites: brain |
+| brain frontal cortex | P0 | covered | matched_terms: brain frontal cortex, 额叶皮层, 额皮质, frontal cortex, Brain - Frontal Cortex (BA9), Brain - Frontal Cortex, brain; matched_gtex_tissues: Brain - Frontal Cortex; matched_tcga_primary_sites: brain |
+| brain hippocampus | P0 | covered | matched_terms: brain hippocampus, 海马, 海马体, hippocampus, Brain - Hippocampus, Brain - Hippocampus, brain; matched_gtex_tissues: Brain - Hippocampus; matched_tcga_primary_sites: brain |
+| brain hypothalamus | P0 | covered | matched_terms: brain hypothalamus, 下丘脑, 丘脑下部, hypothalamus, Brain - Hypothalamus, Brain - Hypothalamus, brain; matched_gtex_tissues: Brain - Hypothalamus; matched_tcga_primary_sites: brain |
+| brain nucleus accumbens | P0 | covered | matched_terms: brain nucleus accumbens, 伏隔核, 脑伏隔核, nucleus accumbens, Brain - Nucleus accumbens (basal ganglia), Brain - Nucleus accumbens, brain; matched_gtex_tissues: Brain - Nucleus accumbens; matched_tcga_primary_sites: brain |
+| brain putamen | P0 | covered | matched_terms: brain putamen, 壳核, 脑壳核, putamen, Brain - Putamen (basal ganglia), Brain - Putamen, brain; matched_gtex_tissues: Brain - Putamen; matched_tcga_primary_sites: brain |
+| spinal cord cervical c1 | P0 | covered | matched_terms: spinal cord cervical c1, 颈髓C1, 颈段脊髓, spinal cord cervical c-1, Brain - Spinal cord (cervical c-1), Brain - Spinal cord, brain, spinal cord; matched_gtex_tissues: Brain - Spinal cord; matched_tcga_primary_sites: brain, spinal cord |
+| brain substantia nigra | P0 | covered | matched_terms: brain substantia nigra, 黑质, 脑黑质, substantia nigra, Brain - Substantia nigra, Brain - Substantia nigra, brain; matched_gtex_tissues: Brain - Substantia nigra; matched_tcga_primary_sites: brain |
+
+## Anatomy Tissue Core Summary
+
+- anatomy/tissue checklist total count: 68
+- covered count: 68
+- missing count: 0
+- coverage percentage: 1.000
+- GTEx tissue coverage: 59/59 (1.000)
+- missing GTEx tissues: none
+- TCGA primary site coverage: 35/35 (1.000)
+- missing TCGA primary sites: none
+- high-risk ambiguity terms: thyroid, liver, lung, colon, rectum, blood, bone marrow, lymph node, adipose tissue
+
 ## P0 Gaps
 
 No P0 gaps detected.
@@ -317,6 +402,9 @@ No P2 gaps detected.
 | oncology_core_missing_tcga_projects | 0 | 0 | pass |
 | endocrine_metabolic_core_coverage | 1.0 | 0.95 | pass |
 | endocrine_metabolic_missing_terms | 0 | 0 | pass |
+| anatomy_tissue_core_coverage | 1.0 | 0.95 | pass |
+| anatomy_tissue_missing_gtex_tissues | 0 | 0 | pass |
+| anatomy_tissue_missing_tcga_primary_sites | 0 | 0 | pass |
 | missing_items | 0 | 0 | pass |
 | p0_gaps | 0 | 0 | pass |
 | audit_cross_context_pollution | 0 | 0 | pass |
@@ -324,6 +412,7 @@ No P2 gaps detected.
 
 ## External Resource Sources And Version Notes
 
+- anatomy_tissue_core: project-curated GTEx tissue site and TCGA primary site checklist (2026-05-11 curated v1)
 - common_cancers: GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects (Curated common cancer checklist, 2026-05)
 - common_diseases: WHO noncommunicable diseases and major disease categories (Curated major disease category checklist, 2026-05)
 - endocrine_metabolic_core: project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist (2026-05-11 curated v1)

@@ -1,20 +1,2813 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-11T09:38:46.362056+00:00",
+  "generated_at": "2026-05-11T10:00:28.263194+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
     "reference_checklists": "data/medical_terms/reference_checklists"
   },
   "overall": {
-    "total_checklist_items": 231,
-    "covered": 231,
+    "total_checklist_items": 299,
+    "covered": 299,
     "partially_covered": 0,
     "missing": 0,
     "coverage_rate": 1.0,
     "weighted_coverage_rate": 1.0
   },
   "sections": {
+    "anatomy_tissue_core": {
+      "checklist_id": "anatomy_tissue_core",
+      "title": "Anatomy and Tissue Core Vocabulary v1",
+      "source": "project-curated GTEx tissue site and TCGA primary site checklist",
+      "source_version": "2026-05-11 curated v1",
+      "total_checklist_items": 68,
+      "covered": 68,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "anatomy_adipose_tissue",
+          "label": "adipose tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "adipose tissue",
+            "脂肪组织",
+            "脂肪",
+            "fat tissue",
+            "Adipose Tissue",
+            "adipose tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Adipose Tissue"
+          ],
+          "matched_terms": [
+            "adipose tissue",
+            "脂肪组织",
+            "脂肪",
+            "fat tissue",
+            "Adipose Tissue",
+            "adipose tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Adipose Tissue"
+          ],
+          "matched_tcga_primary_sites": [
+            "adipose tissue"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [
+            "obesity"
+          ],
+          "ambiguity_notes": "Adipose tissue is not obesity."
+        },
+        {
+          "id": "anatomy_subcutaneous_adipose_tissue",
+          "label": "subcutaneous adipose tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "subcutaneous adipose tissue",
+            "皮下脂肪",
+            "皮下脂肪组织",
+            "subcutaneous fat",
+            "Adipose - Subcutaneous",
+            "Adipose - Subcutaneous",
+            "Adipose Tissue",
+            "adipose tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Adipose - Subcutaneous",
+            "Adipose Tissue"
+          ],
+          "matched_terms": [
+            "subcutaneous adipose tissue",
+            "皮下脂肪",
+            "皮下脂肪组织",
+            "subcutaneous fat",
+            "Adipose - Subcutaneous",
+            "Adipose - Subcutaneous",
+            "Adipose Tissue",
+            "adipose tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Adipose - Subcutaneous",
+            "Adipose Tissue"
+          ],
+          "matched_tcga_primary_sites": [
+            "adipose tissue"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [
+            "visceral adipose tissue",
+            "obesity"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_visceral_adipose_tissue",
+          "label": "visceral adipose tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "visceral adipose tissue",
+            "内脏脂肪",
+            "内脏脂肪组织",
+            "网膜脂肪",
+            "visceral fat",
+            "omental adipose tissue",
+            "Adipose - Visceral (Omentum)",
+            "Adipose - Visceral",
+            "Adipose - Visceral (Omentum)",
+            "Adipose Tissue",
+            "adipose tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Adipose - Visceral",
+            "Adipose - Visceral (Omentum)",
+            "Adipose Tissue"
+          ],
+          "matched_terms": [
+            "visceral adipose tissue",
+            "内脏脂肪",
+            "内脏脂肪组织",
+            "网膜脂肪",
+            "visceral fat",
+            "omental adipose tissue",
+            "Adipose - Visceral (Omentum)",
+            "Adipose - Visceral",
+            "Adipose - Visceral (Omentum)",
+            "Adipose Tissue",
+            "adipose tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Adipose - Visceral",
+            "Adipose - Visceral (Omentum)",
+            "Adipose Tissue"
+          ],
+          "matched_tcga_primary_sites": [
+            "adipose tissue"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [
+            "subcutaneous adipose tissue",
+            "obesity"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_adrenal_gland",
+          "label": "adrenal gland",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "adrenal gland",
+            "肾上腺",
+            "肾上腺组织",
+            "adrenal gland tissue",
+            "Adrenal Gland",
+            "adrenal gland"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Adrenal Gland"
+          ],
+          "matched_terms": [
+            "adrenal gland",
+            "肾上腺",
+            "肾上腺组织",
+            "adrenal gland tissue",
+            "Adrenal Gland",
+            "adrenal gland"
+          ],
+          "matched_gtex_tissues": [
+            "Adrenal Gland"
+          ],
+          "matched_tcga_primary_sites": [
+            "adrenal gland"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_artery",
+          "label": "artery",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "artery",
+            "动脉",
+            "动脉组织",
+            "arterial tissue",
+            "Artery - Aorta",
+            "Artery - Coronary",
+            "Artery - Tibial",
+            "artery"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery - Aorta",
+            "Artery - Coronary",
+            "Artery - Tibial"
+          ],
+          "matched_terms": [
+            "artery",
+            "动脉",
+            "动脉组织",
+            "arterial tissue",
+            "Artery - Aorta",
+            "Artery - Coronary",
+            "Artery - Tibial",
+            "artery"
+          ],
+          "matched_gtex_tissues": [
+            "Artery - Aorta",
+            "Artery - Coronary",
+            "Artery - Tibial"
+          ],
+          "matched_tcga_primary_sites": [
+            "artery"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_aorta",
+          "label": "aorta",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "aorta",
+            "主动脉",
+            "大动脉",
+            "aortic artery",
+            "Artery - Aorta",
+            "Artery - Aorta",
+            "artery"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery - Aorta"
+          ],
+          "matched_terms": [
+            "aorta",
+            "主动脉",
+            "大动脉",
+            "aortic artery",
+            "Artery - Aorta",
+            "Artery - Aorta",
+            "artery"
+          ],
+          "matched_gtex_tissues": [
+            "Artery - Aorta"
+          ],
+          "matched_tcga_primary_sites": [
+            "artery"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_coronary_artery",
+          "label": "coronary artery",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "coronary artery",
+            "冠状动脉",
+            "冠脉",
+            "coronary arterial tissue",
+            "Artery - Coronary",
+            "Artery - Coronary",
+            "artery"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery - Coronary"
+          ],
+          "matched_terms": [
+            "coronary artery",
+            "冠状动脉",
+            "冠脉",
+            "coronary arterial tissue",
+            "Artery - Coronary",
+            "Artery - Coronary",
+            "artery"
+          ],
+          "matched_gtex_tissues": [
+            "Artery - Coronary"
+          ],
+          "matched_tcga_primary_sites": [
+            "artery"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_tibial_artery",
+          "label": "tibial artery",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "tibial artery",
+            "胫动脉",
+            "胫骨动脉",
+            "Artery - Tibial",
+            "Artery - Tibial",
+            "artery"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery - Tibial"
+          ],
+          "matched_terms": [
+            "tibial artery",
+            "胫动脉",
+            "胫骨动脉",
+            "Artery - Tibial",
+            "Artery - Tibial",
+            "artery"
+          ],
+          "matched_gtex_tissues": [
+            "Artery - Tibial"
+          ],
+          "matched_tcga_primary_sites": [
+            "artery"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_breast_mammary_tissue",
+          "label": "breast mammary tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "breast mammary tissue",
+            "乳腺",
+            "乳房",
+            "乳腺组织",
+            "breast tissue",
+            "mammary tissue",
+            "Breast - Mammary Tissue",
+            "Breast",
+            "breast"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Breast - Mammary Tissue",
+            "Breast"
+          ],
+          "matched_terms": [
+            "breast mammary tissue",
+            "乳腺",
+            "乳房",
+            "乳腺组织",
+            "breast tissue",
+            "mammary tissue",
+            "Breast - Mammary Tissue",
+            "Breast",
+            "breast"
+          ],
+          "matched_gtex_tissues": [
+            "Breast - Mammary Tissue",
+            "Breast"
+          ],
+          "matched_tcga_primary_sites": [
+            "breast"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "breast cancer",
+            "TCGA-BRCA"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_breast",
+          "label": "breast",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "breast",
+            "乳房",
+            "乳房组织",
+            "breast tissue",
+            "mammary tissue",
+            "Breast - Mammary Tissue",
+            "Breast",
+            "breast"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Breast - Mammary Tissue",
+            "Breast"
+          ],
+          "matched_terms": [
+            "breast",
+            "乳房",
+            "乳房组织",
+            "breast tissue",
+            "mammary tissue",
+            "Breast - Mammary Tissue",
+            "Breast",
+            "breast"
+          ],
+          "matched_gtex_tissues": [
+            "Breast - Mammary Tissue",
+            "Breast"
+          ],
+          "matched_tcga_primary_sites": [
+            "breast"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "breast cancer",
+            "TCGA-BRCA"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_colon",
+          "label": "colon",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "colon",
+            "结肠",
+            "结肠组织",
+            "colonic tissue",
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "colon"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse"
+          ],
+          "matched_terms": [
+            "colon",
+            "结肠",
+            "结肠组织",
+            "colonic tissue",
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "colon"
+          ],
+          "matched_gtex_tissues": [
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse"
+          ],
+          "matched_tcga_primary_sites": [
+            "colon"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "rectum",
+            "rectal cancer",
+            "TCGA-READ"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_sigmoid_colon",
+          "label": "sigmoid colon",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "sigmoid colon",
+            "乙状结肠",
+            "乙状结肠组织",
+            "sigmoid colonic tissue",
+            "Colon - Sigmoid",
+            "Colon - Sigmoid",
+            "Colon",
+            "colon"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon"
+          ],
+          "matched_terms": [
+            "sigmoid colon",
+            "乙状结肠",
+            "乙状结肠组织",
+            "sigmoid colonic tissue",
+            "Colon - Sigmoid",
+            "Colon - Sigmoid",
+            "Colon",
+            "colon"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon"
+          ],
+          "matched_tcga_primary_sites": [
+            "colon"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [
+            "rectum"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_transverse_colon",
+          "label": "transverse colon",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "transverse colon",
+            "横结肠",
+            "横结肠组织",
+            "transverse colonic tissue",
+            "Colon - Transverse",
+            "Colon - Transverse",
+            "Colon",
+            "colon"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Transverse",
+            "Colon"
+          ],
+          "matched_terms": [
+            "transverse colon",
+            "横结肠",
+            "横结肠组织",
+            "transverse colonic tissue",
+            "Colon - Transverse",
+            "Colon - Transverse",
+            "Colon",
+            "colon"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Transverse",
+            "Colon"
+          ],
+          "matched_tcga_primary_sites": [
+            "colon"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [
+            "rectum"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_rectum",
+          "label": "rectum",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "rectum",
+            "直肠",
+            "直肠组织",
+            "rectal tissue",
+            "rectum"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "rectum",
+            "直肠",
+            "直肠组织",
+            "rectal tissue",
+            "rectum"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "rectum"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "colon",
+            "colon cancer",
+            "TCGA-COAD"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_colorectal_tissue",
+          "label": "colorectal tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "colorectal tissue",
+            "结直肠",
+            "结肠直肠",
+            "colorectal tissue",
+            "colorectum",
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "colon",
+            "rectum"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse"
+          ],
+          "matched_terms": [
+            "colorectal tissue",
+            "结直肠",
+            "结肠直肠",
+            "colorectal tissue",
+            "colorectum",
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "colon",
+            "rectum"
+          ],
+          "matched_gtex_tissues": [
+            "Colon",
+            "Colon - Sigmoid",
+            "Colon - Transverse"
+          ],
+          "matched_tcga_primary_sites": [
+            "colon",
+            "rectum"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "Combination concept that can relate colon and rectum without collapsing isolated colon or rectum."
+        },
+        {
+          "id": "anatomy_esophagus",
+          "label": "esophagus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophagus",
+            "食管",
+            "食道",
+            "食管组织",
+            "oesophagus",
+            "esophageal tissue",
+            "Esophagus - Gastroesophageal Junction",
+            "Esophagus - Mucosa",
+            "Esophagus - Muscularis",
+            "esophagus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Esophagus - Gastroesophageal Junction",
+            "Esophagus - Mucosa",
+            "Esophagus - Muscularis"
+          ],
+          "matched_terms": [
+            "esophagus",
+            "食管",
+            "食道",
+            "食管组织",
+            "oesophagus",
+            "esophageal tissue",
+            "Esophagus - Gastroesophageal Junction",
+            "Esophagus - Mucosa",
+            "Esophagus - Muscularis",
+            "esophagus"
+          ],
+          "matched_gtex_tissues": [
+            "Esophagus - Gastroesophageal Junction",
+            "Esophagus - Mucosa",
+            "Esophagus - Muscularis"
+          ],
+          "matched_tcga_primary_sites": [
+            "esophagus"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "esophageal cancer",
+            "ESCC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_esophagus_gastroesophageal_junction",
+          "label": "esophagus gastroesophageal junction",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophagus gastroesophageal junction",
+            "胃食管交界",
+            "食管胃交界",
+            "贲门交界",
+            "gastroesophageal junction",
+            "GEJ",
+            "Esophagus - Gastroesophageal Junction",
+            "Esophagus - Gastroesophageal Junction",
+            "esophagus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Esophagus - Gastroesophageal Junction"
+          ],
+          "matched_terms": [
+            "esophagus gastroesophageal junction",
+            "胃食管交界",
+            "食管胃交界",
+            "贲门交界",
+            "gastroesophageal junction",
+            "GEJ",
+            "Esophagus - Gastroesophageal Junction",
+            "Esophagus - Gastroesophageal Junction",
+            "esophagus"
+          ],
+          "matched_gtex_tissues": [
+            "Esophagus - Gastroesophageal Junction"
+          ],
+          "matched_tcga_primary_sites": [
+            "esophagus"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_esophagus_mucosa",
+          "label": "esophagus mucosa",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophagus mucosa",
+            "食管黏膜",
+            "食道黏膜",
+            "esophageal mucosa",
+            "Esophagus - Mucosa",
+            "Esophagus - Mucosa",
+            "esophagus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Esophagus - Mucosa"
+          ],
+          "matched_terms": [
+            "esophagus mucosa",
+            "食管黏膜",
+            "食道黏膜",
+            "esophageal mucosa",
+            "Esophagus - Mucosa",
+            "Esophagus - Mucosa",
+            "esophagus"
+          ],
+          "matched_gtex_tissues": [
+            "Esophagus - Mucosa"
+          ],
+          "matched_tcga_primary_sites": [
+            "esophagus"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_esophagus_muscularis",
+          "label": "esophagus muscularis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "esophagus muscularis",
+            "食管肌层",
+            "食道肌层",
+            "esophageal muscularis",
+            "Esophagus - Muscularis",
+            "Esophagus - Muscularis",
+            "esophagus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Esophagus - Muscularis"
+          ],
+          "matched_terms": [
+            "esophagus muscularis",
+            "食管肌层",
+            "食道肌层",
+            "esophageal muscularis",
+            "Esophagus - Muscularis",
+            "Esophagus - Muscularis",
+            "esophagus"
+          ],
+          "matched_gtex_tissues": [
+            "Esophagus - Muscularis"
+          ],
+          "matched_tcga_primary_sites": [
+            "esophagus"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_heart",
+          "label": "heart",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "heart",
+            "心脏",
+            "心肌",
+            "cardiac tissue",
+            "heart tissue",
+            "Heart - Atrial Appendage",
+            "Heart - Left Ventricle",
+            "heart"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Heart - Atrial Appendage",
+            "Heart - Left Ventricle"
+          ],
+          "matched_terms": [
+            "heart",
+            "心脏",
+            "心肌",
+            "cardiac tissue",
+            "heart tissue",
+            "Heart - Atrial Appendage",
+            "Heart - Left Ventricle",
+            "heart"
+          ],
+          "matched_gtex_tissues": [
+            "Heart - Atrial Appendage",
+            "Heart - Left Ventricle"
+          ],
+          "matched_tcga_primary_sites": [
+            "heart"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_heart_atrial_appendage",
+          "label": "heart atrial appendage",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "heart atrial appendage",
+            "心耳",
+            "心房耳",
+            "atrial appendage",
+            "Heart - Atrial Appendage",
+            "Heart - Atrial Appendage",
+            "heart"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Heart - Atrial Appendage"
+          ],
+          "matched_terms": [
+            "heart atrial appendage",
+            "心耳",
+            "心房耳",
+            "atrial appendage",
+            "Heart - Atrial Appendage",
+            "Heart - Atrial Appendage",
+            "heart"
+          ],
+          "matched_gtex_tissues": [
+            "Heart - Atrial Appendage"
+          ],
+          "matched_tcga_primary_sites": [
+            "heart"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_heart_left_ventricle",
+          "label": "heart left ventricle",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "heart left ventricle",
+            "左心室",
+            "左室",
+            "left ventricular tissue",
+            "Heart - Left Ventricle",
+            "Heart - Left Ventricle",
+            "heart"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Heart - Left Ventricle"
+          ],
+          "matched_terms": [
+            "heart left ventricle",
+            "左心室",
+            "左室",
+            "left ventricular tissue",
+            "Heart - Left Ventricle",
+            "Heart - Left Ventricle",
+            "heart"
+          ],
+          "matched_gtex_tissues": [
+            "Heart - Left Ventricle"
+          ],
+          "matched_tcga_primary_sites": [
+            "heart"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_kidney",
+          "label": "kidney",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "kidney",
+            "肾脏",
+            "肾",
+            "肾组织",
+            "renal tissue",
+            "Kidney",
+            "Kidney - Cortex",
+            "kidney"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Kidney",
+            "Kidney - Cortex"
+          ],
+          "matched_terms": [
+            "kidney",
+            "肾脏",
+            "肾",
+            "肾组织",
+            "renal tissue",
+            "Kidney",
+            "Kidney - Cortex",
+            "kidney"
+          ],
+          "matched_gtex_tissues": [
+            "Kidney",
+            "Kidney - Cortex"
+          ],
+          "matched_tcga_primary_sites": [
+            "kidney"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "kidney cancer",
+            "RCC",
+            "TCGA-KIRC",
+            "TCGA-KIRP",
+            "TCGA-KICH"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_kidney_cortex",
+          "label": "kidney cortex",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "kidney cortex",
+            "肾皮质",
+            "肾脏皮质",
+            "renal cortex",
+            "Kidney - Cortex",
+            "Kidney - Cortex",
+            "Kidney",
+            "kidney"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Kidney - Cortex",
+            "Kidney"
+          ],
+          "matched_terms": [
+            "kidney cortex",
+            "肾皮质",
+            "肾脏皮质",
+            "renal cortex",
+            "Kidney - Cortex",
+            "Kidney - Cortex",
+            "Kidney",
+            "kidney"
+          ],
+          "matched_gtex_tissues": [
+            "Kidney - Cortex",
+            "Kidney"
+          ],
+          "matched_tcga_primary_sites": [
+            "kidney"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_liver",
+          "label": "liver",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "liver",
+            "肝脏",
+            "肝",
+            "肝组织",
+            "hepatic tissue",
+            "Liver",
+            "liver"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Liver"
+          ],
+          "matched_terms": [
+            "liver",
+            "肝脏",
+            "肝",
+            "肝组织",
+            "hepatic tissue",
+            "Liver",
+            "liver"
+          ],
+          "matched_gtex_tissues": [
+            "Liver"
+          ],
+          "matched_tcga_primary_sites": [
+            "liver"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "hepatocellular carcinoma",
+            "HCC",
+            "TCGA-LIHC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_lung",
+          "label": "lung",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lung",
+            "肺",
+            "肺部",
+            "肺组织",
+            "pulmonary tissue",
+            "lung tissue",
+            "Lung",
+            "lung"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Lung"
+          ],
+          "matched_terms": [
+            "lung",
+            "肺",
+            "肺部",
+            "肺组织",
+            "pulmonary tissue",
+            "lung tissue",
+            "Lung",
+            "lung"
+          ],
+          "matched_gtex_tissues": [
+            "Lung"
+          ],
+          "matched_tcga_primary_sites": [
+            "lung"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "lung adenocarcinoma",
+            "LUAD",
+            "lung squamous cell carcinoma",
+            "LUSC",
+            "TCGA-LUAD",
+            "TCGA-LUSC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_skeletal_muscle",
+          "label": "skeletal muscle",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "skeletal muscle",
+            "骨骼肌",
+            "肌肉",
+            "骨骼肌组织",
+            "Muscle - Skeletal",
+            "skeletal muscle tissue",
+            "Muscle - Skeletal",
+            "soft tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Muscle - Skeletal"
+          ],
+          "matched_terms": [
+            "skeletal muscle",
+            "骨骼肌",
+            "肌肉",
+            "骨骼肌组织",
+            "Muscle - Skeletal",
+            "skeletal muscle tissue",
+            "Muscle - Skeletal",
+            "soft tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Muscle - Skeletal"
+          ],
+          "matched_tcga_primary_sites": [
+            "soft tissue"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [
+            "sarcoma"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_tibial_nerve",
+          "label": "tibial nerve",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "tibial nerve",
+            "胫神经",
+            "胫骨神经",
+            "Nerve - Tibial",
+            "tibial nerve tissue",
+            "Nerve - Tibial",
+            "nerve"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Nerve - Tibial"
+          ],
+          "matched_terms": [
+            "tibial nerve",
+            "胫神经",
+            "胫骨神经",
+            "Nerve - Tibial",
+            "tibial nerve tissue",
+            "Nerve - Tibial",
+            "nerve"
+          ],
+          "matched_gtex_tissues": [
+            "Nerve - Tibial"
+          ],
+          "matched_tcga_primary_sites": [
+            "nerve"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_ovary",
+          "label": "ovary",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "ovary",
+            "卵巢",
+            "卵巢组织",
+            "ovarian tissue",
+            "Ovary",
+            "ovary"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Ovary"
+          ],
+          "matched_terms": [
+            "ovary",
+            "卵巢",
+            "卵巢组织",
+            "ovarian tissue",
+            "Ovary",
+            "ovary"
+          ],
+          "matched_gtex_tissues": [
+            "Ovary"
+          ],
+          "matched_tcga_primary_sites": [
+            "ovary"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "ovarian cancer",
+            "TCGA-OV"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_pancreas",
+          "label": "pancreas",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "pancreas",
+            "胰腺",
+            "胰腺组织",
+            "pancreatic tissue",
+            "Pancreas",
+            "pancreas"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Pancreas"
+          ],
+          "matched_terms": [
+            "pancreas",
+            "胰腺",
+            "胰腺组织",
+            "pancreatic tissue",
+            "Pancreas",
+            "pancreas"
+          ],
+          "matched_gtex_tissues": [
+            "Pancreas"
+          ],
+          "matched_tcga_primary_sites": [
+            "pancreas"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "pancreatic cancer",
+            "TCGA-PAAD"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_pituitary",
+          "label": "pituitary",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "pituitary",
+            "垂体",
+            "脑垂体",
+            "pituitary gland",
+            "pituitary tissue",
+            "Pituitary",
+            "pituitary"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Pituitary"
+          ],
+          "matched_terms": [
+            "pituitary",
+            "垂体",
+            "脑垂体",
+            "pituitary gland",
+            "pituitary tissue",
+            "Pituitary",
+            "pituitary"
+          ],
+          "matched_gtex_tissues": [
+            "Pituitary"
+          ],
+          "matched_tcga_primary_sites": [
+            "pituitary"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_prostate",
+          "label": "prostate",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "prostate",
+            "前列腺",
+            "前列腺组织",
+            "prostatic tissue",
+            "Prostate",
+            "prostate"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Prostate"
+          ],
+          "matched_terms": [
+            "prostate",
+            "前列腺",
+            "前列腺组织",
+            "prostatic tissue",
+            "Prostate",
+            "prostate"
+          ],
+          "matched_gtex_tissues": [
+            "Prostate"
+          ],
+          "matched_tcga_primary_sites": [
+            "prostate"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "prostate cancer",
+            "TCGA-PRAD"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_skin",
+          "label": "skin",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "skin",
+            "皮肤",
+            "皮肤组织",
+            "cutaneous tissue",
+            "Skin",
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)",
+            "skin"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)"
+          ],
+          "matched_terms": [
+            "skin",
+            "皮肤",
+            "皮肤组织",
+            "cutaneous tissue",
+            "Skin",
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)",
+            "skin"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)"
+          ],
+          "matched_tcga_primary_sites": [
+            "skin"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "melanoma",
+            "skin cancer",
+            "TCGA-SKCM"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_not_sun_exposed_skin",
+          "label": "not sun exposed skin",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "not sun exposed skin",
+            "非日晒皮肤",
+            "未日晒皮肤",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "suprapubic skin",
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin",
+            "skin"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin"
+          ],
+          "matched_terms": [
+            "not sun exposed skin",
+            "非日晒皮肤",
+            "未日晒皮肤",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "suprapubic skin",
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin",
+            "skin"
+          ],
+          "matched_gtex_tissues": [
+            "Skin - Not Sun Exposed",
+            "Skin - Not Sun Exposed (Suprapubic)",
+            "Skin"
+          ],
+          "matched_tcga_primary_sites": [
+            "skin"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_sun_exposed_skin",
+          "label": "sun exposed skin",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "sun exposed skin",
+            "日晒皮肤",
+            "日光暴露皮肤",
+            "Skin - Sun Exposed (Lower leg)",
+            "lower leg skin",
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin",
+            "skin"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin"
+          ],
+          "matched_terms": [
+            "sun exposed skin",
+            "日晒皮肤",
+            "日光暴露皮肤",
+            "Skin - Sun Exposed (Lower leg)",
+            "lower leg skin",
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin",
+            "skin"
+          ],
+          "matched_gtex_tissues": [
+            "Skin - Sun Exposed",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin"
+          ],
+          "matched_tcga_primary_sites": [
+            "skin"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_small_intestine_terminal_ileum",
+          "label": "small intestine terminal ileum",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "small intestine terminal ileum",
+            "回肠末端",
+            "小肠末端",
+            "末端回肠",
+            "小肠",
+            "terminal ileum",
+            "Small Intestine - Terminal Ileum",
+            "ileum",
+            "Small Intestine - Terminal Ileum",
+            "small intestine"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Small Intestine - Terminal Ileum"
+          ],
+          "matched_terms": [
+            "small intestine terminal ileum",
+            "回肠末端",
+            "小肠末端",
+            "末端回肠",
+            "小肠",
+            "terminal ileum",
+            "Small Intestine - Terminal Ileum",
+            "ileum",
+            "Small Intestine - Terminal Ileum",
+            "small intestine"
+          ],
+          "matched_gtex_tissues": [
+            "Small Intestine - Terminal Ileum"
+          ],
+          "matched_tcga_primary_sites": [
+            "small intestine"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_spleen",
+          "label": "spleen",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "spleen",
+            "脾脏",
+            "脾",
+            "splenic tissue",
+            "Spleen",
+            "spleen"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Spleen"
+          ],
+          "matched_terms": [
+            "spleen",
+            "脾脏",
+            "脾",
+            "splenic tissue",
+            "Spleen",
+            "spleen"
+          ],
+          "matched_gtex_tissues": [
+            "Spleen"
+          ],
+          "matched_tcga_primary_sites": [
+            "spleen"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_stomach",
+          "label": "stomach",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "stomach",
+            "胃",
+            "胃组织",
+            "gastric tissue",
+            "Stomach",
+            "stomach"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Stomach"
+          ],
+          "matched_terms": [
+            "stomach",
+            "胃",
+            "胃组织",
+            "gastric tissue",
+            "Stomach",
+            "stomach"
+          ],
+          "matched_gtex_tissues": [
+            "Stomach"
+          ],
+          "matched_tcga_primary_sites": [
+            "stomach"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "stomach cancer",
+            "TCGA-STAD"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_testis",
+          "label": "testis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "testis",
+            "睾丸",
+            "睾丸组织",
+            "testicular tissue",
+            "Testis",
+            "testis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Testis"
+          ],
+          "matched_terms": [
+            "testis",
+            "睾丸",
+            "睾丸组织",
+            "testicular tissue",
+            "Testis",
+            "testis"
+          ],
+          "matched_gtex_tissues": [
+            "Testis"
+          ],
+          "matched_tcga_primary_sites": [
+            "testis"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "testicular germ cell tumor",
+            "TCGA-TGCT"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_thyroid",
+          "label": "thyroid",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "thyroid",
+            "甲状腺",
+            "甲状腺组织",
+            "thyroid tissue",
+            "thyroid gland",
+            "Thyroid",
+            "thyroid"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Thyroid"
+          ],
+          "matched_terms": [
+            "thyroid",
+            "甲状腺",
+            "甲状腺组织",
+            "thyroid tissue",
+            "thyroid gland",
+            "Thyroid",
+            "thyroid"
+          ],
+          "matched_gtex_tissues": [
+            "Thyroid"
+          ],
+          "matched_tcga_primary_sites": [
+            "thyroid"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "thyroid cancer",
+            "PTC",
+            "TCGA-THCA"
+          ],
+          "ambiguity_notes": "Thyroid organ term must not imply thyroid cancer."
+        },
+        {
+          "id": "anatomy_uterus",
+          "label": "uterus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "uterus",
+            "子宫",
+            "子宫组织",
+            "uterine tissue",
+            "Uterus",
+            "uterus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Uterus"
+          ],
+          "matched_terms": [
+            "uterus",
+            "子宫",
+            "子宫组织",
+            "uterine tissue",
+            "Uterus",
+            "uterus"
+          ],
+          "matched_gtex_tissues": [
+            "Uterus"
+          ],
+          "matched_tcga_primary_sites": [
+            "uterus"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "uterine cancer",
+            "TCGA-UCEC",
+            "TCGA-UCS"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_vagina",
+          "label": "vagina",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "vagina",
+            "阴道",
+            "阴道组织",
+            "vaginal tissue",
+            "Vagina",
+            "vagina"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Vagina"
+          ],
+          "matched_terms": [
+            "vagina",
+            "阴道",
+            "阴道组织",
+            "vaginal tissue",
+            "Vagina",
+            "vagina"
+          ],
+          "matched_gtex_tissues": [
+            "Vagina"
+          ],
+          "matched_tcga_primary_sites": [
+            "vagina"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_whole_blood",
+          "label": "whole blood",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "whole blood",
+            "血液",
+            "全血",
+            "外周血",
+            "blood",
+            "peripheral blood",
+            "whole blood",
+            "Whole Blood",
+            "blood"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "whole blood",
+            "血液",
+            "全血",
+            "外周血",
+            "blood",
+            "peripheral blood",
+            "whole blood",
+            "Whole Blood",
+            "blood"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_tcga_primary_sites": [
+            "blood"
+          ],
+          "subcategory": "blood_tissue",
+          "avoid_expansion_to": [
+            "bone marrow",
+            "lymph node",
+            "leukemia"
+          ],
+          "ambiguity_notes": "Blood should not imply bone marrow or lymph node."
+        },
+        {
+          "id": "anatomy_minor_salivary_gland",
+          "label": "minor salivary gland",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "minor salivary gland",
+            "小唾液腺",
+            "唾液腺",
+            "salivary gland",
+            "minor salivary gland tissue",
+            "Minor Salivary Gland",
+            "head and neck"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Minor Salivary Gland"
+          ],
+          "matched_terms": [
+            "minor salivary gland",
+            "小唾液腺",
+            "唾液腺",
+            "salivary gland",
+            "minor salivary gland tissue",
+            "Minor Salivary Gland",
+            "head and neck"
+          ],
+          "matched_gtex_tissues": [
+            "Minor Salivary Gland"
+          ],
+          "matched_tcga_primary_sites": [
+            "head and neck"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_cultured_fibroblasts",
+          "label": "cultured fibroblasts",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "cultured fibroblasts",
+            "培养成纤维细胞",
+            "成纤维细胞",
+            "fibroblasts",
+            "Cells - Cultured fibroblasts",
+            "Cells - Cultured fibroblasts",
+            "soft tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Cells - Cultured fibroblasts"
+          ],
+          "matched_terms": [
+            "cultured fibroblasts",
+            "培养成纤维细胞",
+            "成纤维细胞",
+            "fibroblasts",
+            "Cells - Cultured fibroblasts",
+            "Cells - Cultured fibroblasts",
+            "soft tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Cells - Cultured fibroblasts"
+          ],
+          "matched_tcga_primary_sites": [
+            "soft tissue"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_ebv_transformed_lymphocytes",
+          "label": "EBV-transformed lymphocytes",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "EBV-transformed lymphocytes",
+            "EBV转化淋巴细胞",
+            "EBV转化B细胞",
+            "EBV-transformed lymphocytes",
+            "lymphoblastoid cell line",
+            "Cells - EBV-transformed lymphocytes",
+            "Cells - EBV-transformed lymphocytes",
+            "blood"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Cells - EBV-transformed lymphocytes"
+          ],
+          "matched_terms": [
+            "EBV-transformed lymphocytes",
+            "EBV转化淋巴细胞",
+            "EBV转化B细胞",
+            "EBV-transformed lymphocytes",
+            "lymphoblastoid cell line",
+            "Cells - EBV-transformed lymphocytes",
+            "Cells - EBV-transformed lymphocytes",
+            "blood"
+          ],
+          "matched_gtex_tissues": [
+            "Cells - EBV-transformed lymphocytes"
+          ],
+          "matched_tcga_primary_sites": [
+            "blood"
+          ],
+          "subcategory": "blood_tissue",
+          "avoid_expansion_to": [
+            "lymphoma"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_cervix",
+          "label": "cervix",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "cervix",
+            "宫颈",
+            "子宫颈",
+            "cervical tissue",
+            "uterine cervix",
+            "cervix"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cervix",
+            "宫颈",
+            "子宫颈",
+            "cervical tissue",
+            "uterine cervix",
+            "cervix"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "cervix"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "cervical cancer",
+            "TCGA-CESC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_endometrium",
+          "label": "endometrium",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "endometrium",
+            "子宫内膜",
+            "内膜",
+            "endometrial tissue",
+            "endometrium",
+            "uterus"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "endometrium",
+            "子宫内膜",
+            "内膜",
+            "endometrial tissue",
+            "endometrium",
+            "uterus"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "endometrium",
+            "uterus"
+          ],
+          "subcategory": "tissue_site",
+          "avoid_expansion_to": [
+            "endometrial cancer",
+            "TCGA-UCEC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_bladder",
+          "label": "bladder",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "bladder",
+            "膀胱",
+            "膀胱组织",
+            "urinary bladder",
+            "bladder tissue",
+            "Bladder",
+            "bladder"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Bladder"
+          ],
+          "matched_terms": [
+            "bladder",
+            "膀胱",
+            "膀胱组织",
+            "urinary bladder",
+            "bladder tissue",
+            "Bladder",
+            "bladder"
+          ],
+          "matched_gtex_tissues": [
+            "Bladder"
+          ],
+          "matched_tcga_primary_sites": [
+            "bladder"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "bladder cancer",
+            "TCGA-BLCA"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_bile_duct",
+          "label": "bile duct",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "bile duct",
+            "胆管",
+            "胆道",
+            "biliary tract",
+            "biliary duct",
+            "bile duct"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "bile duct",
+            "胆管",
+            "胆道",
+            "biliary tract",
+            "biliary duct",
+            "bile duct"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "bile duct"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "cholangiocarcinoma",
+            "TCGA-CHOL"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_head_and_neck_tissue",
+          "label": "head and neck tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "head and neck tissue",
+            "头颈部组织",
+            "头颈组织",
+            "head and neck",
+            "upper aerodigestive tract",
+            "head and neck"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "head and neck tissue",
+            "头颈部组织",
+            "头颈组织",
+            "head and neck",
+            "upper aerodigestive tract",
+            "head and neck"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "head and neck"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [
+            "head and neck cancer",
+            "TCGA-HNSC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_bone_marrow",
+          "label": "bone marrow",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "bone marrow",
+            "骨髓",
+            "骨髓组织",
+            "marrow",
+            "bone marrow tissue",
+            "bone marrow"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "bone marrow",
+            "骨髓",
+            "骨髓组织",
+            "marrow",
+            "bone marrow tissue",
+            "bone marrow"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "bone marrow"
+          ],
+          "subcategory": "blood_tissue",
+          "avoid_expansion_to": [
+            "blood",
+            "lymph node",
+            "leukemia",
+            "AML"
+          ],
+          "ambiguity_notes": "Bone marrow should not imply leukemia without disease wording."
+        },
+        {
+          "id": "anatomy_lymph_node",
+          "label": "lymph node",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "lymph node",
+            "淋巴结",
+            "淋巴组织",
+            "lymphatic tissue",
+            "lymph node tissue",
+            "lymph node"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lymph node",
+            "淋巴结",
+            "淋巴组织",
+            "lymphatic tissue",
+            "lymph node tissue",
+            "lymph node"
+          ],
+          "matched_gtex_tissues": [],
+          "matched_tcga_primary_sites": [
+            "lymph node"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [
+            "blood",
+            "bone marrow",
+            "lymphoma",
+            "DLBCL"
+          ],
+          "ambiguity_notes": "Lymph node should not imply lymphoma without disease wording."
+        },
+        {
+          "id": "anatomy_soft_tissue",
+          "label": "soft tissue",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "soft tissue",
+            "软组织",
+            "软组织来源",
+            "connective soft tissue",
+            "Muscle - Skeletal",
+            "soft tissue"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Muscle - Skeletal"
+          ],
+          "matched_terms": [
+            "soft tissue",
+            "软组织",
+            "软组织来源",
+            "connective soft tissue",
+            "Muscle - Skeletal",
+            "soft tissue"
+          ],
+          "matched_gtex_tissues": [
+            "Muscle - Skeletal"
+          ],
+          "matched_tcga_primary_sites": [
+            "soft tissue"
+          ],
+          "subcategory": "tissue",
+          "avoid_expansion_to": [
+            "sarcoma",
+            "TCGA-SARC"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain",
+          "label": "brain",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain",
+            "脑",
+            "脑组织",
+            "brain tissue",
+            "Brain",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain"
+          ],
+          "matched_terms": [
+            "brain",
+            "脑",
+            "脑组织",
+            "brain tissue",
+            "Brain",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "organ",
+          "avoid_expansion_to": [
+            "brain tumor",
+            "GBM",
+            "LGG"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_amygdala",
+          "label": "brain amygdala",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain amygdala",
+            "杏仁核",
+            "脑杏仁核",
+            "amygdala",
+            "Brain - Amygdala",
+            "Brain - Amygdala",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Amygdala"
+          ],
+          "matched_terms": [
+            "brain amygdala",
+            "杏仁核",
+            "脑杏仁核",
+            "amygdala",
+            "Brain - Amygdala",
+            "Brain - Amygdala",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Amygdala"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_anterior_cingulate_cortex",
+          "label": "brain anterior cingulate cortex",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain anterior cingulate cortex",
+            "前扣带皮层",
+            "前扣带回皮层",
+            "anterior cingulate cortex",
+            "Brain - Anterior cingulate cortex (BA24)",
+            "Brain - Anterior cingulate cortex",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Anterior cingulate cortex"
+          ],
+          "matched_terms": [
+            "brain anterior cingulate cortex",
+            "前扣带皮层",
+            "前扣带回皮层",
+            "anterior cingulate cortex",
+            "Brain - Anterior cingulate cortex (BA24)",
+            "Brain - Anterior cingulate cortex",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Anterior cingulate cortex"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_caudate",
+          "label": "brain caudate",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain caudate",
+            "尾状核",
+            "脑尾状核",
+            "caudate nucleus",
+            "Brain - Caudate (basal ganglia)",
+            "Brain - Caudate",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Caudate"
+          ],
+          "matched_terms": [
+            "brain caudate",
+            "尾状核",
+            "脑尾状核",
+            "caudate nucleus",
+            "Brain - Caudate (basal ganglia)",
+            "Brain - Caudate",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Caudate"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_cerebellar_hemisphere",
+          "label": "brain cerebellar hemisphere",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain cerebellar hemisphere",
+            "小脑半球",
+            "小脑半球组织",
+            "cerebellar hemisphere",
+            "Brain - Cerebellar Hemisphere",
+            "Brain - Cerebellar Hemisphere",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Cerebellar Hemisphere"
+          ],
+          "matched_terms": [
+            "brain cerebellar hemisphere",
+            "小脑半球",
+            "小脑半球组织",
+            "cerebellar hemisphere",
+            "Brain - Cerebellar Hemisphere",
+            "Brain - Cerebellar Hemisphere",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Cerebellar Hemisphere"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_cerebellum",
+          "label": "brain cerebellum",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain cerebellum",
+            "小脑",
+            "小脑组织",
+            "cerebellum",
+            "Brain - Cerebellum",
+            "Brain - Cerebellum",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Cerebellum"
+          ],
+          "matched_terms": [
+            "brain cerebellum",
+            "小脑",
+            "小脑组织",
+            "cerebellum",
+            "Brain - Cerebellum",
+            "Brain - Cerebellum",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Cerebellum"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_cortex",
+          "label": "brain cortex",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain cortex",
+            "大脑皮层",
+            "脑皮层",
+            "cerebral cortex",
+            "Brain - Cortex",
+            "Brain - Cortex",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Cortex"
+          ],
+          "matched_terms": [
+            "brain cortex",
+            "大脑皮层",
+            "脑皮层",
+            "cerebral cortex",
+            "Brain - Cortex",
+            "Brain - Cortex",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Cortex"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_frontal_cortex",
+          "label": "brain frontal cortex",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain frontal cortex",
+            "额叶皮层",
+            "额皮质",
+            "frontal cortex",
+            "Brain - Frontal Cortex (BA9)",
+            "Brain - Frontal Cortex",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Frontal Cortex"
+          ],
+          "matched_terms": [
+            "brain frontal cortex",
+            "额叶皮层",
+            "额皮质",
+            "frontal cortex",
+            "Brain - Frontal Cortex (BA9)",
+            "Brain - Frontal Cortex",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Frontal Cortex"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_hippocampus",
+          "label": "brain hippocampus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain hippocampus",
+            "海马",
+            "海马体",
+            "hippocampus",
+            "Brain - Hippocampus",
+            "Brain - Hippocampus",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Hippocampus"
+          ],
+          "matched_terms": [
+            "brain hippocampus",
+            "海马",
+            "海马体",
+            "hippocampus",
+            "Brain - Hippocampus",
+            "Brain - Hippocampus",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Hippocampus"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_hypothalamus",
+          "label": "brain hypothalamus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain hypothalamus",
+            "下丘脑",
+            "丘脑下部",
+            "hypothalamus",
+            "Brain - Hypothalamus",
+            "Brain - Hypothalamus",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Hypothalamus"
+          ],
+          "matched_terms": [
+            "brain hypothalamus",
+            "下丘脑",
+            "丘脑下部",
+            "hypothalamus",
+            "Brain - Hypothalamus",
+            "Brain - Hypothalamus",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Hypothalamus"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_nucleus_accumbens",
+          "label": "brain nucleus accumbens",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain nucleus accumbens",
+            "伏隔核",
+            "脑伏隔核",
+            "nucleus accumbens",
+            "Brain - Nucleus accumbens (basal ganglia)",
+            "Brain - Nucleus accumbens",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Nucleus accumbens"
+          ],
+          "matched_terms": [
+            "brain nucleus accumbens",
+            "伏隔核",
+            "脑伏隔核",
+            "nucleus accumbens",
+            "Brain - Nucleus accumbens (basal ganglia)",
+            "Brain - Nucleus accumbens",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Nucleus accumbens"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_putamen",
+          "label": "brain putamen",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain putamen",
+            "壳核",
+            "脑壳核",
+            "putamen",
+            "Brain - Putamen (basal ganglia)",
+            "Brain - Putamen",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Putamen"
+          ],
+          "matched_terms": [
+            "brain putamen",
+            "壳核",
+            "脑壳核",
+            "putamen",
+            "Brain - Putamen (basal ganglia)",
+            "Brain - Putamen",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Putamen"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_spinal_cord_cervical_c1",
+          "label": "spinal cord cervical c1",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "spinal cord cervical c1",
+            "颈髓C1",
+            "颈段脊髓",
+            "spinal cord cervical c-1",
+            "Brain - Spinal cord (cervical c-1)",
+            "Brain - Spinal cord",
+            "brain",
+            "spinal cord"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Spinal cord"
+          ],
+          "matched_terms": [
+            "spinal cord cervical c1",
+            "颈髓C1",
+            "颈段脊髓",
+            "spinal cord cervical c-1",
+            "Brain - Spinal cord (cervical c-1)",
+            "Brain - Spinal cord",
+            "brain",
+            "spinal cord"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Spinal cord"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain",
+            "spinal cord"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anatomy_brain_substantia_nigra",
+          "label": "brain substantia nigra",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "brain substantia nigra",
+            "黑质",
+            "脑黑质",
+            "substantia nigra",
+            "Brain - Substantia nigra",
+            "Brain - Substantia nigra",
+            "brain"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain - Substantia nigra"
+          ],
+          "matched_terms": [
+            "brain substantia nigra",
+            "黑质",
+            "脑黑质",
+            "substantia nigra",
+            "Brain - Substantia nigra",
+            "Brain - Substantia nigra",
+            "brain"
+          ],
+          "matched_gtex_tissues": [
+            "Brain - Substantia nigra"
+          ],
+          "matched_tcga_primary_sites": [
+            "brain"
+          ],
+          "subcategory": "brain_region",
+          "avoid_expansion_to": [
+            "brain tumor"
+          ],
+          "ambiguity_notes": ""
+        }
+      ],
+      "gtex_tissue_coverage": {
+        "expected_count": 59,
+        "covered_count": 59,
+        "missing_count": 0,
+        "coverage_rate": 1.0,
+        "missing_tissues": []
+      },
+      "tcga_primary_site_coverage": {
+        "expected_count": 35,
+        "covered_count": 35,
+        "missing_count": 0,
+        "coverage_rate": 1.0,
+        "missing_sites": []
+      },
+      "high_risk_ambiguity_terms": [
+        {
+          "term": "thyroid",
+          "risk": "organ term can be confused with thyroid cancer",
+          "policy": "do not expand tissue-only thyroid to THCA/PTC"
+        },
+        {
+          "term": "liver",
+          "risk": "organ term can be confused with HCC/LIHC",
+          "policy": "do not expand liver tissue to HCC"
+        },
+        {
+          "term": "lung",
+          "risk": "organ term can be confused with LUAD/LUSC",
+          "policy": "do not expand lung tissue to lung cancer subtypes"
+        },
+        {
+          "term": "colon",
+          "risk": "can be confused with rectum or colorectal cancer",
+          "policy": "do not collapse colon and rectum unless colorectal is explicit"
+        },
+        {
+          "term": "rectum",
+          "risk": "can be confused with colon",
+          "policy": "keep isolated rectum separate from colon"
+        },
+        {
+          "term": "blood",
+          "risk": "can be confused with marrow or lymphoid malignancy context",
+          "policy": "do not expand to bone marrow, lymph node, or leukemia"
+        },
+        {
+          "term": "bone marrow",
+          "risk": "can be confused with leukemia",
+          "policy": "do not expand tissue-only marrow to leukemia"
+        },
+        {
+          "term": "lymph node",
+          "risk": "can be confused with lymphoma or metastasis",
+          "policy": "do not expand tissue-only lymph node to lymphoma"
+        },
+        {
+          "term": "adipose tissue",
+          "risk": "can be confused with obesity",
+          "policy": "do not expand adipose tissue to obesity"
+        }
+      ]
+    },
     "common_cancers": {
       "checklist_id": "common_cancers",
       "title": "Common Cancers Checklist",
@@ -7281,6 +10074,30 @@
         "status": "pass"
       },
       {
+        "gate_id": "anatomy_tissue_core_coverage",
+        "description": "Anatomy/tissue core checklist coverage must stay >= 95%.",
+        "metric": "coverage_rate",
+        "minimum": 0.95,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "anatomy_tissue_missing_gtex_tissues",
+        "description": "Anatomy/tissue core must cover expected GTEx tissue candidates.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "anatomy_tissue_missing_tcga_primary_sites",
+        "description": "Anatomy/tissue core must cover expected TCGA primary sites.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
         "gate_id": "missing_items",
         "description": "Reference checklist missing count must remain zero.",
         "metric": "count",
@@ -7307,6 +10124,11 @@
     ]
   },
   "source_notes": [
+    {
+      "checklist_id": "anatomy_tissue_core",
+      "source": "project-curated GTEx tissue site and TCGA primary site checklist",
+      "source_version": "2026-05-11 curated v1"
+    },
     {
       "checklist_id": "common_cancers",
       "source": "GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects",
