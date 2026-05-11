@@ -132,7 +132,7 @@ def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str
     blocks = _content_blocks(item)
     if not blocks:
         return []
-    material_block_types = {"count_expression_matrix", "fpkm_expression_matrix", "deg_comparisons", "gene_annotation"}
+    material_block_types = {"count_expression_matrix", "fpkm_expression_matrix", "tpm_expression_matrix", "deg_comparisons", "gene_annotation"}
     if not any(str(block.get("block_type") or "") in material_block_types for block in blocks):
         return []
     assets: list[dict[str, object]] = []
@@ -177,6 +177,24 @@ def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str
                     value_type="fpkm",
                     analysis_ready=True,
                     limitations=["不建议用 FPKM 直接做 DESeq2/edgeR 式重新差异分析。"],
+                )
+            )
+        elif block_type == "tpm_expression_matrix":
+            assets.append(
+                _block_asset(
+                    "normalized_expression_matrix",
+                    item,
+                    block,
+                    source_file=source_file,
+                    file_path=file_path,
+                    species=species,
+                    species_group=species_group,
+                    gene_id_type=gene_id_type,
+                    recommended_for=["expression_visualization", "heatmap", "correlation", "gene_expression_browse"],
+                    label_zh="TPM 表达矩阵",
+                    value_type="tpm",
+                    analysis_ready=True,
+                    limitations=["不建议用 TPM 直接做 DESeq2/edgeR 式重新差异分析。"],
                 )
             )
         elif block_type == "deg_comparisons":
@@ -323,7 +341,9 @@ def _content_block_warnings(assets: list[dict[str, object]]) -> list[str]:
     asset_types = {str(asset.get("asset_type") or "") for asset in assets}
     warnings: list[str] = []
     if {"count_matrix", "normalized_expression_matrix"} <= asset_types:
-        warnings.append("检测到 count 与 FPKM。差异分析建议使用 count；表达展示可使用 FPKM。")
+        value_types = {str(asset.get("value_type") or "") for asset in assets}
+        normalized_label = "FPKM/TPM" if {"fpkm", "tpm"} & value_types else "标准化表达矩阵"
+        warnings.append(f"检测到 count 与 {normalized_label}。差异分析建议使用 count；表达展示可使用 {normalized_label}。")
     if "deg_result_table" in asset_types:
         warnings.append("文件已包含差异分析结果，可用于结果浏览、火山图和富集分析输入；如需重新计算差异分析，请确认分组配置。")
     if any(str(asset.get("species") or "") == "Mus musculus" for asset in assets):
@@ -359,7 +379,7 @@ def _dedupe_standardized_assets(assets: list[dict[str, object]]) -> list[dict[st
         source_file = str(asset.get("source_file") or asset.get("file_path") or "")
         path = Path(source_file).expanduser()
         key_path = str(path.resolve()) if path.exists() else source_file
-        key = (asset_type, key_path)
+        key = (asset_type, key_path, str(asset.get("source_block_type") or ""), str(asset.get("value_type") or ""))
         deduped.setdefault(key, asset)
     return list(deduped.values())
 

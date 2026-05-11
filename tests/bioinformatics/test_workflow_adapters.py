@@ -681,7 +681,9 @@ def test_differential_result_table_not_counted_as_expression_input(project_root:
     assert readiness["has_core_input"] is False
     assert "expression_matrix" not in readiness["available_inputs"]
     standardization = generate_standardized_assets(project_root)
-    assert standardization["registry"]["assets"] == []  # type: ignore[index]
+    standardized_assets = standardization["registry"]["assets"]  # type: ignore[index]
+    assert any(asset["asset_type"] == "deg_result_table" for asset in standardized_assets)
+    assert not any(asset["asset_type"] in {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} for asset in standardized_assets)
 
 
 def test_gzip_text_expression_matrix_is_recognized(project_root: Path) -> None:
