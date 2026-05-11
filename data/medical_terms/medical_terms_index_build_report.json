@@ -1,7 +1,7 @@
 {
   "schema_version": "biomedpilot.medical_terms.sqlite.v6",
   "build_status": "success",
-  "build_time": "2026-05-04T23:52:05.308391+00:00",
+  "build_time": "2026-05-11T09:08:14.242137+00:00",
   "input_sources": [
     {
       "vocabulary_name": "MONDO",
@@ -83,9 +83,9 @@
     "MeSH",
     "EFO"
   ],
-  "terms_count": 116,
-  "synonyms_count": 1968,
-  "crossrefs_count": 175,
+  "terms_count": 143,
+  "synonyms_count": 2298,
+  "crossrefs_count": 213,
   "warnings": [
     "MONDO source missing: data/medical_terms/raw/mondo.owl",
     "DOID source missing: data/medical_terms/raw/doid.obo",
