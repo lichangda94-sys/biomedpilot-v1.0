@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 
 from app.shared.query_intelligence.biomedical_term_registry import match_registry_concepts
 
 from .term_index_loader import load_full_term_index, load_mini_term_index
 from .term_index_models import ChineseTermOverride, TermConcept, TermLookupResult
 from .term_normalizer import normalize_en_term, normalize_zh_term
+from .vocabulary_provider import MedicalVocabularyProvider
 from .zh_overrides_loader import load_zh_overrides
 
 
-def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> TermLookupResult:
+def lookup_medical_terms(
+    query: str,
+    target_context: str = "bioinformatics",
+    *,
+    providers: Iterable[MedicalVocabularyProvider] | None = None,
+) -> TermLookupResult:
     normalized = normalize_en_term(query) if query.isascii() else normalize_zh_term(query)
     warnings: list[str] = []
     if normalized in {"scc", "rcc"}:
@@ -49,6 +56,46 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     concept_ids: list[str] = []
     term_sources: list[str] = []
     confidences: list[float] = []
+
+    provider_matches = [
+        match
+        for provider in providers or ()
+        if (match := provider.lookup(query, normalized, target_context)).matched
+    ]
+    for match in provider_matches:
+        _append_unique(term_sources, match.source)
+        if match.result is not None:
+            _apply_provider_result(
+                match.result,
+                matched_zh_terms=matched_zh_terms,
+                disease_terms=disease_terms,
+                synonyms=synonyms,
+                abbreviations=abbreviations,
+                mesh_terms=mesh_terms,
+                tissue_terms=tissue_terms,
+                tcga_projects=tcga_projects,
+                tcga_primary_sites=tcga_primary_sites,
+                gtex_tissues=gtex_tissues,
+                data_modalities=data_modalities,
+                assay_terms=assay_terms,
+                platform_candidates=platform_candidates,
+                modifier_terms=modifier_terms,
+                exposure_terms=exposure_terms,
+                intervention_terms=intervention_terms,
+                outcome_terms=outcome_terms,
+                study_design_terms=study_design_terms,
+                publication_type_terms=publication_type_terms,
+                pico_terms=pico_terms,
+                effect_measures=effect_measures,
+                diagnostic_accuracy_terms=diagnostic_accuracy_terms,
+                exclusion_type_terms=exclusion_type_terms,
+                quality_assessment_terms=quality_assessment_terms,
+                pubmed_query_terms=pubmed_query_terms,
+                concept_ids=concept_ids,
+                term_sources=term_sources,
+                warnings=warnings,
+                confidences=confidences,
+            )
 
     overrides = [] if suppress_exact_meta_short_token else _matched_overrides(normalized, query, target_context)
     if overrides:
@@ -191,7 +238,7 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         elif concept.semantic_group == "dataset" and not data_modalities:
             _extend_unique(data_modalities, [term for term in concept.en_terms if term not in {"dataset", "GEO", "GSE"}])
 
-    if not overrides and not index_matches and not registry_matches:
+    if not provider_matches and not overrides and not index_matches and not registry_matches:
         warnings.append("未在医学词库索引中匹配到明确术语。")
 
     if not disease_terms and exposure_terms:
@@ -265,6 +312,38 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         confidence=max(confidences) if confidences else (0.75 if registry_matches else 0.0),
         warnings=warnings,
     )
+
+
+def _apply_provider_result(result: TermLookupResult, **targets: list[str] | list[float]) -> None:
+    _extend_unique(targets["matched_zh_terms"], result.matched_zh_terms)
+    _extend_unique(targets["disease_terms"], result.disease_terms_en)
+    _extend_unique(targets["synonyms"], result.synonyms_en)
+    _extend_unique(targets["abbreviations"], result.abbreviations)
+    _extend_unique(targets["mesh_terms"], result.mesh_terms)
+    _extend_unique(targets["tissue_terms"], result.tissue_terms)
+    _extend_unique(targets["tcga_projects"], result.tcga_project_candidates)
+    _extend_unique(targets["tcga_primary_sites"], result.tcga_primary_site_candidates)
+    _extend_unique(targets["gtex_tissues"], result.gtex_tissue_candidates)
+    _extend_unique(targets["data_modalities"], result.data_modality_terms)
+    _extend_unique(targets["assay_terms"], result.assay_terms)
+    _extend_unique(targets["platform_candidates"], result.platform_candidates)
+    _extend_unique(targets["modifier_terms"], result.modifier_terms_en)
+    _extend_unique(targets["exposure_terms"], result.exposure_terms)
+    _extend_unique(targets["intervention_terms"], result.intervention_terms)
+    _extend_unique(targets["outcome_terms"], result.outcome_terms)
+    _extend_unique(targets["study_design_terms"], result.study_design_terms)
+    _extend_unique(targets["publication_type_terms"], result.publication_type_terms)
+    _extend_unique(targets["pico_terms"], result.pico_terms)
+    _extend_unique(targets["effect_measures"], result.effect_measures)
+    _extend_unique(targets["diagnostic_accuracy_terms"], result.diagnostic_accuracy_terms)
+    _extend_unique(targets["exclusion_type_terms"], result.exclusion_type_terms)
+    _extend_unique(targets["quality_assessment_terms"], result.quality_assessment_terms)
+    _extend_unique(targets["pubmed_query_terms"], result.pubmed_query_terms)
+    _extend_unique(targets["concept_ids"], result.concept_ids)
+    _extend_unique(targets["term_sources"], result.term_sources)
+    _extend_unique(targets["warnings"], result.warnings)
+    if result.confidence:
+        targets["confidences"].append(result.confidence)  # type: ignore[union-attr]
 
 
 def _matched_overrides(normalized_query: str, raw_query: str, target_context: str) -> list[ChineseTermOverride]:

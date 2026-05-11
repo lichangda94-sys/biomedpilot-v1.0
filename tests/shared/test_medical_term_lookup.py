@@ -1,7 +1,47 @@
 from __future__ import annotations
 
 import app.shared.query_intelligence.medical_terms.term_lookup as term_lookup
-from app.shared.query_intelligence.medical_terms import lookup_medical_terms
+from app.shared.query_intelligence.medical_terms import (
+    MedicalVocabularyProvider,
+    TermLookupResult,
+    VocabularyProviderMatch,
+    default_vocabulary_providers,
+    lookup_medical_terms,
+)
+
+
+class _InjectedProvider:
+    provider_id = "test_injected_vocabulary"
+    provider_kind = "test_plugin"
+
+    def lookup(self, query: str, normalized_query: str, target_context: str) -> VocabularyProviderMatch:
+        if normalized_query != "插件病种":
+            return VocabularyProviderMatch(source=self.provider_id, provider_kind=self.provider_kind)
+        return VocabularyProviderMatch(
+            source=self.provider_id,
+            provider_kind=self.provider_kind,
+            result=TermLookupResult(
+                original_term=query,
+                normalized_term=normalized_query,
+                matched=True,
+                disease_terms_en=["plugin disease"],
+                concept_ids=["plugin:plugin_disease"],
+                term_sources=[self.provider_id],
+                confidence=0.99,
+            ),
+        )
+
+
+def test_medical_vocabulary_provider_contract_is_exported_and_injectable() -> None:
+    providers = default_vocabulary_providers()
+    result = lookup_medical_terms("插件病种", providers=[_InjectedProvider()])
+
+    assert providers
+    assert isinstance(_InjectedProvider(), MedicalVocabularyProvider)
+    assert result.disease_terms_en == ["plugin disease"]
+    assert "plugin:plugin_disease" in result.concept_ids
+    assert "test_injected_vocabulary" in result.term_sources
+    assert result.confidence == 0.99
 
 
 def test_zh_override_glioma_lookup() -> None:
