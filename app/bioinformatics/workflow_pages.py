@@ -64,6 +64,10 @@ from app.bioinformatics.recognition_detail_report import (
     format_recognition_detail_technical,
     format_recognition_detail_text,
 )
+from app.bioinformatics.recognition_next_steps import (
+    build_recognition_next_steps,
+    standardization_current_input_summary,
+)
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
@@ -2560,6 +2564,7 @@ class BioinformaticsAcquisitionStatusWidget(QWidget):
 
 class BioinformaticsRecognitionWidget(QWidget):
     continue_requested = Signal(object)
+    navigate_requested = Signal(str, object)
     back_requested = Signal()
 
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
@@ -2569,6 +2574,10 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._selected_detail_run: dict[str, object] | None = None
         self._selected_detail_file: dict[str, object] | None = None
         self._selected_detail_payload: dict[str, object] | None = None
+        self._active_next_run: dict[str, object] | None = None
+        self._active_next_files: list[dict[str, object]] = []
+        self._active_next_steps: dict[str, object] | None = None
+        self._next_step_actions: list[dict[str, object]] = []
         self._pre_recognition_rows: list[RegisteredSourceRow] = []
         self._pre_recognition_checks: dict[str, QCheckBox] = {}
         self.setObjectName("bioinformaticsRecognitionPage")
@@ -2715,6 +2724,21 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._asset_summary = _read_only_report_view(190)
         self._asset_summary.setObjectName("recognitionAssetSummary")
         result_layout.addWidget(self._asset_summary)
+        next_card, next_layout = _card("下一步建议")
+        self._next_steps_summary = _read_only_report_view(130)
+        self._next_steps_summary.setObjectName("recognitionNextStepSummary")
+        self._next_steps_summary.setPlainText("完成本次识别后，这里会显示下一步建议。")
+        next_layout.addWidget(self._next_steps_summary)
+        next_actions = QHBoxLayout()
+        self._next_action_buttons: list[QPushButton] = []
+        for index in range(5):
+            button = _button("", f"recognitionNextActionButton_{index}", lambda _checked=False, i=index: self._execute_next_step_action(i))
+            button.setVisible(False)
+            self._next_action_buttons.append(button)
+            next_actions.addWidget(button)
+        next_actions.addStretch(1)
+        next_layout.addLayout(next_actions)
+        result_layout.addWidget(next_card)
         group_card, group_layout = _card("样本与分组预览")
         group_card.setObjectName("recognitionGroupPreviewCard")
         self._group_preview = _read_only_report_view(130)
@@ -2778,6 +2802,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._fill_recognition_table(files)
         self._counts.setPlainText(_recognition_user_summary(report, annotated, warnings, self._project_root))
         self._asset_summary.setPlainText(_recognition_asset_summary(files))
+        self._render_next_steps(self._detail_run_for_current_report(report), files)
         self._group_preview.setPlainText(_group_preview_user_summary(report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}))
         self._technical_details.setPlainText(
             _json(
@@ -2800,6 +2825,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._table.setRowCount(0)
         self._counts.setPlainText("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
         self._asset_summary.setPlainText("")
+        self._clear_next_steps()
         self._group_preview.setPlainText("")
         self._technical_details.setPlainText("")
         self._clear_recognition_detail()
@@ -2842,6 +2868,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._set_status("未找到该历史识别记录。")
             return
         self._render_recognition_detail(run, None)
+        self._render_next_steps(run, None)
         self._set_status("已显示历史识别详情；它不属于本次识别结果，也未修改当前识别批次。")
 
     def _view_current_file_detail(self, file_record: dict[str, object]) -> None:
@@ -2862,6 +2889,68 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._detail_report.setPlainText(format_recognition_detail_text(payload))
         self._detail_technical.setPlainText(format_recognition_detail_technical(payload))
         self._detail_export_button.setEnabled(True)
+
+    def _render_next_steps(self, run: dict[str, object], files: list[dict[str, object]] | None) -> None:
+        if self._project_root is None:
+            return
+        next_steps = build_recognition_next_steps(self._project_root, run, files)
+        self._active_next_run = run
+        self._active_next_files = [dict(item) for item in files or []]
+        self._active_next_steps = next_steps
+        self._next_steps_summary.setPlainText(str(next_steps.get("summary_text") or "暂无下一步建议。"))
+        actions = [next_steps.get("primary_action"), *list(next_steps.get("secondary_actions", []) or [])]
+        self._next_step_actions = [dict(action) for action in actions if isinstance(action, dict)]
+        for index, button in enumerate(self._next_action_buttons):
+            if index < len(self._next_step_actions):
+                button.setText(str(self._next_step_actions[index].get("label") or "操作"))
+                button.setVisible(True)
+                button.setEnabled(True)
+            else:
+                button.setVisible(False)
+                button.setEnabled(False)
+
+    def _clear_next_steps(self) -> None:
+        self._active_next_run = None
+        self._active_next_files = []
+        self._active_next_steps = None
+        self._next_step_actions = []
+        self._next_steps_summary.setPlainText("完成本次识别后，这里会显示下一步建议。")
+        for button in self._next_action_buttons:
+            button.setVisible(False)
+            button.setEnabled(False)
+
+    def _execute_next_step_action(self, index: int) -> None:
+        if self._project_root is None or index >= len(self._next_step_actions):
+            return
+        action = self._next_step_actions[index]
+        target = str(action.get("target") or "")
+        if target == "set_current_recognition_run":
+            run_id = str(action.get("run_id") or (self._active_next_run or {}).get("run_id") or "")
+            self._set_history_run_current(run_id)
+            run = _recognition_run_by_id(self._project_root, run_id)
+            if run is not None:
+                self._render_next_steps(run, None)
+                self._render_recognition_detail(run, self._selected_detail_file)
+            return
+        if target == "detail":
+            if self._active_next_run is not None:
+                first_file = self._active_next_files[0] if self._active_next_files else None
+                self._render_recognition_detail(self._active_next_run, first_file)
+                self._set_status("已显示识别详情；未修改当前识别批次。")
+            return
+        if target == "export_recognition_report":
+            if self._selected_detail_run is None and self._active_next_run is not None:
+                self._selected_detail_run = self._active_next_run
+                self._selected_detail_file = self._active_next_files[0] if self._active_next_files else None
+            self.export_recognition_detail_report()
+            return
+        if target == "data_source":
+            self.navigate_requested.emit("data_source", self._project_root)
+            return
+        if target in {"standardization", "analysis_tasks", "result_browser"}:
+            self.navigate_requested.emit(target, self._project_root)
+            return
+        self._set_status(f"下一步操作暂未接入：{action.get('label') or target}")
 
     def _clear_recognition_detail(self) -> None:
         self._selected_detail_run = None
@@ -3354,6 +3443,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         if artifacts.get("registry") is None:
             self._status_label.setText("尚未生成标准化资产。")
             self._assets.setRowCount(0)
+            self._current_input_summary.setPlainText(standardization_current_input_summary(self._project_root))
             self._summary.setPlainText("")
             self._manifest.setPlainText("")
         else:
@@ -3383,6 +3473,9 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         root.addLayout(actions)
         self._status_label = _status_label("尚未生成标准化资产。")
         root.addWidget(self._status_label)
+        self._current_input_summary = _read_only_report_view(100)
+        self._current_input_summary.setObjectName("standardizationCurrentRecognitionInput")
+        root.addWidget(self._current_input_summary)
         self._assets = _table(["资产类型", "中文名称", "文件路径", "来源文件", "materialize 策略", "validation 状态", "warning", "analysis-ready"])
         root.addWidget(self._assets)
         self._summary = _text_preview(140)
@@ -3399,6 +3492,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         assets = registry.get("assets", []) if isinstance(registry, dict) else []
         warnings = registry.get("warnings", []) if isinstance(registry, dict) else []
         self._status_label.setText(f"标准化资产：{len(assets)} 个，warning {len(warnings)} 条。")
+        if self._project_root is not None:
+            self._current_input_summary.setPlainText(standardization_current_input_summary(self._project_root))
         _fill_table(
             self._assets,
             [
@@ -3663,7 +3758,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._capability_summary = _read_only_report_view(150)
         self._capability_summary.setObjectName("analysisCapabilityGroupedSummary")
         root.addWidget(self._capability_summary)
-        self._tasks = _table(["任务", "是否可运行", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
+        self._tasks = _table(["任务", "是否可运行", "来源与状态", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
         root.addWidget(self._tasks)
         self._records = _text_preview(120)
         root.addWidget(self._records)
@@ -3679,6 +3774,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                 [
                     item.get("label", ""),
                     "可运行" if item.get("can_run") else "不可运行",
+                    _task_source_status_text(item),
                     "、".join(str(v) for v in item.get("available_inputs", []) or []),
                     "、".join(str(v) for v in item.get("missing_inputs", []) or []),
                     "、".join(str(v) for v in item.get("warnings", []) or []),
@@ -3797,6 +3893,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             label = str(item.get("comparison_name") or "未命名比较")
             source = str(item.get("source_file_name") or Path(str(item.get("source_file") or "")).name)
             self._imported_deg_selector.addItem(f"{label} · {source}", item)
+        first_complete = next((index for index, item in enumerate(comparisons) if item.get("is_complete")), 0)
+        if comparisons:
+            self._imported_deg_selector.setCurrentIndex(first_complete)
         self._imported_deg_selector.blockSignals(False)
         self._render_selected_imported_deg()
 
@@ -3829,7 +3928,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 for row in rows[:100]
             ],
         )
-        self._imported_deg_summary.setPlainText(_imported_deg_user_summary(view))
+        self._imported_deg_summary.setPlainText(_imported_deg_user_summary(view, comparison_count=self._imported_deg_selector.count()))
         self._details.setPlainText(_json({"imported_deg_view": {key: value for key, value in view.items() if key != "rows"}, "preview_row_count": min(len(rows), 100)}))
 
 
@@ -7210,7 +7309,29 @@ def _analysis_task_group_summary(center: dict[str, object]) -> str:
     return "\n".join(lines) if lines else "尚未生成可用分析任务。"
 
 
-def _imported_deg_user_summary(view: dict[str, object]) -> str:
+def _task_source_status_text(item: dict[str, object]) -> str:
+    source = str(item.get("source_asset_type") or "")
+    status = str(item.get("capability_status") or "")
+    source_label = {
+        "deg_result_table": "导入表格中的 DEG comparison",
+        "count_matrix": "count matrix",
+        "normalized_expression_matrix": "FPKM matrix",
+        "gene_annotation": "gene annotation",
+    }.get(source, source or "未识别来源资产")
+    status_label = {
+        "available": "可直接使用",
+        "ready_with_group_confirmation": "需要确认分组",
+        "ready_with_threshold_selection": "可用；需选择阈值",
+        "planned": "已规划",
+        "not_available": "不可用",
+    }.get(status, status or "未知状态")
+    reason = "；".join(str(value) for value in item.get("warnings", []) or [] if str(value))
+    if reason:
+        return f"来源：{source_label}；状态：{status_label}；{reason}"
+    return f"来源：{source_label}；状态：{status_label}"
+
+
+def _imported_deg_user_summary(view: dict[str, object], *, comparison_count: int = 0) -> str:
     stats = view.get("statistics") if isinstance(view.get("statistics"), dict) else {}
     thresholds = view.get("selected_thresholds") if isinstance(view.get("selected_thresholds"), dict) else {}
     gene_lists = view.get("gene_lists") if isinstance(view.get("gene_lists"), dict) else {}
@@ -7218,6 +7339,10 @@ def _imported_deg_user_summary(view: dict[str, object]) -> str:
     species = str(view.get("species") or "")
     species_text = f"{enrichment_species} / {species}" if species and species != enrichment_species else enrichment_species
     lines = [
+        "当前结果来源：导入表格中的已有差异分析结果",
+        f"比较数量：{comparison_count}",
+        f"物种：{species or enrichment_species or 'unknown'}",
+        "可用于：DEG 浏览、筛选、火山图输入、富集分析输入",
         "差异结果来源：导入表格中的已有结果",
         f"当前比较：{view.get('comparison_name') or '未选择'}",
         f"筛选阈值：padj < {thresholds.get('padj', 0.05)}；abs(log2FC) > {thresholds.get('abs_log2fc', 1.0)}",

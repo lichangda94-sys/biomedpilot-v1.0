@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN, TYPE_LABELS
+from app.bioinformatics.recognition_next_steps import recognition_run_current_status
 
 
 def build_recognition_detail_payload(project_root: str | Path, run: dict[str, object], file_record: dict[str, object] | None = None) -> dict[str, object]:
@@ -16,7 +17,8 @@ def build_recognition_detail_payload(project_root: str | Path, run: dict[str, ob
     run_id = str(run.get("run_id") or "current_session")
     current = _read_json(root / CURRENT_RECOGNITION_RUN)
     is_current = bool(run.get("is_current")) or (bool(run_id) and str(current.get("run_id") or "") == run_id)
-    status = "旧版识别记录" if run.get("legacy") else "当前使用中" if is_current else "历史记录"
+    current_status = recognition_run_current_status(root, run)
+    status = str(current_status.get("label") or ("当前使用中" if is_current else "历史记录"))
     warnings = [str(item) for item in report.get("warnings", []) or [] if str(item)]
     warnings.extend(str(item.get("warning")) for item in files if isinstance(item, dict) and str(item.get("warning") or "").strip())
     return {
@@ -24,6 +26,7 @@ def build_recognition_detail_payload(project_root: str | Path, run: dict[str, ob
         "run": dict(run),
         "run_id": run_id,
         "status": status,
+        "status_note": str(current_status.get("note") or ""),
         "is_current": is_current,
         "is_legacy": bool(run.get("legacy")),
         "generated_at": str(run.get("generated_at") or report.get("generated_at") or ""),
@@ -45,11 +48,11 @@ def format_recognition_detail_text(payload: dict[str, object]) -> str:
         f"当前状态：{payload.get('status') or '历史记录'}",
     ]
     if payload.get("is_current"):
-        lines.append("说明：该记录是当前标准化输入。")
+        lines.append("说明：该识别记录将作为数据标准化的输入。")
     elif payload.get("is_legacy"):
         lines.append("说明：由旧版项目结构导入。")
     else:
-        lines.append("说明：该记录不是当前标准化输入。")
+        lines.append(f"说明：{payload.get('status_note') or '该识别记录当前不会被标准化模块使用。'}")
     lines.extend(
         [
             f"物种：{_species_text(first)}",

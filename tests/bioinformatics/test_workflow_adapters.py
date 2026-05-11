@@ -17,6 +17,7 @@ from app.bioinformatics.recognition_detail_report import (
     export_recognition_report_markdown,
     format_recognition_detail_text,
 )
+from app.bioinformatics.recognition_next_steps import build_recognition_next_steps, standardization_current_input_summary
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import load_workflow_state, run_project_stage, run_project_workflow
 from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -396,6 +397,72 @@ def test_recognition_detail_report_handles_unknown_table_without_human_default(p
     assert "未检测到明确物种信息" in text
     assert "不默认推断为 Homo sapiens" in text
     assert "物种：未检测到明确物种信息" in text
+
+
+def test_recognition_next_steps_reflect_current_assets_and_species(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    _write_integrated_rnaseq_xlsx(raw_file)
+
+    recognition = run_project_recognition(project_root)
+    run = next(item for item in list_recognition_runs(project_root) if item.get("is_current"))
+    files = [recognition["files"][0]]  # type: ignore[index]
+
+    before_standardization = build_recognition_next_steps(project_root, run, files)  # type: ignore[arg-type]
+    assert before_standardization["primary_action"]["label"] == "继续数据标准化"  # type: ignore[index]
+    assert "查看已有 DEG 结果" in before_standardization["direct_available"]  # type: ignore[operator]
+    assert "重新差异表达分析需要确认分组" in before_standardization["needs_confirmation"]  # type: ignore[operator]
+    assert any("TCGA/GTEx" in item for item in before_standardization["not_recommended"])  # type: ignore[union-attr]
+
+    generate_standardized_assets(project_root)
+    after_standardization = build_recognition_next_steps(project_root, run, files)  # type: ignore[arg-type]
+    assert after_standardization["primary_action"]["label"] == "进入分析任务中心"  # type: ignore[index]
+    assert "count_matrix" in after_standardization["asset_types"]  # type: ignore[operator]
+
+
+def test_recognition_next_steps_handle_unknown_and_human_tables(project_root: Path) -> None:
+    unknown_run = {
+        "run_id": "unknown_run",
+        "recognition_report": {
+            "files": [{"file_name": "unknown.tsv", "recognized_type": "tabular_text_file", "recognized_type_zh": "表格文本文件"}],
+            "warnings": [],
+        },
+    }
+    unknown_steps = build_recognition_next_steps(project_root, unknown_run)
+
+    assert unknown_steps["primary_action"]["label"] == "返回数据导入"  # type: ignore[index]
+    assert any("未检测到明确表达矩阵" in item for item in unknown_steps["not_recommended"])  # type: ignore[union-attr]
+
+    human_run = {
+        "run_id": "human_run",
+        "recognition_report": {
+            "files": [
+                {
+                    "file_name": "human.tsv",
+                    "species": "Homo sapiens",
+                    "species_group": "human",
+                    "content_blocks": [{"block_type": "count_expression_matrix", "sample_columns": ["A_count"], "sample_count": 1}],
+                }
+            ],
+            "warnings": [],
+        },
+    }
+    human_steps = build_recognition_next_steps(project_root, human_run)
+
+    assert not any("小鼠" in item for item in human_steps["not_recommended"])  # type: ignore[union-attr]
+
+
+def test_standardization_current_input_summary_does_not_scan_history(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "expression.tsv"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    raw_file.write_text("gene\tA1\nTP53\t1\n", encoding="utf-8")
+    run_project_recognition(project_root)
+    (project_root / "recognized_data" / "current.json").unlink()
+
+    summary = standardization_current_input_summary(project_root)
+
+    assert "尚未选择当前识别结果" in summary
+    assert "历史识别记录" in summary
 
 
 def test_standardization_task_center_and_results_use_integrated_content_blocks(project_root: Path) -> None:

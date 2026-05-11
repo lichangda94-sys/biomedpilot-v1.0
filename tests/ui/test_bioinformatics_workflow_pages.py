@@ -1659,11 +1659,17 @@ def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, pr
     assert viewed_current["run_id"] == second_current["run_id"]
     assert table.rowCount() == 0
     detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    next_steps = widget.findChild(QTextEdit, "recognitionNextStepSummary")
+    next_button = widget.findChild(QPushButton, "recognitionNextActionButton_0")
     assert detail is not None
     assert "历史记录" in detail.toPlainText()
     assert first.name in detail.toPlainText()
+    assert next_steps is not None
+    assert "该识别记录当前不会被标准化模块使用" in next_steps.toPlainText()
+    assert next_button is not None
+    assert next_button.text() == "设为当前标准化输入"
 
-    widget._set_history_run_current(first_current["run_id"])
+    next_button.click()
     updated_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
     assert updated_current["run_id"] == first_current["run_id"]
     assert widget.status_message() == "已将该识别记录设为当前标准化输入。"
@@ -1680,6 +1686,11 @@ def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, pr
     assert widget.status_message() == "当前识别结果已删除，请重新识别或选择另一条历史记录。"
     standardization = workflow_pages.generate_standardized_assets(project_summary.project_root)
     assert any("current.json" in warning for warning in standardization["registry"]["warnings"])
+    standardization_widget = BioinformaticsStandardizedAssetsWidget()
+    standardization_widget.refresh_project(project_summary)
+    input_summary = standardization_widget.findChild(QTextEdit, "standardizationCurrentRecognitionInput")
+    assert input_summary is not None
+    assert "尚未选择当前识别结果" in input_summary.toPlainText()
 
 
 def test_recognition_filters_system_files_from_report(qt_app, project_summary) -> None:
@@ -1972,7 +1983,21 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
         "ENSMUSG00000064351,20,18,2.1,2.2,-1.7,0.02,0.03,mt-Nd1,protein_coding,mitochondrially encoded NADH\n",
         encoding="utf-8",
     )
-    workflow_pages.run_project_recognition(project_summary.project_root)
+    recognition_report = workflow_pages.run_project_recognition(project_summary.project_root)
+
+    recognition_widget = BioinformaticsRecognitionWidget()
+    recognition_widget.refresh_project(project_summary)
+    recognition_widget._render_report(recognition_report)
+    next_steps = recognition_widget.findChild(QTextEdit, "recognitionNextStepSummary")
+    primary_next = recognition_widget.findChild(QPushButton, "recognitionNextActionButton_0")
+    assert next_steps is not None
+    assert "当前使用中" in next_steps.toPlainText()
+    assert "查看已有 DEG 结果" in next_steps.toPlainText()
+    assert "需要确认分组" in next_steps.toPlainText()
+    assert "TCGA/GTEx" in next_steps.toPlainText()
+    assert primary_next is not None
+    assert primary_next.text() == "继续数据标准化"
+
     workflow_pages.generate_standardized_assets(project_summary.project_root)
 
     task_center = BioinformaticsAnalysisTaskCenterWidget()
@@ -2013,6 +2038,10 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
     summary = results.findChild(QTextEdit, "importedDegSummary")
     assert summary is not None
     summary_text = summary.toPlainText()
+    assert "当前结果来源：导入表格中的已有差异分析结果" in summary_text
+    assert "比较数量：1" in summary_text
+    assert "物种：Mus musculus" in summary_text
+    assert "可用于：DEG 浏览、筛选、火山图输入、富集分析输入" in summary_text
     assert "差异结果来源：导入表格中的已有结果" in summary_text
     assert "当前比较：PFFvsPBS" in summary_text
     assert "significant genes 2" in summary_text
