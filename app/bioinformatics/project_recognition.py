@@ -127,25 +127,26 @@ def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[st
         kind = classification.primary_type
         reason = classification.reason
         confidence = classification.confidence
-        records.append(
-            {
-                "file_name": path.name,
-                "original_path": str(path),
-                "recognized_type": kind,
-                "recognized_type_zh": TYPE_LABELS.get(kind, "未知文件"),
-                "recognized_roles": list(classification.roles),
-                "recognized_roles_zh": [TYPE_LABELS.get(role, role) for role in classification.roles],
-                "secondary_roles": [role for role in classification.roles if role != kind],
-                "detected_assets": list(classification.detected_assets),
-                "container_format": classification.container_format,
-                "content_profile": classification.content_profile or {},
-                "confidence": confidence,
-                "file_size": path.stat().st_size if path.exists() else 0,
-                "reason": reason,
-                "warning": "低置信度，需要人工确认。" if confidence < 0.5 else "",
-                "route_path": str(root / "recognized_data" / kind / path.name),
-            }
-        )
+        content_profile = classification.content_profile or {}
+        record = {
+            "file_name": path.name,
+            "original_path": str(path),
+            "recognized_type": kind,
+            "recognized_type_zh": TYPE_LABELS.get(kind, "未知文件"),
+            "recognized_roles": list(classification.roles),
+            "recognized_roles_zh": [TYPE_LABELS.get(role, role) for role in classification.roles],
+            "secondary_roles": [role for role in classification.roles if role != kind],
+            "detected_assets": list(classification.detected_assets),
+            "container_format": classification.container_format,
+            "content_profile": content_profile,
+            "confidence": confidence,
+            "file_size": path.stat().st_size if path.exists() else 0,
+            "reason": reason,
+            "warning": "低置信度，需要人工确认。" if confidence < 0.5 else "",
+            "route_path": str(root / "recognized_data" / kind / path.name),
+        }
+        record.update(_semantic_record_fields(kind, content_profile))
+        records.append(record)
     warnings.extend(_recognition_warnings(records))
     group_preview = build_group_preview_report(root, records)
     report = {
@@ -358,6 +359,15 @@ def _filter_system_file_records(report: dict[str, object]) -> dict[str, object]:
     ]
     clean = {**report, "files": files, "type_counts": _type_counts(files)}
     return clean
+
+
+def _semantic_record_fields(file_kind: str, content_profile: dict[str, object]) -> dict[str, object]:
+    fields: dict[str, object] = {"file_kind": file_kind}
+    for key in ("semantic_type", "semantic_type_zh", "species", "species_group", "gene_id_type", "content_blocks"):
+        value = content_profile.get(key)
+        if value not in (None, "", []):
+            fields[key] = value
+    return fields
 
 
 def _recognition_warnings(records: list[dict[str, object]]) -> list[str]:
@@ -998,12 +1008,15 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
     header_hits = _header_keyword_hits(normalized_header)
     first_column_values = [row[0] for row in rows if row]
     first_column_pattern = _first_column_id_pattern(first_column_values)
+    blocks_summary = _tabular_content_blocks(header, normalized_header, first_column_values)
+    content_blocks = list(blocks_summary.get("content_blocks", []) or [])
+    expression_sample_columns = list(blocks_summary.get("expression_sample_columns", []) or [])
     diff_like = _is_differential_header(normalized_header)
     sample_metadata_like = _is_sample_metadata_header(normalized_header)
     clinical_like = _is_clinical_header(normalized_header)
     survival_like = _is_survival_header(normalized_header)
     annotation_like = _is_annotation_header(normalized_header)
-    first_gene_like = _is_gene_identifier_header(normalized_header[0]) or first_column_pattern in {"ensembl_id", "probe_id", "gene_symbol", "entrez_id"}
+    first_gene_like = _is_gene_identifier_header(normalized_header[0]) or first_column_pattern in {"ensembl_id", "probe_id", "gene_symbol", "entrez_id"} or bool(blocks_summary.get("gene_id_type"))
     numeric_ratio = numeric_cells / total_cells if total_cells else 0.0
     integer_numeric_ratio = integer_cells / numeric_cells if numeric_cells else 0.0
     non_negative_integer_ratio = non_negative_integer_cells / numeric_cells if numeric_cells else 0.0
@@ -1012,7 +1025,7 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
     possible_role = "unknown"
     has_embedded_annotation = False
     annotation_evidence: list[str] = []
-    if diff_like:
+    if diff_like and not expression_sample_columns:
         possible_role = "differential_result_table"
         evidence.extend(["logFC header", "p-value header", "adjusted p-value/FDR header"])
     elif clinical_like or survival_like:
@@ -1035,16 +1048,22 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         if sample_like_column_count:
             evidence.append("sample-like column names")
         annotation_columns = [
-            header[index]
-            for index, normalized in enumerate(normalized_header[1:], start=1)
-            if index not in numeric_column_indices and _is_annotation_header([normalized])
+            str(column)
+            for block in content_blocks
+            if isinstance(block, dict) and block.get("block_type") in {"gene_annotation", "gene_identifier"}
+            for column in (block.get("annotation_fields", []) or block.get("gene_name_columns", []) or [])
         ]
         has_embedded_annotation = bool(annotation_columns)
         annotation_evidence = [f"annotation column: {column}" for column in annotation_columns]
     elif annotation_like and len(numeric_column_indices) < 2:
         possible_role = "platform_annotation" if any("probe" in item or item == "id_ref" for item in normalized_header) else "gene_annotation"
         evidence.extend(["annotation header keywords"])
-    return {
+    sample_columns = expression_sample_columns or [
+        header[index]
+        for index in numeric_column_indices
+        if index < len(header) and not _is_non_expression_sample_column(normalized_header[index])
+    ]
+    profile = {
         "delimiter": delimiter,
         "header_line": header_line,
         "column_count": len(header),
@@ -1056,11 +1075,7 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         "first_column_id_pattern": first_column_pattern,
         "sample_like_column_count": sample_like_column_count,
         "numeric_column_count": len(numeric_column_indices),
-        "sample_columns": [
-            header[index]
-            for index in numeric_column_indices
-            if index < len(header) and not _is_annotation_header([normalized_header[index]])
-        ],
+        "sample_columns": sample_columns,
         "known_keyword_hits": header_hits,
         "possible_table_role": possible_role,
         "evidence": evidence,
@@ -1068,6 +1083,261 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         "has_embedded_annotation": has_embedded_annotation,
         "annotation_evidence": annotation_evidence,
     }
+    if content_blocks:
+        profile["content_blocks"] = content_blocks
+    for key in ("semantic_type", "semantic_type_zh", "species", "species_group", "gene_id_type"):
+        value = blocks_summary.get(key)
+        if value:
+            profile[key] = value
+    return profile
+
+
+def _tabular_content_blocks(header: list[str], normalized_header: list[str], first_column_values: list[str]) -> dict[str, object]:
+    blocks: list[dict[str, object]] = []
+    gene_block = _gene_identifier_block(header, normalized_header, first_column_values)
+    if gene_block:
+        blocks.append(gene_block)
+
+    count_columns = _expression_columns_by_suffix(header, normalized_header, ("count", "counts"))
+    count_block = _expression_matrix_block("count_expression_matrix", "count", count_columns)
+    if count_block:
+        blocks.append(count_block)
+
+    fpkm_columns = _expression_columns_by_suffix(header, normalized_header, ("fpkm",))
+    fpkm_block = _expression_matrix_block("fpkm_expression_matrix", "fpkm", fpkm_columns)
+    if fpkm_block:
+        fpkm_block["matches_count_sample_ids"] = sorted(fpkm_block.get("inferred_sample_ids", [])) == sorted(count_block.get("inferred_sample_ids", [])) if count_block else False
+        blocks.append(fpkm_block)
+
+    deg_block = _deg_comparison_block(header, normalized_header)
+    if deg_block:
+        blocks.append(deg_block)
+
+    annotation_block = _gene_annotation_block(header, normalized_header)
+    if annotation_block:
+        blocks.append(annotation_block)
+
+    expression_sample_columns = []
+    for block in (count_block, fpkm_block):
+        if block:
+            expression_sample_columns.extend(str(column) for column in block.get("sample_columns", []) or [])
+
+    has_gene = bool(gene_block)
+    has_expression = bool(count_block or fpkm_block)
+    has_results_or_annotation = bool(deg_block or annotation_block)
+    result: dict[str, object] = {
+        "content_blocks": blocks,
+        "expression_sample_columns": list(dict.fromkeys(expression_sample_columns)),
+    }
+    if gene_block:
+        for key in ("species", "species_group", "gene_id_type"):
+            if gene_block.get(key):
+                result[key] = gene_block[key]
+    if has_gene and has_expression and has_results_or_annotation:
+        result["semantic_type"] = "rna_seq_integrated_result_table"
+        result["semantic_type_zh"] = "RNA-seq 综合表达结果表"
+    return result
+
+
+def _gene_identifier_block(header: list[str], normalized_header: list[str], first_column_values: list[str]) -> dict[str, object]:
+    gene_id_columns = [
+        header[index]
+        for index, normalized in enumerate(normalized_header)
+        if normalized in {"gene_id", "ensembl_gene_id", "ensembl_id", "gene", "id_ref", "feature_id", "transcript_id"}
+        or ("ensembl" in normalized and "gene" in normalized)
+    ]
+    gene_name_columns = [
+        header[index]
+        for index, normalized in enumerate(normalized_header)
+        if normalized in {"gene_name", "gene_symbol", "symbol", "genesymbol"}
+    ]
+    gene_system = _infer_gene_id_system(first_column_values)
+    if not gene_id_columns and not gene_name_columns and not gene_system.get("gene_id_type"):
+        return {}
+    block: dict[str, object] = {
+        "block_type": "gene_identifier",
+        "gene_id_columns": list(dict.fromkeys(str(column) for column in gene_id_columns)),
+        "gene_name_columns": list(dict.fromkeys(str(column) for column in gene_name_columns)),
+    }
+    example_values = [value for value in first_column_values[:5] if str(value).strip()]
+    if example_values:
+        block["example_values"] = example_values
+    for key, value in gene_system.items():
+        if value:
+            block[key] = value
+    return block
+
+
+def _infer_gene_id_system(values: list[str]) -> dict[str, str]:
+    usable = [str(value).strip().upper().split(".", 1)[0] for value in values if str(value).strip()]
+    if not usable:
+        return {}
+    patterns = (
+        ("ensembl_mouse_transcript_id", "Mus musculus", "mouse", r"^ENSMUST\d+"),
+        ("ensembl_mouse_gene_id", "Mus musculus", "mouse", r"^ENSMUSG\d+"),
+        ("ensembl_human_gene_id", "Homo sapiens", "human", r"^ENSG\d+"),
+    )
+    threshold = max(1, len(usable) // 2 + 1)
+    for gene_id_type, species, species_group, pattern in patterns:
+        if sum(1 for value in usable if re.match(pattern, value)) >= threshold:
+            return {"gene_id_type": gene_id_type, "species": species, "species_group": species_group}
+    return {}
+
+
+def _expression_columns_by_suffix(header: list[str], normalized_header: list[str], suffixes: tuple[str, ...]) -> list[dict[str, str]]:
+    columns: list[dict[str, str]] = []
+    suffix_pattern = "|".join(re.escape(suffix) for suffix in suffixes)
+    for column, normalized in zip(header, normalized_header, strict=False):
+        match = re.fullmatch(rf"(.+)_({suffix_pattern})", normalized)
+        if not match:
+            continue
+        sample_id = _sample_id_from_expression_column(str(column), (match.group(2),))
+        if not sample_id:
+            sample_id = match.group(1)
+        columns.append({"column": str(column), "sample_id": sample_id})
+    return columns
+
+
+def _sample_id_from_expression_column(column: str, suffixes: tuple[str, ...]) -> str:
+    suffix_pattern = "|".join(re.escape(suffix) for suffix in suffixes)
+    match = re.match(rf"^(.+)_({suffix_pattern})$", column.strip(), flags=re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def _expression_matrix_block(block_type: str, value_type: str, columns: list[dict[str, str]]) -> dict[str, object]:
+    if not columns:
+        return {}
+    sample_ids = [item["sample_id"] for item in columns]
+    groups = [_sample_group_from_id(sample_id) for sample_id in sample_ids]
+    group_counts: dict[str, int] = {}
+    for group in groups:
+        if group:
+            group_counts[group] = group_counts.get(group, 0) + 1
+    return {
+        "block_type": block_type,
+        "value_type": value_type,
+        "sample_count": len(columns),
+        "sample_columns": [item["column"] for item in columns],
+        "inferred_sample_ids": sample_ids,
+        "inferred_groups": list(dict.fromkeys(group for group in groups if group)),
+        "replicate_count_by_group": group_counts,
+    }
+
+
+def _sample_group_from_id(sample_id: str) -> str:
+    value = str(sample_id).strip()
+    match = re.match(r"^(.+?)[_-]?\d+[A-Za-z]?$", value)
+    if match:
+        return match.group(1).strip("_-")
+    return value
+
+
+def _deg_comparison_block(header: list[str], normalized_header: list[str]) -> dict[str, object]:
+    grouped: dict[str, dict[str, str]] = {}
+    display_names: dict[str, str] = {}
+    for column, normalized in zip(header, normalized_header, strict=False):
+        parsed = _parse_deg_column(str(column), normalized)
+        if parsed is None:
+            continue
+        comparison_key, comparison_name, metric = parsed
+        grouped.setdefault(comparison_key, {})[metric] = str(column)
+        display_names.setdefault(comparison_key, comparison_name)
+    if not grouped:
+        return {}
+    comparisons: list[dict[str, object]] = []
+    for comparison_key, columns in grouped.items():
+        name = display_names.get(comparison_key, comparison_key)
+        left, right = _split_comparison_name(name)
+        comparisons.append(
+            {
+                "comparison_name": name,
+                "left_condition": left,
+                "right_condition": right,
+                "log2fc_column": columns.get("log2fc", ""),
+                "pvalue_column": columns.get("pvalue", ""),
+                "padj_column": columns.get("padj", ""),
+                "is_complete": bool(columns.get("log2fc") and columns.get("pvalue") and columns.get("padj")),
+            }
+        )
+    return {
+        "block_type": "deg_comparisons",
+        "comparison_count": len(comparisons),
+        "complete_comparison_count": sum(1 for comparison in comparisons if comparison["is_complete"]),
+        "comparisons": comparisons,
+    }
+
+
+def _parse_deg_column(column: str, normalized: str) -> tuple[str, str, str] | None:
+    metric_map = {
+        "log2foldchange": "log2fc",
+        "log2fc": "log2fc",
+        "logfc": "log2fc",
+        "pvalue": "pvalue",
+        "p_value": "pvalue",
+        "padj": "padj",
+        "fdr": "padj",
+        "qvalue": "padj",
+        "q_value": "padj",
+    }
+    normalized_match = re.fullmatch(r"(.+)_(log2foldchange|log2fc|logfc|pvalue|p_value|padj|fdr|qvalue|q_value)", normalized)
+    if not normalized_match:
+        return None
+    raw_match = re.match(r"^(.+)_(log2FoldChange|log2fc|logFC|pvalue|p_value|padj|fdr|qvalue|q_value)$", column.strip(), flags=re.IGNORECASE)
+    comparison_name = raw_match.group(1) if raw_match else normalized_match.group(1)
+    comparison_key = _normalize_header(comparison_name)
+    metric = metric_map[normalized_match.group(2)]
+    return comparison_key, comparison_name, metric
+
+
+def _split_comparison_name(name: str) -> tuple[str, str]:
+    parts = re.split(r"vs", str(name), maxsplit=1, flags=re.IGNORECASE)
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    return name, ""
+
+
+def _gene_annotation_block(header: list[str], normalized_header: list[str]) -> dict[str, object]:
+    annotation_fields = [
+        str(column)
+        for column, normalized in zip(header, normalized_header, strict=False)
+        if _is_gene_annotation_column(normalized)
+    ]
+    if not annotation_fields:
+        return {}
+    return {
+        "block_type": "gene_annotation",
+        "annotation_fields": list(dict.fromkeys(annotation_fields)),
+    }
+
+
+def _is_gene_annotation_column(normalized: str) -> bool:
+    return normalized in {
+        "gene_name",
+        "gene_chr",
+        "gene_chromosome",
+        "chromosome",
+        "chr",
+        "gene_start",
+        "start",
+        "gene_end",
+        "end",
+        "gene_strand",
+        "strand",
+        "gene_length",
+        "length",
+        "gene_biotype",
+        "biotype",
+        "gene_description",
+        "description",
+        "tf_family",
+        "gene_symbol",
+        "symbol",
+        "genesymbol",
+    }
+
+
+def _is_non_expression_sample_column(normalized: str) -> bool:
+    return _is_gene_annotation_column(normalized) or _parse_deg_column(normalized, normalized) is not None or _is_annotation_header([normalized])
 
 
 def _is_geo_soft_path(path: Path) -> bool:
@@ -1241,9 +1511,9 @@ def _is_gene_identifier_header(header: str) -> bool:
 
 
 def _is_differential_header(headers: list[str]) -> bool:
-    has_logfc = any(header in {"logfc", "log2fc", "log2_fold_change", "log_fold_change"} or "logfc" in header for header in headers)
-    has_p = any(header in {"p", "pvalue", "p_value", "p_val", "p_val_adj", "p_value_adj"} or header.startswith("p_") for header in headers)
-    has_adj = any(header in {"adj_p_val", "adj_p_value", "padj", "fdr", "qvalue", "q_value", "false_discovery_rate"} for header in headers)
+    has_logfc = any(header in {"logfc", "log2fc", "log2foldchange", "log2_fold_change", "log_fold_change"} or "logfc" in header or "log2foldchange" in header for header in headers)
+    has_p = any(header in {"p", "pvalue", "p_value", "p_val", "p_val_adj", "p_value_adj"} or header.startswith("p_") or header.endswith("_pvalue") for header in headers)
+    has_adj = any(header in {"adj_p_val", "adj_p_value", "padj", "fdr", "qvalue", "q_value", "false_discovery_rate"} or header.endswith(("_padj", "_fdr", "_qvalue")) for header in headers)
     has_stat = any(header in {"stat", "statistic", "t", "b", "wald_stat"} for header in headers)
     return has_logfc and has_p and (has_adj or has_stat)
 
@@ -1266,7 +1536,7 @@ def _is_survival_header(headers: list[str]) -> bool:
 
 
 def _is_annotation_header(headers: list[str]) -> bool:
-    annotation_tokens = ("probe", "id_ref", "gene_symbol", "symbol", "gene_assignment", "entrez", "ensembl", "chromosome", "chr", "description")
+    annotation_tokens = ("probe", "id_ref", "gene_symbol", "symbol", "gene_assignment", "entrez", "ensembl", "chromosome", "chr", "description", "biotype")
     return any(any(token in header for token in annotation_tokens) for header in headers)
 
 

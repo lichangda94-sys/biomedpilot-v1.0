@@ -2089,6 +2089,40 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
 
 
+def test_recognition_table_prefers_semantic_type_label(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "integrated_rnaseq_results.xlsx"
+    source.write_text("placeholder", encoding="utf-8")
+    report = {
+        "schema_version": "biomedpilot.recognition_report.v1",
+        "files": [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "tabular_text_file",
+                "recognized_type_zh": "表格文本文件",
+                "recognized_roles": ["normalized_expression_matrix", "platform_annotation"],
+                "semantic_type": "rna_seq_integrated_result_table",
+                "semantic_type_zh": "RNA-seq 综合表达结果表",
+                "detected_assets": [],
+                "confidence": 0.82,
+                "file_size": 1,
+                "reason": "表格内容识别为：标准化表达矩阵、平台注释。",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+        "type_counts": {"tabular_text_file": 1},
+        "warnings": [],
+    }
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    widget._render_report(report)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+
+    assert table.item(0, 2).text() == "RNA-seq 综合表达结果表（底层：表格文本文件）"
+
+
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
     source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
     source.parent.mkdir(parents=True, exist_ok=True)

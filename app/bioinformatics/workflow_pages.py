@@ -6886,6 +6886,9 @@ def _format_confidence(value: object) -> str:
 def _recognition_type_text(item: dict[str, object]) -> str:
     primary = str(item.get("recognized_type") or "unknown")
     primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
+    semantic_label = str(item.get("semantic_type_zh") or "")
+    if semantic_label:
+        return f"{semantic_label}（底层：{primary_label}）"
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != primary]
     if not roles:
         return primary_label

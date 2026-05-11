@@ -39,12 +39,21 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
     return _write_xlsx_rows(path, rows)
 
 
+def _xlsx_column_name(index: int) -> str:
+    value = index + 1
+    letters = ""
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        letters = chr(ord("A") + remainder) + letters
+    return letters
+
+
 def _write_xlsx_rows(path: Path, rows: list[list[object]]) -> Path:
     sheet_rows: list[str] = []
     for row_index, row in enumerate(rows, start=1):
         cells: list[str] = []
         for column_index, value in enumerate(row):
-            reference = f"{chr(ord('A') + column_index)}{row_index}"
+            reference = f"{_xlsx_column_name(column_index)}{row_index}"
             if isinstance(value, (int, float)):
                 cells.append(f'<c r="{reference}"><v>{value}</v></c>')
             else:
@@ -134,6 +143,10 @@ def _write_geo_series_matrix(path: Path) -> Path:
 
 def _asset_by_role(record: dict[str, object]) -> dict[str, dict[str, object]]:
     return {str(asset.get("role") or asset.get("asset_type")): asset for asset in record.get("detected_assets", []) if isinstance(asset, dict)}
+
+
+def _block_by_type(record: dict[str, object]) -> dict[str, dict[str, object]]:
+    return {str(block.get("block_type")): block for block in record.get("content_blocks", []) if isinstance(block, dict)}
 
 
 def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, tmp_path: Path) -> None:
@@ -235,6 +248,79 @@ def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_r
     assert assets["normalized_expression_matrix"]["input_eligible"] is True
     assert record["content_profile"]["delimiter"] == "xlsx"  # type: ignore[index]
     assert "differential_result_table" not in record["recognized_roles"]  # type: ignore[operator]
+
+
+def test_recognition_detects_integrated_rnaseq_result_table_blocks(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    sample_ids = [f"{group}{replicate}" for group in ("A", "B", "C", "D", "E", "F", "H") for replicate in range(1, 4)]
+    comparisons = [
+        "PFFvsPBS",
+        "MMP3vsPBS",
+        "MK2206vsPBS",
+        "PI103vsPBS",
+        "PDTCvsPBS",
+        "PF271vsPBS",
+        "MK2206vsPFF",
+        "PI103vsPFF",
+        "PDTCvsPFF",
+        "PF271vsPFF",
+        "MMP3vsPFF",
+    ]
+    header = (
+        ["gene_id"]
+        + [f"{sample}_count" for sample in sample_ids]
+        + [f"{sample}_fpkm" for sample in sample_ids]
+        + [column for comparison in comparisons for column in (f"{comparison}_log2FoldChange", f"{comparison}_pvalue", f"{comparison}_padj")]
+        + ["gene_name", "gene_chr", "gene_start", "gene_end", "gene_strand", "gene_length", "gene_biotype", "gene_description", "tf_family"]
+    )
+    rows = [
+        header,
+        (
+            ["ENSMUSG00000026193"]
+            + [100 + index for index, _sample in enumerate(sample_ids)]
+            + [round(1.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
+            + [value for _comparison in comparisons for value in (1.2, 0.01, 0.05)]
+            + ["Sox17", "chr1", 4490931, 4497354, "+", 6424, "protein_coding", "SRY-box transcription factor 17", "SOX"]
+        ),
+        (
+            ["ENSMUSG00000064351"]
+            + [200 + index for index, _sample in enumerate(sample_ids)]
+            + [round(2.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
+            + [value for _comparison in comparisons for value in (-0.8, 0.02, 0.08)]
+            + ["mt-Nd1", "chrM", 2751, 3707, "+", 957, "protein_coding", "mitochondrially encoded NADH", ""]
+        ),
+    ]
+    _write_xlsx_rows(raw_file, rows)
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    blocks = _block_by_type(record)  # type: ignore[arg-type]
+    sample_columns = set(record["content_profile"]["sample_columns"])  # type: ignore[index]
+
+    assert record["semantic_type"] == "rna_seq_integrated_result_table"
+    assert record["semantic_type_zh"] == "RNA-seq 综合表达结果表"
+    assert record["file_kind"] == record["recognized_type"]
+    assert record["species"] == "Mus musculus"
+    assert record["species_group"] == "mouse"
+    assert record["gene_id_type"] == "ensembl_mouse_gene_id"
+    assert blocks["gene_identifier"]["gene_id_type"] == "ensembl_mouse_gene_id"
+    assert blocks["count_expression_matrix"]["sample_count"] == 21
+    assert blocks["count_expression_matrix"]["inferred_sample_ids"] == sample_ids
+    assert blocks["count_expression_matrix"]["inferred_groups"] == ["A", "B", "C", "D", "E", "F", "H"]
+    assert blocks["count_expression_matrix"]["replicate_count_by_group"]["A"] == 3
+    assert blocks["fpkm_expression_matrix"]["sample_count"] == 21
+    assert blocks["fpkm_expression_matrix"]["matches_count_sample_ids"] is True
+    assert blocks["deg_comparisons"]["comparison_count"] >= 10
+    assert blocks["deg_comparisons"]["complete_comparison_count"] >= 10
+    assert all(comparison["is_complete"] for comparison in blocks["deg_comparisons"]["comparisons"])
+    assert {"gene_chr", "gene_start", "gene_end", "gene_strand", "gene_length", "gene_biotype", "gene_description", "tf_family"} <= set(blocks["gene_annotation"]["annotation_fields"])
+    assert "gene_start" not in sample_columns
+    assert "gene_end" not in sample_columns
+    assert "gene_length" not in sample_columns
+    assert not any(column.endswith(("_log2FoldChange", "_pvalue", "_padj")) for column in sample_columns)
+    assert {f"{sample}_count" for sample in sample_ids} <= sample_columns
+    assert {f"{sample}_fpkm" for sample in sample_ids} <= sample_columns
 
 
 def test_recognition_ignores_partial_download_files(project_root: Path) -> None:
