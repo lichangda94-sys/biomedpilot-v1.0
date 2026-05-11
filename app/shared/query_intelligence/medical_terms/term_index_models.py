@@ -18,8 +18,6 @@ class TermConcept:
     tissue_terms: list[str] = field(default_factory=list)
     tcga_primary_site_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
-    assay_terms: list[str] = field(default_factory=list)
-    platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     disease_group: str = ""
     concept_type: str = ""
@@ -44,8 +42,6 @@ class TermConcept:
             tissue_terms=_list(payload.get("tissue_terms")),
             tcga_primary_site_candidates=_list(payload.get("tcga_primary_site_candidates")),
             data_modality_terms=_list(payload.get("data_modality_terms")),
-            assay_terms=_list(payload.get("assay_terms")),
-            platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
             disease_group=str(payload.get("disease_group", "")),
             concept_type=str(payload.get("concept_type", "")),
@@ -72,8 +68,6 @@ class ChineseTermOverride:
     tcga_primary_site_candidates: list[str] = field(default_factory=list)
     gtex_tissue_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
-    assay_terms: list[str] = field(default_factory=list)
-    platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
@@ -103,8 +97,6 @@ class ChineseTermOverride:
             tcga_primary_site_candidates=_list(payload.get("tcga_primary_site_candidates")),
             gtex_tissue_candidates=_list(payload.get("gtex_tissue_candidates")),
             data_modality_terms=_list(payload.get("data_modality_terms")),
-            assay_terms=_list(payload.get("assay_terms")),
-            platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
             exposure_terms=_list(payload.get("exposure_terms")),
             intervention_terms=_list(payload.get("intervention_terms")),
@@ -132,8 +124,6 @@ class TermLookupResult:
     tcga_primary_site_candidates: list[str] = field(default_factory=list)
     gtex_tissue_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
-    assay_terms: list[str] = field(default_factory=list)
-    platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
@@ -160,8 +150,6 @@ class TermLookupResult:
             "tcga_primary_site_candidates": list(self.tcga_primary_site_candidates),
             "gtex_tissue_candidates": list(self.gtex_tissue_candidates),
             "data_modality_terms": list(self.data_modality_terms),
-            "assay_terms": list(self.assay_terms),
-            "platform_candidates": list(self.platform_candidates),
             "modifier_terms_en": list(self.modifier_terms_en),
             "exposure_terms": list(self.exposure_terms),
             "intervention_terms": list(self.intervention_terms),

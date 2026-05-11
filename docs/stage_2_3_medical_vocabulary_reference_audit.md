@@ -4,7 +4,7 @@
 
 | Section | Total | Covered | Partial | Missing | Coverage | Weighted |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| overall | 364 | 364 | 0 | 0 | 1.000 | 1.000 |
+| overall | 299 | 299 | 0 | 0 | 1.000 | 1.000 |
 
 ## TCGA Projects Covered/Missing
 
@@ -378,87 +378,6 @@
 - missing TCGA primary sites: none
 - high-risk ambiguity terms: thyroid, liver, lung, colon, rectum, blood, bone marrow, lymph node, adipose tissue
 
-## Bioinformatics Modality Core Covered/Missing
-
-| Item | Priority | Status | Evidence |
-| --- | --- | --- | --- |
-| expression profiling | P0 | covered | matched_terms: expression profiling, gene expression profiling, mRNA expression profiling, transcriptome profiling, 表达谱, 基因表达谱, 表达谱分析, 表达分析; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| transcriptome profiling | P1 | covered | matched_terms: transcriptome profiling, transcriptomic profiling, transcriptomics, 转录组分析, 转录组测序分析, 转录组表达谱; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| RNA-seq | P0 | covered | matched_terms: RNA-seq, RNA sequencing, RNA sequencing assay, RNA测序, RNA测序数据, 转录组测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| bulk RNA-seq | P1 | covered | matched_terms: bulk RNA-seq, bulk RNA sequencing, bulk transcriptome sequencing, bulk RNA测序, bulk转录组, bulk RNA测序数据; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| mRNA expression profiling | P1 | covered | matched_terms: mRNA expression profiling, messenger RNA expression profiling, mRNA expression analysis, mRNA表达谱, 信使RNA表达谱, mRNA表达分析; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| microarray | P0 | covered | matched_terms: microarray, microarray profiling, gene expression microarray, 芯片, 表达芯片, 基因芯片, 微阵列; matched_platforms: GEO, ArrayExpress; subcategory: transcriptomics |
-| expression array | P1 | covered | matched_terms: expression array, gene expression array, expression microarray, 表达芯片, 表达阵列, 基因表达芯片; matched_platforms: GEO, ArrayExpress; subcategory: transcriptomics |
-| single-cell RNA-seq | P0 | covered | matched_terms: single-cell RNA-seq, single cell RNA sequencing, single-cell transcriptomics, scRNA-seq, 单细胞, 单细胞RNA测序, 单细胞转录组, 单细胞测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: transcriptomics |
-| single-nucleus RNA-seq | P1 | covered | matched_terms: single-nucleus RNA-seq, single nucleus RNA sequencing, single-nucleus transcriptomics, snRNA-seq, 单核RNA测序, 单核转录组; matched_platforms: GEO, SRA, ArrayExpress; subcategory: transcriptomics |
-| spatial transcriptomics | P0 | covered | matched_terms: spatial transcriptomics, spatial gene expression profiling, spatial RNA profiling, 空间转录组, 空间转录组学, 空间表达谱, 空间RNA测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: transcriptomics |
-| long-read RNA-seq | P1 | covered | matched_terms: long-read RNA-seq, long read RNA sequencing, long-read transcriptome sequencing, 长读长RNA测序, 长读长转录组, 长读长RNA-seq; matched_platforms: GEO, SRA, ArrayExpress; subcategory: transcriptomics |
-| total RNA-seq | P1 | covered | matched_terms: total RNA-seq, total RNA sequencing, total RNA测序, 总RNA测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| ribo-depleted RNA-seq | P1 | covered | matched_terms: ribo-depleted RNA-seq, ribo depleted RNA sequencing, ribosomal RNA depleted RNA-seq, 去核糖体RNA测序, 核糖体去除RNA测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| polyA RNA-seq | P1 | covered | matched_terms: polyA RNA-seq, polyadenylated RNA sequencing, polyA-selected RNA-seq, polyA RNA测序, polyA选择RNA测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA, GTEx; subcategory: transcriptomics |
-| miRNA-seq | P1 | covered | matched_terms: miRNA-seq, microRNA sequencing, miRNA sequencing, miRNA测序, microRNA测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: noncoding_rna |
-| microRNA profiling | P1 | covered | matched_terms: microRNA profiling, miRNA expression profiling, microRNA expression profiling, miRNA, microRNA表达谱, miRNA表达谱; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: noncoding_rna |
-| lncRNA profiling | P1 | covered | matched_terms: lncRNA profiling, long non-coding RNA profiling, lncRNA expression profiling, lncRNA, lncRNA表达谱, 长链非编码RNA表达谱; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: noncoding_rna |
-| circRNA profiling | P1 | covered | matched_terms: circRNA profiling, circular RNA profiling, circRNA expression profiling, circRNA, circRNA表达谱, 环状RNA表达谱; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: noncoding_rna |
-| small RNA-seq | P1 | covered | matched_terms: small RNA-seq, small RNA sequencing, 小RNA测序, 小RNA-seq; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: noncoding_rna |
-| DNA methylation array | P1 | covered | matched_terms: DNA methylation array, methylation array, DNA methylation microarray, DNA甲基化芯片, 甲基化芯片; matched_platforms: GEO, ArrayExpress, TCGA; subcategory: epigenomics |
-| methylation profiling | P0 | covered | matched_terms: methylation profiling, DNA methylation profiling, methylome profiling, 甲基化, 甲基化分析, 甲基化谱, DNA甲基化; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: epigenomics |
-| bisulfite sequencing | P1 | covered | matched_terms: bisulfite sequencing, bisulphite sequencing, BS-seq, 亚硫酸氢盐测序, 重亚硫酸盐测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| whole-genome bisulfite sequencing | P1 | covered | matched_terms: whole-genome bisulfite sequencing, whole genome bisulfite sequencing, WGBS, 全基因组亚硫酸氢盐测序, 全基因组甲基化测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| reduced representation bisulfite sequencing | P1 | covered | matched_terms: reduced representation bisulfite sequencing, RRBS, 简化代表性亚硫酸氢盐测序, 简化甲基化测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| ATAC-seq | P0 | covered | matched_terms: ATAC-seq, assay for transposase-accessible chromatin sequencing, ATAC sequencing, ATAC测序, 染色质开放性测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| ChIP-seq | P0 | covered | matched_terms: ChIP-seq, chromatin immunoprecipitation sequencing, ChIP sequencing, ChIP测序, 染色质免疫沉淀测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| CUT&RUN | P1 | covered | matched_terms: CUT&RUN, cleavage under targets and release using nuclease, CUT and RUN, CUT&RUN测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| CUT&Tag | P1 | covered | matched_terms: CUT&Tag, cleavage under targets and tagmentation, CUT and Tag, CUT&Tag测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| chromatin accessibility | P1 | covered | matched_terms: chromatin accessibility, chromatin accessibility profiling, open chromatin profiling, 染色质开放性, 染色质可及性; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| histone modification profiling | P1 | covered | matched_terms: histone modification profiling, histone mark profiling, histone modification analysis, 组蛋白修饰谱, 组蛋白修饰分析; matched_platforms: GEO, SRA, ArrayExpress; subcategory: epigenomics |
-| whole genome sequencing | P0 | covered | matched_terms: whole genome sequencing, whole-genome sequencing, WGS, 全基因组, 全基因组测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: genomics |
-| whole exome sequencing | P0 | covered | matched_terms: whole exome sequencing, whole-exome sequencing, WES, 全外显子, 全外显子测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: genomics |
-| targeted sequencing | P1 | covered | matched_terms: targeted sequencing, targeted DNA sequencing, amplicon sequencing, 靶向测序, 目标区域测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: genomics |
-| panel sequencing | P1 | covered | matched_terms: panel sequencing, gene panel sequencing, targeted panel sequencing, panel测序, 基因panel测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: genomics |
-| SNP array | P1 | covered | matched_terms: SNP array, single nucleotide polymorphism array, genotyping array, SNP芯片, 基因分型芯片; matched_platforms: GEO, ArrayExpress; subcategory: genomics |
-| copy number variation | P1 | covered | matched_terms: copy number variation, copy number alteration, copy number profiling, CNV, 拷贝数变异, 拷贝数改变; matched_platforms: GEO, ArrayExpress, TCGA; subcategory: genomics |
-| mutation profiling | P1 | covered | matched_terms: mutation profiling, mutation analysis, variant profiling, 突变谱, 突变分析; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: genomics |
-| somatic mutation | P1 | covered | matched_terms: somatic mutation, somatic variant, somatic mutation profiling, 体细胞突变, 体细胞变异; matched_platforms: GEO, SRA, TCGA; subcategory: genomics |
-| germline variant | P1 | covered | matched_terms: germline variant, germline mutation, inherited variant, 胚系变异, 生殖系变异; matched_platforms: GEO, SRA, ArrayExpress; subcategory: genomics |
-| single-cell multiomics | P1 | covered | matched_terms: single-cell multiomics, single-cell multi-omics, single cell multiomics, 单细胞多组学, 单细胞multiomics; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| single-cell ATAC-seq | P1 | covered | matched_terms: single-cell ATAC-seq, scATAC-seq, single cell ATAC sequencing, 单细胞ATAC测序, 单细胞染色质开放性测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| CITE-seq | P1 | covered | matched_terms: CITE-seq, cellular indexing of transcriptomes and epitopes by sequencing, 细胞索引转录组表位测序, CITE测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| single-cell proteogenomics | P1 | covered | matched_terms: single-cell proteogenomics, single cell proteogenomics, 单细胞蛋白基因组学, 单细胞蛋白基因组; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| multiome ATAC + gene expression | P1 | covered | matched_terms: multiome ATAC + gene expression, multiome ATAC and gene expression, 10x multiome, ATAC和基因表达multiome, 单细胞ATAC加表达; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| cell type annotation | P1 | covered | matched_terms: cell type annotation, cell annotation, cell-type annotation, 细胞类型注释, 细胞注释; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| cell clustering | P1 | covered | matched_terms: cell clustering, single-cell clustering, clustering analysis, 细胞聚类, 单细胞聚类; matched_platforms: GEO, SRA, ArrayExpress; subcategory: single_cell_multiomics |
-| proteomics | P0 | covered | matched_terms: proteomics, protein profiling, proteome profiling, 蛋白组, 蛋白质组, 蛋白组学; matched_platforms: PRIDE, CPTAC, GEO, ArrayExpress; subcategory: proteomics_metabolomics |
-| mass spectrometry proteomics | P1 | covered | matched_terms: mass spectrometry proteomics, MS-based proteomics, mass spectrometry-based proteomics, MS proteomics, 质谱蛋白组, 质谱蛋白质组, MS蛋白组; matched_platforms: PRIDE, CPTAC; subcategory: proteomics_metabolomics |
-| phosphoproteomics | P1 | covered | matched_terms: phosphoproteomics, phosphoproteome profiling, phosphorylation proteomics, 磷酸化蛋白组, 磷酸化蛋白质组; matched_platforms: PRIDE, CPTAC; subcategory: proteomics_metabolomics |
-| metabolomics | P0 | covered | matched_terms: metabolomics, metabolome profiling, metabolic profiling, 代谢组, 代谢组学; matched_platforms: MetaboLights, GEO, ArrayExpress; subcategory: proteomics_metabolomics |
-| lipidomics | P1 | covered | matched_terms: lipidomics, lipidome profiling, lipid profiling, 脂质组, 脂质组学; matched_platforms: MetaboLights, GEO, ArrayExpress; subcategory: proteomics_metabolomics |
-| glycomics | P1 | covered | matched_terms: glycomics, glycome profiling, glycan profiling, 糖组学, 糖组; matched_platforms: GEO, ArrayExpress; subcategory: proteomics_metabolomics |
-| CRISPR screen | P1 | covered | matched_terms: CRISPR screen, CRISPR screening, CRISPR-Cas9 screen, CRISPR, CRISPR筛选, CRISPR筛查; matched_platforms: GEO, SRA, ArrayExpress; subcategory: functional_genomics |
-| RNAi screen | P1 | covered | matched_terms: RNAi screen, RNA interference screen, RNAi screening, RNAi, RNAi筛选, RNA干扰筛选; matched_platforms: GEO, ArrayExpress; subcategory: functional_genomics |
-| shRNA screen | P1 | covered | matched_terms: shRNA screen, short hairpin RNA screen, shRNA screening, shRNA, shRNA筛选, 短发夹RNA筛选; matched_platforms: GEO, ArrayExpress; subcategory: functional_genomics |
-| Perturb-seq | P1 | covered | matched_terms: Perturb-seq, perturbation sequencing, single-cell perturb-seq, 扰动测序; matched_platforms: GEO, SRA, ArrayExpress; subcategory: functional_genomics |
-| drug screen | P1 | covered | matched_terms: drug screen, drug screening, drug sensitivity screen, 药物筛选, 药物敏感性筛选; matched_platforms: GEO, ArrayExpress; subcategory: functional_genomics |
-| survival data | P1 | covered | matched_terms: survival data, survival metadata, overall survival data, OS, 生存数据, 生存信息; matched_platforms: TCGA, GEO; subcategory: clinical_phenotypic_omics |
-| clinical metadata | P1 | covered | matched_terms: clinical metadata, clinical data, clinical annotation, 临床信息, 临床数据; matched_platforms: TCGA, GEO; subcategory: clinical_phenotypic_omics |
-| phenotype data | P1 | covered | matched_terms: phenotype data, phenotypic data, phenotype metadata, 表型数据, 表型信息; matched_platforms: GEO, GTEx, TCGA; subcategory: clinical_phenotypic_omics |
-| immune infiltration | P1 | covered | matched_terms: immune infiltration, immune cell infiltration, tumor immune infiltration, 免疫浸润, 免疫细胞浸润; matched_platforms: GEO, TCGA; subcategory: clinical_phenotypic_omics |
-| tumor microenvironment | P1 | covered | matched_terms: tumor microenvironment, tumour microenvironment, TME, 肿瘤微环境; matched_platforms: GEO, TCGA; subcategory: clinical_phenotypic_omics |
-| pathway activity | P1 | covered | matched_terms: pathway activity, pathway activity analysis, pathway score, 通路活性, 通路活性分析; matched_platforms: GEO, TCGA, GTEx; subcategory: clinical_phenotypic_omics |
-| gene signature | P1 | covered | matched_terms: gene signature, gene expression signature, molecular signature, 基因签名, 基因特征; matched_platforms: GEO, TCGA; subcategory: clinical_phenotypic_omics |
-| sequencing | P0 | covered | matched_terms: sequencing, sequencing assay, high-throughput sequencing, 测序, 高通量测序; matched_platforms: GEO, SRA, ArrayExpress, TCGA; subcategory: genomics |
-
-## Bioinformatics Modality Core Summary
-
-- bioinformatics modality checklist total count: 65
-- covered count: 65
-- missing count: 0
-- coverage percentage: 1.000
-- missing terms: 0
-- quality gate status: pass
-- missing term details: none
-- high-risk ambiguity terms: RNA-seq, scRNA-seq, ATAC-seq, ChIP-seq, WGS, WES, proteomics, metabolomics, 芯片, 表达谱, 测序
-
 ## P0 Gaps
 
 No P0 gaps detected.
@@ -486,8 +405,6 @@ No P2 gaps detected.
 | anatomy_tissue_core_coverage | 1.0 | 0.95 | pass |
 | anatomy_tissue_missing_gtex_tissues | 0 | 0 | pass |
 | anatomy_tissue_missing_tcga_primary_sites | 0 | 0 | pass |
-| bioinformatics_modality_core_coverage | 1.0 | 0.95 | pass |
-| bioinformatics_modality_missing_terms | 0 | 0 | pass |
 | missing_items | 0 | 0 | pass |
 | p0_gaps | 0 | 0 | pass |
 | audit_cross_context_pollution | 0 | 0 | pass |
@@ -496,7 +413,6 @@ No P2 gaps detected.
 ## External Resource Sources And Version Notes
 
 - anatomy_tissue_core: project-curated GTEx tissue site and TCGA primary site checklist (2026-05-11 curated v1)
-- bioinformatics_modality_core: BioMedPilot curated shared medical vocabulary checklist (bioinformatics_modality_core_v1)
 - common_cancers: GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects (Curated common cancer checklist, 2026-05)
 - common_diseases: WHO noncommunicable diseases and major disease categories (Curated major disease category checklist, 2026-05)
 - endocrine_metabolic_core: project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist (2026-05-11 curated v1)

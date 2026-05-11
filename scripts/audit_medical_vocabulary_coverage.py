@@ -55,8 +55,6 @@ def build_coverage_audit_report() -> dict[str, Any]:
             section = _audit_endocrine_metabolic_core(checklist, corpus)
         elif coverage_type == "anatomy_tissue_core":
             section = _audit_anatomy_tissue_core(checklist, corpus)
-        elif coverage_type == "bioinformatics_modality_core":
-            section = _audit_bioinformatics_modality_core(checklist, corpus)
         else:
             section = _audit_generic_terms(checklist, corpus)
         sections[str(checklist.get("checklist_id"))] = section
@@ -156,23 +154,6 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 "## Anatomy Tissue Core Summary",
                 "",
                 _anatomy_tissue_summary_lines(sections["anatomy_tissue_core"]),
-                "",
-            ]
-        )
-    if "bioinformatics_modality_core" in sections:
-        lines.extend(
-            [
-                "## Bioinformatics Modality Core Covered/Missing",
-                "",
-                _details_table(
-                    sections["bioinformatics_modality_core"],
-                    label_key="label",
-                    extra_keys=("matched_terms", "matched_platforms", "subcategory"),
-                ),
-                "",
-                "## Bioinformatics Modality Core Summary",
-                "",
-                _bioinformatics_modality_summary_lines(sections["bioinformatics_modality_core"]),
                 "",
             ]
         )
@@ -454,41 +435,6 @@ def _audit_anatomy_tissue_core(checklist: dict[str, Any], corpus: VocabularyCorp
     return section
 
 
-def _audit_bioinformatics_modality_core(checklist: dict[str, Any], corpus: VocabularyCorpus) -> dict[str, Any]:
-    details = []
-    missing_terms: list[dict[str, Any]] = []
-    modality_text = set(corpus.all_text)
-    for item in checklist["items"]:
-        expected_terms = _list(item.get("expected_terms"))
-        expected_platforms = _list(item.get("expected_platforms") or item.get("related_platforms"))
-        matched_terms = _matched_terms(expected_terms, modality_text)
-        matched_platforms = _matched_terms(expected_platforms, modality_text)
-        missing_for_item = [term for term in expected_terms if term not in matched_terms]
-        if expected_terms and not missing_for_item:
-            status = "covered"
-        elif matched_terms or matched_platforms:
-            status = "partially_covered"
-        else:
-            status = "missing"
-        detail = _detail(
-            item,
-            status,
-            matched_terms=matched_terms,
-            matched_platforms=matched_platforms,
-            missing_terms=missing_for_item,
-            subcategory=str(item.get("subcategory") or ""),
-            avoid_expansion_to=_list(item.get("avoid_expansion_to")),
-            ambiguity_notes=str(item.get("ambiguity_notes") or ""),
-        )
-        details.append(detail)
-        if missing_for_item:
-            missing_terms.append({"id": detail["id"], "label": detail["label"], "missing_terms": missing_for_item})
-    section = _section(checklist, details)
-    section["missing_terms"] = missing_terms
-    section["high_risk_ambiguity_terms"] = checklist.get("ambiguity_terms", [])
-    return section
-
-
 def _section(checklist: dict[str, Any], details: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(details)
     covered = sum(1 for item in details if item["status"] == "covered")
@@ -638,23 +584,6 @@ def _quality_gates(sections: dict[str, Any], gaps: dict[str, list[dict[str, str]
                 ),
             ]
             if "anatomy_tissue_core" in sections
-            else []
-        ),
-        *(
-            [
-                _threshold_gate(
-                    "bioinformatics_modality_core_coverage",
-                    "Bioinformatics modality core checklist coverage must stay >= 95%.",
-                    sections["bioinformatics_modality_core"]["coverage_rate"],
-                    0.95,
-                ),
-                _zero_gate(
-                    "bioinformatics_modality_missing_terms",
-                    "Bioinformatics modality core should not have missing expected terms.",
-                    len(sections["bioinformatics_modality_core"].get("missing_terms", [])),
-                ),
-            ]
-            if "bioinformatics_modality_core" in sections
             else []
         ),
         _zero_gate(
@@ -912,30 +841,6 @@ def _anatomy_tissue_summary_lines(section: dict[str, Any]) -> str:
         f"- TCGA primary site coverage: {primary.get('covered_count', 0)}/{primary.get('expected_count', 0)} ({primary.get('coverage_rate', 0):.3f})",
         f"- missing TCGA primary sites: {', '.join(primary.get('missing_sites', [])) or 'none'}",
     ]
-    if ambiguity_terms:
-        rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
-        lines.append(f"- high-risk ambiguity terms: {rendered_terms}")
-    else:
-        lines.append("- high-risk ambiguity terms: none")
-    return "\n".join(lines)
-
-
-def _bioinformatics_modality_summary_lines(section: dict[str, Any]) -> str:
-    ambiguity_terms = section.get("high_risk_ambiguity_terms", [])
-    missing_terms = section.get("missing_terms", [])
-    lines = [
-        f"- bioinformatics modality checklist total count: {section['total_checklist_items']}",
-        f"- covered count: {section['covered']}",
-        f"- missing count: {section['missing']}",
-        f"- coverage percentage: {section['coverage_rate']:.3f}",
-        f"- missing terms: {len(missing_terms)}",
-        f"- quality gate status: {'pass' if section['coverage_rate'] >= 0.95 and not missing_terms else 'fail'}",
-    ]
-    if missing_terms:
-        rendered = ", ".join(f"{item['id']}: {', '.join(item['missing_terms'])}" for item in missing_terms[:10])
-        lines.append(f"- missing term details: {rendered}")
-    else:
-        lines.append("- missing term details: none")
     if ambiguity_terms:
         rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
         lines.append(f"- high-risk ambiguity terms: {rendered_terms}")
