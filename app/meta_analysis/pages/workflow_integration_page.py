@@ -56,143 +56,55 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
         "title_zh": "Meta 项目首页",
         "route_key": "workflow_home",
         "primary_action_zh": "查看流程状态",
-        "next_action_zh": "进入研究问题",
+        "next_action_zh": "继续：研究问题 / PICO",
         "next_step_id": "pico_workspace",
     },
     {
         "step_id": "pico_workspace",
-        "title_zh": "中文研究问题 / PICO",
+        "title_zh": "研究问题 / PICO",
         "route_key": "pico_workspace",
         "primary_action_zh": "生成 PICO 草稿",
         "next_action_zh": "确认后生成检索策略",
-        "next_step_id": "search_strategy",
+        "next_step_id": "search_import",
     },
     {
-        "step_id": "search_strategy",
-        "title_zh": "检索策略",
+        "step_id": "search_import",
+        "title_zh": "检索与文献导入",
         "route_key": "search_strategy",
         "primary_action_zh": "生成检索策略",
-        "next_action_zh": "进入文献获取",
-        "next_step_id": "literature_acquisition",
+        "next_action_zh": "导入文献后进入筛选",
+        "next_step_id": "screening",
     },
     {
-        "step_id": "literature_acquisition",
-        "title_zh": "文献获取",
-        "route_key": "literature_acquisition",
-        "primary_action_zh": "导入选中文献",
-        "next_action_zh": "查看文献库",
-        "next_step_id": "literature_library",
-    },
-    {
-        "step_id": "literature_library",
-        "title_zh": "文献库",
-        "route_key": "literature_library",
-        "primary_action_zh": "查看文献记录",
-        "next_action_zh": "进入去重复核",
-        "next_step_id": "dedup_review",
-    },
-    {
-        "step_id": "dedup_review",
-        "title_zh": "去重复核",
-        "route_key": "dedup_review",
-        "primary_action_zh": "查看重复组",
-        "next_action_zh": "配置排除标准",
-        "next_step_id": "exclusion_criteria",
-    },
-    {
-        "step_id": "exclusion_criteria",
-        "title_zh": "排除标准",
-        "route_key": "exclusion_criteria",
-        "primary_action_zh": "查看排除理由",
-        "next_action_zh": "进入标题摘要筛选",
-        "next_step_id": "title_abstract_screening",
-    },
-    {
-        "step_id": "title_abstract_screening",
-        "title_zh": "标题摘要筛选",
+        "step_id": "screening",
+        "title_zh": "文献筛选",
         "route_key": "title_abstract_screening",
-        "primary_action_zh": "查看筛选占位",
-        "next_action_zh": "进入全文管理",
-        "next_step_id": "fulltext_management",
+        "primary_action_zh": "查看筛选队列",
+        "next_action_zh": "完成筛选后进入数据提取",
+        "next_step_id": "extraction_quality",
     },
     {
-        "step_id": "fulltext_management",
-        "title_zh": "全文管理与全文筛选",
-        "route_key": "fulltext_management",
-        "primary_action_zh": "查看全文状态",
-        "next_action_zh": "进入数据提取",
-        "next_step_id": "manual_extraction",
-    },
-    {
-        "step_id": "manual_extraction",
-        "title_zh": "数据提取",
+        "step_id": "extraction_quality",
+        "title_zh": "数据提取与质量评价",
         "route_key": "manual_extraction",
         "primary_action_zh": "新建提取行",
-        "next_action_zh": "进入 AI 辅助提取",
-        "next_step_id": "ai_extraction",
+        "next_action_zh": "完成质量评价后进入统计分析",
+        "next_step_id": "analysis_results",
     },
     {
-        "step_id": "ai_extraction",
-        "title_zh": "AI 辅助提取",
-        "route_key": "ai_extraction",
-        "primary_action_zh": "查看建议队列",
-        "next_action_zh": "进入质量评价",
-        "next_step_id": "quality_assessment",
-    },
-    {
-        "step_id": "quality_assessment",
-        "title_zh": "质量评价",
-        "route_key": "quality_assessment",
-        "primary_action_zh": "保存人工评分",
-        "next_action_zh": "进入分析计划",
-        "next_step_id": "analysis_plan",
-    },
-    {
-        "step_id": "analysis_plan",
-        "title_zh": "分析计划",
-        "route_key": "analysis_plan",
-        "primary_action_zh": "生成分析计划草稿",
-        "next_action_zh": "确认后进入统计分析",
-        "next_step_id": "statistics_analysis",
-    },
-    {
-        "step_id": "statistics_analysis",
-        "title_zh": "统计分析",
+        "step_id": "analysis_results",
+        "title_zh": "统计分析与结果",
         "route_key": "statistics_analysis",
         "primary_action_zh": "查看分析计划",
-        "next_action_zh": "等待统计引擎接入",
-        "next_step_id": "figure_results",
+        "next_action_zh": "查看统计结果与图表",
+        "next_step_id": "prisma_reporting",
     },
     {
-        "step_id": "figure_results",
-        "title_zh": "图表结果",
-        "route_key": "figure_results",
-        "primary_action_zh": "查看图表占位",
-        "next_action_zh": "进入 PRISMA",
-        "next_step_id": "prisma",
-    },
-    {
-        "step_id": "prisma",
-        "title_zh": "PRISMA",
-        "route_key": "prisma",
-        "primary_action_zh": "查看 PRISMA 占位",
-        "next_action_zh": "进入报告导出",
-        "next_step_id": "report_export",
-    },
-    {
-        "step_id": "report_export",
-        "title_zh": "报告导出",
+        "step_id": "prisma_reporting",
+        "title_zh": "PRISMA 与报告导出",
         "route_key": "report_export",
         "primary_action_zh": "查看报告占位",
-        "next_action_zh": "进入可复现项目包",
-        "next_step_id": "reproducibility_package",
-    },
-    {
-        "step_id": "reproducibility_package",
-        "title_zh": "可复现项目包",
-        "route_key": "reproducibility_package",
-        "primary_action_zh": "查看导出占位",
-        "next_action_zh": "等待可复现包接入",
+        "next_action_zh": "导出报告与复现包",
         "next_step_id": "",
     },
 )
@@ -230,38 +142,58 @@ def _step_state(project_dir: Path, order: int, definition: dict[str, str]) -> Me
         return _project_home_state(project_dir, order, definition)
     if step_id == "pico_workspace":
         return _pico_state(project_dir, order, definition)
-    if step_id == "search_strategy":
-        return _search_strategy_state(project_dir, order, definition)
-    if step_id == "literature_acquisition":
-        return _pubmed_handoff_state(project_dir, order, definition)
-    if step_id == "literature_library":
-        return _literature_library_state(project_dir, order, definition)
-    if step_id == "dedup_review":
-        return _dedup_state(project_dir, order, definition)
-    if step_id == "exclusion_criteria":
-        return _placeholder_state(project_dir, order, definition, "排除标准页面将在 UI-07 接入；本轮不执行筛选")
-    if step_id == "title_abstract_screening":
-        return _placeholder_state(project_dir, order, definition, "标题摘要筛选将在 UI-08 接入；本轮不创建筛选决定")
-    if step_id == "fulltext_management":
-        return _fulltext_state(project_dir, order, definition)
-    if step_id == "manual_extraction":
-        return _manual_extraction_state(project_dir, order, definition)
-    if step_id == "ai_extraction":
-        return _ai_extraction_state(project_dir, order, definition)
-    if step_id == "quality_assessment":
-        return _quality_state(project_dir, order, definition)
-    if step_id == "analysis_plan":
-        return _analysis_plan_state(project_dir, order, definition)
-    if step_id == "statistics_analysis":
-        return _statistics_placeholder_state(project_dir, order, definition)
-    if step_id == "figure_results":
-        return _placeholder_state(project_dir, order, definition, "图表输出将在 M18 接入")
-    if step_id == "prisma":
-        return _placeholder_state(project_dir, order, definition, "PRISMA 引擎将在 UI-16 接入；数字必须来自真实流程记录")
-    if step_id == "report_export":
-        return _placeholder_state(project_dir, order, definition, "正式报告将在 M20 接入")
-    if step_id == "reproducibility_package":
-        return _placeholder_state(project_dir, order, definition, "可复现项目包将在 UI-18 接入")
+    if step_id == "search_import":
+        return _aggregate_stage_state(
+            project_dir,
+            order,
+            definition,
+            (
+                _search_strategy_state(project_dir, order, {**definition, "step_id": "search_strategy"}),
+                _pubmed_handoff_state(project_dir, order, {**definition, "step_id": "literature_acquisition"}),
+                _literature_library_state(project_dir, order, {**definition, "step_id": "literature_library"}),
+            ),
+        )
+    if step_id == "screening":
+        return _aggregate_stage_state(
+            project_dir,
+            order,
+            definition,
+            (
+                _dedup_state(project_dir, order, {**definition, "step_id": "dedup_review"}),
+                _fulltext_state(project_dir, order, {**definition, "step_id": "fulltext_management"}),
+            ),
+        )
+    if step_id == "extraction_quality":
+        return _aggregate_stage_state(
+            project_dir,
+            order,
+            definition,
+            (
+                _manual_extraction_state(project_dir, order, {**definition, "step_id": "manual_extraction"}),
+                _ai_extraction_state(project_dir, order, {**definition, "step_id": "ai_extraction"}),
+                _quality_state(project_dir, order, {**definition, "step_id": "quality_assessment"}),
+            ),
+        )
+    if step_id == "analysis_results":
+        return _aggregate_stage_state(
+            project_dir,
+            order,
+            definition,
+            (
+                _analysis_plan_state(project_dir, order, {**definition, "step_id": "analysis_plan"}),
+                _statistics_placeholder_state(project_dir, order, {**definition, "step_id": "statistics_analysis"}),
+            ),
+        )
+    if step_id == "prisma_reporting":
+        return _aggregate_stage_state(
+            project_dir,
+            order,
+            definition,
+            (
+                _placeholder_state(project_dir, order, {**definition, "step_id": "prisma"}, "PRISMA 数字来自真实流程记录"),
+                _placeholder_state(project_dir, order, {**definition, "step_id": "report_export"}, "报告导出仍为测试版"),
+            ),
+        )
     return _base_state(project_dir, order, definition, status="待开发", artifact_summary="暂不可用")
 
 
@@ -269,6 +201,7 @@ def _project_home_state(project_dir: Path, order: int, definition: dict[str, str
     artifact_paths = _existing_paths(
         project_dir,
         (
+            "meta_project_manifest.json",
             "protocol/pico_workspace_confirmed.json",
             "protocol/search_strategy_v2/search_strategy_confirmed.json",
             "literature/library_manifest.json",
@@ -486,12 +419,53 @@ def _statistics_placeholder_state(project_dir: Path, order: int, definition: dic
     )
 
 
+def _aggregate_stage_state(
+    project_dir: Path,
+    order: int,
+    definition: dict[str, str],
+    children: tuple[MetaWorkflowStepState, ...],
+) -> MetaWorkflowStepState:
+    statuses = [child.status for child in children]
+    complete = {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "已有人工评分", "已有全文状态", "已导入选中项"}
+    needs_confirm = {"草稿待确认", "待人工复核", "等待用户选择", "有待审核建议"}
+    if statuses and all(status in complete for status in statuses):
+        status = "已完成"
+    elif any(status in needs_confirm for status in statuses):
+        status = "需要确认"
+    elif any(status not in {"未开始", "暂不可用", "testing-level"} for status in statuses):
+        status = "进行中"
+    elif any(status == "暂不可用" for status in statuses):
+        status = "暂不可用"
+    else:
+        status = "未开始"
+    artifact_paths = tuple(path for child in children for path in child.artifact_paths)
+    warnings = tuple(warning for child in children for warning in child.warnings)
+    summary = "；".join(f"{child.title_zh}：{child.artifact_summary}" for child in children)
+    safety_flags = {
+        "auto_confirms_research_judgement": False,
+        "runs_statistics": False,
+        "advances_prisma": False,
+    }
+    return _base_state(
+        project_dir,
+        order,
+        definition,
+        status=status,
+        artifact_count=sum(child.artifact_count for child in children),
+        artifact_summary=summary,
+        artifact_paths=artifact_paths,
+        warnings=warnings,
+        placeholder=all(child.placeholder for child in children),
+        safety_flags=safety_flags,
+    )
+
+
 def _placeholder_state(project_dir: Path, order: int, definition: dict[str, str], message: str) -> MetaWorkflowStepState:
     return _base_state(
         project_dir,
         order,
         definition,
-        status="待开发",
+        status="暂不可用",
         artifact_summary=message,
         artifact_paths=(),
         warnings=(message,),
