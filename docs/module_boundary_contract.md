@@ -7,8 +7,8 @@ existing code or change runtime behavior.
 
 ## Overall Principles
 
-- `app/shared/` owns common vocabulary, context filtering, and shared data
-  structures.
+- `app/shared/` owns common query-intelligence interfaces, lightweight registry
+  fallback, context filtering, and shared data structures.
 - Bioinformatics owns local data import, GEO/GSE, TCGA/GDC, GTEx, data
   recognition, standardization, analysis tasks, results, and reports.
 - Meta Analysis owns PubMed, Web of Science, Embase, CNKI, NBIB/RIS/CSV,
@@ -24,10 +24,16 @@ Allowed shared locations:
 
 - `app/shared/search_context.py`
 - `app/shared/query_intelligence/medical_terms/`
-- `data/medical_terms/`
-- Common medical vocabulary loading and lookup
+- Optional external `data/medical_terms/` assets supplied by
+  `dev/shared-vocabulary`
+- Common medical vocabulary interfaces and fallback lookup
 - Chinese-to-English medical term mapping
 - Context-specific filtering for Bioinformatics and Meta Analysis
+
+`stable/mainline` must not require bundled `data/medical_terms` assets to start
+the app or run Bioinformatics recognition. Full vocabulary data, generated
+indexes, coverage reports, and vocabulary quality gates belong on
+`dev/shared-vocabulary`.
 
 Forbidden shared behavior:
 

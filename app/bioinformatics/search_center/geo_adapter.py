@@ -105,7 +105,7 @@ def _candidate_from_geo_item(item: GeoDatasetSearchItem, query: StructuredBioinf
         source="geo",
         accession_or_project=item.accession,
         display_title=item.title,
-        organism=item.organism or "Homo sapiens",
+        organism=item.organism or "未记录",
         disease=", ".join(query.disease_terms_en),
         tissue=", ".join(query.tissue_terms),
         data_modality=item.data_type,

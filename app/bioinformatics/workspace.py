@@ -77,6 +77,7 @@ if QWidget is not None:
                 on_continue=self.show_readiness,
                 on_back=self.show_data_source,
             )
+            self._recognition_page.navigate_requested.connect(self._handle_workflow_navigation)
             self._readiness_page = BioinformaticsReadinessDashboardWidget(
                 on_continue=self.show_standardization,
                 on_back=self.show_recognition,
@@ -178,6 +179,16 @@ if QWidget is not None:
 
         def show_settings(self) -> None:
             self._stack.setCurrentWidget(self._settings_page)
+
+        def _handle_workflow_navigation(self, target: str, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            if target == "data_source":
+                self.show_data_source(summary)
+            elif target == "standardization":
+                self.show_standardization(summary)
+            elif target == "analysis_tasks":
+                self.show_analysis_tasks(summary)
+            elif target == "result_browser":
+                self.show_results_browser(summary)
 
         def current_project(self) -> BioinformaticsProjectSummary | Path | None:
             return self._current_project
