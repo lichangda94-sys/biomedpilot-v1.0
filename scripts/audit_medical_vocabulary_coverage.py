@@ -48,6 +48,8 @@ def build_coverage_audit_report() -> dict[str, Any]:
             section = _audit_gtex_tissues(checklist, corpus)
         elif coverage_type == "meta_terms":
             section = _audit_meta_terms(checklist, corpus)
+        elif coverage_type == "oncology_core":
+            section = _audit_oncology_core(checklist, corpus)
         else:
             section = _audit_generic_terms(checklist, corpus)
         sections[str(checklist.get("checklist_id"))] = section
@@ -98,25 +100,46 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         "",
         _details_table(sections["meta_terms"], label_key="label", extra_keys=("matched_terms", "coverage_fraction")),
         "",
-        "## P0 Gaps",
-        "",
-        _gap_list(report["prioritized_gaps"]["P0"], "No P0 gaps detected."),
-        "",
-        "## P1 Gaps",
-        "",
-        _gap_list(report["prioritized_gaps"]["P1"], "No P1 gaps detected."),
-        "",
-        "## P2 Gaps",
-        "",
-        _gap_list(report["prioritized_gaps"]["P2"], "No P2 gaps detected."),
-        "",
-        "## Quality Gates",
-        "",
-        _quality_gate_table(report["quality_gates"]),
-        "",
-        "## External Resource Sources And Version Notes",
-        "",
     ]
+    if "oncology_core" in sections:
+        lines.extend(
+            [
+                "## Oncology Core Covered/Missing",
+                "",
+                _details_table(
+                    sections["oncology_core"],
+                    label_key="label",
+                    extra_keys=("matched_terms", "matched_tcga_projects", "matched_gtex_tissues"),
+                ),
+                "",
+                "## Oncology Core Summary",
+                "",
+                _oncology_summary_lines(sections["oncology_core"]),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## P0 Gaps",
+            "",
+            _gap_list(report["prioritized_gaps"]["P0"], "No P0 gaps detected."),
+            "",
+            "## P1 Gaps",
+            "",
+            _gap_list(report["prioritized_gaps"]["P1"], "No P1 gaps detected."),
+            "",
+            "## P2 Gaps",
+            "",
+            _gap_list(report["prioritized_gaps"]["P2"], "No P2 gaps detected."),
+            "",
+            "## Quality Gates",
+            "",
+            _quality_gate_table(report["quality_gates"]),
+            "",
+            "## External Resource Sources And Version Notes",
+            "",
+        ]
+    )
     for note in report["source_notes"]:
         lines.append(f"- {note['checklist_id']}: {note['source']} ({note['source_version']})")
     lines.extend(
@@ -228,6 +251,57 @@ def _audit_generic_terms(checklist: dict[str, Any], corpus: VocabularyCorpus) ->
     return _section(checklist, details)
 
 
+def _audit_oncology_core(checklist: dict[str, Any], corpus: VocabularyCorpus) -> dict[str, Any]:
+    details = []
+    expected_tcga_all: set[str] = set()
+    matched_tcga_all: set[str] = set()
+    missing_common: list[dict[str, str]] = []
+    for item in checklist["items"]:
+        expected_terms = _list(item.get("expected_terms"))
+        expected_projects = _list(item.get("expected_tcga_projects"))
+        expected_tissues = _list(item.get("expected_gtex_tissues"))
+        matched_terms = _matched_terms(expected_terms, corpus.all_text)
+        matched_projects = [project for project in expected_projects if _norm(project) in corpus.tcga_projects]
+        matched_tissues = [tissue for tissue in expected_tissues if _norm(tissue) in corpus.gtex_tissues]
+        expected_tcga_all.update(expected_projects)
+        matched_tcga_all.update(matched_projects)
+        term_requirement_met = not expected_terms or bool(matched_terms)
+        project_requirement_met = not expected_projects or set(map(_norm, expected_projects)) <= set(map(_norm, matched_projects))
+        if term_requirement_met and project_requirement_met:
+            status = "covered"
+        elif matched_terms or matched_projects:
+            status = "partially_covered"
+        else:
+            status = "missing"
+        detail = _detail(
+            item,
+            status,
+            matched_terms=matched_terms,
+            matched_tcga_projects=matched_projects,
+            matched_gtex_tissues=matched_tissues,
+            group=str(item.get("group") or ""),
+            parent_concept=str(item.get("parent_concept") or ""),
+            subtype_of=str(item.get("subtype_of") or ""),
+            avoid_expansion_to=_list(item.get("avoid_expansion_to")),
+            confusion_notes=str(item.get("confusion_notes") or ""),
+        )
+        details.append(detail)
+        if status == "missing" and detail["priority"] in {"P0", "P1"}:
+            missing_common.append({"id": detail["id"], "label": detail["label"], "priority": detail["priority"]})
+    section = _section(checklist, details)
+    missing_tcga = sorted(project for project in expected_tcga_all if project not in matched_tcga_all)
+    section["tcga_project_coverage"] = {
+        "expected_count": len(expected_tcga_all),
+        "covered_count": len(matched_tcga_all),
+        "missing_count": len(missing_tcga),
+        "coverage_rate": round(len(matched_tcga_all) / len(expected_tcga_all), 3) if expected_tcga_all else 0,
+        "missing_projects": missing_tcga,
+    }
+    section["missing_common_oncology_concepts"] = missing_common
+    section["high_risk_ambiguity_terms"] = checklist.get("ambiguity_terms", [])
+    return section
+
+
 def _section(checklist: dict[str, Any], details: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(details)
     covered = sum(1 for item in details if item["status"] == "covered")
@@ -322,6 +396,17 @@ def _quality_gates(sections: dict[str, Any], gaps: dict[str, list[dict[str, str]
             "Meta outcome, design, effect-size, and publication filter terms must stay >= 90%.",
             sections["meta_terms"]["coverage_rate"],
             0.90,
+        ),
+        _threshold_gate(
+            "oncology_core_coverage",
+            "Oncology core checklist coverage must stay >= 95%.",
+            sections["oncology_core"]["coverage_rate"],
+            0.95,
+        ),
+        _zero_gate(
+            "oncology_core_missing_tcga_projects",
+            "Oncology core must cover all TCGA 33 project candidates.",
+            sections["oncology_core"]["tcga_project_coverage"]["missing_count"],
         ),
         _zero_gate(
             "missing_items",
@@ -509,6 +594,31 @@ def _gap_list(items: list[dict[str, str]], empty: str) -> str:
     if not items:
         return empty
     return "\n".join(f"- {item['checklist']}::{item['id']} ({item['label']}): {item['status']}" for item in items)
+
+
+def _oncology_summary_lines(section: dict[str, Any]) -> str:
+    tcga = section.get("tcga_project_coverage", {})
+    ambiguity_terms = section.get("high_risk_ambiguity_terms", [])
+    lines = [
+        f"- oncology checklist total count: {section['total_checklist_items']}",
+        f"- covered count: {section['covered']}",
+        f"- missing count: {section['missing']}",
+        f"- coverage percentage: {section['coverage_rate']:.3f}",
+        f"- TCGA 33 project coverage: {tcga.get('covered_count', 0)}/{tcga.get('expected_count', 0)} ({tcga.get('coverage_rate', 0):.3f})",
+        f"- missing TCGA projects: {', '.join(tcga.get('missing_projects', [])) or 'none'}",
+    ]
+    missing_common = section.get("missing_common_oncology_concepts", [])
+    if missing_common:
+        rendered = ", ".join(f"{item['id']} ({item['priority']})" for item in missing_common)
+        lines.append(f"- missing common oncology concepts: {rendered}")
+    else:
+        lines.append("- missing common oncology concepts: none")
+    if ambiguity_terms:
+        rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
+        lines.append(f"- high-risk ambiguity terms: {rendered_terms}")
+    else:
+        lines.append("- high-risk ambiguity terms: none")
+    return "\n".join(lines)
 
 
 def _quality_gate_table(quality_gates: dict[str, Any]) -> str:
