@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from app.version import APP_VERSION
 
+
 META_PROJECT_MANIFEST = "meta_project_manifest.json"
 META_PROJECT_CONFIG = "meta_project_config.json"
 META_PROJECT_CONTRACT_VERSION = "meta_analysis_project_workspace_v1"
@@ -24,16 +25,6 @@ META_PROJECT_DIRECTORIES = (
     "reports",
     "logs",
     "exports",
-)
-
-META_COMPATIBILITY_DIRECTORIES = (
-    "protocol",
-    "literature",
-    "deduplication",
-    "fulltext",
-    "quality",
-    "figures",
-    "audit",
 )
 
 
@@ -73,11 +64,12 @@ def create_meta_analysis_project(
     if project_root.exists() and any(project_root.iterdir()) and not allow_existing_nonempty:
         raise FileExistsError(f"项目目录已存在且不是空文件夹：{project_root}")
     project_root.mkdir(parents=True, exist_ok=True)
-    for directory in (*META_PROJECT_DIRECTORIES, *META_COMPATIBILITY_DIRECTORIES):
+    for directory in META_PROJECT_DIRECTORIES:
         (project_root / directory).mkdir(parents=True, exist_ok=True)
+
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     project_id = f"meta-{uuid4().hex[:8]}"
-    directories = {name: str((project_root / name).resolve()) for name in (*META_PROJECT_DIRECTORIES, *META_COMPATIBILITY_DIRECTORIES)}
+    directories = {name: str((project_root / name).resolve()) for name in META_PROJECT_DIRECTORIES}
     manifest = {
         "contract_version": META_PROJECT_CONTRACT_VERSION,
         "project_id": project_id,
