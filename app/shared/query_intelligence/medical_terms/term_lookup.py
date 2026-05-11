@@ -15,6 +15,11 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     warnings: list[str] = []
     if normalized in {"scc", "rcc"}:
         warnings.append("检测到高歧义肿瘤缩写；需要补充部位或亚型后再做强疾病扩展。")
+    if target_context == "meta_analysis" and normalized in {"pr", "sd", "pd"}:
+        warnings.append("检测到高歧义 Meta 缩写；需要结合结局、受体或疾病上下文解释。")
+    suppress_exact_meta_short_token = target_context == "bioinformatics" and _is_exact_meta_short_token(query)
+    if suppress_exact_meta_short_token:
+        warnings.append("短 Meta 分析缩写未在 Bioinformatics context 中作为主结果输出。")
     matched_zh_terms: list[str] = []
     disease_terms: list[str] = []
     synonyms: list[str] = []
@@ -33,11 +38,17 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     outcome_terms: list[str] = []
     study_design_terms: list[str] = []
     publication_type_terms: list[str] = []
+    pico_terms: list[str] = []
+    effect_measures: list[str] = []
+    diagnostic_accuracy_terms: list[str] = []
+    exclusion_type_terms: list[str] = []
+    quality_assessment_terms: list[str] = []
+    pubmed_query_terms: list[str] = []
     concept_ids: list[str] = []
     term_sources: list[str] = []
     confidences: list[float] = []
 
-    overrides = _matched_overrides(normalized)
+    overrides = [] if suppress_exact_meta_short_token else _matched_overrides(normalized, query, target_context)
     if overrides:
         _append_unique(term_sources, "zh_term_overrides")
     for override in overrides:
@@ -60,10 +71,16 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(outcome_terms, override.outcome_terms)
         _extend_unique(study_design_terms, override.study_design_terms)
         _extend_unique(publication_type_terms, override.publication_type_terms)
+        _extend_unique(pico_terms, override.pico_terms)
+        _extend_unique(effect_measures, override.effect_measures)
+        _extend_unique(diagnostic_accuracy_terms, override.diagnostic_accuracy_terms)
+        _extend_unique(exclusion_type_terms, override.exclusion_type_terms)
+        _extend_unique(quality_assessment_terms, override.quality_assessment_terms)
+        _extend_unique(pubmed_query_terms, override.pubmed_query_terms)
         if override.confidence:
             confidences.append(override.confidence)
 
-    index_matches, index_source = _matched_runtime_index_concepts(normalized)
+    index_matches, index_source = ([], "") if suppress_exact_meta_short_token else _matched_runtime_index_concepts(normalized, query, target_context)
     if index_matches:
         _append_unique(term_sources, index_source)
     specific_index_modalities = [
@@ -71,6 +88,10 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     ]
     for concept in index_matches:
         if concept.concept_id == "mini:data_modality_core" and specific_index_modalities:
+            continue
+        if concept.concept_id in _BROAD_META_CORE_CONCEPT_IDS and _has_specific_meta_match(index_matches):
+            continue
+        if _should_skip_contextual_false_positive_concept(concept, normalized):
             continue
         _append_unique(concept_ids, concept.concept_id)
         if concept.concept_type == "disease":
@@ -90,12 +111,32 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         elif concept.concept_type == "outcome":
             _append_unique(outcome_terms, concept.preferred_label_en)
             _extend_unique(outcome_terms, concept.synonyms_en)
+            _extend_unique(outcome_terms, concept.pubmed_query_terms)
         elif concept.concept_type == "study_design":
             _append_unique(study_design_terms, concept.preferred_label_en)
             _extend_unique(study_design_terms, concept.synonyms_en)
+            _extend_unique(study_design_terms, concept.pubmed_query_terms)
         elif concept.concept_type == "publication_type":
             _append_unique(publication_type_terms, concept.preferred_label_en)
             _extend_unique(publication_type_terms, concept.synonyms_en)
+            _extend_unique(publication_type_terms, concept.pubmed_query_terms)
+        elif concept.concept_type == "pico_term":
+            _append_unique(pico_terms, concept.preferred_label_en)
+            _extend_unique(pico_terms, concept.pico_terms or concept.synonyms_en)
+        elif concept.concept_type == "effect_measure":
+            _append_unique(effect_measures, concept.preferred_label_en)
+            _extend_unique(effect_measures, concept.effect_measures or concept.synonyms_en)
+        elif concept.concept_type == "diagnostic_accuracy":
+            _append_unique(diagnostic_accuracy_terms, concept.preferred_label_en)
+            _extend_unique(diagnostic_accuracy_terms, concept.diagnostic_accuracy_terms or concept.synonyms_en)
+        elif concept.concept_type == "exclusion_type":
+            _append_unique(exclusion_type_terms, concept.preferred_label_en)
+            _extend_unique(exclusion_type_terms, concept.exclusion_type_terms or concept.synonyms_en)
+            _append_unique(publication_type_terms, concept.preferred_label_en)
+            _extend_unique(publication_type_terms, concept.exclusion_type_terms or concept.synonyms_en)
+        elif concept.concept_type == "quality_assessment":
+            _append_unique(quality_assessment_terms, concept.preferred_label_en)
+            _extend_unique(quality_assessment_terms, concept.quality_assessment_terms or concept.synonyms_en)
         elif concept.concept_type == "tissue":
             _append_unique(tissue_terms, concept.preferred_label_en)
             _extend_unique(tissue_terms, concept.synonyms_en)
@@ -111,13 +152,19 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(assay_terms, concept.assay_terms)
         _extend_unique(platform_candidates, concept.platform_candidates)
         _extend_unique(modifier_terms, concept.modifier_terms_en)
+        _extend_unique(pico_terms, concept.pico_terms)
+        _extend_unique(effect_measures, concept.effect_measures)
+        _extend_unique(diagnostic_accuracy_terms, concept.diagnostic_accuracy_terms)
+        _extend_unique(exclusion_type_terms, concept.exclusion_type_terms)
+        _extend_unique(quality_assessment_terms, concept.quality_assessment_terms)
+        _extend_unique(pubmed_query_terms, concept.pubmed_query_terms)
         _extend_unique(abbreviations, concept.abbreviations)
         _extend_unique(mesh_terms, concept.mesh_terms)
         _extend_unique(tcga_projects, concept.cross_refs.get("tcga", ()))
         _extend_unique(tcga_primary_sites, concept.cross_refs.get("tcga_primary_site", ()))
         _extend_unique(gtex_tissues, concept.cross_refs.get("gtex", ()))
 
-    registry_matches = match_registry_concepts(query, target_context=target_context)
+    registry_matches = [] if suppress_exact_meta_short_token else match_registry_concepts(query, target_context=target_context)
     if registry_matches:
         _append_unique(term_sources, "biomedical_term_registry")
     for concept in registry_matches:
@@ -149,6 +196,13 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         tcga_primary_sites = []
         gtex_tissues = []
         platform_candidates = []
+    elif target_context == "bioinformatics":
+        pico_terms = []
+        effect_measures = []
+        diagnostic_accuracy_terms = []
+        exclusion_type_terms = []
+        quality_assessment_terms = []
+        pubmed_query_terms = []
 
     return TermLookupResult(
         original_term=query,
@@ -166,6 +220,12 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
             or outcome_terms
             or study_design_terms
             or publication_type_terms
+            or pico_terms
+            or effect_measures
+            or diagnostic_accuracy_terms
+            or exclusion_type_terms
+            or quality_assessment_terms
+            or pubmed_query_terms
         ),
         matched_zh_terms=matched_zh_terms,
         disease_terms_en=disease_terms,
@@ -185,6 +245,12 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         outcome_terms=outcome_terms,
         study_design_terms=study_design_terms,
         publication_type_terms=publication_type_terms,
+        pico_terms=pico_terms,
+        effect_measures=effect_measures,
+        diagnostic_accuracy_terms=diagnostic_accuracy_terms,
+        exclusion_type_terms=exclusion_type_terms,
+        quality_assessment_terms=quality_assessment_terms,
+        pubmed_query_terms=pubmed_query_terms,
         concept_ids=concept_ids,
         term_sources=term_sources,
         confidence=max(confidences) if confidences else (0.75 if registry_matches else 0.0),
@@ -192,41 +258,48 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     )
 
 
-def _matched_overrides(normalized_query: str) -> list[ChineseTermOverride]:
+def _matched_overrides(normalized_query: str, raw_query: str, target_context: str) -> list[ChineseTermOverride]:
     candidates: list[ChineseTermOverride] = []
     for override in load_zh_overrides():
+        if not _override_allowed_for_context(override, target_context):
+            continue
         if not override.normalized_zh:
             continue
-        if override.normalized_zh == normalized_query or _term_matches_query(override.normalized_zh, normalized_query, override.zh_term):
+        exact_allowed = override.normalized_zh == normalized_query and not _is_strict_uppercase_short_token(override.zh_term)
+        if exact_allowed or _term_matches_query(override.normalized_zh, normalized_query, override.zh_term, raw_query):
             candidates.append(override)
     return _rank_override_matches(candidates)
 
 
-def _matched_runtime_index_concepts(normalized_query: str) -> tuple[list[TermConcept], str]:
-    full_matches = _matched_index_concepts(normalized_query, load_full_term_index())
+def _matched_runtime_index_concepts(normalized_query: str, raw_query: str, target_context: str) -> tuple[list[TermConcept], str]:
+    full_matches = _matched_index_concepts(normalized_query, raw_query, target_context, load_full_term_index())
     if full_matches:
         return full_matches, "medical_terms_index.sqlite"
-    mini_matches = _matched_index_concepts(normalized_query, load_mini_term_index())
+    mini_matches = _matched_index_concepts(normalized_query, raw_query, target_context, load_mini_term_index())
     if mini_matches:
         return mini_matches, "mini_medical_terms_index"
     return [], ""
 
 
-def _matched_index_concepts(normalized_query: str, concepts: tuple[TermConcept, ...]) -> list[TermConcept]:
+def _matched_index_concepts(normalized_query: str, raw_query: str, target_context: str, concepts: tuple[TermConcept, ...]) -> list[TermConcept]:
     candidates: list[TermConcept] = []
     for concept in concepts:
+        if not _concept_allowed_for_context(concept, target_context):
+            continue
         terms = [concept.preferred_label_en, *concept.normalized_terms, *concept.synonyms_en, *concept.exact_synonyms_en]
         for term in terms:
             normalized = normalize_zh_term(term) if not term.isascii() else normalize_en_term(term)
-            if _term_matches_query(normalized, normalized_query, term):
+            if _term_matches_query(normalized, normalized_query, term, raw_query):
                 candidates.append(concept)
                 break
     return _rank_concept_matches(candidates)
 
 
-def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: str) -> bool:
+def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: str, raw_query: str = "") -> bool:
     if not normalized_term:
         return False
+    if _is_strict_uppercase_short_token(raw_term):
+        return re.search(rf"(?<![A-Za-z0-9]){re.escape(raw_term)}(?![A-Za-z0-9])", raw_query) is not None
     if normalized_term == normalized_query:
         return True
     if not raw_term.isascii():
@@ -239,23 +312,88 @@ def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: s
 
 
 def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[ChineseTermOverride]:
-    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5}
+    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5, "outcome": 6, "effect_measure": 6, "study_design": 6, "publication_type": 6, "pico_term": 6, "diagnostic_accuracy": 6, "exclusion_type": 6, "quality_assessment": 6}
     candidates.sort(key=lambda item: (priority.get(item.concept_type, 9), -len(item.normalized_zh), -item.confidence))
     disease_spans = [item.normalized_zh for item in candidates if item.concept_type == "disease"]
+    has_specific_meta_override = any(
+        item.concept_type in _META_CONCEPT_TYPES
+        and not any(concept_id in _BROAD_META_CORE_CONCEPT_IDS for concept_id in item.mapped_concept_ids)
+        for item in candidates
+    )
     result: list[ChineseTermOverride] = []
     for item in candidates:
+        if any(item.normalized_zh != span and item.normalized_zh in span for span in (candidate.normalized_zh for candidate in candidates)):
+            continue
         if item.concept_type in {"tissue", "data_modality"} and any(item.normalized_zh != span and item.normalized_zh in span for span in disease_spans):
+            continue
+        if has_specific_meta_override and any(concept_id in _BROAD_META_CORE_CONCEPT_IDS for concept_id in item.mapped_concept_ids):
             continue
         result.append(item)
     return result
 
 
 def _rank_concept_matches(candidates: list[TermConcept]) -> list[TermConcept]:
-    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5}
+    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5, "outcome": 6, "effect_measure": 6, "study_design": 6, "publication_type": 6, "pico_term": 6, "diagnostic_accuracy": 6, "exclusion_type": 6, "quality_assessment": 6}
     unique: dict[str, TermConcept] = {candidate.concept_id: candidate for candidate in candidates}
     items = list(unique.values())
     items.sort(key=lambda item: (priority.get(item.concept_type, 9), -max((len(term) for term in item.normalized_terms), default=0)))
     return items
+
+
+_META_CONCEPT_TYPES = {
+    "pico_term",
+    "effect_measure",
+    "outcome",
+    "study_design",
+    "publication_type",
+    "diagnostic_accuracy",
+    "exclusion_type",
+    "quality_assessment",
+}
+
+_BROAD_META_CORE_CONCEPT_IDS = {
+    "mini:meta_outcomes_core",
+    "mini:study_design_core",
+    "mini:publication_exclusion_core",
+    "mini:effect_size_core",
+    "mini:publication_exclusion_gap_terms",
+}
+
+
+def _override_allowed_for_context(override: ChineseTermOverride, target_context: str) -> bool:
+    if target_context == "meta_analysis":
+        return True
+    if override.concept_type in _META_CONCEPT_TYPES:
+        return False
+    if override.contexts and "meta_analysis" in override.contexts and target_context not in override.contexts:
+        return False
+    return True
+
+
+def _concept_allowed_for_context(concept: TermConcept, target_context: str) -> bool:
+    if target_context == "meta_analysis":
+        return True
+    if concept.category == "meta_analysis_term" or concept.concept_type in _META_CONCEPT_TYPES:
+        return False
+    if concept.contexts and "meta_analysis" in concept.contexts and target_context not in concept.contexts:
+        return False
+    return True
+
+
+def _has_specific_meta_match(concepts: list[TermConcept]) -> bool:
+    return any(
+        concept.concept_id not in _BROAD_META_CORE_CONCEPT_IDS
+        and (concept.category == "meta_analysis_term" or concept.concept_type in _META_CONCEPT_TYPES)
+        for concept in concepts
+    )
+
+
+def _is_strict_uppercase_short_token(raw_term: str) -> bool:
+    return raw_term.isascii() and 1 < len(raw_term) <= 3 and raw_term.upper() == raw_term and raw_term.isalpha()
+
+
+def _is_exact_meta_short_token(query: str) -> bool:
+    return query.strip() in {"OS", "HR", "OR", "RR", "CI", "MD", "SMD", "SE", "PR", "CR", "SD", "PD"}
 
 
 def _tcga_from_database_terms(terms: tuple[str, ...]) -> list[str]:
@@ -330,6 +468,14 @@ def _should_skip_registry_concept(concept_id: str, normalized_query: str) -> boo
             "gastroesophageal junction",
         }
         return normalized_query in esophagus_tissue_terms
+    return False
+
+
+def _should_skip_contextual_false_positive_concept(concept: TermConcept, normalized_query: str) -> bool:
+    if concept.concept_id == "mini:meta_analysis_recurrence" and "发表" in normalized_query:
+        return True
+    if concept.concept_id == "mini:meta_analysis_risk" and normalized_query in {"风险比", "危险比", "风险率"}:
+        return True
     return False
 
 
