@@ -1,14 +1,14 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-11T10:00:28.263194+00:00",
+  "generated_at": "2026-05-11T10:09:27.032770+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
     "reference_checklists": "data/medical_terms/reference_checklists"
   },
   "overall": {
-    "total_checklist_items": 299,
-    "covered": 299,
+    "total_checklist_items": 364,
+    "covered": 364,
     "partially_covered": 0,
     "missing": 0,
     "coverage_rate": 1.0,
@@ -2805,6 +2805,2301 @@
           "term": "adipose tissue",
           "risk": "can be confused with obesity",
           "policy": "do not expand adipose tissue to obesity"
+        }
+      ]
+    },
+    "bioinformatics_modality_core": {
+      "checklist_id": "bioinformatics_modality_core",
+      "title": "Bioinformatics Modality Core Vocabulary v1",
+      "source": "BioMedPilot curated shared medical vocabulary checklist",
+      "source_version": "bioinformatics_modality_core_v1",
+      "total_checklist_items": 65,
+      "covered": 65,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "expression_profiling",
+          "label": "expression profiling",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "expression profiling",
+            "gene expression profiling",
+            "mRNA expression profiling",
+            "transcriptome profiling",
+            "表达谱",
+            "基因表达谱",
+            "表达谱分析",
+            "表达分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "expression profiling",
+            "gene expression profiling",
+            "mRNA expression profiling",
+            "transcriptome profiling",
+            "表达谱",
+            "基因表达谱",
+            "表达谱分析",
+            "表达分析"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "bulk RNA-seq",
+            "scRNA-seq"
+          ],
+          "ambiguity_notes": "Broad expression profiling term; may require platform disambiguation between sequencing and array."
+        },
+        {
+          "id": "transcriptome_profiling",
+          "label": "transcriptome profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "transcriptome profiling",
+            "transcriptomic profiling",
+            "transcriptomics",
+            "转录组分析",
+            "转录组测序分析",
+            "转录组表达谱"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "transcriptome profiling",
+            "transcriptomic profiling",
+            "transcriptomics",
+            "转录组分析",
+            "转录组测序分析",
+            "转录组表达谱"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "whole genome sequencing",
+            "proteomics"
+          ],
+          "ambiguity_notes": "Broad transcriptome modality."
+        },
+        {
+          "id": "rna_seq",
+          "label": "RNA-seq",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "RNA-seq",
+            "RNA sequencing",
+            "RNA sequencing assay",
+            "RNA测序",
+            "RNA测序数据",
+            "转录组测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "RNA-seq",
+            "RNA sequencing",
+            "RNA sequencing assay",
+            "RNA测序",
+            "RNA测序数据",
+            "转录组测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "scRNA-seq",
+            "snRNA-seq",
+            "WGS",
+            "WES"
+          ],
+          "ambiguity_notes": "RNA-seq should not match scRNA-seq as a substring."
+        },
+        {
+          "id": "bulk_rna_seq",
+          "label": "bulk RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "bulk RNA-seq",
+            "bulk RNA sequencing",
+            "bulk transcriptome sequencing",
+            "bulk RNA测序",
+            "bulk转录组",
+            "bulk RNA测序数据"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "bulk RNA-seq",
+            "bulk RNA sequencing",
+            "bulk transcriptome sequencing",
+            "bulk RNA测序",
+            "bulk转录组",
+            "bulk RNA测序数据"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "scRNA-seq",
+            "single-cell RNA-seq"
+          ],
+          "ambiguity_notes": "Bulk assay distinct from single-cell RNA-seq."
+        },
+        {
+          "id": "mrna_expression_profiling",
+          "label": "mRNA expression profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "mRNA expression profiling",
+            "messenger RNA expression profiling",
+            "mRNA expression analysis",
+            "mRNA表达谱",
+            "信使RNA表达谱",
+            "mRNA表达分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "mRNA expression profiling",
+            "messenger RNA expression profiling",
+            "mRNA expression analysis",
+            "mRNA表达谱",
+            "信使RNA表达谱",
+            "mRNA表达分析"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "miRNA profiling",
+            "lncRNA profiling"
+          ],
+          "ambiguity_notes": "mRNA-specific expression modality."
+        },
+        {
+          "id": "microarray",
+          "label": "microarray",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "microarray",
+            "microarray profiling",
+            "gene expression microarray",
+            "芯片",
+            "表达芯片",
+            "基因芯片",
+            "微阵列"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "microarray",
+            "microarray profiling",
+            "gene expression microarray",
+            "芯片",
+            "表达芯片",
+            "基因芯片",
+            "微阵列"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "RNA-seq",
+            "SNP array"
+          ],
+          "ambiguity_notes": "Broad chip term; expression array if transcriptomic context is present."
+        },
+        {
+          "id": "expression_array",
+          "label": "expression array",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "expression array",
+            "gene expression array",
+            "expression microarray",
+            "表达芯片",
+            "表达阵列",
+            "基因表达芯片"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "expression array",
+            "gene expression array",
+            "expression microarray",
+            "表达芯片",
+            "表达阵列",
+            "基因表达芯片"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "SNP array",
+            "methylation array"
+          ],
+          "ambiguity_notes": "Expression array, not SNP or methylation array."
+        },
+        {
+          "id": "scrna_seq",
+          "label": "single-cell RNA-seq",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "single-cell RNA-seq",
+            "single cell RNA sequencing",
+            "single-cell transcriptomics",
+            "scRNA-seq",
+            "单细胞",
+            "单细胞RNA测序",
+            "单细胞转录组",
+            "单细胞测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "single-cell RNA-seq",
+            "single cell RNA sequencing",
+            "single-cell transcriptomics",
+            "scRNA-seq",
+            "单细胞",
+            "单细胞RNA测序",
+            "单细胞转录组",
+            "单细胞测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "bulk RNA-seq",
+            "RNA-seq"
+          ],
+          "ambiguity_notes": "Single-cell RNA-seq should not automatically expand to bulk RNA-seq."
+        },
+        {
+          "id": "snrna_seq",
+          "label": "single-nucleus RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "single-nucleus RNA-seq",
+            "single nucleus RNA sequencing",
+            "single-nucleus transcriptomics",
+            "snRNA-seq",
+            "单核RNA测序",
+            "单核转录组"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "single-nucleus RNA-seq",
+            "single nucleus RNA sequencing",
+            "single-nucleus transcriptomics",
+            "snRNA-seq",
+            "单核RNA测序",
+            "单核转录组"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "single-cell RNA-seq",
+            "bulk RNA-seq"
+          ],
+          "ambiguity_notes": "Single-nucleus assay distinct from single-cell RNA-seq."
+        },
+        {
+          "id": "spatial_transcriptomics",
+          "label": "spatial transcriptomics",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "spatial transcriptomics",
+            "spatial gene expression profiling",
+            "spatial RNA profiling",
+            "空间转录组",
+            "空间转录组学",
+            "空间表达谱",
+            "空间RNA测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "spatial transcriptomics",
+            "spatial gene expression profiling",
+            "spatial RNA profiling",
+            "空间转录组",
+            "空间转录组学",
+            "空间表达谱",
+            "空间RNA测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "bulk RNA-seq",
+            "single-cell RNA-seq"
+          ],
+          "ambiguity_notes": "Spatial transcriptomic assay."
+        },
+        {
+          "id": "long_read_rna_seq",
+          "label": "long-read RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "long-read RNA-seq",
+            "long read RNA sequencing",
+            "long-read transcriptome sequencing",
+            "长读长RNA测序",
+            "长读长转录组",
+            "长读长RNA-seq"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "long-read RNA-seq",
+            "long read RNA sequencing",
+            "long-read transcriptome sequencing",
+            "长读长RNA测序",
+            "长读长转录组",
+            "长读长RNA-seq"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "short-read RNA-seq"
+          ],
+          "ambiguity_notes": "Long-read RNA sequencing modality."
+        },
+        {
+          "id": "total_rna_seq",
+          "label": "total RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "total RNA-seq",
+            "total RNA sequencing",
+            "total RNA测序",
+            "总RNA测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "total RNA-seq",
+            "total RNA sequencing",
+            "total RNA测序",
+            "总RNA测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "polyA RNA-seq"
+          ],
+          "ambiguity_notes": "Total RNA library strategy."
+        },
+        {
+          "id": "ribo_depleted_rna_seq",
+          "label": "ribo-depleted RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "ribo-depleted RNA-seq",
+            "ribo depleted RNA sequencing",
+            "ribosomal RNA depleted RNA-seq",
+            "去核糖体RNA测序",
+            "核糖体去除RNA测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "ribo-depleted RNA-seq",
+            "ribo depleted RNA sequencing",
+            "ribosomal RNA depleted RNA-seq",
+            "去核糖体RNA测序",
+            "核糖体去除RNA测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "polyA RNA-seq"
+          ],
+          "ambiguity_notes": "Ribo-depleted RNA library strategy."
+        },
+        {
+          "id": "polya_rna_seq",
+          "label": "polyA RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "polyA RNA-seq",
+            "polyadenylated RNA sequencing",
+            "polyA-selected RNA-seq",
+            "polyA RNA测序",
+            "polyA选择RNA测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "polyA RNA-seq",
+            "polyadenylated RNA sequencing",
+            "polyA-selected RNA-seq",
+            "polyA RNA测序",
+            "polyA选择RNA测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "transcriptomics",
+          "avoid_expansion_to": [
+            "ribo-depleted RNA-seq"
+          ],
+          "ambiguity_notes": "PolyA-selected RNA library strategy."
+        },
+        {
+          "id": "mirna_seq",
+          "label": "miRNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "miRNA-seq",
+            "microRNA sequencing",
+            "miRNA sequencing",
+            "miRNA测序",
+            "microRNA测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "miRNA-seq",
+            "microRNA sequencing",
+            "miRNA sequencing",
+            "miRNA测序",
+            "microRNA测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "noncoding_rna",
+          "avoid_expansion_to": [
+            "mRNA expression profiling"
+          ],
+          "ambiguity_notes": "microRNA sequencing."
+        },
+        {
+          "id": "microrna_profiling",
+          "label": "microRNA profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "microRNA profiling",
+            "miRNA expression profiling",
+            "microRNA expression profiling",
+            "miRNA",
+            "microRNA表达谱",
+            "miRNA表达谱"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "microRNA profiling",
+            "miRNA expression profiling",
+            "microRNA expression profiling",
+            "miRNA",
+            "microRNA表达谱",
+            "miRNA表达谱"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "noncoding_rna",
+          "avoid_expansion_to": [
+            "mRNA expression profiling"
+          ],
+          "ambiguity_notes": "microRNA expression profiling."
+        },
+        {
+          "id": "lncrna_profiling",
+          "label": "lncRNA profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "lncRNA profiling",
+            "long non-coding RNA profiling",
+            "lncRNA expression profiling",
+            "lncRNA",
+            "lncRNA表达谱",
+            "长链非编码RNA表达谱"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lncRNA profiling",
+            "long non-coding RNA profiling",
+            "lncRNA expression profiling",
+            "lncRNA",
+            "lncRNA表达谱",
+            "长链非编码RNA表达谱"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "noncoding_rna",
+          "avoid_expansion_to": [
+            "mRNA expression profiling"
+          ],
+          "ambiguity_notes": "lncRNA profiling."
+        },
+        {
+          "id": "circrna_profiling",
+          "label": "circRNA profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "circRNA profiling",
+            "circular RNA profiling",
+            "circRNA expression profiling",
+            "circRNA",
+            "circRNA表达谱",
+            "环状RNA表达谱"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "circRNA profiling",
+            "circular RNA profiling",
+            "circRNA expression profiling",
+            "circRNA",
+            "circRNA表达谱",
+            "环状RNA表达谱"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "noncoding_rna",
+          "avoid_expansion_to": [
+            "mRNA expression profiling"
+          ],
+          "ambiguity_notes": "circRNA profiling."
+        },
+        {
+          "id": "small_rna_seq",
+          "label": "small RNA-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "small RNA-seq",
+            "small RNA sequencing",
+            "小RNA测序",
+            "小RNA-seq"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "small RNA-seq",
+            "small RNA sequencing",
+            "小RNA测序",
+            "小RNA-seq"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "noncoding_rna",
+          "avoid_expansion_to": [
+            "mRNA expression profiling"
+          ],
+          "ambiguity_notes": "Small RNA sequencing."
+        },
+        {
+          "id": "dna_methylation_array",
+          "label": "DNA methylation array",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "DNA methylation array",
+            "methylation array",
+            "DNA methylation microarray",
+            "DNA甲基化芯片",
+            "甲基化芯片"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "DNA methylation array",
+            "methylation array",
+            "DNA methylation microarray",
+            "DNA甲基化芯片",
+            "甲基化芯片"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "SNP array",
+            "expression array"
+          ],
+          "ambiguity_notes": "Methylation array assay, distinct from expression arrays."
+        },
+        {
+          "id": "methylation_profiling",
+          "label": "methylation profiling",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "methylation profiling",
+            "DNA methylation profiling",
+            "methylome profiling",
+            "甲基化",
+            "甲基化分析",
+            "甲基化谱",
+            "DNA甲基化"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "methylation profiling",
+            "DNA methylation profiling",
+            "methylome profiling",
+            "甲基化",
+            "甲基化分析",
+            "甲基化谱",
+            "DNA甲基化"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "mutation profiling"
+          ],
+          "ambiguity_notes": "Broad methylation profiling concept."
+        },
+        {
+          "id": "bisulfite_sequencing",
+          "label": "bisulfite sequencing",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "bisulfite sequencing",
+            "bisulphite sequencing",
+            "BS-seq",
+            "亚硫酸氢盐测序",
+            "重亚硫酸盐测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "bisulfite sequencing",
+            "bisulphite sequencing",
+            "BS-seq",
+            "亚硫酸氢盐测序",
+            "重亚硫酸盐测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "WGS",
+            "WES"
+          ],
+          "ambiguity_notes": "Bisulfite sequencing for methylation."
+        },
+        {
+          "id": "wgbs",
+          "label": "whole-genome bisulfite sequencing",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "whole-genome bisulfite sequencing",
+            "whole genome bisulfite sequencing",
+            "WGBS",
+            "全基因组亚硫酸氢盐测序",
+            "全基因组甲基化测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "whole-genome bisulfite sequencing",
+            "whole genome bisulfite sequencing",
+            "WGBS",
+            "全基因组亚硫酸氢盐测序",
+            "全基因组甲基化测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "WGS",
+            "RRBS"
+          ],
+          "ambiguity_notes": "Methylation assay, not ordinary WGS."
+        },
+        {
+          "id": "rrbs",
+          "label": "reduced representation bisulfite sequencing",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "reduced representation bisulfite sequencing",
+            "RRBS",
+            "简化代表性亚硫酸氢盐测序",
+            "简化甲基化测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "reduced representation bisulfite sequencing",
+            "RRBS",
+            "简化代表性亚硫酸氢盐测序",
+            "简化甲基化测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "WGBS"
+          ],
+          "ambiguity_notes": "Reduced representation methylation sequencing."
+        },
+        {
+          "id": "atac_seq",
+          "label": "ATAC-seq",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "ATAC-seq",
+            "assay for transposase-accessible chromatin sequencing",
+            "ATAC sequencing",
+            "ATAC测序",
+            "染色质开放性测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "ATAC-seq",
+            "assay for transposase-accessible chromatin sequencing",
+            "ATAC sequencing",
+            "ATAC测序",
+            "染色质开放性测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "ChIP-seq",
+            "CUT&Tag"
+          ],
+          "ambiguity_notes": "Chromatin accessibility assay; not ChIP-seq."
+        },
+        {
+          "id": "chip_seq",
+          "label": "ChIP-seq",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "ChIP-seq",
+            "chromatin immunoprecipitation sequencing",
+            "ChIP sequencing",
+            "ChIP测序",
+            "染色质免疫沉淀测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "ChIP-seq",
+            "chromatin immunoprecipitation sequencing",
+            "ChIP sequencing",
+            "ChIP测序",
+            "染色质免疫沉淀测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "ATAC-seq",
+            "CUT&RUN"
+          ],
+          "ambiguity_notes": "Protein-DNA binding or histone mark assay; not ATAC-seq."
+        },
+        {
+          "id": "cut_and_run",
+          "label": "CUT&RUN",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "CUT&RUN",
+            "cleavage under targets and release using nuclease",
+            "CUT and RUN",
+            "CUT&RUN测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "CUT&RUN",
+            "cleavage under targets and release using nuclease",
+            "CUT and RUN",
+            "CUT&RUN测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "CUT&Tag",
+            "ChIP-seq"
+          ],
+          "ambiguity_notes": "Targeted chromatin profiling assay."
+        },
+        {
+          "id": "cut_and_tag",
+          "label": "CUT&Tag",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "CUT&Tag",
+            "cleavage under targets and tagmentation",
+            "CUT and Tag",
+            "CUT&Tag测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "CUT&Tag",
+            "cleavage under targets and tagmentation",
+            "CUT and Tag",
+            "CUT&Tag测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "CUT&RUN",
+            "ChIP-seq"
+          ],
+          "ambiguity_notes": "Targeted chromatin profiling assay."
+        },
+        {
+          "id": "chromatin_accessibility",
+          "label": "chromatin accessibility",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "chromatin accessibility",
+            "chromatin accessibility profiling",
+            "open chromatin profiling",
+            "染色质开放性",
+            "染色质可及性"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "chromatin accessibility",
+            "chromatin accessibility profiling",
+            "open chromatin profiling",
+            "染色质开放性",
+            "染色质可及性"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "histone modification profiling"
+          ],
+          "ambiguity_notes": "Broad accessibility concept, often ATAC-seq."
+        },
+        {
+          "id": "histone_modification_profiling",
+          "label": "histone modification profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "histone modification profiling",
+            "histone mark profiling",
+            "histone modification analysis",
+            "组蛋白修饰谱",
+            "组蛋白修饰分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "histone modification profiling",
+            "histone mark profiling",
+            "histone modification analysis",
+            "组蛋白修饰谱",
+            "组蛋白修饰分析"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "epigenomics",
+          "avoid_expansion_to": [
+            "chromatin accessibility"
+          ],
+          "ambiguity_notes": "Histone mark profiling, usually ChIP-seq/CUT&Tag context."
+        },
+        {
+          "id": "wgs",
+          "label": "whole genome sequencing",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "whole genome sequencing",
+            "whole-genome sequencing",
+            "WGS",
+            "全基因组",
+            "全基因组测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "whole genome sequencing",
+            "whole-genome sequencing",
+            "WGS",
+            "全基因组",
+            "全基因组测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "WES",
+            "RNA-seq",
+            "WGBS"
+          ],
+          "ambiguity_notes": "Whole genome sequencing, not whole exome sequencing."
+        },
+        {
+          "id": "wes",
+          "label": "whole exome sequencing",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "whole exome sequencing",
+            "whole-exome sequencing",
+            "WES",
+            "全外显子",
+            "全外显子测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "whole exome sequencing",
+            "whole-exome sequencing",
+            "WES",
+            "全外显子",
+            "全外显子测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "WGS",
+            "RNA-seq"
+          ],
+          "ambiguity_notes": "Whole exome sequencing, not whole genome sequencing."
+        },
+        {
+          "id": "targeted_sequencing",
+          "label": "targeted sequencing",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "targeted sequencing",
+            "targeted DNA sequencing",
+            "amplicon sequencing",
+            "靶向测序",
+            "目标区域测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "targeted sequencing",
+            "targeted DNA sequencing",
+            "amplicon sequencing",
+            "靶向测序",
+            "目标区域测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "WGS",
+            "WES"
+          ],
+          "ambiguity_notes": "Targeted sequencing assay."
+        },
+        {
+          "id": "panel_sequencing",
+          "label": "panel sequencing",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "panel sequencing",
+            "gene panel sequencing",
+            "targeted panel sequencing",
+            "panel测序",
+            "基因panel测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "panel sequencing",
+            "gene panel sequencing",
+            "targeted panel sequencing",
+            "panel测序",
+            "基因panel测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "WGS",
+            "WES"
+          ],
+          "ambiguity_notes": "Panel sequencing assay."
+        },
+        {
+          "id": "snp_array",
+          "label": "SNP array",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "SNP array",
+            "single nucleotide polymorphism array",
+            "genotyping array",
+            "SNP芯片",
+            "基因分型芯片"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "SNP array",
+            "single nucleotide polymorphism array",
+            "genotyping array",
+            "SNP芯片",
+            "基因分型芯片"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "expression array",
+            "methylation array"
+          ],
+          "ambiguity_notes": "Genotyping array, not expression chip."
+        },
+        {
+          "id": "cnv",
+          "label": "copy number variation",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "copy number variation",
+            "copy number alteration",
+            "copy number profiling",
+            "CNV",
+            "拷贝数变异",
+            "拷贝数改变"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "copy number variation",
+            "copy number alteration",
+            "copy number profiling",
+            "CNV",
+            "拷贝数变异",
+            "拷贝数改变"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "SNP array"
+          ],
+          "ambiguity_notes": "CNV event/profiling term."
+        },
+        {
+          "id": "mutation_profiling",
+          "label": "mutation profiling",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "mutation profiling",
+            "mutation analysis",
+            "variant profiling",
+            "突变谱",
+            "突变分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "mutation profiling",
+            "mutation analysis",
+            "variant profiling",
+            "突变谱",
+            "突变分析"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "methylation profiling"
+          ],
+          "ambiguity_notes": "Mutation profiling concept."
+        },
+        {
+          "id": "somatic_mutation",
+          "label": "somatic mutation",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "somatic mutation",
+            "somatic variant",
+            "somatic mutation profiling",
+            "体细胞突变",
+            "体细胞变异"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "somatic mutation",
+            "somatic variant",
+            "somatic mutation profiling",
+            "体细胞突变",
+            "体细胞变异"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "germline variant"
+          ],
+          "ambiguity_notes": "Somatic variant concept."
+        },
+        {
+          "id": "germline_variant",
+          "label": "germline variant",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "germline variant",
+            "germline mutation",
+            "inherited variant",
+            "胚系变异",
+            "生殖系变异"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "germline variant",
+            "germline mutation",
+            "inherited variant",
+            "胚系变异",
+            "生殖系变异"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "somatic mutation"
+          ],
+          "ambiguity_notes": "Germline variant concept."
+        },
+        {
+          "id": "single_cell_multiomics",
+          "label": "single-cell multiomics",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "single-cell multiomics",
+            "single-cell multi-omics",
+            "single cell multiomics",
+            "单细胞多组学",
+            "单细胞multiomics"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "single-cell multiomics",
+            "single-cell multi-omics",
+            "single cell multiomics",
+            "单细胞多组学",
+            "单细胞multiomics"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "single-cell RNA-seq"
+          ],
+          "ambiguity_notes": "Broad single-cell multi-omics concept."
+        },
+        {
+          "id": "scatac_seq",
+          "label": "single-cell ATAC-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "single-cell ATAC-seq",
+            "scATAC-seq",
+            "single cell ATAC sequencing",
+            "单细胞ATAC测序",
+            "单细胞染色质开放性测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "single-cell ATAC-seq",
+            "scATAC-seq",
+            "single cell ATAC sequencing",
+            "单细胞ATAC测序",
+            "单细胞染色质开放性测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "ATAC-seq",
+            "single-cell RNA-seq"
+          ],
+          "ambiguity_notes": "Single-cell chromatin accessibility assay."
+        },
+        {
+          "id": "cite_seq",
+          "label": "CITE-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "CITE-seq",
+            "cellular indexing of transcriptomes and epitopes by sequencing",
+            "细胞索引转录组表位测序",
+            "CITE测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "CITE-seq",
+            "cellular indexing of transcriptomes and epitopes by sequencing",
+            "细胞索引转录组表位测序",
+            "CITE测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "single-cell RNA-seq"
+          ],
+          "ambiguity_notes": "Single-cell RNA plus protein tag assay."
+        },
+        {
+          "id": "single_cell_proteogenomics",
+          "label": "single-cell proteogenomics",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "single-cell proteogenomics",
+            "single cell proteogenomics",
+            "单细胞蛋白基因组学",
+            "单细胞蛋白基因组"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "single-cell proteogenomics",
+            "single cell proteogenomics",
+            "单细胞蛋白基因组学",
+            "单细胞蛋白基因组"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "proteomics"
+          ],
+          "ambiguity_notes": "Single-cell integrated protein/genomic assay concept."
+        },
+        {
+          "id": "multiome_atac_gene_expression",
+          "label": "multiome ATAC + gene expression",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "multiome ATAC + gene expression",
+            "multiome ATAC and gene expression",
+            "10x multiome",
+            "ATAC和基因表达multiome",
+            "单细胞ATAC加表达"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "multiome ATAC + gene expression",
+            "multiome ATAC and gene expression",
+            "10x multiome",
+            "ATAC和基因表达multiome",
+            "单细胞ATAC加表达"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "ATAC-seq",
+            "RNA-seq"
+          ],
+          "ambiguity_notes": "Joint ATAC and gene expression assay."
+        },
+        {
+          "id": "cell_type_annotation",
+          "label": "cell type annotation",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cell type annotation",
+            "cell annotation",
+            "cell-type annotation",
+            "细胞类型注释",
+            "细胞注释"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cell type annotation",
+            "cell annotation",
+            "cell-type annotation",
+            "细胞类型注释",
+            "细胞注释"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "disease diagnosis"
+          ],
+          "ambiguity_notes": "Analytic output term, not disease."
+        },
+        {
+          "id": "cell_clustering",
+          "label": "cell clustering",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cell clustering",
+            "single-cell clustering",
+            "clustering analysis",
+            "细胞聚类",
+            "单细胞聚类"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cell clustering",
+            "single-cell clustering",
+            "clustering analysis",
+            "细胞聚类",
+            "单细胞聚类"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "single_cell_multiomics",
+          "avoid_expansion_to": [
+            "cell type annotation"
+          ],
+          "ambiguity_notes": "Single-cell analysis term."
+        },
+        {
+          "id": "proteomics",
+          "label": "proteomics",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "proteomics",
+            "protein profiling",
+            "proteome profiling",
+            "蛋白组",
+            "蛋白质组",
+            "蛋白组学"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "proteomics",
+            "protein profiling",
+            "proteome profiling",
+            "蛋白组",
+            "蛋白质组",
+            "蛋白组学"
+          ],
+          "matched_platforms": [
+            "PRIDE",
+            "CPTAC",
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "proteomics_metabolomics",
+          "avoid_expansion_to": [
+            "metabolomics",
+            "phosphoproteomics"
+          ],
+          "ambiguity_notes": "Proteomics should not expand to metabolomics."
+        },
+        {
+          "id": "mass_spectrometry_proteomics",
+          "label": "mass spectrometry proteomics",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "mass spectrometry proteomics",
+            "MS-based proteomics",
+            "mass spectrometry-based proteomics",
+            "MS proteomics",
+            "质谱蛋白组",
+            "质谱蛋白质组",
+            "MS蛋白组"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "mass spectrometry proteomics",
+            "MS-based proteomics",
+            "mass spectrometry-based proteomics",
+            "MS proteomics",
+            "质谱蛋白组",
+            "质谱蛋白质组",
+            "MS蛋白组"
+          ],
+          "matched_platforms": [
+            "PRIDE",
+            "CPTAC"
+          ],
+          "missing_terms": [],
+          "subcategory": "proteomics_metabolomics",
+          "avoid_expansion_to": [
+            "metabolomics"
+          ],
+          "ambiguity_notes": "Mass spectrometry proteomics."
+        },
+        {
+          "id": "phosphoproteomics",
+          "label": "phosphoproteomics",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "phosphoproteomics",
+            "phosphoproteome profiling",
+            "phosphorylation proteomics",
+            "磷酸化蛋白组",
+            "磷酸化蛋白质组"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "phosphoproteomics",
+            "phosphoproteome profiling",
+            "phosphorylation proteomics",
+            "磷酸化蛋白组",
+            "磷酸化蛋白质组"
+          ],
+          "matched_platforms": [
+            "PRIDE",
+            "CPTAC"
+          ],
+          "missing_terms": [],
+          "subcategory": "proteomics_metabolomics",
+          "avoid_expansion_to": [
+            "proteomics"
+          ],
+          "ambiguity_notes": "Post-translational modification proteomics."
+        },
+        {
+          "id": "metabolomics",
+          "label": "metabolomics",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "metabolomics",
+            "metabolome profiling",
+            "metabolic profiling",
+            "代谢组",
+            "代谢组学"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "metabolomics",
+            "metabolome profiling",
+            "metabolic profiling",
+            "代谢组",
+            "代谢组学"
+          ],
+          "matched_platforms": [
+            "MetaboLights",
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "proteomics_metabolomics",
+          "avoid_expansion_to": [
+            "proteomics",
+            "lipidomics"
+          ],
+          "ambiguity_notes": "Metabolomics should not expand to proteomics."
+        },
+        {
+          "id": "lipidomics",
+          "label": "lipidomics",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "lipidomics",
+            "lipidome profiling",
+            "lipid profiling",
+            "脂质组",
+            "脂质组学"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "lipidomics",
+            "lipidome profiling",
+            "lipid profiling",
+            "脂质组",
+            "脂质组学"
+          ],
+          "matched_platforms": [
+            "MetaboLights",
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "proteomics_metabolomics",
+          "avoid_expansion_to": [
+            "metabolomics"
+          ],
+          "ambiguity_notes": "Lipidomics is related to but distinct from broad metabolomics."
+        },
+        {
+          "id": "glycomics",
+          "label": "glycomics",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "glycomics",
+            "glycome profiling",
+            "glycan profiling",
+            "糖组学",
+            "糖组"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "glycomics",
+            "glycome profiling",
+            "glycan profiling",
+            "糖组学",
+            "糖组"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "proteomics_metabolomics",
+          "avoid_expansion_to": [
+            "metabolomics"
+          ],
+          "ambiguity_notes": "Glycomics assay concept."
+        },
+        {
+          "id": "crispr_screen",
+          "label": "CRISPR screen",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "CRISPR screen",
+            "CRISPR screening",
+            "CRISPR-Cas9 screen",
+            "CRISPR",
+            "CRISPR筛选",
+            "CRISPR筛查"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "CRISPR screen",
+            "CRISPR screening",
+            "CRISPR-Cas9 screen",
+            "CRISPR",
+            "CRISPR筛选",
+            "CRISPR筛查"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "functional_genomics",
+          "avoid_expansion_to": [
+            "RNAi screen"
+          ],
+          "ambiguity_notes": "Functional genomics screen."
+        },
+        {
+          "id": "rnai_screen",
+          "label": "RNAi screen",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "RNAi screen",
+            "RNA interference screen",
+            "RNAi screening",
+            "RNAi",
+            "RNAi筛选",
+            "RNA干扰筛选"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "RNAi screen",
+            "RNA interference screen",
+            "RNAi screening",
+            "RNAi",
+            "RNAi筛选",
+            "RNA干扰筛选"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "functional_genomics",
+          "avoid_expansion_to": [
+            "CRISPR screen",
+            "shRNA screen"
+          ],
+          "ambiguity_notes": "RNA interference screen."
+        },
+        {
+          "id": "shrna_screen",
+          "label": "shRNA screen",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "shRNA screen",
+            "short hairpin RNA screen",
+            "shRNA screening",
+            "shRNA",
+            "shRNA筛选",
+            "短发夹RNA筛选"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "shRNA screen",
+            "short hairpin RNA screen",
+            "shRNA screening",
+            "shRNA",
+            "shRNA筛选",
+            "短发夹RNA筛选"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "functional_genomics",
+          "avoid_expansion_to": [
+            "CRISPR screen",
+            "RNAi screen"
+          ],
+          "ambiguity_notes": "shRNA screening assay."
+        },
+        {
+          "id": "perturb_seq",
+          "label": "Perturb-seq",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Perturb-seq",
+            "perturbation sequencing",
+            "single-cell perturb-seq",
+            "扰动测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Perturb-seq",
+            "perturbation sequencing",
+            "single-cell perturb-seq",
+            "扰动测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "functional_genomics",
+          "avoid_expansion_to": [
+            "CRISPR screen"
+          ],
+          "ambiguity_notes": "Single-cell perturbation assay."
+        },
+        {
+          "id": "drug_screen",
+          "label": "drug screen",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "drug screen",
+            "drug screening",
+            "drug sensitivity screen",
+            "药物筛选",
+            "药物敏感性筛选"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "drug screen",
+            "drug screening",
+            "drug sensitivity screen",
+            "药物筛选",
+            "药物敏感性筛选"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "ArrayExpress"
+          ],
+          "missing_terms": [],
+          "subcategory": "functional_genomics",
+          "avoid_expansion_to": [
+            "CRISPR screen"
+          ],
+          "ambiguity_notes": "Functional drug screening term."
+        },
+        {
+          "id": "survival_data",
+          "label": "survival data",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "survival data",
+            "survival metadata",
+            "overall survival data",
+            "OS",
+            "生存数据",
+            "生存信息"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "survival data",
+            "survival metadata",
+            "overall survival data",
+            "OS",
+            "生存数据",
+            "生存信息"
+          ],
+          "matched_platforms": [
+            "TCGA",
+            "GEO"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "expression profiling"
+          ],
+          "ambiguity_notes": "Clinical endpoint metadata, not assay."
+        },
+        {
+          "id": "clinical_metadata",
+          "label": "clinical metadata",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "clinical metadata",
+            "clinical data",
+            "clinical annotation",
+            "临床信息",
+            "临床数据"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "clinical metadata",
+            "clinical data",
+            "clinical annotation",
+            "临床信息",
+            "临床数据"
+          ],
+          "matched_platforms": [
+            "TCGA",
+            "GEO"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "phenotype data"
+          ],
+          "ambiguity_notes": "Clinical metadata term."
+        },
+        {
+          "id": "phenotype_data",
+          "label": "phenotype data",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "phenotype data",
+            "phenotypic data",
+            "phenotype metadata",
+            "表型数据",
+            "表型信息"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "phenotype data",
+            "phenotypic data",
+            "phenotype metadata",
+            "表型数据",
+            "表型信息"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "GTEx",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "clinical metadata"
+          ],
+          "ambiguity_notes": "Phenotype metadata term."
+        },
+        {
+          "id": "immune_infiltration",
+          "label": "immune infiltration",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "immune infiltration",
+            "immune cell infiltration",
+            "tumor immune infiltration",
+            "免疫浸润",
+            "免疫细胞浸润"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "immune infiltration",
+            "immune cell infiltration",
+            "tumor immune infiltration",
+            "免疫浸润",
+            "免疫细胞浸润"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "tumor microenvironment"
+          ],
+          "ambiguity_notes": "Computational phenotype term."
+        },
+        {
+          "id": "tumor_microenvironment",
+          "label": "tumor microenvironment",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "tumor microenvironment",
+            "tumour microenvironment",
+            "TME",
+            "肿瘤微环境"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "tumor microenvironment",
+            "tumour microenvironment",
+            "TME",
+            "肿瘤微环境"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "immune infiltration"
+          ],
+          "ambiguity_notes": "Tumor microenvironment analytic concept."
+        },
+        {
+          "id": "pathway_activity",
+          "label": "pathway activity",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "pathway activity",
+            "pathway activity analysis",
+            "pathway score",
+            "通路活性",
+            "通路活性分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "pathway activity",
+            "pathway activity analysis",
+            "pathway score",
+            "通路活性",
+            "通路活性分析"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "TCGA",
+            "GTEx"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "gene signature"
+          ],
+          "ambiguity_notes": "Pathway-level analytic term."
+        },
+        {
+          "id": "gene_signature",
+          "label": "gene signature",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "gene signature",
+            "gene expression signature",
+            "molecular signature",
+            "基因签名",
+            "基因特征"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "gene signature",
+            "gene expression signature",
+            "molecular signature",
+            "基因签名",
+            "基因特征"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "clinical_phenotypic_omics",
+          "avoid_expansion_to": [
+            "pathway activity"
+          ],
+          "ambiguity_notes": "Gene signature analytic term."
+        },
+        {
+          "id": "sequencing",
+          "label": "sequencing",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "sequencing",
+            "sequencing assay",
+            "high-throughput sequencing",
+            "测序",
+            "高通量测序"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "sequencing",
+            "sequencing assay",
+            "high-throughput sequencing",
+            "测序",
+            "高通量测序"
+          ],
+          "matched_platforms": [
+            "GEO",
+            "SRA",
+            "ArrayExpress",
+            "TCGA"
+          ],
+          "missing_terms": [],
+          "subcategory": "genomics",
+          "avoid_expansion_to": [
+            "RNA-seq",
+            "WGS",
+            "WES",
+            "scRNA-seq"
+          ],
+          "ambiguity_notes": "Broad ambiguous sequencing term; do not strongly infer a specific sequencing assay."
+        }
+      ],
+      "missing_terms": [],
+      "high_risk_ambiguity_terms": [
+        {
+          "term": "RNA-seq",
+          "note": "Do not match inside scRNA-seq/snRNA-seq."
+        },
+        {
+          "term": "scRNA-seq",
+          "note": "Do not expand to bulk RNA-seq."
+        },
+        {
+          "term": "ATAC-seq",
+          "note": "Do not expand to ChIP-seq."
+        },
+        {
+          "term": "ChIP-seq",
+          "note": "Do not expand to ATAC-seq."
+        },
+        {
+          "term": "WGS",
+          "note": "Do not expand to WES."
+        },
+        {
+          "term": "WES",
+          "note": "Do not expand to WGS."
+        },
+        {
+          "term": "proteomics",
+          "note": "Do not expand to metabolomics."
+        },
+        {
+          "term": "metabolomics",
+          "note": "Do not expand to proteomics."
+        },
+        {
+          "term": "芯片",
+          "note": "Broad Chinese chip term; default to broad microarray context unless SNP/methylation is explicit."
+        },
+        {
+          "term": "表达谱",
+          "note": "Broad expression profiling term spanning RNA-seq and microarray contexts."
+        },
+        {
+          "term": "测序",
+          "note": "Broad sequencing term; do not strongly infer RNA-seq/WGS/WES."
         }
       ]
     },
@@ -10098,6 +12393,22 @@
         "status": "pass"
       },
       {
+        "gate_id": "bioinformatics_modality_core_coverage",
+        "description": "Bioinformatics modality core checklist coverage must stay >= 95%.",
+        "metric": "coverage_rate",
+        "minimum": 0.95,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "bioinformatics_modality_missing_terms",
+        "description": "Bioinformatics modality core should not have missing expected terms.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
         "gate_id": "missing_items",
         "description": "Reference checklist missing count must remain zero.",
         "metric": "count",
@@ -10128,6 +12439,11 @@
       "checklist_id": "anatomy_tissue_core",
       "source": "project-curated GTEx tissue site and TCGA primary site checklist",
       "source_version": "2026-05-11 curated v1"
+    },
+    {
+      "checklist_id": "bioinformatics_modality_core",
+      "source": "BioMedPilot curated shared medical vocabulary checklist",
+      "source_version": "bioinformatics_modality_core_v1"
     },
     {
       "checklist_id": "common_cancers",

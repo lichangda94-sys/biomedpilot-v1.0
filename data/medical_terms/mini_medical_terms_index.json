@@ -20311,5 +20311,5762 @@
       "黑质",
       "脑黑质"
     ]
+  },
+  {
+    "concept_id": "mini:modality_expression_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_expression_profiling",
+    "preferred_label_en": "expression profiling",
+    "synonyms_en": [
+      "gene expression profiling",
+      "mRNA expression profiling",
+      "transcriptome profiling"
+    ],
+    "exact_synonyms_en": [
+      "expression profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "expression profiling",
+      "gene expression profiling",
+      "mRNA expression profiling",
+      "transcriptome profiling",
+      "表达谱",
+      "基因表达谱",
+      "表达谱分析",
+      "表达分析"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "expression profiling",
+      "gene expression profiling",
+      "mRNA expression profiling",
+      "transcriptome profiling"
+    ],
+    "assay_terms": [
+      "expression profiling",
+      "gene expression profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "表达谱",
+    "zh_synonyms": [
+      "基因表达谱",
+      "表达谱分析",
+      "表达分析"
+    ],
+    "preferred_en": "expression profiling",
+    "en_synonyms": [
+      "gene expression profiling",
+      "mRNA expression profiling",
+      "transcriptome profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "bulk RNA-seq",
+      "scRNA-seq"
+    ],
+    "ambiguity_notes": "Broad expression profiling term; may require platform disambiguation between sequencing and array.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "表达谱",
+      "基因表达谱",
+      "表达谱分析",
+      "表达分析"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_transcriptome_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_transcriptome_profiling",
+    "preferred_label_en": "transcriptome profiling",
+    "synonyms_en": [
+      "transcriptomic profiling",
+      "transcriptomics"
+    ],
+    "exact_synonyms_en": [
+      "transcriptome profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "transcriptome profiling",
+      "transcriptomic profiling",
+      "transcriptomics",
+      "转录组分析",
+      "转录组测序分析",
+      "转录组表达谱"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "transcriptome profiling",
+      "transcriptomic profiling",
+      "transcriptomics"
+    ],
+    "assay_terms": [
+      "transcriptome profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "转录组分析",
+    "zh_synonyms": [
+      "转录组测序分析",
+      "转录组表达谱"
+    ],
+    "preferred_en": "transcriptome profiling",
+    "en_synonyms": [
+      "transcriptomic profiling",
+      "transcriptomics"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "whole genome sequencing",
+      "proteomics"
+    ],
+    "ambiguity_notes": "Broad transcriptome modality.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "转录组分析",
+      "转录组测序分析",
+      "转录组表达谱"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_rna_seq",
+    "preferred_label_en": "RNA-seq",
+    "synonyms_en": [
+      "RNA sequencing",
+      "RNA sequencing assay"
+    ],
+    "exact_synonyms_en": [
+      "RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RNA-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "RNA-seq",
+      "RNA sequencing",
+      "RNA sequencing assay",
+      "RNA测序",
+      "RNA测序数据",
+      "转录组测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "RNA-seq",
+      "RNA sequencing",
+      "RNA sequencing assay"
+    ],
+    "assay_terms": [
+      "RNA-seq",
+      "RNA sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "RNA测序",
+    "zh_synonyms": [
+      "RNA-seq",
+      "RNA测序数据",
+      "转录组测序"
+    ],
+    "preferred_en": "RNA-seq",
+    "en_synonyms": [
+      "RNA sequencing",
+      "RNA sequencing assay"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "scRNA-seq",
+      "snRNA-seq",
+      "WGS",
+      "WES"
+    ],
+    "ambiguity_notes": "RNA-seq should not match scRNA-seq as a substring.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "RNA测序",
+      "RNA-seq",
+      "RNA测序数据",
+      "转录组测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_bulk_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_bulk_rna_seq",
+    "preferred_label_en": "bulk RNA-seq",
+    "synonyms_en": [
+      "bulk RNA sequencing",
+      "bulk transcriptome sequencing"
+    ],
+    "exact_synonyms_en": [
+      "bulk RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "bulk RNA-seq",
+      "bulk RNA sequencing",
+      "bulk transcriptome sequencing",
+      "bulk RNA测序",
+      "bulk转录组",
+      "bulk RNA测序数据"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "bulk RNA-seq",
+      "bulk RNA sequencing",
+      "bulk transcriptome sequencing"
+    ],
+    "assay_terms": [
+      "bulk RNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "bulk RNA测序",
+    "zh_synonyms": [
+      "bulk RNA-seq",
+      "bulk转录组",
+      "bulk RNA测序数据"
+    ],
+    "preferred_en": "bulk RNA-seq",
+    "en_synonyms": [
+      "bulk RNA sequencing",
+      "bulk transcriptome sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "scRNA-seq",
+      "single-cell RNA-seq"
+    ],
+    "ambiguity_notes": "Bulk assay distinct from single-cell RNA-seq.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "bulk RNA测序",
+      "bulk RNA-seq",
+      "bulk转录组",
+      "bulk RNA测序数据"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_mrna_expression_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_mrna_expression_profiling",
+    "preferred_label_en": "mRNA expression profiling",
+    "synonyms_en": [
+      "messenger RNA expression profiling",
+      "mRNA expression analysis"
+    ],
+    "exact_synonyms_en": [
+      "mRNA expression profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "mRNA expression profiling",
+      "messenger RNA expression profiling",
+      "mRNA expression analysis",
+      "mRNA表达谱",
+      "信使RNA表达谱",
+      "mRNA表达分析"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "mRNA expression profiling",
+      "messenger RNA expression profiling",
+      "mRNA expression analysis"
+    ],
+    "assay_terms": [
+      "mRNA expression profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "mRNA表达谱",
+    "zh_synonyms": [
+      "信使RNA表达谱",
+      "mRNA表达分析"
+    ],
+    "preferred_en": "mRNA expression profiling",
+    "en_synonyms": [
+      "messenger RNA expression profiling",
+      "mRNA expression analysis"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "miRNA profiling",
+      "lncRNA profiling"
+    ],
+    "ambiguity_notes": "mRNA-specific expression modality.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "mRNA表达谱",
+      "信使RNA表达谱",
+      "mRNA表达分析"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_microarray",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_microarray",
+    "preferred_label_en": "microarray",
+    "synonyms_en": [
+      "microarray profiling",
+      "gene expression microarray"
+    ],
+    "exact_synonyms_en": [
+      "microarray"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "microarray",
+      "microarray profiling",
+      "gene expression microarray",
+      "芯片",
+      "表达芯片",
+      "基因芯片",
+      "微阵列"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "microarray",
+      "microarray profiling",
+      "gene expression microarray"
+    ],
+    "assay_terms": [
+      "microarray",
+      "expression array"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "芯片",
+    "zh_synonyms": [
+      "表达芯片",
+      "基因芯片",
+      "微阵列"
+    ],
+    "preferred_en": "microarray",
+    "en_synonyms": [
+      "microarray profiling",
+      "gene expression microarray"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "RNA-seq",
+      "SNP array"
+    ],
+    "ambiguity_notes": "Broad chip term; expression array if transcriptomic context is present.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "芯片",
+      "表达芯片",
+      "基因芯片",
+      "微阵列"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_expression_array",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_expression_array",
+    "preferred_label_en": "expression array",
+    "synonyms_en": [
+      "gene expression array",
+      "expression microarray"
+    ],
+    "exact_synonyms_en": [
+      "expression array"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "expression array",
+      "gene expression array",
+      "expression microarray",
+      "表达芯片",
+      "表达阵列",
+      "基因表达芯片"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "expression array",
+      "gene expression array",
+      "expression microarray"
+    ],
+    "assay_terms": [
+      "expression array"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "表达芯片",
+    "zh_synonyms": [
+      "表达阵列",
+      "基因表达芯片"
+    ],
+    "preferred_en": "expression array",
+    "en_synonyms": [
+      "gene expression array",
+      "expression microarray"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "SNP array",
+      "methylation array"
+    ],
+    "ambiguity_notes": "Expression array, not SNP or methylation array.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "表达芯片",
+      "表达阵列",
+      "基因表达芯片"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_scrna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_scrna_seq",
+    "preferred_label_en": "single-cell RNA-seq",
+    "synonyms_en": [
+      "single cell RNA sequencing",
+      "single-cell transcriptomics"
+    ],
+    "exact_synonyms_en": [
+      "single-cell RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "scRNA-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "single-cell RNA-seq",
+      "single cell RNA sequencing",
+      "single-cell transcriptomics",
+      "scRNA-seq",
+      "单细胞",
+      "单细胞RNA测序",
+      "单细胞转录组",
+      "单细胞测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "single-cell RNA-seq",
+      "single cell RNA sequencing",
+      "single-cell transcriptomics",
+      "scRNA-seq"
+    ],
+    "assay_terms": [
+      "single-cell RNA-seq",
+      "scRNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "单细胞",
+    "zh_synonyms": [
+      "单细胞RNA测序",
+      "单细胞转录组",
+      "单细胞测序",
+      "scRNA-seq"
+    ],
+    "preferred_en": "single-cell RNA-seq",
+    "en_synonyms": [
+      "single cell RNA sequencing",
+      "single-cell transcriptomics"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "bulk RNA-seq",
+      "RNA-seq"
+    ],
+    "ambiguity_notes": "Single-cell RNA-seq should not automatically expand to bulk RNA-seq.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "单细胞",
+      "单细胞RNA测序",
+      "单细胞转录组",
+      "单细胞测序",
+      "scRNA-seq"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_snrna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_snrna_seq",
+    "preferred_label_en": "single-nucleus RNA-seq",
+    "synonyms_en": [
+      "single nucleus RNA sequencing",
+      "single-nucleus transcriptomics"
+    ],
+    "exact_synonyms_en": [
+      "single-nucleus RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "snRNA-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "single-nucleus RNA-seq",
+      "single nucleus RNA sequencing",
+      "single-nucleus transcriptomics",
+      "snRNA-seq",
+      "单核RNA测序",
+      "单核转录组"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "single-nucleus RNA-seq",
+      "single nucleus RNA sequencing",
+      "single-nucleus transcriptomics",
+      "snRNA-seq"
+    ],
+    "assay_terms": [
+      "single-nucleus RNA-seq",
+      "snRNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "单核RNA测序",
+    "zh_synonyms": [
+      "单核转录组",
+      "snRNA-seq"
+    ],
+    "preferred_en": "single-nucleus RNA-seq",
+    "en_synonyms": [
+      "single nucleus RNA sequencing",
+      "single-nucleus transcriptomics"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "single-cell RNA-seq",
+      "bulk RNA-seq"
+    ],
+    "ambiguity_notes": "Single-nucleus assay distinct from single-cell RNA-seq.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "单核RNA测序",
+      "单核转录组",
+      "snRNA-seq"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_spatial_transcriptomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_spatial_transcriptomics",
+    "preferred_label_en": "spatial transcriptomics",
+    "synonyms_en": [
+      "spatial gene expression profiling",
+      "spatial RNA profiling"
+    ],
+    "exact_synonyms_en": [
+      "spatial transcriptomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "spatial transcriptomics",
+      "spatial gene expression profiling",
+      "spatial RNA profiling",
+      "空间转录组",
+      "空间转录组学",
+      "空间表达谱",
+      "空间RNA测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "spatial transcriptomics",
+      "spatial gene expression profiling",
+      "spatial RNA profiling"
+    ],
+    "assay_terms": [
+      "spatial transcriptomics"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "空间转录组",
+    "zh_synonyms": [
+      "空间转录组学",
+      "空间表达谱",
+      "空间RNA测序"
+    ],
+    "preferred_en": "spatial transcriptomics",
+    "en_synonyms": [
+      "spatial gene expression profiling",
+      "spatial RNA profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "bulk RNA-seq",
+      "single-cell RNA-seq"
+    ],
+    "ambiguity_notes": "Spatial transcriptomic assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "空间转录组",
+      "空间转录组学",
+      "空间表达谱",
+      "空间RNA测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_long_read_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_long_read_rna_seq",
+    "preferred_label_en": "long-read RNA-seq",
+    "synonyms_en": [
+      "long read RNA sequencing",
+      "long-read transcriptome sequencing"
+    ],
+    "exact_synonyms_en": [
+      "long-read RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "long-read RNA-seq",
+      "long read RNA sequencing",
+      "long-read transcriptome sequencing",
+      "长读长RNA测序",
+      "长读长转录组",
+      "长读长RNA-seq"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "long-read RNA-seq",
+      "long read RNA sequencing",
+      "long-read transcriptome sequencing"
+    ],
+    "assay_terms": [
+      "long-read RNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "长读长RNA测序",
+    "zh_synonyms": [
+      "长读长转录组",
+      "长读长RNA-seq"
+    ],
+    "preferred_en": "long-read RNA-seq",
+    "en_synonyms": [
+      "long read RNA sequencing",
+      "long-read transcriptome sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "short-read RNA-seq"
+    ],
+    "ambiguity_notes": "Long-read RNA sequencing modality.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "长读长RNA测序",
+      "长读长转录组",
+      "长读长RNA-seq"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_total_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_total_rna_seq",
+    "preferred_label_en": "total RNA-seq",
+    "synonyms_en": [
+      "total RNA sequencing"
+    ],
+    "exact_synonyms_en": [
+      "total RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "total RNA-seq",
+      "total RNA sequencing",
+      "total RNA测序",
+      "总RNA测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "total RNA-seq",
+      "total RNA sequencing"
+    ],
+    "assay_terms": [
+      "total RNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "total RNA测序",
+    "zh_synonyms": [
+      "总RNA测序",
+      "total RNA-seq"
+    ],
+    "preferred_en": "total RNA-seq",
+    "en_synonyms": [
+      "total RNA sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "polyA RNA-seq"
+    ],
+    "ambiguity_notes": "Total RNA library strategy.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "total RNA测序",
+      "总RNA测序",
+      "total RNA-seq"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_ribo_depleted_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_ribo_depleted_rna_seq",
+    "preferred_label_en": "ribo-depleted RNA-seq",
+    "synonyms_en": [
+      "ribo depleted RNA sequencing",
+      "ribosomal RNA depleted RNA-seq"
+    ],
+    "exact_synonyms_en": [
+      "ribo-depleted RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ribo-depleted RNA-seq",
+      "ribo depleted RNA sequencing",
+      "ribosomal RNA depleted RNA-seq",
+      "去核糖体RNA测序",
+      "核糖体去除RNA测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "ribo-depleted RNA-seq",
+      "ribo depleted RNA sequencing",
+      "ribosomal RNA depleted RNA-seq"
+    ],
+    "assay_terms": [
+      "ribo-depleted RNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "去核糖体RNA测序",
+    "zh_synonyms": [
+      "ribo-depleted RNA-seq",
+      "核糖体去除RNA测序"
+    ],
+    "preferred_en": "ribo-depleted RNA-seq",
+    "en_synonyms": [
+      "ribo depleted RNA sequencing",
+      "ribosomal RNA depleted RNA-seq"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "polyA RNA-seq"
+    ],
+    "ambiguity_notes": "Ribo-depleted RNA library strategy.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "去核糖体RNA测序",
+      "ribo-depleted RNA-seq",
+      "核糖体去除RNA测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_polya_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_polya_rna_seq",
+    "preferred_label_en": "polyA RNA-seq",
+    "synonyms_en": [
+      "polyadenylated RNA sequencing",
+      "polyA-selected RNA-seq"
+    ],
+    "exact_synonyms_en": [
+      "polyA RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "polyA RNA-seq",
+      "polyadenylated RNA sequencing",
+      "polyA-selected RNA-seq",
+      "polyA RNA测序",
+      "polyA选择RNA测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "polyA RNA-seq",
+      "polyadenylated RNA sequencing",
+      "polyA-selected RNA-seq"
+    ],
+    "assay_terms": [
+      "polyA RNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "transcriptomics",
+    "preferred_zh": "polyA RNA测序",
+    "zh_synonyms": [
+      "polyA RNA-seq",
+      "polyA选择RNA测序"
+    ],
+    "preferred_en": "polyA RNA-seq",
+    "en_synonyms": [
+      "polyadenylated RNA sequencing",
+      "polyA-selected RNA-seq"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "ribo-depleted RNA-seq"
+    ],
+    "ambiguity_notes": "PolyA-selected RNA library strategy.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "polyA RNA测序",
+      "polyA RNA-seq",
+      "polyA选择RNA测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_mirna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_mirna_seq",
+    "preferred_label_en": "miRNA-seq",
+    "synonyms_en": [
+      "microRNA sequencing",
+      "miRNA sequencing"
+    ],
+    "exact_synonyms_en": [
+      "miRNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "miRNA-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "miRNA-seq",
+      "microRNA sequencing",
+      "miRNA sequencing",
+      "miRNA测序",
+      "microRNA测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "miRNA-seq",
+      "microRNA sequencing",
+      "miRNA sequencing"
+    ],
+    "assay_terms": [
+      "miRNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "noncoding_rna",
+    "preferred_zh": "miRNA测序",
+    "zh_synonyms": [
+      "microRNA测序",
+      "miRNA-seq"
+    ],
+    "preferred_en": "miRNA-seq",
+    "en_synonyms": [
+      "microRNA sequencing",
+      "miRNA sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "mRNA expression profiling"
+    ],
+    "ambiguity_notes": "microRNA sequencing.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "miRNA测序",
+      "microRNA测序",
+      "miRNA-seq"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_microrna_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_microrna_profiling",
+    "preferred_label_en": "microRNA profiling",
+    "synonyms_en": [
+      "miRNA expression profiling",
+      "microRNA expression profiling"
+    ],
+    "exact_synonyms_en": [
+      "microRNA profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "miRNA"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "microRNA profiling",
+      "miRNA expression profiling",
+      "microRNA expression profiling",
+      "miRNA",
+      "microRNA表达谱",
+      "miRNA表达谱"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "microRNA profiling",
+      "miRNA expression profiling",
+      "microRNA expression profiling",
+      "miRNA"
+    ],
+    "assay_terms": [
+      "microRNA profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "noncoding_rna",
+    "preferred_zh": "microRNA表达谱",
+    "zh_synonyms": [
+      "miRNA表达谱",
+      "microRNA profiling"
+    ],
+    "preferred_en": "microRNA profiling",
+    "en_synonyms": [
+      "miRNA expression profiling",
+      "microRNA expression profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "mRNA expression profiling"
+    ],
+    "ambiguity_notes": "microRNA expression profiling.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "microRNA表达谱",
+      "miRNA表达谱",
+      "microRNA profiling"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_lncrna_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_lncrna_profiling",
+    "preferred_label_en": "lncRNA profiling",
+    "synonyms_en": [
+      "long non-coding RNA profiling",
+      "lncRNA expression profiling"
+    ],
+    "exact_synonyms_en": [
+      "lncRNA profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "lncRNA"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "lncRNA profiling",
+      "long non-coding RNA profiling",
+      "lncRNA expression profiling",
+      "lncRNA",
+      "lncRNA表达谱",
+      "长链非编码RNA表达谱"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "lncRNA profiling",
+      "long non-coding RNA profiling",
+      "lncRNA expression profiling",
+      "lncRNA"
+    ],
+    "assay_terms": [
+      "lncRNA profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "noncoding_rna",
+    "preferred_zh": "lncRNA表达谱",
+    "zh_synonyms": [
+      "长链非编码RNA表达谱",
+      "lncRNA profiling"
+    ],
+    "preferred_en": "lncRNA profiling",
+    "en_synonyms": [
+      "long non-coding RNA profiling",
+      "lncRNA expression profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "mRNA expression profiling"
+    ],
+    "ambiguity_notes": "lncRNA profiling.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "lncRNA表达谱",
+      "长链非编码RNA表达谱",
+      "lncRNA profiling"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_circrna_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_circrna_profiling",
+    "preferred_label_en": "circRNA profiling",
+    "synonyms_en": [
+      "circular RNA profiling",
+      "circRNA expression profiling"
+    ],
+    "exact_synonyms_en": [
+      "circRNA profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "circRNA"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "circRNA profiling",
+      "circular RNA profiling",
+      "circRNA expression profiling",
+      "circRNA",
+      "circRNA表达谱",
+      "环状RNA表达谱"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "circRNA profiling",
+      "circular RNA profiling",
+      "circRNA expression profiling",
+      "circRNA"
+    ],
+    "assay_terms": [
+      "circRNA profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "noncoding_rna",
+    "preferred_zh": "circRNA表达谱",
+    "zh_synonyms": [
+      "环状RNA表达谱",
+      "circRNA profiling"
+    ],
+    "preferred_en": "circRNA profiling",
+    "en_synonyms": [
+      "circular RNA profiling",
+      "circRNA expression profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "mRNA expression profiling"
+    ],
+    "ambiguity_notes": "circRNA profiling.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "circRNA表达谱",
+      "环状RNA表达谱",
+      "circRNA profiling"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_small_rna_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_small_rna_seq",
+    "preferred_label_en": "small RNA-seq",
+    "synonyms_en": [
+      "small RNA sequencing"
+    ],
+    "exact_synonyms_en": [
+      "small RNA-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "small RNA-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "small RNA-seq",
+      "small RNA sequencing",
+      "小RNA测序",
+      "小RNA-seq"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "small RNA-seq",
+      "small RNA sequencing"
+    ],
+    "assay_terms": [
+      "small RNA-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "noncoding_rna",
+    "preferred_zh": "小RNA测序",
+    "zh_synonyms": [
+      "small RNA-seq",
+      "小RNA-seq"
+    ],
+    "preferred_en": "small RNA-seq",
+    "en_synonyms": [
+      "small RNA sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "mRNA expression profiling"
+    ],
+    "ambiguity_notes": "Small RNA sequencing.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "小RNA测序",
+      "small RNA-seq",
+      "小RNA-seq"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_dna_methylation_array",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_dna_methylation_array",
+    "preferred_label_en": "DNA methylation array",
+    "synonyms_en": [
+      "methylation array",
+      "DNA methylation microarray"
+    ],
+    "exact_synonyms_en": [
+      "DNA methylation array"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "DNA methylation array",
+      "methylation array",
+      "DNA methylation microarray",
+      "DNA甲基化芯片",
+      "甲基化芯片"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "DNA methylation array",
+      "methylation array",
+      "DNA methylation microarray"
+    ],
+    "assay_terms": [
+      "DNA methylation array"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "DNA甲基化芯片",
+    "zh_synonyms": [
+      "甲基化芯片",
+      "DNA methylation array"
+    ],
+    "preferred_en": "DNA methylation array",
+    "en_synonyms": [
+      "methylation array",
+      "DNA methylation microarray"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "SNP array",
+      "expression array"
+    ],
+    "ambiguity_notes": "Methylation array assay, distinct from expression arrays.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "DNA甲基化芯片",
+      "甲基化芯片",
+      "DNA methylation array"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_methylation_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_methylation_profiling",
+    "preferred_label_en": "methylation profiling",
+    "synonyms_en": [
+      "DNA methylation profiling",
+      "methylome profiling"
+    ],
+    "exact_synonyms_en": [
+      "methylation profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "methylation profiling",
+      "DNA methylation profiling",
+      "methylome profiling",
+      "甲基化",
+      "甲基化分析",
+      "甲基化谱",
+      "DNA甲基化"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "methylation profiling",
+      "DNA methylation profiling",
+      "methylome profiling"
+    ],
+    "assay_terms": [
+      "methylation profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "甲基化",
+    "zh_synonyms": [
+      "甲基化分析",
+      "甲基化谱",
+      "DNA甲基化"
+    ],
+    "preferred_en": "methylation profiling",
+    "en_synonyms": [
+      "DNA methylation profiling",
+      "methylome profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "mutation profiling"
+    ],
+    "ambiguity_notes": "Broad methylation profiling concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "甲基化",
+      "甲基化分析",
+      "甲基化谱",
+      "DNA甲基化"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_bisulfite_sequencing",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_bisulfite_sequencing",
+    "preferred_label_en": "bisulfite sequencing",
+    "synonyms_en": [
+      "bisulphite sequencing",
+      "BS-seq"
+    ],
+    "exact_synonyms_en": [
+      "bisulfite sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "BS-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "bisulfite sequencing",
+      "bisulphite sequencing",
+      "BS-seq",
+      "亚硫酸氢盐测序",
+      "重亚硫酸盐测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "bisulfite sequencing",
+      "bisulphite sequencing",
+      "BS-seq"
+    ],
+    "assay_terms": [
+      "bisulfite sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "亚硫酸氢盐测序",
+    "zh_synonyms": [
+      "重亚硫酸盐测序",
+      "bisulfite sequencing"
+    ],
+    "preferred_en": "bisulfite sequencing",
+    "en_synonyms": [
+      "bisulphite sequencing",
+      "BS-seq"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WGS",
+      "WES"
+    ],
+    "ambiguity_notes": "Bisulfite sequencing for methylation.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "亚硫酸氢盐测序",
+      "重亚硫酸盐测序",
+      "bisulfite sequencing"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_wgbs",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_wgbs",
+    "preferred_label_en": "whole-genome bisulfite sequencing",
+    "synonyms_en": [
+      "whole genome bisulfite sequencing",
+      "WGBS"
+    ],
+    "exact_synonyms_en": [
+      "whole-genome bisulfite sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "WGBS"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "whole-genome bisulfite sequencing",
+      "whole genome bisulfite sequencing",
+      "WGBS",
+      "全基因组亚硫酸氢盐测序",
+      "全基因组甲基化测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "whole-genome bisulfite sequencing",
+      "whole genome bisulfite sequencing",
+      "WGBS"
+    ],
+    "assay_terms": [
+      "WGBS"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "全基因组亚硫酸氢盐测序",
+    "zh_synonyms": [
+      "WGBS",
+      "全基因组甲基化测序"
+    ],
+    "preferred_en": "whole-genome bisulfite sequencing",
+    "en_synonyms": [
+      "whole genome bisulfite sequencing",
+      "WGBS"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WGS",
+      "RRBS"
+    ],
+    "ambiguity_notes": "Methylation assay, not ordinary WGS.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "全基因组亚硫酸氢盐测序",
+      "WGBS",
+      "全基因组甲基化测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_rrbs",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_rrbs",
+    "preferred_label_en": "reduced representation bisulfite sequencing",
+    "synonyms_en": [
+      "RRBS"
+    ],
+    "exact_synonyms_en": [
+      "reduced representation bisulfite sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RRBS"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "reduced representation bisulfite sequencing",
+      "RRBS",
+      "简化代表性亚硫酸氢盐测序",
+      "简化甲基化测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "reduced representation bisulfite sequencing",
+      "RRBS"
+    ],
+    "assay_terms": [
+      "RRBS"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "简化代表性亚硫酸氢盐测序",
+    "zh_synonyms": [
+      "RRBS",
+      "简化甲基化测序"
+    ],
+    "preferred_en": "reduced representation bisulfite sequencing",
+    "en_synonyms": [
+      "RRBS"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WGBS"
+    ],
+    "ambiguity_notes": "Reduced representation methylation sequencing.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "简化代表性亚硫酸氢盐测序",
+      "RRBS",
+      "简化甲基化测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_atac_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_atac_seq",
+    "preferred_label_en": "ATAC-seq",
+    "synonyms_en": [
+      "assay for transposase-accessible chromatin sequencing",
+      "ATAC sequencing"
+    ],
+    "exact_synonyms_en": [
+      "ATAC-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ATAC-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ATAC-seq",
+      "assay for transposase-accessible chromatin sequencing",
+      "ATAC sequencing",
+      "ATAC测序",
+      "染色质开放性测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "ATAC-seq",
+      "assay for transposase-accessible chromatin sequencing",
+      "ATAC sequencing"
+    ],
+    "assay_terms": [
+      "ATAC-seq",
+      "chromatin accessibility"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "ATAC测序",
+    "zh_synonyms": [
+      "ATAC-seq",
+      "染色质开放性测序"
+    ],
+    "preferred_en": "ATAC-seq",
+    "en_synonyms": [
+      "assay for transposase-accessible chromatin sequencing",
+      "ATAC sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "ChIP-seq",
+      "CUT&Tag"
+    ],
+    "ambiguity_notes": "Chromatin accessibility assay; not ChIP-seq.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "ATAC测序",
+      "ATAC-seq",
+      "染色质开放性测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_chip_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_chip_seq",
+    "preferred_label_en": "ChIP-seq",
+    "synonyms_en": [
+      "chromatin immunoprecipitation sequencing",
+      "ChIP sequencing"
+    ],
+    "exact_synonyms_en": [
+      "ChIP-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ChIP-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ChIP-seq",
+      "chromatin immunoprecipitation sequencing",
+      "ChIP sequencing",
+      "ChIP测序",
+      "染色质免疫沉淀测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "ChIP-seq",
+      "chromatin immunoprecipitation sequencing",
+      "ChIP sequencing"
+    ],
+    "assay_terms": [
+      "ChIP-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "ChIP测序",
+    "zh_synonyms": [
+      "ChIP-seq",
+      "染色质免疫沉淀测序"
+    ],
+    "preferred_en": "ChIP-seq",
+    "en_synonyms": [
+      "chromatin immunoprecipitation sequencing",
+      "ChIP sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "ATAC-seq",
+      "CUT&RUN"
+    ],
+    "ambiguity_notes": "Protein-DNA binding or histone mark assay; not ATAC-seq.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "ChIP测序",
+      "ChIP-seq",
+      "染色质免疫沉淀测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_cut_and_run",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_cut_and_run",
+    "preferred_label_en": "CUT&RUN",
+    "synonyms_en": [
+      "cleavage under targets and release using nuclease"
+    ],
+    "exact_synonyms_en": [
+      "CUT&RUN"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CUT&RUN"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "CUT&RUN",
+      "cleavage under targets and release using nuclease",
+      "CUT and RUN",
+      "CUT&RUN测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "CUT&RUN",
+      "cleavage under targets and release using nuclease"
+    ],
+    "assay_terms": [
+      "CUT&RUN"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "CUT&RUN",
+    "zh_synonyms": [
+      "CUT and RUN",
+      "CUT&RUN测序"
+    ],
+    "preferred_en": "CUT&RUN",
+    "en_synonyms": [
+      "cleavage under targets and release using nuclease"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "CUT&Tag",
+      "ChIP-seq"
+    ],
+    "ambiguity_notes": "Targeted chromatin profiling assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "CUT&RUN",
+      "CUT and RUN",
+      "CUT&RUN测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_cut_and_tag",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_cut_and_tag",
+    "preferred_label_en": "CUT&Tag",
+    "synonyms_en": [
+      "cleavage under targets and tagmentation"
+    ],
+    "exact_synonyms_en": [
+      "CUT&Tag"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CUT&Tag"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "CUT&Tag",
+      "cleavage under targets and tagmentation",
+      "CUT and Tag",
+      "CUT&Tag测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "CUT&Tag",
+      "cleavage under targets and tagmentation"
+    ],
+    "assay_terms": [
+      "CUT&Tag"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "CUT&Tag",
+    "zh_synonyms": [
+      "CUT and Tag",
+      "CUT&Tag测序"
+    ],
+    "preferred_en": "CUT&Tag",
+    "en_synonyms": [
+      "cleavage under targets and tagmentation"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "CUT&RUN",
+      "ChIP-seq"
+    ],
+    "ambiguity_notes": "Targeted chromatin profiling assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "CUT&Tag",
+      "CUT and Tag",
+      "CUT&Tag测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_chromatin_accessibility",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_chromatin_accessibility",
+    "preferred_label_en": "chromatin accessibility",
+    "synonyms_en": [
+      "chromatin accessibility profiling",
+      "open chromatin profiling"
+    ],
+    "exact_synonyms_en": [
+      "chromatin accessibility"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "chromatin accessibility",
+      "chromatin accessibility profiling",
+      "open chromatin profiling",
+      "染色质开放性",
+      "染色质可及性"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "chromatin accessibility",
+      "chromatin accessibility profiling",
+      "open chromatin profiling"
+    ],
+    "assay_terms": [
+      "chromatin accessibility"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "染色质开放性",
+    "zh_synonyms": [
+      "染色质可及性",
+      "chromatin accessibility"
+    ],
+    "preferred_en": "chromatin accessibility",
+    "en_synonyms": [
+      "chromatin accessibility profiling",
+      "open chromatin profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "histone modification profiling"
+    ],
+    "ambiguity_notes": "Broad accessibility concept, often ATAC-seq.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "染色质开放性",
+      "染色质可及性",
+      "chromatin accessibility"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_histone_modification_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_histone_modification_profiling",
+    "preferred_label_en": "histone modification profiling",
+    "synonyms_en": [
+      "histone mark profiling",
+      "histone modification analysis"
+    ],
+    "exact_synonyms_en": [
+      "histone modification profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "histone modification profiling",
+      "histone mark profiling",
+      "histone modification analysis",
+      "组蛋白修饰谱",
+      "组蛋白修饰分析"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "histone modification profiling",
+      "histone mark profiling",
+      "histone modification analysis"
+    ],
+    "assay_terms": [
+      "histone modification profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "epigenomics",
+    "preferred_zh": "组蛋白修饰谱",
+    "zh_synonyms": [
+      "组蛋白修饰分析",
+      "histone modification profiling"
+    ],
+    "preferred_en": "histone modification profiling",
+    "en_synonyms": [
+      "histone mark profiling",
+      "histone modification analysis"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "chromatin accessibility"
+    ],
+    "ambiguity_notes": "Histone mark profiling, usually ChIP-seq/CUT&Tag context.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "组蛋白修饰谱",
+      "组蛋白修饰分析",
+      "histone modification profiling"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_wgs",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_wgs",
+    "preferred_label_en": "whole genome sequencing",
+    "synonyms_en": [
+      "whole-genome sequencing",
+      "WGS"
+    ],
+    "exact_synonyms_en": [
+      "whole genome sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "WGS"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "whole genome sequencing",
+      "whole-genome sequencing",
+      "WGS",
+      "全基因组",
+      "全基因组测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "whole genome sequencing",
+      "whole-genome sequencing",
+      "WGS"
+    ],
+    "assay_terms": [
+      "whole genome sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "全基因组",
+    "zh_synonyms": [
+      "全基因组测序",
+      "WGS"
+    ],
+    "preferred_en": "whole genome sequencing",
+    "en_synonyms": [
+      "whole-genome sequencing",
+      "WGS"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WES",
+      "RNA-seq",
+      "WGBS"
+    ],
+    "ambiguity_notes": "Whole genome sequencing, not whole exome sequencing.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "全基因组",
+      "全基因组测序",
+      "WGS"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_wes",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_wes",
+    "preferred_label_en": "whole exome sequencing",
+    "synonyms_en": [
+      "whole-exome sequencing",
+      "WES"
+    ],
+    "exact_synonyms_en": [
+      "whole exome sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "WES"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "whole exome sequencing",
+      "whole-exome sequencing",
+      "WES",
+      "全外显子",
+      "全外显子测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "whole exome sequencing",
+      "whole-exome sequencing",
+      "WES"
+    ],
+    "assay_terms": [
+      "whole exome sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "全外显子",
+    "zh_synonyms": [
+      "全外显子测序",
+      "WES"
+    ],
+    "preferred_en": "whole exome sequencing",
+    "en_synonyms": [
+      "whole-exome sequencing",
+      "WES"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WGS",
+      "RNA-seq"
+    ],
+    "ambiguity_notes": "Whole exome sequencing, not whole genome sequencing.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "全外显子",
+      "全外显子测序",
+      "WES"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_targeted_sequencing",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_targeted_sequencing",
+    "preferred_label_en": "targeted sequencing",
+    "synonyms_en": [
+      "targeted DNA sequencing",
+      "amplicon sequencing"
+    ],
+    "exact_synonyms_en": [
+      "targeted sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "targeted sequencing",
+      "targeted DNA sequencing",
+      "amplicon sequencing",
+      "靶向测序",
+      "目标区域测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "targeted sequencing",
+      "targeted DNA sequencing",
+      "amplicon sequencing"
+    ],
+    "assay_terms": [
+      "targeted sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "靶向测序",
+    "zh_synonyms": [
+      "目标区域测序",
+      "targeted sequencing"
+    ],
+    "preferred_en": "targeted sequencing",
+    "en_synonyms": [
+      "targeted DNA sequencing",
+      "amplicon sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WGS",
+      "WES"
+    ],
+    "ambiguity_notes": "Targeted sequencing assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "靶向测序",
+      "目标区域测序",
+      "targeted sequencing"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_panel_sequencing",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_panel_sequencing",
+    "preferred_label_en": "panel sequencing",
+    "synonyms_en": [
+      "gene panel sequencing",
+      "targeted panel sequencing"
+    ],
+    "exact_synonyms_en": [
+      "panel sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "panel sequencing",
+      "gene panel sequencing",
+      "targeted panel sequencing",
+      "panel测序",
+      "基因panel测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "panel sequencing",
+      "gene panel sequencing",
+      "targeted panel sequencing"
+    ],
+    "assay_terms": [
+      "panel sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "panel测序",
+    "zh_synonyms": [
+      "基因panel测序",
+      "panel sequencing"
+    ],
+    "preferred_en": "panel sequencing",
+    "en_synonyms": [
+      "gene panel sequencing",
+      "targeted panel sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "WGS",
+      "WES"
+    ],
+    "ambiguity_notes": "Panel sequencing assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "panel测序",
+      "基因panel测序",
+      "panel sequencing"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_snp_array",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_snp_array",
+    "preferred_label_en": "SNP array",
+    "synonyms_en": [
+      "single nucleotide polymorphism array",
+      "genotyping array"
+    ],
+    "exact_synonyms_en": [
+      "SNP array"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SNP array"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "SNP array",
+      "single nucleotide polymorphism array",
+      "genotyping array",
+      "SNP芯片",
+      "基因分型芯片"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "SNP array",
+      "single nucleotide polymorphism array",
+      "genotyping array"
+    ],
+    "assay_terms": [
+      "SNP array"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "SNP芯片",
+    "zh_synonyms": [
+      "SNP array",
+      "基因分型芯片"
+    ],
+    "preferred_en": "SNP array",
+    "en_synonyms": [
+      "single nucleotide polymorphism array",
+      "genotyping array"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "expression array",
+      "methylation array"
+    ],
+    "ambiguity_notes": "Genotyping array, not expression chip.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "SNP芯片",
+      "SNP array",
+      "基因分型芯片"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_cnv",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_cnv",
+    "preferred_label_en": "copy number variation",
+    "synonyms_en": [
+      "copy number alteration",
+      "copy number profiling"
+    ],
+    "exact_synonyms_en": [
+      "copy number variation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CNV"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "copy number variation",
+      "copy number alteration",
+      "copy number profiling",
+      "CNV",
+      "拷贝数变异",
+      "拷贝数改变"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "copy number variation",
+      "copy number alteration",
+      "copy number profiling",
+      "CNV"
+    ],
+    "assay_terms": [
+      "copy number variation profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "拷贝数变异",
+    "zh_synonyms": [
+      "拷贝数改变",
+      "CNV"
+    ],
+    "preferred_en": "copy number variation",
+    "en_synonyms": [
+      "copy number alteration",
+      "copy number profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "SNP array"
+    ],
+    "ambiguity_notes": "CNV event/profiling term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "拷贝数变异",
+      "拷贝数改变",
+      "CNV"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_mutation_profiling",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_mutation_profiling",
+    "preferred_label_en": "mutation profiling",
+    "synonyms_en": [
+      "mutation analysis",
+      "variant profiling"
+    ],
+    "exact_synonyms_en": [
+      "mutation profiling"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "mutation profiling",
+      "mutation analysis",
+      "variant profiling",
+      "突变谱",
+      "突变分析"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "mutation profiling",
+      "mutation analysis",
+      "variant profiling"
+    ],
+    "assay_terms": [
+      "mutation profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "突变谱",
+    "zh_synonyms": [
+      "突变分析",
+      "mutation profiling"
+    ],
+    "preferred_en": "mutation profiling",
+    "en_synonyms": [
+      "mutation analysis",
+      "variant profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "methylation profiling"
+    ],
+    "ambiguity_notes": "Mutation profiling concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "突变谱",
+      "突变分析",
+      "mutation profiling"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_somatic_mutation",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_somatic_mutation",
+    "preferred_label_en": "somatic mutation",
+    "synonyms_en": [
+      "somatic variant",
+      "somatic mutation profiling"
+    ],
+    "exact_synonyms_en": [
+      "somatic mutation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "somatic mutation",
+      "somatic variant",
+      "somatic mutation profiling",
+      "体细胞突变",
+      "体细胞变异"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "somatic mutation",
+      "somatic variant",
+      "somatic mutation profiling"
+    ],
+    "assay_terms": [
+      "somatic mutation profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "体细胞突变",
+    "zh_synonyms": [
+      "somatic mutation",
+      "体细胞变异"
+    ],
+    "preferred_en": "somatic mutation",
+    "en_synonyms": [
+      "somatic variant",
+      "somatic mutation profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "germline variant"
+    ],
+    "ambiguity_notes": "Somatic variant concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "体细胞突变",
+      "somatic mutation",
+      "体细胞变异"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_germline_variant",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_germline_variant",
+    "preferred_label_en": "germline variant",
+    "synonyms_en": [
+      "germline mutation",
+      "inherited variant"
+    ],
+    "exact_synonyms_en": [
+      "germline variant"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "germline variant",
+      "germline mutation",
+      "inherited variant",
+      "胚系变异",
+      "生殖系变异"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "germline variant",
+      "germline mutation",
+      "inherited variant"
+    ],
+    "assay_terms": [
+      "germline variant profiling"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "胚系变异",
+    "zh_synonyms": [
+      "germline variant",
+      "生殖系变异"
+    ],
+    "preferred_en": "germline variant",
+    "en_synonyms": [
+      "germline mutation",
+      "inherited variant"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "somatic mutation"
+    ],
+    "ambiguity_notes": "Germline variant concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "胚系变异",
+      "germline variant",
+      "生殖系变异"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_single_cell_multiomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_single_cell_multiomics",
+    "preferred_label_en": "single-cell multiomics",
+    "synonyms_en": [
+      "single-cell multi-omics",
+      "single cell multiomics"
+    ],
+    "exact_synonyms_en": [
+      "single-cell multiomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "single-cell multiomics",
+      "single-cell multi-omics",
+      "single cell multiomics",
+      "单细胞多组学",
+      "单细胞multiomics"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "single-cell multiomics",
+      "single-cell multi-omics",
+      "single cell multiomics"
+    ],
+    "assay_terms": [
+      "single-cell multiomics"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "单细胞多组学",
+    "zh_synonyms": [
+      "单细胞multiomics",
+      "single-cell multiomics"
+    ],
+    "preferred_en": "single-cell multiomics",
+    "en_synonyms": [
+      "single-cell multi-omics",
+      "single cell multiomics"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "single-cell RNA-seq"
+    ],
+    "ambiguity_notes": "Broad single-cell multi-omics concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "单细胞多组学",
+      "单细胞multiomics",
+      "single-cell multiomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_scatac_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_scatac_seq",
+    "preferred_label_en": "single-cell ATAC-seq",
+    "synonyms_en": [
+      "scATAC-seq",
+      "single cell ATAC sequencing"
+    ],
+    "exact_synonyms_en": [
+      "single-cell ATAC-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "scATAC-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "single-cell ATAC-seq",
+      "scATAC-seq",
+      "single cell ATAC sequencing",
+      "单细胞ATAC测序",
+      "单细胞染色质开放性测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "single-cell ATAC-seq",
+      "scATAC-seq",
+      "single cell ATAC sequencing"
+    ],
+    "assay_terms": [
+      "single-cell ATAC-seq",
+      "scATAC-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "单细胞ATAC测序",
+    "zh_synonyms": [
+      "scATAC-seq",
+      "单细胞染色质开放性测序"
+    ],
+    "preferred_en": "single-cell ATAC-seq",
+    "en_synonyms": [
+      "scATAC-seq",
+      "single cell ATAC sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "ATAC-seq",
+      "single-cell RNA-seq"
+    ],
+    "ambiguity_notes": "Single-cell chromatin accessibility assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "单细胞ATAC测序",
+      "scATAC-seq",
+      "单细胞染色质开放性测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_cite_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_cite_seq",
+    "preferred_label_en": "CITE-seq",
+    "synonyms_en": [
+      "cellular indexing of transcriptomes and epitopes by sequencing"
+    ],
+    "exact_synonyms_en": [
+      "CITE-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CITE-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "CITE-seq",
+      "cellular indexing of transcriptomes and epitopes by sequencing",
+      "细胞索引转录组表位测序",
+      "CITE测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "CITE-seq",
+      "cellular indexing of transcriptomes and epitopes by sequencing"
+    ],
+    "assay_terms": [
+      "CITE-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "CITE-seq",
+    "zh_synonyms": [
+      "细胞索引转录组表位测序",
+      "CITE测序"
+    ],
+    "preferred_en": "CITE-seq",
+    "en_synonyms": [
+      "cellular indexing of transcriptomes and epitopes by sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "single-cell RNA-seq"
+    ],
+    "ambiguity_notes": "Single-cell RNA plus protein tag assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "CITE-seq",
+      "细胞索引转录组表位测序",
+      "CITE测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_single_cell_proteogenomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_single_cell_proteogenomics",
+    "preferred_label_en": "single-cell proteogenomics",
+    "synonyms_en": [
+      "single cell proteogenomics"
+    ],
+    "exact_synonyms_en": [
+      "single-cell proteogenomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "single-cell proteogenomics",
+      "single cell proteogenomics",
+      "单细胞蛋白基因组学",
+      "单细胞蛋白基因组"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "single-cell proteogenomics",
+      "single cell proteogenomics"
+    ],
+    "assay_terms": [
+      "single-cell proteogenomics"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "单细胞蛋白基因组学",
+    "zh_synonyms": [
+      "单细胞蛋白基因组",
+      "single-cell proteogenomics"
+    ],
+    "preferred_en": "single-cell proteogenomics",
+    "en_synonyms": [
+      "single cell proteogenomics"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "proteomics"
+    ],
+    "ambiguity_notes": "Single-cell integrated protein/genomic assay concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "单细胞蛋白基因组学",
+      "单细胞蛋白基因组",
+      "single-cell proteogenomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_multiome_atac_gene_expression",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_multiome_atac_gene_expression",
+    "preferred_label_en": "multiome ATAC + gene expression",
+    "synonyms_en": [
+      "multiome ATAC and gene expression",
+      "10x multiome"
+    ],
+    "exact_synonyms_en": [
+      "multiome ATAC + gene expression"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "multiome ATAC + gene expression",
+      "multiome ATAC and gene expression",
+      "10x multiome",
+      "ATAC和基因表达multiome",
+      "单细胞ATAC加表达"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "multiome ATAC + gene expression",
+      "multiome ATAC and gene expression",
+      "10x multiome"
+    ],
+    "assay_terms": [
+      "multiome ATAC + gene expression"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "ATAC和基因表达multiome",
+    "zh_synonyms": [
+      "multiome ATAC + gene expression",
+      "单细胞ATAC加表达"
+    ],
+    "preferred_en": "multiome ATAC + gene expression",
+    "en_synonyms": [
+      "multiome ATAC and gene expression",
+      "10x multiome"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "ATAC-seq",
+      "RNA-seq"
+    ],
+    "ambiguity_notes": "Joint ATAC and gene expression assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "ATAC和基因表达multiome",
+      "multiome ATAC + gene expression",
+      "单细胞ATAC加表达"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_cell_type_annotation",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_cell_type_annotation",
+    "preferred_label_en": "cell type annotation",
+    "synonyms_en": [
+      "cell annotation",
+      "cell-type annotation"
+    ],
+    "exact_synonyms_en": [
+      "cell type annotation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cell type annotation",
+      "cell annotation",
+      "cell-type annotation",
+      "细胞类型注释",
+      "细胞注释"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "cell type annotation",
+      "cell annotation",
+      "cell-type annotation"
+    ],
+    "assay_terms": [
+      "cell type annotation"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "细胞类型注释",
+    "zh_synonyms": [
+      "细胞注释",
+      "cell type annotation"
+    ],
+    "preferred_en": "cell type annotation",
+    "en_synonyms": [
+      "cell annotation",
+      "cell-type annotation"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "disease diagnosis"
+    ],
+    "ambiguity_notes": "Analytic output term, not disease.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "细胞类型注释",
+      "细胞注释",
+      "cell type annotation"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_cell_clustering",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_cell_clustering",
+    "preferred_label_en": "cell clustering",
+    "synonyms_en": [
+      "single-cell clustering",
+      "clustering analysis"
+    ],
+    "exact_synonyms_en": [
+      "cell clustering"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cell clustering",
+      "single-cell clustering",
+      "clustering analysis",
+      "细胞聚类",
+      "单细胞聚类"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "cell clustering",
+      "single-cell clustering",
+      "clustering analysis"
+    ],
+    "assay_terms": [
+      "cell clustering"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "single_cell_multiomics",
+    "preferred_zh": "细胞聚类",
+    "zh_synonyms": [
+      "单细胞聚类",
+      "cell clustering"
+    ],
+    "preferred_en": "cell clustering",
+    "en_synonyms": [
+      "single-cell clustering",
+      "clustering analysis"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "cell type annotation"
+    ],
+    "ambiguity_notes": "Single-cell analysis term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "细胞聚类",
+      "单细胞聚类",
+      "cell clustering"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_proteomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_proteomics",
+    "preferred_label_en": "proteomics",
+    "synonyms_en": [
+      "protein profiling",
+      "proteome profiling"
+    ],
+    "exact_synonyms_en": [
+      "proteomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "PRIDE",
+        "CPTAC",
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "proteomics",
+      "protein profiling",
+      "proteome profiling",
+      "蛋白组",
+      "蛋白质组",
+      "蛋白组学"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "proteomics",
+      "protein profiling",
+      "proteome profiling"
+    ],
+    "assay_terms": [
+      "proteomics"
+    ],
+    "platform_candidates": [
+      "PRIDE",
+      "CPTAC",
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "proteomics_metabolomics",
+    "preferred_zh": "蛋白组",
+    "zh_synonyms": [
+      "蛋白质组",
+      "蛋白组学",
+      "proteomics"
+    ],
+    "preferred_en": "proteomics",
+    "en_synonyms": [
+      "protein profiling",
+      "proteome profiling"
+    ],
+    "related_platforms": [
+      "PRIDE",
+      "CPTAC",
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "metabolomics",
+      "phosphoproteomics"
+    ],
+    "ambiguity_notes": "Proteomics should not expand to metabolomics.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "蛋白组",
+      "蛋白质组",
+      "蛋白组学",
+      "proteomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_mass_spectrometry_proteomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_mass_spectrometry_proteomics",
+    "preferred_label_en": "mass spectrometry proteomics",
+    "synonyms_en": [
+      "MS-based proteomics",
+      "mass spectrometry-based proteomics"
+    ],
+    "exact_synonyms_en": [
+      "mass spectrometry proteomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MS proteomics"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "PRIDE",
+        "CPTAC"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "mass spectrometry proteomics",
+      "MS-based proteomics",
+      "mass spectrometry-based proteomics",
+      "MS proteomics",
+      "质谱蛋白组",
+      "质谱蛋白质组",
+      "MS蛋白组"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "mass spectrometry proteomics",
+      "MS-based proteomics",
+      "mass spectrometry-based proteomics",
+      "MS proteomics"
+    ],
+    "assay_terms": [
+      "mass spectrometry proteomics"
+    ],
+    "platform_candidates": [
+      "PRIDE",
+      "CPTAC"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "proteomics_metabolomics",
+    "preferred_zh": "质谱蛋白组",
+    "zh_synonyms": [
+      "质谱蛋白质组",
+      "MS蛋白组"
+    ],
+    "preferred_en": "mass spectrometry proteomics",
+    "en_synonyms": [
+      "MS-based proteomics",
+      "mass spectrometry-based proteomics"
+    ],
+    "related_platforms": [
+      "PRIDE",
+      "CPTAC"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "metabolomics"
+    ],
+    "ambiguity_notes": "Mass spectrometry proteomics.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "质谱蛋白组",
+      "质谱蛋白质组",
+      "MS蛋白组"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_phosphoproteomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_phosphoproteomics",
+    "preferred_label_en": "phosphoproteomics",
+    "synonyms_en": [
+      "phosphoproteome profiling",
+      "phosphorylation proteomics"
+    ],
+    "exact_synonyms_en": [
+      "phosphoproteomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "PRIDE",
+        "CPTAC"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "phosphoproteomics",
+      "phosphoproteome profiling",
+      "phosphorylation proteomics",
+      "磷酸化蛋白组",
+      "磷酸化蛋白质组"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "phosphoproteomics",
+      "phosphoproteome profiling",
+      "phosphorylation proteomics"
+    ],
+    "assay_terms": [
+      "phosphoproteomics"
+    ],
+    "platform_candidates": [
+      "PRIDE",
+      "CPTAC"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "proteomics_metabolomics",
+    "preferred_zh": "磷酸化蛋白组",
+    "zh_synonyms": [
+      "磷酸化蛋白质组",
+      "phosphoproteomics"
+    ],
+    "preferred_en": "phosphoproteomics",
+    "en_synonyms": [
+      "phosphoproteome profiling",
+      "phosphorylation proteomics"
+    ],
+    "related_platforms": [
+      "PRIDE",
+      "CPTAC"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "proteomics"
+    ],
+    "ambiguity_notes": "Post-translational modification proteomics.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "磷酸化蛋白组",
+      "磷酸化蛋白质组",
+      "phosphoproteomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_metabolomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_metabolomics",
+    "preferred_label_en": "metabolomics",
+    "synonyms_en": [
+      "metabolome profiling",
+      "metabolic profiling"
+    ],
+    "exact_synonyms_en": [
+      "metabolomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "MetaboLights",
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "metabolomics",
+      "metabolome profiling",
+      "metabolic profiling",
+      "代谢组",
+      "代谢组学"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "metabolomics",
+      "metabolome profiling",
+      "metabolic profiling"
+    ],
+    "assay_terms": [
+      "metabolomics"
+    ],
+    "platform_candidates": [
+      "MetaboLights",
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "proteomics_metabolomics",
+    "preferred_zh": "代谢组",
+    "zh_synonyms": [
+      "代谢组学",
+      "metabolomics"
+    ],
+    "preferred_en": "metabolomics",
+    "en_synonyms": [
+      "metabolome profiling",
+      "metabolic profiling"
+    ],
+    "related_platforms": [
+      "MetaboLights",
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "proteomics",
+      "lipidomics"
+    ],
+    "ambiguity_notes": "Metabolomics should not expand to proteomics.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "代谢组",
+      "代谢组学",
+      "metabolomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_lipidomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_lipidomics",
+    "preferred_label_en": "lipidomics",
+    "synonyms_en": [
+      "lipidome profiling",
+      "lipid profiling"
+    ],
+    "exact_synonyms_en": [
+      "lipidomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "MetaboLights",
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "lipidomics",
+      "lipidome profiling",
+      "lipid profiling",
+      "脂质组",
+      "脂质组学"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "lipidomics",
+      "lipidome profiling",
+      "lipid profiling"
+    ],
+    "assay_terms": [
+      "lipidomics"
+    ],
+    "platform_candidates": [
+      "MetaboLights",
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "proteomics_metabolomics",
+    "preferred_zh": "脂质组",
+    "zh_synonyms": [
+      "脂质组学",
+      "lipidomics"
+    ],
+    "preferred_en": "lipidomics",
+    "en_synonyms": [
+      "lipidome profiling",
+      "lipid profiling"
+    ],
+    "related_platforms": [
+      "MetaboLights",
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "metabolomics"
+    ],
+    "ambiguity_notes": "Lipidomics is related to but distinct from broad metabolomics.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "脂质组",
+      "脂质组学",
+      "lipidomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_glycomics",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_glycomics",
+    "preferred_label_en": "glycomics",
+    "synonyms_en": [
+      "glycome profiling",
+      "glycan profiling"
+    ],
+    "exact_synonyms_en": [
+      "glycomics"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "glycomics",
+      "glycome profiling",
+      "glycan profiling",
+      "糖组学",
+      "糖组"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "glycomics",
+      "glycome profiling",
+      "glycan profiling"
+    ],
+    "assay_terms": [
+      "glycomics"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "proteomics_metabolomics",
+    "preferred_zh": "糖组学",
+    "zh_synonyms": [
+      "糖组",
+      "glycomics"
+    ],
+    "preferred_en": "glycomics",
+    "en_synonyms": [
+      "glycome profiling",
+      "glycan profiling"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "metabolomics"
+    ],
+    "ambiguity_notes": "Glycomics assay concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "糖组学",
+      "糖组",
+      "glycomics"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_crispr_screen",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_crispr_screen",
+    "preferred_label_en": "CRISPR screen",
+    "synonyms_en": [
+      "CRISPR screening",
+      "CRISPR-Cas9 screen"
+    ],
+    "exact_synonyms_en": [
+      "CRISPR screen"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CRISPR"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "CRISPR screen",
+      "CRISPR screening",
+      "CRISPR-Cas9 screen",
+      "CRISPR",
+      "CRISPR筛选",
+      "CRISPR筛查"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "CRISPR screen",
+      "CRISPR screening",
+      "CRISPR-Cas9 screen",
+      "CRISPR"
+    ],
+    "assay_terms": [
+      "CRISPR screen"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "functional_genomics",
+    "preferred_zh": "CRISPR筛选",
+    "zh_synonyms": [
+      "CRISPR screen",
+      "CRISPR筛查"
+    ],
+    "preferred_en": "CRISPR screen",
+    "en_synonyms": [
+      "CRISPR screening",
+      "CRISPR-Cas9 screen"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "RNAi screen"
+    ],
+    "ambiguity_notes": "Functional genomics screen.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "CRISPR筛选",
+      "CRISPR screen",
+      "CRISPR筛查"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_rnai_screen",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_rnai_screen",
+    "preferred_label_en": "RNAi screen",
+    "synonyms_en": [
+      "RNA interference screen",
+      "RNAi screening"
+    ],
+    "exact_synonyms_en": [
+      "RNAi screen"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RNAi"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "RNAi screen",
+      "RNA interference screen",
+      "RNAi screening",
+      "RNAi",
+      "RNAi筛选",
+      "RNA干扰筛选"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "RNAi screen",
+      "RNA interference screen",
+      "RNAi screening",
+      "RNAi"
+    ],
+    "assay_terms": [
+      "RNAi screen"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "functional_genomics",
+    "preferred_zh": "RNAi筛选",
+    "zh_synonyms": [
+      "RNAi screen",
+      "RNA干扰筛选"
+    ],
+    "preferred_en": "RNAi screen",
+    "en_synonyms": [
+      "RNA interference screen",
+      "RNAi screening"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "CRISPR screen",
+      "shRNA screen"
+    ],
+    "ambiguity_notes": "RNA interference screen.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "RNAi筛选",
+      "RNAi screen",
+      "RNA干扰筛选"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_shrna_screen",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_shrna_screen",
+    "preferred_label_en": "shRNA screen",
+    "synonyms_en": [
+      "short hairpin RNA screen",
+      "shRNA screening"
+    ],
+    "exact_synonyms_en": [
+      "shRNA screen"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "shRNA"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "shRNA screen",
+      "short hairpin RNA screen",
+      "shRNA screening",
+      "shRNA",
+      "shRNA筛选",
+      "短发夹RNA筛选"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "shRNA screen",
+      "short hairpin RNA screen",
+      "shRNA screening",
+      "shRNA"
+    ],
+    "assay_terms": [
+      "shRNA screen"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "functional_genomics",
+    "preferred_zh": "shRNA筛选",
+    "zh_synonyms": [
+      "shRNA screen",
+      "短发夹RNA筛选"
+    ],
+    "preferred_en": "shRNA screen",
+    "en_synonyms": [
+      "short hairpin RNA screen",
+      "shRNA screening"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "CRISPR screen",
+      "RNAi screen"
+    ],
+    "ambiguity_notes": "shRNA screening assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "shRNA筛选",
+      "shRNA screen",
+      "短发夹RNA筛选"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_perturb_seq",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_perturb_seq",
+    "preferred_label_en": "Perturb-seq",
+    "synonyms_en": [
+      "perturbation sequencing",
+      "single-cell perturb-seq"
+    ],
+    "exact_synonyms_en": [
+      "Perturb-seq"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Perturb-seq"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Perturb-seq",
+      "perturbation sequencing",
+      "single-cell perturb-seq",
+      "扰动测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "Perturb-seq",
+      "perturbation sequencing",
+      "single-cell perturb-seq"
+    ],
+    "assay_terms": [
+      "Perturb-seq"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "functional_genomics",
+    "preferred_zh": "Perturb-seq",
+    "zh_synonyms": [
+      "扰动测序",
+      "perturb-seq"
+    ],
+    "preferred_en": "Perturb-seq",
+    "en_synonyms": [
+      "perturbation sequencing",
+      "single-cell perturb-seq"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "CRISPR screen"
+    ],
+    "ambiguity_notes": "Single-cell perturbation assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "Perturb-seq",
+      "扰动测序"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_drug_screen",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_drug_screen",
+    "preferred_label_en": "drug screen",
+    "synonyms_en": [
+      "drug screening",
+      "drug sensitivity screen"
+    ],
+    "exact_synonyms_en": [
+      "drug screen"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "ArrayExpress"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "drug screen",
+      "drug screening",
+      "drug sensitivity screen",
+      "药物筛选",
+      "药物敏感性筛选"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "drug screen",
+      "drug screening",
+      "drug sensitivity screen"
+    ],
+    "assay_terms": [
+      "drug screen"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "functional_genomics",
+    "preferred_zh": "药物筛选",
+    "zh_synonyms": [
+      "drug screen",
+      "药物敏感性筛选"
+    ],
+    "preferred_en": "drug screen",
+    "en_synonyms": [
+      "drug screening",
+      "drug sensitivity screen"
+    ],
+    "related_platforms": [
+      "GEO",
+      "ArrayExpress"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "CRISPR screen"
+    ],
+    "ambiguity_notes": "Functional drug screening term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "药物筛选",
+      "drug screen",
+      "药物敏感性筛选"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_survival_data",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_survival_data",
+    "preferred_label_en": "survival data",
+    "synonyms_en": [
+      "survival metadata",
+      "overall survival data"
+    ],
+    "exact_synonyms_en": [
+      "survival data"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "OS"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "TCGA",
+        "GEO"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "survival data",
+      "survival metadata",
+      "overall survival data",
+      "OS",
+      "生存数据",
+      "生存信息"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "survival data",
+      "survival metadata",
+      "overall survival data",
+      "OS"
+    ],
+    "assay_terms": [
+      "survival data"
+    ],
+    "platform_candidates": [
+      "TCGA",
+      "GEO"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "生存数据",
+    "zh_synonyms": [
+      "生存信息",
+      "survival data"
+    ],
+    "preferred_en": "survival data",
+    "en_synonyms": [
+      "survival metadata",
+      "overall survival data"
+    ],
+    "related_platforms": [
+      "TCGA",
+      "GEO"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "expression profiling"
+    ],
+    "ambiguity_notes": "Clinical endpoint metadata, not assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "生存数据",
+      "生存信息",
+      "survival data"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_clinical_metadata",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_clinical_metadata",
+    "preferred_label_en": "clinical metadata",
+    "synonyms_en": [
+      "clinical data",
+      "clinical annotation"
+    ],
+    "exact_synonyms_en": [
+      "clinical metadata"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "TCGA",
+        "GEO"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "clinical metadata",
+      "clinical data",
+      "clinical annotation",
+      "临床信息",
+      "临床数据"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "clinical metadata",
+      "clinical data",
+      "clinical annotation"
+    ],
+    "assay_terms": [
+      "clinical metadata"
+    ],
+    "platform_candidates": [
+      "TCGA",
+      "GEO"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "临床信息",
+    "zh_synonyms": [
+      "临床数据",
+      "clinical metadata"
+    ],
+    "preferred_en": "clinical metadata",
+    "en_synonyms": [
+      "clinical data",
+      "clinical annotation"
+    ],
+    "related_platforms": [
+      "TCGA",
+      "GEO"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "phenotype data"
+    ],
+    "ambiguity_notes": "Clinical metadata term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "临床信息",
+      "临床数据",
+      "clinical metadata"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_phenotype_data",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_phenotype_data",
+    "preferred_label_en": "phenotype data",
+    "synonyms_en": [
+      "phenotypic data",
+      "phenotype metadata"
+    ],
+    "exact_synonyms_en": [
+      "phenotype data"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "GTEx",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "phenotype data",
+      "phenotypic data",
+      "phenotype metadata",
+      "表型数据",
+      "表型信息"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "phenotype data",
+      "phenotypic data",
+      "phenotype metadata"
+    ],
+    "assay_terms": [
+      "phenotype data"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "GTEx",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "表型数据",
+    "zh_synonyms": [
+      "表型信息",
+      "phenotype data"
+    ],
+    "preferred_en": "phenotype data",
+    "en_synonyms": [
+      "phenotypic data",
+      "phenotype metadata"
+    ],
+    "related_platforms": [
+      "GEO",
+      "GTEx",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "clinical metadata"
+    ],
+    "ambiguity_notes": "Phenotype metadata term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "表型数据",
+      "表型信息",
+      "phenotype data"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_immune_infiltration",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_immune_infiltration",
+    "preferred_label_en": "immune infiltration",
+    "synonyms_en": [
+      "immune cell infiltration",
+      "tumor immune infiltration"
+    ],
+    "exact_synonyms_en": [
+      "immune infiltration"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "immune infiltration",
+      "immune cell infiltration",
+      "tumor immune infiltration",
+      "免疫浸润",
+      "免疫细胞浸润"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "immune infiltration",
+      "immune cell infiltration",
+      "tumor immune infiltration"
+    ],
+    "assay_terms": [
+      "immune infiltration analysis"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "免疫浸润",
+    "zh_synonyms": [
+      "免疫细胞浸润",
+      "immune infiltration"
+    ],
+    "preferred_en": "immune infiltration",
+    "en_synonyms": [
+      "immune cell infiltration",
+      "tumor immune infiltration"
+    ],
+    "related_platforms": [
+      "GEO",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "tumor microenvironment"
+    ],
+    "ambiguity_notes": "Computational phenotype term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "免疫浸润",
+      "免疫细胞浸润",
+      "immune infiltration"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_tumor_microenvironment",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_tumor_microenvironment",
+    "preferred_label_en": "tumor microenvironment",
+    "synonyms_en": [
+      "tumour microenvironment",
+      "TME"
+    ],
+    "exact_synonyms_en": [
+      "tumor microenvironment"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TME"
+    ],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "tumor microenvironment",
+      "tumour microenvironment",
+      "TME",
+      "肿瘤微环境"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "tumor microenvironment",
+      "tumour microenvironment",
+      "TME"
+    ],
+    "assay_terms": [
+      "tumor microenvironment analysis"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "肿瘤微环境",
+    "zh_synonyms": [
+      "TME",
+      "tumor microenvironment"
+    ],
+    "preferred_en": "tumor microenvironment",
+    "en_synonyms": [
+      "tumour microenvironment",
+      "TME"
+    ],
+    "related_platforms": [
+      "GEO",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "immune infiltration"
+    ],
+    "ambiguity_notes": "Tumor microenvironment analytic concept.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "肿瘤微环境",
+      "TME",
+      "tumor microenvironment"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_pathway_activity",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_pathway_activity",
+    "preferred_label_en": "pathway activity",
+    "synonyms_en": [
+      "pathway activity analysis",
+      "pathway score"
+    ],
+    "exact_synonyms_en": [
+      "pathway activity"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "TCGA",
+        "GTEx"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "pathway activity",
+      "pathway activity analysis",
+      "pathway score",
+      "通路活性",
+      "通路活性分析"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "pathway activity",
+      "pathway activity analysis",
+      "pathway score"
+    ],
+    "assay_terms": [
+      "pathway activity analysis"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "TCGA",
+      "GTEx"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "通路活性",
+    "zh_synonyms": [
+      "通路活性分析",
+      "pathway activity"
+    ],
+    "preferred_en": "pathway activity",
+    "en_synonyms": [
+      "pathway activity analysis",
+      "pathway score"
+    ],
+    "related_platforms": [
+      "GEO",
+      "TCGA",
+      "GTEx"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "gene signature"
+    ],
+    "ambiguity_notes": "Pathway-level analytic term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "通路活性",
+      "通路活性分析",
+      "pathway activity"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_gene_signature",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_gene_signature",
+    "preferred_label_en": "gene signature",
+    "synonyms_en": [
+      "gene expression signature",
+      "molecular signature"
+    ],
+    "exact_synonyms_en": [
+      "gene signature"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "gene signature",
+      "gene expression signature",
+      "molecular signature",
+      "基因签名",
+      "基因特征"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "gene signature",
+      "gene expression signature",
+      "molecular signature"
+    ],
+    "assay_terms": [
+      "gene signature"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "clinical_phenotypic_omics",
+    "preferred_zh": "基因签名",
+    "zh_synonyms": [
+      "基因特征",
+      "gene signature"
+    ],
+    "preferred_en": "gene signature",
+    "en_synonyms": [
+      "gene expression signature",
+      "molecular signature"
+    ],
+    "related_platforms": [
+      "GEO",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "pathway activity"
+    ],
+    "ambiguity_notes": "Gene signature analytic term.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "基因签名",
+      "基因特征",
+      "gene signature"
+    ]
+  },
+  {
+    "concept_id": "mini:modality_sequencing",
+    "source_vocabulary": "mini",
+    "source_id": "mini:modality_sequencing",
+    "preferred_label_en": "sequencing",
+    "synonyms_en": [
+      "sequencing assay",
+      "high-throughput sequencing"
+    ],
+    "exact_synonyms_en": [
+      "sequencing"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [],
+    "disease_group": "bioinformatics_modality",
+    "concept_type": "data_modality",
+    "parent_terms": [],
+    "cross_refs": {
+      "platform": [
+        "GEO",
+        "SRA",
+        "ArrayExpress",
+        "TCGA"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "bioinformatics_modality_core_v1",
+    "term_source": "project_curated_bioinformatics_modality_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "sequencing",
+      "sequencing assay",
+      "high-throughput sequencing",
+      "测序",
+      "高通量测序"
+    ],
+    "tissue_terms": [],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [
+      "sequencing",
+      "sequencing assay",
+      "high-throughput sequencing"
+    ],
+    "assay_terms": [
+      "sequencing"
+    ],
+    "platform_candidates": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "modifier_terms_en": [],
+    "category": "data_modality",
+    "subcategory": "genomics",
+    "preferred_zh": "测序",
+    "zh_synonyms": [
+      "sequencing",
+      "高通量测序"
+    ],
+    "preferred_en": "sequencing",
+    "en_synonyms": [
+      "sequencing assay",
+      "high-throughput sequencing"
+    ],
+    "related_platforms": [
+      "GEO",
+      "SRA",
+      "ArrayExpress",
+      "TCGA"
+    ],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "RNA-seq",
+      "WGS",
+      "WES",
+      "scRNA-seq"
+    ],
+    "ambiguity_notes": "Broad ambiguous sequencing term; do not strongly infer a specific sequencing assay.",
+    "sources": [
+      "project_curated_bioinformatics_modality_core_v1"
+    ],
+    "zh_terms": [
+      "测序",
+      "sequencing",
+      "高通量测序"
+    ]
   }
 ]

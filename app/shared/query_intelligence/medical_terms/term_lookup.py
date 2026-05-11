@@ -25,6 +25,8 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     tcga_primary_sites: list[str] = []
     gtex_tissues: list[str] = []
     data_modalities: list[str] = []
+    assay_terms: list[str] = []
+    platform_candidates: list[str] = []
     modifier_terms: list[str] = []
     exposure_terms: list[str] = []
     intervention_terms: list[str] = []
@@ -50,6 +52,8 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(tcga_primary_sites, override.tcga_primary_site_candidates)
         _extend_unique(gtex_tissues, override.gtex_tissue_candidates)
         _extend_unique(data_modalities, override.data_modality_terms)
+        _extend_unique(assay_terms, override.assay_terms)
+        _extend_unique(platform_candidates, override.platform_candidates)
         _extend_unique(modifier_terms, override.modifier_terms_en)
         _extend_unique(exposure_terms, override.exposure_terms)
         _extend_unique(intervention_terms, override.intervention_terms)
@@ -62,7 +66,12 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     index_matches, index_source = _matched_runtime_index_concepts(normalized)
     if index_matches:
         _append_unique(term_sources, index_source)
+    specific_index_modalities = [
+        concept for concept in index_matches if concept.concept_type == "data_modality" and concept.concept_id != "mini:data_modality_core"
+    ]
     for concept in index_matches:
+        if concept.concept_id == "mini:data_modality_core" and specific_index_modalities:
+            continue
         _append_unique(concept_ids, concept.concept_id)
         if concept.concept_type == "disease":
             _append_unique(disease_terms, concept.preferred_label_en)
@@ -93,9 +102,14 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         elif concept.concept_type == "data_modality":
             _append_unique(data_modalities, concept.preferred_label_en)
             _extend_unique(data_modalities, concept.synonyms_en)
+            _append_unique(assay_terms, concept.preferred_label_en)
+            _extend_unique(assay_terms, concept.assay_terms)
+            _extend_unique(platform_candidates, concept.platform_candidates)
         _extend_unique(tissue_terms, concept.tissue_terms)
         _extend_unique(tcga_primary_sites, concept.tcga_primary_site_candidates)
         _extend_unique(data_modalities, concept.data_modality_terms)
+        _extend_unique(assay_terms, concept.assay_terms)
+        _extend_unique(platform_candidates, concept.platform_candidates)
         _extend_unique(modifier_terms, concept.modifier_terms_en)
         _extend_unique(abbreviations, concept.abbreviations)
         _extend_unique(mesh_terms, concept.mesh_terms)
@@ -120,7 +134,7 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         elif concept.semantic_group == "modifier":
             _extend_unique(modifier_terms, concept.en_terms)
             _extend_unique(matched_zh_terms, concept.zh_terms)
-        elif concept.semantic_group == "dataset":
+        elif concept.semantic_group == "dataset" and not data_modalities:
             _extend_unique(data_modalities, [term for term in concept.en_terms if term not in {"dataset", "GEO", "GSE"}])
 
     if not overrides and not index_matches and not registry_matches:
@@ -128,10 +142,13 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
 
     if not disease_terms and tissue_terms:
         warnings.append("仅识别到组织词，未识别到明确疾病词。")
+    if not disease_terms and not tissue_terms and data_modalities:
+        warnings.append("识别到数据类型，但未识别到明确疾病概念。")
     if target_context == "meta_analysis":
         tcga_projects = []
         tcga_primary_sites = []
         gtex_tissues = []
+        platform_candidates = []
 
     return TermLookupResult(
         original_term=query,
@@ -141,6 +158,8 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
             or disease_terms
             or tissue_terms
             or data_modalities
+            or assay_terms
+            or platform_candidates
             or modifier_terms
             or exposure_terms
             or intervention_terms
@@ -158,6 +177,8 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         tcga_primary_site_candidates=tcga_primary_sites,
         gtex_tissue_candidates=gtex_tissues,
         data_modality_terms=data_modalities,
+        assay_terms=assay_terms,
+        platform_candidates=platform_candidates,
         modifier_terms_en=modifier_terms,
         exposure_terms=exposure_terms,
         intervention_terms=intervention_terms,
@@ -212,7 +233,7 @@ def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: s
         if len(normalized_term) <= 1:
             return False
         return normalized_term in normalized_query
-    if len(normalized_term) <= 4:
+    if len(normalized_term) <= 4 or "-" in normalized_term or "+" in normalized_term:
         return re.search(rf"(?<![a-z0-9]){re.escape(normalized_term)}(?![a-z0-9])", normalized_query) is not None
     return normalized_term in normalized_query
 
