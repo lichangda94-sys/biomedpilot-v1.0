@@ -22,7 +22,7 @@ from app.bioinformatics.project_workspace_binding import (
     register_acquisition,
 )
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
-from app.bioinformatics.results.project_results import load_result_index, write_result_index
+from app.bioinformatics.results.project_results import build_imported_deg_view, load_imported_deg_comparisons, load_result_index, write_result_index
 
 
 @pytest.fixture
@@ -35,6 +35,56 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
         ["gene_id", "A1_count", "A2_count", "B1_count"],
         ["ENSMUSG00000026193", 195458, 215969, 197661],
         ["ENSMUSG00000064351", 160365, 142505, 129666],
+    ]
+    return _write_xlsx_rows(path, rows)
+
+
+def _integrated_rnaseq_sample_ids() -> list[str]:
+    return [f"{group}{replicate}" for group in ("A", "B", "C", "D", "E", "F", "H") for replicate in range(1, 4)]
+
+
+def _integrated_rnaseq_comparisons() -> list[str]:
+    return [
+        "PFFvsPBS",
+        "MMP3vsPBS",
+        "MK2206vsPBS",
+        "PI103vsPBS",
+        "PDTCvsPBS",
+        "PF271vsPBS",
+        "MK2206vsPFF",
+        "PI103vsPFF",
+        "PDTCvsPFF",
+        "PF271vsPFF",
+        "MMP3vsPFF",
+    ]
+
+
+def _write_integrated_rnaseq_xlsx(path: Path) -> Path:
+    sample_ids = _integrated_rnaseq_sample_ids()
+    comparisons = _integrated_rnaseq_comparisons()
+    header = (
+        ["gene_id"]
+        + [f"{sample}_count" for sample in sample_ids]
+        + [f"{sample}_fpkm" for sample in sample_ids]
+        + [column for comparison in comparisons for column in (f"{comparison}_log2FoldChange", f"{comparison}_pvalue", f"{comparison}_padj")]
+        + ["gene_name", "gene_chr", "gene_start", "gene_end", "gene_strand", "gene_length", "gene_biotype", "gene_description", "tf_family"]
+    )
+    rows = [
+        header,
+        (
+            ["ENSMUSG00000026193"]
+            + [100 + index for index, _sample in enumerate(sample_ids)]
+            + [round(1.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
+            + [value for _comparison in comparisons for value in (1.2, 0.01, 0.04)]
+            + ["Sox17", "chr1", 4490931, 4497354, "+", 6424, "protein_coding", "SRY-box transcription factor 17", "SOX"]
+        ),
+        (
+            ["ENSMUSG00000064351"]
+            + [200 + index for index, _sample in enumerate(sample_ids)]
+            + [round(2.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
+            + [value for _comparison in comparisons for value in (-1.4, 0.02, 0.04)]
+            + ["mt-Nd1", "chrM", 2751, 3707, "+", 957, "protein_coding", "mitochondrially encoded NADH", ""]
+        ),
     ]
     return _write_xlsx_rows(path, rows)
 
@@ -253,45 +303,8 @@ def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_r
 def test_recognition_detects_integrated_rnaseq_result_table_blocks(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
-    sample_ids = [f"{group}{replicate}" for group in ("A", "B", "C", "D", "E", "F", "H") for replicate in range(1, 4)]
-    comparisons = [
-        "PFFvsPBS",
-        "MMP3vsPBS",
-        "MK2206vsPBS",
-        "PI103vsPBS",
-        "PDTCvsPBS",
-        "PF271vsPBS",
-        "MK2206vsPFF",
-        "PI103vsPFF",
-        "PDTCvsPFF",
-        "PF271vsPFF",
-        "MMP3vsPFF",
-    ]
-    header = (
-        ["gene_id"]
-        + [f"{sample}_count" for sample in sample_ids]
-        + [f"{sample}_fpkm" for sample in sample_ids]
-        + [column for comparison in comparisons for column in (f"{comparison}_log2FoldChange", f"{comparison}_pvalue", f"{comparison}_padj")]
-        + ["gene_name", "gene_chr", "gene_start", "gene_end", "gene_strand", "gene_length", "gene_biotype", "gene_description", "tf_family"]
-    )
-    rows = [
-        header,
-        (
-            ["ENSMUSG00000026193"]
-            + [100 + index for index, _sample in enumerate(sample_ids)]
-            + [round(1.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
-            + [value for _comparison in comparisons for value in (1.2, 0.01, 0.05)]
-            + ["Sox17", "chr1", 4490931, 4497354, "+", 6424, "protein_coding", "SRY-box transcription factor 17", "SOX"]
-        ),
-        (
-            ["ENSMUSG00000064351"]
-            + [200 + index for index, _sample in enumerate(sample_ids)]
-            + [round(2.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
-            + [value for _comparison in comparisons for value in (-0.8, 0.02, 0.08)]
-            + ["mt-Nd1", "chrM", 2751, 3707, "+", 957, "protein_coding", "mitochondrially encoded NADH", ""]
-        ),
-    ]
-    _write_xlsx_rows(raw_file, rows)
+    sample_ids = _integrated_rnaseq_sample_ids()
+    _write_integrated_rnaseq_xlsx(raw_file)
 
     recognition = run_project_recognition(project_root)
     record = recognition["files"][0]  # type: ignore[index]
@@ -321,6 +334,87 @@ def test_recognition_detects_integrated_rnaseq_result_table_blocks(project_root:
     assert not any(column.endswith(("_log2FoldChange", "_pvalue", "_padj")) for column in sample_columns)
     assert {f"{sample}_count" for sample in sample_ids} <= sample_columns
     assert {f"{sample}_fpkm" for sample in sample_ids} <= sample_columns
+
+
+def test_standardization_task_center_and_results_use_integrated_content_blocks(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    _write_integrated_rnaseq_xlsx(raw_file)
+
+    recognition = run_project_recognition(project_root)
+    standardization = generate_standardized_assets(project_root)
+    assets = standardization["registry"]["assets"]  # type: ignore[index]
+    by_type = {str(asset["asset_type"]): asset for asset in assets}  # type: ignore[index]
+
+    assert (project_root / "recognized_data" / "current.json").exists()
+    assert recognition["files"][0]["semantic_type"] == "rna_seq_integrated_result_table"  # type: ignore[index]
+    assert {"count_matrix", "normalized_expression_matrix", "deg_result_table", "gene_annotation", "gene_identifier_metadata"} <= set(by_type)
+    assert by_type["count_matrix"]["source_block_type"] == "count_expression_matrix"
+    assert by_type["count_matrix"]["sample_count"] == 21
+    assert by_type["count_matrix"]["value_type"] == "count"
+    assert "differential_expression" in by_type["count_matrix"]["recommended_for"]
+    assert by_type["normalized_expression_matrix"]["source_block_type"] == "fpkm_expression_matrix"
+    assert by_type["normalized_expression_matrix"]["value_type"] == "fpkm"
+    assert "heatmap" in by_type["normalized_expression_matrix"]["recommended_for"]
+    assert by_type["deg_result_table"]["comparison_count"] >= 10
+    assert "volcano_plot" in by_type["deg_result_table"]["recommended_for"]
+    assert "gene_biotype" in by_type["gene_annotation"]["annotation_fields"]
+    assert any("检测到 count 与 FPKM" in warning for warning in standardization["registry"]["warnings"])  # type: ignore[index]
+
+    center = load_analysis_task_center(project_root)
+    capabilities = {str(item["task_id"]): item for item in center["capabilities"]}  # type: ignore[index]
+    assert capabilities["differential_expression_recompute"]["status"] == "ready_with_group_confirmation"
+    assert capabilities["deg_result_browse"]["status"] == "available"
+    assert capabilities["volcano_plot"]["status"] == "available"
+    assert capabilities["heatmap"]["status"] == "available"
+    assert capabilities["correlation"]["status"] == "available"
+    assert capabilities["gene_annotation_display"]["status"] == "available"
+    assert capabilities["human_cohort_integration"]["status"] == "not_available"
+    assert "TCGA/GTEx" in capabilities["human_cohort_integration"]["reason"]
+
+    comparisons = load_imported_deg_comparisons(project_root)
+    assert {item["comparison_name"] for item in comparisons} >= {"PFFvsPBS", "MMP3vsPBS"}
+    view = build_imported_deg_view(project_root, comparison_name="PFFvsPBS")
+    assert view["source"] == "imported_deg_result"
+    assert view["source_label"] == "导入文件中的已有差异分析结果"
+    assert view["original_columns"] == {"log2fc": "PFFvsPBS_log2FoldChange", "pvalue": "PFFvsPBS_pvalue", "padj": "PFFvsPBS_padj"}
+    assert view["columns"] == ["gene_id", "gene_name", "log2FC", "p value", "adjusted p value", "gene_biotype", "gene_description"]
+    assert view["statistics"]["total_genes"] == 2  # type: ignore[index]
+    assert view["statistics"]["significant_genes"] == 2  # type: ignore[index]
+    assert view["statistics"]["upregulated"] == 1  # type: ignore[index]
+    assert view["statistics"]["downregulated"] == 1  # type: ignore[index]
+    assert view["enrichment_species"] == "mouse"
+    assert "gene_start" not in view["columns"]
+    assert "gene_end" not in view["columns"]
+    assert "gene_length" not in view["columns"]
+    result_index = load_result_index(project_root)
+    assert any(item.get("analysis_type") == "imported_deg_result" for item in result_index["entries"])  # type: ignore[index]
+
+
+def test_standardization_requires_current_recognition_run(project_root: Path) -> None:
+    legacy_report = project_root / "logs" / "recognition" / "recognition_report.json"
+    legacy_report.parent.mkdir(parents=True, exist_ok=True)
+    legacy_report.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {
+                        "file_name": "legacy.tsv",
+                        "original_path": str(project_root / "raw_data" / "legacy.tsv"),
+                        "recognized_type": "expression_matrix",
+                        "recognized_roles": ["expression_matrix"],
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    standardization = generate_standardized_assets(project_root)
+
+    assert standardization["registry"]["assets"] == []  # type: ignore[index]
+    assert any("current.json" in warning for warning in standardization["registry"]["warnings"])  # type: ignore[index]
 
 
 def test_recognition_ignores_partial_download_files(project_root: Path) -> None:

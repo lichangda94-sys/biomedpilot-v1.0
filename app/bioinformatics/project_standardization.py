@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report
+from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN, TYPE_LABELS
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 
 
@@ -26,14 +26,24 @@ EXCLUDED_STANDARDIZATION_TYPES = {
 
 def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
-    recognition = load_recognition_report(root) or {}
-    files = list(recognition.get("files", []) or [])
+    current_recognition = _load_current_recognition_run(root)
+    recognition = current_recognition.get("recognition_report") if isinstance(current_recognition.get("recognition_report"), dict) else {}
+    recognized_files = current_recognition.get("recognized_files") if isinstance(current_recognition.get("recognized_files"), dict) else {}
+    files = list(recognized_files.get("files", []) or recognition.get("files", []) or []) if isinstance(recognized_files, dict) else list(recognition.get("files", []) or [])
     assets = []
     warnings = ["当前为资产注册和轻量校验，不等于正式 biological normalization。"]
+    warnings.extend(str(item) for item in current_recognition.get("warnings", []) or [])
     for item in files:
+        if not isinstance(item, dict):
+            continue
+        block_assets = _content_block_standardized_assets(item)
+        if block_assets:
+            assets.extend(block_assets)
+            continue
         for asset_type in _asset_types_for_standardization(item):
             assets.append(
                 {
+                    "asset_id": _asset_id(asset_type, len(assets) + 1),
                     "asset_type": asset_type,
                     "label_zh": TYPE_LABELS.get(asset_type, "未知文件"),
                     "file_path": item.get("route_path") or item.get("original_path"),
@@ -47,6 +57,7 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
                 }
             )
     assets = _dedupe_standardized_assets(assets)
+    warnings.extend(_content_block_warnings(assets))
     readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
     usable = [
         str(row.get("label"))
@@ -59,6 +70,8 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
         "generated_at": _now(),
         "project_root": str(root),
         "assets": assets,
+        "standardized_assets": assets,
+        "current_recognition_run": current_recognition.get("current") or {},
         "warnings": warnings,
     }
     processing_plan = {
@@ -72,6 +85,7 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
         "schema_version": "biomedpilot.analysis_ready_manifest.v1",
         "generated_at": registry["generated_at"],
         "exists": bool(assets),
+        "standardized_assets": assets,
         "usable_analyses": usable,
         "missing_assets": missing,
         "warnings": warnings,
@@ -80,6 +94,241 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
     _write_json(root / ANALYSIS_READY_MANIFEST, manifest)
     _write_json(root / DATA_PROCESSING_TASK_PLAN, processing_plan)
     return {"registry": registry, "analysis_ready_manifest": manifest, "data_processing_task_plan": processing_plan}
+
+
+def _load_current_recognition_run(root: Path) -> dict[str, object]:
+    current_path = root / CURRENT_RECOGNITION_RUN
+    if not current_path.exists():
+        return {
+            "current": None,
+            "recognition_report": {},
+            "recognized_files": {},
+            "warnings": ["未找到当前识别批次 recognized_data/current.json。请先完成数据识别，或在历史识别记录中选择当前结果。"],
+        }
+    current = _read_json(current_path)
+    run_dir = Path(str(current.get("run_dir") or ""))
+    if not run_dir.is_absolute():
+        run_dir = root / run_dir
+    report_path = Path(str(current.get("recognition_report_path") or ""))
+    if not report_path.is_absolute():
+        report_path = root / report_path
+    recognized_files_path = run_dir / "recognized_files.json"
+    warnings = []
+    report = _read_json(report_path) if report_path.exists() else {}
+    recognized_files = _read_json(recognized_files_path) if recognized_files_path.exists() else {}
+    if not report:
+        warnings.append(f"当前识别批次缺少 recognition_report.json：{report_path}")
+    if not recognized_files:
+        warnings.append(f"当前识别批次缺少 recognized_files.json：{recognized_files_path}")
+    return {
+        "current": current,
+        "recognition_report": report,
+        "recognized_files": recognized_files,
+        "warnings": warnings,
+    }
+
+
+def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str, object]]:
+    blocks = _content_blocks(item)
+    if not blocks:
+        return []
+    material_block_types = {"count_expression_matrix", "fpkm_expression_matrix", "deg_comparisons", "gene_annotation"}
+    if not any(str(block.get("block_type") or "") in material_block_types for block in blocks):
+        return []
+    assets: list[dict[str, object]] = []
+    source_file = str(item.get("original_path") or item.get("file_name") or "")
+    file_path = str(item.get("route_path") or item.get("original_path") or "")
+    species = str(item.get("species") or _profile_value(item, "species") or "")
+    species_group = str(item.get("species_group") or _profile_value(item, "species_group") or "")
+    gene_id_type = str(item.get("gene_id_type") or _profile_value(item, "gene_id_type") or "")
+    for block in blocks:
+        block_type = str(block.get("block_type") or "")
+        if block_type == "count_expression_matrix":
+            assets.append(
+                _block_asset(
+                    "count_matrix",
+                    item,
+                    block,
+                    source_file=source_file,
+                    file_path=file_path,
+                    species=species,
+                    species_group=species_group,
+                    gene_id_type=gene_id_type,
+                    recommended_for=["differential_expression", "normalization", "quality_control"],
+                    label_zh="Count 表达矩阵",
+                    value_type="count",
+                    analysis_ready=True,
+                    limitations=["重新差异分析建议优先使用 count matrix。"],
+                )
+            )
+        elif block_type == "fpkm_expression_matrix":
+            assets.append(
+                _block_asset(
+                    "normalized_expression_matrix",
+                    item,
+                    block,
+                    source_file=source_file,
+                    file_path=file_path,
+                    species=species,
+                    species_group=species_group,
+                    gene_id_type=gene_id_type,
+                    recommended_for=["expression_visualization", "heatmap", "correlation", "gene_expression_browse"],
+                    label_zh="FPKM 表达矩阵",
+                    value_type="fpkm",
+                    analysis_ready=True,
+                    limitations=["不建议用 FPKM 直接做 DESeq2/edgeR 式重新差异分析。"],
+                )
+            )
+        elif block_type == "deg_comparisons":
+            assets.append(
+                _block_asset(
+                    "deg_result_table",
+                    item,
+                    block,
+                    source_file=source_file,
+                    file_path=file_path,
+                    species=species,
+                    species_group=species_group,
+                    gene_id_type=gene_id_type,
+                    recommended_for=["volcano_plot", "deg_filtering", "enrichment_input", "result_browse"],
+                    label_zh="已有差异分析结果",
+                    analysis_ready=True,
+                    source_origin="imported_deg_result",
+                    limitations=["差异结果来源为导入表格；如需重新计算差异分析，请确认分组配置。"],
+                )
+            )
+        elif block_type == "gene_annotation":
+            assets.append(
+                _block_asset(
+                    "gene_annotation",
+                    item,
+                    block,
+                    source_file=source_file,
+                    file_path=file_path,
+                    species=species,
+                    species_group=species_group,
+                    gene_id_type=gene_id_type,
+                    recommended_for=["gene_symbol_mapping", "gene_description_display", "protein_coding_filter", "report_annotation"],
+                    label_zh="基因注释",
+                    analysis_ready=True,
+                )
+            )
+        elif block_type == "gene_identifier":
+            assets.append(
+                _block_asset(
+                    "gene_identifier_metadata",
+                    item,
+                    block,
+                    source_file=source_file,
+                    file_path=file_path,
+                    species=species or str(block.get("species") or ""),
+                    species_group=species_group or str(block.get("species_group") or ""),
+                    gene_id_type=gene_id_type or str(block.get("gene_id_type") or ""),
+                    recommended_for=["species_inference", "gene_id_tracking", "id_conversion_planning"],
+                    label_zh="基因标识元数据",
+                    analysis_ready=True,
+                )
+            )
+    for index, asset in enumerate(assets, start=1):
+        asset["asset_id"] = _asset_id(str(asset.get("asset_type") or "asset"), index)
+    return assets
+
+
+def _block_asset(
+    asset_type: str,
+    item: dict[str, object],
+    block: dict[str, object],
+    *,
+    source_file: str,
+    file_path: str,
+    species: str,
+    species_group: str,
+    gene_id_type: str,
+    recommended_for: list[str],
+    label_zh: str,
+    value_type: str = "",
+    analysis_ready: bool = True,
+    source_origin: str = "",
+    limitations: list[str] | None = None,
+) -> dict[str, object]:
+    asset = {
+        "asset_type": asset_type,
+        "label_zh": label_zh,
+        "file_path": file_path,
+        "source_file": source_file,
+        "source_container_type": item.get("recognized_type"),
+        "source_file_name": item.get("file_name") or Path(source_file).name,
+        "source_block_type": block.get("block_type"),
+        "semantic_type": item.get("semantic_type") or _profile_value(item, "semantic_type"),
+        "materialize_strategy": "content_block_reference",
+        "validation_status": "registered",
+        "warning": item.get("warning") or "",
+        "analysis_ready": analysis_ready,
+        "recommended_for": recommended_for,
+        "species": species,
+        "species_group": species_group,
+        "gene_id_type": gene_id_type,
+        "limitations": limitations or [],
+    }
+    if value_type:
+        asset["value_type"] = value_type
+    for key in (
+        "sample_count",
+        "sample_columns",
+        "inferred_sample_ids",
+        "inferred_groups",
+        "replicate_count_by_group",
+        "matches_count_sample_ids",
+        "comparison_count",
+        "complete_comparison_count",
+        "comparisons",
+        "annotation_fields",
+        "gene_id_columns",
+        "gene_name_columns",
+        "example_values",
+    ):
+        value = block.get(key)
+        if value not in (None, "", []):
+            asset[key] = value
+    if source_origin:
+        asset["source_origin"] = source_origin
+    return asset
+
+
+def _content_blocks(item: dict[str, object]) -> list[dict[str, object]]:
+    blocks = item.get("content_blocks")
+    if not isinstance(blocks, list):
+        profile = item.get("content_profile")
+        blocks = profile.get("content_blocks") if isinstance(profile, dict) else []
+    return [block for block in blocks or [] if isinstance(block, dict)]
+
+
+def _profile_value(item: dict[str, object], key: str) -> object:
+    profile = item.get("content_profile")
+    return profile.get(key) if isinstance(profile, dict) else ""
+
+
+def _asset_id(asset_type: str, index: int) -> str:
+    prefix = {
+        "count_matrix": "count_matrix",
+        "normalized_expression_matrix": "fpkm_matrix",
+        "deg_result_table": "deg_results",
+        "gene_annotation": "gene_annotation",
+        "gene_identifier_metadata": "gene_identifier",
+    }.get(asset_type, asset_type or "asset")
+    return f"{prefix}_{index:03d}"
+
+
+def _content_block_warnings(assets: list[dict[str, object]]) -> list[str]:
+    asset_types = {str(asset.get("asset_type") or "") for asset in assets}
+    warnings: list[str] = []
+    if {"count_matrix", "normalized_expression_matrix"} <= asset_types:
+        warnings.append("检测到 count 与 FPKM。差异分析建议使用 count；表达展示可使用 FPKM。")
+    if "deg_result_table" in asset_types:
+        warnings.append("文件已包含差异分析结果，可用于结果浏览、火山图和富集分析输入；如需重新计算差异分析，请确认分组配置。")
+    if any(str(asset.get("species") or "") == "Mus musculus" for asset in assets):
+        warnings.append("小鼠数据：适合动物模型分析、方法验证和机制探索，不应直接按人类临床队列解释。")
+    return warnings
 
 
 def _asset_types_for_standardization(item: dict[str, object]) -> list[str]:

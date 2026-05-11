@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -1862,6 +1862,49 @@ def test_analysis_task_center_runs_geo_differential_expression_and_indexes_resul
     entries = index["entries"]
     assert any(item["analysis_type"] == "differential_expression" for item in entries)
     assert "已运行 GEO 差异分析" in task_center.status_message()
+
+
+def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "gene_id,A1_count,A2_count,A1_fpkm,A2_fpkm,PFFvsPBS_log2FoldChange,PFFvsPBS_pvalue,PFFvsPBS_padj,gene_name,gene_biotype,gene_description\n"
+        "ENSMUSG00000026193,10,12,1.1,1.2,1.5,0.01,0.04,Sox17,protein_coding,SRY-box transcription factor 17\n"
+        "ENSMUSG00000064351,20,18,2.1,2.2,-1.7,0.02,0.03,mt-Nd1,protein_coding,mitochondrially encoded NADH\n",
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+    task_text = " ".join(
+        task_center._tasks.item(row, column).text()
+        for row in range(task_center._tasks.rowCount())
+        for column in range(task_center._tasks.columnCount())
+        if task_center._tasks.item(row, column) is not None
+    )
+    assert "查看差异基因结果" in task_text
+    assert "ready_with_group_confirmation" in task_text
+    assert "小鼠数据" in task_text
+    assert "TCGA/GTEx" in task_text
+
+    results = BioinformaticsResultsBrowserWidget()
+    results.refresh_project(project_summary)
+    selector = results.findChild(QComboBox, "importedDegComparisonSelector")
+    preview = results.findChild(QTableWidget, "importedDegPreviewTable")
+
+    assert selector is not None
+    assert selector.count() == 1
+    assert "PFFvsPBS" in selector.itemText(0)
+    assert preview is not None
+    assert preview.horizontalHeaderItem(2).text() == "log2FC"
+    assert preview.horizontalHeaderItem(4).text() == "adjusted p value"
+    assert preview.rowCount() == 2
+    details = results._details.toPlainText()
+    assert "imported_deg_result" in details
+    assert "mouse" in details
+    assert "PFFvsPBS_log2FoldChange" in details
 
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:

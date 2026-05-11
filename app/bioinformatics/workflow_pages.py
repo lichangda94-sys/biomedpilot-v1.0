@@ -81,7 +81,7 @@ from app.bioinformatics.project_workspace_binding import (
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
 from app.bioinformatics.download import DatasetDownloadService, GeoDatasetProfile, GeoDatasetProfileService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
-from app.bioinformatics.results.project_results import load_result_index, write_result_index
+from app.bioinformatics.results.project_results import build_imported_deg_view, load_imported_deg_comparisons, load_result_index, write_result_index
 from app.bioinformatics.search_center import (
     BioinformaticsSearchCenterResult,
     BioinformaticsSourceRouter,
@@ -3647,8 +3647,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         actions.addWidget(_button("加入报告", "secondaryButton", lambda: self._status_label.setText("加入报告：占位功能。")))
         actions.addStretch(1)
         root.addLayout(actions)
+        comparison_row = QHBoxLayout()
+        comparison_row.addWidget(_muted("Imported DEG comparison："))
+        self._imported_deg_selector = QComboBox()
+        self._imported_deg_selector.setObjectName("importedDegComparisonSelector")
+        self._imported_deg_selector.currentIndexChanged.connect(self._render_selected_imported_deg)
+        comparison_row.addWidget(self._imported_deg_selector)
+        comparison_row.addStretch(1)
+        root.addLayout(comparison_row)
         self._results = _table(["结果名称", "分析类型", "文件类型", "创建时间", "路径", "状态", "warning"])
         root.addWidget(self._results)
+        self._deg_preview = _table(["gene_id", "gene_name", "log2FC", "p value", "adjusted p value", "gene_biotype", "gene_description"])
+        self._deg_preview.setObjectName("importedDegPreviewTable")
+        root.addWidget(self._deg_preview)
         self._details = _text_preview(130)
         root.addWidget(self._details)
         root.addWidget(_button("继续：报告查看", "primaryButton", self.continue_to_report), alignment=Qt.AlignLeft)
@@ -3676,6 +3687,48 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             ],
         )
         self._details.setPlainText(_json({"结果详情": entries[:1], "warnings": warnings}))
+        self._render_imported_deg_selector()
+
+    def _render_imported_deg_selector(self) -> None:
+        self._imported_deg_selector.blockSignals(True)
+        self._imported_deg_selector.clear()
+        comparisons = load_imported_deg_comparisons(self._project_root) if self._project_root is not None else []
+        for item in comparisons:
+            label = str(item.get("comparison_name") or "未命名比较")
+            source = str(item.get("source_file_name") or Path(str(item.get("source_file") or "")).name)
+            self._imported_deg_selector.addItem(f"{label} · {source}", item)
+        self._imported_deg_selector.blockSignals(False)
+        self._render_selected_imported_deg()
+
+    def _render_selected_imported_deg(self) -> None:
+        if self._project_root is None or self._imported_deg_selector.count() == 0:
+            self._deg_preview.setRowCount(0)
+            return
+        item = self._imported_deg_selector.currentData()
+        if not isinstance(item, dict):
+            return
+        view = build_imported_deg_view(
+            self._project_root,
+            source_asset_id=str(item.get("source_asset_id") or ""),
+            comparison_name=str(item.get("comparison_name") or ""),
+        )
+        rows = [row for row in view.get("rows", []) or [] if isinstance(row, dict)]
+        _fill_table(
+            self._deg_preview,
+            [
+                [
+                    row.get("gene_id", ""),
+                    row.get("gene_name", ""),
+                    row.get("log2FC", ""),
+                    row.get("p value", ""),
+                    row.get("adjusted p value", ""),
+                    row.get("gene_biotype", ""),
+                    row.get("gene_description", ""),
+                ]
+                for row in rows[:100]
+            ],
+        )
+        self._details.setPlainText(_json({"imported_deg_view": {key: value for key, value in view.items() if key != "rows"}, "preview_row_count": min(len(rows), 100)}))
 
 
 class BioinformaticsReportViewerWidget(QWidget):
