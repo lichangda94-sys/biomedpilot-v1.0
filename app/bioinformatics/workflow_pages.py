@@ -48,7 +48,16 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
-from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
+from app.bioinformatics.project_recognition import (
+    TYPE_LABELS,
+    classify_file,
+    delete_recognition_run,
+    list_recognition_runs,
+    load_recognition_report,
+    run_project_recognition,
+    run_project_recognition_for_paths,
+    set_current_recognition_run,
+)
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
@@ -2563,6 +2572,7 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
+        self._last_report = None
         self.refresh_report()
 
     def run_recognition(self) -> dict[str, object] | None:
@@ -2571,7 +2581,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             return None
         selected_rows = self._selected_pre_recognition_rows()
         if not selected_rows:
-            self._set_status("请先选择需要识别的数据。")
+            self._set_status("请先选择需要识别的数据源。")
             return None
         selected_paths = _recognition_paths_for_rows(self._project_root, selected_rows)
         if not selected_paths:
@@ -2585,6 +2595,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             skipped_unselected_count=max(0, len(self._pre_recognition_rows) - len(selected_rows)),
         )
         self._render_report(report)
+        self._render_recognition_history()
         self._set_status(f"{self.status_message()} 本次只识别已勾选的数据。")
         return report
 
@@ -2593,16 +2604,9 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._set_status("请先创建或打开生信分析项目。")
             return
         self._render_pre_recognition_inputs()
-        report = load_recognition_report(self._project_root)
-        if report is None:
-            self._set_status("尚未生成数据识别报告。")
-            self._table.setRowCount(0)
-            self._counts.setPlainText("")
-            self._group_preview.setPlainText("")
-            self._technical_details.setPlainText("")
-            return
-        self._render_report(report)
-        self._set_status(f"{self.status_message()} 刷新报告只重新读取当前识别报告显示，不重新扫描文件，也不改变项目文件。")
+        self._clear_current_recognition_display()
+        self._render_recognition_history()
+        self._set_status("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
 
     def clean_old_recognition_results(self, *, skip_confirmation: bool = False) -> bool:
         if self._project_root is None:
@@ -2626,6 +2630,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._table.setRowCount(0)
         self._counts.setPlainText("旧识别结果已清理。raw_data 中的原始导入文件未删除。")
         self._technical_details.setPlainText("")
+        self._render_recognition_history()
         self._set_status("旧识别结果已清理；原始数据文件未删除。请点击“重新识别”重新扫描。")
         return True
 
@@ -2666,8 +2671,11 @@ class BioinformaticsRecognitionWidget(QWidget):
         actions.addStretch(1)
         root.addLayout(actions)
         root.addWidget(_muted("开始识别只处理上方勾选的数据；刷新只更新当前报告显示。"))
-        self._status_label = _status_label("尚未生成数据识别报告。")
+        self._status_label = _status_label("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
         root.addWidget(self._status_label)
+        result_card, result_layout = _card("本次识别结果")
+        self._current_result_hint = _muted("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
+        result_layout.addWidget(self._current_result_hint)
         filter_row = QHBoxLayout()
         filter_row.addWidget(_muted("文件显示："))
         self._duplicate_filter = QComboBox()
@@ -2675,22 +2683,32 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._duplicate_filter.currentIndexChanged.connect(self._rerender_last_report)
         filter_row.addWidget(self._duplicate_filter)
         filter_row.addStretch(1)
-        root.addLayout(filter_row)
+        result_layout.addLayout(filter_row)
         self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning"])
         self._table.setObjectName("recognitionResultTable")
         confidence_header = self._table.horizontalHeaderItem(3)
         if confidence_header is not None:
             confidence_header.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
-        root.addWidget(self._table)
+        result_layout.addWidget(self._table)
         self._counts = _read_only_report_view(130)
         self._counts.setObjectName("recognitionSummaryReport")
-        root.addWidget(self._counts)
+        result_layout.addWidget(self._counts)
         group_card, group_layout = _card("样本与分组预览")
         group_card.setObjectName("recognitionGroupPreviewCard")
         self._group_preview = _read_only_report_view(130)
         self._group_preview.setObjectName("recognitionGroupPreviewReport")
         group_layout.addWidget(self._group_preview)
-        root.addWidget(group_card)
+        result_layout.addWidget(group_card)
+        root.addWidget(result_card)
+
+        history_card, history_layout = _card("历史识别记录")
+        history_layout.addWidget(_muted("这里保存之前运行过的识别结果，不属于本次操作。"))
+        self._history_table = _table(["时间", "批次名称", "输入数据", "识别文件数", "Warning", "状态", "操作"])
+        self._history_table.setObjectName("recognitionHistoryTable")
+        self._history_table.setMinimumHeight(150)
+        history_layout.addWidget(self._history_table)
+        root.addWidget(history_card)
+
         self._technical_details = _text_preview(180)
         self._technical_details.setVisible(False)
         root.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._technical_details)), alignment=Qt.AlignLeft)
@@ -2710,6 +2728,7 @@ class BioinformaticsRecognitionWidget(QWidget):
     def _render_report(self, report: dict[str, object]) -> None:
         self._last_report = report
         self._render_pre_recognition_inputs()
+        self._current_result_hint.setVisible(False)
         annotated = _annotated_recognition_files(report, self._project_root)
         files = _filter_recognition_files(annotated, self._duplicate_filter.currentText())
         warnings = [str(item) for item in report.get("warnings", []) or []]
@@ -2732,6 +2751,68 @@ class BioinformaticsRecognitionWidget(QWidget):
     def _rerender_last_report(self) -> None:
         if self._last_report is not None:
             self._render_report(self._last_report)
+
+    def _clear_current_recognition_display(self) -> None:
+        self._last_report = None
+        self._current_result_hint.setVisible(True)
+        self._table.setRowCount(0)
+        self._counts.setPlainText("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
+        self._group_preview.setPlainText("")
+        self._technical_details.setPlainText("")
+
+    def _render_recognition_history(self) -> None:
+        runs = list_recognition_runs(self._project_root) if self._project_root is not None else []
+        rows = [
+            [
+                _format_history_time(str(run.get("generated_at") or "")),
+                str(run.get("batch_name") or run.get("run_id") or "识别记录"),
+                _history_input_text(run),
+                str(run.get("recognized_file_count") or 0),
+                str(run.get("warning_count") or 0),
+                "当前结果" if run.get("is_current") else str(run.get("status") or "completed"),
+                "",
+            ]
+            for run in runs
+        ]
+        _fill_table(self._history_table, rows)
+        _set_table_widths(self._history_table, [150, 150, 240, 100, 80, 100, 220])
+        self._history_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        for row_index, run in enumerate(runs):
+            actions = QFrame()
+            actions_layout = QHBoxLayout(actions)
+            actions_layout.setContentsMargins(0, 0, 0, 0)
+            actions_layout.setSpacing(4)
+            run_id = str(run.get("run_id") or "")
+            view_button = _button("查看", "secondaryButton", lambda _checked=False, rid=run_id: self._view_history_run(rid))
+            current_button = _button("设为当前结果", "secondaryButton", lambda _checked=False, rid=run_id: self._set_history_run_current(rid))
+            delete_button = _button("删除", "secondaryButton", lambda _checked=False, rid=run_id: self._delete_history_run(rid))
+            actions_layout.addWidget(view_button)
+            actions_layout.addWidget(current_button)
+            actions_layout.addWidget(delete_button)
+            self._history_table.setCellWidget(row_index, 6, actions)
+
+    def _view_history_run(self, run_id: str) -> None:
+        run = _recognition_run_by_id(self._project_root, run_id)
+        if run is None:
+            self._set_status("未找到该历史识别记录。")
+            return
+        self._technical_details.setPlainText(_json({"history_recognition_run": run}))
+        self._technical_details.setVisible(True)
+        self._set_status("已在技术详情中显示历史识别记录；它不属于本次识别结果。")
+
+    def _set_history_run_current(self, run_id: str) -> None:
+        if self._project_root is None or not set_current_recognition_run(self._project_root, run_id):
+            self._set_status("设为当前结果失败。")
+            return
+        self._render_recognition_history()
+        self._set_status("已设为当前结果；后续标准化将读取该识别批次。")
+
+    def _delete_history_run(self, run_id: str) -> None:
+        if self._project_root is None or not delete_recognition_run(self._project_root, run_id):
+            self._set_status("删除历史识别记录失败。")
+            return
+        self._render_recognition_history()
+        self._set_status("已删除历史识别记录。")
 
     def _render_pre_recognition_inputs(self) -> None:
         rows = _registered_source_rows(self._project_root)
@@ -6895,7 +6976,7 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         if count:
             type_lines.append(f"{label}：{count}")
     if project_root is not None and not _current_effective_source_paths(project_root):
-        source_note = "当前版本会扫描项目 raw_data 中所有已选择文件，因此历史导入副本也可能显示在识别结果中。"
+        source_note = "本次识别结果仅来自本次选择的数据源。"
     else:
         source_note = f"当前有效数据来源文件：{effective_count} 个。"
     next_step = "如果已识别到表达矩阵或原始计数矩阵，可以继续数据准备检查；否则请返回数据来源补充文件。"
@@ -6909,6 +6990,34 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
             f"下一步建议：{next_step}",
         ]
     )
+
+
+def _format_history_time(value: str) -> str:
+    if not value:
+        return "未记录"
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone().strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return value
+
+
+def _history_input_text(run: dict[str, object]) -> str:
+    values = run.get("input_data")
+    if not isinstance(values, list) or not values:
+        return "未记录"
+    names = [Path(str(value)).name for value in values if str(value).strip()]
+    if not names:
+        return "未记录"
+    return names[0] if len(names) == 1 else f"{len(names)} 个输入：{names[0]}"
+
+
+def _recognition_run_by_id(project_root: Path | None, run_id: str) -> dict[str, object] | None:
+    if project_root is None or not run_id:
+        return None
+    for run in list_recognition_runs(project_root):
+        if str(run.get("run_id") or "") == run_id:
+            return run
+    return None
 
 
 def _can_continue_from_acquisition(project_root: Path) -> tuple[bool, str]:

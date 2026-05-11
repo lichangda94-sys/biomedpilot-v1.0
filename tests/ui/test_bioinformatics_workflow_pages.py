@@ -1498,7 +1498,7 @@ def test_recognition_requires_selected_inputs(qt_app, project_summary) -> None:
     widget.refresh_project(project_summary)
 
     assert widget.run_recognition() is None
-    assert widget.status_message() == "请先选择需要识别的数据。"
+    assert widget.status_message() == "请先选择需要识别的数据源。"
 
 
 def test_recognition_only_scans_checked_sources(qt_app, project_summary) -> None:
@@ -1525,6 +1525,18 @@ def test_recognition_only_scans_checked_sources(qt_app, project_summary) -> None
     file_names = [item["file_name"] for item in report["files"]]
     assert file_names == [Path(report["selected_inputs"][0]).name]
     assert "skipped_expression.tsv" not in file_names
+    current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    run_id = current["run_id"]
+    run_dir = project_summary.project_root / "recognized_data" / "runs" / run_id
+    assert run_dir.is_dir()
+    assert (run_dir / "input_manifest.json").exists()
+    assert (run_dir / "recognized_files.json").exists()
+    assert (run_dir / "recognition_report.json").exists()
+    assert (run_dir / "warnings.json").exists()
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+    assert history is not None
+    assert history.rowCount() == 1
+    assert history.item(0, 1).text() == "本次识别"
 
 
 def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, project_summary) -> None:
@@ -1536,6 +1548,58 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
     assert "刷新" in button_texts
     assert widget.findChild(QFrame, "recognitionTechnicalOperations").isHidden()
     assert widget._counts.isReadOnly()
+
+
+def test_recognition_opening_old_project_keeps_legacy_report_in_history(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "legacy_expression.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "expression_matrix",
+                "confidence": 0.9,
+                "file_size": source.stat().st_size,
+                "reason": "legacy",
+                "route_path": str(project_summary.project_root / "recognized_data/expression_matrix" / source.name),
+            }
+        ],
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    current_table = widget.findChild(QTableWidget, "recognitionResultTable")
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+
+    assert current_table is not None
+    assert current_table.rowCount() == 0
+    assert "尚未开始本次识别" in widget._counts.toPlainText()
+    assert history is not None
+    assert history.rowCount() == 1
+    assert history.item(0, 1).text() == "旧版识别记录"
+    assert history.item(0, 3).text() == "1"
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+
+def test_recognition_filters_system_files_from_report(qt_app, project_summary) -> None:
+    raw_dir = project_summary.project_root / "raw_data" / "local_import"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    expression = raw_dir / "expression.tsv"
+    expression.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    (raw_dir / ".DS_Store").write_text("system", encoding="utf-8")
+    (raw_dir / "._expression.tsv").write_text("system", encoding="utf-8")
+    macosx = raw_dir / "__MACOSX"
+    macosx.mkdir()
+    (macosx / "expression.tsv").write_text("system", encoding="utf-8")
+
+    report = workflow_pages.run_project_recognition(project_summary.project_root)
+
+    names = [str(item.get("file_name")) for item in report["files"]]
+    assert names == ["expression.tsv"]
+    assert ".DS_Store" not in names
+    assert "._expression.tsv" not in names
 
 
 def test_recognition_delete_selected_removes_binding_not_file(qt_app, project_summary) -> None:
@@ -1676,15 +1740,13 @@ def test_recognition_page_shows_group_preview(qt_app, project_summary) -> None:
     recognition = BioinformaticsRecognitionWidget()
     recognition.refresh_project(project_summary)
     preview = recognition.findChild(QTextEdit, "recognitionGroupPreviewReport")
+    history = recognition.findChild(QTableWidget, "recognitionHistoryTable")
 
     assert preview is not None
-    text = preview.toPlainText()
-    assert "样本数：4" in text
-    assert "识别到的候选分组：condition" in text
-    assert "分组数量：2 组" in text
-    assert "control 2" in text
-    assert "treated 2" in text
-    assert "正式比较组需由你确认" in text
+    assert preview.toPlainText() == ""
+    assert "尚未开始本次识别" in recognition._counts.toPlainText()
+    assert history is not None
+    assert history.rowCount() >= 1
 
 
 def test_readiness_confirms_group_preview_before_comparison_config(qt_app, project_summary) -> None:
@@ -2011,6 +2073,8 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     )
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
+    report = json.loads((project_summary.project_root / "logs" / "recognition" / "recognition_report.json").read_text(encoding="utf-8"))
+    widget._render_report(report)
     table = widget.findChild(QTableWidget, "recognitionResultTable")
 
     assert table.horizontalHeaderItem(3).text() == "识别可信度"
@@ -2049,7 +2113,7 @@ def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, projec
 
     widget.refresh_report()
     assert calls == []
-    assert "不重新扫描文件" in widget.status_message()
+    assert "尚未开始本次识别" in widget.status_message()
 
     table = widget.findChild(QTableWidget, "preRecognitionInputList")
     checkbox = table.cellWidget(0, 0)
@@ -2103,7 +2167,9 @@ def test_recognition_duplicate_filter_marks_and_hides_duplicates(qt_app, project
     _write_mock_recognition_report(root, files)
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
-    table = widget.findChild(QTableWidget)
+    report = json.loads((root / "logs" / "recognition" / "recognition_report.json").read_text(encoding="utf-8"))
+    widget._render_report(report)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
 
     assert table.rowCount() == 2
     warnings = [table.item(row, 6).text() for row in range(table.rowCount())]

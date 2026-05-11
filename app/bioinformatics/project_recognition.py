@@ -13,6 +13,8 @@ from xml.etree import ElementTree
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT, build_group_preview_report
 
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
+RECOGNITION_RUNS_DIR = Path("recognized_data") / "runs"
+CURRENT_RECOGNITION_RUN = Path("recognized_data") / "current.json"
 
 TYPE_LABELS = {
     "expression_matrix": "表达矩阵",
@@ -82,7 +84,15 @@ class RecognitionClassification:
 def run_project_recognition(project_root: str | Path) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
     files = _candidate_files(root)
-    return _run_project_recognition_for_files(root, files)
+    report = _run_project_recognition_for_files(root, files)
+    _write_recognition_run(
+        root,
+        report,
+        selected_inputs=[str(path) for path in files],
+        batch_label="本次识别",
+        set_current=True,
+    )
+    return report
 
 
 def run_project_recognition_for_paths(
@@ -97,7 +107,13 @@ def run_project_recognition_for_paths(
     report["selected_input_count"] = len(files)
     report["skipped_unselected_count"] = max(0, int(skipped_unselected_count))
     report["selected_inputs"] = [str(path) for path in files]
-    _write_json(root / RECOGNITION_REPORT, report)
+    _write_recognition_run(
+        root,
+        report,
+        selected_inputs=[str(path) for path in files],
+        batch_label="本次识别",
+        set_current=True,
+    )
     return report
 
 
@@ -141,14 +157,207 @@ def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[st
         "group_preview": group_preview,
         "warnings": warnings,
     }
-    _write_json(root / RECOGNITION_REPORT, report)
-    _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
     return report
 
 
 def load_recognition_report(project_root: str | Path) -> dict[str, object] | None:
-    path = Path(project_root).expanduser().resolve() / RECOGNITION_REPORT
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    root = Path(project_root).expanduser().resolve()
+    current = _load_current_run(root)
+    if current is None:
+        return None
+    report_path = Path(str(current.get("recognition_report_path") or ""))
+    if not report_path.is_absolute():
+        report_path = root / report_path
+    try:
+        return json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def list_recognition_runs(project_root: str | Path, *, include_legacy: bool = True) -> list[dict[str, object]]:
+    root = Path(project_root).expanduser().resolve()
+    if include_legacy:
+        archive_legacy_recognition_report(root)
+    runs_dir = root / RECOGNITION_RUNS_DIR
+    current = _load_current_run(root) or {}
+    current_run_id = str(current.get("run_id") or "")
+    runs: list[dict[str, object]] = []
+    if not runs_dir.exists():
+        return []
+    for run_dir in sorted((path for path in runs_dir.iterdir() if path.is_dir()), reverse=True):
+        manifest_path = run_dir / "input_manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(manifest, dict):
+            continue
+        report_path = run_dir / "recognition_report.json"
+        report = _read_json_if_exists(report_path) or {}
+        files = report.get("files") if isinstance(report, dict) else []
+        warnings = report.get("warnings") if isinstance(report, dict) else []
+        runs.append(
+            {
+                **manifest,
+                "run_id": str(manifest.get("run_id") or run_dir.name),
+                "run_dir": str(run_dir),
+                "recognition_report_path": str(report_path),
+                "recognized_file_count": len(files) if isinstance(files, list) else 0,
+                "warning_count": len(warnings) if isinstance(warnings, list) else 0,
+                "status": str(manifest.get("status") or "completed"),
+                "is_current": str(manifest.get("run_id") or run_dir.name) == current_run_id,
+            }
+        )
+    return runs
+
+
+def archive_legacy_recognition_report(project_root: str | Path) -> dict[str, object] | None:
+    root = Path(project_root).expanduser().resolve()
+    if (root / CURRENT_RECOGNITION_RUN).exists():
+        return None
+    legacy_path = root / RECOGNITION_REPORT
+    if not legacy_path.exists():
+        return None
+    legacy_run_dir = root / RECOGNITION_RUNS_DIR / "legacy_recognition_report"
+    manifest_path = legacy_run_dir / "input_manifest.json"
+    if manifest_path.exists():
+        return _read_json_if_exists(manifest_path)
+    try:
+        report = json.loads(legacy_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(report, dict):
+        return None
+    report = _filter_system_file_records(report)
+    _write_recognition_run(
+        root,
+        report,
+        selected_inputs=[str(item.get("original_path") or "") for item in report.get("files", []) or [] if isinstance(item, dict)],
+        batch_label="旧版识别记录",
+        run_id="legacy_recognition_report",
+        set_current=False,
+        legacy=True,
+    )
+    return _read_json_if_exists(manifest_path)
+
+
+def set_current_recognition_run(project_root: str | Path, run_id: str) -> bool:
+    root = Path(project_root).expanduser().resolve()
+    run_dir = root / RECOGNITION_RUNS_DIR / run_id
+    report_path = run_dir / "recognition_report.json"
+    if not report_path.exists():
+        return False
+    report = _read_json_if_exists(report_path) or {}
+    group_preview = report.get("group_preview") if isinstance(report, dict) else {}
+    _write_json(root / CURRENT_RECOGNITION_RUN, {
+        "schema_version": "biomedpilot.current_recognition_run.v1",
+        "run_id": run_id,
+        "run_dir": str(run_dir),
+        "recognition_report_path": str(report_path),
+        "set_at": _now(),
+    })
+    if isinstance(group_preview, dict):
+        _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
+    return True
+
+
+def delete_recognition_run(project_root: str | Path, run_id: str) -> bool:
+    root = Path(project_root).expanduser().resolve()
+    run_dir = root / RECOGNITION_RUNS_DIR / run_id
+    if not run_dir.exists() or not run_dir.is_dir():
+        return False
+    current = _load_current_run(root) or {}
+    if str(current.get("run_id") or "") == run_id:
+        try:
+            (root / CURRENT_RECOGNITION_RUN).unlink(missing_ok=True)
+        except OSError:
+            pass
+    import shutil
+
+    shutil.rmtree(run_dir)
+    return True
+
+
+def _write_recognition_run(
+    root: Path,
+    report: dict[str, object],
+    *,
+    selected_inputs: list[str],
+    batch_label: str,
+    set_current: bool,
+    run_id: str | None = None,
+    legacy: bool = False,
+) -> dict[str, object]:
+    clean_report = _filter_system_file_records(report)
+    run_id = run_id or _unique_run_id(root)
+    run_dir = root / RECOGNITION_RUNS_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    files = [item for item in clean_report.get("files", []) or [] if isinstance(item, dict)]
+    warnings = [str(item) for item in clean_report.get("warnings", []) or []]
+    manifest = {
+        "schema_version": "biomedpilot.recognition_run.v1",
+        "run_id": run_id,
+        "batch_name": batch_label,
+        "generated_at": str(clean_report.get("generated_at") or _now()),
+        "input_data": [value for value in selected_inputs if str(value).strip()],
+        "input_count": len([value for value in selected_inputs if str(value).strip()]),
+        "recognized_file_count": len(files),
+        "warning_count": len(warnings),
+        "status": "completed",
+        "legacy": legacy,
+    }
+    _write_json(run_dir / "input_manifest.json", manifest)
+    _write_json(run_dir / "recognized_files.json", {"files": files})
+    _write_json(run_dir / "recognition_report.json", clean_report)
+    _write_json(run_dir / "warnings.json", {"warnings": warnings})
+    if set_current:
+        _write_json(root / CURRENT_RECOGNITION_RUN, {
+            "schema_version": "biomedpilot.current_recognition_run.v1",
+            "run_id": run_id,
+            "run_dir": str(run_dir),
+            "recognition_report_path": str(run_dir / "recognition_report.json"),
+            "set_at": _now(),
+        })
+        group_preview = clean_report.get("group_preview")
+        if isinstance(group_preview, dict):
+            _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
+        _write_json(root / RECOGNITION_REPORT, clean_report)
+    return manifest
+
+
+def _unique_run_id(root: Path) -> str:
+    base = "recognition_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+    runs_dir = root / RECOGNITION_RUNS_DIR
+    candidate = base
+    index = 2
+    while (runs_dir / candidate).exists():
+        candidate = f"{base}_{index}"
+        index += 1
+    return candidate
+
+
+def _load_current_run(root: Path) -> dict[str, object] | None:
+    return _read_json_if_exists(root / CURRENT_RECOGNITION_RUN)
+
+
+def _read_json_if_exists(path: Path) -> dict[str, object] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _filter_system_file_records(report: dict[str, object]) -> dict[str, object]:
+    files = [
+        item
+        for item in report.get("files", []) or []
+        if isinstance(item, dict)
+        and not _is_system_file_name(str(item.get("file_name") or Path(str(item.get("original_path") or "")).name))
+        and not _is_system_path(Path(str(item.get("original_path") or "")))
+    ]
+    clean = {**report, "files": files, "type_counts": _type_counts(files)}
+    return clean
 
 
 def _recognition_warnings(records: list[dict[str, object]]) -> list[str]:
@@ -1211,10 +1420,20 @@ def _is_recognition_candidate_file(path: Path, root: Path) -> bool:
         relative = path.resolve().relative_to(root.resolve())
     except ValueError:
         relative = path
+    if _is_system_path(relative):
+        return False
     parts = relative.parts
     if len(parts) >= 3 and parts[0] == "raw_data" and parts[1] == "geo" and parts[2] == "organized":
         return False
     return True
+
+
+def _is_system_file_name(name: str) -> bool:
+    return name == ".DS_Store" or name == "__MACOSX" or name.startswith("._")
+
+
+def _is_system_path(path: Path) -> bool:
+    return any(_is_system_file_name(part) for part in path.parts)
 
 
 def _registered_reference_files(root: Path) -> list[Path]:
@@ -1235,7 +1454,7 @@ def _registered_reference_files(root: Path) -> list[Path]:
                 continue
             for raw in values:
                 candidate = Path(str(raw)).expanduser()
-                if candidate.is_file():
+                if candidate.is_file() and _is_recognition_candidate_file(candidate, root):
                     paths.append(candidate.resolve())
                 elif candidate.is_dir():
                     paths.extend(path.resolve() for path in candidate.rglob("*") if _is_recognition_candidate_file(path, root))
