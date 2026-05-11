@@ -36,6 +36,31 @@ REGISTRY_CONCEPTS: tuple[MedicalConcept, ...] = (
         semantic_group="disease",
     ),
     MedicalConcept(
+        concept_id="glioma",
+        label_zh="脑胶质瘤",
+        zh_terms=("脑胶质瘤", "胶质瘤", "胶质母细胞瘤"),
+        en_terms=("glioma", "glioblastoma", "lower grade glioma"),
+        synonyms=("GBM", "LGG"),
+        database_terms=("TCGA-GBM", "TCGA-LGG", "brain tissue"),
+        semantic_group="disease",
+    ),
+    MedicalConcept(
+        concept_id="lung_adenocarcinoma",
+        label_zh="肺腺癌",
+        zh_terms=("肺腺癌", "肺腺癌相关数据集"),
+        en_terms=("lung adenocarcinoma", "LUAD"),
+        database_terms=("TCGA-LUAD", "lung tissue"),
+        semantic_group="disease",
+    ),
+    MedicalConcept(
+        concept_id="hepatocellular_carcinoma",
+        label_zh="肝细胞癌",
+        zh_terms=("肝细胞癌", "肝癌", "肝细胞癌相关数据集"),
+        en_terms=("hepatocellular carcinoma", "HCC", "liver cancer"),
+        database_terms=("TCGA-LIHC", "liver tissue"),
+        semantic_group="disease",
+    ),
+    MedicalConcept(
         concept_id="esophageal_squamous_cell_carcinoma",
         label_zh="食管鳞癌",
         zh_terms=("食管鳞癌", "食道鳞癌", "食管鳞状细胞癌"),
@@ -113,6 +138,12 @@ def match_registry_concepts(question: str, *, target_context: str = "") -> tuple
         _append_concept(matches, concept_by_id("bio_dataset_retrieval"))
     if "甲状腺" in question and concept_by_id("thyroid_cancer") not in matches:
         _append_concept(matches, concept_by_id("thyroid_cancer"))
+    if any(token in question for token in ("脑胶质瘤", "胶质瘤", "glioma", "glioblastoma")) and concept_by_id("glioma") not in matches:
+        _append_concept(matches, concept_by_id("glioma"))
+    if any(token in question for token in ("肺腺癌", "LUAD", "lung adenocarcinoma")) and concept_by_id("lung_adenocarcinoma") not in matches:
+        _append_concept(matches, concept_by_id("lung_adenocarcinoma"))
+    if any(token in question for token in ("肝细胞癌", "肝癌", "HCC", "hepatocellular")) and concept_by_id("hepatocellular_carcinoma") not in matches:
+        _append_concept(matches, concept_by_id("hepatocellular_carcinoma"))
     if any(token in question for token in ("食管", "食道", "ESCC", "esophageal", "oesophageal")) and concept_by_id("esophageal_squamous_cell_carcinoma") not in matches:
         _append_concept(matches, concept_by_id("esophageal_squamous_cell_carcinoma"))
     if "低分化" in question and concept_by_id("poorly_differentiated") not in matches:
