@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -7,10 +8,10 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QScrollArea
+    from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QScrollArea
 
     from app.bioinformatics.project_home import BioinformaticsProjectHomeWidget
-    from app.bioinformatics.project_workspace import create_bioinformatics_project
+    from app.bioinformatics.project_workspace import create_bioinformatics_project, open_bioinformatics_project
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     BioinformaticsProjectHomeWidget = None  # type: ignore[assignment]
@@ -111,14 +112,87 @@ def test_project_home_removes_summary_action_buttons_and_updates_open_copy(qt_ap
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
     label_text = "\n".join(label.text() for label in widget.findChildren(QLabel))
 
-    assert "继续：数据来源选择" not in button_texts
-    assert "打开项目文件夹" not in button_texts
     assert "打开项目" not in button_texts
     assert "确认并继续" in button_texts
     assert "创建项目并继续" in button_texts
+    assert widget._summary_content.isHidden()
     assert "raw_data/" not in label_text
     assert "project_manifest.json" not in label_text
     assert "每个项目会自动保存原始数据、分析结果、报告和日志" in label_text
+
+
+def test_project_summary_uses_user_friendly_status_card(qt_app, tmp_path) -> None:
+    events = []
+    widget = BioinformaticsProjectHomeWidget(on_continue=events.append)
+    widget.set_new_project_inputs("Readable Project", tmp_path)
+    summary = widget.create_project_from_inputs()
+
+    label_text = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+
+    assert summary is not None
+    assert "project_created" not in label_text
+    assert "ready_for_data_source_selection" not in label_text
+    assert "项目名称：Readable Project" in label_text
+    assert "当前状态：项目已创建，等待选择数据来源" in label_text
+    assert "项目结构正常" in label_text
+    assert "暂无警告" in label_text
+    assert "当前：选择数据来源" in label_text
+    assert "数据来源\n未选择" in label_text
+    assert "样本识别\n未开始" in label_text
+    assert "分析结果\n暂无" in label_text
+    assert "项目报告\n未生成" in label_text
+    assert "继续：选择数据来源" in button_texts
+    assert "打开项目文件夹" in button_texts
+    assert "查看项目结构" in button_texts
+    assert str(summary.project_root) not in label_text
+    assert widget._project_path_line.toolTip() == str(summary.project_root)
+
+
+def test_project_summary_technical_details_are_collapsed_by_default(qt_app, tmp_path) -> None:
+    widget = BioinformaticsProjectHomeWidget()
+    widget.set_new_project_inputs("Tech Project", tmp_path)
+    summary = widget.create_project_from_inputs()
+    details = widget.findChild(QPlainTextEdit, "bioProjectTechnicalDetails")
+
+    assert summary is not None
+    assert details is not None
+    assert details.isHidden()
+    assert "project_stage: project_created" in details.toPlainText()
+    assert "readiness: ready_for_data_source_selection" in details.toPlainText()
+    widget._technical_toggle.setChecked(True)
+    assert not details.isHidden()
+
+
+def test_project_summary_reads_status_blocks_and_warning_card(qt_app, tmp_path) -> None:
+    created = create_bioinformatics_project("Warned Project", tmp_path)
+    manifest = json.loads(created.manifest_path.read_text(encoding="utf-8"))
+    manifest["readiness"]["warning_count"] = 1
+    manifest["readiness"]["warnings"] = ["缺少标准化表达矩阵"]
+    created.manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    records_dir = created.project_root / "acquisition" / "records"
+    records_dir.mkdir(parents=True, exist_ok=True)
+    (records_dir / "bio-test.json").write_text("{}", encoding="utf-8")
+    recognition = created.project_root / "logs" / "recognition" / "recognition_report.json"
+    recognition.parent.mkdir(parents=True, exist_ok=True)
+    recognition.write_text(json.dumps({"files": [{"recognized_type": "sample_metadata"}]}), encoding="utf-8")
+    result_index = created.project_root / "results" / "summaries" / "result_index.json"
+    result_index.parent.mkdir(parents=True, exist_ok=True)
+    result_index.write_text(json.dumps({"results": [{"path": "results/a.tsv"}]}), encoding="utf-8")
+    report = created.project_root / "reports" / "project_analysis_report.md"
+    report.write_text("# report\n", encoding="utf-8")
+    summary = open_bioinformatics_project(created.project_root).summary
+
+    widget = BioinformaticsProjectHomeWidget()
+    widget._render_summary(summary)
+    label_text = "\n".join(label.text() for label in widget.findChildren(QLabel))
+
+    assert "存在 1 条项目警告" in label_text
+    assert "缺少标准化表达矩阵" in label_text
+    assert "数据来源\n已选择" in label_text
+    assert "样本识别\n已识别" in label_text
+    assert "分析结果\n已有 1 项" in label_text
+    assert "项目报告\n已生成" in label_text
 
 
 def test_project_home_back_triggers_callback(qt_app) -> None:
