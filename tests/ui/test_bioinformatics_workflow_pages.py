@@ -1537,6 +1537,7 @@ def test_recognition_only_scans_checked_sources(qt_app, project_summary) -> None
     assert history is not None
     assert history.rowCount() == 1
     assert history.item(0, 1).text() == "本次识别"
+    assert history.item(0, 6).text() == "当前使用中"
 
 
 def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, project_summary) -> None:
@@ -1580,7 +1581,93 @@ def test_recognition_opening_old_project_keeps_legacy_report_in_history(qt_app, 
     assert history.rowCount() == 1
     assert history.item(0, 1).text() == "旧版识别记录"
     assert history.item(0, 3).text() == "1"
+    assert "表达矩阵" in history.item(0, 4).text()
+    assert history.item(0, 6).text() == "由旧版项目结构导入"
     assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+
+def test_recognition_archives_legacy_recognized_data_report(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "legacy_from_recognized_data.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    legacy_report = project_summary.project_root / "recognized_data" / "recognition_report.json"
+    legacy_report.parent.mkdir(parents=True, exist_ok=True)
+    legacy_report.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.recognition_report.v1",
+                "files": [
+                    {
+                        "file_name": source.name,
+                        "original_path": str(source),
+                        "recognized_type": "expression_matrix",
+                        "recognized_type_zh": "表达矩阵",
+                        "recognized_roles": ["expression_matrix"],
+                    }
+                ],
+                "type_counts": {"expression_matrix": 1},
+                "warnings": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+
+    assert history is not None
+    assert history.rowCount() == 1
+    assert history.item(0, 1).text() == "旧版识别记录"
+    assert history.item(0, 6).text() == "由旧版项目结构导入"
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+
+def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, project_summary) -> None:
+    raw_dir = project_summary.project_root / "raw_data" / "local_import"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    first = raw_dir / "first_expression.tsv"
+    second = raw_dir / "second_expression.tsv"
+    first.write_text("gene\tA1\nTP53\t1\n", encoding="utf-8")
+    second.write_text("gene\tB1\nEGFR\t2\n", encoding="utf-8")
+
+    workflow_pages.run_project_recognition_for_paths(project_summary.project_root, [first])
+    first_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    workflow_pages.run_project_recognition_for_paths(project_summary.project_root, [second])
+    second_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+    assert table is not None
+    assert table.rowCount() == 0
+    assert history is not None
+    assert history.rowCount() == 2
+
+    widget._view_history_run(first_current["run_id"])
+    viewed_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    assert viewed_current["run_id"] == second_current["run_id"]
+    assert table.rowCount() == 0
+    assert "history_recognition_run" in widget._technical_details.toPlainText()
+
+    widget._set_history_run_current(first_current["run_id"])
+    updated_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    assert updated_current["run_id"] == first_current["run_id"]
+    assert widget.status_message() == "已将该识别记录设为当前标准化输入。"
+    assert table.rowCount() == 0
+    status_by_run = {
+        table_widget.item(row, 1).text() + ":" + table_widget.item(row, 2).text(): table_widget.item(row, 6).text()
+        for table_widget in [history]
+        for row in range(table_widget.rowCount())
+    }
+    assert "当前使用中" in status_by_run.values()
+
+    widget._delete_history_run(first_current["run_id"])
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+    assert widget.status_message() == "当前识别结果已删除，请重新识别或选择另一条历史记录。"
+    standardization = workflow_pages.generate_standardized_assets(project_summary.project_root)
+    assert any("current.json" in warning for warning in standardization["registry"]["warnings"])
 
 
 def test_recognition_filters_system_files_from_report(qt_app, project_summary) -> None:

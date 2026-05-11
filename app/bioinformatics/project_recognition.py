@@ -214,10 +214,8 @@ def list_recognition_runs(project_root: str | Path, *, include_legacy: bool = Tr
 
 def archive_legacy_recognition_report(project_root: str | Path) -> dict[str, object] | None:
     root = Path(project_root).expanduser().resolve()
-    if (root / CURRENT_RECOGNITION_RUN).exists():
-        return None
-    legacy_path = root / RECOGNITION_REPORT
-    if not legacy_path.exists():
+    legacy_path = _legacy_recognition_report_path(root, current_exists=(root / CURRENT_RECOGNITION_RUN).exists())
+    if legacy_path is None:
         return None
     legacy_run_dir = root / RECOGNITION_RUNS_DIR / "legacy_recognition_report"
     manifest_path = legacy_run_dir / "input_manifest.json"
@@ -240,6 +238,48 @@ def archive_legacy_recognition_report(project_root: str | Path) -> dict[str, obj
         legacy=True,
     )
     return _read_json_if_exists(manifest_path)
+
+
+def _legacy_recognition_report_path(root: Path, *, current_exists: bool = False) -> Path | None:
+    candidates = [root / "recognized_data" / "recognition_report.json"]
+    if not current_exists:
+        candidates.insert(0, root / RECOGNITION_REPORT)
+    for path in candidates:
+        if path.exists():
+            return path
+    unknown_dir = root / "recognized_data" / "unknown"
+    if unknown_dir.exists():
+        files = [path for path in unknown_dir.rglob("*") if path.is_file() and not _is_system_path(path.relative_to(root) if _is_relative_to(path, root) else path)]
+        records = [
+            {
+                "file_name": path.name,
+                "original_path": str(path),
+                "recognized_type": "unknown",
+                "recognized_type_zh": TYPE_LABELS["unknown"],
+                "recognized_roles": [],
+                "confidence": 0.2,
+                "file_size": path.stat().st_size if path.exists() else 0,
+                "reason": "由旧版 recognized_data/unknown 结构导入。",
+                "warning": "旧版项目结构导入，需要人工确认。",
+                "route_path": str(path),
+            }
+            for path in sorted(files)
+        ]
+        if records:
+            report_path = root / "recognized_data" / "legacy_unknown_recognition_report.json"
+            _write_json(
+                report_path,
+                {
+                    "schema_version": "biomedpilot.recognition_report.v1",
+                    "generated_at": _now(),
+                    "project_root": str(root),
+                    "files": records,
+                    "type_counts": _type_counts(records),
+                    "warnings": ["由旧版项目结构导入"],
+                },
+            )
+            return report_path
+    return None
 
 
 def set_current_recognition_run(project_root: str | Path, run_id: str) -> bool:
@@ -347,6 +387,14 @@ def _read_json_if_exists(path: Path) -> dict[str, object] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _filter_system_file_records(report: dict[str, object]) -> dict[str, object]:

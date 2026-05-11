@@ -11,7 +11,7 @@ import pytest
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
-from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
+from app.bioinformatics.project_recognition import TYPE_LABELS, list_recognition_runs, load_recognition_report, run_project_recognition
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import load_workflow_state, run_project_stage, run_project_workflow
 from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -415,6 +415,24 @@ def test_standardization_requires_current_recognition_run(project_root: Path) ->
 
     assert standardization["registry"]["assets"] == []  # type: ignore[index]
     assert any("current.json" in warning for warning in standardization["registry"]["warnings"])  # type: ignore[index]
+
+
+def test_legacy_unknown_recognized_data_is_archived_as_history(project_root: Path) -> None:
+    unknown_file = project_root / "recognized_data" / "unknown" / "legacy_unknown.tsv"
+    unknown_file.parent.mkdir(parents=True, exist_ok=True)
+    unknown_file.write_text("legacy", encoding="utf-8")
+    (unknown_file.parent / ".DS_Store").write_text("system", encoding="utf-8")
+
+    runs = list_recognition_runs(project_root)
+
+    assert len(runs) == 1
+    run = runs[0]
+    assert run["batch_name"] == "旧版识别记录"
+    assert run["legacy"] is True
+    assert run["recognized_file_count"] == 1
+    report = json.loads(Path(str(run["recognition_report_path"])).read_text(encoding="utf-8"))
+    assert [item["file_name"] for item in report["files"]] == ["legacy_unknown.tsv"]
+    assert not (project_root / "recognized_data" / "current.json").exists()
 
 
 def test_recognition_ignores_partial_download_files(project_root: Path) -> None:

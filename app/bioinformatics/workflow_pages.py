@@ -2707,7 +2707,7 @@ class BioinformaticsRecognitionWidget(QWidget):
 
         history_card, history_layout = _card("历史识别记录")
         history_layout.addWidget(_muted("这里保存之前运行过的识别结果，不属于本次操作。"))
-        self._history_table = _table(["时间", "批次名称", "输入数据", "识别文件数", "Warning", "状态", "操作"])
+        self._history_table = _table(["时间", "批次名称", "输入数据源", "识别文件数", "内容摘要", "Warning 数量", "当前状态", "操作"])
         self._history_table.setObjectName("recognitionHistoryTable")
         self._history_table.setMinimumHeight(150)
         history_layout.addWidget(self._history_table)
@@ -2774,15 +2774,16 @@ class BioinformaticsRecognitionWidget(QWidget):
                 str(run.get("batch_name") or run.get("run_id") or "识别记录"),
                 _history_input_text(run),
                 str(run.get("recognized_file_count") or 0),
+                _history_content_summary(run),
                 str(run.get("warning_count") or 0),
-                "当前结果" if run.get("is_current") else str(run.get("status") or "completed"),
+                "当前使用中" if run.get("is_current") else _history_status_text(run),
                 "",
             ]
             for run in runs
         ]
         _fill_table(self._history_table, rows)
-        _set_table_widths(self._history_table, [150, 150, 240, 100, 80, 100, 220])
-        self._history_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        _set_table_widths(self._history_table, [150, 150, 220, 100, 260, 90, 110, 220])
+        self._history_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
         for row_index, run in enumerate(runs):
             actions = QFrame()
             actions_layout = QHBoxLayout(actions)
@@ -2791,18 +2792,18 @@ class BioinformaticsRecognitionWidget(QWidget):
             run_id = str(run.get("run_id") or "")
             view_button = _button("查看", "secondaryButton", lambda _checked=False, rid=run_id: self._view_history_run(rid))
             current_button = _button("设为当前结果", "secondaryButton", lambda _checked=False, rid=run_id: self._set_history_run_current(rid))
-            delete_button = _button("删除", "secondaryButton", lambda _checked=False, rid=run_id: self._delete_history_run(rid))
+            delete_button = _button("删除记录", "secondaryButton", lambda _checked=False, rid=run_id: self._delete_history_run(rid))
             actions_layout.addWidget(view_button)
             actions_layout.addWidget(current_button)
             actions_layout.addWidget(delete_button)
-            self._history_table.setCellWidget(row_index, 6, actions)
+            self._history_table.setCellWidget(row_index, 7, actions)
 
     def _view_history_run(self, run_id: str) -> None:
         run = _recognition_run_by_id(self._project_root, run_id)
         if run is None:
             self._set_status("未找到该历史识别记录。")
             return
-        self._technical_details.setPlainText(_json({"history_recognition_run": run}))
+        self._technical_details.setPlainText(_history_run_detail_text(run))
         self._technical_details.setVisible(True)
         self._set_status("已在技术详情中显示历史识别记录；它不属于本次识别结果。")
 
@@ -2811,14 +2812,19 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._set_status("设为当前结果失败。")
             return
         self._render_recognition_history()
-        self._set_status("已设为当前结果；后续标准化将读取该识别批次。")
+        self._set_status("已将该识别记录设为当前标准化输入。")
 
     def _delete_history_run(self, run_id: str) -> None:
+        run = _recognition_run_by_id(self._project_root, run_id)
+        was_current = bool(run and run.get("is_current"))
         if self._project_root is None or not delete_recognition_run(self._project_root, run_id):
             self._set_status("删除历史识别记录失败。")
             return
         self._render_recognition_history()
-        self._set_status("已删除历史识别记录。")
+        if was_current:
+            self._set_status("当前识别结果已删除，请重新识别或选择另一条历史记录。")
+        else:
+            self._set_status("已删除历史识别记录。")
 
     def _render_pre_recognition_inputs(self) -> None:
         rows = _registered_source_rows(self._project_root)
@@ -7262,6 +7268,64 @@ def _history_input_text(run: dict[str, object]) -> str:
     if not names:
         return "未记录"
     return names[0] if len(names) == 1 else f"{len(names)} 个输入：{names[0]}"
+
+
+def _history_status_text(run: dict[str, object]) -> str:
+    if run.get("legacy"):
+        return "由旧版项目结构导入"
+    return str(run.get("status") or "completed")
+
+
+def _history_content_summary(run: dict[str, object]) -> str:
+    report = _history_report_payload(run)
+    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)] if isinstance(report, dict) else []
+    if not files:
+        return "无有效识别文件"
+    semantic_count = sum(1 for item in files if item.get("semantic_type") == "rna_seq_integrated_result_table")
+    if semantic_count:
+        return f"RNA-seq 综合表达结果表：{semantic_count}"
+    labels = []
+    for item in files[:3]:
+        label = str(item.get("semantic_type_zh") or item.get("recognized_type_zh") or TYPE_LABELS.get(str(item.get("recognized_type") or "unknown"), "未知文件"))
+        if label:
+            labels.append(label)
+    remaining = len(files) - len(labels)
+    suffix = f"；另有 {remaining} 个文件" if remaining > 0 else ""
+    legacy = "；由旧版项目结构导入" if run.get("legacy") else ""
+    return f"{'、'.join(labels) if labels else '未知文件'}{suffix}{legacy}"
+
+
+def _history_run_detail_text(run: dict[str, object]) -> str:
+    report = _history_report_payload(run)
+    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)] if isinstance(report, dict) else []
+    warnings = [str(item) for item in report.get("warnings", []) or []] if isinstance(report, dict) else []
+    lines = [
+        f"批次名称：{run.get('batch_name') or run.get('run_id') or '识别记录'}",
+        f"当前状态：{'当前使用中' if run.get('is_current') else _history_status_text(run)}",
+        f"识别报告路径：{run.get('recognition_report_path') or '未记录'}",
+        f"内容摘要：{_history_content_summary(run)}",
+    ]
+    if run.get("legacy"):
+        lines.append("来源：由旧版项目结构导入")
+    if files:
+        lines.append("文件摘要：")
+        lines.append(_recognition_asset_summary(files))
+    if warnings:
+        lines.append("Warning：" + "；".join(warnings[:5]))
+    lines.append("技术详情：")
+    lines.append(_json({"history_recognition_run": run, "recognition_report": report}))
+    return "\n".join(lines)
+
+
+def _history_report_payload(run: dict[str, object]) -> dict[str, object]:
+    path = Path(str(run.get("recognition_report_path") or ""))
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _recognition_run_by_id(project_root: Path | None, run_id: str) -> dict[str, object] | None:
