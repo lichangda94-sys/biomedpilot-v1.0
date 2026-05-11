@@ -82,7 +82,6 @@ def build_search_translation_draft(
         "medical_terms_index_scope": "BioMedPilot shared medical vocabulary",
         "context_output_policy": _context_output_policy(target_context),
         "tcga_project_candidates": term_lookup.tcga_project_candidates if target_context == "bioinformatics" else [],
-        "tcga_primary_site_candidates": term_lookup.tcga_primary_site_candidates if target_context == "bioinformatics" else [],
         "gtex_tissue_candidates": term_lookup.gtex_tissue_candidates if target_context == "bioinformatics" else [],
         "tissue_terms": term_lookup.tissue_terms if target_context == "bioinformatics" else [],
     }
@@ -380,7 +379,6 @@ def _database_terms_for_context(
             [
                 *intelligence.database_terms,
                 *getattr(term_lookup, "tcga_project_candidates", []),
-                *getattr(term_lookup, "tcga_primary_site_candidates", []),
                 *getattr(term_lookup, "gtex_tissue_candidates", []),
                 *getattr(term_lookup, "tissue_terms", []),
             ]
@@ -410,7 +408,6 @@ def _term_lookup_audit_for_context(payload: dict[str, object], target_context: s
         for key in (
             "tissue_terms",
             "tcga_project_candidates",
-            "tcga_primary_site_candidates",
             "gtex_tissue_candidates",
             "data_modality_terms",
         ):
@@ -426,7 +423,6 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "tissue_terms",
                 "data_modality_terms",
                 "tcga_project_candidates",
-                "tcga_primary_site_candidates",
                 "gtex_tissue_candidates",
                 "geo_query_terms",
             ],
@@ -452,7 +448,6 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
             ],
             "blocks": [
                 "tcga_project_candidates",
-                "tcga_primary_site_candidates",
                 "gtex_tissue_candidates",
                 "geo_query_candidates",
             ],

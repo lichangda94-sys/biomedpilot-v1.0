@@ -22,7 +22,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     mesh_terms: list[str] = []
     tissue_terms: list[str] = []
     tcga_projects: list[str] = []
-    tcga_primary_sites: list[str] = []
     gtex_tissues: list[str] = []
     data_modalities: list[str] = []
     modifier_terms: list[str] = []
@@ -47,7 +46,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(mesh_terms, override.mesh_terms)
         _extend_unique(tissue_terms, override.tissue_terms)
         _extend_unique(tcga_projects, override.tcga_project_candidates)
-        _extend_unique(tcga_primary_sites, override.tcga_primary_site_candidates)
         _extend_unique(gtex_tissues, override.gtex_tissue_candidates)
         _extend_unique(data_modalities, override.data_modality_terms)
         _extend_unique(modifier_terms, override.modifier_terms_en)
@@ -94,13 +92,11 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
             _append_unique(data_modalities, concept.preferred_label_en)
             _extend_unique(data_modalities, concept.synonyms_en)
         _extend_unique(tissue_terms, concept.tissue_terms)
-        _extend_unique(tcga_primary_sites, concept.tcga_primary_site_candidates)
         _extend_unique(data_modalities, concept.data_modality_terms)
         _extend_unique(modifier_terms, concept.modifier_terms_en)
         _extend_unique(abbreviations, concept.abbreviations)
         _extend_unique(mesh_terms, concept.mesh_terms)
         _extend_unique(tcga_projects, concept.cross_refs.get("tcga", ()))
-        _extend_unique(tcga_primary_sites, concept.cross_refs.get("tcga_primary_site", ()))
         _extend_unique(gtex_tissues, concept.cross_refs.get("gtex", ()))
 
     registry_matches = match_registry_concepts(query, target_context=target_context)
@@ -130,7 +126,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         warnings.append("仅识别到组织词，未识别到明确疾病词。")
     if target_context == "meta_analysis":
         tcga_projects = []
-        tcga_primary_sites = []
         gtex_tissues = []
 
     return TermLookupResult(
@@ -155,7 +150,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         mesh_terms=mesh_terms,
         tissue_terms=tissue_terms,
         tcga_project_candidates=tcga_projects,
-        tcga_primary_site_candidates=tcga_primary_sites,
         gtex_tissue_candidates=gtex_tissues,
         data_modality_terms=data_modalities,
         modifier_terms_en=modifier_terms,
@@ -209,8 +203,6 @@ def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: s
     if normalized_term == normalized_query:
         return True
     if not raw_term.isascii():
-        if len(normalized_term) <= 1:
-            return False
         return normalized_term in normalized_query
     if len(normalized_term) <= 4:
         return re.search(rf"(?<![a-z0-9]){re.escape(normalized_term)}(?![a-z0-9])", normalized_query) is not None
@@ -255,61 +247,31 @@ def _gtex_from_database_terms(terms: tuple[str, ...]) -> list[str]:
 
 
 def _should_skip_registry_concept(concept_id: str, normalized_query: str) -> bool:
-    if concept_id == "thyroid_cancer":
-        non_cancer_thyroid_terms = {
-            "甲状腺",
-            "thyroid",
-            "thyroid tissue",
-            "thyroid gland",
-            "甲状腺结节",
-            "桥本甲状腺炎",
-            "桥本病",
-            "graves病",
-            "格雷夫斯病",
-            "甲状腺功能减退症",
-            "甲减",
-            "甲状腺功能亢进症",
-            "甲亢",
-            "自身免疫性甲状腺炎",
-            "甲状腺肿",
-            "甲状腺激素紊乱",
-            "hypothyroidism",
-            "hyperthyroidism",
-            "hashimoto thyroiditis",
-            "graves disease",
-            "autoimmune thyroiditis",
-            "thyroid nodule",
-            "goiter",
-            "thyroid hormone disorder",
-        }
-        exact_tissue_terms = {"甲状腺", "thyroid", "thyroid tissue", "thyroid gland"}
-        return normalized_query in exact_tissue_terms or any(
-            term not in exact_tissue_terms and term in normalized_query for term in non_cancer_thyroid_terms
-        )
-    if concept_id == "esophageal_squamous_cell_carcinoma":
-        esophagus_tissue_terms = {
-            "食管",
-            "食道",
-            "食管组织",
-            "食道组织",
-            "食管黏膜",
-            "食道黏膜",
-            "食管肌层",
-            "食道肌层",
-            "胃食管交界",
-            "食管胃交界",
-            "贲门交界",
-            "esophagus",
-            "oesophagus",
-            "esophageal tissue",
-            "esophagus mucosa",
-            "esophageal mucosa",
-            "esophagus muscularis",
-            "esophageal muscularis",
-            "gastroesophageal junction",
-        }
-        return normalized_query in esophagus_tissue_terms
-    return False
+    if concept_id != "thyroid_cancer":
+        return False
+    non_cancer_thyroid_terms = {
+        "甲状腺结节",
+        "桥本甲状腺炎",
+        "桥本病",
+        "graves病",
+        "格雷夫斯病",
+        "甲状腺功能减退症",
+        "甲减",
+        "甲状腺功能亢进症",
+        "甲亢",
+        "自身免疫性甲状腺炎",
+        "甲状腺肿",
+        "甲状腺激素紊乱",
+        "hypothyroidism",
+        "hyperthyroidism",
+        "hashimoto thyroiditis",
+        "graves disease",
+        "autoimmune thyroiditis",
+        "thyroid nodule",
+        "goiter",
+        "thyroid hormone disorder",
+    }
+    return any(term in normalized_query for term in non_cancer_thyroid_terms)
 
 
 def _extend_unique(items: list[str], values: object) -> None:

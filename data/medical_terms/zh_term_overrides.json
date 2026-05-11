@@ -3901,114 +3901,75 @@
   {
     "zh_term": "脑",
     "zh_terms": [
-      "脑",
-      "脑组织"
+      "脑"
     ],
     "preferred_label_en": "brain",
     "mapped_concept_ids": [
-      "mini:anatomy_brain"
+      "mini:brain_tissue"
     ],
     "tissue_terms": [
       "brain",
       "brain tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Brain"
+    ],
     "gtex_tissue_candidates": [
       "Brain"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "brain tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "甲状腺",
     "zh_terms": [
-      "甲状腺",
-      "甲状腺组织"
+      "甲状腺"
     ],
     "preferred_label_en": "thyroid",
     "mapped_concept_ids": [
-      "mini:anatomy_thyroid"
+      "mini:thyroid_tissue"
     ],
     "tissue_terms": [
       "thyroid",
-      "thyroid tissue",
       "thyroid gland"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Thyroid Gland"
+    ],
     "gtex_tissue_candidates": [
       "Thyroid"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "thyroid tissue",
-      "thyroid gland"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "thyroid"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "食管",
     "zh_terms": [
       "食管",
-      "食道",
-      "食管组织"
+      "食道"
     ],
     "preferred_label_en": "esophagus",
     "mapped_concept_ids": [
-      "mini:anatomy_esophagus"
+      "mini:esophagus_tissue"
     ],
     "tissue_terms": [
       "esophagus",
-      "oesophagus",
       "esophageal tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Esophagus"
+    ],
     "gtex_tissue_candidates": [
-      "Esophagus - Gastroesophageal Junction",
-      "Esophagus - Mucosa",
-      "Esophagus - Muscularis"
+      "Esophagus"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "oesophagus",
-      "esophageal tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "esophagus"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "食道",
@@ -4038,145 +3999,98 @@
   {
     "zh_term": "肺",
     "zh_terms": [
-      "肺",
-      "肺部",
-      "肺组织"
+      "肺"
     ],
     "preferred_label_en": "lung",
     "mapped_concept_ids": [
-      "mini:anatomy_lung"
+      "mini:lung_tissue"
     ],
     "tissue_terms": [
       "lung",
-      "pulmonary tissue",
       "lung tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Lung"
+    ],
     "gtex_tissue_candidates": [
       "Lung"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "pulmonary tissue",
-      "lung tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "lung"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "胃",
     "zh_terms": [
-      "胃",
-      "胃组织"
+      "胃"
     ],
     "preferred_label_en": "stomach",
     "mapped_concept_ids": [
-      "mini:anatomy_stomach"
+      "mini:stomach_tissue"
     ],
     "tissue_terms": [
       "stomach",
       "gastric tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Stomach"
+    ],
     "gtex_tissue_candidates": [
       "Stomach"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "gastric tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "stomach"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "结肠",
     "zh_terms": [
-      "结肠",
-      "结肠组织"
+      "结肠"
     ],
     "preferred_label_en": "colon",
     "mapped_concept_ids": [
-      "mini:anatomy_colon"
+      "mini:colon_tissue"
     ],
     "tissue_terms": [
       "colon",
       "colonic tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Colon"
+    ],
     "gtex_tissue_candidates": [
-      "Colon",
-      "Colon - Sigmoid",
-      "Colon - Transverse"
+      "Colon"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "colonic tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "colon"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "直肠",
     "zh_terms": [
-      "直肠",
-      "直肠组织"
+      "直肠"
     ],
     "preferred_label_en": "rectum",
     "mapped_concept_ids": [
-      "mini:anatomy_rectum"
+      "mini:rectum_tissue"
     ],
     "tissue_terms": [
       "rectum",
       "rectal tissue"
     ],
-    "mesh_terms": [],
-    "gtex_tissue_candidates": [],
+    "mesh_terms": [
+      "Rectum"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon"
+    ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "rectal tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "rectum"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "肝",
@@ -4205,473 +4119,334 @@
   {
     "zh_term": "胰腺",
     "zh_terms": [
-      "胰腺",
-      "胰腺组织"
+      "胰腺"
     ],
     "preferred_label_en": "pancreas",
     "mapped_concept_ids": [
-      "mini:anatomy_pancreas"
+      "mini:pancreas_tissue"
     ],
     "tissue_terms": [
       "pancreas",
       "pancreatic tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Pancreas"
+    ],
     "gtex_tissue_candidates": [
       "Pancreas"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "pancreatic tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "pancreas"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "乳腺",
     "zh_terms": [
-      "乳腺",
-      "乳房",
-      "乳腺组织"
+      "乳腺"
     ],
-    "preferred_label_en": "breast mammary tissue",
+    "preferred_label_en": "breast",
     "mapped_concept_ids": [
-      "mini:anatomy_breast_mammary_tissue"
+      "mini:breast_tissue"
     ],
     "tissue_terms": [
-      "breast mammary tissue",
-      "breast tissue",
+      "breast",
       "mammary tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Breast"
+    ],
     "gtex_tissue_candidates": [
-      "Breast - Mammary Tissue",
       "Breast"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "breast tissue",
-      "mammary tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "breast"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "前列腺",
     "zh_terms": [
-      "前列腺",
-      "前列腺组织"
+      "前列腺"
     ],
     "preferred_label_en": "prostate",
     "mapped_concept_ids": [
-      "mini:anatomy_prostate"
+      "mini:prostate_tissue"
     ],
     "tissue_terms": [
       "prostate",
       "prostatic tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Prostate"
+    ],
     "gtex_tissue_candidates": [
       "Prostate"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "prostatic tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "prostate"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "卵巢",
     "zh_terms": [
-      "卵巢",
-      "卵巢组织"
+      "卵巢"
     ],
     "preferred_label_en": "ovary",
     "mapped_concept_ids": [
-      "mini:anatomy_ovary"
+      "mini:ovary_tissue"
     ],
     "tissue_terms": [
       "ovary",
       "ovarian tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Ovary"
+    ],
     "gtex_tissue_candidates": [
       "Ovary"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "ovarian tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "ovary"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "宫颈",
     "zh_terms": [
-      "宫颈",
-      "子宫颈"
+      "宫颈"
     ],
     "preferred_label_en": "cervix",
     "mapped_concept_ids": [
-      "mini:anatomy_cervix"
+      "mini:cervix_tissue"
     ],
     "tissue_terms": [
       "cervix",
-      "cervical tissue",
       "uterine cervix"
     ],
-    "mesh_terms": [],
-    "gtex_tissue_candidates": [],
+    "mesh_terms": [
+      "Uterine Cervix"
+    ],
+    "gtex_tissue_candidates": [
+      "Uterus"
+    ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "cervical tissue",
-      "uterine cervix"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "cervix"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "子宫内膜",
     "zh_terms": [
-      "子宫内膜",
-      "内膜"
+      "子宫内膜"
     ],
     "preferred_label_en": "endometrium",
     "mapped_concept_ids": [
-      "mini:anatomy_endometrium"
+      "mini:endometrium_tissue"
     ],
     "tissue_terms": [
       "endometrium",
-      "endometrial tissue"
+      "uterine endometrium"
     ],
-    "mesh_terms": [],
-    "gtex_tissue_candidates": [],
+    "mesh_terms": [
+      "Endometrium"
+    ],
+    "gtex_tissue_candidates": [
+      "Uterus"
+    ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "endometrial tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "endometrium",
-      "uterus"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "肾脏",
     "zh_terms": [
       "肾脏",
       "肾",
-      "肾组织"
+      "肾组织",
+      "肾皮质",
+      "肾髓质"
     ],
     "preferred_label_en": "kidney",
     "mapped_concept_ids": [
-      "mini:anatomy_kidney"
+      "mini:kidney_tissue"
     ],
     "tissue_terms": [
       "kidney",
-      "renal tissue"
+      "renal tissue",
+      "kidney cortex",
+      "kidney medulla"
     ],
-    "mesh_terms": [],
-    "gtex_tissue_candidates": [
+    "mesh_terms": [
       "Kidney",
-      "Kidney - Cortex"
+      "Kidney Cortex",
+      "Kidney Medulla"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
+    "term_source": "stage2_5_reference_audit_gap_fix",
+    "confidence": 0.9,
+    "source": "zh_override",
     "synonyms_en": [
-      "renal tissue"
-    ],
-    "disease_terms_en": [],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "kidney"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+      "renal tissue",
+      "kidney cortex",
+      "kidney medulla"
+    ]
   },
   {
     "zh_term": "膀胱",
     "zh_terms": [
       "膀胱",
-      "膀胱组织"
+      "膀胱组织",
+      "泌尿膀胱"
     ],
     "preferred_label_en": "bladder",
     "mapped_concept_ids": [
-      "mini:anatomy_bladder"
+      "mini:bladder_tissue"
     ],
     "tissue_terms": [
       "bladder",
       "urinary bladder",
       "bladder tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Urinary Bladder"
+    ],
     "gtex_tissue_candidates": [
       "Bladder"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
+    "term_source": "stage2_5_reference_audit_gap_fix",
+    "confidence": 0.9,
+    "source": "zh_override",
     "synonyms_en": [
       "urinary bladder",
       "bladder tissue"
-    ],
-    "disease_terms_en": [],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "bladder"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    ]
   },
   {
     "zh_term": "皮肤",
     "zh_terms": [
-      "皮肤",
-      "皮肤组织"
+      "皮肤"
     ],
     "preferred_label_en": "skin",
     "mapped_concept_ids": [
-      "mini:anatomy_skin"
+      "mini:skin_tissue"
     ],
     "tissue_terms": [
       "skin",
       "cutaneous tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Skin"
+    ],
     "gtex_tissue_candidates": [
-      "Skin",
-      "Skin - Not Sun Exposed",
-      "Skin - Not Sun Exposed (Suprapubic)",
-      "Skin - Sun Exposed",
-      "Skin - Sun Exposed (Lower leg)"
+      "Skin"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "cutaneous tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "skin"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "血液",
     "zh_terms": [
-      "血液",
-      "全血",
-      "外周血"
+      "血液"
     ],
-    "preferred_label_en": "whole blood",
+    "preferred_label_en": "blood",
     "mapped_concept_ids": [
-      "mini:anatomy_whole_blood"
+      "mini:blood_tissue"
     ],
     "tissue_terms": [
-      "whole blood",
       "blood",
-      "peripheral blood",
       "whole blood"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Blood"
+    ],
     "gtex_tissue_candidates": [
       "Whole Blood"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "blood",
-      "peripheral blood",
-      "whole blood"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "blood"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "骨髓",
     "zh_terms": [
-      "骨髓",
-      "骨髓组织"
+      "骨髓"
     ],
     "preferred_label_en": "bone marrow",
     "mapped_concept_ids": [
-      "mini:anatomy_bone_marrow"
+      "mini:bone_marrow_tissue"
     ],
     "tissue_terms": [
       "bone marrow",
-      "marrow",
-      "bone marrow tissue"
+      "marrow"
     ],
-    "mesh_terms": [],
-    "gtex_tissue_candidates": [],
+    "mesh_terms": [
+      "Bone Marrow"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "marrow",
-      "bone marrow tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "bone marrow"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "淋巴结",
     "zh_terms": [
-      "淋巴结",
-      "淋巴组织"
+      "淋巴结"
     ],
     "preferred_label_en": "lymph node",
     "mapped_concept_ids": [
-      "mini:anatomy_lymph_node"
+      "mini:lymph_node_tissue"
     ],
     "tissue_terms": [
       "lymph node",
-      "lymphatic tissue",
-      "lymph node tissue"
+      "lymphatic tissue"
     ],
-    "mesh_terms": [],
-    "gtex_tissue_candidates": [],
+    "mesh_terms": [
+      "Lymph Nodes"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "lymphatic tissue",
-      "lymph node tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "lymph node"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "脂肪组织",
     "zh_terms": [
-      "脂肪组织",
-      "脂肪"
+      "脂肪组织"
     ],
     "preferred_label_en": "adipose tissue",
     "mapped_concept_ids": [
-      "mini:anatomy_adipose_tissue"
+      "mini:adipose_tissue"
     ],
     "tissue_terms": [
       "adipose tissue",
       "fat tissue"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Adipose Tissue"
+    ],
     "gtex_tissue_candidates": [
       "Adipose Tissue"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "fat tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "adipose tissue"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "肌肉",
@@ -4700,40 +4475,27 @@
   {
     "zh_term": "心脏",
     "zh_terms": [
-      "心脏",
-      "心肌"
+      "心脏"
     ],
     "preferred_label_en": "heart",
     "mapped_concept_ids": [
-      "mini:anatomy_heart"
+      "mini:heart_tissue"
     ],
     "tissue_terms": [
       "heart",
       "cardiac tissue",
-      "heart tissue"
+      "myocardium"
     ],
-    "mesh_terms": [],
+    "mesh_terms": [
+      "Heart"
+    ],
     "gtex_tissue_candidates": [
-      "Heart - Atrial Appendage",
-      "Heart - Left Ventricle"
+      "Heart"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "cardiac tissue",
-      "heart tissue"
-    ],
-    "abbreviations": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "heart"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "term_source": "stage2_2_systematic_curated_zh_override",
+    "confidence": 0.9,
+    "source": "zh_override"
   },
   {
     "zh_term": "代谢组",
@@ -5392,7 +5154,7 @@
       "Pheochromocytoma"
     ],
     "tissue_terms": [
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
@@ -5874,36 +5636,18 @@
     "zh_term": "脾脏",
     "preferred_label_en": "spleen",
     "mapped_concept_ids": [
-      "mini:anatomy_spleen"
+      "mini:spleen_tissue"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
     "tissue_terms": [
-      "spleen",
-      "splenic tissue"
+      "spleen"
     ],
     "gtex_tissue_candidates": [
       "Spleen"
-    ],
-    "zh_terms": [
-      "脾脏",
-      "脾"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "splenic tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "spleen"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    ]
   },
   {
     "zh_term": "脾",
@@ -5926,108 +5670,52 @@
     "zh_term": "垂体",
     "preferred_label_en": "pituitary",
     "mapped_concept_ids": [
-      "mini:anatomy_pituitary"
+      "mini:pituitary_tissue"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
     "tissue_terms": [
-      "pituitary",
-      "pituitary gland",
-      "pituitary tissue"
+      "pituitary"
     ],
     "gtex_tissue_candidates": [
       "Pituitary"
-    ],
-    "zh_terms": [
-      "垂体",
-      "脑垂体"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "pituitary gland",
-      "pituitary tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "pituitary"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    ]
   },
   {
     "zh_term": "肾上腺",
     "preferred_label_en": "adrenal gland",
     "mapped_concept_ids": [
-      "mini:anatomy_adrenal_gland"
+      "mini:adrenal_gland_tissue"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
     "tissue_terms": [
-      "adrenal gland",
-      "adrenal gland tissue"
+      "adrenal gland"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland"
-    ],
-    "zh_terms": [
-      "肾上腺",
-      "肾上腺组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "adrenal gland tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "adrenal gland"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    ]
   },
   {
     "zh_term": "睾丸",
     "preferred_label_en": "testis",
     "mapped_concept_ids": [
-      "mini:anatomy_testis"
+      "mini:testis_tissue"
     ],
     "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
     "tissue_terms": [
-      "testis",
-      "testicular tissue"
+      "testis"
     ],
     "gtex_tissue_candidates": [
       "Testis"
-    ],
-    "zh_terms": [
-      "睾丸",
-      "睾丸组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "testicular tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "testis"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    ]
   },
   {
     "zh_term": "效应量",
@@ -9673,7 +9361,7 @@
       "Cushing Syndrome"
     ],
     "tissue_terms": [
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland",
@@ -9710,7 +9398,7 @@
       "Adrenal Insufficiency"
     ],
     "tissue_terms": [
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland"
@@ -9747,7 +9435,7 @@
       "Addison Disease"
     ],
     "tissue_terms": [
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland"
@@ -9787,7 +9475,7 @@
       "Hyperaldosteronism"
     ],
     "tissue_terms": [
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland",
@@ -9826,7 +9514,7 @@
       "Adrenocortical Adenoma"
     ],
     "tissue_terms": [
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland"
@@ -10627,7 +10315,7 @@
     ],
     "tissue_terms": [
       "blood",
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland",
@@ -10665,7 +10353,7 @@
     ],
     "tissue_terms": [
       "blood",
-      "adrenal gland tissue"
+      "adrenal tissue"
     ],
     "gtex_tissue_candidates": [
       "Adrenal Gland",
@@ -10805,1611 +10493,5 @@
       "25-hydroxyvitamin D",
       "25(OH)D"
     ]
-  },
-  {
-    "zh_term": "皮下脂肪",
-    "preferred_label_en": "subcutaneous adipose tissue",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_subcutaneous_adipose_tissue"
-    ],
-    "zh_terms": [
-      "皮下脂肪",
-      "皮下脂肪组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "subcutaneous fat",
-      "Adipose - Subcutaneous"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "subcutaneous adipose tissue",
-      "subcutaneous fat",
-      "Adipose - Subcutaneous"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "adipose tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose - Subcutaneous",
-      "Adipose Tissue"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "内脏脂肪",
-    "preferred_label_en": "visceral adipose tissue",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_visceral_adipose_tissue"
-    ],
-    "zh_terms": [
-      "内脏脂肪",
-      "内脏脂肪组织",
-      "网膜脂肪"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "visceral fat",
-      "omental adipose tissue",
-      "Adipose - Visceral (Omentum)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "visceral adipose tissue",
-      "visceral fat",
-      "omental adipose tissue",
-      "Adipose - Visceral (Omentum)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "adipose tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose - Visceral",
-      "Adipose - Visceral (Omentum)",
-      "Adipose Tissue"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "动脉",
-    "preferred_label_en": "artery",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_artery"
-    ],
-    "zh_terms": [
-      "动脉",
-      "动脉组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "arterial tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "artery",
-      "arterial tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "artery"
-    ],
-    "gtex_tissue_candidates": [
-      "Artery - Aorta",
-      "Artery - Coronary",
-      "Artery - Tibial"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "主动脉",
-    "preferred_label_en": "aorta",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_aorta"
-    ],
-    "zh_terms": [
-      "主动脉",
-      "大动脉"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "aortic artery",
-      "Artery - Aorta"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "aorta",
-      "aortic artery",
-      "Artery - Aorta"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "artery"
-    ],
-    "gtex_tissue_candidates": [
-      "Artery - Aorta"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "冠状动脉",
-    "preferred_label_en": "coronary artery",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_coronary_artery"
-    ],
-    "zh_terms": [
-      "冠状动脉",
-      "冠脉"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "coronary arterial tissue",
-      "Artery - Coronary"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "coronary artery",
-      "coronary arterial tissue",
-      "Artery - Coronary"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "artery"
-    ],
-    "gtex_tissue_candidates": [
-      "Artery - Coronary"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "胫动脉",
-    "preferred_label_en": "tibial artery",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_tibial_artery"
-    ],
-    "zh_terms": [
-      "胫动脉",
-      "胫骨动脉"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "Artery - Tibial"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "tibial artery",
-      "Artery - Tibial"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "artery"
-    ],
-    "gtex_tissue_candidates": [
-      "Artery - Tibial"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "乳房",
-    "preferred_label_en": "breast",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_breast"
-    ],
-    "zh_terms": [
-      "乳房",
-      "乳房组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "breast tissue",
-      "mammary tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "breast",
-      "breast tissue",
-      "mammary tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "breast"
-    ],
-    "gtex_tissue_candidates": [
-      "Breast - Mammary Tissue",
-      "Breast"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "乙状结肠",
-    "preferred_label_en": "sigmoid colon",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_sigmoid_colon"
-    ],
-    "zh_terms": [
-      "乙状结肠",
-      "乙状结肠组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "sigmoid colonic tissue",
-      "Colon - Sigmoid"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "sigmoid colon",
-      "sigmoid colonic tissue",
-      "Colon - Sigmoid"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "colon"
-    ],
-    "gtex_tissue_candidates": [
-      "Colon - Sigmoid",
-      "Colon"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "横结肠",
-    "preferred_label_en": "transverse colon",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_transverse_colon"
-    ],
-    "zh_terms": [
-      "横结肠",
-      "横结肠组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "transverse colonic tissue",
-      "Colon - Transverse"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "transverse colon",
-      "transverse colonic tissue",
-      "Colon - Transverse"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "colon"
-    ],
-    "gtex_tissue_candidates": [
-      "Colon - Transverse",
-      "Colon"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "结直肠",
-    "preferred_label_en": "colorectal tissue",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_colorectal_tissue"
-    ],
-    "zh_terms": [
-      "结直肠",
-      "结肠直肠"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "colorectal tissue",
-      "colorectum"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "colorectal tissue",
-      "colorectal tissue",
-      "colorectum"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "colon",
-      "rectum"
-    ],
-    "gtex_tissue_candidates": [
-      "Colon",
-      "Colon - Sigmoid",
-      "Colon - Transverse"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "胃食管交界",
-    "preferred_label_en": "esophagus gastroesophageal junction",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_esophagus_gastroesophageal_junction"
-    ],
-    "zh_terms": [
-      "胃食管交界",
-      "食管胃交界",
-      "贲门交界"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "gastroesophageal junction",
-      "GEJ",
-      "Esophagus - Gastroesophageal Junction"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "esophagus gastroesophageal junction",
-      "gastroesophageal junction",
-      "GEJ",
-      "Esophagus - Gastroesophageal Junction"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "esophagus"
-    ],
-    "gtex_tissue_candidates": [
-      "Esophagus - Gastroesophageal Junction"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "食管黏膜",
-    "preferred_label_en": "esophagus mucosa",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_esophagus_mucosa"
-    ],
-    "zh_terms": [
-      "食管黏膜",
-      "食道黏膜"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "esophageal mucosa",
-      "Esophagus - Mucosa"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "esophagus mucosa",
-      "esophageal mucosa",
-      "Esophagus - Mucosa"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "esophagus"
-    ],
-    "gtex_tissue_candidates": [
-      "Esophagus - Mucosa"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "食管肌层",
-    "preferred_label_en": "esophagus muscularis",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_esophagus_muscularis"
-    ],
-    "zh_terms": [
-      "食管肌层",
-      "食道肌层"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "esophageal muscularis",
-      "Esophagus - Muscularis"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "esophagus muscularis",
-      "esophageal muscularis",
-      "Esophagus - Muscularis"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "esophagus"
-    ],
-    "gtex_tissue_candidates": [
-      "Esophagus - Muscularis"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "心耳",
-    "preferred_label_en": "heart atrial appendage",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_heart_atrial_appendage"
-    ],
-    "zh_terms": [
-      "心耳",
-      "心房耳"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "atrial appendage",
-      "Heart - Atrial Appendage"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "heart atrial appendage",
-      "atrial appendage",
-      "Heart - Atrial Appendage"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "heart"
-    ],
-    "gtex_tissue_candidates": [
-      "Heart - Atrial Appendage"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "左心室",
-    "preferred_label_en": "heart left ventricle",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_heart_left_ventricle"
-    ],
-    "zh_terms": [
-      "左心室",
-      "左室"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "left ventricular tissue",
-      "Heart - Left Ventricle"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "heart left ventricle",
-      "left ventricular tissue",
-      "Heart - Left Ventricle"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "heart"
-    ],
-    "gtex_tissue_candidates": [
-      "Heart - Left Ventricle"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "肾皮质",
-    "preferred_label_en": "kidney cortex",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_kidney_cortex"
-    ],
-    "zh_terms": [
-      "肾皮质",
-      "肾脏皮质"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "renal cortex",
-      "Kidney - Cortex"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "kidney cortex",
-      "renal cortex",
-      "Kidney - Cortex"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "kidney"
-    ],
-    "gtex_tissue_candidates": [
-      "Kidney - Cortex",
-      "Kidney"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "肝脏",
-    "preferred_label_en": "liver",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_liver"
-    ],
-    "zh_terms": [
-      "肝脏",
-      "肝",
-      "肝组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "hepatic tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "liver",
-      "hepatic tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "liver"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "骨骼肌",
-    "preferred_label_en": "skeletal muscle",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_skeletal_muscle"
-    ],
-    "zh_terms": [
-      "骨骼肌",
-      "肌肉",
-      "骨骼肌组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "Muscle - Skeletal",
-      "skeletal muscle tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "skeletal muscle",
-      "Muscle - Skeletal",
-      "skeletal muscle tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "soft tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Muscle - Skeletal"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "胫神经",
-    "preferred_label_en": "tibial nerve",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_tibial_nerve"
-    ],
-    "zh_terms": [
-      "胫神经",
-      "胫骨神经"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "Nerve - Tibial",
-      "tibial nerve tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "tibial nerve",
-      "Nerve - Tibial",
-      "tibial nerve tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "nerve"
-    ],
-    "gtex_tissue_candidates": [
-      "Nerve - Tibial"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "非日晒皮肤",
-    "preferred_label_en": "not sun exposed skin",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_not_sun_exposed_skin"
-    ],
-    "zh_terms": [
-      "非日晒皮肤",
-      "未日晒皮肤"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "Skin - Not Sun Exposed (Suprapubic)",
-      "suprapubic skin"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "not sun exposed skin",
-      "Skin - Not Sun Exposed (Suprapubic)",
-      "suprapubic skin"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "skin"
-    ],
-    "gtex_tissue_candidates": [
-      "Skin - Not Sun Exposed",
-      "Skin - Not Sun Exposed (Suprapubic)",
-      "Skin"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "日晒皮肤",
-    "preferred_label_en": "sun exposed skin",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_sun_exposed_skin"
-    ],
-    "zh_terms": [
-      "日晒皮肤",
-      "日光暴露皮肤"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "Skin - Sun Exposed (Lower leg)",
-      "lower leg skin"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "sun exposed skin",
-      "Skin - Sun Exposed (Lower leg)",
-      "lower leg skin"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "skin"
-    ],
-    "gtex_tissue_candidates": [
-      "Skin - Sun Exposed",
-      "Skin - Sun Exposed (Lower leg)",
-      "Skin"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "回肠末端",
-    "preferred_label_en": "small intestine terminal ileum",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_small_intestine_terminal_ileum"
-    ],
-    "zh_terms": [
-      "回肠末端",
-      "小肠末端",
-      "末端回肠",
-      "小肠"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "terminal ileum",
-      "Small Intestine - Terminal Ileum",
-      "ileum"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "small intestine terminal ileum",
-      "terminal ileum",
-      "Small Intestine - Terminal Ileum",
-      "ileum"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "small intestine"
-    ],
-    "gtex_tissue_candidates": [
-      "Small Intestine - Terminal Ileum"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "子宫",
-    "preferred_label_en": "uterus",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_uterus"
-    ],
-    "zh_terms": [
-      "子宫",
-      "子宫组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "uterine tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "uterus",
-      "uterine tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "uterus"
-    ],
-    "gtex_tissue_candidates": [
-      "Uterus"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "阴道",
-    "preferred_label_en": "vagina",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_vagina"
-    ],
-    "zh_terms": [
-      "阴道",
-      "阴道组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "vaginal tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "vagina",
-      "vaginal tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "vagina"
-    ],
-    "gtex_tissue_candidates": [
-      "Vagina"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "小唾液腺",
-    "preferred_label_en": "minor salivary gland",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_minor_salivary_gland"
-    ],
-    "zh_terms": [
-      "小唾液腺",
-      "唾液腺"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "salivary gland",
-      "minor salivary gland tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "minor salivary gland",
-      "salivary gland",
-      "minor salivary gland tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "head and neck"
-    ],
-    "gtex_tissue_candidates": [
-      "Minor Salivary Gland"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "培养成纤维细胞",
-    "preferred_label_en": "cultured fibroblasts",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_cultured_fibroblasts"
-    ],
-    "zh_terms": [
-      "培养成纤维细胞",
-      "成纤维细胞"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "fibroblasts",
-      "Cells - Cultured fibroblasts"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "cultured fibroblasts",
-      "fibroblasts",
-      "Cells - Cultured fibroblasts"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "soft tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Cells - Cultured fibroblasts"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "EBV转化淋巴细胞",
-    "preferred_label_en": "EBV-transformed lymphocytes",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_ebv_transformed_lymphocytes"
-    ],
-    "zh_terms": [
-      "EBV转化淋巴细胞",
-      "EBV转化B细胞"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "EBV-transformed lymphocytes",
-      "lymphoblastoid cell line",
-      "Cells - EBV-transformed lymphocytes"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "EBV-transformed lymphocytes",
-      "EBV-transformed lymphocytes",
-      "lymphoblastoid cell line",
-      "Cells - EBV-transformed lymphocytes"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Cells - EBV-transformed lymphocytes"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "胆管",
-    "preferred_label_en": "bile duct",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_bile_duct"
-    ],
-    "zh_terms": [
-      "胆管",
-      "胆道"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "biliary tract",
-      "biliary duct"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "bile duct",
-      "biliary tract",
-      "biliary duct"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "bile duct"
-    ],
-    "gtex_tissue_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "头颈部组织",
-    "preferred_label_en": "head and neck tissue",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_head_and_neck_tissue"
-    ],
-    "zh_terms": [
-      "头颈部组织",
-      "头颈组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "head and neck",
-      "upper aerodigestive tract"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "head and neck tissue",
-      "head and neck",
-      "upper aerodigestive tract"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "head and neck"
-    ],
-    "gtex_tissue_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "软组织",
-    "preferred_label_en": "soft tissue",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_soft_tissue"
-    ],
-    "zh_terms": [
-      "软组织",
-      "软组织来源"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "connective soft tissue"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "soft tissue",
-      "connective soft tissue"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "soft tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Muscle - Skeletal"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "杏仁核",
-    "preferred_label_en": "brain amygdala",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_amygdala"
-    ],
-    "zh_terms": [
-      "杏仁核",
-      "脑杏仁核"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "amygdala",
-      "Brain - Amygdala"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain amygdala",
-      "amygdala",
-      "Brain - Amygdala"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Amygdala"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "前扣带皮层",
-    "preferred_label_en": "brain anterior cingulate cortex",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_anterior_cingulate_cortex"
-    ],
-    "zh_terms": [
-      "前扣带皮层",
-      "前扣带回皮层"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "anterior cingulate cortex",
-      "Brain - Anterior cingulate cortex (BA24)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain anterior cingulate cortex",
-      "anterior cingulate cortex",
-      "Brain - Anterior cingulate cortex (BA24)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Anterior cingulate cortex"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "尾状核",
-    "preferred_label_en": "brain caudate",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_caudate"
-    ],
-    "zh_terms": [
-      "尾状核",
-      "脑尾状核"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "caudate nucleus",
-      "Brain - Caudate (basal ganglia)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain caudate",
-      "caudate nucleus",
-      "Brain - Caudate (basal ganglia)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Caudate"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "小脑半球",
-    "preferred_label_en": "brain cerebellar hemisphere",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_cerebellar_hemisphere"
-    ],
-    "zh_terms": [
-      "小脑半球",
-      "小脑半球组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "cerebellar hemisphere",
-      "Brain - Cerebellar Hemisphere"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain cerebellar hemisphere",
-      "cerebellar hemisphere",
-      "Brain - Cerebellar Hemisphere"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Cerebellar Hemisphere"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "小脑",
-    "preferred_label_en": "brain cerebellum",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_cerebellum"
-    ],
-    "zh_terms": [
-      "小脑",
-      "小脑组织"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "cerebellum",
-      "Brain - Cerebellum"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain cerebellum",
-      "cerebellum",
-      "Brain - Cerebellum"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Cerebellum"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "大脑皮层",
-    "preferred_label_en": "brain cortex",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_cortex"
-    ],
-    "zh_terms": [
-      "大脑皮层",
-      "脑皮层"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "cerebral cortex",
-      "Brain - Cortex"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain cortex",
-      "cerebral cortex",
-      "Brain - Cortex"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Cortex"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "额叶皮层",
-    "preferred_label_en": "brain frontal cortex",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_frontal_cortex"
-    ],
-    "zh_terms": [
-      "额叶皮层",
-      "额皮质"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "frontal cortex",
-      "Brain - Frontal Cortex (BA9)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain frontal cortex",
-      "frontal cortex",
-      "Brain - Frontal Cortex (BA9)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Frontal Cortex"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "海马",
-    "preferred_label_en": "brain hippocampus",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_hippocampus"
-    ],
-    "zh_terms": [
-      "海马",
-      "海马体"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "hippocampus",
-      "Brain - Hippocampus"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain hippocampus",
-      "hippocampus",
-      "Brain - Hippocampus"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Hippocampus"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "下丘脑",
-    "preferred_label_en": "brain hypothalamus",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_hypothalamus"
-    ],
-    "zh_terms": [
-      "下丘脑",
-      "丘脑下部"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "hypothalamus",
-      "Brain - Hypothalamus"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain hypothalamus",
-      "hypothalamus",
-      "Brain - Hypothalamus"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Hypothalamus"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "伏隔核",
-    "preferred_label_en": "brain nucleus accumbens",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_nucleus_accumbens"
-    ],
-    "zh_terms": [
-      "伏隔核",
-      "脑伏隔核"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "nucleus accumbens",
-      "Brain - Nucleus accumbens (basal ganglia)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain nucleus accumbens",
-      "nucleus accumbens",
-      "Brain - Nucleus accumbens (basal ganglia)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Nucleus accumbens"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "壳核",
-    "preferred_label_en": "brain putamen",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_putamen"
-    ],
-    "zh_terms": [
-      "壳核",
-      "脑壳核"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "putamen",
-      "Brain - Putamen (basal ganglia)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain putamen",
-      "putamen",
-      "Brain - Putamen (basal ganglia)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Putamen"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "颈髓C1",
-    "preferred_label_en": "spinal cord cervical c1",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_spinal_cord_cervical_c1"
-    ],
-    "zh_terms": [
-      "颈髓C1",
-      "颈段脊髓"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "spinal cord cervical c-1",
-      "Brain - Spinal cord (cervical c-1)"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "spinal cord cervical c1",
-      "spinal cord cervical c-1",
-      "Brain - Spinal cord (cervical c-1)"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain",
-      "spinal cord"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Spinal cord"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "黑质",
-    "preferred_label_en": "brain substantia nigra",
-    "concept_type": "tissue",
-    "term_source": "project_curated_anatomy_tissue_core_v1",
-    "confidence": 0.95,
-    "source": "anatomy_tissue_core_v1",
-    "mapped_concept_ids": [
-      "mini:anatomy_brain_substantia_nigra"
-    ],
-    "zh_terms": [
-      "黑质",
-      "脑黑质"
-    ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "substantia nigra",
-      "Brain - Substantia nigra"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [],
-    "tissue_terms": [
-      "brain substantia nigra",
-      "substantia nigra",
-      "Brain - Substantia nigra"
-    ],
-    "tcga_project_candidates": [],
-    "tcga_primary_site_candidates": [
-      "brain"
-    ],
-    "gtex_tissue_candidates": [
-      "Brain - Substantia nigra"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
   }
 ]

@@ -46,7 +46,6 @@ class IndexConcept:
     abbreviations: list[str] = field(default_factory=list)
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
-    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     disease_group: str = ""
@@ -661,7 +660,6 @@ def _defaults() -> dict[str, object]:
         "abbreviations": [],
         "mesh_terms": [],
         "tissue_terms": [],
-        "tcga_primary_site_candidates": [],
         "data_modality_terms": [],
         "modifier_terms_en": [],
         "disease_group": "",

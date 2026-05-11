@@ -23,7 +23,6 @@ class VocabularyCorpus:
     text_by_field: dict[str, set[str]]
     all_text: set[str]
     tcga_projects: set[str]
-    tcga_primary_sites: set[str]
     gtex_tissues: set[str]
     gtex_status_by_tissue: dict[str, set[str]]
 
@@ -53,8 +52,6 @@ def build_coverage_audit_report() -> dict[str, Any]:
             section = _audit_oncology_core(checklist, corpus)
         elif coverage_type == "endocrine_metabolic_core":
             section = _audit_endocrine_metabolic_core(checklist, corpus)
-        elif coverage_type == "anatomy_tissue_core":
-            section = _audit_anatomy_tissue_core(checklist, corpus)
         else:
             section = _audit_generic_terms(checklist, corpus)
         sections[str(checklist.get("checklist_id"))] = section
@@ -137,23 +134,6 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 "## Endocrine And Metabolic Core Summary",
                 "",
                 _endocrine_metabolic_summary_lines(sections["endocrine_metabolic_core"]),
-                "",
-            ]
-        )
-    if "anatomy_tissue_core" in sections:
-        lines.extend(
-            [
-                "## Anatomy Tissue Core Covered/Missing",
-                "",
-                _details_table(
-                    sections["anatomy_tissue_core"],
-                    label_key="label",
-                    extra_keys=("matched_terms", "matched_gtex_tissues", "matched_tcga_primary_sites"),
-                ),
-                "",
-                "## Anatomy Tissue Core Summary",
-                "",
-                _anatomy_tissue_summary_lines(sections["anatomy_tissue_core"]),
                 "",
             ]
         )
@@ -376,65 +356,6 @@ def _audit_endocrine_metabolic_core(checklist: dict[str, Any], corpus: Vocabular
     return section
 
 
-def _audit_anatomy_tissue_core(checklist: dict[str, Any], corpus: VocabularyCorpus) -> dict[str, Any]:
-    details = []
-    expected_gtex_all: set[str] = set()
-    matched_gtex_all: set[str] = set()
-    expected_primary_all: set[str] = set()
-    matched_primary_all: set[str] = set()
-    for item in checklist["items"]:
-        expected_terms = _list(item.get("expected_terms"))
-        expected_gtex = _list(item.get("expected_gtex_tissues") or item.get("gtex_tissue_candidates"))
-        expected_primary_sites = _list(item.get("expected_tcga_primary_sites") or item.get("tcga_primary_site_candidates"))
-        matched_terms = _matched_terms(expected_terms, corpus.all_text)
-        matched_gtex = [tissue for tissue in expected_gtex if _norm(tissue) in corpus.gtex_tissues]
-        matched_primary_sites = [site for site in expected_primary_sites if _norm(site) in corpus.tcga_primary_sites]
-        expected_gtex_all.update(expected_gtex)
-        matched_gtex_all.update(matched_gtex)
-        expected_primary_all.update(expected_primary_sites)
-        matched_primary_all.update(matched_primary_sites)
-        term_requirement_met = not expected_terms or bool(matched_terms)
-        gtex_requirement_met = not expected_gtex or set(map(_norm, expected_gtex)) <= set(map(_norm, matched_gtex))
-        primary_requirement_met = not expected_primary_sites or set(map(_norm, expected_primary_sites)) <= set(map(_norm, matched_primary_sites))
-        if term_requirement_met and gtex_requirement_met and primary_requirement_met:
-            status = "covered"
-        elif matched_terms or matched_gtex or matched_primary_sites:
-            status = "partially_covered"
-        else:
-            status = "missing"
-        details.append(
-            _detail(
-                item,
-                status,
-                matched_terms=matched_terms,
-                matched_gtex_tissues=matched_gtex,
-                matched_tcga_primary_sites=matched_primary_sites,
-                subcategory=str(item.get("subcategory") or ""),
-                avoid_expansion_to=_list(item.get("avoid_expansion_to")),
-                ambiguity_notes=str(item.get("ambiguity_notes") or ""),
-            )
-        )
-    section = _section(checklist, details)
-    missing_gtex = sorted(tissue for tissue in expected_gtex_all if _norm(tissue) not in {_norm(value) for value in matched_gtex_all})
-    missing_primary = sorted(site for site in expected_primary_all if _norm(site) not in {_norm(value) for value in matched_primary_all})
-    section["gtex_tissue_coverage"] = {
-        "expected_count": len(expected_gtex_all),
-        "covered_count": len(matched_gtex_all),
-        "missing_count": len(missing_gtex),
-        "coverage_rate": round(len(matched_gtex_all) / len(expected_gtex_all), 3) if expected_gtex_all else 0,
-        "missing_tissues": missing_gtex,
-    }
-    section["tcga_primary_site_coverage"] = {
-        "expected_count": len(expected_primary_all),
-        "covered_count": len(matched_primary_all),
-        "missing_count": len(missing_primary),
-        "coverage_rate": round(len(matched_primary_all) / len(expected_primary_all), 3) if expected_primary_all else 0,
-        "missing_sites": missing_primary,
-    }
-    section["high_risk_ambiguity_terms"] = checklist.get("ambiguity_terms", [])
-    return section
-
-
 def _section(checklist: dict[str, Any], details: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(details)
     covered = sum(1 for item in details if item["status"] == "covered")
@@ -564,28 +485,6 @@ def _quality_gates(sections: dict[str, Any], gaps: dict[str, list[dict[str, str]
             if "endocrine_metabolic_core" in sections
             else []
         ),
-        *(
-            [
-                _threshold_gate(
-                    "anatomy_tissue_core_coverage",
-                    "Anatomy/tissue core checklist coverage must stay >= 95%.",
-                    sections["anatomy_tissue_core"]["coverage_rate"],
-                    0.95,
-                ),
-                _zero_gate(
-                    "anatomy_tissue_missing_gtex_tissues",
-                    "Anatomy/tissue core must cover expected GTEx tissue candidates.",
-                    sections["anatomy_tissue_core"]["gtex_tissue_coverage"]["missing_count"],
-                ),
-                _zero_gate(
-                    "anatomy_tissue_missing_tcga_primary_sites",
-                    "Anatomy/tissue core must cover expected TCGA primary sites.",
-                    sections["anatomy_tissue_core"]["tcga_primary_site_coverage"]["missing_count"],
-                ),
-            ]
-            if "anatomy_tissue_core" in sections
-            else []
-        ),
         _zero_gate(
             "missing_items",
             "Reference checklist missing count must remain zero.",
@@ -654,7 +553,6 @@ def _build_corpus() -> VocabularyCorpus:
     text_by_field: dict[str, set[str]] = {}
     all_text: set[str] = set()
     tcga_projects: set[str] = set()
-    tcga_primary_sites: set[str] = set()
     gtex_tissues: set[str] = set()
     gtex_status_by_tissue: dict[str, set[str]] = {}
     for record in records:
@@ -666,21 +564,17 @@ def _build_corpus() -> VocabularyCorpus:
                 all_text.add(normalized)
         for project in _nested_values(record.get("tcga_project_candidates")):
             tcga_projects.add(_norm(project))
-        for site in _nested_values(record.get("tcga_primary_site_candidates")):
-            tcga_primary_sites.add(_norm(site))
         cross_refs = record.get("cross_refs")
         if isinstance(cross_refs, dict):
             for project in _nested_values(cross_refs.get("tcga")):
                 tcga_projects.add(_norm(project))
-            for site in _nested_values(cross_refs.get("tcga_primary_site")):
-                tcga_primary_sites.add(_norm(site))
             for tissue in _nested_values(cross_refs.get("gtex")):
                 gtex_tissues.add(_norm(tissue))
                 gtex_status_by_tissue.setdefault(_norm(tissue), set()).update(_gtex_statuses_for(record, tissue))
         for tissue in _nested_values(record.get("gtex_tissue_candidates")):
             gtex_tissues.add(_norm(tissue))
             gtex_status_by_tissue.setdefault(_norm(tissue), set()).update(_gtex_statuses_for(record, tissue))
-    return VocabularyCorpus(records, text_by_field, all_text, tcga_projects, tcga_primary_sites, gtex_tissues, gtex_status_by_tissue)
+    return VocabularyCorpus(records, text_by_field, all_text, tcga_projects, gtex_tissues, gtex_status_by_tissue)
 
 
 def _field_values(record: dict[str, Any]) -> dict[str, list[str]]:
@@ -819,28 +713,6 @@ def _endocrine_metabolic_summary_lines(section: dict[str, Any]) -> str:
         lines.append(f"- missing term details: {rendered}")
     else:
         lines.append("- missing term details: none")
-    if ambiguity_terms:
-        rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
-        lines.append(f"- high-risk ambiguity terms: {rendered_terms}")
-    else:
-        lines.append("- high-risk ambiguity terms: none")
-    return "\n".join(lines)
-
-
-def _anatomy_tissue_summary_lines(section: dict[str, Any]) -> str:
-    gtex = section.get("gtex_tissue_coverage", {})
-    primary = section.get("tcga_primary_site_coverage", {})
-    ambiguity_terms = section.get("high_risk_ambiguity_terms", [])
-    lines = [
-        f"- anatomy/tissue checklist total count: {section['total_checklist_items']}",
-        f"- covered count: {section['covered']}",
-        f"- missing count: {section['missing']}",
-        f"- coverage percentage: {section['coverage_rate']:.3f}",
-        f"- GTEx tissue coverage: {gtex.get('covered_count', 0)}/{gtex.get('expected_count', 0)} ({gtex.get('coverage_rate', 0):.3f})",
-        f"- missing GTEx tissues: {', '.join(gtex.get('missing_tissues', [])) or 'none'}",
-        f"- TCGA primary site coverage: {primary.get('covered_count', 0)}/{primary.get('expected_count', 0)} ({primary.get('coverage_rate', 0):.3f})",
-        f"- missing TCGA primary sites: {', '.join(primary.get('missing_sites', [])) or 'none'}",
-    ]
     if ambiguity_terms:
         rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
         lines.append(f"- high-risk ambiguity terms: {rendered_terms}")

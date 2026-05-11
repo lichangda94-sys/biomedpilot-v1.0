@@ -16,7 +16,6 @@ class TermConcept:
     abbreviations: list[str] = field(default_factory=list)
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
-    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     disease_group: str = ""
@@ -40,7 +39,6 @@ class TermConcept:
             abbreviations=_list(payload.get("abbreviations")),
             mesh_terms=_list(payload.get("mesh_terms")),
             tissue_terms=_list(payload.get("tissue_terms")),
-            tcga_primary_site_candidates=_list(payload.get("tcga_primary_site_candidates")),
             data_modality_terms=_list(payload.get("data_modality_terms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
             disease_group=str(payload.get("disease_group", "")),
@@ -65,7 +63,6 @@ class ChineseTermOverride:
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
     tcga_project_candidates: list[str] = field(default_factory=list)
-    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     gtex_tissue_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
@@ -94,7 +91,6 @@ class ChineseTermOverride:
             mesh_terms=_list(payload.get("mesh_terms")),
             tissue_terms=_list(payload.get("tissue_terms")),
             tcga_project_candidates=_list(payload.get("tcga_project_candidates")),
-            tcga_primary_site_candidates=_list(payload.get("tcga_primary_site_candidates")),
             gtex_tissue_candidates=_list(payload.get("gtex_tissue_candidates")),
             data_modality_terms=_list(payload.get("data_modality_terms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
@@ -121,7 +117,6 @@ class TermLookupResult:
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
     tcga_project_candidates: list[str] = field(default_factory=list)
-    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     gtex_tissue_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
@@ -147,7 +142,6 @@ class TermLookupResult:
             "mesh_terms": list(self.mesh_terms),
             "tissue_terms": list(self.tissue_terms),
             "tcga_project_candidates": list(self.tcga_project_candidates),
-            "tcga_primary_site_candidates": list(self.tcga_primary_site_candidates),
             "gtex_tissue_candidates": list(self.gtex_tissue_candidates),
             "data_modality_terms": list(self.data_modality_terms),
             "modifier_terms_en": list(self.modifier_terms_en),
