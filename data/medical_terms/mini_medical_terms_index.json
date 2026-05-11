@@ -1635,7 +1635,6 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Pancreas",
         "Whole Blood"
       ]
     },
@@ -1681,11 +1680,14 @@
     ],
     "ambiguity_notes": "",
     "sources": [
-      "project_curated_endocrine_metabolic_core_v1"
+      "project_curated_endocrine_metabolic_core_v1",
+      "project_curated_cardiovascular_core_v1"
     ],
     "gtex_tissue_candidates": [
-      "Pancreas",
       "Whole Blood"
+    ],
+    "related_concepts": [
+      "mini:diabetes_mellitus"
     ]
   },
   {
@@ -1841,8 +1843,8 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Adipose",
-        "Adipose Tissue"
+        "Adipose - Subcutaneous",
+        "Adipose - Visceral"
       ]
     },
     "license": "project-local-curated",
@@ -1887,10 +1889,15 @@
     ],
     "ambiguity_notes": "BMI is retained as a reporting abbreviation for obesity but BMI alone should map to body mass index, not obesity.",
     "sources": [
-      "project_curated_endocrine_metabolic_core_v1"
+      "project_curated_endocrine_metabolic_core_v1",
+      "project_curated_cardiovascular_core_v1"
     ],
     "gtex_tissue_candidates": [
-      "Adipose Tissue"
+      "Adipose - Subcutaneous",
+      "Adipose - Visceral"
+    ],
+    "related_concepts": [
+      "mini:obesity"
     ]
   },
   {
@@ -1899,11 +1906,13 @@
     "source_id": "hypertension",
     "preferred_label_en": "Hypertension",
     "zh_terms": [
-      "高血压"
+      "高血压",
+      "高血压病"
     ],
     "synonyms_en": [
       "hypertensive",
-      "high blood pressure"
+      "high blood pressure",
+      "hypertensive disease"
     ],
     "exact_synonyms_en": [
       "Hypertension"
@@ -1928,8 +1937,12 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Artery",
-        "Heart"
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
@@ -1941,7 +1954,54 @@
       "high blood pressure",
       "hypertensive",
       "HTN",
-      "高血压"
+      "高血压",
+      "高血压病",
+      "hypertensive disease"
+    ],
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "preferred_zh": "高血压",
+    "zh_synonyms": [
+      "高血压病"
+    ],
+    "preferred_en": "hypertension",
+    "en_synonyms": [
+      "high blood pressure",
+      "hypertensive disease"
+    ],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "heart",
+      "blood vessel"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "pulmonary hypertension",
+      "essential hypertension",
+      "secondary hypertension"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
     ]
   },
   {
@@ -1951,26 +2011,34 @@
     "preferred_label_en": "Coronary Artery Disease",
     "zh_terms": [
       "冠心病",
-      "冠状动脉疾病"
+      "冠状动脉疾病",
+      "缺血性心脏病",
+      "缺血性心脏疾病"
     ],
     "synonyms_en": [
       "ischemic heart disease",
-      "coronary heart disease"
+      "coronary heart disease",
+      "coronary artery disease"
     ],
     "exact_synonyms_en": [
-      "Coronary Artery Disease"
+      "Coronary Artery Disease",
+      "coronary heart disease",
+      "ischemic heart disease"
     ],
     "related_synonyms_en": [],
     "abbreviations": [
       "CAD",
-      "CHD"
+      "CHD",
+      "IHD"
     ],
     "mesh_terms": [
-      "Coronary Artery Disease"
+      "Coronary Artery Disease",
+      "Myocardial Ischemia"
     ],
     "tissue_terms": [
       "heart",
-      "artery"
+      "artery",
+      "coronary artery"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
@@ -1981,8 +2049,11 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Heart",
-        "Artery"
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
       ]
     },
     "license": "project-local-curated",
@@ -1996,7 +2067,53 @@
       "CAD",
       "CHD",
       "冠心病",
-      "冠状动脉疾病"
+      "冠状动脉疾病",
+      "缺血性心脏病",
+      "缺血性心脏疾病",
+      "IHD",
+      "Myocardial Ischemia"
+    ],
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "preferred_zh": "冠状动脉疾病",
+    "zh_synonyms": [
+      "冠心病"
+    ],
+    "preferred_en": "coronary artery disease",
+    "en_synonyms": [
+      "coronary heart disease",
+      "ischemic heart disease"
+    ],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "coronary artery",
+      "heart"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "atherosclerosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
     ]
   },
   {
@@ -4390,8 +4507,8 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Whole Blood",
-        "Liver"
+        "Liver",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
@@ -4431,11 +4548,15 @@
     "avoid_expansion_to": [],
     "ambiguity_notes": "",
     "sources": [
-      "project_curated_endocrine_metabolic_core_v1"
+      "project_curated_endocrine_metabolic_core_v1",
+      "project_curated_cardiovascular_core_v1"
     ],
     "gtex_tissue_candidates": [
       "Liver",
       "Whole Blood"
+    ],
+    "related_concepts": [
+      "mini:hypercholesterolemia"
     ]
   },
   {
@@ -4474,7 +4595,8 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Heart"
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
       ]
     },
     "license": "project-local-curated",
@@ -4489,6 +4611,43 @@
       "CHF",
       "心力衰竭",
       "心衰"
+    ],
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "preferred_zh": "心力衰竭",
+    "zh_synonyms": [
+      "心衰"
+    ],
+    "preferred_en": "heart failure",
+    "en_synonyms": [
+      "cardiac failure",
+      "congestive heart failure"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "cardiomyopathy"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
     ]
   },
   {
@@ -4513,7 +4672,8 @@
     ],
     "tissue_terms": [
       "artery",
-      "heart"
+      "heart",
+      "blood vessel"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
@@ -4524,8 +4684,10 @@
     ],
     "cross_refs": {
       "gtex": [
-        "Artery",
-        "Heart"
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
@@ -4537,6 +4699,43 @@
       "arteriosclerosis",
       "atherosclerotic disease",
       "动脉粥样硬化"
+    ],
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "preferred_zh": "动脉粥样硬化",
+    "zh_synonyms": [],
+    "preferred_en": "atherosclerosis",
+    "en_synonyms": [
+      "atherosclerotic disease"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "artery",
+      "blood vessel"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "coronary artery disease"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
     ]
   },
   {
@@ -4644,6 +4843,47 @@
       "CVA",
       "脑卒中",
       "中风"
+    ],
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "preferred_zh": "脑卒中",
+    "zh_synonyms": [
+      "中风"
+    ],
+    "preferred_en": "stroke",
+    "en_synonyms": [
+      "cerebrovascular accident"
+    ],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "ischemic stroke",
+      "hemorrhagic stroke"
+    ],
+    "related_concepts": [],
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "avoid_expansion_to": [
+      "myocardial infarction"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
     ]
   },
   {
@@ -10365,7 +10605,8 @@
     "cross_refs": {
       "gtex": [
         "Liver",
-        "Adipose Tissue",
+        "Adipose - Subcutaneous",
+        "Adipose - Visceral",
         "Whole Blood"
       ]
     },
@@ -10413,7 +10654,8 @@
     "avoid_expansion_to": [],
     "ambiguity_notes": "",
     "sources": [
-      "project_curated_endocrine_metabolic_core_v1"
+      "project_curated_endocrine_metabolic_core_v1",
+      "project_curated_cardiovascular_core_v1"
     ],
     "zh_terms": [
       "血脂异常",
@@ -10421,8 +10663,12 @@
     ],
     "gtex_tissue_candidates": [
       "Liver",
-      "Adipose Tissue",
+      "Adipose - Subcutaneous",
+      "Adipose - Visceral",
       "Whole Blood"
+    ],
+    "related_concepts": [
+      "mini:dyslipidemia"
     ]
   },
   {
@@ -34733,6 +34979,7296 @@
     "zh_terms": [
       "诊断准确性",
       "诊断准确度"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_essential_hypertension",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_essential_hypertension",
+    "preferred_label_en": "essential hypertension",
+    "synonyms_en": [
+      "primary hypertension"
+    ],
+    "exact_synonyms_en": [
+      "essential hypertension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Hypertension"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "essential hypertension",
+      "primary hypertension",
+      "Hypertension"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "essential hypertension",
+      "原发性高血压",
+      "本态性高血压",
+      "primary hypertension"
+    ],
+    "preferred_zh": "原发性高血压",
+    "zh_synonyms": [
+      "本态性高血压"
+    ],
+    "preferred_en": "essential hypertension",
+    "en_synonyms": [
+      "primary hypertension"
+    ],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "secondary hypertension",
+      "pulmonary hypertension"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "原发性高血压",
+      "本态性高血压"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_secondary_hypertension",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_secondary_hypertension",
+    "preferred_label_en": "secondary hypertension",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "secondary hypertension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Hypertension"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "secondary hypertension",
+      "Hypertension"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "secondary hypertension",
+      "继发性高血压"
+    ],
+    "preferred_zh": "继发性高血压",
+    "zh_synonyms": [],
+    "preferred_en": "secondary hypertension",
+    "en_synonyms": [],
+    "related_organs": [
+      "kidney",
+      "adrenal gland",
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "essential hypertension",
+      "pulmonary hypertension"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "继发性高血压"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_pulmonary_hypertension",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_pulmonary_hypertension",
+    "preferred_label_en": "pulmonary hypertension",
+    "synonyms_en": [
+      "pulmonary arterial hypertension"
+    ],
+    "exact_synonyms_en": [
+      "pulmonary hypertension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PH",
+      "PAH"
+    ],
+    "mesh_terms": [
+      "Hypertension, Pulmonary"
+    ],
+    "tissue_terms": [
+      "lung",
+      "pulmonary artery",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "pulmonary hypertension",
+      "pulmonary arterial hypertension",
+      "Hypertension, Pulmonary"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung",
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "pulmonary hypertension",
+      "肺动脉高压",
+      "肺高压",
+      "pulmonary arterial hypertension",
+      "PH",
+      "PAH"
+    ],
+    "preferred_zh": "肺动脉高压",
+    "zh_synonyms": [
+      "肺高压"
+    ],
+    "preferred_en": "pulmonary hypertension",
+    "en_synonyms": [
+      "pulmonary arterial hypertension"
+    ],
+    "related_organs": [
+      "lung",
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "lung",
+      "pulmonary artery",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung",
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "essential hypertension",
+      "systemic hypertension"
+    ],
+    "ambiguity_notes": "PH is a short abbreviation and should be interpreted only with pulmonary hypertension context.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "肺动脉高压",
+      "肺高压"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_isolated_systolic_hypertension",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_isolated_systolic_hypertension",
+    "preferred_label_en": "isolated systolic hypertension",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "isolated systolic hypertension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ISH"
+    ],
+    "mesh_terms": [
+      "Hypertension"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "isolated systolic hypertension",
+      "Hypertension"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "isolated systolic hypertension",
+      "单纯收缩期高血压",
+      "ISH"
+    ],
+    "preferred_zh": "单纯收缩期高血压",
+    "zh_synonyms": [],
+    "preferred_en": "isolated systolic hypertension",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "pulmonary hypertension"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "单纯收缩期高血压"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_prehypertension",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_prehypertension",
+    "preferred_label_en": "prehypertension",
+    "synonyms_en": [
+      "elevated blood pressure"
+    ],
+    "exact_synonyms_en": [
+      "prehypertension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Prehypertension"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "prehypertension",
+      "elevated blood pressure"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "prehypertension",
+      "elevated blood pressure"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "prehypertension",
+      "高血压前期",
+      "血压正常高值",
+      "elevated blood pressure"
+    ],
+    "preferred_zh": "高血压前期",
+    "zh_synonyms": [
+      "血压正常高值"
+    ],
+    "preferred_en": "prehypertension",
+    "en_synonyms": [
+      "elevated blood pressure"
+    ],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypertension"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "高血压前期",
+      "血压正常高值"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_hypotension",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_hypotension",
+    "preferred_label_en": "hypotension",
+    "synonyms_en": [
+      "low blood pressure"
+    ],
+    "exact_synonyms_en": [
+      "hypotension"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Hypotension"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "hypotension",
+      "low blood pressure"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "hypotension",
+      "low blood pressure"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "hypertension_blood_pressure",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "hypotension",
+      "低血压",
+      "low blood pressure"
+    ],
+    "preferred_zh": "低血压",
+    "zh_synonyms": [],
+    "preferred_en": "hypotension",
+    "en_synonyms": [
+      "low blood pressure"
+    ],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypertension"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "低血压"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_myocardial_infarction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_myocardial_infarction",
+    "preferred_label_en": "myocardial infarction",
+    "synonyms_en": [
+      "heart attack"
+    ],
+    "exact_synonyms_en": [
+      "myocardial infarction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MI"
+    ],
+    "mesh_terms": [
+      "Myocardial Infarction"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "myocardial infarction",
+      "heart attack"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "myocardial infarction",
+      "心肌梗死",
+      "心梗",
+      "heart attack",
+      "MI"
+    ],
+    "preferred_zh": "心肌梗死",
+    "zh_synonyms": [
+      "心梗"
+    ],
+    "preferred_en": "myocardial infarction",
+    "en_synonyms": [
+      "heart attack"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "stroke",
+      "cerebral infarction"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心肌梗死",
+      "心梗"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_acute_myocardial_infarction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_acute_myocardial_infarction",
+    "preferred_label_en": "acute myocardial infarction",
+    "synonyms_en": [
+      "acute MI"
+    ],
+    "exact_synonyms_en": [
+      "acute myocardial infarction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AMI"
+    ],
+    "mesh_terms": [
+      "Myocardial Infarction"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "acute myocardial infarction",
+      "acute MI",
+      "Myocardial Infarction"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "myocardial infarction"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "acute myocardial infarction",
+      "急性心肌梗死",
+      "急性心梗",
+      "acute MI",
+      "AMI"
+    ],
+    "preferred_zh": "急性心肌梗死",
+    "zh_synonyms": [
+      "急性心梗"
+    ],
+    "preferred_en": "acute myocardial infarction",
+    "en_synonyms": [
+      "acute MI"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "myocardial infarction"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "stroke"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "急性心肌梗死",
+      "急性心梗"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_acute_coronary_syndrome",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_acute_coronary_syndrome",
+    "preferred_label_en": "acute coronary syndrome",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "acute coronary syndrome"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ACS"
+    ],
+    "mesh_terms": [
+      "Acute Coronary Syndrome"
+    ],
+    "tissue_terms": [
+      "coronary artery",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "acute coronary syndrome"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "acute coronary syndrome",
+      "急性冠脉综合征",
+      "急性冠状动脉综合征",
+      "ACS"
+    ],
+    "preferred_zh": "急性冠脉综合征",
+    "zh_synonyms": [
+      "急性冠状动脉综合征"
+    ],
+    "preferred_en": "acute coronary syndrome",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "coronary artery",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "stable angina"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "急性冠脉综合征",
+      "急性冠状动脉综合征"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_angina_pectoris",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_angina_pectoris",
+    "preferred_label_en": "angina pectoris",
+    "synonyms_en": [
+      "angina"
+    ],
+    "exact_synonyms_en": [
+      "angina pectoris"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Angina Pectoris"
+    ],
+    "tissue_terms": [
+      "heart",
+      "coronary artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "angina pectoris",
+      "angina"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "angina pectoris",
+      "心绞痛",
+      "angina"
+    ],
+    "preferred_zh": "心绞痛",
+    "zh_synonyms": [],
+    "preferred_en": "angina pectoris",
+    "en_synonyms": [
+      "angina"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart",
+      "coronary artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "stable angina",
+      "unstable angina"
+    ],
+    "avoid_expansion_to": [
+      "myocardial infarction"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心绞痛"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_stable_angina",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_stable_angina",
+    "preferred_label_en": "stable angina",
+    "synonyms_en": [
+      "stable angina pectoris"
+    ],
+    "exact_synonyms_en": [
+      "stable angina"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Angina, Stable"
+    ],
+    "tissue_terms": [
+      "heart",
+      "coronary artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "stable angina",
+      "stable angina pectoris",
+      "Angina, Stable"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "angina pectoris"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "stable angina",
+      "稳定型心绞痛",
+      "stable angina pectoris"
+    ],
+    "preferred_zh": "稳定型心绞痛",
+    "zh_synonyms": [],
+    "preferred_en": "stable angina",
+    "en_synonyms": [
+      "stable angina pectoris"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart",
+      "coronary artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "angina pectoris"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "unstable angina",
+      "acute coronary syndrome"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "稳定型心绞痛"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_unstable_angina",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_unstable_angina",
+    "preferred_label_en": "unstable angina",
+    "synonyms_en": [
+      "unstable angina pectoris"
+    ],
+    "exact_synonyms_en": [
+      "unstable angina"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "UA"
+    ],
+    "mesh_terms": [
+      "Angina, Unstable"
+    ],
+    "tissue_terms": [
+      "heart",
+      "coronary artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "unstable angina",
+      "unstable angina pectoris",
+      "Angina, Unstable"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "coronary_ischemic_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "angina pectoris"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "unstable angina",
+      "不稳定型心绞痛",
+      "unstable angina pectoris",
+      "UA"
+    ],
+    "preferred_zh": "不稳定型心绞痛",
+    "zh_synonyms": [],
+    "preferred_en": "unstable angina",
+    "en_synonyms": [
+      "unstable angina pectoris"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart",
+      "coronary artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "angina pectoris"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "stable angina"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "不稳定型心绞痛"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_heart_failure_with_reduced_ejection_fraction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_heart_failure_with_reduced_ejection_fraction",
+    "preferred_label_en": "heart failure with reduced ejection fraction",
+    "synonyms_en": [
+      "reduced ejection fraction heart failure"
+    ],
+    "exact_synonyms_en": [
+      "heart failure with reduced ejection fraction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HFrEF"
+    ],
+    "mesh_terms": [
+      "Heart Failure"
+    ],
+    "tissue_terms": [
+      "left ventricle",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "heart failure with reduced ejection fraction",
+      "reduced ejection fraction heart failure",
+      "Heart Failure"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "heart failure"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "heart failure with reduced ejection fraction",
+      "射血分数降低型心力衰竭",
+      "射血分数降低型心衰",
+      "reduced ejection fraction heart failure",
+      "HFrEF"
+    ],
+    "preferred_zh": "射血分数降低型心力衰竭",
+    "zh_synonyms": [
+      "射血分数降低型心衰"
+    ],
+    "preferred_en": "heart failure with reduced ejection fraction",
+    "en_synonyms": [
+      "reduced ejection fraction heart failure"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "left ventricle",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "heart failure"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "HFpEF"
+    ],
+    "ambiguity_notes": "HFrEF should remain a heart failure subtype and not be expanded to all ejection fraction phenotypes.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "射血分数降低型心力衰竭",
+      "射血分数降低型心衰"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_heart_failure_with_preserved_ejection_fraction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_heart_failure_with_preserved_ejection_fraction",
+    "preferred_label_en": "heart failure with preserved ejection fraction",
+    "synonyms_en": [
+      "preserved ejection fraction heart failure"
+    ],
+    "exact_synonyms_en": [
+      "heart failure with preserved ejection fraction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HFpEF"
+    ],
+    "mesh_terms": [
+      "Heart Failure"
+    ],
+    "tissue_terms": [
+      "left ventricle",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "heart failure with preserved ejection fraction",
+      "preserved ejection fraction heart failure",
+      "Heart Failure"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "heart failure"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "heart failure with preserved ejection fraction",
+      "射血分数保留型心力衰竭",
+      "射血分数保留型心衰",
+      "preserved ejection fraction heart failure",
+      "HFpEF"
+    ],
+    "preferred_zh": "射血分数保留型心力衰竭",
+    "zh_synonyms": [
+      "射血分数保留型心衰"
+    ],
+    "preferred_en": "heart failure with preserved ejection fraction",
+    "en_synonyms": [
+      "preserved ejection fraction heart failure"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "left ventricle",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "heart failure"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "HFrEF"
+    ],
+    "ambiguity_notes": "HFpEF should remain a heart failure subtype and not be expanded to all ejection fraction phenotypes.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "射血分数保留型心力衰竭",
+      "射血分数保留型心衰"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_cardiomyopathy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_cardiomyopathy",
+    "preferred_label_en": "cardiomyopathy",
+    "synonyms_en": [
+      "myocardiopathy"
+    ],
+    "exact_synonyms_en": [
+      "cardiomyopathy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Cardiomyopathies"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "cardiomyopathy",
+      "myocardiopathy",
+      "Cardiomyopathies"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cardiomyopathy",
+      "心肌病",
+      "myocardiopathy"
+    ],
+    "preferred_zh": "心肌病",
+    "zh_synonyms": [],
+    "preferred_en": "cardiomyopathy",
+    "en_synonyms": [
+      "myocardiopathy"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "dilated cardiomyopathy",
+      "hypertrophic cardiomyopathy",
+      "restrictive cardiomyopathy",
+      "ischemic cardiomyopathy"
+    ],
+    "avoid_expansion_to": [
+      "heart failure"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心肌病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_dilated_cardiomyopathy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_dilated_cardiomyopathy",
+    "preferred_label_en": "dilated cardiomyopathy",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "dilated cardiomyopathy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "DCM"
+    ],
+    "mesh_terms": [
+      "Cardiomyopathy, Dilated"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "dilated cardiomyopathy",
+      "Cardiomyopathy, Dilated"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiomyopathy"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "dilated cardiomyopathy",
+      "扩张型心肌病",
+      "DCM"
+    ],
+    "preferred_zh": "扩张型心肌病",
+    "zh_synonyms": [],
+    "preferred_en": "dilated cardiomyopathy",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiomyopathy"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypertrophic cardiomyopathy"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "扩张型心肌病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_hypertrophic_cardiomyopathy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_hypertrophic_cardiomyopathy",
+    "preferred_label_en": "hypertrophic cardiomyopathy",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "hypertrophic cardiomyopathy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HCM"
+    ],
+    "mesh_terms": [
+      "Cardiomyopathy, Hypertrophic"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "hypertrophic cardiomyopathy",
+      "Cardiomyopathy, Hypertrophic"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiomyopathy"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "hypertrophic cardiomyopathy",
+      "肥厚型心肌病",
+      "HCM"
+    ],
+    "preferred_zh": "肥厚型心肌病",
+    "zh_synonyms": [],
+    "preferred_en": "hypertrophic cardiomyopathy",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiomyopathy"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "dilated cardiomyopathy"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "肥厚型心肌病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_restrictive_cardiomyopathy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_restrictive_cardiomyopathy",
+    "preferred_label_en": "restrictive cardiomyopathy",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "restrictive cardiomyopathy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RCM"
+    ],
+    "mesh_terms": [
+      "Cardiomyopathy, Restrictive"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "restrictive cardiomyopathy",
+      "Cardiomyopathy, Restrictive"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiomyopathy"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "restrictive cardiomyopathy",
+      "限制型心肌病",
+      "RCM"
+    ],
+    "preferred_zh": "限制型心肌病",
+    "zh_synonyms": [],
+    "preferred_en": "restrictive cardiomyopathy",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiomyopathy"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "dilated cardiomyopathy"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "限制型心肌病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_ischemic_cardiomyopathy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_ischemic_cardiomyopathy",
+    "preferred_label_en": "ischemic cardiomyopathy",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "ischemic cardiomyopathy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ICM"
+    ],
+    "mesh_terms": [
+      "Cardiomyopathy, Ischemic"
+    ],
+    "tissue_terms": [
+      "myocardium",
+      "coronary artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "ischemic cardiomyopathy",
+      "Cardiomyopathy, Ischemic"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "heart_failure_cardiomyopathy",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiomyopathy"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ischemic cardiomyopathy",
+      "缺血性心肌病",
+      "ICM"
+    ],
+    "preferred_zh": "缺血性心肌病",
+    "zh_synonyms": [],
+    "preferred_en": "ischemic cardiomyopathy",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart",
+      "artery"
+    ],
+    "related_tissues": [
+      "myocardium",
+      "coronary artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [
+      "ischemic heart disease"
+    ],
+    "parent_concepts": [
+      "cardiomyopathy"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "heart failure"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "缺血性心肌病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_arrhythmia",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_arrhythmia",
+    "preferred_label_en": "arrhythmia",
+    "synonyms_en": [
+      "cardiac arrhythmia"
+    ],
+    "exact_synonyms_en": [
+      "arrhythmia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Arrhythmias, Cardiac"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "arrhythmia",
+      "cardiac arrhythmia",
+      "Arrhythmias, Cardiac"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "arrhythmia",
+      "心律失常",
+      "心律不齐",
+      "cardiac arrhythmia"
+    ],
+    "preferred_zh": "心律失常",
+    "zh_synonyms": [
+      "心律不齐"
+    ],
+    "preferred_en": "arrhythmia",
+    "en_synonyms": [
+      "cardiac arrhythmia"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "atrial fibrillation",
+      "atrial flutter",
+      "ventricular tachycardia",
+      "ventricular fibrillation"
+    ],
+    "avoid_expansion_to": [
+      "atrial fibrillation"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心律失常",
+      "心律不齐"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_atrial_fibrillation",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_atrial_fibrillation",
+    "preferred_label_en": "atrial fibrillation",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "atrial fibrillation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AF",
+      "AFib"
+    ],
+    "mesh_terms": [
+      "Atrial Fibrillation"
+    ],
+    "tissue_terms": [
+      "atrium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "atrial fibrillation"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "arrhythmia"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "atrial fibrillation",
+      "心房颤动",
+      "房颤",
+      "AF",
+      "AFib"
+    ],
+    "preferred_zh": "心房颤动",
+    "zh_synonyms": [
+      "房颤"
+    ],
+    "preferred_en": "atrial fibrillation",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "atrium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "arrhythmia"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "atrial flutter",
+      "all arrhythmia"
+    ],
+    "ambiguity_notes": "AF is a short token and can be ambiguous outside cardiovascular context.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心房颤动",
+      "房颤"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_atrial_flutter",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_atrial_flutter",
+    "preferred_label_en": "atrial flutter",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "atrial flutter"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AFL"
+    ],
+    "mesh_terms": [
+      "Atrial Flutter"
+    ],
+    "tissue_terms": [
+      "atrium",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "atrial flutter"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "arrhythmia"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "atrial flutter",
+      "心房扑动",
+      "房扑",
+      "AFL"
+    ],
+    "preferred_zh": "心房扑动",
+    "zh_synonyms": [
+      "房扑"
+    ],
+    "preferred_en": "atrial flutter",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "atrium",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "arrhythmia"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "atrial fibrillation"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心房扑动",
+      "房扑"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_ventricular_tachycardia",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_ventricular_tachycardia",
+    "preferred_label_en": "ventricular tachycardia",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "ventricular tachycardia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "VT"
+    ],
+    "mesh_terms": [
+      "Tachycardia, Ventricular"
+    ],
+    "tissue_terms": [
+      "ventricle",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "ventricular tachycardia",
+      "Tachycardia, Ventricular"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "arrhythmia"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ventricular tachycardia",
+      "室性心动过速",
+      "室速",
+      "VT"
+    ],
+    "preferred_zh": "室性心动过速",
+    "zh_synonyms": [
+      "室速"
+    ],
+    "preferred_en": "ventricular tachycardia",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "ventricle",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "arrhythmia"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "ventricular fibrillation"
+    ],
+    "ambiguity_notes": "VT is a short token and should require exact abbreviation matching.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "室性心动过速",
+      "室速"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_ventricular_fibrillation",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_ventricular_fibrillation",
+    "preferred_label_en": "ventricular fibrillation",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "ventricular fibrillation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "VF"
+    ],
+    "mesh_terms": [
+      "Ventricular Fibrillation"
+    ],
+    "tissue_terms": [
+      "ventricle",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "ventricular fibrillation"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "arrhythmia"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ventricular fibrillation",
+      "心室颤动",
+      "室颤",
+      "VF"
+    ],
+    "preferred_zh": "心室颤动",
+    "zh_synonyms": [
+      "室颤"
+    ],
+    "preferred_en": "ventricular fibrillation",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "ventricle",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "arrhythmia"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "ventricular tachycardia"
+    ],
+    "ambiguity_notes": "VF is a short token and should require exact abbreviation matching.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心室颤动",
+      "室颤"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_bradycardia",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_bradycardia",
+    "preferred_label_en": "bradycardia",
+    "synonyms_en": [
+      "slow heart rate"
+    ],
+    "exact_synonyms_en": [
+      "bradycardia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Bradycardia"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "bradycardia",
+      "slow heart rate"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "bradycardia",
+      "slow heart rate"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "bradycardia",
+      "心动过缓",
+      "心率过缓",
+      "slow heart rate"
+    ],
+    "preferred_zh": "心动过缓",
+    "zh_synonyms": [
+      "心率过缓"
+    ],
+    "preferred_en": "bradycardia",
+    "en_synonyms": [
+      "slow heart rate"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "tachycardia"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心动过缓",
+      "心率过缓"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_tachycardia",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_tachycardia",
+    "preferred_label_en": "tachycardia",
+    "synonyms_en": [
+      "fast heart rate"
+    ],
+    "exact_synonyms_en": [
+      "tachycardia"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Tachycardia"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "tachycardia",
+      "fast heart rate"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "tachycardia",
+      "fast heart rate"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "tachycardia",
+      "心动过速",
+      "心率过速",
+      "fast heart rate"
+    ],
+    "preferred_zh": "心动过速",
+    "zh_synonyms": [
+      "心率过速"
+    ],
+    "preferred_en": "tachycardia",
+    "en_synonyms": [
+      "fast heart rate"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "bradycardia"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心动过速",
+      "心率过速"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_long_qt_syndrome",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_long_qt_syndrome",
+    "preferred_label_en": "long QT syndrome",
+    "synonyms_en": [
+      "prolonged QT syndrome"
+    ],
+    "exact_synonyms_en": [
+      "long QT syndrome"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LQTS"
+    ],
+    "mesh_terms": [
+      "Long QT Syndrome"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "long QT syndrome",
+      "prolonged QT syndrome"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "arrhythmia",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "long QT syndrome",
+      "长QT综合征",
+      "长QT间期综合征",
+      "prolonged QT syndrome",
+      "LQTS"
+    ],
+    "preferred_zh": "长QT综合征",
+    "zh_synonyms": [
+      "长QT间期综合征"
+    ],
+    "preferred_en": "long QT syndrome",
+    "en_synonyms": [
+      "prolonged QT syndrome"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "tachycardia"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "长QT综合征",
+      "长QT间期综合征"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_arteriosclerosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_arteriosclerosis",
+    "preferred_label_en": "arteriosclerosis",
+    "synonyms_en": [
+      "arterial sclerosis"
+    ],
+    "exact_synonyms_en": [
+      "arteriosclerosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Arteriosclerosis"
+    ],
+    "tissue_terms": [
+      "artery",
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "arteriosclerosis",
+      "arterial sclerosis"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "arteriosclerosis",
+      "动脉硬化",
+      "arterial sclerosis"
+    ],
+    "preferred_zh": "动脉硬化",
+    "zh_synonyms": [],
+    "preferred_en": "arteriosclerosis",
+    "en_synonyms": [
+      "arterial sclerosis"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "artery",
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [
+      "atherosclerosis"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "coronary artery disease"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "动脉硬化"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_peripheral_artery_disease",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_peripheral_artery_disease",
+    "preferred_label_en": "peripheral artery disease",
+    "synonyms_en": [
+      "peripheral arterial disease"
+    ],
+    "exact_synonyms_en": [
+      "peripheral artery disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PAD"
+    ],
+    "mesh_terms": [
+      "Peripheral Arterial Disease"
+    ],
+    "tissue_terms": [
+      "peripheral artery",
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "peripheral artery disease",
+      "peripheral arterial disease"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "peripheral artery disease",
+      "外周动脉疾病",
+      "外周动脉病",
+      "peripheral arterial disease",
+      "PAD"
+    ],
+    "preferred_zh": "外周动脉疾病",
+    "zh_synonyms": [
+      "外周动脉病"
+    ],
+    "preferred_en": "peripheral artery disease",
+    "en_synonyms": [
+      "peripheral arterial disease"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "peripheral artery",
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "coronary artery disease"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "外周动脉疾病",
+      "外周动脉病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_peripheral_vascular_disease",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_peripheral_vascular_disease",
+    "preferred_label_en": "peripheral vascular disease",
+    "synonyms_en": [
+      "peripheral vascular disorder"
+    ],
+    "exact_synonyms_en": [
+      "peripheral vascular disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PVD"
+    ],
+    "mesh_terms": [
+      "Peripheral Vascular Diseases"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "peripheral vascular disease",
+      "peripheral vascular disorder",
+      "Peripheral Vascular Diseases"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "peripheral vascular disease",
+      "外周血管疾病",
+      "周围血管病",
+      "peripheral vascular disorder",
+      "PVD"
+    ],
+    "preferred_zh": "外周血管疾病",
+    "zh_synonyms": [
+      "周围血管病"
+    ],
+    "preferred_en": "peripheral vascular disease",
+    "en_synonyms": [
+      "peripheral vascular disorder"
+    ],
+    "related_organs": [
+      "artery",
+      "vein"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "peripheral artery disease"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "外周血管疾病",
+      "周围血管病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_carotid_artery_disease",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_carotid_artery_disease",
+    "preferred_label_en": "carotid artery disease",
+    "synonyms_en": [
+      "carotid stenosis"
+    ],
+    "exact_synonyms_en": [
+      "carotid artery disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Carotid Artery Diseases"
+    ],
+    "tissue_terms": [
+      "carotid artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "carotid artery disease",
+      "carotid stenosis",
+      "Carotid Artery Diseases"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Brain"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "carotid artery disease",
+      "颈动脉疾病",
+      "颈动脉病变",
+      "carotid stenosis"
+    ],
+    "preferred_zh": "颈动脉疾病",
+    "zh_synonyms": [
+      "颈动脉病变"
+    ],
+    "preferred_en": "carotid artery disease",
+    "en_synonyms": [
+      "carotid stenosis"
+    ],
+    "related_organs": [
+      "artery",
+      "brain"
+    ],
+    "related_tissues": [
+      "carotid artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Brain"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "stroke"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "颈动脉疾病",
+      "颈动脉病变"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_aortic_aneurysm",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_aortic_aneurysm",
+    "preferred_label_en": "aortic aneurysm",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "aortic aneurysm"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Aortic Aneurysm"
+    ],
+    "tissue_terms": [
+      "aorta",
+      "artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "aortic aneurysm"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "aortic aneurysm",
+      "主动脉瘤"
+    ],
+    "preferred_zh": "主动脉瘤",
+    "zh_synonyms": [],
+    "preferred_en": "aortic aneurysm",
+    "en_synonyms": [],
+    "related_organs": [
+      "aorta",
+      "artery"
+    ],
+    "related_tissues": [
+      "aorta",
+      "artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "abdominal aortic aneurysm"
+    ],
+    "avoid_expansion_to": [
+      "vascular calcification"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "主动脉瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_abdominal_aortic_aneurysm",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_abdominal_aortic_aneurysm",
+    "preferred_label_en": "abdominal aortic aneurysm",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "abdominal aortic aneurysm"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AAA"
+    ],
+    "mesh_terms": [
+      "Aortic Aneurysm, Abdominal"
+    ],
+    "tissue_terms": [
+      "aorta",
+      "artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "abdominal aortic aneurysm",
+      "Aortic Aneurysm, Abdominal"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "aortic aneurysm"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "abdominal aortic aneurysm",
+      "腹主动脉瘤",
+      "AAA"
+    ],
+    "preferred_zh": "腹主动脉瘤",
+    "zh_synonyms": [],
+    "preferred_en": "abdominal aortic aneurysm",
+    "en_synonyms": [],
+    "related_organs": [
+      "aorta",
+      "artery"
+    ],
+    "related_tissues": [
+      "aorta",
+      "artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "aortic aneurysm"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "thoracic aortic aneurysm"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "腹主动脉瘤"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_vascular_calcification",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_vascular_calcification",
+    "preferred_label_en": "vascular calcification",
+    "synonyms_en": [
+      "arterial calcification"
+    ],
+    "exact_synonyms_en": [
+      "vascular calcification"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Vascular Calcification"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "vascular calcification",
+      "arterial calcification"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "vascular calcification",
+      "arterial calcification"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "vascular calcification",
+      "血管钙化",
+      "动脉钙化",
+      "arterial calcification"
+    ],
+    "preferred_zh": "血管钙化",
+    "zh_synonyms": [
+      "动脉钙化"
+    ],
+    "preferred_en": "vascular calcification",
+    "en_synonyms": [
+      "arterial calcification"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "atherosclerosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "血管钙化",
+      "动脉钙化"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_endothelial_dysfunction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_endothelial_dysfunction",
+    "preferred_label_en": "endothelial dysfunction",
+    "synonyms_en": [
+      "vascular endothelial dysfunction"
+    ],
+    "exact_synonyms_en": [
+      "endothelial dysfunction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Endothelium, Vascular"
+    ],
+    "tissue_terms": [
+      "endothelium",
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "endothelial dysfunction",
+      "vascular endothelial dysfunction"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "endothelial dysfunction",
+      "vascular endothelial dysfunction",
+      "Endothelium, Vascular"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "atherosclerosis_vascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "endothelial dysfunction",
+      "内皮功能障碍",
+      "血管内皮功能障碍",
+      "vascular endothelial dysfunction"
+    ],
+    "preferred_zh": "内皮功能障碍",
+    "zh_synonyms": [
+      "血管内皮功能障碍"
+    ],
+    "preferred_en": "endothelial dysfunction",
+    "en_synonyms": [
+      "vascular endothelial dysfunction"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "endothelium",
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "atherosclerosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "内皮功能障碍",
+      "血管内皮功能障碍"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_ischemic_stroke",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_ischemic_stroke",
+    "preferred_label_en": "ischemic stroke",
+    "synonyms_en": [
+      "cerebral ischemic stroke"
+    ],
+    "exact_synonyms_en": [
+      "ischemic stroke"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "ischemic stroke",
+      "cerebral ischemic stroke",
+      "Stroke"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "stroke"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ischemic stroke",
+      "缺血性脑卒中",
+      "脑梗死",
+      "cerebral ischemic stroke"
+    ],
+    "preferred_zh": "缺血性脑卒中",
+    "zh_synonyms": [
+      "脑梗死"
+    ],
+    "preferred_en": "ischemic stroke",
+    "en_synonyms": [
+      "cerebral ischemic stroke"
+    ],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "related_concepts": [
+      "cerebral infarction"
+    ],
+    "parent_concepts": [
+      "stroke"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "myocardial infarction",
+      "hemorrhagic stroke"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "缺血性脑卒中",
+      "脑梗死"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_hemorrhagic_stroke",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_hemorrhagic_stroke",
+    "preferred_label_en": "hemorrhagic stroke",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "hemorrhagic stroke"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "hemorrhagic stroke",
+      "Stroke"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "stroke"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "hemorrhagic stroke",
+      "出血性脑卒中",
+      "脑出血性卒中"
+    ],
+    "preferred_zh": "出血性脑卒中",
+    "zh_synonyms": [
+      "脑出血性卒中"
+    ],
+    "preferred_en": "hemorrhagic stroke",
+    "en_synonyms": [],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "stroke"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "ischemic stroke",
+      "myocardial infarction"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "出血性脑卒中",
+      "脑出血性卒中"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_transient_ischemic_attack",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_transient_ischemic_attack",
+    "preferred_label_en": "transient ischemic attack",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "transient ischemic attack"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TIA"
+    ],
+    "mesh_terms": [
+      "Ischemic Attack, Transient"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "transient ischemic attack",
+      "Ischemic Attack, Transient"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "transient ischemic attack",
+      "短暂性脑缺血发作",
+      "短暂脑缺血发作",
+      "TIA"
+    ],
+    "preferred_zh": "短暂性脑缺血发作",
+    "zh_synonyms": [
+      "短暂脑缺血发作"
+    ],
+    "preferred_en": "transient ischemic attack",
+    "en_synonyms": [],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "stroke"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "短暂性脑缺血发作",
+      "短暂脑缺血发作"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_cerebral_infarction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_cerebral_infarction",
+    "preferred_label_en": "cerebral infarction",
+    "synonyms_en": [
+      "brain infarction"
+    ],
+    "exact_synonyms_en": [
+      "cerebral infarction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Brain Infarction"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "cerebral infarction",
+      "brain infarction"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cerebral infarction",
+      "脑梗死",
+      "脑梗塞",
+      "brain infarction"
+    ],
+    "preferred_zh": "脑梗死",
+    "zh_synonyms": [
+      "脑梗塞"
+    ],
+    "preferred_en": "cerebral infarction",
+    "en_synonyms": [
+      "brain infarction"
+    ],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "related_concepts": [
+      "ischemic stroke"
+    ],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "myocardial infarction"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "脑梗死",
+      "脑梗塞"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_intracerebral_hemorrhage",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_intracerebral_hemorrhage",
+    "preferred_label_en": "intracerebral hemorrhage",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "intracerebral hemorrhage"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ICH"
+    ],
+    "mesh_terms": [
+      "Cerebral Hemorrhage"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "intracerebral hemorrhage",
+      "Cerebral Hemorrhage"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "intracerebral hemorrhage",
+      "脑实质出血",
+      "脑内出血",
+      "ICH"
+    ],
+    "preferred_zh": "脑实质出血",
+    "zh_synonyms": [
+      "脑内出血"
+    ],
+    "preferred_en": "intracerebral hemorrhage",
+    "en_synonyms": [],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "ischemic stroke"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "脑实质出血",
+      "脑内出血"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_subarachnoid_hemorrhage",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_subarachnoid_hemorrhage",
+    "preferred_label_en": "subarachnoid hemorrhage",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "subarachnoid hemorrhage"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SAH"
+    ],
+    "mesh_terms": [
+      "Subarachnoid Hemorrhage"
+    ],
+    "tissue_terms": [
+      "brain",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "subarachnoid hemorrhage"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "cerebrovascular_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "subarachnoid hemorrhage",
+      "蛛网膜下腔出血",
+      "SAH"
+    ],
+    "preferred_zh": "蛛网膜下腔出血",
+    "zh_synonyms": [],
+    "preferred_en": "subarachnoid hemorrhage",
+    "en_synonyms": [],
+    "related_organs": [
+      "brain",
+      "blood"
+    ],
+    "related_tissues": [
+      "brain",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "ischemic stroke"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "蛛网膜下腔出血"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_thrombosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_thrombosis",
+    "preferred_label_en": "thrombosis",
+    "synonyms_en": [
+      "blood thrombosis"
+    ],
+    "exact_synonyms_en": [
+      "thrombosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Thrombosis"
+    ],
+    "tissue_terms": [
+      "blood",
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "thrombosis",
+      "blood thrombosis"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "thrombosis_embolism",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "thrombosis",
+      "血栓形成",
+      "血栓",
+      "blood thrombosis"
+    ],
+    "preferred_zh": "血栓形成",
+    "zh_synonyms": [
+      "血栓"
+    ],
+    "preferred_en": "thrombosis",
+    "en_synonyms": [
+      "blood thrombosis"
+    ],
+    "related_organs": [
+      "blood vessel",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "venous thromboembolism",
+      "deep vein thrombosis",
+      "arterial thrombosis"
+    ],
+    "avoid_expansion_to": [
+      "embolism"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "血栓形成",
+      "血栓"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_venous_thromboembolism",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_venous_thromboembolism",
+    "preferred_label_en": "venous thromboembolism",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "venous thromboembolism"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "VTE"
+    ],
+    "mesh_terms": [
+      "Venous Thromboembolism"
+    ],
+    "tissue_terms": [
+      "blood",
+      "vein"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "venous thromboembolism"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "thrombosis_embolism",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "venous thromboembolism",
+      "静脉血栓栓塞症",
+      "静脉血栓栓塞",
+      "VTE"
+    ],
+    "preferred_zh": "静脉血栓栓塞症",
+    "zh_synonyms": [
+      "静脉血栓栓塞"
+    ],
+    "preferred_en": "venous thromboembolism",
+    "en_synonyms": [],
+    "related_organs": [
+      "vein",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "vein"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "deep vein thrombosis",
+      "pulmonary embolism"
+    ],
+    "avoid_expansion_to": [
+      "arterial thrombosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "静脉血栓栓塞症",
+      "静脉血栓栓塞"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_deep_vein_thrombosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_deep_vein_thrombosis",
+    "preferred_label_en": "deep vein thrombosis",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "deep vein thrombosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "DVT"
+    ],
+    "mesh_terms": [
+      "Venous Thrombosis"
+    ],
+    "tissue_terms": [
+      "blood",
+      "vein"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "deep vein thrombosis",
+      "Venous Thrombosis"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "thrombosis_embolism",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "venous thromboembolism"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "deep vein thrombosis",
+      "深静脉血栓形成",
+      "深静脉血栓",
+      "DVT"
+    ],
+    "preferred_zh": "深静脉血栓形成",
+    "zh_synonyms": [
+      "深静脉血栓"
+    ],
+    "preferred_en": "deep vein thrombosis",
+    "en_synonyms": [],
+    "related_organs": [
+      "vein",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "vein"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "venous thromboembolism"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "pulmonary embolism"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "深静脉血栓形成",
+      "深静脉血栓"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_pulmonary_embolism",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_pulmonary_embolism",
+    "preferred_label_en": "pulmonary embolism",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "pulmonary embolism"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PE"
+    ],
+    "mesh_terms": [
+      "Pulmonary Embolism"
+    ],
+    "tissue_terms": [
+      "lung",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "pulmonary embolism"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "thrombosis_embolism",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "venous thromboembolism"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "pulmonary embolism",
+      "肺栓塞",
+      "PE"
+    ],
+    "preferred_zh": "肺栓塞",
+    "zh_synonyms": [],
+    "preferred_en": "pulmonary embolism",
+    "en_synonyms": [],
+    "related_organs": [
+      "lung",
+      "blood"
+    ],
+    "related_tissues": [
+      "lung",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "venous thromboembolism"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "pulmonary hypertension"
+    ],
+    "ambiguity_notes": "PE is a short abbreviation and should require exact match.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "肺栓塞"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_arterial_thrombosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_arterial_thrombosis",
+    "preferred_label_en": "arterial thrombosis",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "arterial thrombosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Thrombosis"
+    ],
+    "tissue_terms": [
+      "blood",
+      "artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "arterial thrombosis",
+      "Thrombosis"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "thrombosis_embolism",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "thrombosis"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "arterial thrombosis",
+      "动脉血栓形成",
+      "动脉血栓"
+    ],
+    "preferred_zh": "动脉血栓形成",
+    "zh_synonyms": [
+      "动脉血栓"
+    ],
+    "preferred_en": "arterial thrombosis",
+    "en_synonyms": [],
+    "related_organs": [
+      "artery",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "thrombosis"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "venous thromboembolism"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "动脉血栓形成",
+      "动脉血栓"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_valvular_heart_disease",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_valvular_heart_disease",
+    "preferred_label_en": "valvular heart disease",
+    "synonyms_en": [
+      "heart valve disease"
+    ],
+    "exact_synonyms_en": [
+      "valvular heart disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "VHD"
+    ],
+    "mesh_terms": [
+      "Heart Valve Diseases"
+    ],
+    "tissue_terms": [
+      "heart valve",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "valvular heart disease",
+      "heart valve disease",
+      "Heart Valve Diseases"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "valvular_structural_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "valvular heart disease",
+      "心脏瓣膜病",
+      "瓣膜性心脏病",
+      "heart valve disease",
+      "VHD"
+    ],
+    "preferred_zh": "心脏瓣膜病",
+    "zh_synonyms": [
+      "瓣膜性心脏病"
+    ],
+    "preferred_en": "valvular heart disease",
+    "en_synonyms": [
+      "heart valve disease"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart valve",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [
+      "aortic stenosis",
+      "mitral regurgitation",
+      "mitral stenosis"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心脏瓣膜病",
+      "瓣膜性心脏病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_aortic_stenosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_aortic_stenosis",
+    "preferred_label_en": "aortic stenosis",
+    "synonyms_en": [
+      "aortic valve stenosis"
+    ],
+    "exact_synonyms_en": [
+      "aortic stenosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AS"
+    ],
+    "mesh_terms": [
+      "Aortic Valve Stenosis"
+    ],
+    "tissue_terms": [
+      "aortic valve",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "aortic stenosis",
+      "aortic valve stenosis"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "valvular_structural_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "valvular heart disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "aortic stenosis",
+      "主动脉瓣狭窄",
+      "aortic valve stenosis",
+      "AS"
+    ],
+    "preferred_zh": "主动脉瓣狭窄",
+    "zh_synonyms": [],
+    "preferred_en": "aortic stenosis",
+    "en_synonyms": [
+      "aortic valve stenosis"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "aortic valve",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "valvular heart disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "mitral stenosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "主动脉瓣狭窄"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_mitral_regurgitation",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_mitral_regurgitation",
+    "preferred_label_en": "mitral regurgitation",
+    "synonyms_en": [
+      "mitral insufficiency"
+    ],
+    "exact_synonyms_en": [
+      "mitral regurgitation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MR"
+    ],
+    "mesh_terms": [
+      "Mitral Valve Insufficiency"
+    ],
+    "tissue_terms": [
+      "mitral valve",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "mitral regurgitation",
+      "mitral insufficiency",
+      "Mitral Valve Insufficiency"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "valvular_structural_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "valvular heart disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "mitral regurgitation",
+      "二尖瓣反流",
+      "二尖瓣关闭不全",
+      "mitral insufficiency",
+      "MR"
+    ],
+    "preferred_zh": "二尖瓣反流",
+    "zh_synonyms": [
+      "二尖瓣关闭不全"
+    ],
+    "preferred_en": "mitral regurgitation",
+    "en_synonyms": [
+      "mitral insufficiency"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "mitral valve",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "valvular heart disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "mitral stenosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "二尖瓣反流",
+      "二尖瓣关闭不全"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_mitral_stenosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_mitral_stenosis",
+    "preferred_label_en": "mitral stenosis",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "mitral stenosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MS"
+    ],
+    "mesh_terms": [
+      "Mitral Valve Stenosis"
+    ],
+    "tissue_terms": [
+      "mitral valve",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "mitral stenosis",
+      "Mitral Valve Stenosis"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "valvular_structural_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "valvular heart disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "mitral stenosis",
+      "二尖瓣狭窄",
+      "MS"
+    ],
+    "preferred_zh": "二尖瓣狭窄",
+    "zh_synonyms": [],
+    "preferred_en": "mitral stenosis",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "mitral valve",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "valvular heart disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "mitral regurgitation"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "二尖瓣狭窄"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_congenital_heart_disease",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_congenital_heart_disease",
+    "preferred_label_en": "congenital heart disease",
+    "synonyms_en": [
+      "congenital cardiac disease"
+    ],
+    "exact_synonyms_en": [
+      "congenital heart disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CHD"
+    ],
+    "mesh_terms": [
+      "Heart Defects, Congenital"
+    ],
+    "tissue_terms": [
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "congenital heart disease",
+      "congenital cardiac disease",
+      "Heart Defects, Congenital"
+    ],
+    "disease_group": "cardiovascular disease",
+    "concept_type": "disease",
+    "category": "cardiovascular",
+    "subcategory": "valvular_structural_heart_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "congenital heart disease",
+      "先天性心脏病",
+      "先心病",
+      "congenital cardiac disease",
+      "CHD"
+    ],
+    "preferred_zh": "先天性心脏病",
+    "zh_synonyms": [
+      "先心病"
+    ],
+    "preferred_en": "congenital heart disease",
+    "en_synonyms": [
+      "congenital cardiac disease"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "coronary heart disease"
+    ],
+    "ambiguity_notes": "CHD can also mean coronary heart disease; require context for expansion.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "先天性心脏病",
+      "先心病"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_smoking",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_smoking",
+    "preferred_label_en": "smoking",
+    "synonyms_en": [
+      "tobacco smoking",
+      "smoking exposure"
+    ],
+    "exact_synonyms_en": [
+      "smoking"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Smoking"
+    ],
+    "tissue_terms": [
+      "lung",
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "smoking",
+      "tobacco smoking",
+      "smoking exposure"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "smoking",
+      "tobacco smoking",
+      "smoking exposure"
+    ],
+    "disease_group": "cardiovascular risk factor",
+    "concept_type": "risk_factor",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_risk_factor_phenotype",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Lung",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "smoking",
+      "吸烟",
+      "烟草暴露",
+      "tobacco smoking",
+      "smoking exposure"
+    ],
+    "preferred_zh": "吸烟",
+    "zh_synonyms": [
+      "烟草暴露"
+    ],
+    "preferred_en": "smoking",
+    "en_synonyms": [
+      "tobacco smoking",
+      "smoking exposure"
+    ],
+    "related_organs": [
+      "lung",
+      "blood"
+    ],
+    "related_tissues": [
+      "lung",
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "lung cancer"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "吸烟",
+      "烟草暴露"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_inflammation",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_inflammation",
+    "preferred_label_en": "inflammation",
+    "synonyms_en": [
+      "inflammatory response"
+    ],
+    "exact_synonyms_en": [
+      "inflammation"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Inflammation"
+    ],
+    "tissue_terms": [
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "inflammation",
+      "inflammatory response"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "inflammation",
+      "inflammatory response"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_risk_factor_phenotype",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "inflammation",
+      "炎症",
+      "炎性反应",
+      "inflammatory response"
+    ],
+    "preferred_zh": "炎症",
+    "zh_synonyms": [
+      "炎性反应"
+    ],
+    "preferred_en": "inflammation",
+    "en_synonyms": [
+      "inflammatory response"
+    ],
+    "related_organs": [
+      "blood"
+    ],
+    "related_tissues": [
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "autoimmune disease"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "炎症",
+      "炎性反应"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_vascular_stiffness",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_vascular_stiffness",
+    "preferred_label_en": "vascular stiffness",
+    "synonyms_en": [
+      "vascular stiffening"
+    ],
+    "exact_synonyms_en": [
+      "vascular stiffness"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Vascular Stiffness"
+    ],
+    "tissue_terms": [
+      "blood vessel"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "vascular stiffness",
+      "vascular stiffening"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "vascular stiffness",
+      "vascular stiffening"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_risk_factor_phenotype",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "vascular stiffness",
+      "血管僵硬",
+      "血管硬度",
+      "vascular stiffening"
+    ],
+    "preferred_zh": "血管僵硬",
+    "zh_synonyms": [
+      "血管硬度"
+    ],
+    "preferred_en": "vascular stiffness",
+    "en_synonyms": [
+      "vascular stiffening"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "blood vessel"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "atherosclerosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "血管僵硬",
+      "血管硬度"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_arterial_stiffness",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_arterial_stiffness",
+    "preferred_label_en": "arterial stiffness",
+    "synonyms_en": [
+      "arterial stiffening"
+    ],
+    "exact_synonyms_en": [
+      "arterial stiffness"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Vascular Stiffness"
+    ],
+    "tissue_terms": [
+      "artery"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "arterial stiffness",
+      "arterial stiffening"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "arterial stiffness",
+      "arterial stiffening",
+      "Vascular Stiffness"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_risk_factor_phenotype",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "arterial stiffness",
+      "动脉僵硬",
+      "动脉硬度",
+      "arterial stiffening"
+    ],
+    "preferred_zh": "动脉僵硬",
+    "zh_synonyms": [
+      "动脉硬度"
+    ],
+    "preferred_en": "arterial stiffness",
+    "en_synonyms": [
+      "arterial stiffening"
+    ],
+    "related_organs": [
+      "artery"
+    ],
+    "related_tissues": [
+      "artery"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery - Aorta",
+      "Artery - Coronary",
+      "Artery - Tibial"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "arteriosclerosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "动脉僵硬",
+      "动脉硬度"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_left_ventricular_hypertrophy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_left_ventricular_hypertrophy",
+    "preferred_label_en": "left ventricular hypertrophy",
+    "synonyms_en": [],
+    "exact_synonyms_en": [
+      "left ventricular hypertrophy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LVH"
+    ],
+    "mesh_terms": [
+      "Hypertrophy, Left Ventricular"
+    ],
+    "tissue_terms": [
+      "left ventricle",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "left ventricular hypertrophy",
+      "LVH"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "left ventricular hypertrophy",
+      "Hypertrophy, Left Ventricular"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_risk_factor_phenotype",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "left ventricular hypertrophy",
+      "左心室肥厚",
+      "左室肥厚",
+      "LVH"
+    ],
+    "preferred_zh": "左心室肥厚",
+    "zh_synonyms": [
+      "左室肥厚"
+    ],
+    "preferred_en": "left ventricular hypertrophy",
+    "en_synonyms": [],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "left ventricle",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypertrophic cardiomyopathy"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "左心室肥厚",
+      "左室肥厚"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_ejection_fraction",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_ejection_fraction",
+    "preferred_label_en": "ejection fraction",
+    "synonyms_en": [
+      "left ventricular ejection fraction"
+    ],
+    "exact_synonyms_en": [
+      "ejection fraction"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "EF",
+      "LVEF"
+    ],
+    "mesh_terms": [
+      "Stroke Volume"
+    ],
+    "tissue_terms": [
+      "left ventricle",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "ejection fraction",
+      "left ventricular ejection fraction",
+      "EF",
+      "LVEF"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "ejection fraction",
+      "left ventricular ejection fraction",
+      "Stroke Volume"
+    ],
+    "disease_group": "cardiovascular phenotype",
+    "concept_type": "phenotype",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_risk_factor_phenotype",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ejection fraction",
+      "射血分数",
+      "心脏射血分数",
+      "left ventricular ejection fraction",
+      "EF",
+      "LVEF"
+    ],
+    "preferred_zh": "射血分数",
+    "zh_synonyms": [
+      "心脏射血分数"
+    ],
+    "preferred_en": "ejection fraction",
+    "en_synonyms": [
+      "left ventricular ejection fraction"
+    ],
+    "related_organs": [
+      "heart"
+    ],
+    "related_tissues": [
+      "left ventricle",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "heart failure"
+    ],
+    "ambiguity_notes": "EF is a short token; exact abbreviation matching is required.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "射血分数",
+      "心脏射血分数"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_troponin",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_troponin",
+    "preferred_label_en": "troponin",
+    "synonyms_en": [
+      "cardiac troponin"
+    ],
+    "exact_synonyms_en": [
+      "troponin"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Tn"
+    ],
+    "mesh_terms": [
+      "Troponin"
+    ],
+    "tissue_terms": [
+      "blood",
+      "myocardium"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "troponin",
+      "cardiac troponin",
+      "Tn"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "troponin",
+      "cardiac troponin"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "troponin",
+      "肌钙蛋白",
+      "心肌肌钙蛋白",
+      "cardiac troponin",
+      "Tn"
+    ],
+    "preferred_zh": "肌钙蛋白",
+    "zh_synonyms": [
+      "心肌肌钙蛋白"
+    ],
+    "preferred_en": "troponin",
+    "en_synonyms": [
+      "cardiac troponin"
+    ],
+    "related_organs": [
+      "heart",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "myocardium"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "myocardial infarction"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "肌钙蛋白",
+      "心肌肌钙蛋白"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_cardiac_troponin_i",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_cardiac_troponin_i",
+    "preferred_label_en": "cardiac troponin I",
+    "synonyms_en": [
+      "troponin I"
+    ],
+    "exact_synonyms_en": [
+      "cardiac troponin I"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "cTnI",
+      "TnI"
+    ],
+    "mesh_terms": [
+      "Troponin I"
+    ],
+    "tissue_terms": [
+      "blood",
+      "myocardium"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "cardiac troponin I",
+      "troponin I",
+      "cTnI",
+      "TnI"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "cardiac troponin I",
+      "troponin I"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cardiac troponin I",
+      "心肌肌钙蛋白I",
+      "肌钙蛋白I",
+      "troponin I",
+      "cTnI",
+      "TnI"
+    ],
+    "preferred_zh": "心肌肌钙蛋白I",
+    "zh_synonyms": [
+      "肌钙蛋白I"
+    ],
+    "preferred_en": "cardiac troponin I",
+    "en_synonyms": [
+      "troponin I"
+    ],
+    "related_organs": [
+      "heart",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "myocardium"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "cardiac troponin T"
+    ],
+    "ambiguity_notes": "cTnI is a short biomarker abbreviation and should not imply disease by itself.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心肌肌钙蛋白I",
+      "肌钙蛋白I"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_cardiac_troponin_t",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_cardiac_troponin_t",
+    "preferred_label_en": "cardiac troponin T",
+    "synonyms_en": [
+      "troponin T"
+    ],
+    "exact_synonyms_en": [
+      "cardiac troponin T"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "cTnT",
+      "TnT"
+    ],
+    "mesh_terms": [
+      "Troponin T"
+    ],
+    "tissue_terms": [
+      "blood",
+      "myocardium"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "cardiac troponin T",
+      "troponin T",
+      "cTnT",
+      "TnT"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "cardiac troponin T",
+      "troponin T"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cardiac troponin T",
+      "心肌肌钙蛋白T",
+      "肌钙蛋白T",
+      "troponin T",
+      "cTnT",
+      "TnT"
+    ],
+    "preferred_zh": "心肌肌钙蛋白T",
+    "zh_synonyms": [
+      "肌钙蛋白T"
+    ],
+    "preferred_en": "cardiac troponin T",
+    "en_synonyms": [
+      "troponin T"
+    ],
+    "related_organs": [
+      "heart",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "myocardium"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "cardiac troponin I"
+    ],
+    "ambiguity_notes": "cTnT is a short biomarker abbreviation and should not imply disease by itself.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "心肌肌钙蛋白T",
+      "肌钙蛋白T"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_b_type_natriuretic_peptide",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_b_type_natriuretic_peptide",
+    "preferred_label_en": "B-type natriuretic peptide",
+    "synonyms_en": [
+      "brain natriuretic peptide"
+    ],
+    "exact_synonyms_en": [
+      "B-type natriuretic peptide"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "BNP"
+    ],
+    "mesh_terms": [
+      "Natriuretic Peptide, Brain"
+    ],
+    "tissue_terms": [
+      "blood",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "B-type natriuretic peptide",
+      "brain natriuretic peptide",
+      "BNP"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "B-type natriuretic peptide",
+      "brain natriuretic peptide",
+      "Natriuretic Peptide, Brain"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "B-type natriuretic peptide",
+      "B型利钠肽",
+      "脑钠肽",
+      "brain natriuretic peptide",
+      "BNP"
+    ],
+    "preferred_zh": "B型利钠肽",
+    "zh_synonyms": [
+      "脑钠肽"
+    ],
+    "preferred_en": "B-type natriuretic peptide",
+    "en_synonyms": [
+      "brain natriuretic peptide"
+    ],
+    "related_organs": [
+      "heart",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "heart failure"
+    ],
+    "ambiguity_notes": "BNP is a short biomarker abbreviation and should not imply heart failure by itself.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "B型利钠肽",
+      "脑钠肽"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_nt_pro_bnp",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_nt_pro_bnp",
+    "preferred_label_en": "N-terminal pro-B-type natriuretic peptide",
+    "synonyms_en": [
+      "NT-proBNP",
+      "N terminal pro BNP"
+    ],
+    "exact_synonyms_en": [
+      "N-terminal pro-B-type natriuretic peptide"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "NT-proBNP"
+    ],
+    "mesh_terms": [
+      "Natriuretic Peptide, Brain"
+    ],
+    "tissue_terms": [
+      "blood",
+      "heart"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "N-terminal pro-B-type natriuretic peptide",
+      "NT-proBNP",
+      "N terminal pro BNP"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "N-terminal pro-B-type natriuretic peptide",
+      "NT-proBNP",
+      "N terminal pro BNP",
+      "Natriuretic Peptide, Brain"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Heart - Left Ventricle",
+        "Heart - Atrial Appendage",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "N-terminal pro-B-type natriuretic peptide",
+      "N端脑钠肽前体",
+      "NT-proBNP",
+      "N terminal pro BNP"
+    ],
+    "preferred_zh": "N端脑钠肽前体",
+    "zh_synonyms": [
+      "NT-proBNP"
+    ],
+    "preferred_en": "N-terminal pro-B-type natriuretic peptide",
+    "en_synonyms": [
+      "NT-proBNP",
+      "N terminal pro BNP"
+    ],
+    "related_organs": [
+      "heart",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "heart"
+    ],
+    "gtex_tissue_candidates": [
+      "Heart - Left Ventricle",
+      "Heart - Atrial Appendage",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "BNP",
+      "heart failure"
+    ],
+    "ambiguity_notes": "NT-proBNP is a biomarker, not a disease concept.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "N端脑钠肽前体",
+      "NT-proBNP"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_c_reactive_protein",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_c_reactive_protein",
+    "preferred_label_en": "C-reactive protein",
+    "synonyms_en": [
+      "high-sensitivity C-reactive protein",
+      "hs-CRP"
+    ],
+    "exact_synonyms_en": [
+      "C-reactive protein"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CRP",
+      "hsCRP"
+    ],
+    "mesh_terms": [
+      "C-Reactive Protein"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "C-reactive protein",
+      "high-sensitivity C-reactive protein",
+      "hs-CRP",
+      "CRP",
+      "hsCRP"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "C-reactive protein",
+      "high-sensitivity C-reactive protein",
+      "hs-CRP"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "C-reactive protein",
+      "C反应蛋白",
+      "高敏C反应蛋白",
+      "high-sensitivity C-reactive protein",
+      "hs-CRP",
+      "CRP",
+      "hsCRP"
+    ],
+    "preferred_zh": "C反应蛋白",
+    "zh_synonyms": [
+      "高敏C反应蛋白"
+    ],
+    "preferred_en": "C-reactive protein",
+    "en_synonyms": [
+      "high-sensitivity C-reactive protein",
+      "hs-CRP"
+    ],
+    "related_organs": [
+      "liver",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "inflammation"
+    ],
+    "ambiguity_notes": "CRP is a short biomarker abbreviation and should not imply disease by itself.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "C反应蛋白",
+      "高敏C反应蛋白"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_ldl_cholesterol",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_ldl_cholesterol",
+    "preferred_label_en": "LDL cholesterol",
+    "synonyms_en": [
+      "low-density lipoprotein cholesterol",
+      "LDL-C"
+    ],
+    "exact_synonyms_en": [
+      "LDL cholesterol"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "LDL",
+      "LDL-C"
+    ],
+    "mesh_terms": [
+      "Cholesterol, LDL"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "LDL cholesterol",
+      "low-density lipoprotein cholesterol",
+      "LDL-C",
+      "LDL"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "LDL cholesterol",
+      "low-density lipoprotein cholesterol",
+      "LDL-C",
+      "Cholesterol, LDL"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "LDL cholesterol",
+      "低密度脂蛋白胆固醇",
+      "LDL胆固醇",
+      "low-density lipoprotein cholesterol",
+      "LDL-C",
+      "LDL"
+    ],
+    "preferred_zh": "低密度脂蛋白胆固醇",
+    "zh_synonyms": [
+      "LDL胆固醇"
+    ],
+    "preferred_en": "LDL cholesterol",
+    "en_synonyms": [
+      "low-density lipoprotein cholesterol",
+      "LDL-C"
+    ],
+    "related_organs": [
+      "liver",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypercholesterolemia"
+    ],
+    "ambiguity_notes": "LDL alone is a biomarker token and should not imply disease without high/low context.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "低密度脂蛋白胆固醇",
+      "LDL胆固醇"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_hdl_cholesterol",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_hdl_cholesterol",
+    "preferred_label_en": "HDL cholesterol",
+    "synonyms_en": [
+      "high-density lipoprotein cholesterol",
+      "HDL-C"
+    ],
+    "exact_synonyms_en": [
+      "HDL cholesterol"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HDL",
+      "HDL-C"
+    ],
+    "mesh_terms": [
+      "Cholesterol, HDL"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "HDL cholesterol",
+      "high-density lipoprotein cholesterol",
+      "HDL-C",
+      "HDL"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "HDL cholesterol",
+      "high-density lipoprotein cholesterol",
+      "HDL-C",
+      "Cholesterol, HDL"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "HDL cholesterol",
+      "高密度脂蛋白胆固醇",
+      "HDL胆固醇",
+      "high-density lipoprotein cholesterol",
+      "HDL-C",
+      "HDL"
+    ],
+    "preferred_zh": "高密度脂蛋白胆固醇",
+    "zh_synonyms": [
+      "HDL胆固醇"
+    ],
+    "preferred_en": "HDL cholesterol",
+    "en_synonyms": [
+      "high-density lipoprotein cholesterol",
+      "HDL-C"
+    ],
+    "related_organs": [
+      "liver",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "dyslipidemia"
+    ],
+    "ambiguity_notes": "HDL alone is a biomarker token and should not imply disease without high/low context.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "高密度脂蛋白胆固醇",
+      "HDL胆固醇"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_triglycerides",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_triglycerides",
+    "preferred_label_en": "triglycerides",
+    "synonyms_en": [
+      "triacylglycerol"
+    ],
+    "exact_synonyms_en": [
+      "triglycerides"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TG"
+    ],
+    "mesh_terms": [
+      "Triglycerides"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "triglycerides",
+      "triacylglycerol",
+      "TG"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "triglycerides",
+      "triacylglycerol"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "triglycerides",
+      "甘油三酯",
+      "三酰甘油",
+      "triacylglycerol",
+      "TG"
+    ],
+    "preferred_zh": "甘油三酯",
+    "zh_synonyms": [
+      "三酰甘油"
+    ],
+    "preferred_en": "triglycerides",
+    "en_synonyms": [
+      "triacylglycerol"
+    ],
+    "related_organs": [
+      "liver",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypertriglyceridemia"
+    ],
+    "ambiguity_notes": "TG is a short biomarker abbreviation and should not imply hypertriglyceridemia by itself.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "甘油三酯",
+      "三酰甘油"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_total_cholesterol",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_total_cholesterol",
+    "preferred_label_en": "total cholesterol",
+    "synonyms_en": [
+      "serum total cholesterol"
+    ],
+    "exact_synonyms_en": [
+      "total cholesterol"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TC"
+    ],
+    "mesh_terms": [
+      "Cholesterol"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "total cholesterol",
+      "serum total cholesterol",
+      "TC"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "total cholesterol",
+      "serum total cholesterol",
+      "Cholesterol"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "total cholesterol",
+      "总胆固醇",
+      "血清总胆固醇",
+      "serum total cholesterol",
+      "TC"
+    ],
+    "preferred_zh": "总胆固醇",
+    "zh_synonyms": [
+      "血清总胆固醇"
+    ],
+    "preferred_en": "total cholesterol",
+    "en_synonyms": [
+      "serum total cholesterol"
+    ],
+    "related_organs": [
+      "liver",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "hypercholesterolemia"
+    ],
+    "ambiguity_notes": "TC is a short biomarker abbreviation and should not imply disease by itself.",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "总胆固醇",
+      "血清总胆固醇"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_lipoprotein_a",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_lipoprotein_a",
+    "preferred_label_en": "lipoprotein(a)",
+    "synonyms_en": [
+      "lipoprotein a"
+    ],
+    "exact_synonyms_en": [
+      "lipoprotein(a)"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Lp(a)"
+    ],
+    "mesh_terms": [
+      "Lipoprotein(a)"
+    ],
+    "tissue_terms": [
+      "blood",
+      "liver"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "lipoprotein(a)",
+      "lipoprotein a",
+      "Lp(a)"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "lipoprotein(a)",
+      "lipoprotein a"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Liver",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "lipoprotein(a)",
+      "脂蛋白a",
+      "脂蛋白(a)",
+      "lipoprotein a",
+      "Lp(a)"
+    ],
+    "preferred_zh": "脂蛋白a",
+    "zh_synonyms": [
+      "脂蛋白(a)"
+    ],
+    "preferred_en": "lipoprotein(a)",
+    "en_synonyms": [
+      "lipoprotein a"
+    ],
+    "related_organs": [
+      "liver",
+      "blood"
+    ],
+    "related_tissues": [
+      "blood",
+      "liver"
+    ],
+    "gtex_tissue_candidates": [
+      "Liver",
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "LDL cholesterol"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "脂蛋白a",
+      "脂蛋白(a)"
+    ]
+  },
+  {
+    "concept_id": "mini:cardiovascular_homocysteine",
+    "source_vocabulary": "mini",
+    "source_id": "mini:cardiovascular_homocysteine",
+    "preferred_label_en": "homocysteine",
+    "synonyms_en": [
+      "total homocysteine"
+    ],
+    "exact_synonyms_en": [
+      "homocysteine"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Hcy"
+    ],
+    "mesh_terms": [
+      "Homocysteine"
+    ],
+    "tissue_terms": [
+      "blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "exposure_terms": [
+      "homocysteine",
+      "total homocysteine",
+      "Hcy"
+    ],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "pubmed_query_terms": [
+      "homocysteine",
+      "total homocysteine"
+    ],
+    "disease_group": "cardiovascular biomarker",
+    "concept_type": "biomarker",
+    "category": "cardiovascular",
+    "subcategory": "cardiovascular_biomarker",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "cardiovascular disease"
+    ],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "version": "cardiovascular_core_v1",
+    "term_source": "project_curated_cardiovascular_core_v1",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "homocysteine",
+      "同型半胱氨酸",
+      "高同型半胱氨酸",
+      "total homocysteine",
+      "Hcy"
+    ],
+    "preferred_zh": "同型半胱氨酸",
+    "zh_synonyms": [
+      "高同型半胱氨酸"
+    ],
+    "preferred_en": "homocysteine",
+    "en_synonyms": [
+      "total homocysteine"
+    ],
+    "related_organs": [
+      "blood"
+    ],
+    "related_tissues": [
+      "blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "related_concepts": [],
+    "parent_concepts": [
+      "cardiovascular disease"
+    ],
+    "child_concepts": [],
+    "avoid_expansion_to": [
+      "thrombosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_cardiovascular_core_v1"
+    ],
+    "zh_terms": [
+      "同型半胱氨酸",
+      "高同型半胱氨酸"
     ]
   }
 ]

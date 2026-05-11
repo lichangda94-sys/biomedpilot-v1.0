@@ -21,6 +21,7 @@ CORE_CHECKLIST_IDS = (
     "anatomy_tissue_core",
     "bioinformatics_modality_core",
     "meta_analysis_terms_core",
+    "cardiovascular_core",
 )
 
 
@@ -66,6 +67,8 @@ def build_coverage_audit_report() -> dict[str, Any]:
             section = _audit_bioinformatics_modality_core(checklist, corpus)
         elif coverage_type == "meta_analysis_terms_core":
             section = _audit_meta_analysis_terms_core(checklist, corpus)
+        elif coverage_type == "cardiovascular_core":
+            section = _audit_cardiovascular_core(checklist, corpus)
         else:
             section = _audit_generic_terms(checklist, corpus)
         sections[str(checklist.get("checklist_id"))] = section
@@ -202,6 +205,23 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 "## Meta Analysis Terms Core Summary",
                 "",
                 _meta_analysis_terms_summary_lines(sections["meta_analysis_terms_core"]),
+                "",
+            ]
+        )
+    if "cardiovascular_core" in sections:
+        lines.extend(
+            [
+                "## Cardiovascular Core Covered/Missing",
+                "",
+                _details_table(
+                    sections["cardiovascular_core"],
+                    label_key="label",
+                    extra_keys=("matched_terms", "matched_gtex_tissues", "subcategory", "concept_type"),
+                ),
+                "",
+                "## Cardiovascular Core Summary",
+                "",
+                _cardiovascular_summary_lines(sections["cardiovascular_core"]),
                 "",
             ]
         )
@@ -566,6 +586,58 @@ def _audit_meta_analysis_terms_core(checklist: dict[str, Any], corpus: Vocabular
     return section
 
 
+def _audit_cardiovascular_core(checklist: dict[str, Any], corpus: VocabularyCorpus) -> dict[str, Any]:
+    details = []
+    missing_terms: list[dict[str, Any]] = []
+    by_subcategory: dict[str, dict[str, int]] = {}
+    for item in checklist["items"]:
+        expected_terms = _list(item.get("expected_terms"))
+        expected_tissues = _list(item.get("expected_gtex_tissues") or item.get("gtex_tissue_candidates"))
+        matched_terms = _matched_terms(expected_terms, corpus.all_text)
+        matched_tissues = [tissue for tissue in expected_tissues if _norm(tissue) in corpus.gtex_tissues]
+        missing_for_item = [term for term in expected_terms if term not in matched_terms]
+        if expected_terms and not missing_for_item:
+            status = "covered"
+        elif matched_terms or matched_tissues:
+            status = "partially_covered"
+        else:
+            status = "missing"
+        subcategory = str(item.get("subcategory") or "")
+        bucket = by_subcategory.setdefault(subcategory, {"total": 0, "covered": 0, "partial": 0, "missing": 0})
+        bucket["total"] += 1
+        if status == "covered":
+            bucket["covered"] += 1
+        elif status == "partially_covered":
+            bucket["partial"] += 1
+        else:
+            bucket["missing"] += 1
+        detail = _detail(
+            item,
+            status,
+            matched_terms=matched_terms,
+            matched_gtex_tissues=matched_tissues,
+            missing_terms=missing_for_item,
+            subcategory=subcategory,
+            concept_type=str(item.get("concept_type") or ""),
+            avoid_expansion_to=_list(item.get("avoid_expansion_to")),
+            ambiguity_notes=str(item.get("ambiguity_notes") or ""),
+        )
+        details.append(detail)
+        if missing_for_item:
+            missing_terms.append({"id": detail["id"], "label": detail["label"], "missing_terms": missing_for_item})
+    section = _section(checklist, details)
+    section["missing_terms"] = missing_terms
+    section["subcategory_coverage"] = {
+        key: {
+            **value,
+            "coverage_rate": round(value["covered"] / value["total"], 3) if value["total"] else 0,
+        }
+        for key, value in sorted(by_subcategory.items())
+    }
+    section["high_risk_ambiguity_terms"] = checklist.get("ambiguity_terms", [])
+    return section
+
+
 def _section(checklist: dict[str, Any], details: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(details)
     covered = sum(1 for item in details if item["status"] == "covered")
@@ -793,6 +865,23 @@ def _quality_gates(sections: dict[str, Any], gaps: dict[str, list[dict[str, str]
                 ),
             ]
             if "meta_analysis_terms_core" in sections
+            else []
+        ),
+        *(
+            [
+                _threshold_gate(
+                    "cardiovascular_core_coverage",
+                    "Cardiovascular core checklist coverage must stay >= 95%.",
+                    sections["cardiovascular_core"]["coverage_rate"],
+                    0.95,
+                ),
+                _zero_gate(
+                    "cardiovascular_core_missing_terms",
+                    "Cardiovascular core should not have missing expected terms.",
+                    len(sections["cardiovascular_core"].get("missing_terms", [])),
+                ),
+            ]
+            if "cardiovascular_core" in sections
             else []
         ),
         _zero_gate(
@@ -1088,6 +1177,36 @@ def _meta_analysis_terms_summary_lines(section: dict[str, Any]) -> str:
     subcategory_coverage = section.get("subcategory_coverage", {})
     lines = [
         f"- meta analysis terms checklist total count: {section['total_checklist_items']}",
+        f"- covered count: {section['covered']}",
+        f"- missing count: {section['missing']}",
+        f"- coverage percentage: {section['coverage_rate']:.3f}",
+        f"- missing terms: {len(missing_terms)}",
+        f"- quality gate status: {'pass' if section['coverage_rate'] >= 0.95 and not missing_terms else 'fail'}",
+    ]
+    if subcategory_coverage:
+        rendered = ", ".join(
+            f"{key} {value['covered']}/{value['total']}" for key, value in subcategory_coverage.items()
+        )
+        lines.append(f"- subcategory coverage: {rendered}")
+    if missing_terms:
+        rendered = ", ".join(f"{item['id']}: {', '.join(item['missing_terms'])}" for item in missing_terms[:10])
+        lines.append(f"- missing term details: {rendered}")
+    else:
+        lines.append("- missing term details: none")
+    if ambiguity_terms:
+        rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
+        lines.append(f"- high-risk ambiguity terms: {rendered_terms}")
+    else:
+        lines.append("- high-risk ambiguity terms: none")
+    return "\n".join(lines)
+
+
+def _cardiovascular_summary_lines(section: dict[str, Any]) -> str:
+    ambiguity_terms = section.get("high_risk_ambiguity_terms", [])
+    missing_terms = section.get("missing_terms", [])
+    subcategory_coverage = section.get("subcategory_coverage", {})
+    lines = [
+        f"- cardiovascular checklist total count: {section['total_checklist_items']}",
         f"- covered count: {section['covered']}",
         f"- missing count: {section['missing']}",
         f"- coverage percentage: {section['coverage_rate']:.3f}",

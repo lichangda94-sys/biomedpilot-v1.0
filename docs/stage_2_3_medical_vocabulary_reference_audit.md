@@ -4,7 +4,7 @@
 
 | Section | Total | Covered | Partial | Missing | Coverage | Weighted |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| overall | 472 | 472 | 0 | 0 | 1.000 | 1.000 |
+| overall | 552 | 552 | 0 | 0 | 1.000 | 1.000 |
 
 ## TCGA Projects Covered/Missing
 
@@ -584,6 +584,103 @@
 - missing term details: none
 - high-risk ambiguity terms: OR, OS, HR, PR, SD, PD, CI, MD, SMD, SE, RR
 
+## Cardiovascular Core Covered/Missing
+
+| Item | Priority | Status | Evidence |
+| --- | --- | --- | --- |
+| hypertension | P0 | covered | matched_terms: hypertension, 高血压, 高血压病, high blood pressure, hypertensive disease, HTN; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: hypertension_blood_pressure; concept_type: disease |
+| essential hypertension | P0 | covered | matched_terms: essential hypertension, 原发性高血压, 本态性高血压, primary hypertension, Hypertension; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: hypertension_blood_pressure; concept_type: disease |
+| secondary hypertension | P1 | covered | matched_terms: secondary hypertension, 继发性高血压, Hypertension; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: hypertension_blood_pressure; concept_type: disease |
+| pulmonary hypertension | P0 | covered | matched_terms: pulmonary hypertension, 肺动脉高压, 肺高压, pulmonary arterial hypertension, PH, PAH, Hypertension, Pulmonary; matched_gtex_tissues: Lung, Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: hypertension_blood_pressure; concept_type: disease |
+| isolated systolic hypertension | P1 | covered | matched_terms: isolated systolic hypertension, 单纯收缩期高血压, ISH, Hypertension; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: hypertension_blood_pressure; concept_type: disease |
+| prehypertension | P1 | covered | matched_terms: prehypertension, 高血压前期, 血压正常高值, elevated blood pressure; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: hypertension_blood_pressure; concept_type: phenotype |
+| hypotension | P1 | covered | matched_terms: hypotension, 低血压, low blood pressure; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: hypertension_blood_pressure; concept_type: phenotype |
+| coronary artery disease | P0 | covered | matched_terms: coronary artery disease, 冠状动脉疾病, 冠心病, coronary heart disease, ischemic heart disease, CAD, CHD; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| coronary heart disease | P0 | covered | matched_terms: coronary heart disease, 冠心病, 缺血性心脏病, coronary artery disease, ischemic heart disease, CHD, CAD; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| ischemic heart disease | P1 | covered | matched_terms: ischemic heart disease, 缺血性心脏病, 缺血性心脏疾病, coronary heart disease, coronary artery disease, IHD, Myocardial Ischemia; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| myocardial infarction | P0 | covered | matched_terms: myocardial infarction, 心肌梗死, 心梗, heart attack, MI; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| acute myocardial infarction | P0 | covered | matched_terms: acute myocardial infarction, 急性心肌梗死, 急性心梗, acute MI, AMI, Myocardial Infarction; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| acute coronary syndrome | P0 | covered | matched_terms: acute coronary syndrome, 急性冠脉综合征, 急性冠状动脉综合征, ACS; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| angina pectoris | P1 | covered | matched_terms: angina pectoris, 心绞痛, angina; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| stable angina | P1 | covered | matched_terms: stable angina, 稳定型心绞痛, stable angina pectoris, Angina, Stable; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| unstable angina | P1 | covered | matched_terms: unstable angina, 不稳定型心绞痛, unstable angina pectoris, UA, Angina, Unstable; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: coronary_ischemic_heart_disease; concept_type: disease |
+| heart failure | P0 | covered | matched_terms: heart failure, 心力衰竭, 心衰, cardiac failure, congestive heart failure, HF, CHF; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| heart failure with reduced ejection fraction | P0 | covered | matched_terms: heart failure with reduced ejection fraction, 射血分数降低型心力衰竭, 射血分数降低型心衰, reduced ejection fraction heart failure, HFrEF, Heart Failure; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| heart failure with preserved ejection fraction | P0 | covered | matched_terms: heart failure with preserved ejection fraction, 射血分数保留型心力衰竭, 射血分数保留型心衰, preserved ejection fraction heart failure, HFpEF, Heart Failure; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| cardiomyopathy | P0 | covered | matched_terms: cardiomyopathy, 心肌病, myocardiopathy, Cardiomyopathies; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| dilated cardiomyopathy | P1 | covered | matched_terms: dilated cardiomyopathy, 扩张型心肌病, DCM, Cardiomyopathy, Dilated; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| hypertrophic cardiomyopathy | P1 | covered | matched_terms: hypertrophic cardiomyopathy, 肥厚型心肌病, HCM, Cardiomyopathy, Hypertrophic; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| restrictive cardiomyopathy | P2 | covered | matched_terms: restrictive cardiomyopathy, 限制型心肌病, RCM, Cardiomyopathy, Restrictive; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| ischemic cardiomyopathy | P1 | covered | matched_terms: ischemic cardiomyopathy, 缺血性心肌病, ICM, Cardiomyopathy, Ischemic; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: heart_failure_cardiomyopathy; concept_type: disease |
+| arrhythmia | P0 | covered | matched_terms: arrhythmia, 心律失常, 心律不齐, cardiac arrhythmia, Arrhythmias, Cardiac; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: disease |
+| atrial fibrillation | P0 | covered | matched_terms: atrial fibrillation, 心房颤动, 房颤, AF, AFib; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: disease |
+| atrial flutter | P1 | covered | matched_terms: atrial flutter, 心房扑动, 房扑, AFL; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: disease |
+| ventricular tachycardia | P1 | covered | matched_terms: ventricular tachycardia, 室性心动过速, 室速, VT, Tachycardia, Ventricular; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: disease |
+| ventricular fibrillation | P1 | covered | matched_terms: ventricular fibrillation, 心室颤动, 室颤, VF; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: disease |
+| bradycardia | P1 | covered | matched_terms: bradycardia, 心动过缓, 心率过缓, slow heart rate; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: phenotype |
+| tachycardia | P1 | covered | matched_terms: tachycardia, 心动过速, 心率过速, fast heart rate; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: phenotype |
+| long QT syndrome | P1 | covered | matched_terms: long QT syndrome, 长QT综合征, 长QT间期综合征, prolonged QT syndrome, LQTS; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: arrhythmia; concept_type: disease |
+| atherosclerosis | P0 | covered | matched_terms: atherosclerosis, 动脉粥样硬化, atherosclerotic disease; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| arteriosclerosis | P1 | covered | matched_terms: arteriosclerosis, 动脉硬化, arterial sclerosis; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| peripheral artery disease | P0 | covered | matched_terms: peripheral artery disease, 外周动脉疾病, 外周动脉病, peripheral arterial disease, PAD; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| peripheral vascular disease | P1 | covered | matched_terms: peripheral vascular disease, 外周血管疾病, 周围血管病, peripheral vascular disorder, PVD, Peripheral Vascular Diseases; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| carotid artery disease | P1 | covered | matched_terms: carotid artery disease, 颈动脉疾病, 颈动脉病变, carotid stenosis, Carotid Artery Diseases; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Brain; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| aortic aneurysm | P1 | covered | matched_terms: aortic aneurysm, 主动脉瘤; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| abdominal aortic aneurysm | P1 | covered | matched_terms: abdominal aortic aneurysm, 腹主动脉瘤, AAA, Aortic Aneurysm, Abdominal; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: atherosclerosis_vascular_disease; concept_type: disease |
+| vascular calcification | P1 | covered | matched_terms: vascular calcification, 血管钙化, 动脉钙化, arterial calcification; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: atherosclerosis_vascular_disease; concept_type: phenotype |
+| endothelial dysfunction | P1 | covered | matched_terms: endothelial dysfunction, 内皮功能障碍, 血管内皮功能障碍, vascular endothelial dysfunction, Endothelium, Vascular; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: atherosclerosis_vascular_disease; concept_type: phenotype |
+| stroke | P0 | covered | matched_terms: stroke, 脑卒中, 中风, cerebrovascular accident, CVA; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| ischemic stroke | P0 | covered | matched_terms: ischemic stroke, 缺血性脑卒中, 脑梗死, cerebral ischemic stroke, Stroke; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| hemorrhagic stroke | P1 | covered | matched_terms: hemorrhagic stroke, 出血性脑卒中, 脑出血性卒中, Stroke; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| transient ischemic attack | P1 | covered | matched_terms: transient ischemic attack, 短暂性脑缺血发作, 短暂脑缺血发作, TIA, Ischemic Attack, Transient; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| cerebral infarction | P0 | covered | matched_terms: cerebral infarction, 脑梗死, 脑梗塞, brain infarction; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| intracerebral hemorrhage | P1 | covered | matched_terms: intracerebral hemorrhage, 脑实质出血, 脑内出血, ICH, Cerebral Hemorrhage; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| subarachnoid hemorrhage | P1 | covered | matched_terms: subarachnoid hemorrhage, 蛛网膜下腔出血, SAH; matched_gtex_tissues: Brain, Whole Blood; subcategory: cerebrovascular_disease; concept_type: disease |
+| thrombosis | P1 | covered | matched_terms: thrombosis, 血栓形成, 血栓, blood thrombosis; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: thrombosis_embolism; concept_type: disease |
+| venous thromboembolism | P0 | covered | matched_terms: venous thromboembolism, 静脉血栓栓塞症, 静脉血栓栓塞, VTE; matched_gtex_tissues: Whole Blood; subcategory: thrombosis_embolism; concept_type: disease |
+| deep vein thrombosis | P0 | covered | matched_terms: deep vein thrombosis, 深静脉血栓形成, 深静脉血栓, DVT, Venous Thrombosis; matched_gtex_tissues: Whole Blood; subcategory: thrombosis_embolism; concept_type: disease |
+| pulmonary embolism | P0 | covered | matched_terms: pulmonary embolism, 肺栓塞, PE; matched_gtex_tissues: Lung, Whole Blood; subcategory: thrombosis_embolism; concept_type: disease |
+| arterial thrombosis | P1 | covered | matched_terms: arterial thrombosis, 动脉血栓形成, 动脉血栓, Thrombosis; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: thrombosis_embolism; concept_type: disease |
+| valvular heart disease | P1 | covered | matched_terms: valvular heart disease, 心脏瓣膜病, 瓣膜性心脏病, heart valve disease, VHD, Heart Valve Diseases; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: valvular_structural_heart_disease; concept_type: disease |
+| aortic stenosis | P1 | covered | matched_terms: aortic stenosis, 主动脉瓣狭窄, aortic valve stenosis, AS; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: valvular_structural_heart_disease; concept_type: disease |
+| mitral regurgitation | P1 | covered | matched_terms: mitral regurgitation, 二尖瓣反流, 二尖瓣关闭不全, mitral insufficiency, MR, Mitral Valve Insufficiency; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: valvular_structural_heart_disease; concept_type: disease |
+| mitral stenosis | P1 | covered | matched_terms: mitral stenosis, 二尖瓣狭窄, MS, Mitral Valve Stenosis; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: valvular_structural_heart_disease; concept_type: disease |
+| congenital heart disease | P1 | covered | matched_terms: congenital heart disease, 先天性心脏病, 先心病, congenital cardiac disease, CHD, Heart Defects, Congenital; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: valvular_structural_heart_disease; concept_type: disease |
+| dyslipidemia | P0 | covered | matched_terms: dyslipidemia, 血脂异常, 脂质异常, dyslipidaemia, Dyslipidemias; matched_gtex_tissues: Liver, Adipose - Subcutaneous, Adipose - Visceral, Whole Blood; subcategory: cardiovascular_risk_factor_phenotype; concept_type: disease |
+| hypercholesterolemia | P1 | covered | matched_terms: hypercholesterolemia, 高胆固醇血症, 胆固醇升高, high cholesterol; matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_risk_factor_phenotype; concept_type: disease |
+| obesity | P1 | covered | matched_terms: obesity, 肥胖, 肥胖症; matched_gtex_tissues: Adipose - Subcutaneous, Adipose - Visceral; subcategory: cardiovascular_risk_factor_phenotype; concept_type: disease |
+| diabetes mellitus | P1 | covered | matched_terms: diabetes mellitus, 糖尿病, diabetes, DM; matched_gtex_tissues: Whole Blood; subcategory: cardiovascular_risk_factor_phenotype; concept_type: disease |
+| smoking | P1 | covered | matched_terms: smoking, 吸烟, 烟草暴露, tobacco smoking, smoking exposure; matched_gtex_tissues: Lung, Whole Blood; subcategory: cardiovascular_risk_factor_phenotype; concept_type: risk_factor |
+| inflammation | P1 | covered | matched_terms: inflammation, 炎症, 炎性反应, inflammatory response; matched_gtex_tissues: Whole Blood; subcategory: cardiovascular_risk_factor_phenotype; concept_type: phenotype |
+| vascular stiffness | P1 | covered | matched_terms: vascular stiffness, 血管僵硬, 血管硬度, vascular stiffening; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial, Whole Blood; subcategory: cardiovascular_risk_factor_phenotype; concept_type: phenotype |
+| arterial stiffness | P1 | covered | matched_terms: arterial stiffness, 动脉僵硬, 动脉硬度, arterial stiffening, Vascular Stiffness; matched_gtex_tissues: Artery - Aorta, Artery - Coronary, Artery - Tibial; subcategory: cardiovascular_risk_factor_phenotype; concept_type: phenotype |
+| left ventricular hypertrophy | P1 | covered | matched_terms: left ventricular hypertrophy, 左心室肥厚, 左室肥厚, LVH, Hypertrophy, Left Ventricular; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: cardiovascular_risk_factor_phenotype; concept_type: phenotype |
+| ejection fraction | P0 | covered | matched_terms: ejection fraction, 射血分数, 心脏射血分数, left ventricular ejection fraction, EF, LVEF, Stroke Volume; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage; subcategory: cardiovascular_risk_factor_phenotype; concept_type: phenotype |
+| troponin | P0 | covered | matched_terms: troponin, 肌钙蛋白, 心肌肌钙蛋白, cardiac troponin, Tn; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| cardiac troponin I | P0 | covered | matched_terms: cardiac troponin I, 心肌肌钙蛋白I, 肌钙蛋白I, troponin I, cTnI, TnI; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| cardiac troponin T | P0 | covered | matched_terms: cardiac troponin T, 心肌肌钙蛋白T, 肌钙蛋白T, troponin T, cTnT, TnT; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| B-type natriuretic peptide | P0 | covered | matched_terms: B-type natriuretic peptide, B型利钠肽, 脑钠肽, brain natriuretic peptide, BNP, Natriuretic Peptide, Brain; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| N-terminal pro-B-type natriuretic peptide | P0 | covered | matched_terms: N-terminal pro-B-type natriuretic peptide, N端脑钠肽前体, NT-proBNP, N terminal pro BNP, Natriuretic Peptide, Brain; matched_gtex_tissues: Heart - Left Ventricle, Heart - Atrial Appendage, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| C-reactive protein | P0 | covered | matched_terms: C-reactive protein, C反应蛋白, 高敏C反应蛋白, high-sensitivity C-reactive protein, hs-CRP, CRP, hsCRP; matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| LDL cholesterol | P0 | covered | matched_terms: LDL cholesterol, 低密度脂蛋白胆固醇, LDL胆固醇, low-density lipoprotein cholesterol, LDL-C, LDL, Cholesterol, LDL; matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| HDL cholesterol | P0 | covered | matched_terms: HDL cholesterol, 高密度脂蛋白胆固醇, HDL胆固醇, high-density lipoprotein cholesterol, HDL-C, HDL, Cholesterol, HDL; matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| triglycerides | P0 | covered | matched_terms: triglycerides, 甘油三酯, 三酰甘油, triacylglycerol, TG; matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| total cholesterol | P1 | covered | matched_terms: total cholesterol, 总胆固醇, 血清总胆固醇, serum total cholesterol, TC, Cholesterol; matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| lipoprotein(a) | P1 | covered | matched_terms: lipoprotein(a), 脂蛋白a, 脂蛋白(a), lipoprotein a, Lp(a); matched_gtex_tissues: Liver, Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+| homocysteine | P1 | covered | matched_terms: homocysteine, 同型半胱氨酸, 高同型半胱氨酸, total homocysteine, Hcy; matched_gtex_tissues: Whole Blood; subcategory: cardiovascular_biomarker; concept_type: biomarker |
+
+## Cardiovascular Core Summary
+
+- cardiovascular checklist total count: 80
+- covered count: 80
+- missing count: 0
+- coverage percentage: 1.000
+- missing terms: 0
+- quality gate status: pass
+- subcategory coverage: arrhythmia 8/8, atherosclerosis_vascular_disease 9/9, cardiovascular_biomarker 12/12, cardiovascular_risk_factor_phenotype 10/10, cerebrovascular_disease 7/7, coronary_ischemic_heart_disease 9/9, heart_failure_cardiomyopathy 8/8, hypertension_blood_pressure 7/7, thrombosis_embolism 5/5, valvular_structural_heart_disease 5/5
+- missing term details: none
+- high-risk ambiguity terms: CAD, CHD, MI, PH, AF, VT, VF, PE, LDL, HDL, CRP, BNP, EF
+
 ## P0 Gaps
 
 No P0 gaps detected.
@@ -615,6 +712,8 @@ No P2 gaps detected.
 | bioinformatics_modality_missing_terms | 0 | 0 | pass |
 | meta_analysis_terms_core_coverage | 1.0 | 0.95 | pass |
 | meta_analysis_terms_missing_terms | 0 | 0 | pass |
+| cardiovascular_core_coverage | 1.0 | 0.95 | pass |
+| cardiovascular_core_missing_terms | 0 | 0 | pass |
 | missing_items | 0 | 0 | pass |
 | p0_gaps | 0 | 0 | pass |
 | audit_cross_context_pollution | 0 | 0 | pass |
@@ -624,6 +723,7 @@ No P2 gaps detected.
 
 - anatomy_tissue_core: project-curated GTEx tissue site and TCGA primary site checklist (2026-05-11 curated v1)
 - bioinformatics_modality_core: BioMedPilot curated shared medical vocabulary checklist (bioinformatics_modality_core_v1)
+- cardiovascular_core: project_curated (cardiovascular_core_v1)
 - common_cancers: GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects (Curated common cancer checklist, 2026-05)
 - common_diseases: WHO noncommunicable diseases and major disease categories (Curated major disease category checklist, 2026-05)
 - endocrine_metabolic_core: project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist (2026-05-11 curated v1)
