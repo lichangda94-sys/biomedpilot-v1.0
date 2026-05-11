@@ -72,7 +72,9 @@ def build_search_translation_draft(
             [*term_lookup.disease_terms_en, *term_lookup.synonyms_en, *registry["main_concepts_en"]]
         )
         registry["modifier_terms_en"] = _unique([*registry["modifier_terms_en"], *term_lookup.modifier_terms_en])
-        registry["data_type_terms_en"] = _unique([*term_lookup.data_modality_terms, *registry["data_type_terms_en"]])
+        registry["data_type_terms_en"] = _unique(
+            [*term_lookup.data_modality_terms, *term_lookup.assay_terms, *registry["data_type_terms_en"]]
+        )
     term_lookup_audit = _term_lookup_audit_for_context(term_lookup.to_dict(), target_context)
     audit: dict[str, object] = {
         "registry_concepts": [concept.to_dict() for concept in intelligence.concepts],
@@ -85,6 +87,8 @@ def build_search_translation_draft(
         "tcga_primary_site_candidates": term_lookup.tcga_primary_site_candidates if target_context == "bioinformatics" else [],
         "gtex_tissue_candidates": term_lookup.gtex_tissue_candidates if target_context == "bioinformatics" else [],
         "tissue_terms": term_lookup.tissue_terms if target_context == "bioinformatics" else [],
+        "assay_terms": term_lookup.assay_terms,
+        "platform_candidates": term_lookup.platform_candidates if target_context == "bioinformatics" else [],
     }
     warnings = list(intelligence.warnings)
     warnings.extend(term_lookup.warnings)
@@ -383,6 +387,8 @@ def _database_terms_for_context(
                 *getattr(term_lookup, "tcga_primary_site_candidates", []),
                 *getattr(term_lookup, "gtex_tissue_candidates", []),
                 *getattr(term_lookup, "tissue_terms", []),
+                *getattr(term_lookup, "assay_terms", []),
+                *getattr(term_lookup, "platform_candidates", []),
             ]
         )
     if target_context == "meta_analysis":
@@ -412,7 +418,7 @@ def _term_lookup_audit_for_context(payload: dict[str, object], target_context: s
             "tcga_project_candidates",
             "tcga_primary_site_candidates",
             "gtex_tissue_candidates",
-            "data_modality_terms",
+            "platform_candidates",
         ):
             result.pop(key, None)
     return result
@@ -425,6 +431,8 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "disease_terms_en",
                 "tissue_terms",
                 "data_modality_terms",
+                "assay_terms",
+                "platform_candidates",
                 "tcga_project_candidates",
                 "tcga_primary_site_candidates",
                 "gtex_tissue_candidates",
@@ -444,6 +452,8 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "synonyms_en",
                 "abbreviations",
                 "mesh_terms",
+                "data_modality_terms",
+                "assay_terms",
                 "exposure_terms",
                 "intervention_terms",
                 "outcome_terms",
@@ -454,6 +464,7 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "tcga_project_candidates",
                 "tcga_primary_site_candidates",
                 "gtex_tissue_candidates",
+                "platform_candidates",
                 "geo_query_candidates",
             ],
         }

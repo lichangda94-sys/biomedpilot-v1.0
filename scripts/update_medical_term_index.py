@@ -48,6 +48,8 @@ class IndexConcept:
     tissue_terms: list[str] = field(default_factory=list)
     tcga_primary_site_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
+    assay_terms: list[str] = field(default_factory=list)
+    platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     disease_group: str = ""
     concept_type: str = "unknown"
@@ -476,6 +478,8 @@ def _insert_synonyms(conn: sqlite3.Connection, term_id: int, concept: IndexConce
         ("mesh", concept.mesh_terms, "en"),
         ("tissue", concept.tissue_terms, "en"),
         ("data_modality", concept.data_modality_terms, "en"),
+        ("assay", concept.assay_terms, "en"),
+        ("platform", concept.platform_candidates, "en"),
         ("modifier", concept.modifier_terms_en, "en"),
     )
     for synonym_type, values, language in groups:
@@ -519,6 +523,10 @@ def _insert_search_values(conn: sqlite3.Connection, term_id: int, concept: Index
             *concept.related_synonyms_en,
             *concept.abbreviations,
             *concept.mesh_terms,
+            *concept.tissue_terms,
+            *concept.data_modality_terms,
+            *concept.assay_terms,
+            *concept.platform_candidates,
         ]
     )
     for value in values:
@@ -663,6 +671,8 @@ def _defaults() -> dict[str, object]:
         "tissue_terms": [],
         "tcga_primary_site_candidates": [],
         "data_modality_terms": [],
+        "assay_terms": [],
+        "platform_candidates": [],
         "modifier_terms_en": [],
         "disease_group": "",
         "concept_type": "unknown",
