@@ -1,2 +1,0 @@
-"""Meta Analysis screening namespace."""
-
