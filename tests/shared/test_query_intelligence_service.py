@@ -12,7 +12,36 @@ from app.shared.query_intelligence import (
     analyze_medical_question,
     build_search_translation_draft,
 )
-from app.shared.query_intelligence.medical_terms import active_index_status, lookup_medical_terms
+from app.shared.query_intelligence.medical_terms import (
+    RegistryFallbackVocabularyProvider,
+    TermConcept,
+    VocabularyProviderMatch,
+    active_index_status,
+    default_vocabulary_providers,
+    lookup_medical_terms,
+)
+
+
+class _InjectedVocabularyProvider:
+    provider_id = "test_vocabulary_provider"
+    provider_kind = "test_provider"
+
+    def lookup(self, query: str, normalized_query: str, target_context: str) -> VocabularyProviderMatch:
+        return VocabularyProviderMatch(
+            source=self.provider_id,
+            provider_kind=self.provider_kind,
+            index_concepts=(
+                TermConcept(
+                    concept_id="test:custom_disease",
+                    source_vocabulary="test",
+                    source_id="custom",
+                    preferred_label_en="custom disease",
+                    concept_type="disease",
+                    normalized_terms=[normalized_query],
+                    cross_refs={"tcga": ["TCGA-CUSTOM"]},
+                ),
+            ),
+        )
 
 
 def test_registry_fallback_maps_shared_concepts_without_bundled_vocabulary_assets() -> None:
@@ -41,6 +70,25 @@ def test_lookup_uses_registry_when_external_medical_terms_assets_are_absent() ->
     assert "biomedical_term_registry" in result.term_sources
     assert "thyroid cancer" in result.disease_terms_en
     assert "TCGA-THCA" in result.tcga_project_candidates
+
+
+def test_lookup_uses_vocabulary_provider_interface_before_fallback() -> None:
+    result = lookup_medical_terms("自定义疾病", providers=(_InjectedVocabularyProvider(), RegistryFallbackVocabularyProvider()))
+
+    assert result.term_sources[0] == "test_vocabulary_provider"
+    assert "custom disease" in result.disease_terms_en
+    assert "TCGA-CUSTOM" in result.tcga_project_candidates
+
+
+def test_default_vocabulary_providers_keep_external_assets_before_mainline_fallback() -> None:
+    providers = default_vocabulary_providers()
+
+    assert [provider.provider_id for provider in providers] == [
+        "zh_term_overrides",
+        "runtime_medical_terms_index",
+        "biomedical_term_registry",
+    ]
+    assert providers[-1].provider_kind == "mainline_fallback"
 
 
 def test_build_search_translation_draft_keeps_context_boundaries() -> None:

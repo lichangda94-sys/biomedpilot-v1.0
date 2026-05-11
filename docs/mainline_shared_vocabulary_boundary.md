@@ -32,6 +32,19 @@ Bioinformatics pages, run data recognition, or generate Meta Analysis search
 drafts. If external vocabulary assets are absent, lookup falls back to the
 small in-code biomedical registry.
 
+All application callers should enter vocabulary through:
+
+- `lookup_medical_terms(query, target_context=...)`
+- `default_vocabulary_providers()`
+- custom `MedicalVocabularyProvider` implementations when a packaged or
+  branch-local vocabulary module is available
+
+The default provider order in mainline is:
+
+1. external Chinese overrides
+2. external runtime medical terms index
+3. mainline fallback registry
+
 Vocabulary branches may provide richer assets at the existing optional paths:
 
 - `data/medical_terms/zh_term_overrides.json`

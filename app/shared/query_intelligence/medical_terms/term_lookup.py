@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-from app.shared.query_intelligence.biomedical_term_registry import match_registry_concepts
+from collections.abc import Iterable
 
-from .term_index_loader import load_full_term_index, load_mini_term_index
-from .term_index_models import ChineseTermOverride, TermConcept, TermLookupResult
-from .term_normalizer import normalize_en_term, normalize_zh_term
-from .zh_overrides_loader import load_zh_overrides
+from .term_index_models import TermLookupResult
+from .term_normalizer import normalize_zh_term
+from .vocabulary_provider import MedicalVocabularyProvider, VocabularyProviderMatch, default_vocabulary_providers
 
 
-def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> TermLookupResult:
+def lookup_medical_terms(
+    query: str,
+    target_context: str = "bioinformatics",
+    *,
+    providers: Iterable[MedicalVocabularyProvider] | None = None,
+) -> TermLookupResult:
     normalized = normalize_zh_term(query)
     warnings: list[str] = []
     matched_zh_terms: list[str] = []
@@ -30,10 +34,90 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     term_sources: list[str] = []
     confidences: list[float] = []
 
-    overrides = _matched_overrides(normalized)
-    if overrides:
-        _append_unique(term_sources, "zh_term_overrides")
-    for override in overrides:
+    provider_matches = tuple(
+        provider.lookup(query, normalized, target_context)
+        for provider in (tuple(providers) if providers is not None else default_vocabulary_providers())
+    )
+    registry_matched = any(match.registry_concepts for match in provider_matches)
+    for match in provider_matches:
+        if match.matched:
+            _append_unique(term_sources, match.source)
+        _apply_provider_match(
+            match,
+            matched_zh_terms=matched_zh_terms,
+            disease_terms=disease_terms,
+            synonyms=synonyms,
+            abbreviations=abbreviations,
+            mesh_terms=mesh_terms,
+            tissue_terms=tissue_terms,
+            tcga_projects=tcga_projects,
+            gtex_tissues=gtex_tissues,
+            data_modalities=data_modalities,
+            modifier_terms=modifier_terms,
+            exposure_terms=exposure_terms,
+            intervention_terms=intervention_terms,
+            outcome_terms=outcome_terms,
+            study_design_terms=study_design_terms,
+            publication_type_terms=publication_type_terms,
+            concept_ids=concept_ids,
+            confidences=confidences,
+        )
+
+    if not any(match.matched for match in provider_matches):
+        warnings.append("未在医学词库索引中匹配到明确术语。")
+
+    if not disease_terms and tissue_terms:
+        warnings.append("仅识别到组织词，未识别到明确疾病词。")
+    if target_context == "meta_analysis":
+        tcga_projects = []
+        gtex_tissues = []
+
+    return TermLookupResult(
+        original_term=query,
+        normalized_term=normalized,
+        matched=bool(matched_zh_terms or disease_terms or tissue_terms or data_modalities or modifier_terms),
+        matched_zh_terms=matched_zh_terms,
+        disease_terms_en=disease_terms,
+        synonyms_en=synonyms,
+        abbreviations=abbreviations,
+        mesh_terms=mesh_terms,
+        tissue_terms=tissue_terms,
+        tcga_project_candidates=tcga_projects,
+        gtex_tissue_candidates=gtex_tissues,
+        data_modality_terms=data_modalities,
+        modifier_terms_en=modifier_terms,
+        exposure_terms=exposure_terms,
+        intervention_terms=intervention_terms,
+        outcome_terms=outcome_terms,
+        study_design_terms=study_design_terms,
+        publication_type_terms=publication_type_terms,
+        concept_ids=concept_ids,
+        term_sources=term_sources,
+        confidence=max(confidences) if confidences else (0.75 if registry_matched else 0.0),
+        warnings=warnings,
+    )
+
+
+def _apply_provider_match(match: VocabularyProviderMatch, **targets: list[str] | list[float]) -> None:
+    matched_zh_terms = targets["matched_zh_terms"]
+    disease_terms = targets["disease_terms"]
+    synonyms = targets["synonyms"]
+    abbreviations = targets["abbreviations"]
+    mesh_terms = targets["mesh_terms"]
+    tissue_terms = targets["tissue_terms"]
+    tcga_projects = targets["tcga_projects"]
+    gtex_tissues = targets["gtex_tissues"]
+    data_modalities = targets["data_modalities"]
+    modifier_terms = targets["modifier_terms"]
+    exposure_terms = targets["exposure_terms"]
+    intervention_terms = targets["intervention_terms"]
+    outcome_terms = targets["outcome_terms"]
+    study_design_terms = targets["study_design_terms"]
+    publication_type_terms = targets["publication_type_terms"]
+    concept_ids = targets["concept_ids"]
+    confidences = targets["confidences"]
+
+    for override in match.overrides:
         _append_unique(matched_zh_terms, override.zh_term)
         _extend_unique(concept_ids, override.mapped_concept_ids)
         _extend_unique(disease_terms, override.disease_terms_en)
@@ -51,12 +135,9 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(study_design_terms, override.study_design_terms)
         _extend_unique(publication_type_terms, override.publication_type_terms)
         if override.confidence:
-            confidences.append(override.confidence)
+            confidences.append(override.confidence)  # type: ignore[union-attr]
 
-    index_matches, index_source = _matched_runtime_index_concepts(normalized)
-    if index_matches:
-        _append_unique(term_sources, index_source)
-    for concept in index_matches:
+    for concept in match.index_concepts:
         _append_unique(concept_ids, concept.concept_id)
         if concept.concept_type == "disease":
             _append_unique(disease_terms, concept.preferred_label_en)
@@ -92,10 +173,7 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         _extend_unique(tcga_projects, concept.cross_refs.get("tcga", ()))
         _extend_unique(gtex_tissues, concept.cross_refs.get("gtex", ()))
 
-    registry_matches = match_registry_concepts(query, target_context=target_context)
-    if registry_matches:
-        _append_unique(term_sources, "biomedical_term_registry")
-    for concept in registry_matches:
+    for concept in match.registry_concepts:
         if concept.semantic_group == "disease":
             _extend_unique(disease_terms, concept.en_terms)
             _extend_unique(synonyms, concept.synonyms)
@@ -109,92 +187,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
             _extend_unique(matched_zh_terms, concept.zh_terms)
         elif concept.semantic_group == "dataset":
             _extend_unique(data_modalities, [term for term in concept.en_terms if term not in {"dataset", "GEO", "GSE"}])
-
-    if not overrides and not index_matches and not registry_matches:
-        warnings.append("未在医学词库索引中匹配到明确术语。")
-
-    if not disease_terms and tissue_terms:
-        warnings.append("仅识别到组织词，未识别到明确疾病词。")
-    if target_context == "meta_analysis":
-        tcga_projects = []
-        gtex_tissues = []
-
-    return TermLookupResult(
-        original_term=query,
-        normalized_term=normalized,
-        matched=bool(matched_zh_terms or disease_terms or tissue_terms or data_modalities or modifier_terms),
-        matched_zh_terms=matched_zh_terms,
-        disease_terms_en=disease_terms,
-        synonyms_en=synonyms,
-        abbreviations=abbreviations,
-        mesh_terms=mesh_terms,
-        tissue_terms=tissue_terms,
-        tcga_project_candidates=tcga_projects,
-        gtex_tissue_candidates=gtex_tissues,
-        data_modality_terms=data_modalities,
-        modifier_terms_en=modifier_terms,
-        exposure_terms=exposure_terms,
-        intervention_terms=intervention_terms,
-        outcome_terms=outcome_terms,
-        study_design_terms=study_design_terms,
-        publication_type_terms=publication_type_terms,
-        concept_ids=concept_ids,
-        term_sources=term_sources,
-        confidence=max(confidences) if confidences else (0.75 if registry_matches else 0.0),
-        warnings=warnings,
-    )
-
-
-def _matched_overrides(normalized_query: str) -> list[ChineseTermOverride]:
-    candidates: list[ChineseTermOverride] = []
-    for override in load_zh_overrides():
-        if not override.normalized_zh:
-            continue
-        if override.normalized_zh == normalized_query or override.normalized_zh in normalized_query:
-            candidates.append(override)
-    return _rank_override_matches(candidates)
-
-
-def _matched_runtime_index_concepts(normalized_query: str) -> tuple[list[TermConcept], str]:
-    full_matches = _matched_index_concepts(normalized_query, load_full_term_index())
-    if full_matches:
-        return full_matches, "medical_terms_index.sqlite"
-    mini_matches = _matched_index_concepts(normalized_query, load_mini_term_index())
-    if mini_matches:
-        return mini_matches, "mini_medical_terms_index"
-    return [], ""
-
-
-def _matched_index_concepts(normalized_query: str, concepts: tuple[TermConcept, ...]) -> list[TermConcept]:
-    candidates: list[TermConcept] = []
-    for concept in concepts:
-        terms = [concept.preferred_label_en, *concept.normalized_terms, *concept.synonyms_en, *concept.exact_synonyms_en]
-        for term in terms:
-            normalized = normalize_zh_term(term) if not term.isascii() else normalize_en_term(term)
-            if normalized and (normalized == normalized_query or normalized in normalized_query):
-                candidates.append(concept)
-                break
-    return _rank_concept_matches(candidates)
-
-
-def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[ChineseTermOverride]:
-    priority = {"disease": 0, "modifier": 1, "tissue": 2, "data_modality": 3}
-    candidates.sort(key=lambda item: (priority.get(item.concept_type, 9), -len(item.normalized_zh), -item.confidence))
-    disease_spans = [item.normalized_zh for item in candidates if item.concept_type == "disease"]
-    result: list[ChineseTermOverride] = []
-    for item in candidates:
-        if item.concept_type in {"tissue", "data_modality"} and any(item.normalized_zh != span and item.normalized_zh in span for span in disease_spans):
-            continue
-        result.append(item)
-    return result
-
-
-def _rank_concept_matches(candidates: list[TermConcept]) -> list[TermConcept]:
-    priority = {"disease": 0, "modifier": 1, "tissue": 2, "data_modality": 3}
-    unique: dict[str, TermConcept] = {candidate.concept_id: candidate for candidate in candidates}
-    items = list(unique.values())
-    items.sort(key=lambda item: (priority.get(item.concept_type, 9), -max((len(term) for term in item.normalized_terms), default=0)))
-    return items
 
 
 def _tcga_from_database_terms(terms: tuple[str, ...]) -> list[str]:
