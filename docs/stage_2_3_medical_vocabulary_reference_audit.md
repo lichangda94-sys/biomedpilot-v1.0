@@ -4,7 +4,7 @@
 
 | Section | Total | Covered | Partial | Missing | Coverage | Weighted |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| overall | 552 | 552 | 0 | 0 | 1.000 | 1.000 |
+| overall | 621 | 621 | 0 | 0 | 1.000 | 1.000 |
 
 ## TCGA Projects Covered/Missing
 
@@ -681,6 +681,92 @@
 - missing term details: none
 - high-risk ambiguity terms: CAD, CHD, MI, PH, AF, VT, VF, PE, LDL, HDL, CRP, BNP, EF
 
+## Immune Inflammatory Core Covered/Missing
+
+| Item | Priority | Status | Evidence |
+| --- | --- | --- | --- |
+| systemic lupus erythematosus | P0 | covered | matched_terms: systemic lupus erythematosus, 系统性红斑狼疮, 红斑狼疮, lupus, SLE, Lupus Erythematosus, Systemic; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: autoimmune_disease; concept_type: disease |
+| rheumatoid arthritis | P0 | covered | matched_terms: rheumatoid arthritis, 类风湿关节炎, 类风湿性关节炎, inflammatory arthritis, RA, Arthritis, Rheumatoid; matched_gtex_tissues: Whole Blood; subcategory: autoimmune_disease; concept_type: disease |
+| Sjogren syndrome | P0 | covered | matched_terms: Sjogren syndrome, 干燥综合征, 舍格伦综合征, 干燥症, Sjögren syndrome, Sjögren disease, sicca syndrome, SS; matched_gtex_tissues: Whole Blood, Spleen; subcategory: autoimmune_disease; concept_type: disease |
+| systemic sclerosis | P0 | covered | matched_terms: systemic sclerosis, 系统性硬化症, 硬皮病, 系统性硬皮病, scleroderma, SSc, Scleroderma, Systemic; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: autoimmune_disease; concept_type: disease |
+| dermatomyositis | P0 | covered | matched_terms: dermatomyositis, 皮肌炎, idiopathic dermatomyositis, DM; matched_gtex_tissues: Muscle - Skeletal, Whole Blood; subcategory: autoimmune_disease; concept_type: disease |
+| polymyositis | P0 | covered | matched_terms: polymyositis, 多发性肌炎, idiopathic polymyositis, PM; matched_gtex_tissues: Muscle - Skeletal, Whole Blood; subcategory: autoimmune_disease; concept_type: disease |
+| mixed connective tissue disease | P0 | covered | matched_terms: mixed connective tissue disease, 混合性结缔组织病, mixed connective-tissue disease, MCTD; matched_gtex_tissues: Whole Blood; subcategory: autoimmune_disease; concept_type: disease |
+| antiphospholipid syndrome | P0 | covered | matched_terms: antiphospholipid syndrome, 抗磷脂综合征, 抗磷脂抗体综合征, antiphospholipid antibody syndrome, APS; matched_gtex_tissues: Whole Blood; subcategory: autoimmune_disease; concept_type: disease |
+| Hashimoto thyroiditis | P0 | covered | matched_terms: Hashimoto thyroiditis, 桥本甲状腺炎, 桥本病, Hashimoto disease, chronic lymphocytic thyroiditis, 慢性淋巴细胞性甲状腺炎; matched_gtex_tissues: Thyroid, Whole Blood; subcategory: autoimmune_cross_reference; concept_type: disease |
+| Graves disease | P0 | covered | matched_terms: Graves disease, Graves病, 格雷夫斯病, 毒性弥漫性甲状腺肿, Basedow disease, Graves-Basedow disease; matched_gtex_tissues: Thyroid, Whole Blood; subcategory: autoimmune_cross_reference; concept_type: disease |
+| osteoarthritis | P0 | covered | matched_terms: osteoarthritis, 骨关节炎, 退行性关节炎, degenerative joint disease, OA; matched_gtex_tissues: Whole Blood; subcategory: rheumatic_arthritis; concept_type: disease |
+| ankylosing spondylitis | P0 | covered | matched_terms: ankylosing spondylitis, 强直性脊柱炎, Bechterew disease, AS, Spondylitis, Ankylosing; matched_gtex_tissues: Whole Blood; subcategory: rheumatic_arthritis; concept_type: disease |
+| psoriatic arthritis | P0 | covered | matched_terms: psoriatic arthritis, 银屑病关节炎, 牛皮癣关节炎, arthritis psoriatic, PsA, Arthritis, Psoriatic; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: rheumatic_arthritis; concept_type: disease |
+| juvenile idiopathic arthritis | P0 | covered | matched_terms: juvenile idiopathic arthritis, 幼年特发性关节炎, 儿童特发性关节炎, juvenile rheumatoid arthritis, JIA, Arthritis, Juvenile; matched_gtex_tissues: Whole Blood; subcategory: rheumatic_arthritis; concept_type: disease |
+| gout | P0 | covered | matched_terms: gout, 痛风, 痛风性关节炎, gouty arthritis; matched_gtex_tissues: Whole Blood; subcategory: rheumatic_arthritis; concept_type: disease |
+| vasculitis | P0 | covered | matched_terms: vasculitis, 血管炎, vascular inflammation; matched_gtex_tissues: Artery, Artery - Aorta, Whole Blood; subcategory: vasculitis; concept_type: disease |
+| giant cell arteritis | P0 | covered | matched_terms: giant cell arteritis, 巨细胞动脉炎, temporal arteritis, GCA; matched_gtex_tissues: Artery, Artery - Aorta, Whole Blood; subcategory: vasculitis; concept_type: disease |
+| Takayasu arteritis | P0 | covered | matched_terms: Takayasu arteritis, 大动脉炎, 高安动脉炎, Takayasu disease, TAK; matched_gtex_tissues: Artery, Artery - Aorta, Whole Blood; subcategory: vasculitis; concept_type: disease |
+| ANCA-associated vasculitis | P0 | covered | matched_terms: ANCA-associated vasculitis, ANCA相关性血管炎, 抗中性粒细胞胞浆抗体相关性血管炎, antineutrophil cytoplasmic antibody-associated vasculitis, AAV, Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis; matched_gtex_tissues: Kidney - Cortex, Whole Blood; subcategory: vasculitis; concept_type: disease |
+| inflammatory bowel disease | P0 | covered | matched_terms: inflammatory bowel disease, 炎症性肠病, 炎性肠病, inflammatory bowel diseases, IBD; matched_gtex_tissues: Colon - Sigmoid, Colon - Transverse, Small Intestine - Terminal Ileum, Whole Blood; subcategory: inflammatory_bowel_disease; concept_type: disease |
+| Crohn disease | P0 | covered | matched_terms: Crohn disease, 克罗恩病, 克隆病, 克罗恩氏病, Crohn's disease, regional enteritis, CD; matched_gtex_tissues: Colon - Sigmoid, Colon - Transverse, Small Intestine - Terminal Ileum, Whole Blood; subcategory: inflammatory_bowel_disease; concept_type: disease |
+| ulcerative colitis | P0 | covered | matched_terms: ulcerative colitis, 溃疡性结肠炎, UC, colitis ulcerative, Colitis, Ulcerative; matched_gtex_tissues: Colon - Sigmoid, Colon - Transverse, Small Intestine - Terminal Ileum, Whole Blood; subcategory: inflammatory_bowel_disease; concept_type: disease |
+| microscopic colitis | P0 | covered | matched_terms: microscopic colitis, 显微镜下结肠炎; matched_gtex_tissues: Colon - Sigmoid, Colon - Transverse, Small Intestine - Terminal Ileum, Whole Blood; subcategory: inflammatory_bowel_disease; concept_type: disease |
+| asthma | P0 | covered | matched_terms: asthma, 哮喘, 支气管哮喘, bronchial asthma; matched_gtex_tissues: Lung, Whole Blood; subcategory: allergy_airway_inflammation; concept_type: disease |
+| allergic rhinitis | P0 | covered | matched_terms: allergic rhinitis, 变应性鼻炎, 过敏性鼻炎, hay fever, Rhinitis, Allergic; matched_gtex_tissues: Whole Blood; subcategory: allergy_airway_inflammation; concept_type: disease |
+| atopic dermatitis | P0 | covered | matched_terms: atopic dermatitis, 特应性皮炎, 异位性皮炎, atopic eczema, Dermatitis, Atopic; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: allergy_airway_inflammation; concept_type: disease |
+| eczema | P0 | covered | matched_terms: eczema, 湿疹, dermatitis; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: allergy_airway_inflammation; concept_type: disease |
+| food allergy | P0 | covered | matched_terms: food allergy, 食物过敏, food hypersensitivity; matched_gtex_tissues: Colon - Sigmoid, Colon - Transverse, Small Intestine - Terminal Ileum, Whole Blood; subcategory: allergy_airway_inflammation; concept_type: disease |
+| anaphylaxis | P0 | covered | matched_terms: anaphylaxis, 过敏性休克, 严重过敏反应, anaphylactic reaction; matched_gtex_tissues: Whole Blood; subcategory: allergy_airway_inflammation; concept_type: disease |
+| chronic rhinosinusitis | P0 | covered | matched_terms: chronic rhinosinusitis, 慢性鼻窦炎, 慢性鼻-鼻窦炎, chronic sinusitis, CRS, Sinusitis; matched_gtex_tissues: Whole Blood; subcategory: allergy_airway_inflammation; concept_type: disease |
+| chronic obstructive pulmonary disease | P0 | covered | matched_terms: chronic obstructive pulmonary disease, 慢性阻塞性肺疾病, 慢阻肺, chronic obstructive lung disease, COPD, Pulmonary Disease, Chronic Obstructive; matched_gtex_tissues: Lung, Whole Blood; subcategory: allergy_airway_inflammation; concept_type: disease |
+| psoriasis | P0 | covered | matched_terms: psoriasis, 银屑病, 牛皮癣, psoriasis vulgaris, PsO; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: skin_immune_disease; concept_type: disease |
+| vitiligo | P0 | covered | matched_terms: vitiligo, 白癜风, leukoderma; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: skin_immune_disease; concept_type: disease |
+| alopecia areata | P0 | covered | matched_terms: alopecia areata, 斑秃, patchy hair loss, AA; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: skin_immune_disease; concept_type: disease |
+| hidradenitis suppurativa | P0 | covered | matched_terms: hidradenitis suppurativa, 化脓性汗腺炎, acne inversa, HS; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: skin_immune_disease; concept_type: disease |
+| pemphigus | P0 | covered | matched_terms: pemphigus, 天疱疮, pemphigus vulgaris; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: skin_immune_disease; concept_type: disease |
+| bullous pemphigoid | P0 | covered | matched_terms: bullous pemphigoid, 大疱性类天疱疮, Pemphigoid, Bullous; matched_gtex_tissues: Skin, Skin - Sun Exposed (Lower leg), Skin - Not Sun Exposed (Suprapubic); subcategory: skin_immune_disease; concept_type: disease |
+| multiple sclerosis | P0 | covered | matched_terms: multiple sclerosis, 多发性硬化, 多发性硬化症, MS; matched_gtex_tissues: Brain, Brain - Cortex, Whole Blood; subcategory: neuroimmune_disease; concept_type: disease |
+| neuromyelitis optica spectrum disorder | P0 | covered | matched_terms: neuromyelitis optica spectrum disorder, 视神经脊髓炎谱系疾病, 视神经脊髓炎, neuromyelitis optica, Devic disease, NMOSD, NMO; matched_gtex_tissues: Brain, Brain - Cortex, Whole Blood; subcategory: neuroimmune_disease; concept_type: disease |
+| myasthenia gravis | P0 | covered | matched_terms: myasthenia gravis, 重症肌无力, MG; matched_gtex_tissues: Muscle - Skeletal, Whole Blood; subcategory: neuroimmune_disease; concept_type: disease |
+| Guillain-Barre syndrome | P0 | covered | matched_terms: Guillain-Barre syndrome, 吉兰-巴雷综合征, 格林巴利综合征, Guillain-Barré syndrome, acute inflammatory demyelinating polyneuropathy, GBS, AIDP; matched_gtex_tissues: Nerve - Tibial, Whole Blood; subcategory: neuroimmune_disease; concept_type: disease |
+| autoimmune encephalitis | P0 | covered | matched_terms: autoimmune encephalitis, 自身免疫性脑炎, AE, Encephalitis; matched_gtex_tissues: Brain, Brain - Cortex, Whole Blood; subcategory: neuroimmune_disease; concept_type: disease |
+| T cell | P0 | covered | matched_terms: T cell, T细胞, T淋巴细胞, T lymphocyte, T-cell, T-Lymphocytes; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| B cell | P0 | covered | matched_terms: B cell, B细胞, B淋巴细胞, B lymphocyte, B-cell, B-Lymphocytes; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| macrophage | P0 | covered | matched_terms: macrophage, 巨噬细胞, macrophages; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| monocyte | P0 | covered | matched_terms: monocyte, 单核细胞, monocytes; matched_gtex_tissues: Whole Blood; subcategory: immune_cell; concept_type: immune_cell |
+| neutrophil | P0 | covered | matched_terms: neutrophil, 中性粒细胞, 中性白细胞, neutrophils; matched_gtex_tissues: Whole Blood; subcategory: immune_cell; concept_type: immune_cell |
+| dendritic cell | P0 | covered | matched_terms: dendritic cell, 树突状细胞, dendritic cells, DC; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| natural killer cell | P0 | covered | matched_terms: natural killer cell, NK细胞, 自然杀伤细胞, NK cell, natural killer cells, NK, Killer Cells, Natural; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| regulatory T cell | P0 | covered | matched_terms: regulatory T cell, 调节性T细胞, Treg细胞, Treg, T regulatory cell, T-Lymphocytes, Regulatory; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| Th1 cell | P0 | covered | matched_terms: Th1 cell, Th1细胞, T helper 1 cell, type 1 helper T cell, Th1, Th1 Cells; matched_gtex_tissues: Whole Blood; subcategory: immune_cell; concept_type: immune_cell |
+| Th2 cell | P0 | covered | matched_terms: Th2 cell, Th2细胞, T helper 2 cell, type 2 helper T cell, Th2, Th2 Cells; matched_gtex_tissues: Whole Blood; subcategory: immune_cell; concept_type: immune_cell |
+| Th17 cell | P0 | covered | matched_terms: Th17 cell, Th17细胞, T helper 17 cell, Th17, Th17 Cells; matched_gtex_tissues: Whole Blood; subcategory: immune_cell; concept_type: immune_cell |
+| plasma cell | P0 | covered | matched_terms: plasma cell, 浆细胞, plasmocyte, Plasma Cells; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_cell; concept_type: immune_cell |
+| C-reactive protein | P0 | covered | matched_terms: C-reactive protein, C反应蛋白, 高敏C反应蛋白, high-sensitivity C-reactive protein, hs-CRP, CRP, hsCRP; matched_gtex_tissues: Liver, Whole Blood; subcategory: immune_biomarker_cross_reference; concept_type: biomarker |
+| interleukin-6 | P0 | covered | matched_terms: interleukin-6, 白细胞介素6, IL-6, IL6; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| interleukin-1 beta | P0 | covered | matched_terms: interleukin-1 beta, 白细胞介素1β, IL-1β, IL-1beta, IL-1 beta, interleukin-1β, IL-1B, IL1B, Interleukin-1beta; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| tumor necrosis factor alpha | P0 | covered | matched_terms: tumor necrosis factor alpha, 肿瘤坏死因子α, TNF-α, TNF-alpha, TNF, Tumor Necrosis Factor-alpha; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| interferon gamma | P0 | covered | matched_terms: interferon gamma, 干扰素γ, IFN-γ, IFN-gamma, IFN, IFNG, Interferon-gamma; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| interleukin-10 | P0 | covered | matched_terms: interleukin-10, 白细胞介素10, IL-10, IL10; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| interleukin-17 | P0 | covered | matched_terms: interleukin-17, 白细胞介素17, IL-17, IL17; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| immunoglobulin E | P0 | covered | matched_terms: immunoglobulin E, 免疫球蛋白E, IgE, IgE antibody; matched_gtex_tissues: Whole Blood; subcategory: immune_biomarker; concept_type: biomarker |
+| antinuclear antibody | P0 | covered | matched_terms: antinuclear antibody, 抗核抗体, ANA, antinuclear antibodies, Antibodies, Antinuclear; matched_gtex_tissues: Whole Blood; subcategory: autoantibody; concept_type: biomarker |
+| rheumatoid factor | P0 | covered | matched_terms: rheumatoid factor, 类风湿因子, RF, rheumatoid factors; matched_gtex_tissues: Whole Blood; subcategory: autoantibody; concept_type: biomarker |
+| anti-cyclic citrullinated peptide antibody | P0 | covered | matched_terms: anti-cyclic citrullinated peptide antibody, 抗环瓜氨酸肽抗体, 抗CCP抗体, anti-CCP, anti-CCP antibody, anti-citrullinated protein antibody, ACPA, Anti-Citrullinated Protein Antibodies; matched_gtex_tissues: Whole Blood; subcategory: autoantibody; concept_type: biomarker |
+| antineutrophil cytoplasmic antibody | P0 | covered | matched_terms: antineutrophil cytoplasmic antibody, 抗中性粒细胞胞浆抗体, ANCA, ANCA antibody, Antibodies, Antineutrophil Cytoplasmic; matched_gtex_tissues: Whole Blood; subcategory: autoantibody; concept_type: biomarker |
+| inflammation | P1 | covered | matched_terms: inflammation, 炎症, 炎性反应, inflammatory response; matched_gtex_tissues: Whole Blood; subcategory: immune_process; concept_type: process |
+| immune response | P1 | covered | matched_terms: immune response, 免疫反应, 免疫应答, immune activation, host immune response, Immune System Phenomena; matched_gtex_tissues: Whole Blood, Spleen; subcategory: immune_process; concept_type: process |
+| cytokine storm | P1 | covered | matched_terms: cytokine storm, 细胞因子风暴, 细胞因子释放综合征, cytokine release syndrome, CRS; matched_gtex_tissues: Whole Blood; subcategory: immune_process; concept_type: phenotype |
+
+## Immune Inflammatory Core Summary
+
+- immune/inflammatory checklist total count: 69
+- covered count: 69
+- missing count: 0
+- coverage percentage: 1.000
+- missing terms: 0
+- quality gate status: pass
+- subcategory coverage: allergy_airway_inflammation 8/8, autoantibody 4/4, autoimmune_cross_reference 2/2, autoimmune_disease 8/8, immune_biomarker 7/7, immune_biomarker_cross_reference 1/1, immune_cell 12/12, immune_process 3/3, inflammatory_bowel_disease 4/4, neuroimmune_disease 5/5, rheumatic_arthritis 5/5, skin_immune_disease 6/6, vasculitis 4/4
+- missing term details: none
+- high-risk ambiguity terms: RA, IBD, SLE, SS, DM, PM, APS, AS, OA, PsA, JIA, GCA, AAV, UC, CD, COPD, CRS, MS, NMOSD, MG, GBS, AE, DC, NK, Treg, Th1, Th2, Th17, CRP, IL-6, TNF, IFN, IgE, ANA, RF, ANCA
+
 ## P0 Gaps
 
 No P0 gaps detected.
@@ -714,6 +800,8 @@ No P2 gaps detected.
 | meta_analysis_terms_missing_terms | 0 | 0 | pass |
 | cardiovascular_core_coverage | 1.0 | 0.95 | pass |
 | cardiovascular_core_missing_terms | 0 | 0 | pass |
+| immune_inflammatory_core_coverage | 1.0 | 0.95 | pass |
+| immune_inflammatory_core_missing_terms | 0 | 0 | pass |
 | missing_items | 0 | 0 | pass |
 | p0_gaps | 0 | 0 | pass |
 | audit_cross_context_pollution | 0 | 0 | pass |
@@ -728,6 +816,7 @@ No P2 gaps detected.
 - common_diseases: WHO noncommunicable diseases and major disease categories (Curated major disease category checklist, 2026-05)
 - endocrine_metabolic_core: project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist (2026-05-11 curated v1)
 - gtex_tissues: GTEx Portal tissue groups (GTEx tissue group checklist, curated access 2026-05)
+- immune_inflammatory_core: project_curated (immune_inflammatory_core_v1)
 - meta_analysis_terms_core: BioMedPilot curated shared medical vocabulary checklist (meta_analysis_terms_core_v1)
 - meta_terms: Cochrane-style Meta-analysis retrieval strategy term categories (Curated Meta retrieval checklist, 2026-05)
 - oncology_core: BioMedPilot curated oncology core based on TCGA/GDC project labels, common translational oncology concepts, and MeSH heading names (oncology_core_v1_2026-05-11)

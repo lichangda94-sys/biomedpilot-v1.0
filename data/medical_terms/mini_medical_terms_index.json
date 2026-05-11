@@ -2281,11 +2281,10 @@
       "类风湿性关节炎"
     ],
     "synonyms_en": [
-      "inflammatory arthritis",
-      "rheumatoid arthritis"
+      "inflammatory arthritis"
     ],
     "exact_synonyms_en": [
-      "Rheumatoid Arthritis"
+      "rheumatoid arthritis"
     ],
     "related_synonyms_en": [],
     "abbreviations": [
@@ -2295,28 +2294,86 @@
       "Arthritis, Rheumatoid"
     ],
     "tissue_terms": [
-      "joint",
-      "synovium"
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "immune mediated disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "immune mediated disease"
+      "immune and inflammatory disease"
     ],
-    "cross_refs": {},
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
-      "Rheumatoid Arthritis",
+      "rheumatoid arthritis",
+      "类风湿关节炎",
+      "类风湿性关节炎",
       "inflammatory arthritis",
       "RA",
-      "类风湿关节炎",
+      "Arthritis, Rheumatoid"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "rheumatoid arthritis",
+      "inflammatory arthritis",
+      "Arthritis, Rheumatoid"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "类风湿关节炎",
+    "zh_synonyms": [
       "类风湿性关节炎"
-    ]
+    ],
+    "preferred_en": "rheumatoid arthritis",
+    "en_synonyms": [
+      "inflammatory arthritis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "osteoarthritis",
+      "psoriatic arthritis"
+    ],
+    "ambiguity_notes": "RA requires exact abbreviation matching.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:inflammatory_bowel_disease",
@@ -2328,53 +2385,111 @@
       "炎性肠病"
     ],
     "synonyms_en": [
-      "IBD",
-      "inflammatory bowel diseases",
-      "Crohn Disease",
-      "Ulcerative Colitis"
+      "inflammatory bowel diseases"
     ],
     "exact_synonyms_en": [
-      "Inflammatory Bowel Disease"
+      "inflammatory bowel disease"
     ],
     "related_synonyms_en": [],
     "abbreviations": [
       "IBD"
     ],
     "mesh_terms": [
-      "Inflammatory Bowel Diseases",
-      "Crohn Disease",
-      "Colitis, Ulcerative"
+      "Inflammatory Bowel Diseases"
     ],
     "tissue_terms": [
-      "intestine",
-      "colon"
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "immune mediated disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "immune mediated disease"
+      "immune and inflammatory disease"
     ],
     "cross_refs": {
       "gtex": [
         "Colon",
-        "Small Intestine"
+        "Small Intestine",
+        "Colon - Sigmoid",
+        "Colon - Transverse",
+        "Small Intestine - Terminal Ileum",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.1-mini-2026-05-03",
-    "term_source": "stage2_1_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
-      "Inflammatory Bowel Disease",
-      "Crohn Disease",
-      "Ulcerative Colitis",
-      "IBD",
-      "inflammatory bowel diseases",
+      "inflammatory bowel disease",
       "炎症性肠病",
+      "炎性肠病",
+      "inflammatory bowel diseases",
+      "IBD"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "inflammatory bowel disease",
+      "inflammatory bowel diseases"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "inflammatory_bowel_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "炎症性肠病",
+    "zh_synonyms": [
       "炎性肠病"
-    ]
+    ],
+    "preferred_en": "inflammatory bowel disease",
+    "en_synonyms": [
+      "inflammatory bowel diseases"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "Crohn disease",
+      "ulcerative colitis"
+    ],
+    "ambiguity_notes": "IBD is an umbrella term; do not auto-expand to Crohn disease or ulcerative colitis.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:fatty_liver_disease",
@@ -4943,11 +5058,11 @@
     "source_id": "systemic_lupus_erythematosus",
     "preferred_label_en": "systemic lupus erythematosus",
     "zh_terms": [
-      "系统性红斑狼疮"
+      "系统性红斑狼疮",
+      "红斑狼疮"
     ],
     "synonyms_en": [
-      "lupus",
-      "SLE"
+      "lupus"
     ],
     "exact_synonyms_en": [
       "systemic lupus erythematosus"
@@ -4960,34 +5075,95 @@
       "Lupus Erythematosus, Systemic"
     ],
     "tissue_terms": [
-      "blood",
-      "skin",
-      "kidney"
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "immune mediated disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "immune mediated disease"
+      "immune and inflammatory disease"
     ],
     "cross_refs": {
       "gtex": [
         "Whole Blood",
         "Skin",
-        "Kidney"
+        "Kidney",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
       "systemic lupus erythematosus",
+      "系统性红斑狼疮",
+      "红斑狼疮",
       "lupus",
       "SLE",
-      "系统性红斑狼疮"
-    ]
+      "Lupus Erythematosus, Systemic"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "systemic lupus erythematosus",
+      "lupus",
+      "Lupus Erythematosus, Systemic"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "系统性红斑狼疮",
+    "zh_synonyms": [
+      "红斑狼疮"
+    ],
+    "preferred_en": "systemic lupus erythematosus",
+    "en_synonyms": [
+      "lupus"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [
+      "lupus nephritis"
+    ],
+    "ambiguity_notes": "SLE should not automatically expand to lupus nephritis.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:crohn_disease",
@@ -4995,15 +5171,16 @@
     "source_id": "crohn_disease",
     "preferred_label_en": "Crohn Disease",
     "zh_terms": [
-      "克罗恩病"
+      "克罗恩病",
+      "克隆病",
+      "克罗恩氏病"
     ],
     "synonyms_en": [
-      "Crohn disease",
       "Crohn's disease",
-      "inflammatory bowel disease"
+      "regional enteritis"
     ],
     "exact_synonyms_en": [
-      "Crohn Disease"
+      "Crohn disease"
     ],
     "related_synonyms_en": [],
     "abbreviations": [
@@ -5013,33 +5190,102 @@
       "Crohn Disease"
     ],
     "tissue_terms": [
-      "intestine",
-      "colon"
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "immune mediated disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "immune mediated disease"
+      "immune and inflammatory disease"
     ],
     "cross_refs": {
       "gtex": [
         "Colon",
-        "Small Intestine"
+        "Small Intestine",
+        "Colon - Sigmoid",
+        "Colon - Transverse",
+        "Small Intestine - Terminal Ileum",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
-      "Crohn Disease",
+      "Crohn disease",
+      "克罗恩病",
+      "克隆病",
+      "克罗恩氏病",
       "Crohn's disease",
-      "inflammatory bowel disease",
-      "CD",
-      "克罗恩病"
-    ]
+      "regional enteritis",
+      "CD"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Crohn disease",
+      "Crohn's disease",
+      "regional enteritis"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "inflammatory_bowel_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "克罗恩病",
+    "zh_synonyms": [
+      "克隆病",
+      "克罗恩氏病"
+    ],
+    "preferred_en": "Crohn disease",
+    "en_synonyms": [
+      "Crohn's disease",
+      "regional enteritis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "ulcerative colitis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:ulcerative_colitis",
@@ -5047,14 +5293,14 @@
     "source_id": "ulcerative_colitis",
     "preferred_label_en": "Ulcerative Colitis",
     "zh_terms": [
-      "溃疡性结肠炎"
+      "溃疡性结肠炎",
+      "UC"
     ],
     "synonyms_en": [
-      "ulcerative colitis",
-      "inflammatory bowel disease"
+      "colitis ulcerative"
     ],
     "exact_synonyms_en": [
-      "Ulcerative Colitis"
+      "ulcerative colitis"
     ],
     "related_synonyms_en": [],
     "abbreviations": [
@@ -5064,30 +5310,97 @@
       "Colitis, Ulcerative"
     ],
     "tissue_terms": [
-      "colon"
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "immune mediated disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "immune mediated disease"
+      "immune and inflammatory disease"
     ],
     "cross_refs": {
       "gtex": [
-        "Colon"
+        "Colon",
+        "Colon - Sigmoid",
+        "Colon - Transverse",
+        "Small Intestine - Terminal Ileum",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
-      "Ulcerative Colitis",
-      "inflammatory bowel disease",
+      "ulcerative colitis",
+      "溃疡性结肠炎",
       "UC",
-      "溃疡性结肠炎"
-    ]
+      "colitis ulcerative",
+      "Colitis, Ulcerative"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "ulcerative colitis",
+      "colitis ulcerative",
+      "Colitis, Ulcerative"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "inflammatory_bowel_disease",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "溃疡性结肠炎",
+    "zh_synonyms": [
+      "UC"
+    ],
+    "preferred_en": "ulcerative colitis",
+    "en_synonyms": [
+      "colitis ulcerative"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "Crohn disease"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:chronic_obstructive_pulmonary_disease",
@@ -5099,7 +5412,6 @@
       "慢阻肺"
     ],
     "synonyms_en": [
-      "COPD",
       "chronic obstructive lung disease"
     ],
     "exact_synonyms_en": [
@@ -5113,31 +5425,89 @@
       "Pulmonary Disease, Chronic Obstructive"
     ],
     "tissue_terms": [
-      "lung"
+      "Lung",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "respiratory disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "respiratory disease"
+      "immune and inflammatory disease"
     ],
     "cross_refs": {
       "gtex": [
-        "Lung"
+        "Lung",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
       "chronic obstructive pulmonary disease",
-      "COPD",
-      "chronic obstructive lung disease",
       "慢性阻塞性肺疾病",
+      "慢阻肺",
+      "chronic obstructive lung disease",
+      "COPD",
+      "Pulmonary Disease, Chronic Obstructive"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "chronic obstructive pulmonary disease",
+      "chronic obstructive lung disease",
+      "Pulmonary Disease, Chronic Obstructive"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "慢性阻塞性肺疾病",
+    "zh_synonyms": [
       "慢阻肺"
-    ]
+    ],
+    "preferred_en": "chronic obstructive pulmonary disease",
+    "en_synonyms": [
+      "chronic obstructive lung disease"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "asthma"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:asthma",
@@ -5145,11 +5515,11 @@
     "source_id": "asthma",
     "preferred_label_en": "asthma",
     "zh_terms": [
-      "哮喘"
+      "哮喘",
+      "支气管哮喘"
     ],
     "synonyms_en": [
-      "bronchial asthma",
-      "allergic asthma"
+      "bronchial asthma"
     ],
     "exact_synonyms_en": [
       "asthma"
@@ -5160,15 +5530,15 @@
       "Asthma"
     ],
     "tissue_terms": [
-      "lung",
-      "blood"
+      "Lung",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
-    "disease_group": "respiratory disease",
+    "disease_group": "immune_inflammatory",
     "concept_type": "disease",
     "parent_terms": [
-      "respiratory disease"
+      "immune and inflammatory disease"
     ],
     "cross_refs": {
       "gtex": [
@@ -5177,15 +5547,69 @@
       ]
     },
     "license": "project-local-curated",
-    "version": "stage2.2-systematic-v2-2026-05-03",
-    "term_source": "stage2_2_systematic_curated_mini_index",
-    "confidence": 0.93,
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "confidence": 0.95,
     "normalized_terms": [
       "asthma",
-      "bronchial asthma",
-      "allergic asthma",
-      "哮喘"
-    ]
+      "哮喘",
+      "支气管哮喘",
+      "bronchial asthma"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "asthma",
+      "bronchial asthma"
+    ],
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "preferred_zh": "哮喘",
+    "zh_synonyms": [
+      "支气管哮喘"
+    ],
+    "preferred_en": "asthma",
+    "en_synonyms": [
+      "bronchial asthma"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Lung",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "COPD"
+    ],
+    "ambiguity_notes": "Asthma and COPD are distinct airway diseases.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:thyroid_tissue",
@@ -11276,26 +11700,30 @@
     ],
     "disease_group": "endocrine_metabolic",
     "concept_type": "disease",
-    "parent_terms": [],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
     "cross_refs": {
       "gtex": [
-        "Thyroid"
+        "Thyroid",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
     "version": "endocrine_metabolic_core_v1",
     "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
+    "confidence": 0.95,
     "normalized_terms": [
       "Hashimoto thyroiditis",
       "桥本甲状腺炎",
       "桥本病",
-      "慢性淋巴细胞性甲状腺炎",
       "Hashimoto disease",
-      "chronic lymphocytic thyroiditis"
+      "chronic lymphocytic thyroiditis",
+      "慢性淋巴细胞性甲状腺炎"
     ],
     "tissue_terms": [
-      "thyroid tissue"
+      "Thyroid",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
@@ -11311,13 +11739,14 @@
       "Hashimoto disease",
       "chronic lymphocytic thyroiditis"
     ],
-    "related_organs": [
-      "thyroid"
-    ],
+    "related_organs": [],
     "related_tissues": [
-      "thyroid tissue"
+      "Thyroid",
+      "Whole Blood"
     ],
-    "parent_concepts": [],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
     "child_concepts": [],
     "contexts": [
       "bioinformatics",
@@ -11329,9 +11758,10 @@
       "PTC",
       "TCGA-THCA"
     ],
-    "ambiguity_notes": "Hashimoto thyroiditis can cause hypothyroidism but should not be collapsed into hypothyroidism.",
+    "ambiguity_notes": "Cross-reference from endocrine core; do not duplicate.",
     "sources": [
-      "project_curated_endocrine_metabolic_core_v1"
+      "project_curated_endocrine_metabolic_core_v1",
+      "project_curated_immune_inflammatory_core_v1"
     ],
     "zh_terms": [
       "桥本甲状腺炎",
@@ -11339,8 +11769,30 @@
       "慢性淋巴细胞性甲状腺炎"
     ],
     "gtex_tissue_candidates": [
-      "Thyroid"
-    ]
+      "Thyroid",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Hashimoto thyroiditis",
+      "Hashimoto disease",
+      "chronic lymphocytic thyroiditis"
+    ],
+    "related_concepts": [],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:graves_disease",
@@ -11361,16 +11813,19 @@
     ],
     "disease_group": "endocrine_metabolic",
     "concept_type": "disease",
-    "parent_terms": [],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
     "cross_refs": {
       "gtex": [
-        "Thyroid"
+        "Thyroid",
+        "Whole Blood"
       ]
     },
     "license": "project-local-curated",
     "version": "endocrine_metabolic_core_v1",
     "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
+    "confidence": 0.95,
     "normalized_terms": [
       "Graves disease",
       "Graves病",
@@ -11380,7 +11835,8 @@
       "Graves-Basedow disease"
     ],
     "tissue_terms": [
-      "thyroid tissue"
+      "Thyroid",
+      "Whole Blood"
     ],
     "data_modality_terms": [],
     "modifier_terms_en": [],
@@ -11396,13 +11852,14 @@
       "Basedow disease",
       "Graves-Basedow disease"
     ],
-    "related_organs": [
-      "thyroid"
-    ],
+    "related_organs": [],
     "related_tissues": [
-      "thyroid tissue"
+      "Thyroid",
+      "Whole Blood"
     ],
-    "parent_concepts": [],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
     "child_concepts": [],
     "contexts": [
       "bioinformatics",
@@ -11414,9 +11871,10 @@
       "PTC",
       "TCGA-THCA"
     ],
-    "ambiguity_notes": "Graves disease is related to hyperthyroidism but should not be collapsed into hyperthyroidism.",
+    "ambiguity_notes": "Cross-reference from endocrine core; do not duplicate.",
     "sources": [
-      "project_curated_endocrine_metabolic_core_v1"
+      "project_curated_endocrine_metabolic_core_v1",
+      "project_curated_immune_inflammatory_core_v1"
     ],
     "zh_terms": [
       "Graves病",
@@ -11424,8 +11882,30 @@
       "毒性弥漫性甲状腺肿"
     ],
     "gtex_tissue_candidates": [
-      "Thyroid"
-    ]
+      "Thyroid",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Graves disease",
+      "Basedow disease",
+      "Graves-Basedow disease"
+    ],
+    "related_concepts": [],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:autoimmune_thyroiditis",
@@ -40399,7 +40879,7 @@
       "Inflammation"
     ],
     "tissue_terms": [
-      "blood"
+      "Whole Blood"
     ],
     "tcga_primary_site_candidates": [],
     "data_modality_terms": [],
@@ -40432,7 +40912,7 @@
       "meta_analysis"
     ],
     "parent_terms": [
-      "cardiovascular disease"
+      "immune and inflammatory term"
     ],
     "cross_refs": {
       "gtex": [
@@ -40457,31 +40937,32 @@
     "en_synonyms": [
       "inflammatory response"
     ],
-    "related_organs": [
-      "blood"
-    ],
+    "related_organs": [],
     "related_tissues": [
-      "blood"
+      "Whole Blood"
     ],
     "gtex_tissue_candidates": [
       "Whole Blood"
     ],
     "related_concepts": [],
     "parent_concepts": [
-      "cardiovascular disease"
+      "immune and inflammatory term"
     ],
     "child_concepts": [],
     "avoid_expansion_to": [
       "autoimmune disease"
     ],
-    "ambiguity_notes": "",
+    "ambiguity_notes": "Cross-reference from cardiovascular phenotype/process; not a disease.",
     "sources": [
-      "project_curated_cardiovascular_core_v1"
+      "project_curated_cardiovascular_core_v1",
+      "project_curated_immune_inflammatory_core_v1"
     ],
     "zh_terms": [
       "炎症",
       "炎性反应"
-    ]
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   },
   {
     "concept_id": "mini:cardiovascular_vascular_stiffness",
@@ -41504,8 +41985,8 @@
       "C-Reactive Protein"
     ],
     "tissue_terms": [
-      "blood",
-      "liver"
+      "Liver",
+      "Whole Blood"
     ],
     "tcga_primary_site_candidates": [],
     "data_modality_terms": [],
@@ -41542,7 +42023,7 @@
       "meta_analysis"
     ],
     "parent_terms": [
-      "cardiovascular disease"
+      "immune and inflammatory term"
     ],
     "cross_refs": {
       "gtex": [
@@ -41572,13 +42053,10 @@
       "high-sensitivity C-reactive protein",
       "hs-CRP"
     ],
-    "related_organs": [
-      "liver",
-      "blood"
-    ],
+    "related_organs": [],
     "related_tissues": [
-      "blood",
-      "liver"
+      "Liver",
+      "Whole Blood"
     ],
     "gtex_tissue_candidates": [
       "Liver",
@@ -41586,19 +42064,26 @@
     ],
     "related_concepts": [],
     "parent_concepts": [
-      "cardiovascular disease"
+      "immune and inflammatory term"
     ],
     "child_concepts": [],
-    "avoid_expansion_to": [
-      "inflammation"
-    ],
-    "ambiguity_notes": "CRP is a short biomarker abbreviation and should not imply disease by itself.",
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "Cross-reference from cardiovascular core; do not duplicate.",
     "sources": [
-      "project_curated_cardiovascular_core_v1"
+      "project_curated_cardiovascular_core_v1",
+      "project_curated_immune_inflammatory_core_v1"
     ],
     "zh_terms": [
       "C反应蛋白",
       "高敏C反应蛋白"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "C-reactive protein",
+      "high-sensitivity C-reactive protein",
+      "hs-CRP",
+      "CRP",
+      "hsCRP"
     ]
   },
   {
@@ -42270,5 +42755,6136 @@
       "同型半胱氨酸",
       "高同型半胱氨酸"
     ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_sjogren_syndrome",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_sjogren_syndrome",
+    "preferred_label_en": "Sjogren syndrome",
+    "synonyms_en": [
+      "Sjögren syndrome",
+      "Sjögren disease",
+      "sicca syndrome"
+    ],
+    "exact_synonyms_en": [
+      "Sjogren syndrome"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SS"
+    ],
+    "mesh_terms": [
+      "Sjogren Syndrome"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Sjogren syndrome",
+      "Sjögren syndrome",
+      "Sjögren disease",
+      "sicca syndrome"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Sjogren syndrome",
+      "干燥综合征",
+      "舍格伦综合征",
+      "干燥症",
+      "Sjögren syndrome",
+      "Sjögren disease",
+      "sicca syndrome",
+      "SS"
+    ],
+    "preferred_zh": "干燥综合征",
+    "zh_synonyms": [
+      "舍格伦综合征",
+      "干燥症"
+    ],
+    "preferred_en": "Sjogren syndrome",
+    "en_synonyms": [
+      "Sjögren syndrome",
+      "Sjögren disease",
+      "sicca syndrome"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "干燥综合征",
+      "舍格伦综合征",
+      "干燥症"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_systemic_sclerosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_systemic_sclerosis",
+    "preferred_label_en": "systemic sclerosis",
+    "synonyms_en": [
+      "scleroderma"
+    ],
+    "exact_synonyms_en": [
+      "systemic sclerosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "SSc"
+    ],
+    "mesh_terms": [
+      "Scleroderma, Systemic"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "systemic sclerosis",
+      "scleroderma",
+      "Scleroderma, Systemic"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "systemic sclerosis",
+      "系统性硬化症",
+      "硬皮病",
+      "系统性硬皮病",
+      "scleroderma",
+      "SSc",
+      "Scleroderma, Systemic"
+    ],
+    "preferred_zh": "系统性硬化症",
+    "zh_synonyms": [
+      "硬皮病",
+      "系统性硬皮病"
+    ],
+    "preferred_en": "systemic sclerosis",
+    "en_synonyms": [
+      "scleroderma"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "系统性硬化症",
+      "硬皮病",
+      "系统性硬皮病"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_dermatomyositis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_dermatomyositis",
+    "preferred_label_en": "dermatomyositis",
+    "synonyms_en": [
+      "idiopathic dermatomyositis"
+    ],
+    "exact_synonyms_en": [
+      "dermatomyositis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "DM"
+    ],
+    "mesh_terms": [
+      "Dermatomyositis"
+    ],
+    "tissue_terms": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "dermatomyositis",
+      "idiopathic dermatomyositis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Muscle - Skeletal",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "dermatomyositis",
+      "皮肌炎",
+      "idiopathic dermatomyositis",
+      "DM"
+    ],
+    "preferred_zh": "皮肌炎",
+    "zh_synonyms": [],
+    "preferred_en": "dermatomyositis",
+    "en_synonyms": [
+      "idiopathic dermatomyositis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "polymyositis"
+    ],
+    "ambiguity_notes": "DM can conflict with diabetes mellitus.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "皮肌炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_polymyositis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_polymyositis",
+    "preferred_label_en": "polymyositis",
+    "synonyms_en": [
+      "idiopathic polymyositis"
+    ],
+    "exact_synonyms_en": [
+      "polymyositis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PM"
+    ],
+    "mesh_terms": [
+      "Polymyositis"
+    ],
+    "tissue_terms": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "polymyositis",
+      "idiopathic polymyositis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Muscle - Skeletal",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "polymyositis",
+      "多发性肌炎",
+      "idiopathic polymyositis",
+      "PM"
+    ],
+    "preferred_zh": "多发性肌炎",
+    "zh_synonyms": [],
+    "preferred_en": "polymyositis",
+    "en_synonyms": [
+      "idiopathic polymyositis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "dermatomyositis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "多发性肌炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_mixed_connective_tissue_disease",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_mixed_connective_tissue_disease",
+    "preferred_label_en": "mixed connective tissue disease",
+    "synonyms_en": [
+      "mixed connective-tissue disease"
+    ],
+    "exact_synonyms_en": [
+      "mixed connective tissue disease"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MCTD"
+    ],
+    "mesh_terms": [
+      "Mixed Connective Tissue Disease"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "mixed connective tissue disease",
+      "mixed connective-tissue disease"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "mixed connective tissue disease",
+      "混合性结缔组织病",
+      "mixed connective-tissue disease",
+      "MCTD"
+    ],
+    "preferred_zh": "混合性结缔组织病",
+    "zh_synonyms": [],
+    "preferred_en": "mixed connective tissue disease",
+    "en_synonyms": [
+      "mixed connective-tissue disease"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "混合性结缔组织病"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_antiphospholipid_syndrome",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_antiphospholipid_syndrome",
+    "preferred_label_en": "antiphospholipid syndrome",
+    "synonyms_en": [
+      "antiphospholipid antibody syndrome"
+    ],
+    "exact_synonyms_en": [
+      "antiphospholipid syndrome"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "APS"
+    ],
+    "mesh_terms": [
+      "Antiphospholipid Syndrome"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "antiphospholipid syndrome",
+      "antiphospholipid antibody syndrome"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "autoimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "antiphospholipid syndrome",
+      "抗磷脂综合征",
+      "抗磷脂抗体综合征",
+      "antiphospholipid antibody syndrome",
+      "APS"
+    ],
+    "preferred_zh": "抗磷脂综合征",
+    "zh_synonyms": [
+      "抗磷脂抗体综合征"
+    ],
+    "preferred_en": "antiphospholipid syndrome",
+    "en_synonyms": [
+      "antiphospholipid antibody syndrome"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "systemic lupus erythematosus"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "抗磷脂综合征",
+      "抗磷脂抗体综合征"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_osteoarthritis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_osteoarthritis",
+    "preferred_label_en": "osteoarthritis",
+    "synonyms_en": [
+      "degenerative joint disease"
+    ],
+    "exact_synonyms_en": [
+      "osteoarthritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "OA"
+    ],
+    "mesh_terms": [
+      "Osteoarthritis"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "osteoarthritis",
+      "degenerative joint disease"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "rheumatic_arthritis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "osteoarthritis",
+      "骨关节炎",
+      "退行性关节炎",
+      "degenerative joint disease",
+      "OA"
+    ],
+    "preferred_zh": "骨关节炎",
+    "zh_synonyms": [
+      "退行性关节炎"
+    ],
+    "preferred_en": "osteoarthritis",
+    "en_synonyms": [
+      "degenerative joint disease"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "rheumatoid arthritis",
+      "psoriatic arthritis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "骨关节炎",
+      "退行性关节炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_ankylosing_spondylitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_ankylosing_spondylitis",
+    "preferred_label_en": "ankylosing spondylitis",
+    "synonyms_en": [
+      "Bechterew disease"
+    ],
+    "exact_synonyms_en": [
+      "ankylosing spondylitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AS"
+    ],
+    "mesh_terms": [
+      "Spondylitis, Ankylosing"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "ankylosing spondylitis",
+      "Bechterew disease",
+      "Spondylitis, Ankylosing"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "rheumatic_arthritis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ankylosing spondylitis",
+      "强直性脊柱炎",
+      "Bechterew disease",
+      "AS",
+      "Spondylitis, Ankylosing"
+    ],
+    "preferred_zh": "强直性脊柱炎",
+    "zh_synonyms": [],
+    "preferred_en": "ankylosing spondylitis",
+    "en_synonyms": [
+      "Bechterew disease"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "强直性脊柱炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_psoriatic_arthritis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_psoriatic_arthritis",
+    "preferred_label_en": "psoriatic arthritis",
+    "synonyms_en": [
+      "arthritis psoriatic"
+    ],
+    "exact_synonyms_en": [
+      "psoriatic arthritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PsA"
+    ],
+    "mesh_terms": [
+      "Arthritis, Psoriatic"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "psoriatic arthritis",
+      "arthritis psoriatic",
+      "Arthritis, Psoriatic"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "rheumatic_arthritis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "psoriatic arthritis",
+      "银屑病关节炎",
+      "牛皮癣关节炎",
+      "arthritis psoriatic",
+      "PsA",
+      "Arthritis, Psoriatic"
+    ],
+    "preferred_zh": "银屑病关节炎",
+    "zh_synonyms": [
+      "牛皮癣关节炎"
+    ],
+    "preferred_en": "psoriatic arthritis",
+    "en_synonyms": [
+      "arthritis psoriatic"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [
+      "psoriasis"
+    ],
+    "ambiguity_notes": "Psoriasis and psoriatic arthritis should not collapse.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "银屑病关节炎",
+      "牛皮癣关节炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_juvenile_idiopathic_arthritis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_juvenile_idiopathic_arthritis",
+    "preferred_label_en": "juvenile idiopathic arthritis",
+    "synonyms_en": [
+      "juvenile rheumatoid arthritis"
+    ],
+    "exact_synonyms_en": [
+      "juvenile idiopathic arthritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "JIA"
+    ],
+    "mesh_terms": [
+      "Arthritis, Juvenile"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "juvenile idiopathic arthritis",
+      "juvenile rheumatoid arthritis",
+      "Arthritis, Juvenile"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "rheumatic_arthritis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "juvenile idiopathic arthritis",
+      "幼年特发性关节炎",
+      "儿童特发性关节炎",
+      "juvenile rheumatoid arthritis",
+      "JIA",
+      "Arthritis, Juvenile"
+    ],
+    "preferred_zh": "幼年特发性关节炎",
+    "zh_synonyms": [
+      "儿童特发性关节炎"
+    ],
+    "preferred_en": "juvenile idiopathic arthritis",
+    "en_synonyms": [
+      "juvenile rheumatoid arthritis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "幼年特发性关节炎",
+      "儿童特发性关节炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_gout",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_gout",
+    "preferred_label_en": "gout",
+    "synonyms_en": [
+      "gouty arthritis"
+    ],
+    "exact_synonyms_en": [
+      "gout"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Gout"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "gout",
+      "gouty arthritis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "rheumatic_arthritis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "gout",
+      "痛风",
+      "痛风性关节炎",
+      "gouty arthritis"
+    ],
+    "preferred_zh": "痛风",
+    "zh_synonyms": [
+      "痛风性关节炎"
+    ],
+    "preferred_en": "gout",
+    "en_synonyms": [
+      "gouty arthritis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "痛风",
+      "痛风性关节炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_vasculitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_vasculitis",
+    "preferred_label_en": "vasculitis",
+    "synonyms_en": [
+      "vascular inflammation"
+    ],
+    "exact_synonyms_en": [
+      "vasculitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Vasculitis"
+    ],
+    "tissue_terms": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "vasculitis",
+      "vascular inflammation"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "vasculitis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Artery",
+        "Artery - Aorta",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "vasculitis",
+      "血管炎",
+      "vascular inflammation"
+    ],
+    "preferred_zh": "血管炎",
+    "zh_synonyms": [],
+    "preferred_en": "vasculitis",
+    "en_synonyms": [
+      "vascular inflammation"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "giant cell arteritis",
+      "Takayasu arteritis",
+      "ANCA-associated vasculitis"
+    ],
+    "ambiguity_notes": "Umbrella vasculitis should not imply a subtype.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "血管炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_giant_cell_arteritis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_giant_cell_arteritis",
+    "preferred_label_en": "giant cell arteritis",
+    "synonyms_en": [
+      "temporal arteritis"
+    ],
+    "exact_synonyms_en": [
+      "giant cell arteritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "GCA"
+    ],
+    "mesh_terms": [
+      "Giant Cell Arteritis"
+    ],
+    "tissue_terms": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "giant cell arteritis",
+      "temporal arteritis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "vasculitis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Artery",
+        "Artery - Aorta",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "giant cell arteritis",
+      "巨细胞动脉炎",
+      "temporal arteritis",
+      "GCA"
+    ],
+    "preferred_zh": "巨细胞动脉炎",
+    "zh_synonyms": [],
+    "preferred_en": "giant cell arteritis",
+    "en_synonyms": [
+      "temporal arteritis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "vasculitis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "巨细胞动脉炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_takayasu_arteritis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_takayasu_arteritis",
+    "preferred_label_en": "Takayasu arteritis",
+    "synonyms_en": [
+      "Takayasu disease"
+    ],
+    "exact_synonyms_en": [
+      "Takayasu arteritis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TAK"
+    ],
+    "mesh_terms": [
+      "Takayasu Arteritis"
+    ],
+    "tissue_terms": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Takayasu arteritis",
+      "Takayasu disease"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "vasculitis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Artery",
+        "Artery - Aorta",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Takayasu arteritis",
+      "大动脉炎",
+      "高安动脉炎",
+      "Takayasu disease",
+      "TAK"
+    ],
+    "preferred_zh": "大动脉炎",
+    "zh_synonyms": [
+      "高安动脉炎"
+    ],
+    "preferred_en": "Takayasu arteritis",
+    "en_synonyms": [
+      "Takayasu disease"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Artery",
+      "Artery - Aorta",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "vasculitis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "大动脉炎",
+      "高安动脉炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_anca_associated_vasculitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_anca_associated_vasculitis",
+    "preferred_label_en": "ANCA-associated vasculitis",
+    "synonyms_en": [
+      "antineutrophil cytoplasmic antibody-associated vasculitis"
+    ],
+    "exact_synonyms_en": [
+      "ANCA-associated vasculitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AAV"
+    ],
+    "mesh_terms": [
+      "Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis"
+    ],
+    "tissue_terms": [
+      "Kidney - Cortex",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "ANCA-associated vasculitis",
+      "antineutrophil cytoplasmic antibody-associated vasculitis",
+      "Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "vasculitis",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Kidney - Cortex",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "ANCA-associated vasculitis",
+      "ANCA相关性血管炎",
+      "抗中性粒细胞胞浆抗体相关性血管炎",
+      "antineutrophil cytoplasmic antibody-associated vasculitis",
+      "AAV",
+      "Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis"
+    ],
+    "preferred_zh": "ANCA相关性血管炎",
+    "zh_synonyms": [
+      "抗中性粒细胞胞浆抗体相关性血管炎"
+    ],
+    "preferred_en": "ANCA-associated vasculitis",
+    "en_synonyms": [
+      "antineutrophil cytoplasmic antibody-associated vasculitis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Kidney - Cortex",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Kidney - Cortex",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "ANCA"
+    ],
+    "ambiguity_notes": "ANCA disease should not be triggered by ANCA biomarker alone.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "ANCA相关性血管炎",
+      "抗中性粒细胞胞浆抗体相关性血管炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_microscopic_colitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_microscopic_colitis",
+    "preferred_label_en": "microscopic colitis",
+    "synonyms_en": [
+      "microscopic colitis"
+    ],
+    "exact_synonyms_en": [
+      "microscopic colitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Microscopic Colitis"
+    ],
+    "tissue_terms": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "microscopic colitis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "inflammatory_bowel_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Colon - Sigmoid",
+        "Colon - Transverse",
+        "Small Intestine - Terminal Ileum",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "microscopic colitis",
+      "显微镜下结肠炎"
+    ],
+    "preferred_zh": "显微镜下结肠炎",
+    "zh_synonyms": [],
+    "preferred_en": "microscopic colitis",
+    "en_synonyms": [
+      "microscopic colitis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "显微镜下结肠炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_allergic_rhinitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_allergic_rhinitis",
+    "preferred_label_en": "allergic rhinitis",
+    "synonyms_en": [
+      "hay fever"
+    ],
+    "exact_synonyms_en": [
+      "allergic rhinitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Rhinitis, Allergic"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "allergic rhinitis",
+      "hay fever",
+      "Rhinitis, Allergic"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "allergic rhinitis",
+      "变应性鼻炎",
+      "过敏性鼻炎",
+      "hay fever",
+      "Rhinitis, Allergic"
+    ],
+    "preferred_zh": "变应性鼻炎",
+    "zh_synonyms": [
+      "过敏性鼻炎"
+    ],
+    "preferred_en": "allergic rhinitis",
+    "en_synonyms": [
+      "hay fever"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "变应性鼻炎",
+      "过敏性鼻炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_atopic_dermatitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_atopic_dermatitis",
+    "preferred_label_en": "atopic dermatitis",
+    "synonyms_en": [
+      "atopic eczema"
+    ],
+    "exact_synonyms_en": [
+      "atopic dermatitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Dermatitis, Atopic"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "atopic dermatitis",
+      "atopic eczema",
+      "Dermatitis, Atopic"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "atopic dermatitis",
+      "特应性皮炎",
+      "异位性皮炎",
+      "atopic eczema",
+      "Dermatitis, Atopic"
+    ],
+    "preferred_zh": "特应性皮炎",
+    "zh_synonyms": [
+      "异位性皮炎"
+    ],
+    "preferred_en": "atopic dermatitis",
+    "en_synonyms": [
+      "atopic eczema"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [
+      "eczema"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "特应性皮炎",
+      "异位性皮炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_eczema",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_eczema",
+    "preferred_label_en": "eczema",
+    "synonyms_en": [
+      "dermatitis"
+    ],
+    "exact_synonyms_en": [
+      "eczema"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Eczema"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "eczema",
+      "dermatitis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "eczema",
+      "湿疹",
+      "dermatitis"
+    ],
+    "preferred_zh": "湿疹",
+    "zh_synonyms": [],
+    "preferred_en": "eczema",
+    "en_synonyms": [
+      "dermatitis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [
+      "atopic dermatitis"
+    ],
+    "ambiguity_notes": "Eczema is broader than atopic dermatitis.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "湿疹"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_food_allergy",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_food_allergy",
+    "preferred_label_en": "food allergy",
+    "synonyms_en": [
+      "food hypersensitivity"
+    ],
+    "exact_synonyms_en": [
+      "food allergy"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Food Hypersensitivity"
+    ],
+    "tissue_terms": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "food allergy",
+      "food hypersensitivity"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Colon - Sigmoid",
+        "Colon - Transverse",
+        "Small Intestine - Terminal Ileum",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "food allergy",
+      "食物过敏",
+      "food hypersensitivity"
+    ],
+    "preferred_zh": "食物过敏",
+    "zh_synonyms": [],
+    "preferred_en": "food allergy",
+    "en_synonyms": [
+      "food hypersensitivity"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Colon - Sigmoid",
+      "Colon - Transverse",
+      "Small Intestine - Terminal Ileum",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "食物过敏"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_anaphylaxis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_anaphylaxis",
+    "preferred_label_en": "anaphylaxis",
+    "synonyms_en": [
+      "anaphylactic reaction"
+    ],
+    "exact_synonyms_en": [
+      "anaphylaxis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Anaphylaxis"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "anaphylaxis",
+      "anaphylactic reaction"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "anaphylaxis",
+      "过敏性休克",
+      "严重过敏反应",
+      "anaphylactic reaction"
+    ],
+    "preferred_zh": "过敏性休克",
+    "zh_synonyms": [
+      "严重过敏反应"
+    ],
+    "preferred_en": "anaphylaxis",
+    "en_synonyms": [
+      "anaphylactic reaction"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "过敏性休克",
+      "严重过敏反应"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_chronic_rhinosinusitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_chronic_rhinosinusitis",
+    "preferred_label_en": "chronic rhinosinusitis",
+    "synonyms_en": [
+      "chronic sinusitis"
+    ],
+    "exact_synonyms_en": [
+      "chronic rhinosinusitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CRS"
+    ],
+    "mesh_terms": [
+      "Sinusitis"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "chronic rhinosinusitis",
+      "chronic sinusitis",
+      "Sinusitis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "allergy_airway_inflammation",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "chronic rhinosinusitis",
+      "慢性鼻窦炎",
+      "慢性鼻-鼻窦炎",
+      "chronic sinusitis",
+      "CRS",
+      "Sinusitis"
+    ],
+    "preferred_zh": "慢性鼻窦炎",
+    "zh_synonyms": [
+      "慢性鼻-鼻窦炎"
+    ],
+    "preferred_en": "chronic rhinosinusitis",
+    "en_synonyms": [
+      "chronic sinusitis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "cytokine release syndrome"
+    ],
+    "ambiguity_notes": "CRS can mean chronic rhinosinusitis or cytokine release syndrome.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "慢性鼻窦炎",
+      "慢性鼻-鼻窦炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_psoriasis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_psoriasis",
+    "preferred_label_en": "psoriasis",
+    "synonyms_en": [
+      "psoriasis vulgaris"
+    ],
+    "exact_synonyms_en": [
+      "psoriasis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "PsO"
+    ],
+    "mesh_terms": [
+      "Psoriasis"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "psoriasis",
+      "psoriasis vulgaris"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "skin_immune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "psoriasis",
+      "银屑病",
+      "牛皮癣",
+      "psoriasis vulgaris",
+      "PsO"
+    ],
+    "preferred_zh": "银屑病",
+    "zh_synonyms": [
+      "牛皮癣"
+    ],
+    "preferred_en": "psoriasis",
+    "en_synonyms": [
+      "psoriasis vulgaris"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [
+      "psoriatic arthritis"
+    ],
+    "ambiguity_notes": "Psoriasis should not automatically equal psoriatic arthritis.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "银屑病",
+      "牛皮癣"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_vitiligo",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_vitiligo",
+    "preferred_label_en": "vitiligo",
+    "synonyms_en": [
+      "leukoderma"
+    ],
+    "exact_synonyms_en": [
+      "vitiligo"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Vitiligo"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "vitiligo",
+      "leukoderma"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "skin_immune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "vitiligo",
+      "白癜风",
+      "leukoderma"
+    ],
+    "preferred_zh": "白癜风",
+    "zh_synonyms": [],
+    "preferred_en": "vitiligo",
+    "en_synonyms": [
+      "leukoderma"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "白癜风"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_alopecia_areata",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_alopecia_areata",
+    "preferred_label_en": "alopecia areata",
+    "synonyms_en": [
+      "patchy hair loss"
+    ],
+    "exact_synonyms_en": [
+      "alopecia areata"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AA"
+    ],
+    "mesh_terms": [
+      "Alopecia Areata"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "alopecia areata",
+      "patchy hair loss"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "skin_immune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "alopecia areata",
+      "斑秃",
+      "patchy hair loss",
+      "AA"
+    ],
+    "preferred_zh": "斑秃",
+    "zh_synonyms": [],
+    "preferred_en": "alopecia areata",
+    "en_synonyms": [
+      "patchy hair loss"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "斑秃"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_hidradenitis_suppurativa",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_hidradenitis_suppurativa",
+    "preferred_label_en": "hidradenitis suppurativa",
+    "synonyms_en": [
+      "acne inversa"
+    ],
+    "exact_synonyms_en": [
+      "hidradenitis suppurativa"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "HS"
+    ],
+    "mesh_terms": [
+      "Hidradenitis Suppurativa"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "hidradenitis suppurativa",
+      "acne inversa"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "skin_immune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "hidradenitis suppurativa",
+      "化脓性汗腺炎",
+      "acne inversa",
+      "HS"
+    ],
+    "preferred_zh": "化脓性汗腺炎",
+    "zh_synonyms": [],
+    "preferred_en": "hidradenitis suppurativa",
+    "en_synonyms": [
+      "acne inversa"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "化脓性汗腺炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_pemphigus",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_pemphigus",
+    "preferred_label_en": "pemphigus",
+    "synonyms_en": [
+      "pemphigus vulgaris"
+    ],
+    "exact_synonyms_en": [
+      "pemphigus"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Pemphigus"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "pemphigus",
+      "pemphigus vulgaris"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "skin_immune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "pemphigus",
+      "天疱疮",
+      "pemphigus vulgaris"
+    ],
+    "preferred_zh": "天疱疮",
+    "zh_synonyms": [],
+    "preferred_en": "pemphigus",
+    "en_synonyms": [
+      "pemphigus vulgaris"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "天疱疮"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_bullous_pemphigoid",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_bullous_pemphigoid",
+    "preferred_label_en": "bullous pemphigoid",
+    "synonyms_en": [
+      "bullous pemphigoid"
+    ],
+    "exact_synonyms_en": [
+      "bullous pemphigoid"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Pemphigoid, Bullous"
+    ],
+    "tissue_terms": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "bullous pemphigoid",
+      "Pemphigoid, Bullous"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "skin_immune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Skin",
+        "Skin - Sun Exposed (Lower leg)",
+        "Skin - Not Sun Exposed (Suprapubic)"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "bullous pemphigoid",
+      "大疱性类天疱疮",
+      "Pemphigoid, Bullous"
+    ],
+    "preferred_zh": "大疱性类天疱疮",
+    "zh_synonyms": [],
+    "preferred_en": "bullous pemphigoid",
+    "en_synonyms": [
+      "bullous pemphigoid"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "gtex_tissue_candidates": [
+      "Skin",
+      "Skin - Sun Exposed (Lower leg)",
+      "Skin - Not Sun Exposed (Suprapubic)"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "大疱性类天疱疮"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_multiple_sclerosis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_multiple_sclerosis",
+    "preferred_label_en": "multiple sclerosis",
+    "synonyms_en": [
+      "multiple sclerosis"
+    ],
+    "exact_synonyms_en": [
+      "multiple sclerosis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MS"
+    ],
+    "mesh_terms": [
+      "Multiple Sclerosis"
+    ],
+    "tissue_terms": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "multiple sclerosis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "neuroimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Brain - Cortex",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "multiple sclerosis",
+      "多发性硬化",
+      "多发性硬化症",
+      "MS"
+    ],
+    "preferred_zh": "多发性硬化",
+    "zh_synonyms": [
+      "多发性硬化症"
+    ],
+    "preferred_en": "multiple sclerosis",
+    "en_synonyms": [
+      "multiple sclerosis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "MS is high risk abbreviation.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "多发性硬化",
+      "多发性硬化症"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_neuromyelitis_optica_spectrum_disorder",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_neuromyelitis_optica_spectrum_disorder",
+    "preferred_label_en": "neuromyelitis optica spectrum disorder",
+    "synonyms_en": [
+      "neuromyelitis optica",
+      "Devic disease"
+    ],
+    "exact_synonyms_en": [
+      "neuromyelitis optica spectrum disorder"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "NMOSD",
+      "NMO"
+    ],
+    "mesh_terms": [
+      "Neuromyelitis Optica"
+    ],
+    "tissue_terms": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "neuromyelitis optica spectrum disorder",
+      "neuromyelitis optica",
+      "Devic disease"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "neuroimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Brain - Cortex",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "neuromyelitis optica spectrum disorder",
+      "视神经脊髓炎谱系疾病",
+      "视神经脊髓炎",
+      "neuromyelitis optica",
+      "Devic disease",
+      "NMOSD",
+      "NMO"
+    ],
+    "preferred_zh": "视神经脊髓炎谱系疾病",
+    "zh_synonyms": [
+      "视神经脊髓炎"
+    ],
+    "preferred_en": "neuromyelitis optica spectrum disorder",
+    "en_synonyms": [
+      "neuromyelitis optica",
+      "Devic disease"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "multiple sclerosis"
+    ],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "视神经脊髓炎谱系疾病",
+      "视神经脊髓炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_myasthenia_gravis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_myasthenia_gravis",
+    "preferred_label_en": "myasthenia gravis",
+    "synonyms_en": [
+      "myasthenia gravis"
+    ],
+    "exact_synonyms_en": [
+      "myasthenia gravis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "MG"
+    ],
+    "mesh_terms": [
+      "Myasthenia Gravis"
+    ],
+    "tissue_terms": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "myasthenia gravis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "neuroimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Muscle - Skeletal",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "myasthenia gravis",
+      "重症肌无力",
+      "MG"
+    ],
+    "preferred_zh": "重症肌无力",
+    "zh_synonyms": [],
+    "preferred_en": "myasthenia gravis",
+    "en_synonyms": [
+      "myasthenia gravis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Muscle - Skeletal",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "重症肌无力"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_guillain_barre_syndrome",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_guillain_barre_syndrome",
+    "preferred_label_en": "Guillain-Barre syndrome",
+    "synonyms_en": [
+      "Guillain-Barré syndrome",
+      "acute inflammatory demyelinating polyneuropathy"
+    ],
+    "exact_synonyms_en": [
+      "Guillain-Barre syndrome"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "GBS",
+      "AIDP"
+    ],
+    "mesh_terms": [
+      "Guillain-Barre Syndrome"
+    ],
+    "tissue_terms": [
+      "Nerve - Tibial",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Guillain-Barre syndrome",
+      "Guillain-Barré syndrome",
+      "acute inflammatory demyelinating polyneuropathy"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "neuroimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Nerve - Tibial",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Guillain-Barre syndrome",
+      "吉兰-巴雷综合征",
+      "格林巴利综合征",
+      "Guillain-Barré syndrome",
+      "acute inflammatory demyelinating polyneuropathy",
+      "GBS",
+      "AIDP"
+    ],
+    "preferred_zh": "吉兰-巴雷综合征",
+    "zh_synonyms": [
+      "格林巴利综合征"
+    ],
+    "preferred_en": "Guillain-Barre syndrome",
+    "en_synonyms": [
+      "Guillain-Barré syndrome",
+      "acute inflammatory demyelinating polyneuropathy"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Nerve - Tibial",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Nerve - Tibial",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "吉兰-巴雷综合征",
+      "格林巴利综合征"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_autoimmune_encephalitis",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_autoimmune_encephalitis",
+    "preferred_label_en": "autoimmune encephalitis",
+    "synonyms_en": [
+      "autoimmune encephalitis"
+    ],
+    "exact_synonyms_en": [
+      "autoimmune encephalitis"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "AE"
+    ],
+    "mesh_terms": [
+      "Encephalitis"
+    ],
+    "tissue_terms": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "autoimmune encephalitis",
+      "Encephalitis"
+    ],
+    "concept_type": "disease",
+    "category": "immune_inflammatory",
+    "subcategory": "neuroimmune_disease",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory disease"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory disease"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Brain",
+        "Brain - Cortex",
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "autoimmune encephalitis",
+      "自身免疫性脑炎",
+      "AE",
+      "Encephalitis"
+    ],
+    "preferred_zh": "自身免疫性脑炎",
+    "zh_synonyms": [],
+    "preferred_en": "autoimmune encephalitis",
+    "en_synonyms": [
+      "autoimmune encephalitis"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Brain",
+      "Brain - Cortex",
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "自身免疫性脑炎"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_t_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_t_cell",
+    "preferred_label_en": "T cell",
+    "synonyms_en": [
+      "T lymphocyte",
+      "T-cell"
+    ],
+    "exact_synonyms_en": [
+      "T cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "T-Lymphocytes"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "T cell",
+      "T lymphocyte",
+      "T-cell",
+      "T-Lymphocytes"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "T cell",
+      "T细胞",
+      "T淋巴细胞",
+      "T lymphocyte",
+      "T-cell",
+      "T-Lymphocytes"
+    ],
+    "preferred_zh": "T细胞",
+    "zh_synonyms": [
+      "T淋巴细胞"
+    ],
+    "preferred_en": "T cell",
+    "en_synonyms": [
+      "T lymphocyte",
+      "T-cell"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "T细胞",
+      "T淋巴细胞"
+    ],
+    "immune_cell_terms": [
+      "T cell",
+      "T lymphocyte",
+      "T-cell"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_b_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_b_cell",
+    "preferred_label_en": "B cell",
+    "synonyms_en": [
+      "B lymphocyte",
+      "B-cell"
+    ],
+    "exact_synonyms_en": [
+      "B cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "B-Lymphocytes"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "B cell",
+      "B lymphocyte",
+      "B-cell",
+      "B-Lymphocytes"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "B cell",
+      "B细胞",
+      "B淋巴细胞",
+      "B lymphocyte",
+      "B-cell",
+      "B-Lymphocytes"
+    ],
+    "preferred_zh": "B细胞",
+    "zh_synonyms": [
+      "B淋巴细胞"
+    ],
+    "preferred_en": "B cell",
+    "en_synonyms": [
+      "B lymphocyte",
+      "B-cell"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "B细胞",
+      "B淋巴细胞"
+    ],
+    "immune_cell_terms": [
+      "B cell",
+      "B lymphocyte",
+      "B-cell"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_macrophage",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_macrophage",
+    "preferred_label_en": "macrophage",
+    "synonyms_en": [
+      "macrophages"
+    ],
+    "exact_synonyms_en": [
+      "macrophage"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Macrophages"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "macrophage",
+      "macrophages"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "macrophage",
+      "巨噬细胞",
+      "macrophages"
+    ],
+    "preferred_zh": "巨噬细胞",
+    "zh_synonyms": [],
+    "preferred_en": "macrophage",
+    "en_synonyms": [
+      "macrophages"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "巨噬细胞"
+    ],
+    "immune_cell_terms": [
+      "macrophage",
+      "macrophages"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_monocyte",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_monocyte",
+    "preferred_label_en": "monocyte",
+    "synonyms_en": [
+      "monocytes"
+    ],
+    "exact_synonyms_en": [
+      "monocyte"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Monocytes"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "monocyte",
+      "monocytes"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "monocyte",
+      "单核细胞",
+      "monocytes"
+    ],
+    "preferred_zh": "单核细胞",
+    "zh_synonyms": [],
+    "preferred_en": "monocyte",
+    "en_synonyms": [
+      "monocytes"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "单核细胞"
+    ],
+    "immune_cell_terms": [
+      "monocyte",
+      "monocytes"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_neutrophil",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_neutrophil",
+    "preferred_label_en": "neutrophil",
+    "synonyms_en": [
+      "neutrophils"
+    ],
+    "exact_synonyms_en": [
+      "neutrophil"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Neutrophils"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "neutrophil",
+      "neutrophils"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "neutrophil",
+      "中性粒细胞",
+      "中性白细胞",
+      "neutrophils"
+    ],
+    "preferred_zh": "中性粒细胞",
+    "zh_synonyms": [
+      "中性白细胞"
+    ],
+    "preferred_en": "neutrophil",
+    "en_synonyms": [
+      "neutrophils"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "中性粒细胞",
+      "中性白细胞"
+    ],
+    "immune_cell_terms": [
+      "neutrophil",
+      "neutrophils"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_dendritic_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_dendritic_cell",
+    "preferred_label_en": "dendritic cell",
+    "synonyms_en": [
+      "dendritic cells"
+    ],
+    "exact_synonyms_en": [
+      "dendritic cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "DC"
+    ],
+    "mesh_terms": [
+      "Dendritic Cells"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "dendritic cell",
+      "dendritic cells"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "dendritic cell",
+      "树突状细胞",
+      "dendritic cells",
+      "DC"
+    ],
+    "preferred_zh": "树突状细胞",
+    "zh_synonyms": [],
+    "preferred_en": "dendritic cell",
+    "en_synonyms": [
+      "dendritic cells"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "DC is high risk abbreviation.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "树突状细胞"
+    ],
+    "immune_cell_terms": [
+      "dendritic cell",
+      "dendritic cells",
+      "DC"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_natural_killer_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_natural_killer_cell",
+    "preferred_label_en": "natural killer cell",
+    "synonyms_en": [
+      "NK cell",
+      "natural killer cells"
+    ],
+    "exact_synonyms_en": [
+      "natural killer cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "NK"
+    ],
+    "mesh_terms": [
+      "Killer Cells, Natural"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "natural killer cell",
+      "NK cell",
+      "natural killer cells",
+      "Killer Cells, Natural"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "natural killer cell",
+      "NK细胞",
+      "自然杀伤细胞",
+      "NK cell",
+      "natural killer cells",
+      "NK",
+      "Killer Cells, Natural"
+    ],
+    "preferred_zh": "NK细胞",
+    "zh_synonyms": [
+      "自然杀伤细胞"
+    ],
+    "preferred_en": "natural killer cell",
+    "en_synonyms": [
+      "NK cell",
+      "natural killer cells"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "NK细胞",
+      "自然杀伤细胞"
+    ],
+    "immune_cell_terms": [
+      "natural killer cell",
+      "NK cell",
+      "natural killer cells",
+      "NK"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_regulatory_t_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_regulatory_t_cell",
+    "preferred_label_en": "regulatory T cell",
+    "synonyms_en": [
+      "Treg",
+      "T regulatory cell"
+    ],
+    "exact_synonyms_en": [
+      "regulatory T cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Treg"
+    ],
+    "mesh_terms": [
+      "T-Lymphocytes, Regulatory"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "regulatory T cell",
+      "Treg",
+      "T regulatory cell",
+      "T-Lymphocytes, Regulatory"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "regulatory T cell",
+      "调节性T细胞",
+      "Treg细胞",
+      "Treg",
+      "T regulatory cell",
+      "T-Lymphocytes, Regulatory"
+    ],
+    "preferred_zh": "调节性T细胞",
+    "zh_synonyms": [
+      "Treg细胞"
+    ],
+    "preferred_en": "regulatory T cell",
+    "en_synonyms": [
+      "Treg",
+      "T regulatory cell"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "调节性T细胞",
+      "Treg细胞"
+    ],
+    "immune_cell_terms": [
+      "regulatory T cell",
+      "Treg",
+      "T regulatory cell"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_th1_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_th1_cell",
+    "preferred_label_en": "Th1 cell",
+    "synonyms_en": [
+      "T helper 1 cell",
+      "type 1 helper T cell"
+    ],
+    "exact_synonyms_en": [
+      "Th1 cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Th1"
+    ],
+    "mesh_terms": [
+      "Th1 Cells"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Th1 cell",
+      "T helper 1 cell",
+      "type 1 helper T cell",
+      "Th1 Cells"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Th1 cell",
+      "Th1细胞",
+      "T helper 1 cell",
+      "type 1 helper T cell",
+      "Th1",
+      "Th1 Cells"
+    ],
+    "preferred_zh": "Th1细胞",
+    "zh_synonyms": [],
+    "preferred_en": "Th1 cell",
+    "en_synonyms": [
+      "T helper 1 cell",
+      "type 1 helper T cell"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "Th1细胞"
+    ],
+    "immune_cell_terms": [
+      "Th1 cell",
+      "T helper 1 cell",
+      "type 1 helper T cell",
+      "Th1"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_th2_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_th2_cell",
+    "preferred_label_en": "Th2 cell",
+    "synonyms_en": [
+      "T helper 2 cell",
+      "type 2 helper T cell"
+    ],
+    "exact_synonyms_en": [
+      "Th2 cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Th2"
+    ],
+    "mesh_terms": [
+      "Th2 Cells"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Th2 cell",
+      "T helper 2 cell",
+      "type 2 helper T cell",
+      "Th2 Cells"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Th2 cell",
+      "Th2细胞",
+      "T helper 2 cell",
+      "type 2 helper T cell",
+      "Th2",
+      "Th2 Cells"
+    ],
+    "preferred_zh": "Th2细胞",
+    "zh_synonyms": [],
+    "preferred_en": "Th2 cell",
+    "en_synonyms": [
+      "T helper 2 cell",
+      "type 2 helper T cell"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "Th2细胞"
+    ],
+    "immune_cell_terms": [
+      "Th2 cell",
+      "T helper 2 cell",
+      "type 2 helper T cell",
+      "Th2"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_th17_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_th17_cell",
+    "preferred_label_en": "Th17 cell",
+    "synonyms_en": [
+      "T helper 17 cell"
+    ],
+    "exact_synonyms_en": [
+      "Th17 cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "Th17"
+    ],
+    "mesh_terms": [
+      "Th17 Cells"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "Th17 cell",
+      "T helper 17 cell",
+      "Th17 Cells"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "Th17 cell",
+      "Th17细胞",
+      "T helper 17 cell",
+      "Th17",
+      "Th17 Cells"
+    ],
+    "preferred_zh": "Th17细胞",
+    "zh_synonyms": [],
+    "preferred_en": "Th17 cell",
+    "en_synonyms": [
+      "T helper 17 cell"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "Th17细胞"
+    ],
+    "immune_cell_terms": [
+      "Th17 cell",
+      "T helper 17 cell",
+      "Th17"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_plasma_cell",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_plasma_cell",
+    "preferred_label_en": "plasma cell",
+    "synonyms_en": [
+      "plasmocyte"
+    ],
+    "exact_synonyms_en": [
+      "plasma cell"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Plasma Cells"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [],
+    "pubmed_query_terms": [
+      "plasma cell",
+      "plasmocyte",
+      "Plasma Cells"
+    ],
+    "concept_type": "immune_cell",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_cell",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "plasma cell",
+      "浆细胞",
+      "plasmocyte",
+      "Plasma Cells"
+    ],
+    "preferred_zh": "浆细胞",
+    "zh_synonyms": [],
+    "preferred_en": "plasma cell",
+    "en_synonyms": [
+      "plasmocyte"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "浆细胞"
+    ],
+    "immune_cell_terms": [
+      "plasma cell",
+      "plasmocyte"
+    ],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_interleukin_6",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_interleukin_6",
+    "preferred_label_en": "interleukin-6",
+    "synonyms_en": [
+      "IL-6",
+      "IL6"
+    ],
+    "exact_synonyms_en": [
+      "interleukin-6"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IL-6",
+      "IL6"
+    ],
+    "mesh_terms": [
+      "Interleukin-6"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "interleukin-6",
+      "IL-6",
+      "IL6"
+    ],
+    "pubmed_query_terms": [
+      "interleukin-6",
+      "IL-6",
+      "IL6"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "interleukin-6",
+      "白细胞介素6",
+      "IL-6",
+      "IL6"
+    ],
+    "preferred_zh": "白细胞介素6",
+    "zh_synonyms": [
+      "IL-6"
+    ],
+    "preferred_en": "interleukin-6",
+    "en_synonyms": [
+      "IL-6",
+      "IL6"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "白细胞介素6",
+      "IL-6"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "interleukin-6",
+      "IL-6",
+      "IL6"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_interleukin_1_beta",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_interleukin_1_beta",
+    "preferred_label_en": "interleukin-1 beta",
+    "synonyms_en": [
+      "IL-1 beta",
+      "interleukin-1β"
+    ],
+    "exact_synonyms_en": [
+      "interleukin-1 beta"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IL-1β",
+      "IL-1B",
+      "IL1B"
+    ],
+    "mesh_terms": [
+      "Interleukin-1beta"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "interleukin-1 beta",
+      "IL-1 beta",
+      "interleukin-1β",
+      "IL-1β",
+      "IL-1B",
+      "IL1B"
+    ],
+    "pubmed_query_terms": [
+      "interleukin-1 beta",
+      "IL-1 beta",
+      "interleukin-1β",
+      "Interleukin-1beta"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "interleukin-1 beta",
+      "白细胞介素1β",
+      "IL-1β",
+      "IL-1beta",
+      "IL-1 beta",
+      "interleukin-1β",
+      "IL-1B",
+      "IL1B",
+      "Interleukin-1beta"
+    ],
+    "preferred_zh": "白细胞介素1β",
+    "zh_synonyms": [
+      "IL-1β",
+      "IL-1beta"
+    ],
+    "preferred_en": "interleukin-1 beta",
+    "en_synonyms": [
+      "IL-1 beta",
+      "interleukin-1β"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "白细胞介素1β",
+      "IL-1β",
+      "IL-1beta"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "interleukin-1 beta",
+      "IL-1 beta",
+      "interleukin-1β",
+      "IL-1β",
+      "IL-1B",
+      "IL1B"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_tumor_necrosis_factor_alpha",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_tumor_necrosis_factor_alpha",
+    "preferred_label_en": "tumor necrosis factor alpha",
+    "synonyms_en": [
+      "TNF-alpha",
+      "TNF-α",
+      "TNF"
+    ],
+    "exact_synonyms_en": [
+      "tumor necrosis factor alpha"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "TNF",
+      "TNF-alpha"
+    ],
+    "mesh_terms": [
+      "Tumor Necrosis Factor-alpha"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "tumor necrosis factor alpha",
+      "TNF-alpha",
+      "TNF-α",
+      "TNF"
+    ],
+    "pubmed_query_terms": [
+      "tumor necrosis factor alpha",
+      "TNF-alpha",
+      "TNF-α",
+      "TNF",
+      "Tumor Necrosis Factor-alpha"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "tumor necrosis factor alpha",
+      "肿瘤坏死因子α",
+      "TNF-α",
+      "TNF-alpha",
+      "TNF",
+      "Tumor Necrosis Factor-alpha"
+    ],
+    "preferred_zh": "肿瘤坏死因子α",
+    "zh_synonyms": [
+      "TNF-α",
+      "TNF-alpha"
+    ],
+    "preferred_en": "tumor necrosis factor alpha",
+    "en_synonyms": [
+      "TNF-alpha",
+      "TNF-α",
+      "TNF"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "TNF is a short cytokine token.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "肿瘤坏死因子α",
+      "TNF-α",
+      "TNF-alpha"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "tumor necrosis factor alpha",
+      "TNF-alpha",
+      "TNF-α",
+      "TNF"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_interferon_gamma",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_interferon_gamma",
+    "preferred_label_en": "interferon gamma",
+    "synonyms_en": [
+      "IFN-gamma",
+      "IFN-γ"
+    ],
+    "exact_synonyms_en": [
+      "interferon gamma"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IFN",
+      "IFNG",
+      "IFN-gamma"
+    ],
+    "mesh_terms": [
+      "Interferon-gamma"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "interferon gamma",
+      "IFN-gamma",
+      "IFN-γ",
+      "IFN",
+      "IFNG"
+    ],
+    "pubmed_query_terms": [
+      "interferon gamma",
+      "IFN-gamma",
+      "IFN-γ",
+      "Interferon-gamma"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "interferon gamma",
+      "干扰素γ",
+      "IFN-γ",
+      "IFN-gamma",
+      "IFN",
+      "IFNG",
+      "Interferon-gamma"
+    ],
+    "preferred_zh": "干扰素γ",
+    "zh_synonyms": [
+      "IFN-γ",
+      "IFN-gamma"
+    ],
+    "preferred_en": "interferon gamma",
+    "en_synonyms": [
+      "IFN-gamma",
+      "IFN-γ"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "IFN is broad and context-sensitive.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "干扰素γ",
+      "IFN-γ",
+      "IFN-gamma"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "interferon gamma",
+      "IFN-gamma",
+      "IFN-γ",
+      "IFN",
+      "IFNG"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_interleukin_10",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_interleukin_10",
+    "preferred_label_en": "interleukin-10",
+    "synonyms_en": [
+      "IL-10",
+      "IL10"
+    ],
+    "exact_synonyms_en": [
+      "interleukin-10"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IL-10",
+      "IL10"
+    ],
+    "mesh_terms": [
+      "Interleukin-10"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "interleukin-10",
+      "IL-10",
+      "IL10"
+    ],
+    "pubmed_query_terms": [
+      "interleukin-10",
+      "IL-10",
+      "IL10"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "interleukin-10",
+      "白细胞介素10",
+      "IL-10",
+      "IL10"
+    ],
+    "preferred_zh": "白细胞介素10",
+    "zh_synonyms": [
+      "IL-10"
+    ],
+    "preferred_en": "interleukin-10",
+    "en_synonyms": [
+      "IL-10",
+      "IL10"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "白细胞介素10",
+      "IL-10"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "interleukin-10",
+      "IL-10",
+      "IL10"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_interleukin_17",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_interleukin_17",
+    "preferred_label_en": "interleukin-17",
+    "synonyms_en": [
+      "IL-17",
+      "IL17"
+    ],
+    "exact_synonyms_en": [
+      "interleukin-17"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IL-17",
+      "IL17"
+    ],
+    "mesh_terms": [
+      "Interleukin-17"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "interleukin-17",
+      "IL-17",
+      "IL17"
+    ],
+    "pubmed_query_terms": [
+      "interleukin-17",
+      "IL-17",
+      "IL17"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "interleukin-17",
+      "白细胞介素17",
+      "IL-17",
+      "IL17"
+    ],
+    "preferred_zh": "白细胞介素17",
+    "zh_synonyms": [
+      "IL-17"
+    ],
+    "preferred_en": "interleukin-17",
+    "en_synonyms": [
+      "IL-17",
+      "IL17"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "白细胞介素17",
+      "IL-17"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "interleukin-17",
+      "IL-17",
+      "IL17"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_immunoglobulin_e",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_immunoglobulin_e",
+    "preferred_label_en": "immunoglobulin E",
+    "synonyms_en": [
+      "IgE antibody"
+    ],
+    "exact_synonyms_en": [
+      "immunoglobulin E"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "IgE"
+    ],
+    "mesh_terms": [
+      "Immunoglobulin E"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "immunoglobulin E",
+      "IgE antibody",
+      "IgE"
+    ],
+    "pubmed_query_terms": [
+      "immunoglobulin E",
+      "IgE antibody"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_biomarker",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "immunoglobulin E",
+      "免疫球蛋白E",
+      "IgE",
+      "IgE antibody"
+    ],
+    "preferred_zh": "免疫球蛋白E",
+    "zh_synonyms": [
+      "IgE"
+    ],
+    "preferred_en": "immunoglobulin E",
+    "en_synonyms": [
+      "IgE antibody"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "免疫球蛋白E",
+      "IgE"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "immunoglobulin E",
+      "IgE antibody",
+      "IgE"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_antinuclear_antibody",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_antinuclear_antibody",
+    "preferred_label_en": "antinuclear antibody",
+    "synonyms_en": [
+      "antinuclear antibodies"
+    ],
+    "exact_synonyms_en": [
+      "antinuclear antibody"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ANA"
+    ],
+    "mesh_terms": [
+      "Antibodies, Antinuclear"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "antinuclear antibody",
+      "antinuclear antibodies",
+      "ANA"
+    ],
+    "pubmed_query_terms": [
+      "antinuclear antibody",
+      "antinuclear antibodies",
+      "Antibodies, Antinuclear"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "autoantibody",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "antinuclear antibody",
+      "抗核抗体",
+      "ANA",
+      "antinuclear antibodies",
+      "Antibodies, Antinuclear"
+    ],
+    "preferred_zh": "抗核抗体",
+    "zh_synonyms": [
+      "ANA"
+    ],
+    "preferred_en": "antinuclear antibody",
+    "en_synonyms": [
+      "antinuclear antibodies"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "抗核抗体",
+      "ANA"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "antinuclear antibody",
+      "antinuclear antibodies",
+      "ANA"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_rheumatoid_factor",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_rheumatoid_factor",
+    "preferred_label_en": "rheumatoid factor",
+    "synonyms_en": [
+      "rheumatoid factors"
+    ],
+    "exact_synonyms_en": [
+      "rheumatoid factor"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "RF"
+    ],
+    "mesh_terms": [
+      "Rheumatoid Factor"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "rheumatoid factor",
+      "rheumatoid factors",
+      "RF"
+    ],
+    "pubmed_query_terms": [
+      "rheumatoid factor",
+      "rheumatoid factors"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "autoantibody",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "rheumatoid factor",
+      "类风湿因子",
+      "RF",
+      "rheumatoid factors"
+    ],
+    "preferred_zh": "类风湿因子",
+    "zh_synonyms": [
+      "RF"
+    ],
+    "preferred_en": "rheumatoid factor",
+    "en_synonyms": [
+      "rheumatoid factors"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "RF is a short token.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "类风湿因子",
+      "RF"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "rheumatoid factor",
+      "rheumatoid factors",
+      "RF"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_anti_cyclic_citrullinated_peptide_antibody",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_anti_cyclic_citrullinated_peptide_antibody",
+    "preferred_label_en": "anti-cyclic citrullinated peptide antibody",
+    "synonyms_en": [
+      "anti-CCP antibody",
+      "anti-citrullinated protein antibody"
+    ],
+    "exact_synonyms_en": [
+      "anti-cyclic citrullinated peptide antibody"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "anti-CCP",
+      "ACPA"
+    ],
+    "mesh_terms": [
+      "Anti-Citrullinated Protein Antibodies"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "anti-cyclic citrullinated peptide antibody",
+      "anti-CCP antibody",
+      "anti-citrullinated protein antibody",
+      "anti-CCP",
+      "ACPA"
+    ],
+    "pubmed_query_terms": [
+      "anti-cyclic citrullinated peptide antibody",
+      "anti-CCP antibody",
+      "anti-citrullinated protein antibody",
+      "Anti-Citrullinated Protein Antibodies"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "autoantibody",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "anti-cyclic citrullinated peptide antibody",
+      "抗环瓜氨酸肽抗体",
+      "抗CCP抗体",
+      "anti-CCP",
+      "anti-CCP antibody",
+      "anti-citrullinated protein antibody",
+      "ACPA",
+      "Anti-Citrullinated Protein Antibodies"
+    ],
+    "preferred_zh": "抗环瓜氨酸肽抗体",
+    "zh_synonyms": [
+      "抗CCP抗体",
+      "anti-CCP"
+    ],
+    "preferred_en": "anti-cyclic citrullinated peptide antibody",
+    "en_synonyms": [
+      "anti-CCP antibody",
+      "anti-citrullinated protein antibody"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "抗环瓜氨酸肽抗体",
+      "抗CCP抗体",
+      "anti-CCP"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "anti-cyclic citrullinated peptide antibody",
+      "anti-CCP antibody",
+      "anti-citrullinated protein antibody",
+      "anti-CCP",
+      "ACPA"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_antineutrophil_cytoplasmic_antibody",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_antineutrophil_cytoplasmic_antibody",
+    "preferred_label_en": "antineutrophil cytoplasmic antibody",
+    "synonyms_en": [
+      "ANCA antibody"
+    ],
+    "exact_synonyms_en": [
+      "antineutrophil cytoplasmic antibody"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "ANCA"
+    ],
+    "mesh_terms": [
+      "Antibodies, Antineutrophil Cytoplasmic"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "antineutrophil cytoplasmic antibody",
+      "ANCA antibody",
+      "ANCA"
+    ],
+    "pubmed_query_terms": [
+      "antineutrophil cytoplasmic antibody",
+      "ANCA antibody",
+      "Antibodies, Antineutrophil Cytoplasmic"
+    ],
+    "concept_type": "biomarker",
+    "category": "immune_inflammatory",
+    "subcategory": "autoantibody",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "antineutrophil cytoplasmic antibody",
+      "抗中性粒细胞胞浆抗体",
+      "ANCA",
+      "ANCA antibody",
+      "Antibodies, Antineutrophil Cytoplasmic"
+    ],
+    "preferred_zh": "抗中性粒细胞胞浆抗体",
+    "zh_synonyms": [
+      "ANCA"
+    ],
+    "preferred_en": "antineutrophil cytoplasmic antibody",
+    "en_synonyms": [
+      "ANCA antibody"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "ANCA-associated vasculitis"
+    ],
+    "ambiguity_notes": "ANCA biomarker should not automatically equal AAV.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "抗中性粒细胞胞浆抗体",
+      "ANCA"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": [
+      "antineutrophil cytoplasmic antibody",
+      "ANCA antibody",
+      "ANCA"
+    ]
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_immune_response",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_immune_response",
+    "preferred_label_en": "immune response",
+    "synonyms_en": [
+      "immune activation",
+      "host immune response"
+    ],
+    "exact_synonyms_en": [
+      "immune response"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [],
+    "mesh_terms": [
+      "Immune System Phenomena"
+    ],
+    "tissue_terms": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "immune response",
+      "immune activation",
+      "host immune response"
+    ],
+    "pubmed_query_terms": [
+      "immune response",
+      "immune activation",
+      "host immune response",
+      "Immune System Phenomena"
+    ],
+    "concept_type": "process",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_process",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood",
+        "Spleen"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "immune response",
+      "免疫反应",
+      "免疫应答",
+      "immune activation",
+      "host immune response",
+      "Immune System Phenomena"
+    ],
+    "preferred_zh": "免疫反应",
+    "zh_synonyms": [
+      "免疫应答"
+    ],
+    "preferred_en": "immune response",
+    "en_synonyms": [
+      "immune activation",
+      "host immune response"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood",
+      "Spleen"
+    ],
+    "avoid_expansion_to": [],
+    "ambiguity_notes": "",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "免疫反应",
+      "免疫应答"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
+  },
+  {
+    "concept_id": "mini:immune_inflammatory_cytokine_storm",
+    "source_vocabulary": "mini",
+    "source_id": "mini:immune_inflammatory_cytokine_storm",
+    "preferred_label_en": "cytokine storm",
+    "synonyms_en": [
+      "cytokine release syndrome"
+    ],
+    "exact_synonyms_en": [
+      "cytokine storm"
+    ],
+    "related_synonyms_en": [],
+    "abbreviations": [
+      "CRS"
+    ],
+    "mesh_terms": [
+      "Cytokine Release Syndrome"
+    ],
+    "tissue_terms": [
+      "Whole Blood"
+    ],
+    "tcga_primary_site_candidates": [],
+    "data_modality_terms": [],
+    "assay_terms": [],
+    "platform_candidates": [],
+    "modifier_terms_en": [],
+    "intervention_terms": [],
+    "outcome_terms": [],
+    "study_design_terms": [],
+    "publication_type_terms": [],
+    "pico_terms": [],
+    "effect_measures": [],
+    "diagnostic_accuracy_terms": [],
+    "exclusion_type_terms": [],
+    "quality_assessment_terms": [],
+    "exposure_terms": [
+      "cytokine storm",
+      "cytokine release syndrome",
+      "CRS"
+    ],
+    "pubmed_query_terms": [
+      "cytokine storm",
+      "cytokine release syndrome"
+    ],
+    "concept_type": "phenotype",
+    "category": "immune_inflammatory",
+    "subcategory": "immune_process",
+    "disease_group": "immune_inflammatory",
+    "version": "immune_inflammatory_core_v1",
+    "term_source": "project_curated_immune_inflammatory_core_v1",
+    "contexts": [
+      "bioinformatics",
+      "meta_analysis"
+    ],
+    "parent_terms": [
+      "immune and inflammatory term"
+    ],
+    "parent_concepts": [
+      "immune and inflammatory term"
+    ],
+    "child_concepts": [],
+    "related_concepts": [],
+    "cross_refs": {
+      "gtex": [
+        "Whole Blood"
+      ]
+    },
+    "license": "project-local-curated",
+    "confidence": 0.95,
+    "normalized_terms": [
+      "cytokine storm",
+      "细胞因子风暴",
+      "细胞因子释放综合征",
+      "cytokine release syndrome",
+      "CRS"
+    ],
+    "preferred_zh": "细胞因子风暴",
+    "zh_synonyms": [
+      "细胞因子释放综合征"
+    ],
+    "preferred_en": "cytokine storm",
+    "en_synonyms": [
+      "cytokine release syndrome"
+    ],
+    "related_organs": [],
+    "related_tissues": [
+      "Whole Blood"
+    ],
+    "gtex_tissue_candidates": [
+      "Whole Blood"
+    ],
+    "avoid_expansion_to": [
+      "chronic rhinosinusitis"
+    ],
+    "ambiguity_notes": "CRS can also mean chronic rhinosinusitis.",
+    "sources": [
+      "project_curated_immune_inflammatory_core_v1"
+    ],
+    "zh_terms": [
+      "细胞因子风暴",
+      "细胞因子释放综合征"
+    ],
+    "immune_cell_terms": [],
+    "biomarker_terms": []
   }
 ]

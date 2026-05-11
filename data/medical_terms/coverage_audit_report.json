@@ -1,26 +1,26 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-11T12:21:04.615141+00:00",
+  "generated_at": "2026-05-11T13:56:39.103621+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
     "reference_checklists": "data/medical_terms/reference_checklists"
   },
   "overall": {
-    "total_checklist_items": 552,
-    "covered": 552,
+    "total_checklist_items": 621,
+    "covered": 621,
     "partially_covered": 0,
     "missing": 0,
     "coverage_rate": 1.0,
     "weighted_coverage_rate": 1.0,
-    "core_checklist_items": 464,
-    "core_covered": 464,
+    "core_checklist_items": 533,
+    "core_covered": 533,
     "core_missing": 0,
     "core_coverage_rate": 1.0,
-    "total_runtime_concepts": 517,
-    "total_zh_overrides": 936,
-    "total_high_risk_ambiguity_terms": 62,
-    "corpus_records": 1453,
+    "total_runtime_concepts": 575,
+    "total_zh_overrides": 1094,
+    "total_high_risk_ambiguity_terms": 98,
+    "corpus_records": 1669,
     "quality_gate_status": "pass"
   },
   "core_checklist_summary": {
@@ -364,6 +364,162 @@
         {
           "term": "EF",
           "notes": "Cardiac phenotype token, not an effect measure or disease."
+        }
+      ],
+      "p0_gaps": [],
+      "p1_gaps": [],
+      "p2_gaps": [],
+      "quality_gate_status": "pass"
+    },
+    "immune_inflammatory_core": {
+      "total": 69,
+      "covered": 69,
+      "missing": 0,
+      "coverage_percentage": 1.0,
+      "high_risk_ambiguity_terms": [
+        {
+          "term": "RA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IBD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "SLE",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "SS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "DM",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "PM",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "APS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "AS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "OA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "PsA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "JIA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "GCA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "AAV",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "UC",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "CD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "COPD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "CRS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "MS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "NMOSD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "MG",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "GBS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "AE",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "DC",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "NK",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Treg",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Th1",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Th2",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Th17",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "CRP",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IL-6",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "TNF",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IFN",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IgE",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "ANA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "RF",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "ANCA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
         }
       ],
       "p0_gaps": [],
@@ -12582,6 +12738,2665 @@
       "exact": 23,
       "approximate": 0
     },
+    "immune_inflammatory_core": {
+      "checklist_id": "immune_inflammatory_core",
+      "title": "Shared Medical Vocabulary Immune & Inflammatory Core v1",
+      "source": "project_curated",
+      "source_version": "immune_inflammatory_core_v1",
+      "total_checklist_items": 69,
+      "covered": 69,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "systemic_lupus_erythematosus",
+          "label": "systemic lupus erythematosus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "systemic lupus erythematosus",
+            "系统性红斑狼疮",
+            "红斑狼疮",
+            "lupus",
+            "SLE",
+            "Lupus Erythematosus, Systemic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "systemic lupus erythematosus",
+            "系统性红斑狼疮",
+            "红斑狼疮",
+            "lupus",
+            "SLE",
+            "Lupus Erythematosus, Systemic"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "lupus nephritis"
+          ],
+          "ambiguity_notes": "SLE should not automatically expand to lupus nephritis."
+        },
+        {
+          "id": "rheumatoid_arthritis",
+          "label": "rheumatoid arthritis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "rheumatoid arthritis",
+            "类风湿关节炎",
+            "类风湿性关节炎",
+            "inflammatory arthritis",
+            "RA",
+            "Arthritis, Rheumatoid"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "rheumatoid arthritis",
+            "类风湿关节炎",
+            "类风湿性关节炎",
+            "inflammatory arthritis",
+            "RA",
+            "Arthritis, Rheumatoid"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "osteoarthritis",
+            "psoriatic arthritis"
+          ],
+          "ambiguity_notes": "RA requires exact abbreviation matching."
+        },
+        {
+          "id": "sjogren_syndrome",
+          "label": "Sjogren syndrome",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Sjogren syndrome",
+            "干燥综合征",
+            "舍格伦综合征",
+            "干燥症",
+            "Sjögren syndrome",
+            "Sjögren disease",
+            "sicca syndrome",
+            "SS"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "Sjogren syndrome",
+            "干燥综合征",
+            "舍格伦综合征",
+            "干燥症",
+            "Sjögren syndrome",
+            "Sjögren disease",
+            "sicca syndrome",
+            "SS"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "systemic_sclerosis",
+          "label": "systemic sclerosis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "systemic sclerosis",
+            "系统性硬化症",
+            "硬皮病",
+            "系统性硬皮病",
+            "scleroderma",
+            "SSc",
+            "Scleroderma, Systemic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "systemic sclerosis",
+            "系统性硬化症",
+            "硬皮病",
+            "系统性硬皮病",
+            "scleroderma",
+            "SSc",
+            "Scleroderma, Systemic"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "dermatomyositis",
+          "label": "dermatomyositis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "dermatomyositis",
+            "皮肌炎",
+            "idiopathic dermatomyositis",
+            "DM"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Muscle - Skeletal",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "dermatomyositis",
+            "皮肌炎",
+            "idiopathic dermatomyositis",
+            "DM"
+          ],
+          "matched_gtex_tissues": [
+            "Muscle - Skeletal",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "polymyositis"
+          ],
+          "ambiguity_notes": "DM can conflict with diabetes mellitus."
+        },
+        {
+          "id": "polymyositis",
+          "label": "polymyositis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "polymyositis",
+            "多发性肌炎",
+            "idiopathic polymyositis",
+            "PM"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Muscle - Skeletal",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "polymyositis",
+            "多发性肌炎",
+            "idiopathic polymyositis",
+            "PM"
+          ],
+          "matched_gtex_tissues": [
+            "Muscle - Skeletal",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "dermatomyositis"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "mixed_connective_tissue_disease",
+          "label": "mixed connective tissue disease",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "mixed connective tissue disease",
+            "混合性结缔组织病",
+            "mixed connective-tissue disease",
+            "MCTD"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "mixed connective tissue disease",
+            "混合性结缔组织病",
+            "mixed connective-tissue disease",
+            "MCTD"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "antiphospholipid_syndrome",
+          "label": "antiphospholipid syndrome",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "antiphospholipid syndrome",
+            "抗磷脂综合征",
+            "抗磷脂抗体综合征",
+            "antiphospholipid antibody syndrome",
+            "APS"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "antiphospholipid syndrome",
+            "抗磷脂综合征",
+            "抗磷脂抗体综合征",
+            "antiphospholipid antibody syndrome",
+            "APS"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "systemic lupus erythematosus"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "hashimoto_thyroiditis",
+          "label": "Hashimoto thyroiditis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Hashimoto thyroiditis",
+            "桥本甲状腺炎",
+            "桥本病",
+            "Hashimoto disease",
+            "chronic lymphocytic thyroiditis",
+            "慢性淋巴细胞性甲状腺炎"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Thyroid",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Hashimoto thyroiditis",
+            "桥本甲状腺炎",
+            "桥本病",
+            "Hashimoto disease",
+            "chronic lymphocytic thyroiditis",
+            "慢性淋巴细胞性甲状腺炎"
+          ],
+          "matched_gtex_tissues": [
+            "Thyroid",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_cross_reference",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "hypothyroidism",
+            "thyroid cancer",
+            "PTC",
+            "TCGA-THCA"
+          ],
+          "ambiguity_notes": "Cross-reference from endocrine core; do not duplicate."
+        },
+        {
+          "id": "graves_disease",
+          "label": "Graves disease",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Graves disease",
+            "Graves病",
+            "格雷夫斯病",
+            "毒性弥漫性甲状腺肿",
+            "Basedow disease",
+            "Graves-Basedow disease"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Thyroid",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Graves disease",
+            "Graves病",
+            "格雷夫斯病",
+            "毒性弥漫性甲状腺肿",
+            "Basedow disease",
+            "Graves-Basedow disease"
+          ],
+          "matched_gtex_tissues": [
+            "Thyroid",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoimmune_cross_reference",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "hyperthyroidism",
+            "thyroid cancer",
+            "PTC",
+            "TCGA-THCA"
+          ],
+          "ambiguity_notes": "Cross-reference from endocrine core; do not duplicate."
+        },
+        {
+          "id": "osteoarthritis",
+          "label": "osteoarthritis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "osteoarthritis",
+            "骨关节炎",
+            "退行性关节炎",
+            "degenerative joint disease",
+            "OA"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "osteoarthritis",
+            "骨关节炎",
+            "退行性关节炎",
+            "degenerative joint disease",
+            "OA"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "rheumatic_arthritis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "rheumatoid arthritis",
+            "psoriatic arthritis"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "ankylosing_spondylitis",
+          "label": "ankylosing spondylitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "ankylosing spondylitis",
+            "强直性脊柱炎",
+            "Bechterew disease",
+            "AS",
+            "Spondylitis, Ankylosing"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "ankylosing spondylitis",
+            "强直性脊柱炎",
+            "Bechterew disease",
+            "AS",
+            "Spondylitis, Ankylosing"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "rheumatic_arthritis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "psoriatic_arthritis",
+          "label": "psoriatic arthritis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "psoriatic arthritis",
+            "银屑病关节炎",
+            "牛皮癣关节炎",
+            "arthritis psoriatic",
+            "PsA",
+            "Arthritis, Psoriatic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "psoriatic arthritis",
+            "银屑病关节炎",
+            "牛皮癣关节炎",
+            "arthritis psoriatic",
+            "PsA",
+            "Arthritis, Psoriatic"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "rheumatic_arthritis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "psoriasis"
+          ],
+          "ambiguity_notes": "Psoriasis and psoriatic arthritis should not collapse."
+        },
+        {
+          "id": "juvenile_idiopathic_arthritis",
+          "label": "juvenile idiopathic arthritis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "juvenile idiopathic arthritis",
+            "幼年特发性关节炎",
+            "儿童特发性关节炎",
+            "juvenile rheumatoid arthritis",
+            "JIA",
+            "Arthritis, Juvenile"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "juvenile idiopathic arthritis",
+            "幼年特发性关节炎",
+            "儿童特发性关节炎",
+            "juvenile rheumatoid arthritis",
+            "JIA",
+            "Arthritis, Juvenile"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "rheumatic_arthritis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "gout",
+          "label": "gout",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "gout",
+            "痛风",
+            "痛风性关节炎",
+            "gouty arthritis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "gout",
+            "痛风",
+            "痛风性关节炎",
+            "gouty arthritis"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "rheumatic_arthritis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "vasculitis",
+          "label": "vasculitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "vasculitis",
+            "血管炎",
+            "vascular inflammation"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery",
+            "Artery - Aorta",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "vasculitis",
+            "血管炎",
+            "vascular inflammation"
+          ],
+          "matched_gtex_tissues": [
+            "Artery",
+            "Artery - Aorta",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "vasculitis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "giant cell arteritis",
+            "Takayasu arteritis",
+            "ANCA-associated vasculitis"
+          ],
+          "ambiguity_notes": "Umbrella vasculitis should not imply a subtype."
+        },
+        {
+          "id": "giant_cell_arteritis",
+          "label": "giant cell arteritis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "giant cell arteritis",
+            "巨细胞动脉炎",
+            "temporal arteritis",
+            "GCA"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery",
+            "Artery - Aorta",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "giant cell arteritis",
+            "巨细胞动脉炎",
+            "temporal arteritis",
+            "GCA"
+          ],
+          "matched_gtex_tissues": [
+            "Artery",
+            "Artery - Aorta",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "vasculitis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "vasculitis"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "takayasu_arteritis",
+          "label": "Takayasu arteritis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Takayasu arteritis",
+            "大动脉炎",
+            "高安动脉炎",
+            "Takayasu disease",
+            "TAK"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Artery",
+            "Artery - Aorta",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Takayasu arteritis",
+            "大动脉炎",
+            "高安动脉炎",
+            "Takayasu disease",
+            "TAK"
+          ],
+          "matched_gtex_tissues": [
+            "Artery",
+            "Artery - Aorta",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "vasculitis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "vasculitis"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anca_associated_vasculitis",
+          "label": "ANCA-associated vasculitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "ANCA-associated vasculitis",
+            "ANCA相关性血管炎",
+            "抗中性粒细胞胞浆抗体相关性血管炎",
+            "antineutrophil cytoplasmic antibody-associated vasculitis",
+            "AAV",
+            "Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Kidney - Cortex",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "ANCA-associated vasculitis",
+            "ANCA相关性血管炎",
+            "抗中性粒细胞胞浆抗体相关性血管炎",
+            "antineutrophil cytoplasmic antibody-associated vasculitis",
+            "AAV",
+            "Anti-Neutrophil Cytoplasmic Antibody-Associated Vasculitis"
+          ],
+          "matched_gtex_tissues": [
+            "Kidney - Cortex",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "vasculitis",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "ANCA"
+          ],
+          "ambiguity_notes": "ANCA disease should not be triggered by ANCA biomarker alone."
+        },
+        {
+          "id": "inflammatory_bowel_disease",
+          "label": "inflammatory bowel disease",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "inflammatory bowel disease",
+            "炎症性肠病",
+            "炎性肠病",
+            "inflammatory bowel diseases",
+            "IBD"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "inflammatory bowel disease",
+            "炎症性肠病",
+            "炎性肠病",
+            "inflammatory bowel diseases",
+            "IBD"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "inflammatory_bowel_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "Crohn disease",
+            "ulcerative colitis"
+          ],
+          "ambiguity_notes": "IBD is an umbrella term; do not auto-expand to Crohn disease or ulcerative colitis."
+        },
+        {
+          "id": "crohn_disease",
+          "label": "Crohn disease",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Crohn disease",
+            "克罗恩病",
+            "克隆病",
+            "克罗恩氏病",
+            "Crohn's disease",
+            "regional enteritis",
+            "CD"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Crohn disease",
+            "克罗恩病",
+            "克隆病",
+            "克罗恩氏病",
+            "Crohn's disease",
+            "regional enteritis",
+            "CD"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "inflammatory_bowel_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "ulcerative colitis"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "ulcerative_colitis",
+          "label": "ulcerative colitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "ulcerative colitis",
+            "溃疡性结肠炎",
+            "UC",
+            "colitis ulcerative",
+            "Colitis, Ulcerative"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "ulcerative colitis",
+            "溃疡性结肠炎",
+            "UC",
+            "colitis ulcerative",
+            "Colitis, Ulcerative"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "inflammatory_bowel_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "Crohn disease"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "microscopic_colitis",
+          "label": "microscopic colitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "microscopic colitis",
+            "显微镜下结肠炎"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "microscopic colitis",
+            "显微镜下结肠炎"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "inflammatory_bowel_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "asthma",
+          "label": "asthma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "asthma",
+            "哮喘",
+            "支气管哮喘",
+            "bronchial asthma"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Lung",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "asthma",
+            "哮喘",
+            "支气管哮喘",
+            "bronchial asthma"
+          ],
+          "matched_gtex_tissues": [
+            "Lung",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "COPD"
+          ],
+          "ambiguity_notes": "Asthma and COPD are distinct airway diseases."
+        },
+        {
+          "id": "allergic_rhinitis",
+          "label": "allergic rhinitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "allergic rhinitis",
+            "变应性鼻炎",
+            "过敏性鼻炎",
+            "hay fever",
+            "Rhinitis, Allergic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "allergic rhinitis",
+            "变应性鼻炎",
+            "过敏性鼻炎",
+            "hay fever",
+            "Rhinitis, Allergic"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "atopic_dermatitis",
+          "label": "atopic dermatitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "atopic dermatitis",
+            "特应性皮炎",
+            "异位性皮炎",
+            "atopic eczema",
+            "Dermatitis, Atopic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "atopic dermatitis",
+            "特应性皮炎",
+            "异位性皮炎",
+            "atopic eczema",
+            "Dermatitis, Atopic"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "eczema"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "eczema",
+          "label": "eczema",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "eczema",
+            "湿疹",
+            "dermatitis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "eczema",
+            "湿疹",
+            "dermatitis"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "atopic dermatitis"
+          ],
+          "ambiguity_notes": "Eczema is broader than atopic dermatitis."
+        },
+        {
+          "id": "food_allergy",
+          "label": "food allergy",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "food allergy",
+            "食物过敏",
+            "food hypersensitivity"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "food allergy",
+            "食物过敏",
+            "food hypersensitivity"
+          ],
+          "matched_gtex_tissues": [
+            "Colon - Sigmoid",
+            "Colon - Transverse",
+            "Small Intestine - Terminal Ileum",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "anaphylaxis",
+          "label": "anaphylaxis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "anaphylaxis",
+            "过敏性休克",
+            "严重过敏反应",
+            "anaphylactic reaction"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "anaphylaxis",
+            "过敏性休克",
+            "严重过敏反应",
+            "anaphylactic reaction"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "chronic_rhinosinusitis",
+          "label": "chronic rhinosinusitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "chronic rhinosinusitis",
+            "慢性鼻窦炎",
+            "慢性鼻-鼻窦炎",
+            "chronic sinusitis",
+            "CRS",
+            "Sinusitis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "chronic rhinosinusitis",
+            "慢性鼻窦炎",
+            "慢性鼻-鼻窦炎",
+            "chronic sinusitis",
+            "CRS",
+            "Sinusitis"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "cytokine release syndrome"
+          ],
+          "ambiguity_notes": "CRS can mean chronic rhinosinusitis or cytokine release syndrome."
+        },
+        {
+          "id": "chronic_obstructive_pulmonary_disease",
+          "label": "chronic obstructive pulmonary disease",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "chronic obstructive pulmonary disease",
+            "慢性阻塞性肺疾病",
+            "慢阻肺",
+            "chronic obstructive lung disease",
+            "COPD",
+            "Pulmonary Disease, Chronic Obstructive"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Lung",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "chronic obstructive pulmonary disease",
+            "慢性阻塞性肺疾病",
+            "慢阻肺",
+            "chronic obstructive lung disease",
+            "COPD",
+            "Pulmonary Disease, Chronic Obstructive"
+          ],
+          "matched_gtex_tissues": [
+            "Lung",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "allergy_airway_inflammation",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "asthma"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "psoriasis",
+          "label": "psoriasis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "psoriasis",
+            "银屑病",
+            "牛皮癣",
+            "psoriasis vulgaris",
+            "PsO"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "psoriasis",
+            "银屑病",
+            "牛皮癣",
+            "psoriasis vulgaris",
+            "PsO"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "skin_immune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "psoriatic arthritis"
+          ],
+          "ambiguity_notes": "Psoriasis should not automatically equal psoriatic arthritis."
+        },
+        {
+          "id": "vitiligo",
+          "label": "vitiligo",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "vitiligo",
+            "白癜风",
+            "leukoderma"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "vitiligo",
+            "白癜风",
+            "leukoderma"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "skin_immune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "alopecia_areata",
+          "label": "alopecia areata",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "alopecia areata",
+            "斑秃",
+            "patchy hair loss",
+            "AA"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "alopecia areata",
+            "斑秃",
+            "patchy hair loss",
+            "AA"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "skin_immune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "hidradenitis_suppurativa",
+          "label": "hidradenitis suppurativa",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "hidradenitis suppurativa",
+            "化脓性汗腺炎",
+            "acne inversa",
+            "HS"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "hidradenitis suppurativa",
+            "化脓性汗腺炎",
+            "acne inversa",
+            "HS"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "skin_immune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "pemphigus",
+          "label": "pemphigus",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "pemphigus",
+            "天疱疮",
+            "pemphigus vulgaris"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "pemphigus",
+            "天疱疮",
+            "pemphigus vulgaris"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "skin_immune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "bullous_pemphigoid",
+          "label": "bullous pemphigoid",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "bullous pemphigoid",
+            "大疱性类天疱疮",
+            "Pemphigoid, Bullous"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "matched_terms": [
+            "bullous pemphigoid",
+            "大疱性类天疱疮",
+            "Pemphigoid, Bullous"
+          ],
+          "matched_gtex_tissues": [
+            "Skin",
+            "Skin - Sun Exposed (Lower leg)",
+            "Skin - Not Sun Exposed (Suprapubic)"
+          ],
+          "missing_terms": [],
+          "subcategory": "skin_immune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "multiple_sclerosis",
+          "label": "multiple sclerosis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "multiple sclerosis",
+            "多发性硬化",
+            "多发性硬化症",
+            "MS"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain",
+            "Brain - Cortex",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "multiple sclerosis",
+            "多发性硬化",
+            "多发性硬化症",
+            "MS"
+          ],
+          "matched_gtex_tissues": [
+            "Brain",
+            "Brain - Cortex",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "neuroimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "MS is high risk abbreviation."
+        },
+        {
+          "id": "neuromyelitis_optica_spectrum_disorder",
+          "label": "neuromyelitis optica spectrum disorder",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "neuromyelitis optica spectrum disorder",
+            "视神经脊髓炎谱系疾病",
+            "视神经脊髓炎",
+            "neuromyelitis optica",
+            "Devic disease",
+            "NMOSD",
+            "NMO"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain",
+            "Brain - Cortex",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "neuromyelitis optica spectrum disorder",
+            "视神经脊髓炎谱系疾病",
+            "视神经脊髓炎",
+            "neuromyelitis optica",
+            "Devic disease",
+            "NMOSD",
+            "NMO"
+          ],
+          "matched_gtex_tissues": [
+            "Brain",
+            "Brain - Cortex",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "neuroimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [
+            "multiple sclerosis"
+          ],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "myasthenia_gravis",
+          "label": "myasthenia gravis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "myasthenia gravis",
+            "重症肌无力",
+            "MG"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Muscle - Skeletal",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "myasthenia gravis",
+            "重症肌无力",
+            "MG"
+          ],
+          "matched_gtex_tissues": [
+            "Muscle - Skeletal",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "neuroimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "guillain_barre_syndrome",
+          "label": "Guillain-Barre syndrome",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Guillain-Barre syndrome",
+            "吉兰-巴雷综合征",
+            "格林巴利综合征",
+            "Guillain-Barré syndrome",
+            "acute inflammatory demyelinating polyneuropathy",
+            "GBS",
+            "AIDP"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Nerve - Tibial",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Guillain-Barre syndrome",
+            "吉兰-巴雷综合征",
+            "格林巴利综合征",
+            "Guillain-Barré syndrome",
+            "acute inflammatory demyelinating polyneuropathy",
+            "GBS",
+            "AIDP"
+          ],
+          "matched_gtex_tissues": [
+            "Nerve - Tibial",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "neuroimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "autoimmune_encephalitis",
+          "label": "autoimmune encephalitis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "autoimmune encephalitis",
+            "自身免疫性脑炎",
+            "AE",
+            "Encephalitis"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Brain",
+            "Brain - Cortex",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "autoimmune encephalitis",
+            "自身免疫性脑炎",
+            "AE",
+            "Encephalitis"
+          ],
+          "matched_gtex_tissues": [
+            "Brain",
+            "Brain - Cortex",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "neuroimmune_disease",
+          "concept_type": "disease",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "t_cell",
+          "label": "T cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "T cell",
+            "T细胞",
+            "T淋巴细胞",
+            "T lymphocyte",
+            "T-cell",
+            "T-Lymphocytes"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "T cell",
+            "T细胞",
+            "T淋巴细胞",
+            "T lymphocyte",
+            "T-cell",
+            "T-Lymphocytes"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "b_cell",
+          "label": "B cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "B cell",
+            "B细胞",
+            "B淋巴细胞",
+            "B lymphocyte",
+            "B-cell",
+            "B-Lymphocytes"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "B cell",
+            "B细胞",
+            "B淋巴细胞",
+            "B lymphocyte",
+            "B-cell",
+            "B-Lymphocytes"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "macrophage",
+          "label": "macrophage",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "macrophage",
+            "巨噬细胞",
+            "macrophages"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "macrophage",
+            "巨噬细胞",
+            "macrophages"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "monocyte",
+          "label": "monocyte",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "monocyte",
+            "单核细胞",
+            "monocytes"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "monocyte",
+            "单核细胞",
+            "monocytes"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "neutrophil",
+          "label": "neutrophil",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "neutrophil",
+            "中性粒细胞",
+            "中性白细胞",
+            "neutrophils"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "neutrophil",
+            "中性粒细胞",
+            "中性白细胞",
+            "neutrophils"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "dendritic_cell",
+          "label": "dendritic cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "dendritic cell",
+            "树突状细胞",
+            "dendritic cells",
+            "DC"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "dendritic cell",
+            "树突状细胞",
+            "dendritic cells",
+            "DC"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "DC is high risk abbreviation."
+        },
+        {
+          "id": "natural_killer_cell",
+          "label": "natural killer cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "natural killer cell",
+            "NK细胞",
+            "自然杀伤细胞",
+            "NK cell",
+            "natural killer cells",
+            "NK",
+            "Killer Cells, Natural"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "natural killer cell",
+            "NK细胞",
+            "自然杀伤细胞",
+            "NK cell",
+            "natural killer cells",
+            "NK",
+            "Killer Cells, Natural"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "regulatory_t_cell",
+          "label": "regulatory T cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "regulatory T cell",
+            "调节性T细胞",
+            "Treg细胞",
+            "Treg",
+            "T regulatory cell",
+            "T-Lymphocytes, Regulatory"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "regulatory T cell",
+            "调节性T细胞",
+            "Treg细胞",
+            "Treg",
+            "T regulatory cell",
+            "T-Lymphocytes, Regulatory"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "th1_cell",
+          "label": "Th1 cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Th1 cell",
+            "Th1细胞",
+            "T helper 1 cell",
+            "type 1 helper T cell",
+            "Th1",
+            "Th1 Cells"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Th1 cell",
+            "Th1细胞",
+            "T helper 1 cell",
+            "type 1 helper T cell",
+            "Th1",
+            "Th1 Cells"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "th2_cell",
+          "label": "Th2 cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Th2 cell",
+            "Th2细胞",
+            "T helper 2 cell",
+            "type 2 helper T cell",
+            "Th2",
+            "Th2 Cells"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Th2 cell",
+            "Th2细胞",
+            "T helper 2 cell",
+            "type 2 helper T cell",
+            "Th2",
+            "Th2 Cells"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "th17_cell",
+          "label": "Th17 cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "Th17 cell",
+            "Th17细胞",
+            "T helper 17 cell",
+            "Th17",
+            "Th17 Cells"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "Th17 cell",
+            "Th17细胞",
+            "T helper 17 cell",
+            "Th17",
+            "Th17 Cells"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "plasma_cell",
+          "label": "plasma cell",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "plasma cell",
+            "浆细胞",
+            "plasmocyte",
+            "Plasma Cells"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "plasma cell",
+            "浆细胞",
+            "plasmocyte",
+            "Plasma Cells"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_cell",
+          "concept_type": "immune_cell",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "c_reactive_protein",
+          "label": "C-reactive protein",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "C-reactive protein",
+            "C反应蛋白",
+            "高敏C反应蛋白",
+            "high-sensitivity C-reactive protein",
+            "hs-CRP",
+            "CRP",
+            "hsCRP"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Liver",
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "C-reactive protein",
+            "C反应蛋白",
+            "高敏C反应蛋白",
+            "high-sensitivity C-reactive protein",
+            "hs-CRP",
+            "CRP",
+            "hsCRP"
+          ],
+          "matched_gtex_tissues": [
+            "Liver",
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker_cross_reference",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "Cross-reference from cardiovascular core; do not duplicate."
+        },
+        {
+          "id": "interleukin_6",
+          "label": "interleukin-6",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "interleukin-6",
+            "白细胞介素6",
+            "IL-6",
+            "IL6"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "interleukin-6",
+            "白细胞介素6",
+            "IL-6",
+            "IL6"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "interleukin_1_beta",
+          "label": "interleukin-1 beta",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "interleukin-1 beta",
+            "白细胞介素1β",
+            "IL-1β",
+            "IL-1beta",
+            "IL-1 beta",
+            "interleukin-1β",
+            "IL-1B",
+            "IL1B",
+            "Interleukin-1beta"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "interleukin-1 beta",
+            "白细胞介素1β",
+            "IL-1β",
+            "IL-1beta",
+            "IL-1 beta",
+            "interleukin-1β",
+            "IL-1B",
+            "IL1B",
+            "Interleukin-1beta"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "tumor_necrosis_factor_alpha",
+          "label": "tumor necrosis factor alpha",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "tumor necrosis factor alpha",
+            "肿瘤坏死因子α",
+            "TNF-α",
+            "TNF-alpha",
+            "TNF",
+            "Tumor Necrosis Factor-alpha"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "tumor necrosis factor alpha",
+            "肿瘤坏死因子α",
+            "TNF-α",
+            "TNF-alpha",
+            "TNF",
+            "Tumor Necrosis Factor-alpha"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "TNF is a short cytokine token."
+        },
+        {
+          "id": "interferon_gamma",
+          "label": "interferon gamma",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "interferon gamma",
+            "干扰素γ",
+            "IFN-γ",
+            "IFN-gamma",
+            "IFN",
+            "IFNG",
+            "Interferon-gamma"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "interferon gamma",
+            "干扰素γ",
+            "IFN-γ",
+            "IFN-gamma",
+            "IFN",
+            "IFNG",
+            "Interferon-gamma"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "IFN is broad and context-sensitive."
+        },
+        {
+          "id": "interleukin_10",
+          "label": "interleukin-10",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "interleukin-10",
+            "白细胞介素10",
+            "IL-10",
+            "IL10"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "interleukin-10",
+            "白细胞介素10",
+            "IL-10",
+            "IL10"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "interleukin_17",
+          "label": "interleukin-17",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "interleukin-17",
+            "白细胞介素17",
+            "IL-17",
+            "IL17"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "interleukin-17",
+            "白细胞介素17",
+            "IL-17",
+            "IL17"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "immunoglobulin_e",
+          "label": "immunoglobulin E",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "immunoglobulin E",
+            "免疫球蛋白E",
+            "IgE",
+            "IgE antibody"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "immunoglobulin E",
+            "免疫球蛋白E",
+            "IgE",
+            "IgE antibody"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_biomarker",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "antinuclear_antibody",
+          "label": "antinuclear antibody",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "antinuclear antibody",
+            "抗核抗体",
+            "ANA",
+            "antinuclear antibodies",
+            "Antibodies, Antinuclear"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "antinuclear antibody",
+            "抗核抗体",
+            "ANA",
+            "antinuclear antibodies",
+            "Antibodies, Antinuclear"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoantibody",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "rheumatoid_factor",
+          "label": "rheumatoid factor",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "rheumatoid factor",
+            "类风湿因子",
+            "RF",
+            "rheumatoid factors"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "rheumatoid factor",
+            "类风湿因子",
+            "RF",
+            "rheumatoid factors"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoantibody",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "RF is a short token."
+        },
+        {
+          "id": "anti_cyclic_citrullinated_peptide_antibody",
+          "label": "anti-cyclic citrullinated peptide antibody",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "anti-cyclic citrullinated peptide antibody",
+            "抗环瓜氨酸肽抗体",
+            "抗CCP抗体",
+            "anti-CCP",
+            "anti-CCP antibody",
+            "anti-citrullinated protein antibody",
+            "ACPA",
+            "Anti-Citrullinated Protein Antibodies"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "anti-cyclic citrullinated peptide antibody",
+            "抗环瓜氨酸肽抗体",
+            "抗CCP抗体",
+            "anti-CCP",
+            "anti-CCP antibody",
+            "anti-citrullinated protein antibody",
+            "ACPA",
+            "Anti-Citrullinated Protein Antibodies"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoantibody",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "antineutrophil_cytoplasmic_antibody",
+          "label": "antineutrophil cytoplasmic antibody",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "antineutrophil cytoplasmic antibody",
+            "抗中性粒细胞胞浆抗体",
+            "ANCA",
+            "ANCA antibody",
+            "Antibodies, Antineutrophil Cytoplasmic"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "antineutrophil cytoplasmic antibody",
+            "抗中性粒细胞胞浆抗体",
+            "ANCA",
+            "ANCA antibody",
+            "Antibodies, Antineutrophil Cytoplasmic"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "autoantibody",
+          "concept_type": "biomarker",
+          "avoid_expansion_to": [
+            "ANCA-associated vasculitis"
+          ],
+          "ambiguity_notes": "ANCA biomarker should not automatically equal AAV."
+        },
+        {
+          "id": "inflammation",
+          "label": "inflammation",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "inflammation",
+            "炎症",
+            "炎性反应",
+            "inflammatory response"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "inflammation",
+            "炎症",
+            "炎性反应",
+            "inflammatory response"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_process",
+          "concept_type": "process",
+          "avoid_expansion_to": [
+            "autoimmune disease"
+          ],
+          "ambiguity_notes": "Cross-reference from cardiovascular phenotype/process; not a disease."
+        },
+        {
+          "id": "immune_response",
+          "label": "immune response",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "immune response",
+            "免疫反应",
+            "免疫应答",
+            "immune activation",
+            "host immune response",
+            "Immune System Phenomena"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "matched_terms": [
+            "immune response",
+            "免疫反应",
+            "免疫应答",
+            "immune activation",
+            "host immune response",
+            "Immune System Phenomena"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood",
+            "Spleen"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_process",
+          "concept_type": "process",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "cytokine_storm",
+          "label": "cytokine storm",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cytokine storm",
+            "细胞因子风暴",
+            "细胞因子释放综合征",
+            "cytokine release syndrome",
+            "CRS"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "matched_terms": [
+            "cytokine storm",
+            "细胞因子风暴",
+            "细胞因子释放综合征",
+            "cytokine release syndrome",
+            "CRS"
+          ],
+          "matched_gtex_tissues": [
+            "Whole Blood"
+          ],
+          "missing_terms": [],
+          "subcategory": "immune_process",
+          "concept_type": "phenotype",
+          "avoid_expansion_to": [
+            "chronic rhinosinusitis"
+          ],
+          "ambiguity_notes": "CRS can also mean chronic rhinosinusitis."
+        }
+      ],
+      "missing_terms": [],
+      "subcategory_coverage": {
+        "allergy_airway_inflammation": {
+          "total": 8,
+          "covered": 8,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "autoantibody": {
+          "total": 4,
+          "covered": 4,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "autoimmune_cross_reference": {
+          "total": 2,
+          "covered": 2,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "autoimmune_disease": {
+          "total": 8,
+          "covered": 8,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "immune_biomarker": {
+          "total": 7,
+          "covered": 7,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "immune_biomarker_cross_reference": {
+          "total": 1,
+          "covered": 1,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "immune_cell": {
+          "total": 12,
+          "covered": 12,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "immune_process": {
+          "total": 3,
+          "covered": 3,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "inflammatory_bowel_disease": {
+          "total": 4,
+          "covered": 4,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "neuroimmune_disease": {
+          "total": 5,
+          "covered": 5,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "rheumatic_arthritis": {
+          "total": 5,
+          "covered": 5,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "skin_immune_disease": {
+          "total": 6,
+          "covered": 6,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "vasculitis": {
+          "total": 4,
+          "covered": 4,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        }
+      },
+      "high_risk_ambiguity_terms": [
+        {
+          "term": "RA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IBD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "SLE",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "SS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "DM",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "PM",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "APS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "AS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "OA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "PsA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "JIA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "GCA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "AAV",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "UC",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "CD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "COPD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "CRS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "MS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "NMOSD",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "MG",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "GBS",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "AE",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "DC",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "NK",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Treg",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Th1",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Th2",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "Th17",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "CRP",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IL-6",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "TNF",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IFN",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "IgE",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "ANA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "RF",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        },
+        {
+          "term": "ANCA",
+          "reason": "short or ambiguous immune/inflammatory token; exact match or context required"
+        }
+      ]
+    },
     "meta_analysis_terms_core": {
       "checklist_id": "meta_analysis_terms_core",
       "title": "Meta Analysis Terms Core Vocabulary v1",
@@ -18835,6 +21650,22 @@
         "status": "pass"
       },
       {
+        "gate_id": "immune_inflammatory_core_coverage",
+        "description": "Immune/inflammatory core checklist coverage must stay >= 95%.",
+        "metric": "coverage_rate",
+        "minimum": 0.95,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "immune_inflammatory_core_missing_terms",
+        "description": "Immune/inflammatory core should not have missing expected terms.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
         "gate_id": "missing_items",
         "description": "Reference checklist missing count must remain zero.",
         "metric": "count",
@@ -18895,6 +21726,11 @@
       "checklist_id": "gtex_tissues",
       "source": "GTEx Portal tissue groups",
       "source_version": "GTEx tissue group checklist, curated access 2026-05"
+    },
+    {
+      "checklist_id": "immune_inflammatory_core",
+      "source": "project_curated",
+      "source_version": "immune_inflammatory_core_v1"
     },
     {
       "checklist_id": "meta_analysis_terms_core",

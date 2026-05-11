@@ -19,6 +19,7 @@ CORE_CHECKLISTS = {
     "bioinformatics_modality_core": "bioinformatics_modality_core_checklist.json",
     "meta_analysis_terms_core": "meta_analysis_terms_core_checklist.json",
     "cardiovascular_core": "cardiovascular_core_checklist.json",
+    "immune_inflammatory_core": "immune_inflammatory_core_checklist.json",
 }
 CORE_TERM_SOURCES = {
     "project_curated_endocrine_metabolic_core_v1",
@@ -26,6 +27,7 @@ CORE_TERM_SOURCES = {
     "project_curated_bioinformatics_modality_core_v1",
     "project_curated_meta_analysis_terms_core_v1",
     "project_curated_cardiovascular_core_v1",
+    "project_curated_immune_inflammatory_core_v1",
 }
 
 
@@ -63,7 +65,7 @@ def test_all_core_checklists_are_covered_and_summarized() -> None:
     assert report["overall"]["core_coverage_rate"] == 1.0
     assert report["overall"]["total_runtime_concepts"] == len(_mini())
     assert report["overall"]["total_zh_overrides"] == len(_zh_overrides())
-    assert report["overall"]["total_high_risk_ambiguity_terms"] >= 60
+    assert report["overall"]["total_high_risk_ambiguity_terms"] >= 90
 
 
 def test_runtime_concept_structure_is_consistent_for_curated_cores() -> None:
@@ -99,6 +101,9 @@ def test_runtime_concept_structure_is_consistent_for_curated_cores() -> None:
             assert concept_type != "disease"
             assert item.get("contexts") == ["meta_analysis"]
         if concept_type in {"biomarker", "hormone", "laboratory_marker"}:
+            assert not item.get("disease_terms_en")
+        if concept_type == "immune_cell":
+            assert item.get("immune_cell_terms")
             assert not item.get("disease_terms_en")
 
 

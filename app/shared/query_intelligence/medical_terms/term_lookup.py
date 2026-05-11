@@ -417,6 +417,8 @@ def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: s
             return False
         return normalized_term in normalized_query
     if len(normalized_term) <= 4 or "-" in normalized_term or "+" in normalized_term:
+        if raw_query and re.search(rf"(?<![A-Za-z0-9]){re.escape(raw_term)}(?![A-Za-z0-9])", raw_query, flags=re.IGNORECASE):
+            return True
         return re.search(rf"(?<![a-z0-9]){re.escape(normalized_term)}(?![a-z0-9])", normalized_query) is not None
     return normalized_term in normalized_query
 
