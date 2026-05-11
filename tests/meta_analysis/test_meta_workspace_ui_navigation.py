@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from app.meta_analysis.project_workspace import META_PROJECT_DIRECTORIES, create_meta_analysis_project
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -24,118 +27,137 @@ def qt_app():
     return QApplication.instance() or QApplication([])
 
 
-def test_meta_workspace_layout_state_defines_internal_beta_navigation() -> None:
+def _visible_text(widget) -> str:
+    texts: list[str] = []
+    for child in [*widget.findChildren(QLabel), *widget.findChildren(QPushButton)]:
+        if child.isVisibleTo(widget):
+            value = child.text()
+            if value:
+                texts.append(value)
+    return "\n".join(texts)
+
+
+def test_meta_workspace_layout_state_uses_seven_user_facing_stages() -> None:
     state = meta_workspace_layout_state()
 
     assert "0.1.0-internal-beta" in state.status_label
-    assert "内部测试版 / Developer Preview / testing" in state.status_label
     assert state.title == "Meta 分析模块"
     assert state.default_page_key == "workflow_home"
-    page_keys = [item.page_key for item in state.navigation_items]
-    assert page_keys == [
+    assert [item.page_key for item in state.navigation_items] == [
         "workflow_home",
         "pico_workspace",
         "search_strategy",
-        "literature_acquisition",
-        "literature_library",
-        "dedup_review",
-        "exclusion_criteria",
         "title_abstract_screening",
-        "fulltext_management",
         "manual_extraction",
-        "ai_extraction",
-        "quality_assessment",
-        "analysis_plan",
         "statistics_analysis",
-        "figure_results",
-        "prisma",
         "report_export",
-        "reproducibility_package",
+    ]
+    assert [item.label for item in state.navigation_items] == [
+        "Meta 项目首页",
+        "研究问题 / PICO",
+        "检索与导入",
+        "文献筛选",
+        "提取与质量评价",
+        "统计分析",
+        "报告导出",
     ]
     assert "不能作为正式临床" in state.testing_notice
 
 
-def test_meta_workspace_navigation_has_one_page_key_per_item() -> None:
-    state = meta_workspace_layout_state()
-
-    labels = [item.label for item in state.navigation_items]
-    page_keys = [item.page_key for item in state.navigation_items]
-    assert len(labels) == len(page_keys)
-    assert len(set(page_keys)) == len(page_keys)
-    assert "质量评价" in " ".join(labels)
-    assert "报告导出" in " ".join(labels)
-    assert "数据提取" in " ".join(labels)
-
-
-def test_meta_workspace_widget_mounts_current_development_pages(qt_app) -> None:
+def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path: Path) -> None:
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 
+    summary = create_meta_analysis_project("Mounted Pages", tmp_path)
     widget = MetaAnalysisWorkspaceWidget()
-    page_keys = widget.page_keys()
+    widget.set_project_dir(summary.project_root)
 
-    assert widget.meta_workspace_layout_state()["global_nav"] == "metaGlobalNav"
     assert widget.meta_workspace_layout_state()["workflow_nav"] == "metaWorkflowNav"
     assert widget.meta_workspace_layout_state()["current_step_workspace"] == "metaCurrentStepWorkspace"
-    assert "manual_extraction" in page_keys
-    assert "ai_extraction" in page_keys
-    assert "statistics_analysis" in page_keys
-    assert "literature_acquisition" in page_keys
-    assert "reproducibility_package" in page_keys
-
-
-def test_meta_workspace_mounts_ui_07_to_ui_18_pages_without_auto_outputs(qt_app, tmp_path) -> None:
-    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
-
-    widget = MetaAnalysisWorkspaceWidget()
-    widget.set_project_dir(tmp_path)
-
-    expected_pages = {
-        "metaExclusionCriteriaPage",
-        "metaTitleAbstractScreeningPage",
-        "metaFulltextManagementPage",
-        "metaManualExtractionPage",
-        "metaAIExtractionPage",
-        "metaQualityAssessmentPage",
-        "metaAnalysisPlanPage",
-        "metaStatisticsAnalysisPage",
-        "metaFigureResultsPage",
-        "metaPrismaPage",
-        "metaReportExportPage",
-        "metaReproducibilityPackagePage",
-    }
-    mounted_pages = {frame.objectName() for frame in widget.findChildren(QFrame)}
-
-    assert expected_pages <= mounted_pages
-    assert not (tmp_path / "analysis" / "runs").exists()
-    assert not (tmp_path / "analysis" / "results").exists()
-    assert not (tmp_path / "reports" / "formal_meta_report.md").exists()
-    assert not list((tmp_path / "exports").glob("reproducibility_package_*.zip"))
-
-
-def test_meta_workspace_dedup_page_shows_groups_and_merge_preview(qt_app, tmp_path) -> None:
-    from app.meta_analysis.services.dedup_review_v2_service import DedupReviewV2Service
-    from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
-    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
-
-    LiteratureLibraryService().import_records(
-        tmp_path,
-        source_type="test_fixture",
-        raw_records=[
-            {"record_id": "lit-a", "title": "Duplicate trial", "authors": ["A"], "first_author": "A", "journal": "J", "year": "2024", "pmid": "123"},
-            {"record_id": "lit-b", "title": "Duplicate trial extended", "authors": ["A"], "first_author": "A", "journal": "J", "year": "2024", "pmid": "123"},
-        ],
+    assert widget.page_keys() == (
+        "workflow_home",
+        "pico_workspace",
+        "search_strategy",
+        "title_abstract_screening",
+        "manual_extraction",
+        "statistics_analysis",
+        "report_export",
     )
-    DedupReviewV2Service().build_review_queue(tmp_path)
+    mounted_pages = {frame.objectName() for frame in widget.findChildren(QFrame)}
+    assert {
+        "metaProjectHomePage",
+        "metaPicoPage",
+        "metaSearchStrategyPage",
+        "metaTitleAbstractScreeningPage",
+        "metaManualExtractionPage",
+        "metaStatisticsAnalysisPage",
+        "metaReportExportPage",
+    } <= mounted_pages
+
+
+def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 
     widget = MetaAnalysisWorkspaceWidget()
-    widget.set_project_dir(tmp_path)
-    widget.show_step("dedup_review")
+    widget.show()
+    qt_app.processEvents()
 
-    group_list = widget.findChild(QListWidget, "metaDedupGroupList")
-    preview = widget.findChild(QTextEdit, "metaDedupMergePreview")
+    buttons = [button for button in widget.findChildren(QPushButton) if button.text() == "继续：研究问题 / PICO"]
+    assert buttons
+    assert all(not button.isEnabled() for button in buttons)
+    assert "请先新建或打开 Meta 项目" in _visible_text(widget)
 
-    assert group_list is not None
-    assert group_list.count() == 1
-    assert "红色：高度重复" in group_list.item(0).text()
-    assert preview is not None
-    assert "auto_merged" in preview.toPlainText()
+
+def test_meta_workspace_creates_meta_project_from_home_form(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_new_project_form(project_name="高血压 Meta", research_topic="降压治疗", save_location=tmp_path)
+
+    summary = widget.create_meta_project_from_form()
+
+    assert summary is not None
+    assert widget.current_project_dir() == summary.project_root
+    for directory in META_PROJECT_DIRECTORIES:
+        assert (summary.project_root / directory).is_dir()
+    manifest = json.loads((summary.project_root / "meta_project_manifest.json").read_text(encoding="utf-8"))
+    config = json.loads((summary.project_root / "meta_project_config.json").read_text(encoding="utf-8"))
+    assert manifest["project_type"] == "meta_analysis"
+    assert manifest["project_name"] == "高血压 Meta"
+    assert manifest["workflow_stage"] == "project_home"
+    assert config["ui"]["current_page"] == "workflow_home"
+
+
+def test_meta_workspace_opens_existing_project_and_rejects_invalid_folder(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("Existing Meta", tmp_path)
+    invalid = tmp_path / "plain-folder"
+    invalid.mkdir()
+    widget = MetaAnalysisWorkspaceWidget()
+
+    assert widget.open_meta_project_folder(summary.project_root) is True
+    assert widget.current_project_dir() == summary.project_root
+    assert widget.open_meta_project_folder(invalid) is False
+    assert widget.current_project_dir() == summary.project_root
+
+
+def test_meta_home_collapses_repeated_status_and_developer_terms(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("Clean Home", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show()
+    qt_app.processEvents()
+
+    visible = _visible_text(widget)
+    assert "当前项目状态" not in visible
+    assert "项目概览" not in visible
+    assert "最近 warnings" not in visible
+    assert "project_home" not in visible
+    assert "manifest" not in visible
+    assert "config" not in visible
+    assert "workflow_state" not in visible
+    assert visible.count("Developer Preview / 本地测试版") == 1
+    assert "下一步：填写研究问题 / PICO" in visible
+    assert "继续：研究问题 / PICO" in visible
