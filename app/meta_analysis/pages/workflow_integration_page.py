@@ -69,7 +69,7 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
     },
     {
         "step_id": "search_import",
-        "title_zh": "检索与文献导入",
+        "title_zh": "检索与导入",
         "route_key": "search_strategy",
         "primary_action_zh": "生成检索策略",
         "next_action_zh": "导入文献后进入筛选",
@@ -85,7 +85,7 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
     },
     {
         "step_id": "extraction_quality",
-        "title_zh": "数据提取与质量评价",
+        "title_zh": "提取与质量评价",
         "route_key": "manual_extraction",
         "primary_action_zh": "新建提取行",
         "next_action_zh": "完成质量评价后进入统计分析",
@@ -93,7 +93,7 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
     },
     {
         "step_id": "analysis_results",
-        "title_zh": "统计分析与结果",
+        "title_zh": "统计分析",
         "route_key": "statistics_analysis",
         "primary_action_zh": "查看分析计划",
         "next_action_zh": "查看统计结果与图表",
@@ -101,7 +101,7 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
     },
     {
         "step_id": "prisma_reporting",
-        "title_zh": "PRISMA 与报告导出",
+        "title_zh": "报告导出",
         "route_key": "report_export",
         "primary_action_zh": "查看报告占位",
         "next_action_zh": "导出报告与复现包",
@@ -441,11 +441,6 @@ def _aggregate_stage_state(
     artifact_paths = tuple(path for child in children for path in child.artifact_paths)
     warnings = tuple(warning for child in children for warning in child.warnings)
     summary = "；".join(f"{child.title_zh}：{child.artifact_summary}" for child in children)
-    safety_flags = {
-        "auto_confirms_research_judgement": False,
-        "runs_statistics": False,
-        "advances_prisma": False,
-    }
     return _base_state(
         project_dir,
         order,
@@ -456,7 +451,7 @@ def _aggregate_stage_state(
         artifact_paths=artifact_paths,
         warnings=warnings,
         placeholder=all(child.placeholder for child in children),
-        safety_flags=safety_flags,
+        safety_flags={"auto_confirms_research_judgement": False, "runs_statistics": False, "advances_prisma": False},
     )
 
 

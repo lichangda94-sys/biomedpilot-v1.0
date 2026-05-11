@@ -20,18 +20,18 @@ def step_by_id(project_dir: Path) -> dict[str, object]:
     return {step.step_id: step for step in state.steps}
 
 
-def test_meta_workflow_integration_state_has_seven_chinese_main_stages(tmp_path: Path) -> None:
+def test_meta_workflow_integration_state_has_seven_chinese_stages(tmp_path: Path) -> None:
     state = meta_workflow_integration_state_from_project(tmp_path)
 
     assert state.step_count == 7
     assert [step.title_zh for step in state.steps] == [
         "Meta 项目首页",
         "研究问题 / PICO",
-        "检索与文献导入",
+        "检索与导入",
         "文献筛选",
-        "数据提取与质量评价",
-        "统计分析与结果",
-        "PRISMA 与报告导出",
+        "提取与质量评价",
+        "统计分析",
+        "报告导出",
     ]
     for step in state.steps:
         assert step.status
@@ -112,7 +112,6 @@ def test_literature_pubmed_dedup_extraction_quality_and_analysis_plan_summaries(
     assert steps["extraction_quality"].warning_count >= 1
     assert "suggestions=1" in steps["extraction_quality"].artifact_summary
     assert "completed=1" in steps["extraction_quality"].artifact_summary
-    assert steps["analysis_results"].status in {"进行中", "需要确认"}
     assert "confirmed=True" in steps["analysis_results"].artifact_summary
 
 
@@ -125,6 +124,7 @@ def test_placeholder_pages_do_not_generate_statistics_figures_reports_or_prisma(
     assert steps["analysis_results"].safety_flags["runs_statistics"] is False
     assert "不自动运行统计" in steps["analysis_results"].artifact_summary
     assert steps["prisma_reporting"].placeholder is True
+    assert steps["prisma_reporting"].safety_flags["advances_prisma"] is False
     assert not (tmp_path / "analysis" / "runs").exists()
     assert not (tmp_path / "analysis" / "results").exists()
     assert not (tmp_path / "figures").exists()

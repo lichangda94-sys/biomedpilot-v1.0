@@ -77,9 +77,10 @@ def test_ui1a_meta_workspace_entry_is_chinese_friendly() -> None:
     assert "0.1.0-internal-beta" in state.status_label
     assert "内部测试版 / Developer Preview / testing" in state.status_label
     assert labels[0] == "Meta 项目首页"
-    assert "检索与文献导入" in labels
-    assert "数据提取与质量评价" in labels
-    assert "PRISMA 与报告导出" in labels
+    assert "检索与导入" in labels
+    assert "提取与质量评价" in labels
+    assert "统计分析" in labels
+    assert "报告导出" in labels
     assert "不能作为正式临床" in state.testing_notice
 
 

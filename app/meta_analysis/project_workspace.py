@@ -8,7 +8,6 @@ from uuid import uuid4
 
 from app.version import APP_VERSION
 
-
 META_PROJECT_MANIFEST = "meta_project_manifest.json"
 META_PROJECT_CONFIG = "meta_project_config.json"
 META_PROJECT_CONTRACT_VERSION = "meta_analysis_project_workspace_v1"
@@ -76,8 +75,7 @@ def create_meta_analysis_project(
     project_root.mkdir(parents=True, exist_ok=True)
     for directory in (*META_PROJECT_DIRECTORIES, *META_COMPATIBILITY_DIRECTORIES):
         (project_root / directory).mkdir(parents=True, exist_ok=True)
-
-    now = _now_iso()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     project_id = f"meta-{uuid4().hex[:8]}"
     directories = {name: str((project_root / name).resolve()) for name in (*META_PROJECT_DIRECTORIES, *META_COMPATIBILITY_DIRECTORIES)}
     manifest = {
@@ -105,11 +103,8 @@ def create_meta_analysis_project(
         "updated_at": now,
         "workflow_stage": "project_home",
         "developer_preview": True,
-        "ui": {
-            "current_page": "workflow_home",
-            "language": "zh-CN",
-        },
         "research_topic": research_topic.strip(),
+        "ui": {"current_page": "workflow_home", "language": "zh-CN"},
     }
     _atomic_write_json(project_root / META_PROJECT_MANIFEST, manifest)
     _atomic_write_json(project_root / META_PROJECT_CONFIG, config)
@@ -123,16 +118,16 @@ def open_meta_analysis_project(project_root: str | Path) -> MetaProjectValidatio
 def validate_meta_analysis_project(project_root: str | Path) -> MetaProjectValidation:
     root = Path(project_root).expanduser().resolve()
     manifest_path = root / META_PROJECT_MANIFEST
-    errors: list[str] = []
-    warnings: list[str] = []
     if not manifest_path.exists():
-        return MetaProjectValidation(False, root, ("该文件夹不是有效的 Meta 项目，或缺少 meta_project_manifest.json。",), (), None)
+        return MetaProjectValidation(False, root, ("该文件夹不是有效的 Meta 项目，或缺少项目识别文件。",), (), None)
     try:
         manifest = _read_json(manifest_path)
     except Exception:
-        return MetaProjectValidation(False, root, ("无法读取 meta_project_manifest.json，请确认该文件未损坏。",), (), None)
+        return MetaProjectValidation(False, root, ("无法读取项目识别文件，请确认该文件未损坏。",), (), None)
+    errors: list[str] = []
+    warnings: list[str] = []
     if manifest.get("project_type") != "meta_analysis":
-        errors.append("meta_project_manifest.json 不是 Meta 分析项目。")
+        errors.append("项目识别文件不是 Meta 分析项目。")
     for directory in META_PROJECT_DIRECTORIES:
         if not (root / directory).exists():
             warnings.append(f"缺少项目目录：{directory}/")
@@ -163,10 +158,6 @@ def _summary_from_manifest(root: Path, manifest: dict[str, object]) -> MetaProje
 def _slug(value: str) -> str:
     cleaned = "".join(char if char.isalnum() else "_" for char in value.strip())
     return "_".join(part for part in cleaned.split("_") if part) or "Meta_Project"
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _read_json(path: Path) -> dict[str, object]:
