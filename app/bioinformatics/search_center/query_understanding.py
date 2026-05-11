@@ -29,12 +29,13 @@ class QueryUnderstandingLayer:
         )
         draft = filter_search_translation_draft_by_context(draft, BIOINFORMATICS_SEARCH_CONTEXT)
         lookup = _lookup_payload(draft)
-        disease_terms_missing = not draft.disease_terms_en and not draft.main_concepts_en
-        disease_en = _unique([*draft.disease_terms_en, *draft.main_concepts_en])
+        data_modalities = _unique([*draft.data_type_terms_en, "expression profiling", "RNA-seq", "microarray", "transcriptome"])
+        disease_en = _disease_terms_en(draft, data_modalities)
+        disease_terms_missing = not disease_en
+        disease_zh = () if disease_terms_missing else tuple(draft.disease_terms_zh or draft.main_concepts_zh)
         synonyms = _unique([term for term in draft.main_concepts_en if term not in disease_en])
         abbreviations = _unique([*lookup.get("abbreviations", []), *_abbreviations([*disease_en, *draft.main_concepts_en])])
         tissue_terms = _unique([*lookup.get("tissue_terms", []), *_tissue_terms(cleaned, disease_en, draft.database_terms)])
-        data_modalities = _unique([*draft.data_type_terms_en, "expression profiling", "RNA-seq", "microarray", "transcriptome"])
         tcga_project_ids = _unique([*lookup.get("tcga_project_candidates", []), *_tcga_projects(cleaned, [*disease_en, *draft.database_terms])])
         gtex_tissues = _unique([*lookup.get("gtex_tissue_candidates", []), *_gtex_tissues(cleaned, [*disease_en, *tissue_terms, *draft.database_terms])])
         broad_geo_query = _build_geo_query((), data_modalities)
@@ -48,7 +49,7 @@ class QueryUnderstandingLayer:
         warnings = tuple(dict.fromkeys([*draft.warnings, *guard_warnings, *_mapping_warnings(tcga_project_ids, gtex_tissues)]))
         return StructuredBioinformaticsQuery(
             original_query_zh=cleaned,
-            disease_terms_zh=tuple(draft.disease_terms_zh or draft.main_concepts_zh),
+            disease_terms_zh=disease_zh,
             disease_terms_en=disease_en,
             synonyms=synonyms,
             abbreviations=abbreviations,
@@ -73,6 +74,31 @@ class QueryUnderstandingLayer:
                 "broad_geo_query_label": f"宽泛补充检索｜{broad_geo_query}",
             },
         )
+
+
+def _disease_terms_en(draft: object, data_modalities: tuple[str, ...]) -> tuple[str, ...]:
+    platform_keys = {term.lower() for term in data_modalities}
+    terms = [*getattr(draft, "disease_terms_en", ()), *getattr(draft, "main_concepts_en", ())]
+    return _unique([term for term in terms if not _is_platform_only_label(str(term), platform_keys)])
+
+
+def _is_platform_only_label(term: str, platform_keys: set[str]) -> bool:
+    lowered = term.strip().lower()
+    if lowered in platform_keys:
+        return True
+    return any(
+        token in lowered
+        for token in (
+            "expression profiling",
+            "gene expression",
+            "transcriptome",
+            "rna-seq",
+            "rnaseq",
+            "microarray",
+            "single-cell",
+            "scrna-seq",
+        )
+    )
 
 
 def _tcga_projects(original: str, terms: list[str]) -> tuple[str, ...]:

@@ -351,6 +351,87 @@ def test_geo_profile_chinese_brief_does_not_create_groups() -> None:
     assert profile.sample_structure_preview["status"] == "no_group_detected"
 
 
+def test_gse5078_uses_geo_organism_for_mouse_analysis_potential(tmp_path: Path) -> None:
+    source = tmp_path / "GSE5078_family.soft.gz"
+    lines = [
+        "^SERIES = GSE5078",
+        "!Series_title = Hippocampal transcript profile in young and middle-aged mice",
+        "!Series_sample_organism = Mus musculus",
+        "!Series_type = Expression profiling by array",
+        "!Series_overall_design = 14 biological replicates for 15-month-old mice, 9 biological replicates for 2-month-old mice. Whole hippocampus.",
+        "!Series_platform_id = GPL1261",
+    ]
+    for index in range(1, 24):
+        lines.extend(
+            [
+                f"^SAMPLE = GSM{index}",
+                f"!Sample_geo_accession = GSM{index}",
+                f"!Sample_title = mouse hippocampus replicate {index}",
+                "!Sample_organism_ch1 = Mus musculus",
+                "!Sample_source_name_ch1 = whole hippocampus",
+            ]
+        )
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write("\n".join(lines))
+
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE5078",
+        candidate_metadata={
+            "title_en": "Hippocampal transcript profile in young and middle-aged mice",
+            "Organism": "Mus musculus",
+            "sample_count": 23,
+            "data_type": "Expression profiling by array",
+        },
+        family_soft_path=source,
+    )
+
+    assert profile.organism == "Mus musculus"
+    assert profile.species_group in {"mouse", "animal_model"}
+    assert profile.metadata_sample_count == 23
+    assert profile.analysis_potential_level == "动物模型 / 方法验证潜力"
+    assert "Homo sapiens" not in profile.organism
+    assert "人类或疑似人类" not in profile.analysis_potential_reason
+    assert "Mus musculus" in profile.analysis_potential_reason
+    assert "样本数 23" in profile.analysis_potential_reason
+    assert "表达芯片" in profile.analysis_potential_reason
+    assert "小鼠年龄比较研究" in profile.analysis_potential_reason
+
+
+def test_geo_profile_does_not_default_missing_organism_to_human() -> None:
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE2000",
+        candidate_metadata={
+            "title_en": "Hippocampal transcript profile in young and middle-aged mice",
+            "sample_count": 23,
+            "data_type": "Expression profiling by array",
+        },
+    )
+
+    assert profile.organism == ""
+    assert profile.species_group == "unknown"
+    assert "Homo sapiens" not in profile.analysis_potential_reason
+    assert "人类或疑似人类" not in profile.analysis_potential_reason
+    assert "样本物种未识别" in profile.analysis_potential_reason
+
+
+def test_gse33630_still_recognizes_human_organism() -> None:
+    profile = GeoDatasetProfileService().build_profile(
+        accession="GSE33630",
+        candidate_metadata={
+            "title_en": "Gene expression profile of papillary thyroid carcinoma",
+            "summary_en": "Human thyroid carcinoma and normal tissue expression profiling.",
+            "overall_design_en": "PTC and normal thyroid samples were analyzed.",
+            "organism": "Homo sapiens",
+            "sample_count": 105,
+            "data_type": "Expression profiling by array",
+        },
+    )
+
+    assert profile.organism == "Homo sapiens"
+    assert profile.species_group == "human"
+    assert "样本物种为 Homo sapiens" in profile.analysis_potential_reason
+
+
 def _write_family_soft(path: Path, *, title: str, samples: list[tuple[str, str, str, list[str]]]) -> None:
     lines = [
         "^SERIES = GSETEST",

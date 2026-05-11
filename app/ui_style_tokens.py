@@ -439,6 +439,65 @@ def bioinformatics_project_home_stylesheet() -> str:
         color: {COLORS["muted"]};
         background: transparent;
     }}
+    QLabel#bioProjectSummaryLine {{
+        color: {COLORS["text"]};
+        font-weight: 600;
+    }}
+    QLabel#bioProjectStepLabel {{
+        background: {COLORS["surface_muted"]};
+        color: {COLORS["muted"]};
+        border: 1px solid {COLORS["border"]};
+        border-radius: {RADIUS["sm"]}px;
+        padding: 6px 8px;
+        font-size: {FONT_SIZE["secondary"]}px;
+        font-weight: 650;
+    }}
+    QLabel#bioProjectStepLabel[state="done"] {{
+        background: #E7F7F5;
+        color: {COLORS["bio"]};
+        border: 1px solid #BCE7E2;
+    }}
+    QLabel#bioProjectStepLabel[state="current"] {{
+        background: {COLORS["bio"]};
+        color: #FFFFFF;
+        border: 1px solid {COLORS["bio"]};
+    }}
+    QFrame#bioProjectHealthCard {{
+        background: #E7F7F5;
+        border: 1px solid #BCE7E2;
+        border-radius: {RADIUS["md"]}px;
+    }}
+    QFrame#bioProjectHealthCard[status="warning"] {{
+        background: {COLORS["warning_soft"]};
+        border: 1px solid #F5D899;
+    }}
+    QLabel#bioProjectHealthTitle {{
+        color: {COLORS["bio"]};
+        background: transparent;
+        font-weight: 800;
+    }}
+    QLabel#bioProjectHealthDetail {{
+        color: {COLORS["muted"]};
+        background: transparent;
+        font-size: {FONT_SIZE["secondary"]}px;
+        font-weight: 600;
+    }}
+    QFrame#bioProjectMiniStatusBlock {{
+        background: {COLORS["surface_muted"]};
+        border: 1px solid {COLORS["border"]};
+        border-radius: {RADIUS["md"]}px;
+    }}
+    QLabel#bioProjectMiniStatusTitle {{
+        color: {COLORS["muted"]};
+        background: transparent;
+        font-size: {FONT_SIZE["secondary"]}px;
+        font-weight: 650;
+    }}
+    QLabel#bioProjectMiniStatusValue {{
+        color: {COLORS["bio"]};
+        background: transparent;
+        font-weight: 800;
+    }}
     QFrame#projectValidationStatusCard {{
         background: #EAF8F6;
         border: 1px solid #91D8D0;

@@ -50,6 +50,8 @@ class IndexConcept:
     data_modality_terms: list[str] = field(default_factory=list)
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
@@ -494,6 +496,8 @@ def _insert_synonyms(conn: sqlite3.Connection, term_id: int, concept: IndexConce
         ("data_modality", concept.data_modality_terms, "en"),
         ("assay", concept.assay_terms, "en"),
         ("platform", concept.platform_candidates, "en"),
+        ("immune_cell", concept.immune_cell_terms, "en"),
+        ("biomarker", concept.biomarker_terms, "en"),
         ("modifier", concept.modifier_terms_en, "en"),
         ("exposure", concept.exposure_terms, "en"),
         ("intervention", concept.intervention_terms, "en"),
@@ -552,6 +556,8 @@ def _insert_search_values(conn: sqlite3.Connection, term_id: int, concept: Index
             *concept.data_modality_terms,
             *concept.assay_terms,
             *concept.platform_candidates,
+            *concept.immune_cell_terms,
+            *concept.biomarker_terms,
             *concept.exposure_terms,
             *concept.intervention_terms,
             *concept.outcome_terms,
@@ -709,6 +715,8 @@ def _defaults() -> dict[str, object]:
         "data_modality_terms": [],
         "assay_terms": [],
         "platform_candidates": [],
+        "immune_cell_terms": [],
+        "biomarker_terms": [],
         "modifier_terms_en": [],
         "exposure_terms": [],
         "intervention_terms": [],

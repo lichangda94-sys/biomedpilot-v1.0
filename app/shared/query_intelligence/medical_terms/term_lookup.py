@@ -24,6 +24,8 @@ def lookup_medical_terms(
         warnings.append("检测到高歧义肿瘤缩写；需要补充部位或亚型后再做强疾病扩展。")
     if normalized in {"cad", "chd", "mi", "ph", "af", "vt", "vf", "pe", "ldl", "hdl", "crp", "bnp", "ef"}:
         warnings.append("检测到高歧义心血管缩写；仅按精确缩写和当前上下文解释。")
+    if normalized in {"ra", "ibd", "sle", "il-6", "tnf", "ifn", "ige", "ana", "rf", "anca"}:
+        warnings.append("检测到高歧义免疫炎症缩写；仅按精确缩写和当前上下文解释。")
     if target_context == "meta_analysis" and normalized in {"pr", "sd", "pd"}:
         warnings.append("检测到高歧义 Meta 缩写；需要结合结局、受体或疾病上下文解释。")
     suppress_exact_meta_short_token = target_context == "bioinformatics" and _is_exact_meta_short_token(query)
@@ -41,6 +43,8 @@ def lookup_medical_terms(
     data_modalities: list[str] = []
     assay_terms: list[str] = []
     platform_candidates: list[str] = []
+    immune_cell_terms: list[str] = []
+    biomarker_terms: list[str] = []
     modifier_terms: list[str] = []
     exposure_terms: list[str] = []
     intervention_terms: list[str] = []
@@ -79,6 +83,8 @@ def lookup_medical_terms(
                 data_modalities=data_modalities,
                 assay_terms=assay_terms,
                 platform_candidates=platform_candidates,
+                immune_cell_terms=immune_cell_terms,
+                biomarker_terms=biomarker_terms,
                 modifier_terms=modifier_terms,
                 exposure_terms=exposure_terms,
                 intervention_terms=intervention_terms,
@@ -114,6 +120,8 @@ def lookup_medical_terms(
         _extend_unique(data_modalities, override.data_modality_terms)
         _extend_unique(assay_terms, override.assay_terms)
         _extend_unique(platform_candidates, override.platform_candidates)
+        _extend_unique(immune_cell_terms, override.immune_cell_terms)
+        _extend_unique(biomarker_terms, override.biomarker_terms)
         _extend_unique(modifier_terms, override.modifier_terms_en)
         _extend_unique(exposure_terms, override.exposure_terms)
         _extend_unique(intervention_terms, override.intervention_terms)
@@ -148,7 +156,7 @@ def lookup_medical_terms(
             _extend_unique(disease_terms, concept.exact_synonyms_en)
             _extend_unique(synonyms, concept.synonyms_en)
             _extend_unique(synonyms, concept.related_synonyms_en)
-        elif concept.concept_type == "exposure":
+        elif concept.concept_type in {"exposure", "process"}:
             _append_unique(exposure_terms, concept.preferred_label_en)
             _extend_unique(exposure_terms, concept.exposure_terms or concept.synonyms_en)
         elif concept.concept_type in {"intervention", "treatment"}:
@@ -157,6 +165,12 @@ def lookup_medical_terms(
         elif concept.concept_type in {"biomarker", "hormone", "laboratory_marker", "phenotype"}:
             _append_unique(exposure_terms, concept.preferred_label_en)
             _extend_unique(exposure_terms, concept.synonyms_en)
+            if concept.concept_type in {"biomarker", "hormone", "laboratory_marker"}:
+                _append_unique(biomarker_terms, concept.preferred_label_en)
+                _extend_unique(biomarker_terms, concept.biomarker_terms or concept.synonyms_en)
+        elif concept.concept_type == "immune_cell":
+            _append_unique(immune_cell_terms, concept.preferred_label_en)
+            _extend_unique(immune_cell_terms, concept.immune_cell_terms or concept.synonyms_en)
         elif concept.concept_type == "outcome":
             _append_unique(outcome_terms, concept.preferred_label_en)
             _extend_unique(outcome_terms, concept.outcome_terms or concept.synonyms_en)
@@ -200,6 +214,8 @@ def lookup_medical_terms(
         _extend_unique(data_modalities, concept.data_modality_terms)
         _extend_unique(assay_terms, concept.assay_terms)
         _extend_unique(platform_candidates, concept.platform_candidates)
+        _extend_unique(immune_cell_terms, concept.immune_cell_terms)
+        _extend_unique(biomarker_terms, concept.biomarker_terms)
         _extend_unique(modifier_terms, concept.modifier_terms_en)
         _extend_unique(exposure_terms, concept.exposure_terms)
         _extend_unique(intervention_terms, concept.intervention_terms)
@@ -241,7 +257,7 @@ def lookup_medical_terms(
     if not provider_matches and not overrides and not index_matches and not registry_matches:
         warnings.append("未在医学词库索引中匹配到明确术语。")
 
-    if not disease_terms and exposure_terms:
+    if not disease_terms and (exposure_terms or biomarker_terms or immune_cell_terms):
         warnings.append("识别到暴露、表型或生物标志物，未识别到明确疾病词。")
     elif not disease_terms and tissue_terms:
         warnings.append("仅识别到组织词，未识别到明确疾病词。")
@@ -270,6 +286,8 @@ def lookup_medical_terms(
             or data_modalities
             or assay_terms
             or platform_candidates
+            or immune_cell_terms
+            or biomarker_terms
             or modifier_terms
             or exposure_terms
             or intervention_terms
@@ -295,6 +313,8 @@ def lookup_medical_terms(
         data_modality_terms=data_modalities,
         assay_terms=assay_terms,
         platform_candidates=platform_candidates,
+        immune_cell_terms=immune_cell_terms,
+        biomarker_terms=biomarker_terms,
         modifier_terms_en=modifier_terms,
         exposure_terms=exposure_terms,
         intervention_terms=intervention_terms,
@@ -327,6 +347,8 @@ def _apply_provider_result(result: TermLookupResult, **targets: list[str] | list
     _extend_unique(targets["data_modalities"], result.data_modality_terms)
     _extend_unique(targets["assay_terms"], result.assay_terms)
     _extend_unique(targets["platform_candidates"], result.platform_candidates)
+    _extend_unique(targets["immune_cell_terms"], result.immune_cell_terms)
+    _extend_unique(targets["biomarker_terms"], result.biomarker_terms)
     _extend_unique(targets["modifier_terms"], result.modifier_terms_en)
     _extend_unique(targets["exposure_terms"], result.exposure_terms)
     _extend_unique(targets["intervention_terms"], result.intervention_terms)
@@ -400,7 +422,7 @@ def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: s
 
 
 def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[ChineseTermOverride]:
-    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5, "outcome": 6, "effect_measure": 6, "study_design": 6, "publication_type": 6, "pico_term": 6, "diagnostic_accuracy": 6, "exclusion_type": 6, "quality_assessment": 6}
+    priority = {"disease": 0, "phenotype": 1, "process": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "immune_cell": 3, "modifier": 4, "tissue": 5, "data_modality": 6, "outcome": 7, "effect_measure": 7, "study_design": 7, "publication_type": 7, "pico_term": 7, "diagnostic_accuracy": 7, "exclusion_type": 7, "quality_assessment": 7}
     candidates.sort(key=lambda item: (priority.get(item.concept_type, 9), -len(item.normalized_zh), -item.confidence))
     disease_spans = [item.normalized_zh for item in candidates if item.concept_type == "disease"]
     has_specific_meta_override = any(
@@ -421,7 +443,7 @@ def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[Chines
 
 
 def _rank_concept_matches(candidates: list[TermConcept]) -> list[TermConcept]:
-    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5, "outcome": 6, "effect_measure": 6, "study_design": 6, "publication_type": 6, "pico_term": 6, "diagnostic_accuracy": 6, "exclusion_type": 6, "quality_assessment": 6}
+    priority = {"disease": 0, "phenotype": 1, "process": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "immune_cell": 3, "modifier": 4, "tissue": 5, "data_modality": 6, "outcome": 7, "effect_measure": 7, "study_design": 7, "publication_type": 7, "pico_term": 7, "diagnostic_accuracy": 7, "exclusion_type": 7, "quality_assessment": 7}
     unique: dict[str, TermConcept] = {candidate.concept_id: candidate for candidate in candidates}
     items = list(unique.values())
     items.sort(key=lambda item: (priority.get(item.concept_type, 9), -max((len(term) for term in item.normalized_terms), default=0)))
@@ -502,6 +524,17 @@ def _gtex_from_database_terms(terms: tuple[str, ...]) -> list[str]:
 
 
 def _should_skip_registry_concept(concept_id: str, normalized_query: str) -> bool:
+    if concept_id == "glioma" and normalized_query in {
+        "gbm",
+        "glioblastoma",
+        "glioblastoma multiforme",
+        "lgg",
+        "lower grade glioma",
+        "brain lower grade glioma",
+        "low grade glioma",
+        "low-grade glioma",
+    }:
+        return True
     if concept_id == "thyroid_cancer":
         non_cancer_thyroid_terms = {
             "甲状腺",
@@ -608,6 +641,8 @@ def _should_skip_contextual_false_positive_concept(concept: TermConcept, normali
         "脑梗死",
         "出血性脑卒中",
     }:
+        return True
+    if concept.concept_id == "mini:systemic_lupus_erythematosus" and "lupus nephritis" in normalized_query:
         return True
     return False
 

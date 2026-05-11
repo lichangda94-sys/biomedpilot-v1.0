@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPushButton, QFrame, QPlainTextEdit, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -283,6 +283,31 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
     assert widget.objectName() == "bioinformaticsDataSourcePage"
 
 
+def test_gse_preview_preserves_geo_organism_for_detail_profile(qt_app) -> None:
+    metadata_text = "\n".join(
+        [
+            "当前 GSE 编号：GSE5078",
+            "数据集标题：Hippocampal transcript profile in young and middle-aged mice",
+            "样本数：23",
+            "平台信息：GPL1261",
+            "物种：Mus musculus",
+        ]
+    )
+
+    preview = workflow_pages._gse_preview_from_metadata("GSE5078", metadata_text)
+    candidate = workflow_pages._geo_candidate_from_gse_preview(preview)
+    rows = workflow_pages._geo_detail_basic_rows(candidate)
+    profile = workflow_pages._build_geo_detail_profile(None, candidate)
+    row_map = {str(row[0]): str(row[1]) for row in rows}
+
+    assert preview.organism == "Mus musculus"
+    assert candidate.organism == "Mus musculus"
+    assert row_map["物种"] == "Mus musculus"
+    assert profile.organism == "Mus musculus"
+    assert profile.species_group == "mouse"
+    assert "人类或疑似人类" not in profile.analysis_potential_reason
+
+
 def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
     card_titles = [
@@ -309,6 +334,36 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
     assert "登记为数据源" not in button_texts
+
+
+def test_local_import_strategy_copy_uses_user_friendly_copy(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    combo = widget._local_strategy_combo
+    hint = widget.findChild(QLabel, "localImportStrategyHint")
+
+    assert combo.currentText() == "复制到项目文件夹（推荐）"
+    assert combo.itemText(0) == "复制到项目文件夹（推荐）"
+    assert combo.itemText(1) == "使用原文件位置"
+    assert hint is not None
+    assert hint.text() == "把数据文件复制到当前项目，便于后续复用、迁移和归档。"
+    all_text = "\n".join(
+        [hint.text(), combo.itemText(0), combo.itemText(1), *[label.text() for label in widget.findChildren(QLabel)]]
+    )
+    assert "仅记录路径" not in all_text
+
+
+def test_local_import_strategy_reference_updates_hint(qt_app) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    combo = widget._local_strategy_combo
+    hint = widget.findChild(QLabel, "localImportStrategyHint")
+
+    combo.setCurrentText("使用原文件位置")
+
+    assert hint is not None
+    assert "不复制文件" in hint.text()
+    assert "后续分析将从原位置读取" in hint.text()
+    assert "请勿移动或删除" in hint.text()
+    assert "项目可能无法继续读取该数据" in hint.text()
 
 
 def test_data_source_registers_local_reference_strategy(qt_app, project_summary, tmp_path: Path) -> None:
@@ -1443,7 +1498,7 @@ def test_recognition_requires_selected_inputs(qt_app, project_summary) -> None:
     widget.refresh_project(project_summary)
 
     assert widget.run_recognition() is None
-    assert widget.status_message() == "请先选择需要识别的数据。"
+    assert widget.status_message() == "请先选择需要识别的数据源。"
 
 
 def test_recognition_only_scans_checked_sources(qt_app, project_summary) -> None:
@@ -1470,6 +1525,19 @@ def test_recognition_only_scans_checked_sources(qt_app, project_summary) -> None
     file_names = [item["file_name"] for item in report["files"]]
     assert file_names == [Path(report["selected_inputs"][0]).name]
     assert "skipped_expression.tsv" not in file_names
+    current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    run_id = current["run_id"]
+    run_dir = project_summary.project_root / "recognized_data" / "runs" / run_id
+    assert run_dir.is_dir()
+    assert (run_dir / "input_manifest.json").exists()
+    assert (run_dir / "recognized_files.json").exists()
+    assert (run_dir / "recognition_report.json").exists()
+    assert (run_dir / "warnings.json").exists()
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+    assert history is not None
+    assert history.rowCount() == 1
+    assert history.item(0, 1).text() == "本次识别"
+    assert history.item(0, 6).text() == "当前使用中"
 
 
 def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, project_summary) -> None:
@@ -1481,6 +1549,167 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
     assert "刷新" in button_texts
     assert widget.findChild(QFrame, "recognitionTechnicalOperations").isHidden()
     assert widget._counts.isReadOnly()
+
+
+def test_recognition_opening_old_project_keeps_legacy_report_in_history(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "legacy_expression.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "expression_matrix",
+                "confidence": 0.9,
+                "file_size": source.stat().st_size,
+                "reason": "legacy",
+                "route_path": str(project_summary.project_root / "recognized_data/expression_matrix" / source.name),
+            }
+        ],
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    current_table = widget.findChild(QTableWidget, "recognitionResultTable")
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+
+    assert current_table is not None
+    assert current_table.rowCount() == 0
+    assert "尚未开始本次识别" in widget._counts.toPlainText()
+    assert history is not None
+    assert history.rowCount() == 1
+    assert history.item(0, 1).text() == "旧版识别记录"
+    assert history.item(0, 3).text() == "1"
+    assert "表达矩阵" in history.item(0, 4).text()
+    assert history.item(0, 6).text() == "由旧版项目结构导入"
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+    run = workflow_pages.list_recognition_runs(project_summary.project_root)[0]
+    widget._view_history_run(str(run["run_id"]))
+    detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    assert detail is not None
+    assert "旧版识别记录" in detail.toPlainText()
+    assert "由旧版项目结构导入" in detail.toPlainText()
+    assert current_table.rowCount() == 0
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+
+def test_recognition_archives_legacy_recognized_data_report(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "legacy_from_recognized_data.tsv"
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    legacy_report = project_summary.project_root / "recognized_data" / "recognition_report.json"
+    legacy_report.parent.mkdir(parents=True, exist_ok=True)
+    legacy_report.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.recognition_report.v1",
+                "files": [
+                    {
+                        "file_name": source.name,
+                        "original_path": str(source),
+                        "recognized_type": "expression_matrix",
+                        "recognized_type_zh": "表达矩阵",
+                        "recognized_roles": ["expression_matrix"],
+                    }
+                ],
+                "type_counts": {"expression_matrix": 1},
+                "warnings": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+
+    assert history is not None
+    assert history.rowCount() == 1
+    assert history.item(0, 1).text() == "旧版识别记录"
+    assert history.item(0, 6).text() == "由旧版项目结构导入"
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+
+def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, project_summary) -> None:
+    raw_dir = project_summary.project_root / "raw_data" / "local_import"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    first = raw_dir / "first_expression.tsv"
+    second = raw_dir / "second_expression.tsv"
+    first.write_text("gene\tA1\nTP53\t1\n", encoding="utf-8")
+    second.write_text("gene\tB1\nEGFR\t2\n", encoding="utf-8")
+
+    workflow_pages.run_project_recognition_for_paths(project_summary.project_root, [first])
+    first_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    workflow_pages.run_project_recognition_for_paths(project_summary.project_root, [second])
+    second_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    history = widget.findChild(QTableWidget, "recognitionHistoryTable")
+    assert table is not None
+    assert table.rowCount() == 0
+    assert history is not None
+    assert history.rowCount() == 2
+
+    widget._view_history_run(first_current["run_id"])
+    viewed_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    assert viewed_current["run_id"] == second_current["run_id"]
+    assert table.rowCount() == 0
+    detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    next_steps = widget.findChild(QTextEdit, "recognitionNextStepSummary")
+    next_button = widget.findChild(QPushButton, "recognitionNextActionButton_0")
+    assert detail is not None
+    assert "历史记录" in detail.toPlainText()
+    assert first.name in detail.toPlainText()
+    assert next_steps is not None
+    assert "该识别记录当前不会被标准化模块使用" in next_steps.toPlainText()
+    assert next_button is not None
+    assert next_button.text() == "设为当前标准化输入"
+
+    next_button.click()
+    updated_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
+    assert updated_current["run_id"] == first_current["run_id"]
+    assert widget.status_message() == "已将该识别记录设为当前标准化输入。"
+    assert table.rowCount() == 0
+    status_by_run = {
+        table_widget.item(row, 1).text() + ":" + table_widget.item(row, 2).text(): table_widget.item(row, 6).text()
+        for table_widget in [history]
+        for row in range(table_widget.rowCount())
+    }
+    assert "当前使用中" in status_by_run.values()
+
+    widget._delete_history_run(first_current["run_id"])
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+    assert widget.status_message() == "当前识别结果已删除，请重新识别或选择另一条历史记录。"
+    standardization = workflow_pages.generate_standardized_assets(project_summary.project_root)
+    assert any("current.json" in warning for warning in standardization["registry"]["warnings"])
+    standardization_widget = BioinformaticsStandardizedAssetsWidget()
+    standardization_widget.refresh_project(project_summary)
+    input_summary = standardization_widget.findChild(QTextEdit, "standardizationCurrentRecognitionInput")
+    assert input_summary is not None
+    assert "尚未选择当前识别结果" in input_summary.toPlainText()
+
+
+def test_recognition_filters_system_files_from_report(qt_app, project_summary) -> None:
+    raw_dir = project_summary.project_root / "raw_data" / "local_import"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    expression = raw_dir / "expression.tsv"
+    expression.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    (raw_dir / ".DS_Store").write_text("system", encoding="utf-8")
+    (raw_dir / "._expression.tsv").write_text("system", encoding="utf-8")
+    macosx = raw_dir / "__MACOSX"
+    macosx.mkdir()
+    (macosx / "expression.tsv").write_text("system", encoding="utf-8")
+
+    report = workflow_pages.run_project_recognition(project_summary.project_root)
+
+    names = [str(item.get("file_name")) for item in report["files"]]
+    assert names == ["expression.tsv"]
+    assert ".DS_Store" not in names
+    assert "._expression.tsv" not in names
 
 
 def test_recognition_delete_selected_removes_binding_not_file(qt_app, project_summary) -> None:
@@ -1621,15 +1850,13 @@ def test_recognition_page_shows_group_preview(qt_app, project_summary) -> None:
     recognition = BioinformaticsRecognitionWidget()
     recognition.refresh_project(project_summary)
     preview = recognition.findChild(QTextEdit, "recognitionGroupPreviewReport")
+    history = recognition.findChild(QTableWidget, "recognitionHistoryTable")
 
     assert preview is not None
-    text = preview.toPlainText()
-    assert "样本数：4" in text
-    assert "识别到的候选分组：condition" in text
-    assert "分组数量：2 组" in text
-    assert "control 2" in text
-    assert "treated 2" in text
-    assert "正式比较组需由你确认" in text
+    assert preview.toPlainText() == ""
+    assert "尚未开始本次识别" in recognition._counts.toPlainText()
+    assert history is not None
+    assert history.rowCount() >= 1
 
 
 def test_readiness_confirms_group_preview_before_comparison_config(qt_app, project_summary) -> None:
@@ -1745,6 +1972,86 @@ def test_analysis_task_center_runs_geo_differential_expression_and_indexes_resul
     entries = index["entries"]
     assert any(item["analysis_type"] == "differential_expression" for item in entries)
     assert "已运行 GEO 差异分析" in task_center.status_message()
+
+
+def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "gene_id,A1_count,A2_count,A1_fpkm,A2_fpkm,PFFvsPBS_log2FoldChange,PFFvsPBS_pvalue,PFFvsPBS_padj,gene_name,gene_biotype,gene_description\n"
+        "ENSMUSG00000026193,10,12,1.1,1.2,1.5,0.01,0.04,Sox17,protein_coding,SRY-box transcription factor 17\n"
+        "ENSMUSG00000064351,20,18,2.1,2.2,-1.7,0.02,0.03,mt-Nd1,protein_coding,mitochondrially encoded NADH\n",
+        encoding="utf-8",
+    )
+    recognition_report = workflow_pages.run_project_recognition(project_summary.project_root)
+
+    recognition_widget = BioinformaticsRecognitionWidget()
+    recognition_widget.refresh_project(project_summary)
+    recognition_widget._render_report(recognition_report)
+    next_steps = recognition_widget.findChild(QTextEdit, "recognitionNextStepSummary")
+    primary_next = recognition_widget.findChild(QPushButton, "recognitionNextActionButton_0")
+    assert next_steps is not None
+    assert "当前使用中" in next_steps.toPlainText()
+    assert "查看已有 DEG 结果" in next_steps.toPlainText()
+    assert "需要确认分组" in next_steps.toPlainText()
+    assert "TCGA/GTEx" in next_steps.toPlainText()
+    assert primary_next is not None
+    assert primary_next.text() == "继续数据标准化"
+
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+    grouped = task_center.findChild(QTextEdit, "analysisCapabilityGroupedSummary")
+    assert grouped is not None
+    grouped_text = grouped.toPlainText()
+    assert "可直接使用已有结果" in grouped_text
+    assert "查看差异基因结果" in grouped_text
+    assert "需要确认分组后运行" in grouped_text
+    assert "表达数据探索" in grouped_text
+    assert "小鼠数据：适合动物模型分析" in grouped_text
+    assert "TCGA" not in grouped_text
+    assert "GTEx" not in grouped_text
+    task_text = " ".join(
+        task_center._tasks.item(row, column).text()
+        for row in range(task_center._tasks.rowCount())
+        for column in range(task_center._tasks.columnCount())
+        if task_center._tasks.item(row, column) is not None
+    )
+    assert "查看差异基因结果" in task_text
+    assert "ready_with_group_confirmation" in task_text
+    assert "小鼠数据" in task_text
+    assert "TCGA/GTEx" in task_text
+
+    results = BioinformaticsResultsBrowserWidget()
+    results.refresh_project(project_summary)
+    selector = results.findChild(QComboBox, "importedDegComparisonSelector")
+    preview = results.findChild(QTableWidget, "importedDegPreviewTable")
+
+    assert selector is not None
+    assert selector.count() == 1
+    assert "PFFvsPBS" in selector.itemText(0)
+    assert preview is not None
+    assert preview.horizontalHeaderItem(2).text() == "log2FC"
+    assert preview.horizontalHeaderItem(4).text() == "adjusted p value"
+    assert preview.rowCount() == 2
+    summary = results.findChild(QTextEdit, "importedDegSummary")
+    assert summary is not None
+    summary_text = summary.toPlainText()
+    assert "当前结果来源：导入表格中的已有差异分析结果" in summary_text
+    assert "比较数量：1" in summary_text
+    assert "物种：Mus musculus" in summary_text
+    assert "可用于：DEG 浏览、筛选、火山图输入、富集分析输入" in summary_text
+    assert "差异结果来源：导入表格中的已有结果" in summary_text
+    assert "当前比较：PFFvsPBS" in summary_text
+    assert "significant genes 2" in summary_text
+    assert "upregulated 1" in summary_text
+    assert "downregulated 1" in summary_text
+    assert "富集物种：mouse / Mus musculus" in summary_text
+    details = results._details.toPlainText()
+    assert "imported_deg_result" in details
+    assert "mouse" in details
+    assert "PFFvsPBS_log2FoldChange" in details
 
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
@@ -1956,6 +2263,8 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     )
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
+    report = json.loads((project_summary.project_root / "logs" / "recognition" / "recognition_report.json").read_text(encoding="utf-8"))
+    widget._render_report(report)
     table = widget.findChild(QTableWidget, "recognitionResultTable")
 
     assert table.horizontalHeaderItem(3).text() == "识别可信度"
@@ -1968,6 +2277,140 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     assert table.item(0, 2).text() == "GEO SOFT 容器（含：表达矩阵、样本注释）"
     assert "可用角色：表达矩阵、样本注释" in table.item(0, 2).toolTip()
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
+
+
+def test_recognition_table_prefers_semantic_type_label(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "integrated_rnaseq_results.xlsx"
+    source.write_text("placeholder", encoding="utf-8")
+    report = {
+        "schema_version": "biomedpilot.recognition_report.v1",
+        "files": [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "tabular_text_file",
+                "recognized_type_zh": "表格文本文件",
+                "recognized_roles": ["normalized_expression_matrix", "platform_annotation"],
+                "semantic_type": "rna_seq_integrated_result_table",
+                "semantic_type_zh": "RNA-seq 综合表达结果表",
+                "detected_assets": [],
+                "confidence": 0.82,
+                "file_size": 1,
+                "reason": "表格内容识别为：标准化表达矩阵、平台注释。",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+        "type_counts": {"tabular_text_file": 1},
+        "warnings": [],
+    }
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    widget._render_report(report)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+
+    assert table.item(0, 2).text() == "RNA-seq 综合表达结果表"
+
+
+def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "integrated_rnaseq_results.xlsx"
+    source.write_text("placeholder", encoding="utf-8")
+    comparisons = [
+        {"comparison_name": name, "log2fc_column": f"{name}_log2FoldChange", "pvalue_column": f"{name}_pvalue", "padj_column": f"{name}_padj", "is_complete": True}
+        for name in ("PFFvsPBS", "MMP3vsPBS", "MK2206vsPBS", "PI103vsPBS", "PDTCvsPBS", "PF271vsPBS", "MK2206vsPFF", "PI103vsPFF", "PDTCvsPFF", "PF271vsPFF")
+    ]
+    report = {
+        "schema_version": "biomedpilot.recognition_report.v1",
+        "files": [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "tabular_text_file",
+                "recognized_type_zh": "表格文本文件",
+                "semantic_type": "rna_seq_integrated_result_table",
+                "semantic_type_zh": "RNA-seq 综合表达结果表",
+                "species": "Mus musculus",
+                "species_group": "mouse",
+                "gene_id_type": "ensembl_mouse_gene_id",
+                "content_blocks": [
+                    {"block_type": "gene_identifier", "gene_id_type": "ensembl_mouse_gene_id", "species": "Mus musculus", "species_group": "mouse", "example_values": ["ENSMUSG00000026193"]},
+                    {"block_type": "count_expression_matrix", "sample_count": 21, "sample_columns": [f"A{i}_count" for i in range(1, 4)], "inferred_groups": ["A", "B", "C", "D", "E", "F", "H"], "replicate_count_by_group": {"A": 3, "B": 3, "C": 3, "D": 3, "E": 3, "F": 3, "H": 3}},
+                    {"block_type": "fpkm_expression_matrix", "sample_count": 21, "sample_columns": [f"A{i}_fpkm" for i in range(1, 4)], "matches_count_sample_ids": True},
+                    {"block_type": "deg_comparisons", "comparison_count": 10, "complete_comparison_count": 10, "comparisons": comparisons},
+                    {"block_type": "gene_annotation", "annotation_fields": ["gene_name", "gene_chr", "gene_start", "gene_end", "gene_length", "gene_biotype", "gene_description", "tf_family"]},
+                ],
+                "content_profile": {"sample_columns": [f"A{i}_count" for i in range(1, 4)] + [f"A{i}_fpkm" for i in range(1, 4)]},
+                "detected_assets": [],
+                "confidence": 0.92,
+                "file_size": 1,
+                "reason": "integrated",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+        "type_counts": {"tabular_text_file": 1},
+        "warnings": [],
+    }
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    widget._render_report(report)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    summary = widget.findChild(QTextEdit, "recognitionAssetSummary")
+
+    assert table is not None
+    assert summary is not None
+    text = summary.toPlainText()
+    assert "文件类型：RNA-seq 综合表达结果表" in text
+    assert "物种：Mus musculus" in text
+    assert "基因 ID：Ensembl mouse gene ID" in text
+    assert "表达数据：count 矩阵 21 列；FPKM 矩阵 21 列" in text
+    assert "差异比较：10 个完整比较" in text
+    assert "基因注释：已包含" in text
+    assert "Count 矩阵：21 列，7 组，每组约 3 个重复" in text
+    assert "FPKM 矩阵：21 列，与 count 样本匹配" in text
+    assert "PFFvsPBS" in text
+    assert "另有 6 个比较" in text
+    assert "差异分析建议使用 count" in text
+    assert "小鼠数据" in text
+    assert "tabular_text_file" not in text
+    assert "PFFvsPBS_log2FoldChange" not in text
+    assert "gene_start" not in text
+    assert "Homo sapiens" not in text
+
+    detail_button = table.cellWidget(0, 7)
+    assert detail_button is not None
+    assert isinstance(detail_button, QPushButton)
+    detail_button.click()
+
+    detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    technical = widget.findChild(QPlainTextEdit, "recognitionDetailTechnical")
+    assert detail is not None
+    assert technical is not None
+    detail_text = detail.toPlainText()
+    assert "RNA-seq 综合表达结果表" in detail_text
+    assert "Mus musculus" in detail_text
+    assert "Ensembl mouse gene ID" in detail_text
+    assert "Count 表达矩阵" in detail_text
+    assert "FPKM 表达矩阵" in detail_text
+    assert "比较数量：10" in detail_text
+    assert "Gene annotation" in detail_text
+    assert "PFFvsPBS\tPFFvsPBS_log2FoldChange\tPFFvsPBS_pvalue\tPFFvsPBS_padj\t完整" in detail_text
+    assert "ENSMUSG 前缀对应 Ensembl mouse gene ID" in detail_text
+    assert "暂无识别警告" in detail_text
+    sample_section = detail_text.split("样本列与分组推断", 1)[1].split("DEG comparison 识别", 1)[0]
+    assert "gene_start" not in sample_section
+    assert "PFFvsPBS_log2FoldChange" not in sample_section
+    assert technical.isHidden()
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+    export_button = widget.findChild(QPushButton, "recognitionDetailExportButton")
+    assert export_button is not None
+    export_button.click()
+    export_path = project_summary.project_root / "recognized_data" / "runs" / "current_session" / "recognition_report_user.md"
+    assert export_path.exists()
+    assert "RNA-seq 综合表达结果表" in export_path.read_text(encoding="utf-8")
 
 
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
@@ -1994,7 +2437,7 @@ def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, projec
 
     widget.refresh_report()
     assert calls == []
-    assert "不重新扫描文件" in widget.status_message()
+    assert "尚未开始本次识别" in widget.status_message()
 
     table = widget.findChild(QTableWidget, "preRecognitionInputList")
     checkbox = table.cellWidget(0, 0)
@@ -2048,7 +2491,9 @@ def test_recognition_duplicate_filter_marks_and_hides_duplicates(qt_app, project
     _write_mock_recognition_report(root, files)
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
-    table = widget.findChild(QTableWidget)
+    report = json.loads((root / "logs" / "recognition" / "recognition_report.json").read_text(encoding="utf-8"))
+    widget._render_report(report)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
 
     assert table.rowCount() == 2
     warnings = [table.item(row, 6).text() for row in range(table.rowCount())]

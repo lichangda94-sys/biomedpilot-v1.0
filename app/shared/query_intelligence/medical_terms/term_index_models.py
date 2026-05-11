@@ -20,6 +20,8 @@ class TermConcept:
     data_modality_terms: list[str] = field(default_factory=list)
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
@@ -60,6 +62,8 @@ class TermConcept:
             data_modality_terms=_list(payload.get("data_modality_terms")),
             assay_terms=_list(payload.get("assay_terms")),
             platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
+            immune_cell_terms=_list(payload.get("immune_cell_terms")),
+            biomarker_terms=_list(payload.get("biomarker_terms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
             exposure_terms=_list(payload.get("exposure_terms")),
             intervention_terms=_list(payload.get("intervention_terms")),
@@ -102,6 +106,8 @@ class ChineseTermOverride:
     data_modality_terms: list[str] = field(default_factory=list)
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
@@ -140,6 +146,8 @@ class ChineseTermOverride:
             data_modality_terms=_list(payload.get("data_modality_terms")),
             assay_terms=_list(payload.get("assay_terms")),
             platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
+            immune_cell_terms=_list(payload.get("immune_cell_terms")),
+            biomarker_terms=_list(payload.get("biomarker_terms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
             exposure_terms=_list(payload.get("exposure_terms")),
             intervention_terms=_list(payload.get("intervention_terms")),
@@ -176,6 +184,8 @@ class TermLookupResult:
     data_modality_terms: list[str] = field(default_factory=list)
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
@@ -210,6 +220,8 @@ class TermLookupResult:
             "data_modality_terms": list(self.data_modality_terms),
             "assay_terms": list(self.assay_terms),
             "platform_candidates": list(self.platform_candidates),
+            "immune_cell_terms": list(self.immune_cell_terms),
+            "biomarker_terms": list(self.biomarker_terms),
             "modifier_terms_en": list(self.modifier_terms_en),
             "exposure_terms": list(self.exposure_terms),
             "intervention_terms": list(self.intervention_terms),

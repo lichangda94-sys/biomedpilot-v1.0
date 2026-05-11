@@ -10,6 +10,11 @@ from app.shared.feature_status import FeatureItem, feature_item_from_availabilit
 from app.shared.storage import default_storage_root
 from app.version import APP_VERSION
 
+from app.meta_analysis.project_workspace import (
+    MetaProjectSummary,
+    create_meta_analysis_project,
+    open_meta_analysis_project,
+)
 from app.meta_analysis.ui_text import INTERNAL_BETA_STATUS_ZH
 from app.meta_analysis.pages.workflow_integration_page import (
     MetaWorkflowStepState,
@@ -103,7 +108,7 @@ def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
     return MetaWorkspaceLayoutState(
         title="Meta 分析模块",
         status_label=version_status,
-        description="用中文串联 Meta 分析主流程：状态可见、按钮清楚、下一步明确；未完成能力保持 testing-level / 待开发。",
+        description="用中文串联 Meta 分析主流程：状态可见、按钮清楚、下一步明确。",
         navigation_items=workflow_items,
         default_page_key="workflow_home",
         testing_notice="当前 Meta 分析模块仍为内部测试版；所有结果需要人工复核，不能作为正式临床、投稿或 production 结论。",
@@ -258,6 +263,59 @@ def _diagnostics_summary_text(diagnostics: dict[str, object]) -> str:
     return "; ".join(f"{field}={_int_from(diagnostics, field)}" for field in fields if _int_from(diagnostics, field))
 
 
+def _meta_project_folder_name(project_name: str) -> str:
+    cleaned = "".join(char if char.isalnum() else "_" for char in project_name.strip())
+    return "_".join(part for part in cleaned.split("_") if part) or "Meta_Project"
+
+
+def _compact_path(path: Path | None) -> str:
+    if path is None:
+        return "未选择"
+    home = Path.home()
+    try:
+        relative = path.expanduser().resolve().relative_to(home)
+        parts = (home.name, *relative.parts)
+    except ValueError:
+        parts = path.parts
+    if len(parts) <= 4:
+        return " / ".join(parts)
+    return " / ".join((parts[0], "...", *parts[-3:]))
+
+
+def _workflow_stage_zh(stage: str) -> str:
+    return {
+        "project_home": "项目首页",
+        "pico_workspace": "研究问题 / PICO",
+        "search_import": "检索与导入",
+        "screening": "文献筛选",
+        "extraction_quality": "提取与质量评价",
+        "analysis_results": "统计分析",
+        "prisma_reporting": "报告导出",
+    }.get(stage, "项目首页")
+
+
+def _main_stage_status_label(status: str) -> str:
+    if status in {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "已有人工评分", "已创建"}:
+        return "已完成"
+    if status in {"草稿待确认", "待人工复核", "等待用户选择", "有待审核建议"}:
+        return "需要确认"
+    if status in {"testing-level", "待开发"}:
+        return "暂不可用"
+    return status or "未开始"
+
+
+def _nav_stage_label(title: str) -> str:
+    return {
+        "Meta 项目首页": "项目首页",
+        "研究问题 / PICO": "研究问题 / PICO",
+        "检索与导入": "检索与导入",
+        "文献筛选": "文献筛选",
+        "提取与质量评价": "提取与质量评价",
+        "统计分析": "统计分析",
+        "报告导出": "报告导出",
+    }.get(title, title)
+
+
 try:
     from PySide6.QtWidgets import (
         QComboBox,
@@ -295,9 +353,29 @@ if QWidget is not None:
         DECISION_SET_MASTER_RECORD,
         DedupReviewV2Service,
     )
+    from app.meta_analysis.services.ai_assisted_extraction_queue_service import AIAssistedExtractionQueueService
+    from app.meta_analysis.services.analysis_plan_service import AnalysisPlanService
+    from app.meta_analysis.services.exclusion_criteria_library_service import (
+        FULL_TEXT_STAGE,
+        TITLE_ABSTRACT_STAGE,
+        ExclusionCriteriaLibraryService,
+    )
+    from app.meta_analysis.services.figure_result_service import FigureResultService
+    from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
+    from app.meta_analysis.services.fulltext_eligibility_service import FullTextEligibilityService
+    from app.meta_analysis.services.fulltext_management_service import (
+        FULLTEXT_MANAGEMENT_STATUSES,
+        FullTextManagementService,
+    )
+    from app.meta_analysis.services.fulltext_parsing_service import FullTextParsingService
     from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
+    from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
+    from app.meta_analysis.services.meta_statistics_engine_service import MetaStatisticsEngineService
     from app.meta_analysis.services.multisource_literature_import_service import MultiSourceLiteratureImportService
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
+    from app.meta_analysis.services.publication_export_service import PublicationExportService
+    from app.meta_analysis.services.quality_service import QualityAssessmentService
+    from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -308,6 +386,7 @@ if QWidget is not None:
             self._on_back = on_back
             self._current_project_record = None
             self._current_project_dir: Path | None = None
+            self._current_meta_project: MetaProjectSummary | None = None
             self._page_keys: list[str] = []
 
             root = QHBoxLayout(self)
@@ -326,10 +405,10 @@ if QWidget is not None:
             self._project_summary_label.setObjectName("metaMutedText")
             self._project_summary_label.setWordWrap(True)
             global_layout.addWidget(self._project_summary_label)
-            status = QLabel("Developer Preview")
+            status = QLabel("")
             status.setObjectName("metaStatusBadge")
             global_layout.addWidget(status)
-            notice = QLabel("testing-level；所有研究判断需要人工确认。")
+            notice = QLabel("")
             notice.setObjectName("metaMutedText")
             notice.setWordWrap(True)
             global_layout.addWidget(notice)
@@ -342,16 +421,35 @@ if QWidget is not None:
 
             self._workflow_nav = QFrame()
             self._workflow_nav.setObjectName("metaWorkflowNav")
-            self._workflow_nav.setFixedWidth(280)
+            self._workflow_nav.setFixedWidth(310)
             workflow_layout = QVBoxLayout(self._workflow_nav)
             workflow_layout.setContentsMargins(14, 18, 14, 18)
             workflow_layout.setSpacing(10)
-            workflow_title = QLabel("Meta 工作流")
+            workflow_title = QLabel("Meta 项目侧栏")
             workflow_title.setObjectName("metaPanelTitle")
             workflow_layout.addWidget(workflow_title)
+            self._sidebar_project_label = QLabel("当前项目：未创建\n项目位置：未选择")
+            self._sidebar_project_label.setObjectName("metaMutedText")
+            self._sidebar_project_label.setWordWrap(True)
+            workflow_layout.addWidget(self._sidebar_project_label)
+            sidebar_actions = QHBoxLayout()
+            self._new_project_nav_button = QPushButton("新建 Meta 项目")
+            self._new_project_nav_button.setObjectName("metaSecondaryButton")
+            self._new_project_nav_button.clicked.connect(lambda: self.show_step("workflow_home"))
+            self._open_project_nav_button = QPushButton("打开已有项目")
+            self._open_project_nav_button.setObjectName("metaSecondaryButton")
+            self._open_project_nav_button.clicked.connect(self._choose_existing_project_folder)
+            sidebar_actions.addWidget(self._new_project_nav_button)
+            sidebar_actions.addWidget(self._open_project_nav_button)
+            workflow_layout.addLayout(sidebar_actions)
             self._navigation_list = QListWidget()
             self._navigation_list.setObjectName("metaWorkflowStepList")
             workflow_layout.addWidget(self._navigation_list, 1)
+            back = QPushButton("返回模块首页")
+            back.setObjectName("metaSecondaryButton")
+            if on_back:
+                back.clicked.connect(on_back)
+            workflow_layout.addWidget(back)
 
             self._workspace = QFrame()
             self._workspace.setObjectName("metaCurrentStepWorkspace")
@@ -363,7 +461,6 @@ if QWidget is not None:
             workspace_layout.addWidget(self._page_stack, 1)
 
             self._navigation_list.currentRowChanged.connect(self._page_stack.setCurrentIndex)
-            root.addWidget(self._global_nav)
             root.addWidget(self._workflow_nav)
             root.addWidget(self._workspace, 1)
             self._rebuild_pages()
@@ -386,7 +483,85 @@ if QWidget is not None:
 
         def set_project_dir(self, path: str | Path | None) -> None:
             self._current_project_dir = Path(path).expanduser().resolve() if path else None
+            self._current_meta_project = None
+            if self._current_project_dir is not None:
+                validation = open_meta_analysis_project(self._current_project_dir)
+                if validation.is_valid and validation.summary is not None:
+                    self._current_meta_project = validation.summary
             self._rebuild_pages()
+
+        def set_new_project_form(self, *, project_name: str = "", research_topic: str = "", save_location: str | Path | None = None) -> None:
+            if hasattr(self, "_new_project_name_input"):
+                self._new_project_name_input.setText(project_name)
+                self._research_topic_input.setText(research_topic)
+                self._save_location_input.setText(str(save_location or ""))
+                self._refresh_final_project_path()
+
+        def create_meta_project_from_form(self, *, allow_existing_nonempty: bool = False) -> MetaProjectSummary | None:
+            project_name = self._new_project_name_input.text().strip() if hasattr(self, "_new_project_name_input") else ""
+            save_location = self._save_location_input.text().strip() if hasattr(self, "_save_location_input") else ""
+            research_topic = self._research_topic_input.text().strip() if hasattr(self, "_research_topic_input") else ""
+            if not project_name:
+                self._set_project_status("请先填写项目名称。")
+                return None
+            if not save_location:
+                self._set_project_status("请先选择保存位置。")
+                return None
+            target = Path(save_location).expanduser().resolve() / _meta_project_folder_name(project_name)
+            if target.exists() and any(target.iterdir()) and not allow_existing_nonempty:
+                answer = QMessageBox.question(
+                    self,
+                    "确认使用已有文件夹",
+                    "目标项目文件夹已存在且不是空文件夹。是否继续在该文件夹中创建 Meta 项目？",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                if answer != QMessageBox.Yes:
+                    self._set_project_status("已取消创建 Meta 项目。")
+                    return None
+                allow_existing_nonempty = True
+            try:
+                summary = create_meta_analysis_project(project_name, save_location, research_topic=research_topic, allow_existing_nonempty=allow_existing_nonempty)
+            except Exception as exc:
+                self._set_project_status(f"创建 Meta 项目失败：{exc}")
+                return None
+            self._current_project_dir = summary.project_root
+            self._current_meta_project = summary
+            self._set_project_status("Meta 项目已创建，可以继续研究问题 / PICO。")
+            self._rebuild_pages()
+            return summary
+
+        def open_meta_project_folder(self, path: str | Path) -> bool:
+            validation = open_meta_analysis_project(path)
+            if not validation.is_valid or validation.summary is None:
+                self._set_project_status("；".join(validation.errors) or "该文件夹不是有效 Meta 项目。")
+                return False
+            self._current_project_dir = validation.summary.project_root
+            self._current_meta_project = validation.summary
+            self._set_project_status("已打开 Meta 项目。")
+            self._rebuild_pages()
+            return True
+
+        def _choose_save_location(self) -> None:
+            path = QFileDialog.getExistingDirectory(self, "选择保存位置")
+            if path:
+                self._save_location_input.setText(path)
+                self._refresh_final_project_path()
+
+        def _choose_existing_project_folder(self) -> None:
+            path = QFileDialog.getExistingDirectory(self, "选择已有项目文件夹")
+            if path:
+                self.open_meta_project_folder(path)
+
+        def _refresh_final_project_path(self, *_args) -> None:
+            project_name = self._new_project_name_input.text().strip() if hasattr(self, "_new_project_name_input") else ""
+            save_location = self._save_location_input.text().strip() if hasattr(self, "_save_location_input") else ""
+            final = str(Path(save_location).expanduser() / _meta_project_folder_name(project_name)) if project_name and save_location else "请填写项目名称并选择保存位置"
+            self._final_project_path_label.setText(f"最终项目路径：{final}")
+
+        def _set_project_status(self, text: str) -> None:
+            if hasattr(self, "_project_action_status_label"):
+                self._project_action_status_label.setText(text)
 
         def show_step(self, page_key: str) -> None:
             if page_key in self._page_keys:
@@ -412,7 +587,8 @@ if QWidget is not None:
             self._update_project_summary()
             state = meta_workflow_integration_state_from_project(self._project_dir_for_state())
             for step in state.steps:
-                item = QListWidgetItem(f"{step.order}. {step.title_zh}\n{step.status}")
+                status = "当前" if not self._page_keys else _main_stage_status_label(step.status)
+                item = QListWidgetItem(f"{step.order}. {_nav_stage_label(step.title_zh)} · {status}")
                 item.setToolTip(f"{step.primary_action_zh}\n{step.next_action_zh}")
                 self._navigation_list.addItem(item)
                 self._page_stack.addWidget(_scroll_page(self._page_for_step(step, state)))
@@ -424,28 +600,97 @@ if QWidget is not None:
 
         def _update_project_summary(self) -> None:
             if self._current_project_dir is None:
-                self._project_summary_label.setText("当前项目：未选择\n进入项目后显示真实 Meta 工作区。")
+                self._project_summary_label.setText("当前项目：未创建\n进入项目后显示真实 Meta 工作区。")
+                self._sidebar_project_label.setText("当前项目：未创建\n项目位置：未选择")
                 return
-            name = getattr(self._current_project_record, "name", "") or self._current_project_dir.parent.name
-            self._project_summary_label.setText(f"当前项目：{name}\n{self._current_project_dir}")
+            name = self._current_meta_project.project_name if self._current_meta_project is not None else getattr(self._current_project_record, "name", "") or self._current_project_dir.name
+            compact = _compact_path(self._current_project_dir)
+            self._project_summary_label.setText(f"当前项目：{name}\n{compact}")
+            self._sidebar_project_label.setText(f"当前项目：{name}\n项目位置：{compact}")
 
         def _page_for_step(self, step: MetaWorkflowStepState, state) -> QWidget:
             if self._current_project_dir is None:
-                return _no_project_page(step, on_go_pico=lambda: self.show_step("pico_workspace"))
+                if step.route_key == "workflow_home":
+                    return self._meta_project_home_page(state)
+                return _no_project_page(step)
             project_dir = self._current_project_dir
             if step.route_key == "workflow_home":
-                return _project_home_page(state, project_dir, on_go_pico=lambda: self.show_step("pico_workspace"))
+                return _project_home_page(state, project_dir, self._current_meta_project, on_go_pico=lambda: self.show_step("pico_workspace"))
             if step.route_key == "pico_workspace":
                 return _pico_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("search_strategy"))
             if step.route_key == "search_strategy":
-                return _search_strategy_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("literature_acquisition"))
-            if step.route_key == "literature_acquisition":
-                return _literature_acquisition_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("literature_library"))
-            if step.route_key == "literature_library":
-                return _literature_library_page(project_dir)
-            if step.route_key == "dedup_review":
-                return _dedup_review_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("exclusion_criteria"))
+                return _search_strategy_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("title_abstract_screening"))
+            if step.route_key == "title_abstract_screening":
+                return _title_abstract_screening_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
+            if step.route_key == "manual_extraction":
+                return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
+            if step.route_key == "statistics_analysis":
+                return _statistics_analysis_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
+            if step.route_key == "report_export":
+                return _report_export_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("workflow_home"))
             return _placeholder_step_page(step)
+
+        def _meta_project_home_page(self, state) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaProjectHomePage")
+            layout = QVBoxLayout(frame)
+            layout.setSpacing(12)
+            layout.addWidget(_meta_home_header(None, "Meta 项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
+            layout.addWidget(self._meta_project_management_card(compact=True))
+            action_card = _card("下一步")
+            action_layout = action_card.layout()
+            action_layout.addWidget(QLabel("请先新建或打开 Meta 项目。"))
+            continue_button = QPushButton("继续：研究问题 / PICO")
+            continue_button.setObjectName("metaPrimaryButton")
+            continue_button.setEnabled(False)
+            action_layout.addWidget(continue_button)
+            layout.addWidget(action_card)
+            layout.addWidget(_developer_details(_developer_diagnostics_text(state), button_text="开发者诊断"))
+            layout.addStretch(1)
+            return frame
+
+        def _meta_project_management_card(self, *, compact: bool = False) -> QFrame:
+            card = _card("新建 Meta 项目" if compact else "Meta 项目管理")
+            card.setObjectName("metaProjectManagementCard")
+            layout = card.layout()
+            self._new_project_name_input = QLineEdit()
+            self._new_project_name_input.setObjectName("metaProjectNameInput")
+            self._new_project_name_input.setPlaceholderText("项目名称")
+            self._research_topic_input = QLineEdit()
+            self._research_topic_input.setObjectName("metaResearchTopicInput")
+            self._research_topic_input.setPlaceholderText("研究主题（可选）")
+            self._save_location_input = QLineEdit()
+            self._save_location_input.setObjectName("metaSaveLocationInput")
+            self._save_location_input.setPlaceholderText("请选择保存位置")
+            browse_button = QPushButton("选择保存位置")
+            browse_button.setObjectName("metaSecondaryButton")
+            browse_button.clicked.connect(self._choose_save_location)
+            self._final_project_path_label = QLabel("最终项目路径：请填写项目名称并选择保存位置")
+            self._final_project_path_label.setObjectName("metaMutedText")
+            self._final_project_path_label.setWordWrap(True)
+            self._new_project_name_input.textChanged.connect(self._refresh_final_project_path)
+            self._save_location_input.textChanged.connect(self._refresh_final_project_path)
+            create_button = QPushButton("创建项目")
+            create_button.setObjectName("metaPrimaryButton")
+            create_button.clicked.connect(lambda: self.create_meta_project_from_form())
+            layout.addWidget(self._new_project_name_input)
+            layout.addWidget(self._research_topic_input)
+            location_row = QHBoxLayout()
+            location_row.addWidget(self._save_location_input, 1)
+            location_row.addWidget(browse_button)
+            layout.addLayout(location_row)
+            layout.addWidget(self._final_project_path_label)
+            layout.addWidget(create_button)
+            layout.addWidget(QLabel("打开已有 Meta 项目"))
+            open_button = QPushButton("选择已有项目文件夹")
+            open_button.setObjectName("metaSecondaryButton")
+            open_button.clicked.connect(self._choose_existing_project_folder)
+            layout.addWidget(open_button)
+            self._project_action_status_label = QLabel("请先新建或打开 Meta 项目。" if self._current_project_dir is None else "Meta 项目已打开。")
+            self._project_action_status_label.setObjectName("metaMutedText")
+            self._project_action_status_label.setWordWrap(True)
+            layout.addWidget(self._project_action_status_label)
+            return card
 
     def _feature_row(feature: FeatureAvailability) -> QFrame:
         frame = QFrame()
@@ -474,52 +719,37 @@ if QWidget is not None:
         return scroll
 
 
-    def _project_home_page(state, project_dir: Path, *, on_go_pico: Callable[[], None]) -> QFrame:
+    def _project_home_page(state, project_dir: Path, summary: MetaProjectSummary | None, *, on_go_pico: Callable[[], None]) -> QFrame:
         frame = QFrame()
         frame.setObjectName("metaProjectHomePage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("Meta 项目首页", "项目概览、当前阶段和下一步。", "Developer Preview"))
-        steps = {step.step_id: step for step in state.steps}
-        home = steps.get("project_home")
-        pico = steps.get("pico_workspace")
-        library = steps.get("literature_library")
-        plan = steps.get("analysis_plan")
-        overview_lines = [
-            f"项目目录：{project_dir}",
-            "当前阶段：" + ("尚未开始，请先进入研究问题" if pico and pico.status == "未开始" else f"研究问题：{pico.status if pico else '未开始'}"),
-            f"文献库：{library.artifact_summary if library else 'records=0'}",
-            f"分析计划：{plan.status if plan else '未开始'}",
-        ]
-        layout.addWidget(_info_card("项目概览", overview_lines, object_name="metaProjectOverviewCard"))
-        completed = len([step for step in state.steps if step.status in {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "有待审核建议", "已有人工评分"}])
-        layout.addWidget(_info_card("流程进度", [f"已产生状态的步骤：{completed}/{state.step_count}", f"下一步：{state.next_recommended_step_id}"], object_name="metaProgressCard"))
-        warnings = [warning for step in state.steps for warning in step.warnings][:5]
-        layout.addWidget(_info_card("最近 warnings", warnings or ["暂无 warning"], object_name="metaWarningsCard"))
-        action_card = _card("下一步操作")
+        layout.addWidget(_meta_home_header(summary, "Meta 项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
+        action_card = _card("当前项目已打开")
         action_layout = action_card.layout()
-        next_button = QPushButton("进入研究问题")
+        action_layout.addWidget(QLabel("下一步：填写研究问题 / PICO"))
+        next_button = QPushButton("继续：研究问题 / PICO")
         next_button.setObjectName("metaPrimaryButton")
         next_button.clicked.connect(on_go_pico)
-        action_layout.addWidget(QLabel("从中文研究问题开始，生成并确认 PICO / PICOS / PECO。"))
         action_layout.addWidget(next_button)
         layout.addWidget(action_card)
-        layout.addWidget(_developer_details(_state_debug_text(state)))
+        layout.addWidget(_project_business_summary(project_dir))
+        layout.addWidget(_progress_summary(state))
+        layout.addWidget(_developer_details(_developer_diagnostics_text(state, summary), button_text="开发者诊断"))
         layout.addStretch(1)
         return frame
 
 
-    def _no_project_page(step: MetaWorkflowStepState, *, on_go_pico: Callable[[], None]) -> QFrame:
+    def _no_project_page(step: MetaWorkflowStepState) -> QFrame:
         frame = QFrame()
         frame.setObjectName("metaNoProjectPage")
         layout = QVBoxLayout(frame)
-        layout.addWidget(_page_header(step.title_zh, "当前未绑定 Meta 项目。", "空状态"))
-        layout.addWidget(_info_card("尚未开始", ["请先从桌面主 APP 新建或打开 Meta 项目。", "空项目状态不会写入任何业务文件。"]))
-        if step.route_key == "workflow_home":
-            button = QPushButton("进入研究问题")
-            button.setObjectName("metaSecondaryButton")
-            button.clicked.connect(on_go_pico)
-            layout.addWidget(button)
+        layout.addWidget(_page_header(step.title_zh, "请先新建或打开 Meta 项目。", "空状态"))
+        layout.addWidget(_info_card("尚未开始", ["请先新建或打开 Meta 项目。", "项目创建前不会写入研究问题、检索策略或文献库。"]))
+        button = QPushButton("继续：研究问题 / PICO")
+        button.setObjectName("metaSecondaryButton")
+        button.setEnabled(False)
+        layout.addWidget(button)
         layout.addStretch(1)
         return frame
 
@@ -570,7 +800,7 @@ if QWidget is not None:
         save.setObjectName("metaSecondaryButton")
         confirm = QPushButton("确认研究问题")
         confirm.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：检索策略")
+        next_button = QPushButton("下一步：检索与导入")
         next_button.setObjectName("metaSecondaryButton")
         row = QHBoxLayout()
         row.addWidget(save)
@@ -650,7 +880,7 @@ if QWidget is not None:
         frame.setObjectName("metaSearchStrategyPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("检索策略", "基于已确认研究问题生成多数据库检索式。", "draft-only"))
+        layout.addWidget(_page_header("检索与导入", "基于已确认研究问题生成检索式，并汇总文献导入状态。", "需要确认"))
         if not (project_dir / "protocol" / "pico_workspace_confirmed.json").exists():
             layout.addWidget(_info_card("请先确认研究问题", ["没有 confirmed protocol 时不能生成正式检索策略草稿。"]))
             layout.addStretch(1)
@@ -662,7 +892,7 @@ if QWidget is not None:
         save_edit = QPushButton("保存当前编辑")
         confirm = QPushButton("确认检索式")
         export = QPushButton("导出 Markdown / TXT")
-        next_button = QPushButton("下一步：文献获取")
+        next_button = QPushButton("下一步：文献筛选")
         for button in (save_edit, confirm, export, next_button):
             button.setObjectName("metaSecondaryButton")
         row = QHBoxLayout()
@@ -1027,6 +1257,817 @@ if QWidget is not None:
         return frame
 
 
+    def _exclusion_criteria_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = ExclusionCriteriaLibraryService()
+        reasons = list(service.list_reasons(project_dir, enabled_only=False))
+        enabled_codes = {reason.code for reason in reasons if reason.enabled} or {reason.code for reason in service.list_reasons(project_dir)}
+        frame = QFrame()
+        frame.setObjectName("metaExclusionCriteriaPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("排除标准", "项目级排除理由库；只作为人工筛选选项。", "人工配置"))
+        layout.addWidget(
+            _info_card(
+                "当前状态",
+                [
+                    f"排除理由：{len(reasons)}",
+                    f"已启用：{len(enabled_codes)}",
+                    "不会自动筛选，不推进 PRISMA。",
+                ],
+                object_name="metaExclusionSummary",
+            )
+        )
+        reason_list = QListWidget()
+        reason_list.setObjectName("metaExclusionReasonList")
+        reason_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        for reason in reasons:
+            item = QListWidgetItem(f"{reason.chinese_label} / {reason.english_label}\n{reason.code} · {','.join(reason.applies_to_stage)}")
+            item.setData(Qt.ItemDataRole.UserRole, reason.code)
+            reason_list.addItem(item)
+            item.setSelected(reason.code in enabled_codes)
+        layout.addWidget(reason_list)
+        custom_card = _card("新增自定义理由")
+        custom_layout = custom_card.layout()
+        custom_cn = QLineEdit()
+        custom_cn.setPlaceholderText("中文名称")
+        custom_en = QLineEdit()
+        custom_en.setPlaceholderText("English label")
+        custom_prisma = QLineEdit()
+        custom_prisma.setPlaceholderText("PRISMA reason mapping")
+        custom_layout.addWidget(custom_cn)
+        custom_layout.addWidget(custom_en)
+        custom_layout.addWidget(custom_prisma)
+        layout.addWidget(custom_card)
+        button_row = QHBoxLayout()
+        save_draft = QPushButton("保存排除标准草稿")
+        confirm = QPushButton("确认排除标准")
+        add_custom = QPushButton("新增理由")
+        next_button = QPushButton("下一步：标题摘要筛选")
+        for button in (save_draft, confirm, add_custom, next_button):
+            button.setObjectName("metaSecondaryButton")
+            button_row.addWidget(button)
+        save_draft.setObjectName("metaPrimaryButton")
+        button_row.addStretch(1)
+        layout.addLayout(button_row)
+        layout.addWidget(_developer_details(f"library_path={service.library_path(project_dir)}\nprisma_map={service.prisma_reason_map_path(project_dir)}"))
+        layout.addStretch(1)
+
+        def selected_codes() -> tuple[str, ...]:
+            return tuple(str(item.data(Qt.ItemDataRole.UserRole)) for item in reason_list.selectedItems())
+
+        def save(confirm_library: bool) -> None:
+            service.save_library(project_dir, selected_reason_codes=selected_codes(), actor="reviewer", confirm=confirm_library)
+            on_refresh()
+
+        def do_add_custom() -> None:
+            if not custom_cn.text().strip() or not custom_en.text().strip():
+                _show_message("请填写自定义理由名称")
+                return
+            service.add_custom_reason(
+                project_dir,
+                english_label=custom_en.text().strip(),
+                chinese_label=custom_cn.text().strip(),
+                prisma_reason=custom_prisma.text().strip() or custom_en.text().strip(),
+                actor="reviewer",
+            )
+            on_refresh()
+
+        save_draft.clicked.connect(lambda: save(False))
+        confirm.clicked.connect(lambda: save(True))
+        add_custom.clicked.connect(do_add_custom)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _title_abstract_screening_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = TitleAbstractScreeningV2Service()
+        exclusion = ExclusionCriteriaLibraryService()
+        queue = service.load_queue(project_dir)
+        records = _items_from_payload(queue, "queue_records")
+        decisions = _items_from_payload(_load_json_object(service.decisions_path(project_dir)), "screening_records")
+        reasons = list(exclusion.list_reasons(project_dir, stage=TITLE_ABSTRACT_STAGE, enabled_only=True))
+        frame = QFrame()
+        frame.setObjectName("metaTitleAbstractScreeningPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("文献筛选", "逐篇人工筛选；AI 只能作为 suggestion。", "人工决定"))
+        layout.addWidget(_info_card("筛选摘要", [f"队列文献：{len(records)}", f"人工决定：{len(decisions)}", "PRISMA screened/excluded 只来自用户决定。"], object_name="metaScreeningSummary"))
+        actions = QHBoxLayout()
+        build_queue = QPushButton("生成筛选队列")
+        save_decision = QPushButton("保存人工决定")
+        next_button = QPushButton("下一步：提取与质量评价")
+        for button in (build_queue, save_decision, next_button):
+            button.setObjectName("metaPrimaryButton" if button is build_queue else "metaSecondaryButton")
+            actions.addWidget(button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        content = QHBoxLayout()
+        record_list = QListWidget()
+        record_list.setObjectName("metaScreeningRecordList")
+        for record in records:
+            item = QListWidgetItem(f"{record.get('title') or 'Untitled'}\n{record.get('year', '')} · PMID {record.get('pmid', '-') or '-'}")
+            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
+            record_list.addItem(item)
+        content.addWidget(record_list, 1)
+        panel = _card("当前文献")
+        panel_layout = panel.layout()
+        detail = QTextEdit()
+        detail.setObjectName("metaScreeningRecordDetail")
+        detail.setReadOnly(True)
+        decision = QComboBox()
+        for label, value in (("纳入", "include"), ("排除", "exclude"), ("不确定", "uncertain"), ("需复核", "needs_review")):
+            decision.addItem(label, value)
+        reason = QComboBox()
+        reason.addItem("选择排除理由", "")
+        for item in reasons:
+            reason.addItem(f"{item.chinese_label} / {item.english_label}", item.code)
+        notes = QPlainTextEdit()
+        notes.setPlaceholderText("筛选备注")
+        notes.setMaximumHeight(80)
+        panel_layout.addWidget(detail)
+        panel_layout.addWidget(decision)
+        panel_layout.addWidget(reason)
+        panel_layout.addWidget(notes)
+        content.addWidget(panel, 2)
+        layout.addLayout(content)
+        layout.addWidget(_developer_details(f"queue={service.queue_path(project_dir)}\ndecisions={service.decisions_path(project_dir)}"))
+        layout.addStretch(1)
+
+        def update_detail(index: int = 0) -> None:
+            if 0 <= index < len(records):
+                record = records[index]
+                detail.setPlainText("\n".join([f"题名：{record.get('title', '')}", f"摘要：{record.get('abstract', '')}", f"来源：{record.get('source_type', '')}"]))
+            else:
+                detail.setPlainText("暂无待筛选文献。")
+
+        def do_build_queue() -> None:
+            result = service.build_queue(project_dir, project_id=project_dir.name)
+            _show_message(result.message)
+            on_refresh()
+
+        def do_save_decision() -> None:
+            item = record_list.currentItem()
+            if item is None:
+                _show_message("请选择文献")
+                return
+            record_id = str(item.data(Qt.ItemDataRole.UserRole))
+            selected_decision = str(decision.currentData() or "")
+            selected_reason = str(reason.currentData() or "")
+            if selected_decision == "exclude" and not selected_reason:
+                _show_message("排除必须选择排除理由")
+                return
+            result = service.save_decision(
+                project_dir,
+                record_id=record_id,
+                decision=selected_decision,
+                actor="reviewer",
+                exclusion_reason_code=selected_reason,
+                notes=notes.toPlainText(),
+            )
+            _show_message(result.message)
+            on_refresh()
+
+        record_list.currentRowChanged.connect(update_detail)
+        build_queue.clicked.connect(do_build_queue)
+        save_decision.clicked.connect(do_save_decision)
+        next_button.clicked.connect(on_next)
+        record_list.setCurrentRow(0 if records else -1)
+        update_detail(record_list.currentRow())
+        return frame
+
+
+    def _fulltext_management_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        management = FullTextManagementService()
+        eligibility = FullTextEligibilityService()
+        parser = FullTextParsingService()
+        records = list(management.list_records(project_dir))
+        candidates = list(eligibility.build_candidates_from_screening(project_dir))
+        decisions = list(eligibility.load_eligibility_decisions(project_dir))
+        frame = QFrame()
+        frame.setObjectName("metaFulltextManagementPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("全文管理与全文筛选", "PDF/链接/解析状态和人工全文资格决定。", "人工决定"))
+        layout.addWidget(_info_card("全文摘要", [f"管理记录：{len(records)}", f"全文候选：{len(candidates)}", f"资格决定：{len(decisions)}", "不自动提取数据，不推进定量分析。"], object_name="metaFulltextSummary"))
+        buttons = QHBoxLayout()
+        build_registry = QPushButton("建立全文队列")
+        attach_pdf = QPushButton("绑定 PDF")
+        parse_pdf = QPushButton("解析全文")
+        save_status = QPushButton("保存全文状态")
+        save_eligibility = QPushButton("保存全文筛选")
+        next_button = QPushButton("下一步：数据提取")
+        for button in (build_registry, attach_pdf, parse_pdf, save_status, save_eligibility, next_button):
+            button.setObjectName("metaSecondaryButton")
+            buttons.addWidget(button)
+        build_registry.setObjectName("metaPrimaryButton")
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        record_list = QListWidget()
+        record_list.setObjectName("metaFulltextRecordList")
+        source_records = records or candidates
+        for record in source_records:
+            record_id = getattr(record, "record_id", "")
+            title = getattr(record, "title", "")
+            status = getattr(record, "fulltext_status", getattr(record, "eligibility_status", ""))
+            item = QListWidgetItem(f"{title or record_id}\n{record_id} · {status}")
+            item.setData(Qt.ItemDataRole.UserRole, record_id)
+            record_list.addItem(item)
+        layout.addWidget(record_list)
+        form = _card("人工状态")
+        form_layout = form.layout()
+        fulltext_status = QComboBox()
+        for status in FULLTEXT_MANAGEMENT_STATUSES:
+            fulltext_status.addItem(status, status)
+        eligibility_status = QComboBox()
+        for status in ("available_online", "local_pdf_linked", "local_pdf_copied", "missing_full_text", "manual_review_required", "excluded_after_full_text_review", "included_for_extraction"):
+            eligibility_status.addItem(status, status)
+        fulltext_reason = QLineEdit()
+        fulltext_reason.setPlaceholderText("全文不可得或排除理由")
+        form_layout.addWidget(fulltext_status)
+        form_layout.addWidget(eligibility_status)
+        form_layout.addWidget(fulltext_reason)
+        layout.addWidget(form)
+        layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nparsed_dir={parser.parsed_dir(project_dir)}"))
+        layout.addStretch(1)
+
+        def selected_record_id() -> str:
+            item = record_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def do_build_registry() -> None:
+            result = management.build_registry_from_screening(project_dir, project_id=project_dir.name)
+            _show_message(result.message)
+            on_refresh()
+
+        def do_attach_pdf() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            filename, _ = QFileDialog.getOpenFileName(frame, "选择 PDF", str(project_dir), "PDF (*.pdf);;All files (*)")
+            if filename:
+                result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer")
+                _show_message(result.message)
+                on_refresh()
+
+        def do_parse_pdf() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            try:
+                result = parser.parse_record(project_dir, record_id=record_id)
+                _show_message(result.message)
+            except Exception as exc:
+                _show_message(str(exc))
+            on_refresh()
+
+        def do_save_status() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            result = management.update_status(project_dir, record_id=record_id, status=str(fulltext_status.currentData()), actor="reviewer", notes=fulltext_reason.text())
+            _show_message(result.message)
+            on_refresh()
+
+        def do_save_eligibility() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            result = eligibility.save_eligibility_decision(
+                project_dir,
+                record_id=record_id,
+                eligibility_status=str(eligibility_status.currentData()),
+                reviewer_id="reviewer",
+                exclusion_reason=fulltext_reason.text(),
+            )
+            _show_message(result.message)
+            on_refresh()
+
+        build_registry.clicked.connect(do_build_registry)
+        attach_pdf.clicked.connect(do_attach_pdf)
+        parse_pdf.clicked.connect(do_parse_pdf)
+        save_status.clicked.connect(do_save_status)
+        save_eligibility.clicked.connect(do_save_eligibility)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _manual_extraction_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = ManualExtractionEffectRowService()
+        library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
+        units = service.load_study_units(project_dir)
+        rows = service.load_effect_rows(project_dir)
+        validation = _load_json_object(service.validation_report_path(project_dir))
+        frame = QFrame()
+        frame.setObjectName("metaManualExtractionPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("提取与质量评价", "逐篇文献提取数据，并由用户完成质量评价。", "草稿"))
+        layout.addWidget(_info_card("提取概览", [f"文献：{len(records)}", f"study unit：{len(units)}", f"effect row：{len(rows)}", f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}", "completed_by_user 不等于 analysis-ready。"], object_name="metaExtractionSummary"))
+        action_row = QHBoxLayout()
+        create_unit = QPushButton("新建 study unit")
+        create_row = QPushButton("新建提取行")
+        complete_row = QPushButton("完成本行提取")
+        mark_missing = QPushButton("标记缺失数据")
+        export_template = QPushButton("导出空模板 CSV")
+        export_current = QPushButton("导出当前 CSV")
+        import_csv = QPushButton("导入 CSV 草稿")
+        next_button = QPushButton("下一步：统计分析")
+        for button in (create_unit, create_row, complete_row, mark_missing, export_template, export_current, import_csv, next_button):
+            button.setObjectName("metaSecondaryButton")
+            action_row.addWidget(button)
+        create_unit.setObjectName("metaPrimaryButton")
+        action_row.addStretch(1)
+        layout.addLayout(action_row)
+        lists = QHBoxLayout()
+        record_list = QListWidget()
+        record_list.setObjectName("metaExtractionRecordList")
+        for record in records:
+            item = QListWidgetItem(f"{record.get('first_author') or record.get('title') or record.get('record_id')} · {record.get('year', '')}")
+            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
+            record_list.addItem(item)
+        unit_list = QListWidget()
+        unit_list.setObjectName("metaStudyUnitList")
+        for unit in units:
+            item = QListWidgetItem(f"{unit.get('study_unit_label') or unit.get('study_unit_id')}\n{unit.get('record_id', '')}")
+            item.setData(Qt.ItemDataRole.UserRole, str(unit.get("study_unit_id", "")))
+            unit_list.addItem(item)
+        row_list = QListWidget()
+        row_list.setObjectName("metaEffectRowList")
+        for row in rows:
+            item = QListWidgetItem(f"{row.get('outcome_name') or row.get('effect_row_id')}\n{row.get('data_input_mode', '')} · {row.get('validation_status', '')}")
+            item.setData(Qt.ItemDataRole.UserRole, str(row.get("effect_row_id", "")))
+            row_list.addItem(item)
+        lists.addWidget(record_list)
+        lists.addWidget(unit_list)
+        lists.addWidget(row_list)
+        layout.addLayout(lists)
+        layout.addWidget(_developer_details(f"manifest={service.manifest_path(project_dir)}\nvalidation={service.validation_report_path(project_dir)}"))
+        layout.addStretch(1)
+
+        def selected_record_id() -> str:
+            item = record_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else (str(records[0].get("record_id", "")) if records else "")
+
+        def selected_unit_id() -> str:
+            item = unit_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else (str(units[0].get("study_unit_id", "")) if units else "")
+
+        def selected_row_id() -> str:
+            item = row_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def do_create_unit() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请先在文献库中导入文献")
+                return
+            result = service.create_study_unit(project_dir, record_id=record_id, study_unit_label=f"Study unit {len(units) + 1}", actor="reviewer")
+            _show_message(result.message)
+            on_refresh()
+
+        def do_create_row() -> None:
+            unit_id = selected_unit_id()
+            if not unit_id:
+                _show_message("请先新建 study unit")
+                return
+            result = service.create_effect_row(
+                project_dir,
+                study_unit_id=unit_id,
+                actor="reviewer",
+                data_input_mode="manual_note_only",
+                outcome_name="待填写结局",
+                evidence_note="UI draft; requires reviewer completion.",
+            )
+            _show_message(result.message)
+            on_refresh()
+
+        def do_complete_row() -> None:
+            row_id = selected_row_id()
+            if not row_id:
+                _show_message("请选择 effect row")
+                return
+            result = service.complete_effect_row(project_dir, effect_row_id=row_id, actor="reviewer")
+            _show_message(result.message)
+            on_refresh()
+
+        def do_mark_missing() -> None:
+            row_id = selected_row_id()
+            if not row_id:
+                _show_message("请选择 effect row")
+                return
+            result = service.mark_missing_data(project_dir, effect_row_id=row_id, actor="reviewer", missing_reason="用户标记缺失数据")
+            _show_message(result.message)
+            on_refresh()
+
+        def do_import_csv() -> None:
+            filename, _ = QFileDialog.getOpenFileName(frame, "选择 CSV", str(project_dir), "CSV (*.csv);;All files (*)")
+            if filename:
+                result = service.import_csv_as_draft(project_dir, csv_path=Path(filename), actor="reviewer")
+                _show_message(result.message)
+                on_refresh()
+
+        create_unit.clicked.connect(do_create_unit)
+        create_row.clicked.connect(do_create_row)
+        complete_row.clicked.connect(do_complete_row)
+        mark_missing.clicked.connect(do_mark_missing)
+        export_template.clicked.connect(lambda: _show_message(service.export_empty_template_csv(project_dir, actor="reviewer").message))
+        export_current.clicked.connect(lambda: _show_message(service.export_current_csv(project_dir, actor="reviewer").message))
+        import_csv.clicked.connect(do_import_csv)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _ai_extraction_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = AIAssistedExtractionQueueService()
+        suggestions = service.list_extraction_suggestions(project_dir)
+        counts: dict[str, int] = {}
+        for suggestion in suggestions:
+            counts[suggestion.status] = counts.get(suggestion.status, 0) + 1
+        frame = QFrame()
+        frame.setObjectName("metaAIExtractionPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("AI 辅助提取", "suggestion 队列；accepted 后也只写人工提取草稿。", "建议待审"))
+        layout.addWidget(_info_card("建议队列", [f"总数：{len(suggestions)}", f"状态：{counts}", "不会写 final extraction，不生成 analysis-ready dataset。"], object_name="metaAIExtractionSummary"))
+        suggestion_list = QListWidget()
+        suggestion_list.setObjectName("metaAIExtractionSuggestionList")
+        for suggestion in suggestions:
+            item = QListWidgetItem(f"{suggestion.status} · {suggestion.suggestion_id}\nconfidence={suggestion.confidence}")
+            item.setData(Qt.ItemDataRole.UserRole, suggestion.suggestion_id)
+            suggestion_list.addItem(item)
+        layout.addWidget(suggestion_list)
+        actions = QHBoxLayout()
+        accept = QPushButton("接受建议")
+        reject = QPushButton("拒绝建议")
+        apply_draft = QPushButton("写入人工草稿")
+        next_button = QPushButton("下一步：质量评价")
+        for button in (accept, reject, apply_draft, next_button):
+            button.setObjectName("metaSecondaryButton")
+            actions.addWidget(button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        layout.addWidget(_developer_details(f"queue={service.queue_path(project_dir)}\napplication={service.application_path(project_dir)}"))
+        layout.addStretch(1)
+
+        def selected_suggestion_id() -> str:
+            item = suggestion_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def do_accept() -> None:
+            suggestion_id = selected_suggestion_id()
+            if suggestion_id:
+                service.accept_suggestion(project_dir, suggestion_id, actor="reviewer")
+                on_refresh()
+
+        def do_reject() -> None:
+            suggestion_id = selected_suggestion_id()
+            if suggestion_id:
+                service.reject_suggestion(project_dir, suggestion_id, actor="reviewer")
+                on_refresh()
+
+        def do_apply() -> None:
+            suggestion_id = selected_suggestion_id()
+            if not suggestion_id:
+                return
+            result = service.apply_accepted_suggestion_as_draft(project_dir, suggestion_id=suggestion_id, actor="reviewer")
+            _show_message(result.message)
+            on_refresh()
+
+        accept.clicked.connect(do_accept)
+        reject.clicked.connect(do_reject)
+        apply_draft.clicked.connect(do_apply)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _quality_assessment_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = QualityAssessmentService()
+        registry = service.tool_registry_v1()
+        records = service.load_quality_assessment_records_v1(project_dir)
+        suggestions = service.recommend_quality_tools()
+        frame = QFrame()
+        frame.setObjectName("metaQualityAssessmentPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("质量评价", "工具推荐和人工 domain rating；GRADE 仅 placeholder。", "人工评分"))
+        layout.addWidget(_info_card("质量评价摘要", [f"工具数：{registry.get('tool_count', 0)}", f"评分记录：{len(records)}", "不自动评分，不自动 GRADE，不运行统计。"], object_name="metaQualitySummary"))
+        tool_selector = QComboBox()
+        for suggestion in suggestions:
+            tool_selector.addItem(f"{suggestion.get('tool_name')} · suggested", str(suggestion.get("tool_name", "")))
+        assessment_list = QListWidget()
+        assessment_list.setObjectName("metaQualityAssessmentList")
+        for record in records:
+            item = QListWidgetItem(f"{record.get('tool_name')} · {record.get('status')}\n{record.get('assessment_id')}")
+            item.setData(Qt.ItemDataRole.UserRole, str(record.get("assessment_id", "")))
+            assessment_list.addItem(item)
+        layout.addWidget(tool_selector)
+        layout.addWidget(assessment_list)
+        actions = QHBoxLayout()
+        save_draft = QPushButton("保存评分草稿")
+        complete = QPushButton("完成质量评价")
+        export_csv = QPushButton("导出 CSV")
+        next_button = QPushButton("下一步：分析计划")
+        for button in (save_draft, complete, export_csv, next_button):
+            button.setObjectName("metaSecondaryButton")
+            actions.addWidget(button)
+        save_draft.setObjectName("metaPrimaryButton")
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        layout.addWidget(_developer_details(f"records={project_dir / 'quality' / 'quality_assessment_records_v1.json'}"))
+        layout.addStretch(1)
+
+        def selected_assessment_id() -> str:
+            item = assessment_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def do_save_draft() -> None:
+            tool_name = str(tool_selector.currentData() or "")
+            if not tool_name:
+                _show_message("暂无推荐工具")
+                return
+            result = service.create_quality_assessment_draft(
+                project_dir,
+                study_id="study-ui-draft",
+                record_id="record-ui-draft",
+                tool_name=tool_name,
+                reviewer_id="reviewer",
+                actor="reviewer",
+            )
+            _show_message(result.message)
+            on_refresh()
+
+        def do_complete() -> None:
+            assessment_id = selected_assessment_id()
+            if not assessment_id:
+                _show_message("请选择质量评价记录")
+                return
+            result = service.complete_quality_assessment_by_user(project_dir, assessment_id=assessment_id, actor="reviewer")
+            _show_message(result.message)
+            on_refresh()
+
+        save_draft.clicked.connect(do_save_draft)
+        complete.clicked.connect(do_complete)
+        export_csv.clicked.connect(lambda: _show_message(f"已导出：{service.export_quality_assessments_v1_csv(project_dir).name}"))
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _analysis_plan_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = AnalysisPlanService()
+        draft = service.load_draft(project_dir)
+        confirmed = service.load_confirmed(project_dir)
+        frame = QFrame()
+        frame.setObjectName("metaAnalysisPlanPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("分析计划", "从 confirmed protocol、提取行、质量评价生成草稿。", "需要人工确认"))
+        layout.addWidget(_info_card("当前状态", [f"draft：{bool(draft)}", f"confirmed：{bool(confirmed)}", f"warnings：{len(draft.get('warnings', [])) if draft else 0}", "确认前不得运行统计。"], object_name="metaAnalysisPlanSummary"))
+        preview = QTextEdit()
+        preview.setObjectName("metaAnalysisPlanPreview")
+        preview.setReadOnly(True)
+        preview.setPlainText(json.dumps({"draft": draft, "confirmed": confirmed}, ensure_ascii=False, indent=2)[:12000])
+        layout.addWidget(preview)
+        buttons = QHBoxLayout()
+        generate = QPushButton("生成分析计划草稿")
+        confirm = QPushButton("确认分析计划")
+        next_button = QPushButton("下一步：统计分析")
+        for button in (generate, confirm, next_button):
+            button.setObjectName("metaSecondaryButton")
+            buttons.addWidget(button)
+        generate.setObjectName("metaPrimaryButton")
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        layout.addWidget(_developer_details(f"draft={service.draft_path(project_dir)}\nconfirmed={service.confirmed_path(project_dir)}"))
+        layout.addStretch(1)
+
+        def do_generate() -> None:
+            try:
+                result = service.generate_draft(project_dir, actor="reviewer")
+                _show_message(result.message)
+            except Exception as exc:
+                _show_message(str(exc))
+            on_refresh()
+
+        def do_confirm() -> None:
+            try:
+                result = service.confirm_plan(project_dir, actor="reviewer")
+                _show_message(result.message)
+            except Exception as exc:
+                _show_message(str(exc))
+            on_refresh()
+
+        generate.clicked.connect(do_generate)
+        confirm.clicked.connect(do_confirm)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _statistics_analysis_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        plan_service = AnalysisPlanService()
+        stats = MetaStatisticsEngineService(analysis_plan_service=plan_service)
+        confirmed = plan_service.load_confirmed(project_dir)
+        manifest = _load_json_object(stats.manifest_path(project_dir))
+        result_files = sorted(stats.results_dir(project_dir).glob("*_result.json")) if stats.results_dir(project_dir).exists() else []
+        latest_result = _load_json_object(result_files[-1]) if result_files else {}
+        frame = QFrame()
+        frame.setObjectName("metaStatisticsAnalysisPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("统计分析", "只能从 confirmed analysis plan 运行；结果 testing-level。", "M17 / testing"))
+        layout.addWidget(_info_card("输入校验", ["请先确认分析计划" if not confirmed else "已有 confirmed analysis plan", f"run_count={manifest.get('run_count', len(result_files))}", "不生成医学 conclusion，不推进 PRISMA。"], object_name="metaStatisticsSummary"))
+        result_view = QTextEdit()
+        result_view.setObjectName("metaStatisticsResultPreview")
+        result_view.setReadOnly(True)
+        result_view.setPlainText(json.dumps(latest_result or {"message": "暂无统计结果"}, ensure_ascii=False, indent=2)[:12000])
+        layout.addWidget(result_view)
+        buttons = QHBoxLayout()
+        run = QPushButton("运行统计分析")
+        run.setObjectName("metaPrimaryButton")
+        run.setEnabled(bool(confirmed))
+        next_button = QPushButton("下一步：报告导出")
+        next_button.setObjectName("metaSecondaryButton")
+        buttons.addWidget(run)
+        buttons.addWidget(next_button)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        layout.addWidget(_developer_details(f"manifest={stats.manifest_path(project_dir)}\nresults={stats.results_dir(project_dir)}"))
+        layout.addStretch(1)
+
+        def do_run() -> None:
+            try:
+                result = stats.run_statistics(project_dir, actor="reviewer")
+                _show_message(result.message)
+            except Exception as exc:
+                _show_message(str(exc))
+            on_refresh()
+
+        run.clicked.connect(do_run)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _figure_results_page(project_dir: Path, *, on_next: Callable[[], None]) -> QFrame:
+        service = FigureResultService()
+        artifacts = service.list_figure_artifacts(project_dir)
+        results_dir = project_dir / "analysis" / "results"
+        result_files = sorted(results_dir.glob("*_result.json")) if results_dir.exists() else []
+        frame = QFrame()
+        frame.setObjectName("metaFigureResultsPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("图表结果", "读取已存在图表/统计结果；不重新计算统计。", "M18 逐步接入"))
+        layout.addWidget(_info_card("图表摘要", [f"figure artifacts：{len(artifacts)}", f"standardized results：{len(result_files)}", "本页不会重新计算统计，不生成 conclusion。"], object_name="metaFigureSummary"))
+        table = QTableWidget()
+        table.setObjectName("metaFigureArtifactTable")
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["figure_id", "type", "format", "path"])
+        table.setRowCount(len(artifacts))
+        for row, artifact in enumerate(artifacts):
+            values = [artifact.figure_id, artifact.figure_type, artifact.output_format, artifact.output_path]
+            for col, value in enumerate(values):
+                table.setItem(row, col, QTableWidgetItem(str(value)))
+        layout.addWidget(table)
+        next_button = QPushButton("下一步：PRISMA")
+        next_button.setObjectName("metaSecondaryButton")
+        next_button.clicked.connect(on_next)
+        layout.addWidget(next_button)
+        layout.addWidget(_developer_details(f"figure_manifest={project_dir / 'figures' / 'figure_artifacts.json'}\nresults_dir={results_dir}"))
+        layout.addStretch(1)
+        return frame
+
+
+    def _prisma_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        service = PRISMAService()
+        summary = service.load_prisma_flow_summary(project_dir)
+        frame = QFrame()
+        frame.setObjectName("metaPrismaPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("PRISMA", "数字必须来自真实导入、去重、筛选、全文记录。", "可追溯"))
+        lines = ["尚未生成 PRISMA summary。"]
+        if summary is not None:
+            payload = _prisma_payload(summary)
+            lines = [
+                f"identified={payload.get('records_identified', 0)}",
+                f"duplicates_removed={payload.get('duplicates_removed', 0)}",
+                f"screened={payload.get('records_screened', 0)}",
+                f"title/abstract excluded={payload.get('records_excluded_title_abstract', 0)}",
+                f"studies included={payload.get('studies_included', 0)}",
+            ]
+        layout.addWidget(_info_card("PRISMA summary", lines, object_name="metaPrismaSummary"))
+        buttons = QHBoxLayout()
+        collect = QPushButton("生成 PRISMA summary")
+        export_md = QPushButton("导出 Markdown")
+        next_button = QPushButton("下一步：报告导出")
+        for button in (collect, export_md, next_button):
+            button.setObjectName("metaSecondaryButton")
+            buttons.addWidget(button)
+        collect.setObjectName("metaPrimaryButton")
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        layout.addWidget(_developer_details(f"summary={project_dir / 'reports' / 'prisma_flow_summary.json'}"))
+        layout.addStretch(1)
+
+        def do_collect() -> None:
+            result = service.collect_prisma_numbers(project_dir)
+            path = service.save_prisma_flow_summary(project_dir, result)
+            _show_message(f"已生成：{path.name}")
+            on_refresh()
+
+        def do_export_md() -> None:
+            result = service.load_prisma_flow_summary(project_dir) or service.collect_prisma_numbers(project_dir)
+            path = service.export_prisma_flow_markdown(project_dir, result)
+            _show_message(f"已导出：{path.name}")
+            on_refresh()
+
+        collect.clicked.connect(do_collect)
+        export_md.clicked.connect(do_export_md)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _report_export_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
+        report_path = project_dir / "reports" / "formal_meta_report.md"
+        frame = QFrame()
+        frame.setObjectName("metaReportExportPage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("报告导出", "生成 draft/testing 报告；discussion/conclusion 需人工编辑。", "draft"))
+        layout.addWidget(_info_card("报告状态", [f"Markdown：{'已存在' if report_path.exists() else '暂无'}", "不会自动生成强 conclusion。", "数字来自真实流程和 PRISMA summary。"], object_name="metaReportSummary"))
+        preview = QTextEdit()
+        preview.setObjectName("metaReportPreview")
+        preview.setReadOnly(True)
+        preview.setPlainText(report_path.read_text(encoding="utf-8")[:12000] if report_path.exists() else "暂无报告草稿。")
+        layout.addWidget(preview)
+        buttons = QHBoxLayout()
+        build_md = QPushButton("生成 Markdown 草稿")
+        export_html = QPushButton("导出 HTML")
+        export_docx = QPushButton("导出 DOCX")
+        next_button = QPushButton("返回项目首页")
+        for button in (build_md, export_html, export_docx, next_button):
+            button.setObjectName("metaSecondaryButton")
+            buttons.addWidget(button)
+        build_md.setObjectName("metaPrimaryButton")
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        layout.addWidget(_developer_details(f"report={report_path}"))
+        layout.addStretch(1)
+
+        def do_build_md() -> None:
+            path = FormalMarkdownReportBuilder().build_formal_markdown_report(project_dir)
+            _show_message(f"已生成：{path.name}")
+            on_refresh()
+
+        def do_export_html() -> None:
+            result = PublicationExportService().export_html_report(project_dir)
+            _show_message(result.message)
+            on_refresh()
+
+        def do_export_docx() -> None:
+            result = PublicationExportService().export_word_report(project_dir)
+            _show_message(result.message)
+            on_refresh()
+
+        build_md.clicked.connect(do_build_md)
+        export_html.clicked.connect(do_export_html)
+        export_docx.clicked.connect(do_export_docx)
+        next_button.clicked.connect(on_next)
+        return frame
+
+
+    def _reproducibility_package_page(project_dir: Path, *, on_refresh: Callable[[], None]) -> QFrame:
+        exports = sorted((project_dir / "exports").glob("reproducibility_package_*.zip")) if (project_dir / "exports").exists() else []
+        frame = QFrame()
+        frame.setObjectName("metaReproducibilityPackagePage")
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(12)
+        layout.addWidget(_page_header("可复现项目包", "打包项目关键 artifact，保留 schema/version。", "export"))
+        layout.addWidget(_info_card("导出状态", [f"已有 package：{len(exports)}", "不包含不必要的本机绝对路径。", "用于内部 testing / 迁移复核。"], object_name="metaReproducibilitySummary"))
+        package_list = QListWidget()
+        package_list.setObjectName("metaReproducibilityPackageList")
+        for path in exports:
+            package_list.addItem(str(path.relative_to(project_dir)))
+        layout.addWidget(package_list)
+        export = QPushButton("导出可复现项目包")
+        export.setObjectName("metaPrimaryButton")
+        layout.addWidget(export)
+        layout.addWidget(_developer_details(f"exports_dir={project_dir / 'exports'}"))
+        layout.addStretch(1)
+
+        def do_export() -> None:
+            result = PublicationExportService().export_reproducibility_package(project_dir)
+            _show_message(result.message)
+            on_refresh()
+
+        export.clicked.connect(do_export)
+        return frame
+
+
     def _placeholder_step_page(step: MetaWorkflowStepState) -> QFrame:
         frame = QFrame()
         frame.setObjectName(f"metaPlaceholder_{step.route_key}")
@@ -1059,6 +2100,103 @@ if QWidget is not None:
         return frame
 
 
+    def _meta_home_header(summary: MetaProjectSummary | None, title: str, subtitle: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("metaPageHeader")
+        layout = QHBoxLayout(frame)
+        title_col = QVBoxLayout()
+        title_label = QLabel(title)
+        title_label.setObjectName("metaPageTitle")
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("metaMutedText")
+        subtitle_label.setWordWrap(True)
+        title_col.addWidget(title_label)
+        title_col.addWidget(subtitle_label)
+        if summary is not None:
+            summary_label = QLabel(
+                f"{summary.project_name} · {_compact_path(summary.project_root)} · 当前阶段：{_workflow_stage_zh(summary.workflow_stage)}"
+            )
+            summary_label.setObjectName("metaMutedText")
+            summary_label.setWordWrap(True)
+            title_col.addWidget(summary_label)
+        layout.addLayout(title_col, 1)
+        badge_label = QLabel("Developer Preview / 本地测试版")
+        badge_label.setObjectName("metaStatusBadge")
+        layout.addWidget(badge_label)
+        return frame
+
+
+    def _project_business_summary(project_dir: Path) -> QFrame:
+        pico = PICOWorkspaceService()
+        library = LiteratureLibraryService()
+        extraction = ManualExtractionEffectRowService()
+        analysis = AnalysisPlanService()
+        screening_payload = _load_json_object(TitleAbstractScreeningV2Service().decisions_path(project_dir))
+        screening_records = _items_from_payload(screening_payload, "screening_records")
+        literature_count = len(library.list_records(project_dir))
+        effect_rows = extraction.load_effect_rows(project_dir)
+        lines = [
+            f"研究问题：{'已确认' if pico.load_confirmed(project_dir) else '未填写'}",
+            f"文献库：{literature_count} 篇",
+            f"筛选记录：{len(screening_records)} 条",
+            f"数据提取表：{'已创建' if effect_rows else '未创建'}",
+            f"分析计划：{'已创建' if analysis.load_confirmed(project_dir) else '未创建'}",
+        ]
+        return _info_card("项目摘要", lines, object_name="metaProjectSummaryCard")
+
+
+    def _progress_summary(state) -> QFrame:
+        stage_labels = {
+            "project_home": "项目首页",
+            "pico_workspace": "研究问题",
+            "search_import": "检索与导入",
+            "screening": "文献筛选",
+            "extraction_quality": "提取与质量评价",
+            "analysis_results": "统计分析",
+            "prisma_reporting": "报告导出",
+        }
+        complete_statuses = {"已有项目", "已确认", "已生成", "已有记录", "已有草稿", "已有人工评分"}
+        current = next((step for step in state.steps if step.status not in complete_statuses), state.steps[-1])
+        if current.step_id == "pico_workspace":
+            current_line = "当前进度：项目已创建"
+            next_line = "下一步：填写研究问题 / PICO"
+        else:
+            current_line = f"当前进度：{stage_labels.get(current.step_id, current.title_zh)}"
+            next_line = f"下一步：{current.next_action_zh}"
+        chips = []
+        for step in state.steps:
+            label = stage_labels.get(step.step_id, step.title_zh)
+            if step.step_id == current.step_id:
+                status = "当前"
+            elif step.status in complete_statuses:
+                status = "已完成"
+            else:
+                status = _main_stage_status_label(step.status)
+            chips.append(f"{label} {status}")
+        return _info_card("流程进度", [current_line, next_line, " / ".join(chips)], object_name="metaProgressCard")
+
+
+    def _developer_diagnostics_text(state, summary: MetaProjectSummary | None = None) -> str:
+        lines = ["内部诊断信息"]
+        if summary is not None:
+            lines.extend(
+                [
+                    f"project_stage={summary.workflow_stage}",
+                    f"status={summary.status}",
+                    f"created_at={summary.created_at}",
+                    f"manifest_path={summary.manifest_path}",
+                    f"config_path={summary.config_path}",
+                ]
+            )
+        lines.append("workflow_state:")
+        lines.extend(f"{step.route_key}: {step.status} / {step.artifact_summary}" for step in state.steps)
+        warnings = [warning for step in state.steps for warning in step.warnings]
+        if warnings:
+            lines.append("warnings:")
+            lines.extend(warnings[:8])
+        return "\n".join(lines)
+
+
     def _card(title: str) -> QFrame:
         frame = QFrame()
         frame.setObjectName("metaCard")
@@ -1081,11 +2219,11 @@ if QWidget is not None:
         return frame
 
 
-    def _developer_details(text: str) -> QFrame:
+    def _developer_details(text: str, *, button_text: str = "开发者诊断") -> QFrame:
         frame = QFrame()
         frame.setObjectName("metaDeveloperDetails")
         layout = QVBoxLayout(frame)
-        button = QPushButton("开发详情")
+        button = QPushButton(button_text)
         button.setObjectName("metaSecondaryButton")
         detail = QLabel(text)
         detail.setObjectName("metaDeveloperDetailsBody")
