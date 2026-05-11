@@ -96,7 +96,12 @@ def build_bioinformatics_query_strategy(question: str | SearchTranslationDraft) 
 
 def _disease_terms(draft: SearchTranslationDraft) -> list[str]:
     terms = [*draft.disease_terms_en, *draft.main_concepts_en]
-    return _unique(term for term in terms if not _is_database_or_tissue_label(term))
+    platform_terms = _platform_terms(draft)
+    return _unique(
+        term
+        for term in terms
+        if not _is_database_or_tissue_label(term) and not _is_platform_only_label(term, platform_terms)
+    )
 
 
 def _platform_terms(draft: SearchTranslationDraft) -> list[str]:
@@ -176,6 +181,26 @@ def _gtex_candidates(values: object) -> list[GtexTissueCandidate]:
 def _is_database_or_tissue_label(term: str) -> bool:
     lowered = term.lower()
     return lowered.startswith(("tcga-", "gtex")) or lowered in {"geo", "gse", "tcga", "normal tissue", "tumor tissue"}
+
+
+def _is_platform_only_label(term: str, platform_terms: list[str]) -> bool:
+    lowered = term.strip().lower()
+    platform_keys = {value.lower() for value in platform_terms}
+    if lowered in platform_keys:
+        return True
+    return any(
+        token in lowered
+        for token in (
+            "expression profiling",
+            "gene expression",
+            "transcriptome",
+            "rna-seq",
+            "rnaseq",
+            "microarray",
+            "single-cell",
+            "scrna-seq",
+        )
+    )
 
 
 def _unique(values: object) -> list[str]:
