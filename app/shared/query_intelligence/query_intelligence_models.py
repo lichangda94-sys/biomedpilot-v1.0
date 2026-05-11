@@ -88,6 +88,12 @@ class SearchTranslationDraft:
     search_execution_status: str
     audit: dict[str, Any]
     candidate_terms: list[str] = field(default_factory=list)
+    pico_terms: list[str] = field(default_factory=list)
+    effect_measures: list[str] = field(default_factory=list)
+    diagnostic_accuracy_terms: list[str] = field(default_factory=list)
+    exclusion_type_terms: list[str] = field(default_factory=list)
+    quality_assessment_terms: list[str] = field(default_factory=list)
+    pubmed_query_terms: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

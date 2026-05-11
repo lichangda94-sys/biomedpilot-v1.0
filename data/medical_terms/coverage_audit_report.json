@@ -1,14 +1,14 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-11T10:09:27.032770+00:00",
+  "generated_at": "2026-05-11T10:32:50.617170+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
     "reference_checklists": "data/medical_terms/reference_checklists"
   },
   "overall": {
-    "total_checklist_items": 364,
-    "covered": 364,
+    "total_checklist_items": 472,
+    "covered": 472,
     "partially_covered": 0,
     "missing": 0,
     "coverage_rate": 1.0,
@@ -9077,6 +9077,2895 @@
       "exact": 23,
       "approximate": 0
     },
+    "meta_analysis_terms_core": {
+      "checklist_id": "meta_analysis_terms_core",
+      "title": "Meta Analysis Terms Core Vocabulary v1",
+      "source": "BioMedPilot curated shared medical vocabulary checklist",
+      "source_version": "meta_analysis_terms_core_v1",
+      "total_checklist_items": 108,
+      "covered": 108,
+      "partially_covered": 0,
+      "missing": 0,
+      "coverage_rate": 1.0,
+      "weighted_coverage_rate": 1.0,
+      "details": [
+        {
+          "id": "population",
+          "label": "population",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "population",
+            "study population",
+            "participants",
+            "研究人群",
+            "人群",
+            "目标人群"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "population",
+            "study population",
+            "participants",
+            "研究人群",
+            "人群",
+            "目标人群"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "patient",
+          "label": "patient",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "patient",
+            "patients",
+            "participant",
+            "患者",
+            "病人",
+            "受试者"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "patient",
+            "patients",
+            "participant",
+            "患者",
+            "病人",
+            "受试者"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "intervention",
+          "label": "intervention",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "intervention",
+            "intervention arm",
+            "treatment intervention",
+            "干预",
+            "治疗干预",
+            "干预措施"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "intervention",
+            "intervention arm",
+            "treatment intervention",
+            "干预",
+            "治疗干预",
+            "干预措施"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "exposure",
+          "label": "exposure",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "exposure",
+            "risk factor",
+            "exposure factor",
+            "暴露",
+            "风险因素",
+            "暴露因素"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "exposure",
+            "risk factor",
+            "exposure factor",
+            "暴露",
+            "风险因素",
+            "暴露因素"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "comparator",
+          "label": "comparator",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "comparator",
+            "comparison group",
+            "reference group",
+            "对照组",
+            "比较组",
+            "参照组"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "comparator",
+            "comparison group",
+            "reference group",
+            "对照组",
+            "比较组",
+            "参照组"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "control",
+          "label": "control",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "control",
+            "control group",
+            "controls",
+            "控制组",
+            "对照",
+            "空白对照"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "control",
+            "control group",
+            "controls",
+            "控制组",
+            "对照",
+            "空白对照"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "outcome",
+          "label": "outcome",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "outcome",
+            "clinical outcome",
+            "endpoint outcome",
+            "结局",
+            "研究结局",
+            "终点结局"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "outcome",
+            "clinical outcome",
+            "endpoint outcome",
+            "结局",
+            "研究结局",
+            "终点结局"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "study_design",
+          "label": "study design",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "study design",
+            "study type",
+            "research design",
+            "研究设计",
+            "研究类型",
+            "设计类型"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "study design",
+            "study type",
+            "research design",
+            "研究设计",
+            "研究类型",
+            "设计类型"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "setting",
+          "label": "setting",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "setting",
+            "study setting",
+            "clinical setting",
+            "研究场景",
+            "研究环境",
+            "医疗场景"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "setting",
+            "study setting",
+            "clinical setting",
+            "研究场景",
+            "研究环境",
+            "医疗场景"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "follow_up",
+          "label": "follow-up",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "follow-up",
+            "follow up",
+            "follow-up period",
+            "随访",
+            "随访时间",
+            "随访期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "follow-up",
+            "follow up",
+            "follow-up period",
+            "随访",
+            "随访时间",
+            "随访期"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "subgroup",
+          "label": "subgroup",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "subgroup",
+            "subgroup population",
+            "stratum",
+            "亚组",
+            "亚组分析人群",
+            "分层人群"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "subgroup",
+            "subgroup population",
+            "stratum",
+            "亚组",
+            "亚组分析人群",
+            "分层人群"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "endpoint",
+          "label": "endpoint",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "endpoint",
+            "clinical endpoint",
+            "study endpoint",
+            "终点",
+            "研究终点",
+            "临床终点"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "endpoint",
+            "clinical endpoint",
+            "study endpoint",
+            "终点",
+            "研究终点",
+            "临床终点"
+          ],
+          "missing_terms": [],
+          "subcategory": "pico_framework",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "randomized_controlled_trial",
+          "label": "randomized controlled trial",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "randomized controlled trial",
+            "randomised controlled trial",
+            "controlled clinical trial",
+            "RCT",
+            "随机对照试验",
+            "随机临床试验",
+            "RCT研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "randomized controlled trial",
+            "randomised controlled trial",
+            "controlled clinical trial",
+            "RCT",
+            "随机对照试验",
+            "随机临床试验",
+            "RCT研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "clinical_trial",
+          "label": "clinical trial",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "clinical trial",
+            "clinical study",
+            "trial",
+            "临床试验",
+            "临床研究试验"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "clinical trial",
+            "clinical study",
+            "trial",
+            "临床试验",
+            "临床研究试验"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "cohort_study",
+          "label": "cohort study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "cohort study",
+            "cohort",
+            "longitudinal cohort study",
+            "队列研究",
+            "队列"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cohort study",
+            "cohort",
+            "longitudinal cohort study",
+            "队列研究",
+            "队列"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "prospective_cohort",
+          "label": "prospective cohort",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "prospective cohort",
+            "prospective cohort study",
+            "前瞻性队列",
+            "前瞻性队列研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "prospective cohort",
+            "prospective cohort study",
+            "前瞻性队列",
+            "前瞻性队列研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "retrospective_cohort",
+          "label": "retrospective cohort",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "retrospective cohort",
+            "retrospective cohort study",
+            "回顾性队列",
+            "回顾性队列研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "retrospective cohort",
+            "retrospective cohort study",
+            "回顾性队列",
+            "回顾性队列研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "case_control_study",
+          "label": "case-control study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "case-control study",
+            "case control study",
+            "病例对照研究",
+            "病例-对照研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "case-control study",
+            "case control study",
+            "病例对照研究",
+            "病例-对照研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "cross_sectional_study",
+          "label": "cross-sectional study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "cross-sectional study",
+            "cross sectional study",
+            "横断面研究",
+            "横截面研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cross-sectional study",
+            "cross sectional study",
+            "横断面研究",
+            "横截面研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "nested_case_control_study",
+          "label": "nested case-control study",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "nested case-control study",
+            "nested case control study",
+            "巢式病例对照研究",
+            "嵌套病例对照研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "nested case-control study",
+            "nested case control study",
+            "巢式病例对照研究",
+            "嵌套病例对照研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "case_cohort_study",
+          "label": "case-cohort study",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "case-cohort study",
+            "case cohort study",
+            "病例队列研究",
+            "病例-队列研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "case-cohort study",
+            "case cohort study",
+            "病例队列研究",
+            "病例-队列研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "diagnostic_accuracy_study",
+          "label": "diagnostic accuracy study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "diagnostic accuracy study",
+            "diagnostic test accuracy study",
+            "DTA",
+            "诊断准确性研究",
+            "诊断试验准确性研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "diagnostic accuracy study",
+            "diagnostic test accuracy study",
+            "DTA",
+            "诊断准确性研究",
+            "诊断试验准确性研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "prognostic_study",
+          "label": "prognostic study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "prognostic study",
+            "prognosis study",
+            "预后研究",
+            "预后因素研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "prognostic study",
+            "prognosis study",
+            "预后研究",
+            "预后因素研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "observational_study",
+          "label": "observational study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "observational study",
+            "observational research",
+            "观察性研究",
+            "观察研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "observational study",
+            "observational research",
+            "观察性研究",
+            "观察研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "real_world_study",
+          "label": "real-world study",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "real-world study",
+            "real world study",
+            "real-world evidence study",
+            "RWS",
+            "RWE",
+            "真实世界研究",
+            "真实世界证据研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "real-world study",
+            "real world study",
+            "real-world evidence study",
+            "RWS",
+            "RWE",
+            "真实世界研究",
+            "真实世界证据研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "registry_study",
+          "label": "registry study",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "registry study",
+            "registry-based study",
+            "registry based study",
+            "登记研究",
+            "注册登记研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "registry study",
+            "registry-based study",
+            "registry based study",
+            "登记研究",
+            "注册登记研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "study_design",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "hazard_ratio",
+          "label": "hazard ratio",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "hazard ratio",
+            "hazard rate ratio",
+            "HR",
+            "风险比",
+            "危险比",
+            "风险率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "hazard ratio",
+            "hazard rate ratio",
+            "HR",
+            "风险比",
+            "危险比",
+            "风险率"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "HR may also mean heart rate; use as effect measure in Meta Analysis context."
+        },
+        {
+          "id": "odds_ratio",
+          "label": "odds ratio",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "odds ratio",
+            "OR",
+            "优势比",
+            "比值比",
+            "胜算比"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "odds ratio",
+            "OR",
+            "优势比",
+            "比值比",
+            "胜算比"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "OR must not match lowercase word or."
+        },
+        {
+          "id": "risk_ratio",
+          "label": "risk ratio",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "risk ratio",
+            "relative risk ratio",
+            "RR",
+            "风险比值",
+            "相对风险比"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "risk ratio",
+            "relative risk ratio",
+            "RR",
+            "风险比值",
+            "相对风险比"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "RR overlaps relative risk."
+        },
+        {
+          "id": "relative_risk",
+          "label": "relative risk",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "relative risk",
+            "risk ratio",
+            "RR",
+            "相对危险度",
+            "相对风险"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "relative risk",
+            "risk ratio",
+            "RR",
+            "相对危险度",
+            "相对风险"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "Relative risk often abbreviated RR."
+        },
+        {
+          "id": "risk_difference",
+          "label": "risk difference",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "risk difference",
+            "absolute risk difference",
+            "RD",
+            "风险差",
+            "绝对风险差"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "risk difference",
+            "absolute risk difference",
+            "RD",
+            "风险差",
+            "绝对风险差"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "mean_difference",
+          "label": "mean difference",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "mean difference",
+            "mean difference estimate",
+            "MD",
+            "均数差",
+            "平均差"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "mean difference",
+            "mean difference estimate",
+            "MD",
+            "均数差",
+            "平均差"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "MD can be an abbreviation in other domains; keep as effect measure."
+        },
+        {
+          "id": "standardized_mean_difference",
+          "label": "standardized mean difference",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "standardized mean difference",
+            "standardised mean difference",
+            "SMD",
+            "标准化均数差",
+            "标准化平均差"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "standardized mean difference",
+            "standardised mean difference",
+            "SMD",
+            "标准化均数差",
+            "标准化平均差"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "weighted_mean_difference",
+          "label": "weighted mean difference",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "weighted mean difference",
+            "weighted mean difference estimate",
+            "WMD",
+            "加权均数差",
+            "加权平均差"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "weighted mean difference",
+            "weighted mean difference estimate",
+            "WMD",
+            "加权均数差",
+            "加权平均差"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "correlation_coefficient",
+          "label": "correlation coefficient",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "correlation coefficient",
+            "correlation estimate",
+            "相关系数",
+            "相关性系数"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "correlation coefficient",
+            "correlation estimate",
+            "相关系数",
+            "相关性系数"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "Lowercase r is not added as a strict abbreviation to avoid broad matching."
+        },
+        {
+          "id": "beta_coefficient",
+          "label": "beta coefficient",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "beta coefficient",
+            "regression coefficient",
+            "beta estimate",
+            "beta",
+            "回归系数",
+            "β系数"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "beta coefficient",
+            "regression coefficient",
+            "beta estimate",
+            "beta",
+            "回归系数",
+            "β系数"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "confidence_interval",
+          "label": "confidence interval",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "confidence interval",
+            "CI",
+            "置信区间",
+            "可信区间"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "confidence interval",
+            "CI",
+            "置信区间",
+            "可信区间"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "CI must not match ordinary text."
+        },
+        {
+          "id": "standard_error",
+          "label": "standard error",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "standard error",
+            "standard error of the mean",
+            "SE",
+            "标准误",
+            "标准误差"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "standard error",
+            "standard error of the mean",
+            "SE",
+            "标准误",
+            "标准误差"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "SE is a short token requiring strict boundary matching."
+        },
+        {
+          "id": "p_value",
+          "label": "p value",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "p value",
+            "P-value",
+            "probability value",
+            "P值",
+            "显著性P值"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "p value",
+            "P-value",
+            "probability value",
+            "P值",
+            "显著性P值"
+          ],
+          "missing_terms": [],
+          "subcategory": "effect_measure",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "Single P is not added as strict abbreviation to avoid broad matching."
+        },
+        {
+          "id": "overall_survival",
+          "label": "overall survival",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "overall survival",
+            "survival overall",
+            "OS",
+            "总生存",
+            "总生存期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "overall survival",
+            "survival overall",
+            "OS",
+            "总生存",
+            "总生存期"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "OS is an outcome abbreviation only in Meta Analysis context."
+        },
+        {
+          "id": "progression_free_survival",
+          "label": "progression-free survival",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "progression-free survival",
+            "progression free survival",
+            "PFS",
+            "无进展生存",
+            "无进展生存期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "progression-free survival",
+            "progression free survival",
+            "PFS",
+            "无进展生存",
+            "无进展生存期"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "disease_free_survival",
+          "label": "disease-free survival",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "disease-free survival",
+            "disease free survival",
+            "DFS",
+            "无病生存",
+            "无病生存期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "disease-free survival",
+            "disease free survival",
+            "DFS",
+            "无病生存",
+            "无病生存期"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "recurrence_free_survival",
+          "label": "recurrence-free survival",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "recurrence-free survival",
+            "recurrence free survival",
+            "RFS",
+            "无复发生存",
+            "无复发生存期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "recurrence-free survival",
+            "recurrence free survival",
+            "RFS",
+            "无复发生存",
+            "无复发生存期"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "event_free_survival",
+          "label": "event-free survival",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "event-free survival",
+            "event free survival",
+            "EFS",
+            "无事件生存",
+            "无事件生存期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "event-free survival",
+            "event free survival",
+            "EFS",
+            "无事件生存",
+            "无事件生存期"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "cancer_specific_survival",
+          "label": "cancer-specific survival",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "cancer-specific survival",
+            "cancer specific survival",
+            "CSS",
+            "癌症特异性生存",
+            "肿瘤特异性生存"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "cancer-specific survival",
+            "cancer specific survival",
+            "CSS",
+            "癌症特异性生存",
+            "肿瘤特异性生存"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "disease_specific_survival",
+          "label": "disease-specific survival",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "disease-specific survival",
+            "disease specific survival",
+            "DSS",
+            "疾病特异性生存",
+            "疾病特异性生存期"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "disease-specific survival",
+            "disease specific survival",
+            "DSS",
+            "疾病特异性生存",
+            "疾病特异性生存期"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "objective_response_rate",
+          "label": "objective response rate",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "objective response rate",
+            "objective response",
+            "ORR",
+            "客观缓解率",
+            "客观反应率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "objective response rate",
+            "objective response",
+            "ORR",
+            "客观缓解率",
+            "客观反应率"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "complete_response",
+          "label": "complete response",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "complete response",
+            "complete remission",
+            "CR",
+            "完全缓解",
+            "完全反应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "complete response",
+            "complete remission",
+            "CR",
+            "完全缓解",
+            "完全反应"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "CR may also mean complete remission or other terms."
+        },
+        {
+          "id": "partial_response",
+          "label": "partial response",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "partial response",
+            "partial remission",
+            "PR",
+            "部分缓解",
+            "部分反应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "partial response",
+            "partial remission",
+            "PR",
+            "部分缓解",
+            "部分反应"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "PR can also mean progesterone receptor; keep ambiguous."
+        },
+        {
+          "id": "stable_disease",
+          "label": "stable disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "stable disease",
+            "stable response",
+            "SD",
+            "疾病稳定",
+            "病情稳定"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "stable disease",
+            "stable response",
+            "SD",
+            "疾病稳定",
+            "病情稳定"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "SD can also mean standard deviation; keep ambiguous."
+        },
+        {
+          "id": "progressive_disease",
+          "label": "progressive disease",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "progressive disease",
+            "disease progression",
+            "PD",
+            "疾病进展",
+            "病情进展"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "progressive disease",
+            "disease progression",
+            "PD",
+            "疾病进展",
+            "病情进展"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": "PD can also mean Parkinson disease; keep ambiguous."
+        },
+        {
+          "id": "recurrence",
+          "label": "recurrence",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "recurrence",
+            "relapse",
+            "recurrent event",
+            "复发",
+            "复发事件"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "recurrence",
+            "relapse",
+            "recurrent event",
+            "复发",
+            "复发事件"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "metastasis",
+          "label": "metastasis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "metastasis",
+            "metastatic event",
+            "distant metastasis",
+            "转移",
+            "远处转移"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "metastasis",
+            "metastatic event",
+            "distant metastasis",
+            "转移",
+            "远处转移"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "mortality",
+          "label": "mortality",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "mortality",
+            "death rate",
+            "死亡率",
+            "病死率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "mortality",
+            "death rate",
+            "死亡率",
+            "病死率"
+          ],
+          "missing_terms": [],
+          "subcategory": "survival_oncology_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "incidence",
+          "label": "incidence",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "incidence",
+            "incident rate",
+            "发病率",
+            "发生率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "incidence",
+            "incident rate",
+            "发病率",
+            "发生率"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "prevalence",
+          "label": "prevalence",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "prevalence",
+            "prevalence rate",
+            "患病率",
+            "流行率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "prevalence",
+            "prevalence rate",
+            "患病率",
+            "流行率"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "risk",
+          "label": "risk",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "risk",
+            "disease risk",
+            "风险",
+            "发生风险"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "risk",
+            "disease risk",
+            "风险",
+            "发生风险"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "hospitalization",
+          "label": "hospitalization",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "hospitalization",
+            "hospitalisation",
+            "hospital admission",
+            "住院",
+            "住院率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "hospitalization",
+            "hospitalisation",
+            "hospital admission",
+            "住院",
+            "住院率"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "adverse_event",
+          "label": "adverse event",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "adverse event",
+            "adverse events",
+            "AE",
+            "不良事件",
+            "不良反应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "adverse event",
+            "adverse events",
+            "AE",
+            "不良事件",
+            "不良反应"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "serious_adverse_event",
+          "label": "serious adverse event",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "serious adverse event",
+            "serious adverse events",
+            "SAE",
+            "严重不良事件",
+            "严重不良反应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "serious adverse event",
+            "serious adverse events",
+            "SAE",
+            "严重不良事件",
+            "严重不良反应"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "quality_of_life",
+          "label": "quality of life",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "quality of life",
+            "health-related quality of life",
+            "生活质量",
+            "生命质量"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "quality of life",
+            "health-related quality of life",
+            "生活质量",
+            "生命质量"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "symptom_score",
+          "label": "symptom score",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "symptom score",
+            "symptom scale score",
+            "症状评分",
+            "症状量表评分"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "symptom score",
+            "symptom scale score",
+            "症状评分",
+            "症状量表评分"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "treatment_response",
+          "label": "treatment response",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "treatment response",
+            "response to treatment",
+            "治疗反应",
+            "疗效反应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "treatment response",
+            "response to treatment",
+            "治疗反应",
+            "疗效反应"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "complication",
+          "label": "complication",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "complication",
+            "complications",
+            "并发症",
+            "并发事件"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "complication",
+            "complications",
+            "并发症",
+            "并发事件"
+          ],
+          "missing_terms": [],
+          "subcategory": "general_clinical_outcome",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "sensitivity",
+          "label": "sensitivity",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "sensitivity",
+            "true positive rate",
+            "敏感性",
+            "灵敏度"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "sensitivity",
+            "true positive rate",
+            "敏感性",
+            "灵敏度"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "specificity",
+          "label": "specificity",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "specificity",
+            "true negative rate",
+            "特异性",
+            "特异度"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "specificity",
+            "true negative rate",
+            "特异性",
+            "特异度"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "area_under_curve",
+          "label": "area under the curve",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "area under the curve",
+            "area under curve",
+            "AUC",
+            "曲线下面积",
+            "AUC值"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "area under the curve",
+            "area under curve",
+            "AUC",
+            "曲线下面积",
+            "AUC值"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "receiver_operating_characteristic",
+          "label": "receiver operating characteristic",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "receiver operating characteristic",
+            "ROC curve",
+            "ROC",
+            "受试者工作特征曲线",
+            "ROC曲线"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "receiver operating characteristic",
+            "ROC curve",
+            "ROC",
+            "受试者工作特征曲线",
+            "ROC曲线"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "diagnostic_odds_ratio",
+          "label": "diagnostic odds ratio",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "diagnostic odds ratio",
+            "diagnostic OR",
+            "DOR",
+            "诊断优势比",
+            "诊断比值比"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "diagnostic odds ratio",
+            "diagnostic OR",
+            "DOR",
+            "诊断优势比",
+            "诊断比值比"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "positive_likelihood_ratio",
+          "label": "positive likelihood ratio",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "positive likelihood ratio",
+            "PLR",
+            "LR+",
+            "阳性似然比",
+            "阳性似然率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "positive likelihood ratio",
+            "PLR",
+            "LR+",
+            "阳性似然比",
+            "阳性似然率"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "negative_likelihood_ratio",
+          "label": "negative likelihood ratio",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "negative likelihood ratio",
+            "NLR",
+            "LR-",
+            "阴性似然比",
+            "阴性似然率"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "negative likelihood ratio",
+            "NLR",
+            "LR-",
+            "阴性似然比",
+            "阴性似然率"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "positive_predictive_value",
+          "label": "positive predictive value",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "positive predictive value",
+            "PPV",
+            "阳性预测值",
+            "阳性预报值"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "positive predictive value",
+            "PPV",
+            "阳性预测值",
+            "阳性预报值"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "negative_predictive_value",
+          "label": "negative predictive value",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "negative predictive value",
+            "NPV",
+            "阴性预测值",
+            "阴性预报值"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "negative predictive value",
+            "NPV",
+            "阴性预测值",
+            "阴性预报值"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "heterogeneity",
+          "label": "heterogeneity",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "heterogeneity",
+            "between-study heterogeneity",
+            "异质性",
+            "研究异质性"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "heterogeneity",
+            "between-study heterogeneity",
+            "异质性",
+            "研究异质性"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "i_squared",
+          "label": "I-squared",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "I-squared",
+            "I squared",
+            "I2",
+            "I方",
+            "I²"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "I-squared",
+            "I squared",
+            "I2",
+            "I方",
+            "I²"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "tau_squared",
+          "label": "tau-squared",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "tau-squared",
+            "tau squared",
+            "tau2",
+            "tau方",
+            "τ²"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "tau-squared",
+            "tau squared",
+            "tau2",
+            "tau方",
+            "τ²"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "random_effects_model",
+          "label": "random-effects model",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "random-effects model",
+            "random effects model",
+            "随机效应模型",
+            "随机效应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "random-effects model",
+            "random effects model",
+            "随机效应模型",
+            "随机效应"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "fixed_effect_model",
+          "label": "fixed-effect model",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "fixed-effect model",
+            "fixed effect model",
+            "固定效应模型",
+            "固定效应"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "fixed-effect model",
+            "fixed effect model",
+            "固定效应模型",
+            "固定效应"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "subgroup_analysis",
+          "label": "subgroup analysis",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "subgroup analysis",
+            "subgroup analyses",
+            "亚组分析",
+            "分层分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "subgroup analysis",
+            "subgroup analyses",
+            "亚组分析",
+            "分层分析"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "sensitivity_analysis",
+          "label": "sensitivity analysis",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "sensitivity analysis",
+            "robustness analysis",
+            "敏感性分析",
+            "稳健性分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "sensitivity analysis",
+            "robustness analysis",
+            "敏感性分析",
+            "稳健性分析"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "meta_regression",
+          "label": "meta-regression",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "meta-regression",
+            "meta regression",
+            "Meta回归",
+            "元回归"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "meta-regression",
+            "meta regression",
+            "Meta回归",
+            "元回归"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "publication_bias",
+          "label": "publication bias",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "publication bias",
+            "reporting bias",
+            "发表偏倚",
+            "出版偏倚"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "publication bias",
+            "reporting bias",
+            "发表偏倚",
+            "出版偏倚"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "funnel_plot",
+          "label": "funnel plot",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "funnel plot",
+            "funnel-plot",
+            "漏斗图",
+            "漏斗图分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "funnel plot",
+            "funnel-plot",
+            "漏斗图",
+            "漏斗图分析"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "egger_test",
+          "label": "Egger test",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Egger test",
+            "Egger regression test",
+            "Egger检验",
+            "Egger回归检验"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Egger test",
+            "Egger regression test",
+            "Egger检验",
+            "Egger回归检验"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "begg_test",
+          "label": "Begg test",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Begg test",
+            "Begg rank correlation test",
+            "Begg检验",
+            "Begg秩相关检验"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Begg test",
+            "Begg rank correlation test",
+            "Begg检验",
+            "Begg秩相关检验"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "leave_one_out_analysis",
+          "label": "leave-one-out analysis",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "leave-one-out analysis",
+            "leave one out analysis",
+            "逐一剔除分析",
+            "留一法分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "leave-one-out analysis",
+            "leave one out analysis",
+            "逐一剔除分析",
+            "留一法分析"
+          ],
+          "missing_terms": [],
+          "subcategory": "heterogeneity_statistics",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "systematic_review",
+          "label": "systematic review",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "systematic review",
+            "systematic literature review",
+            "系统综述",
+            "系统评价"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "systematic review",
+            "systematic literature review",
+            "系统综述",
+            "系统评价"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "meta_analysis",
+          "label": "meta-analysis",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "meta-analysis",
+            "meta analysis",
+            "Meta分析",
+            "荟萃分析"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "meta-analysis",
+            "meta analysis",
+            "Meta分析",
+            "荟萃分析"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "review",
+          "label": "review",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "review",
+            "review article",
+            "综述",
+            "综述文章"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "review",
+            "review article",
+            "综述",
+            "综述文章"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "case_report",
+          "label": "case report",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "case report",
+            "case reports",
+            "病例报告",
+            "个案报告"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "case report",
+            "case reports",
+            "病例报告",
+            "个案报告"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "letter",
+          "label": "letter",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "letter",
+            "letter to editor",
+            "信件",
+            "读者来信"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "letter",
+            "letter to editor",
+            "信件",
+            "读者来信"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "editorial",
+          "label": "editorial",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "editorial",
+            "editorial article",
+            "社论",
+            "编辑部文章"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "editorial",
+            "editorial article",
+            "社论",
+            "编辑部文章"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "comment",
+          "label": "comment",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "comment",
+            "commentary",
+            "评论",
+            "评论文章"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "comment",
+            "commentary",
+            "评论",
+            "评论文章"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "conference_abstract",
+          "label": "conference abstract",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "conference abstract",
+            "meeting abstract",
+            "会议摘要",
+            "会议论文摘要"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "conference abstract",
+            "meeting abstract",
+            "会议摘要",
+            "会议论文摘要"
+          ],
+          "missing_terms": [],
+          "subcategory": "publication_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "protocol",
+          "label": "protocol",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "protocol",
+            "study protocol",
+            "review protocol",
+            "研究方案",
+            "试验方案"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "protocol",
+            "study protocol",
+            "review protocol",
+            "研究方案",
+            "试验方案"
+          ],
+          "missing_terms": [],
+          "subcategory": "exclusion_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "animal_study",
+          "label": "animal study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "animal study",
+            "animal experiment",
+            "animal-only study",
+            "动物研究",
+            "动物实验"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "animal study",
+            "animal experiment",
+            "animal-only study",
+            "动物研究",
+            "动物实验"
+          ],
+          "missing_terms": [],
+          "subcategory": "exclusion_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "in_vitro_study",
+          "label": "in vitro study",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "in vitro study",
+            "cell experiment",
+            "in-vitro study",
+            "体外研究",
+            "细胞实验"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "in vitro study",
+            "cell experiment",
+            "in-vitro study",
+            "体外研究",
+            "细胞实验"
+          ],
+          "missing_terms": [],
+          "subcategory": "exclusion_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "non_human_study",
+          "label": "non-human study",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "non-human study",
+            "nonhuman study",
+            "非人类研究",
+            "非人体研究"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "non-human study",
+            "nonhuman study",
+            "非人类研究",
+            "非人体研究"
+          ],
+          "missing_terms": [],
+          "subcategory": "exclusion_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "cochrane_risk_of_bias",
+          "label": "Cochrane Risk of Bias",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Cochrane Risk of Bias",
+            "Cochrane risk-of-bias tool",
+            "Risk of Bias 2",
+            "RoB 2",
+            "RoB",
+            "Cochrane偏倚风险工具",
+            "Cochrane风险偏倚"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Cochrane Risk of Bias",
+            "Cochrane risk-of-bias tool",
+            "Risk of Bias 2",
+            "RoB 2",
+            "RoB",
+            "Cochrane偏倚风险工具",
+            "Cochrane风险偏倚"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "robins_i",
+          "label": "ROBINS-I",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "ROBINS-I",
+            "Risk Of Bias In Non-randomized Studies of Interventions",
+            "ROBINS-I工具",
+            "非随机研究偏倚风险工具"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "ROBINS-I",
+            "Risk Of Bias In Non-randomized Studies of Interventions",
+            "ROBINS-I工具",
+            "非随机研究偏倚风险工具"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "newcastle_ottawa_scale",
+          "label": "Newcastle-Ottawa Scale",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "Newcastle-Ottawa Scale",
+            "Newcastle Ottawa Scale",
+            "NOS",
+            "Newcastle-Ottawa量表",
+            "NOS量表",
+            "纽卡斯尔渥太华量表"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "Newcastle-Ottawa Scale",
+            "Newcastle Ottawa Scale",
+            "NOS",
+            "Newcastle-Ottawa量表",
+            "NOS量表",
+            "纽卡斯尔渥太华量表"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "quadas_2",
+          "label": "QUADAS-2",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "QUADAS-2",
+            "Quality Assessment of Diagnostic Accuracy Studies 2",
+            "QUADAS-2工具",
+            "诊断准确性质量评价工具"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "QUADAS-2",
+            "Quality Assessment of Diagnostic Accuracy Studies 2",
+            "QUADAS-2工具",
+            "诊断准确性质量评价工具"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "jbi_critical_appraisal",
+          "label": "JBI critical appraisal",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "JBI critical appraisal",
+            "Joanna Briggs Institute critical appraisal",
+            "JBI",
+            "JBI质量评价",
+            "JBI评价工具"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "JBI critical appraisal",
+            "Joanna Briggs Institute critical appraisal",
+            "JBI",
+            "JBI质量评价",
+            "JBI评价工具"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "ahrq_checklist",
+          "label": "AHRQ checklist",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "AHRQ checklist",
+            "Agency for Healthcare Research and Quality checklist",
+            "AHRQ",
+            "AHRQ清单",
+            "AHRQ评价清单"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "AHRQ checklist",
+            "Agency for Healthcare Research and Quality checklist",
+            "AHRQ",
+            "AHRQ清单",
+            "AHRQ评价清单"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "grade",
+          "label": "GRADE",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "GRADE",
+            "Grading of Recommendations Assessment Development and Evaluation",
+            "GRADE证据评价",
+            "GRADE分级"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "GRADE",
+            "Grading of Recommendations Assessment Development and Evaluation",
+            "GRADE证据评价",
+            "GRADE分级"
+          ],
+          "missing_terms": [],
+          "subcategory": "quality_assessment",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "preprint",
+          "label": "preprint",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "preprint",
+            "preprint article",
+            "预印本",
+            "预印本论文"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "preprint",
+            "preprint article",
+            "预印本",
+            "预印本论文"
+          ],
+          "missing_terms": [],
+          "subcategory": "exclusion_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "duplicate_publication",
+          "label": "duplicate publication",
+          "priority": "P1",
+          "status": "covered",
+          "expected_terms": [
+            "duplicate publication",
+            "duplicate report",
+            "重复发表",
+            "重复出版"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "duplicate publication",
+            "duplicate report",
+            "重复发表",
+            "重复出版"
+          ],
+          "missing_terms": [],
+          "subcategory": "exclusion_type",
+          "avoid_expansion_to": [],
+          "ambiguity_notes": ""
+        },
+        {
+          "id": "diagnostic_accuracy",
+          "label": "diagnostic accuracy",
+          "priority": "P0",
+          "status": "covered",
+          "expected_terms": [
+            "diagnostic accuracy",
+            "diagnostic test accuracy",
+            "诊断准确性",
+            "诊断准确度"
+          ],
+          "expected_tcga_projects": [],
+          "expected_gtex_tissues": [],
+          "matched_terms": [
+            "diagnostic accuracy",
+            "diagnostic test accuracy",
+            "诊断准确性",
+            "诊断准确度"
+          ],
+          "missing_terms": [],
+          "subcategory": "diagnostic_accuracy",
+          "avoid_expansion_to": [
+            "diagnostic accuracy study"
+          ],
+          "ambiguity_notes": "Diagnostic accuracy metric family, not a study design by itself."
+        }
+      ],
+      "missing_terms": [],
+      "subcategory_coverage": {
+        "diagnostic_accuracy": {
+          "total": 10,
+          "covered": 10,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "effect_measure": {
+          "total": 13,
+          "covered": 13,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "exclusion_type": {
+          "total": 6,
+          "covered": 6,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "general_clinical_outcome": {
+          "total": 10,
+          "covered": 10,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "heterogeneity_statistics": {
+          "total": 13,
+          "covered": 13,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "pico_framework": {
+          "total": 12,
+          "covered": 12,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "publication_type": {
+          "total": 8,
+          "covered": 8,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "quality_assessment": {
+          "total": 7,
+          "covered": 7,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "study_design": {
+          "total": 14,
+          "covered": 14,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        },
+        "survival_oncology_outcome": {
+          "total": 15,
+          "covered": 15,
+          "partial": 0,
+          "missing": 0,
+          "coverage_rate": 1.0
+        }
+      },
+      "high_risk_ambiguity_terms": [
+        {
+          "term": "OR",
+          "note": "Odds ratio; must not match lowercase word or."
+        },
+        {
+          "term": "OS",
+          "note": "Overall survival in Meta Analysis context only."
+        },
+        {
+          "term": "HR",
+          "note": "Hazard ratio; may also mean heart rate."
+        },
+        {
+          "term": "PR",
+          "note": "Partial response; may also mean progesterone receptor."
+        },
+        {
+          "term": "SD",
+          "note": "Stable disease; may also mean standard deviation."
+        },
+        {
+          "term": "PD",
+          "note": "Progressive disease; may also mean Parkinson disease."
+        },
+        {
+          "term": "CI",
+          "note": "Confidence interval; short token requires strict boundary."
+        },
+        {
+          "term": "MD",
+          "note": "Mean difference; short token requires strict boundary."
+        },
+        {
+          "term": "SMD",
+          "note": "Standardized mean difference."
+        },
+        {
+          "term": "SE",
+          "note": "Standard error; may also be broad abbreviation."
+        },
+        {
+          "term": "RR",
+          "note": "Risk ratio or relative risk; short token requires strict boundary."
+        }
+      ]
+    },
     "meta_terms": {
       "checklist_id": "meta_terms",
       "title": "Meta Analysis Retrieval Terms Checklist",
@@ -12409,6 +15298,22 @@
         "status": "pass"
       },
       {
+        "gate_id": "meta_analysis_terms_core_coverage",
+        "description": "Meta analysis terms core checklist coverage must stay >= 95%.",
+        "metric": "coverage_rate",
+        "minimum": 0.95,
+        "observed": 1.0,
+        "status": "pass"
+      },
+      {
+        "gate_id": "meta_analysis_terms_missing_terms",
+        "description": "Meta analysis terms core should not have missing expected terms.",
+        "metric": "count",
+        "maximum": 0,
+        "observed": 0,
+        "status": "pass"
+      },
+      {
         "gate_id": "missing_items",
         "description": "Reference checklist missing count must remain zero.",
         "metric": "count",
@@ -12464,6 +15369,11 @@
       "checklist_id": "gtex_tissues",
       "source": "GTEx Portal tissue groups",
       "source_version": "GTEx tissue group checklist, curated access 2026-05"
+    },
+    {
+      "checklist_id": "meta_analysis_terms_core",
+      "source": "BioMedPilot curated shared medical vocabulary checklist",
+      "source_version": "meta_analysis_terms_core_v1"
     },
     {
       "checklist_id": "meta_terms",

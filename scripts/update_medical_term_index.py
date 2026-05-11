@@ -51,8 +51,17 @@ class IndexConcept:
     assay_terms: list[str] = field(default_factory=list)
     platform_candidates: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
+    pico_terms: list[str] = field(default_factory=list)
+    effect_measures: list[str] = field(default_factory=list)
+    diagnostic_accuracy_terms: list[str] = field(default_factory=list)
+    exclusion_type_terms: list[str] = field(default_factory=list)
+    quality_assessment_terms: list[str] = field(default_factory=list)
+    pubmed_query_terms: list[str] = field(default_factory=list)
     disease_group: str = ""
     concept_type: str = "unknown"
+    category: str = ""
+    subcategory: str = ""
+    contexts: list[str] = field(default_factory=list)
     parent_terms: list[str] = field(default_factory=list)
     cross_refs: dict[str, list[str]] = field(default_factory=dict)
     license: str = ""
@@ -481,6 +490,12 @@ def _insert_synonyms(conn: sqlite3.Connection, term_id: int, concept: IndexConce
         ("assay", concept.assay_terms, "en"),
         ("platform", concept.platform_candidates, "en"),
         ("modifier", concept.modifier_terms_en, "en"),
+        ("pico", concept.pico_terms, "en"),
+        ("effect_measure", concept.effect_measures, "en"),
+        ("diagnostic_accuracy", concept.diagnostic_accuracy_terms, "en"),
+        ("exclusion_type", concept.exclusion_type_terms, "en"),
+        ("quality_assessment", concept.quality_assessment_terms, "en"),
+        ("pubmed_query", concept.pubmed_query_terms, "en"),
     )
     for synonym_type, values, language in groups:
         for value in values:
@@ -527,6 +542,12 @@ def _insert_search_values(conn: sqlite3.Connection, term_id: int, concept: Index
             *concept.data_modality_terms,
             *concept.assay_terms,
             *concept.platform_candidates,
+            *concept.pico_terms,
+            *concept.effect_measures,
+            *concept.diagnostic_accuracy_terms,
+            *concept.exclusion_type_terms,
+            *concept.quality_assessment_terms,
+            *concept.pubmed_query_terms,
         ]
     )
     for value in values:
@@ -674,8 +695,17 @@ def _defaults() -> dict[str, object]:
         "assay_terms": [],
         "platform_candidates": [],
         "modifier_terms_en": [],
+        "pico_terms": [],
+        "effect_measures": [],
+        "diagnostic_accuracy_terms": [],
+        "exclusion_type_terms": [],
+        "quality_assessment_terms": [],
+        "pubmed_query_terms": [],
         "disease_group": "",
         "concept_type": "unknown",
+        "category": "",
+        "subcategory": "",
+        "contexts": [],
         "parent_terms": [],
         "cross_refs": {},
         "license": "",
