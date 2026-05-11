@@ -58,6 +58,12 @@ from app.bioinformatics.project_recognition import (
     run_project_recognition_for_paths,
     set_current_recognition_run,
 )
+from app.bioinformatics.recognition_detail_report import (
+    build_recognition_detail_payload,
+    export_recognition_report_markdown,
+    format_recognition_detail_technical,
+    format_recognition_detail_text,
+)
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
@@ -2560,6 +2566,9 @@ class BioinformaticsRecognitionWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self._last_report: dict[str, object] | None = None
+        self._selected_detail_run: dict[str, object] | None = None
+        self._selected_detail_file: dict[str, object] | None = None
+        self._selected_detail_payload: dict[str, object] | None = None
         self._pre_recognition_rows: list[RegisteredSourceRow] = []
         self._pre_recognition_checks: dict[str, QCheckBox] = {}
         self.setObjectName("bioinformaticsRecognitionPage")
@@ -2631,12 +2640,21 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._counts.setPlainText("旧识别结果已清理。raw_data 中的原始导入文件未删除。")
         self._asset_summary.setPlainText("")
         self._technical_details.setPlainText("")
+        self._clear_recognition_detail()
         self._render_recognition_history()
         self._set_status("旧识别结果已清理；原始数据文件未删除。请点击“重新识别”重新扫描。")
         return True
 
     def status_message(self) -> str:
         return self._status_label.text()
+
+    def export_recognition_detail_report(self) -> Path | None:
+        if self._project_root is None or self._selected_detail_run is None:
+            self._set_status("请先查看一个识别详情，再导出报告。")
+            return None
+        path = export_recognition_report_markdown(self._project_root, self._selected_detail_run, self._selected_detail_file)
+        self._set_status(f"识别报告已导出：{path}")
+        return path
 
     def continue_to_readiness(self) -> None:
         if self._project_root is None:
@@ -2685,7 +2703,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         filter_row.addWidget(self._duplicate_filter)
         filter_row.addStretch(1)
         result_layout.addLayout(filter_row)
-        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning"])
+        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning", "操作"])
         self._table.setObjectName("recognitionResultTable")
         confidence_header = self._table.horizontalHeaderItem(3)
         if confidence_header is not None:
@@ -2712,6 +2730,25 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._history_table.setMinimumHeight(150)
         history_layout.addWidget(self._history_table)
         root.addWidget(history_card)
+
+        detail_card, detail_layout = _card("识别详情")
+        detail_layout.addWidget(_muted("只读查看本次识别文件或历史识别记录，不会修改当前识别批次。"))
+        self._detail_report = _read_only_report_view(260)
+        self._detail_report.setObjectName("recognitionDetailReport")
+        self._detail_report.setPlainText("请选择本次识别文件或历史识别记录查看详情。")
+        detail_layout.addWidget(self._detail_report)
+        detail_actions = QHBoxLayout()
+        self._detail_export_button = _button("导出识别报告", "recognitionDetailExportButton", self.export_recognition_detail_report)
+        self._detail_export_button.setEnabled(False)
+        detail_actions.addWidget(self._detail_export_button)
+        detail_actions.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._detail_technical)))
+        detail_actions.addStretch(1)
+        detail_layout.addLayout(detail_actions)
+        self._detail_technical = _text_preview(180)
+        self._detail_technical.setObjectName("recognitionDetailTechnical")
+        self._detail_technical.setVisible(False)
+        detail_layout.addWidget(self._detail_technical)
+        root.addWidget(detail_card)
 
         self._technical_details = _text_preview(180)
         self._technical_details.setVisible(False)
@@ -2765,6 +2802,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._asset_summary.setPlainText("")
         self._group_preview.setPlainText("")
         self._technical_details.setPlainText("")
+        self._clear_recognition_detail()
 
     def _render_recognition_history(self) -> None:
         runs = list_recognition_runs(self._project_root) if self._project_root is not None else []
@@ -2803,9 +2841,48 @@ class BioinformaticsRecognitionWidget(QWidget):
         if run is None:
             self._set_status("未找到该历史识别记录。")
             return
-        self._technical_details.setPlainText(_history_run_detail_text(run))
-        self._technical_details.setVisible(True)
-        self._set_status("已在技术详情中显示历史识别记录；它不属于本次识别结果。")
+        self._render_recognition_detail(run, None)
+        self._set_status("已显示历史识别详情；它不属于本次识别结果，也未修改当前识别批次。")
+
+    def _view_current_file_detail(self, file_record: dict[str, object]) -> None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。")
+            return
+        report = self._last_report or {"files": [file_record]}
+        self._render_recognition_detail(self._detail_run_for_current_report(report), file_record)
+        self._set_status("已显示本次识别文件详情；未修改当前识别批次。")
+
+    def _render_recognition_detail(self, run: dict[str, object], file_record: dict[str, object] | None) -> None:
+        if self._project_root is None:
+            return
+        payload = build_recognition_detail_payload(self._project_root, run, file_record)
+        self._selected_detail_run = run
+        self._selected_detail_file = file_record
+        self._selected_detail_payload = payload
+        self._detail_report.setPlainText(format_recognition_detail_text(payload))
+        self._detail_technical.setPlainText(format_recognition_detail_technical(payload))
+        self._detail_export_button.setEnabled(True)
+
+    def _clear_recognition_detail(self) -> None:
+        self._selected_detail_run = None
+        self._selected_detail_file = None
+        self._selected_detail_payload = None
+        self._detail_report.setPlainText("请选择本次识别文件或历史识别记录查看详情。")
+        self._detail_technical.setPlainText("")
+        self._detail_technical.setVisible(False)
+        self._detail_export_button.setEnabled(False)
+
+    def _detail_run_for_current_report(self, report: dict[str, object]) -> dict[str, object]:
+        if self._project_root is not None:
+            current = next((run for run in list_recognition_runs(self._project_root) if run.get("is_current")), None)
+            if current is not None:
+                return current
+        return {
+            "run_id": str(report.get("run_id") or "current_session"),
+            "batch_name": "本次识别",
+            "generated_at": report.get("generated_at"),
+            "recognition_report": report,
+        }
 
     def _set_history_run_current(self, run_id: str) -> None:
         if self._project_root is None or not set_current_recognition_run(self._project_root, run_id):
@@ -2874,6 +2951,7 @@ class BioinformaticsRecognitionWidget(QWidget):
                     _format_file_size(item.get("file_size")),
                     str(item.get("reason", "")),
                     warning,
+                    "",
                 ]
             )
         for row_index, row in enumerate(rows):
@@ -2889,6 +2967,9 @@ class BioinformaticsRecognitionWidget(QWidget):
                 elif col_index == 4:
                     table_item.setToolTip(f"原始 bytes：{source.get('file_size', '未记录')}")
                 self._table.setItem(row_index, col_index, table_item)
+            detail_button = _button("查看详情", "secondaryButton", lambda _checked=False, record=dict(files[row_index]): self._view_current_file_detail(record))
+            detail_button.setObjectName(f"recognitionFileDetailButton_{row_index}")
+            self._table.setCellWidget(row_index, 7, detail_button)
         self._table.resizeColumnsToContents()
 
     def _toggle_pre_recognition_header(self, section: int) -> None:

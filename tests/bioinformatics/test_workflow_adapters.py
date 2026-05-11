@@ -12,6 +12,11 @@ from app.bioinformatics.project_analysis_tasks import create_analysis_task, load
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, list_recognition_runs, load_recognition_report, run_project_recognition
+from app.bioinformatics.recognition_detail_report import (
+    build_recognition_detail_payload,
+    export_recognition_report_markdown,
+    format_recognition_detail_text,
+)
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import load_workflow_state, run_project_stage, run_project_workflow
 from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -334,6 +339,63 @@ def test_recognition_detects_integrated_rnaseq_result_table_blocks(project_root:
     assert not any(column.endswith(("_log2FoldChange", "_pvalue", "_padj")) for column in sample_columns)
     assert {f"{sample}_count" for sample in sample_ids} <= sample_columns
     assert {f"{sample}_fpkm" for sample in sample_ids} <= sample_columns
+
+
+def test_recognition_detail_report_exports_user_summary_without_matrix_rows(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    _write_integrated_rnaseq_xlsx(raw_file)
+
+    recognition = run_project_recognition(project_root)
+    run = next(item for item in list_recognition_runs(project_root) if item.get("is_current"))
+    record = recognition["files"][0]  # type: ignore[index]
+
+    payload = build_recognition_detail_payload(project_root, run, record)  # type: ignore[arg-type]
+    text = format_recognition_detail_text(payload)
+    export_path = export_recognition_report_markdown(project_root, run, record)  # type: ignore[arg-type]
+    markdown = export_path.read_text(encoding="utf-8")
+
+    assert "RNA-seq 综合表达结果表" in text
+    assert "Mus musculus" in text
+    assert "Ensembl mouse gene ID" in text
+    assert "Count 表达矩阵" in text
+    assert "FPKM 表达矩阵" in text
+    assert "PFFvsPBS" in text
+    assert "gene annotation" in text.lower()
+    assert "ENSMUSG 前缀对应 Ensembl mouse gene ID" in text
+    sample_section = text.split("样本列与分组推断", 1)[1].split("DEG comparison 识别", 1)[0]
+    assert "gene_start" not in sample_section
+    assert "PFFvsPBS_log2FoldChange" not in sample_section
+    assert "暂无识别警告" in text
+    assert export_path.name == "recognition_report_user.md"
+    assert "Technical Appendix" in markdown
+    assert "SRY-box transcription factor 17" not in markdown
+    assert "mitochondrially encoded NADH" not in markdown
+
+
+def test_recognition_detail_report_handles_unknown_table_without_human_default(project_root: Path) -> None:
+    run = {
+        "run_id": "manual_unknown",
+        "recognition_report": {
+            "files": [
+                {
+                    "file_name": "unknown.tsv",
+                    "recognized_type": "tabular_text_file",
+                    "recognized_type_zh": "表格文本文件",
+                    "content_profile": {"sample_columns": []},
+                }
+            ],
+            "warnings": [],
+        },
+    }
+
+    payload = build_recognition_detail_payload(project_root, run)
+    text = format_recognition_detail_text(payload)
+
+    assert "未检测到明确的数据内容块" in text
+    assert "未检测到明确物种信息" in text
+    assert "不默认推断为 Homo sapiens" in text
+    assert "物种：未检测到明确物种信息" in text
 
 
 def test_standardization_task_center_and_results_use_integrated_content_blocks(project_root: Path) -> None:

@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPushButton, QFrame, QPlainTextEdit, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -1585,6 +1585,15 @@ def test_recognition_opening_old_project_keeps_legacy_report_in_history(qt_app, 
     assert history.item(0, 6).text() == "由旧版项目结构导入"
     assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
 
+    run = workflow_pages.list_recognition_runs(project_summary.project_root)[0]
+    widget._view_history_run(str(run["run_id"]))
+    detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    assert detail is not None
+    assert "旧版识别记录" in detail.toPlainText()
+    assert "由旧版项目结构导入" in detail.toPlainText()
+    assert current_table.rowCount() == 0
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
 
 def test_recognition_archives_legacy_recognized_data_report(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "legacy_from_recognized_data.tsv"
@@ -1649,7 +1658,10 @@ def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, pr
     viewed_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
     assert viewed_current["run_id"] == second_current["run_id"]
     assert table.rowCount() == 0
-    assert "history_recognition_run" in widget._technical_details.toPlainText()
+    detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    assert detail is not None
+    assert "历史记录" in detail.toPlainText()
+    assert first.name in detail.toPlainText()
 
     widget._set_history_run_current(first_current["run_id"])
     updated_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
@@ -2315,8 +2327,10 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
     widget._render_report(report)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
     summary = widget.findChild(QTextEdit, "recognitionAssetSummary")
 
+    assert table is not None
     assert summary is not None
     text = summary.toPlainText()
     assert "文件类型：RNA-seq 综合表达结果表" in text
@@ -2335,6 +2349,39 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     assert "PFFvsPBS_log2FoldChange" not in text
     assert "gene_start" not in text
     assert "Homo sapiens" not in text
+
+    detail_button = table.cellWidget(0, 7)
+    assert detail_button is not None
+    assert isinstance(detail_button, QPushButton)
+    detail_button.click()
+
+    detail = widget.findChild(QTextEdit, "recognitionDetailReport")
+    technical = widget.findChild(QPlainTextEdit, "recognitionDetailTechnical")
+    assert detail is not None
+    assert technical is not None
+    detail_text = detail.toPlainText()
+    assert "RNA-seq 综合表达结果表" in detail_text
+    assert "Mus musculus" in detail_text
+    assert "Ensembl mouse gene ID" in detail_text
+    assert "Count 表达矩阵" in detail_text
+    assert "FPKM 表达矩阵" in detail_text
+    assert "比较数量：10" in detail_text
+    assert "Gene annotation" in detail_text
+    assert "PFFvsPBS\tPFFvsPBS_log2FoldChange\tPFFvsPBS_pvalue\tPFFvsPBS_padj\t完整" in detail_text
+    assert "ENSMUSG 前缀对应 Ensembl mouse gene ID" in detail_text
+    assert "暂无识别警告" in detail_text
+    sample_section = detail_text.split("样本列与分组推断", 1)[1].split("DEG comparison 识别", 1)[0]
+    assert "gene_start" not in sample_section
+    assert "PFFvsPBS_log2FoldChange" not in sample_section
+    assert technical.isHidden()
+    assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
+
+    export_button = widget.findChild(QPushButton, "recognitionDetailExportButton")
+    assert export_button is not None
+    export_button.click()
+    export_path = project_summary.project_root / "recognized_data" / "runs" / "current_session" / "recognition_report_user.md"
+    assert export_path.exists()
+    assert "RNA-seq 综合表达结果表" in export_path.read_text(encoding="utf-8")
 
 
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
