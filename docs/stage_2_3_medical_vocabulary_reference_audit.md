@@ -4,7 +4,7 @@
 
 | Section | Total | Covered | Partial | Missing | Coverage | Weighted |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| overall | 231 | 231 | 0 | 0 | 1.000 | 1.000 |
+| overall | 156 | 156 | 0 | 0 | 1.000 | 1.000 |
 
 ## TCGA Projects Covered/Missing
 
@@ -114,7 +114,7 @@
 | Item | Priority | Status | Evidence |
 | --- | --- | --- | --- |
 | survival outcomes | P0 | covered | matched_terms: overall survival, OS, progression-free survival, PFS, disease-free survival, DFS, recurrence-free survival, RFS, mortality, recurrence; coverage_fraction: 1.0 |
-| diagnostic outcomes | P0 | covered | matched_terms: diagnostic accuracy, sensitivity, specificity, AUC, ROC; coverage_fraction: 1.0 |
+| diagnostic outcomes | P0 | covered | matched_terms: diagnostic accuracy, sensitivity, specificity, AUC; coverage_fraction: 0.8 |
 | effect sizes | P0 | covered | matched_terms: hazard ratio, HR, odds ratio, OR, relative risk, RR, mean difference, MD, standardized mean difference, SMD, weighted mean difference, WMD, confidence interval, CI; coverage_fraction: 1.0 |
 | study designs | P0 | covered | matched_terms: randomized controlled trial, RCT, cohort study, case-control study, cross-sectional study, diagnostic accuracy study, prognostic study; coverage_fraction: 1.0 |
 | publication exclusion types | P0 | covered | matched_terms: review, meta-analysis, editorial, letter, comment, case report, conference abstract, animal study, cell experiment, duplicate publication, preprint, study protocol, non-human study, in vitro study; coverage_fraction: 1.0 |
@@ -203,96 +203,6 @@
 - missing common oncology concepts: none
 - high-risk ambiguity terms: SCC, RCC, PTC, CRC, MM
 
-## Endocrine And Metabolic Core Covered/Missing
-
-| Item | Priority | Status | Evidence |
-| --- | --- | --- | --- |
-| diabetes mellitus | P1 | covered | matched_terms: diabetes mellitus, 糖尿病, 糖尿病, diabetes, diabetes mellitus, DM, Diabetes Mellitus; matched_gtex_tissues: Pancreas, Whole Blood |
-| type 1 diabetes mellitus | P1 | covered | matched_terms: type 1 diabetes mellitus, 1型糖尿病, 一型糖尿病, 1型糖尿病, type 1 diabetes, insulin-dependent diabetes mellitus, T1D, T1DM, Diabetes Mellitus, Type 1; matched_gtex_tissues: Pancreas, Whole Blood |
-| type 2 diabetes mellitus | P1 | covered | matched_terms: type 2 diabetes mellitus, 2型糖尿病, 二型糖尿病, 2型糖尿病, type 2 diabetes, non-insulin-dependent diabetes mellitus, T2D, T2DM, Diabetes Mellitus, Type 2; matched_gtex_tissues: Pancreas, Adipose Tissue, Liver, Whole Blood |
-| prediabetes | P1 | covered | matched_terms: prediabetes, 糖尿病前期, 糖前期, 前驱糖尿病, pre-diabetes, intermediate hyperglycemia, Prediabetic State; matched_gtex_tissues: Pancreas, Liver, Whole Blood |
-| impaired fasting glucose | P1 | covered | matched_terms: impaired fasting glucose, 空腹血糖受损, 空腹葡萄糖受损, impaired fasting glycaemia, IFG, Glucose Intolerance; matched_gtex_tissues: Pancreas, Liver, Whole Blood |
-| impaired glucose tolerance | P1 | covered | matched_terms: impaired glucose tolerance, 糖耐量受损, 葡萄糖耐量受损, impaired glucose tolerance test, IGT, Glucose Intolerance; matched_gtex_tissues: Pancreas, Liver, Whole Blood |
-| insulin resistance | P1 | covered | matched_terms: insulin resistance, 胰岛素抵抗, 胰岛素敏感性降低, reduced insulin sensitivity, IR, Insulin Resistance; matched_gtex_tissues: Pancreas, Adipose Tissue, Liver, Muscle - Skeletal, Whole Blood |
-| hyperglycemia | P1 | covered | matched_terms: hyperglycemia, 高血糖, 血糖升高, high blood glucose, high blood sugar, Hyperglycemia; matched_gtex_tissues: Pancreas, Liver, Whole Blood |
-| hypoglycemia | P1 | covered | matched_terms: hypoglycemia, 低血糖, 血糖过低, low blood glucose, low blood sugar, Hypoglycemia; matched_gtex_tissues: Pancreas, Liver, Whole Blood |
-| gestational diabetes mellitus | P1 | covered | matched_terms: gestational diabetes mellitus, 妊娠期糖尿病, 妊娠糖尿病, gestational diabetes, GDM, Diabetes, Gestational; matched_gtex_tissues: Pancreas, Whole Blood |
-| obesity | P1 | covered | matched_terms: obesity, 肥胖, 肥胖症, obese, adiposity, Obesity; matched_gtex_tissues: Adipose Tissue |
-| overweight | P1 | covered | matched_terms: overweight, 超重, 体重超重, increased body weight, Overweight; matched_gtex_tissues: Adipose Tissue |
-| central obesity | P1 | covered | matched_terms: central obesity, 中心性肥胖, 中央型肥胖, central adiposity, Obesity, Abdominal; matched_gtex_tissues: Adipose Tissue |
-| abdominal obesity | P1 | covered | matched_terms: abdominal obesity, 腹型肥胖, 腹部肥胖, visceral obesity, abdominal adiposity, Obesity, Abdominal; matched_gtex_tissues: Adipose Tissue |
-| morbid obesity | P1 | covered | matched_terms: morbid obesity, 病态肥胖, 重度肥胖, severe obesity, Obesity, Morbid; matched_gtex_tissues: Adipose Tissue |
-| body mass index | P1 | covered | matched_terms: body mass index, 体重指数, 身体质量指数, BMI, body-mass index, BMI, Body Mass Index |
-| dyslipidemia | P1 | covered | matched_terms: dyslipidemia, 血脂异常, 脂质异常, dyslipidaemia, Dyslipidemias; matched_gtex_tissues: Liver, Adipose Tissue, Whole Blood |
-| hyperlipidemia | P1 | covered | matched_terms: hyperlipidemia, 高脂血症, 血脂升高, hyperlipidaemia, Hyperlipidemias; matched_gtex_tissues: Liver, Whole Blood |
-| hypercholesterolemia | P1 | covered | matched_terms: hypercholesterolemia, 高胆固醇血症, 胆固醇升高, high cholesterol, Hypercholesterolemia; matched_gtex_tissues: Liver, Whole Blood |
-| hypertriglyceridemia | P1 | covered | matched_terms: hypertriglyceridemia, 高甘油三酯血症, 甘油三酯升高, high triglycerides, HTG, Hypertriglyceridemia; matched_gtex_tissues: Liver, Adipose Tissue, Whole Blood |
-| low HDL cholesterol | P1 | covered | matched_terms: low HDL cholesterol, 低高密度脂蛋白胆固醇, 低HDL胆固醇, low HDL-C, decreased HDL cholesterol, HDL, HDL-C, Cholesterol, HDL; matched_gtex_tissues: Liver, Whole Blood |
-| high LDL cholesterol | P1 | covered | matched_terms: high LDL cholesterol, 高低密度脂蛋白胆固醇, 高LDL胆固醇, high LDL-C, elevated LDL cholesterol, LDL, LDL-C, Cholesterol, LDL; matched_gtex_tissues: Liver, Whole Blood |
-| metabolic syndrome | P1 | covered | matched_terms: metabolic syndrome, 代谢综合征, 代谢症候群, metabolic syndrome X, MetS, Metabolic Syndrome; matched_gtex_tissues: Adipose Tissue, Liver, Pancreas, Whole Blood |
-| nonalcoholic fatty liver disease | P1 | covered | matched_terms: nonalcoholic fatty liver disease, 非酒精性脂肪性肝病, 非酒精性脂肪肝, 脂肪肝, non-alcoholic fatty liver disease, fatty liver disease, hepatic steatosis, NAFLD, Non-alcoholic Fatty Liver Disease, Fatty Liver; matched_gtex_tissues: Liver |
-| metabolic dysfunction-associated steatotic liver disease | P1 | covered | matched_terms: metabolic dysfunction-associated steatotic liver disease, 代谢功能障碍相关脂肪性肝病, 代谢相关脂肪性肝病, metabolic dysfunction associated steatotic liver disease, MASLD, Fatty Liver; matched_gtex_tissues: Liver |
-| nonalcoholic steatohepatitis | P1 | covered | matched_terms: nonalcoholic steatohepatitis, 非酒精性脂肪性肝炎, 非酒精性脂肪肝炎, non-alcoholic steatohepatitis, NASH, Non-alcoholic Fatty Liver Disease; matched_gtex_tissues: Liver |
-| hypothyroidism | P1 | covered | matched_terms: hypothyroidism, 甲状腺功能减退症, 甲减, 甲状腺功能低下, underactive thyroid, Hypothyroidism; matched_gtex_tissues: Thyroid |
-| hyperthyroidism | P1 | covered | matched_terms: hyperthyroidism, 甲状腺功能亢进症, 甲亢, overactive thyroid, thyrotoxicosis, Hyperthyroidism; matched_gtex_tissues: Thyroid |
-| Hashimoto thyroiditis | P1 | covered | matched_terms: Hashimoto thyroiditis, 桥本甲状腺炎, 桥本病, 慢性淋巴细胞性甲状腺炎, Hashimoto disease, chronic lymphocytic thyroiditis, Hashimoto Disease; matched_gtex_tissues: Thyroid |
-| Graves disease | P1 | covered | matched_terms: Graves disease, Graves病, 格雷夫斯病, 毒性弥漫性甲状腺肿, Basedow disease, Graves-Basedow disease, Graves Disease; matched_gtex_tissues: Thyroid |
-| autoimmune thyroiditis | P1 | covered | matched_terms: autoimmune thyroiditis, 自身免疫性甲状腺炎, 自身免疫甲状腺炎, autoimmune thyroid disease, AITD, Thyroiditis, Autoimmune; matched_gtex_tissues: Thyroid |
-| thyroid nodule | P1 | covered | matched_terms: thyroid nodule, 甲状腺结节, 甲状腺结节病变, thyroid nodules, Thyroid Nodule; matched_gtex_tissues: Thyroid |
-| goiter | P1 | covered | matched_terms: goiter, 甲状腺肿, 甲状腺肿大, goitre, Goiter; matched_gtex_tissues: Thyroid |
-| thyroid hormone disorder | P1 | covered | matched_terms: thyroid hormone disorder, 甲状腺激素紊乱, 甲状腺激素异常, thyroid hormone abnormality, Thyroid Hormones; matched_gtex_tissues: Thyroid |
-| hyperparathyroidism | P1 | covered | matched_terms: hyperparathyroidism, 甲状旁腺功能亢进症, 甲旁亢, overactive parathyroid, Hyperparathyroidism; matched_gtex_tissues: Thyroid |
-| hypoparathyroidism | P1 | covered | matched_terms: hypoparathyroidism, 甲状旁腺功能减退症, 甲旁减, underactive parathyroid, Hypoparathyroidism; matched_gtex_tissues: Thyroid |
-| hypercalcemia | P1 | covered | matched_terms: hypercalcemia, 高钙血症, 血钙升高, high serum calcium, Hypercalcemia; matched_gtex_tissues: Whole Blood |
-| hypocalcemia | P1 | covered | matched_terms: hypocalcemia, 低钙血症, 血钙降低, low serum calcium, Hypocalcemia; matched_gtex_tissues: Whole Blood |
-| vitamin D deficiency | P1 | covered | matched_terms: vitamin D deficiency, 维生素D缺乏, 维D缺乏, 25-hydroxyvitamin D deficiency, 25(OH)D, Vitamin D Deficiency; matched_gtex_tissues: Whole Blood, Liver, Kidney |
-| osteoporosis | P1 | covered | matched_terms: osteoporosis, 骨质疏松症, 骨质疏松, low bone mineral density, OP, Osteoporosis |
-| pituitary adenoma | P1 | covered | matched_terms: pituitary adenoma, 垂体腺瘤, 脑垂体腺瘤, pituitary tumor, Pituitary Neoplasms; matched_gtex_tissues: Pituitary |
-| hyperprolactinemia | P1 | covered | matched_terms: hyperprolactinemia, 高泌乳素血症, 泌乳素升高, high prolactin, HPRL, Hyperprolactinemia; matched_gtex_tissues: Pituitary, Whole Blood |
-| acromegaly | P1 | covered | matched_terms: acromegaly, 肢端肥大症, 肢端肥大, growth hormone excess, GH excess, Acromegaly; matched_gtex_tissues: Pituitary |
-| Cushing disease | P1 | covered | matched_terms: Cushing disease, 库欣病, 垂体性库欣病, pituitary-dependent Cushing disease, Cushing Syndrome; matched_gtex_tissues: Pituitary, Adrenal Gland |
-| hypopituitarism | P1 | covered | matched_terms: hypopituitarism, 垂体功能减退症, 垂体功能低下, pituitary insufficiency, Hypopituitarism; matched_gtex_tissues: Pituitary |
-| Cushing syndrome | P1 | covered | matched_terms: Cushing syndrome, 库欣综合征, 皮质醇增多症, hypercortisolism, Cushing Syndrome; matched_gtex_tissues: Adrenal Gland, Pituitary |
-| adrenal insufficiency | P1 | covered | matched_terms: adrenal insufficiency, 肾上腺功能不全, 肾上腺皮质功能不全, adrenal failure, Adrenal Insufficiency; matched_gtex_tissues: Adrenal Gland |
-| Addison disease | P1 | covered | matched_terms: Addison disease, 阿狄森病, 艾迪生病, 原发性肾上腺皮质功能减退, Addison's disease, primary adrenal insufficiency, Addison Disease; matched_gtex_tissues: Adrenal Gland |
-| primary aldosteronism | P1 | covered | matched_terms: primary aldosteronism, 原发性醛固酮增多症, 原醛症, Conn syndrome, primary hyperaldosteronism, PA, Hyperaldosteronism; matched_gtex_tissues: Adrenal Gland, Kidney |
-| pheochromocytoma | P1 | covered | matched_terms: pheochromocytoma, 嗜铬细胞瘤, 肾上腺嗜铬细胞瘤, phaeochromocytoma, PCC, Pheochromocytoma; matched_gtex_tissues: Adrenal Gland |
-| adrenal adenoma | P1 | covered | matched_terms: adrenal adenoma, 肾上腺腺瘤, 肾上腺良性腺瘤, adrenocortical adenoma, Adrenocortical Adenoma; matched_gtex_tissues: Adrenal Gland |
-| polycystic ovary syndrome | P1 | covered | matched_terms: polycystic ovary syndrome, 多囊卵巢综合征, 多囊卵巢综合症, polycystic ovarian syndrome, PCOS, Polycystic Ovary Syndrome; matched_gtex_tissues: Ovary, Adipose Tissue |
-| hypogonadism | P1 | covered | matched_terms: hypogonadism, 性腺功能减退症, 性腺功能低下, gonadal insufficiency, Hypogonadism; matched_gtex_tissues: Ovary, Testis |
-| premature ovarian insufficiency | P1 | covered | matched_terms: premature ovarian insufficiency, 卵巢早衰, 早发性卵巢功能不全, primary ovarian insufficiency, premature ovarian failure, POI, POF, Primary Ovarian Insufficiency; matched_gtex_tissues: Ovary |
-| menopause | P1 | covered | matched_terms: menopause, 绝经, 围绝经期, menopausal status, Menopause; matched_gtex_tissues: Ovary |
-| adiponectin | P2 | covered | matched_terms: adiponectin, 脂联素, 脂肪连接素, ADIPOQ protein, ADIPOQ, Adiponectin; matched_gtex_tissues: Adipose Tissue, Whole Blood |
-| leptin | P2 | covered | matched_terms: leptin, 瘦素, 瘦蛋白, LEP protein, LEP, Leptin; matched_gtex_tissues: Adipose Tissue, Whole Blood |
-| insulin | P2 | covered | matched_terms: insulin, 胰岛素, 胰岛素水平, INS hormone, INS, Insulin; matched_gtex_tissues: Pancreas, Whole Blood |
-| C-peptide | P2 | covered | matched_terms: C-peptide, C肽, 连接肽, connecting peptide, CPEP, C-Peptide; matched_gtex_tissues: Pancreas, Whole Blood |
-| glucagon | P2 | covered | matched_terms: glucagon, 胰高血糖素, 高血糖素, GCG hormone, GCG, Glucagon; matched_gtex_tissues: Pancreas, Whole Blood |
-| hemoglobin A1c | P2 | covered | matched_terms: hemoglobin A1c, 糖化血红蛋白, 糖化血红蛋白A1c, glycated hemoglobin, HbA1c, HbA1c, A1c, Glycated Hemoglobin A; matched_gtex_tissues: Whole Blood |
-| fasting glucose | P2 | covered | matched_terms: fasting glucose, 空腹血糖, 空腹葡萄糖, fasting plasma glucose, fasting blood glucose, FPG, FBG, Blood Glucose; matched_gtex_tissues: Whole Blood, Pancreas, Liver |
-| thyroid-stimulating hormone | P2 | covered | matched_terms: thyroid-stimulating hormone, 促甲状腺激素, 促甲状腺素, thyrotropin, TSH, Thyrotropin; matched_gtex_tissues: Pituitary, Thyroid, Whole Blood |
-| triiodothyronine | P2 | covered | matched_terms: triiodothyronine, 三碘甲状腺原氨酸, 总T3, total T3, thyroid hormone T3, T3, Triiodothyronine; matched_gtex_tissues: Thyroid, Whole Blood |
-| thyroxine | P2 | covered | matched_terms: thyroxine, 甲状腺素, 总T4, total T4, thyroid hormone T4, T4, Thyroxine; matched_gtex_tissues: Thyroid, Whole Blood |
-| free triiodothyronine | P2 | covered | matched_terms: free triiodothyronine, 游离三碘甲状腺原氨酸, 游离T3, free T3, FT3, free T3, Triiodothyronine; matched_gtex_tissues: Thyroid, Whole Blood |
-| free thyroxine | P2 | covered | matched_terms: free thyroxine, 游离甲状腺素, 游离T4, free T4, FT4, free T4, Thyroxine; matched_gtex_tissues: Thyroid, Whole Blood |
-| thyroglobulin | P2 | covered | matched_terms: thyroglobulin, 甲状腺球蛋白, 甲球蛋白, Tg protein, Tg, Thyroglobulin; matched_gtex_tissues: Thyroid, Whole Blood |
-| thyroid peroxidase antibody | P2 | covered | matched_terms: thyroid peroxidase antibody, 甲状腺过氧化物酶抗体, 抗甲状腺过氧化物酶抗体, anti-thyroid peroxidase antibody, anti-TPO antibody, TPOAb, TPO-Ab, Thyroid Peroxidase Antibodies; matched_gtex_tissues: Thyroid, Whole Blood |
-| thyroglobulin antibody | P2 | covered | matched_terms: thyroglobulin antibody, 甲状腺球蛋白抗体, 抗甲状腺球蛋白抗体, anti-thyroglobulin antibody, TgAb, Tg-Ab, Thyroglobulin Antibodies; matched_gtex_tissues: Thyroid, Whole Blood |
-| cortisol | P2 | covered | matched_terms: cortisol, 皮质醇, 氢化可的松, hydrocortisone, Hydrocortisone; matched_gtex_tissues: Adrenal Gland, Whole Blood |
-| aldosterone | P2 | covered | matched_terms: aldosterone, 醛固酮, 醛甾酮, mineralocorticoid aldosterone, Aldosterone; matched_gtex_tissues: Adrenal Gland, Kidney, Whole Blood |
-| renin | P2 | covered | matched_terms: renin, 肾素, 血浆肾素, plasma renin, PRA, Renin; matched_gtex_tissues: Kidney, Whole Blood |
-| parathyroid hormone | P2 | covered | matched_terms: parathyroid hormone, 甲状旁腺激素, 甲旁素, parathormone, PTH, Parathyroid Hormone; matched_gtex_tissues: Whole Blood, Kidney |
-| vitamin D | P2 | covered | matched_terms: vitamin D, 维生素D, 25羟维生素D, 25-hydroxyvitamin D, 25(OH)D, VitD, 25(OH)D, Vitamin D; matched_gtex_tissues: Whole Blood, Liver, Kidney |
-
-## Endocrine And Metabolic Core Summary
-
-- endocrine/metabolic checklist total count: 75
-- covered count: 75
-- missing count: 0
-- coverage percentage: 1.000
-- missing terms: 0
-- missing term details: none
-- high-risk ambiguity terms: T1D, T2D, PCOS, TSH, T3, T4, PTH, BMI, HDL, LDL, NAFLD, NASH, MASLD
-
 ## P0 Gaps
 
 No P0 gaps detected.
@@ -315,8 +225,6 @@ No P2 gaps detected.
 | meta_retrieval_terms | 1.0 | 0.9 | pass |
 | oncology_core_coverage | 1.0 | 0.95 | pass |
 | oncology_core_missing_tcga_projects | 0 | 0 | pass |
-| endocrine_metabolic_core_coverage | 1.0 | 0.95 | pass |
-| endocrine_metabolic_missing_terms | 0 | 0 | pass |
 | missing_items | 0 | 0 | pass |
 | p0_gaps | 0 | 0 | pass |
 | audit_cross_context_pollution | 0 | 0 | pass |
@@ -326,7 +234,6 @@ No P2 gaps detected.
 
 - common_cancers: GLOBOCAN / Global Cancer Observatory common cancer sites plus TCGA common projects (Curated common cancer checklist, 2026-05)
 - common_diseases: WHO noncommunicable diseases and major disease categories (Curated major disease category checklist, 2026-05)
-- endocrine_metabolic_core: project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist (2026-05-11 curated v1)
 - gtex_tissues: GTEx Portal tissue groups (GTEx tissue group checklist, curated access 2026-05)
 - meta_terms: Cochrane-style Meta-analysis retrieval strategy term categories (Curated Meta retrieval checklist, 2026-05)
 - oncology_core: BioMedPilot curated oncology core based on TCGA/GDC project labels, common translational oncology concepts, and MeSH heading names (oncology_core_v1_2026-05-11)

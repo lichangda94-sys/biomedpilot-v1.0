@@ -143,7 +143,7 @@
     "note": "No full ontology index enabled; mini vocabulary JSON remains the primary runtime path."
   },
   "stage_v6_optional_sqlite_index": {
-    "processed_at": "2026-05-11T09:38:46.286443+00:00",
+    "processed_at": "2026-05-11T09:08:14.242137+00:00",
     "schema_version": "biomedpilot.medical_terms.sqlite.v6",
     "generated_files": [
       "data/medical_terms/medical_terms_index.sqlite",
@@ -151,9 +151,9 @@
     ],
     "fallback_mode": "mini_vocabulary_only",
     "index_kind": "mini-derived sqlite index",
-    "terms_count": 207,
-    "synonyms_count": 2998,
-    "crossrefs_count": 334,
+    "terms_count": 143,
+    "synonyms_count": 2298,
+    "crossrefs_count": 213,
     "note": "Optional sqlite enhancement only; mini_medical_terms_index.json and zh_term_overrides.json remain stable fallback inputs."
   }
 }

@@ -1253,20 +1253,18 @@
   {
     "zh_term": "糖尿病",
     "zh_terms": [
-      "糖尿病",
       "糖尿病"
     ],
-    "preferred_label_en": "diabetes mellitus",
+    "preferred_label_en": "Diabetes Mellitus",
     "mapped_concept_ids": [
       "mini:diabetes_mellitus"
     ],
     "disease_terms_en": [
-      "diabetes mellitus",
+      "Diabetes Mellitus",
       "diabetes",
-      "diabetes mellitus"
+      "diabetic"
     ],
     "synonyms_en": [
-      "diabetes",
       "diabetes mellitus"
     ],
     "abbreviations": [
@@ -1276,40 +1274,37 @@
       "Diabetes Mellitus"
     ],
     "tissue_terms": [
-      "pancreatic islet",
+      "pancreas",
       "blood"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Pancreas",
-      "Whole Blood"
+      "Pancreas"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_1_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override"
   },
   {
     "zh_term": "2型糖尿病",
     "zh_terms": [
       "2型糖尿病",
       "二型糖尿病",
-      "2型糖尿病"
+      "II型糖尿病"
     ],
-    "preferred_label_en": "type 2 diabetes mellitus",
+    "preferred_label_en": "Type 2 Diabetes Mellitus",
     "mapped_concept_ids": [
       "mini:type_2_diabetes_mellitus"
     ],
     "disease_terms_en": [
-      "type 2 diabetes mellitus",
+      "Type 2 Diabetes Mellitus",
       "type 2 diabetes",
-      "non-insulin-dependent diabetes mellitus"
+      "diabetic"
     ],
     "synonyms_en": [
-      "type 2 diabetes",
+      "T2D",
+      "T2DM",
       "non-insulin-dependent diabetes mellitus"
     ],
     "abbreviations": [
@@ -1317,65 +1312,65 @@
       "T2DM"
     ],
     "mesh_terms": [
-      "Diabetes Mellitus, Type 2"
+      "Diabetes Mellitus, Type 2",
+      "Diabetes Mellitus"
     ],
     "tissue_terms": [
-      "pancreatic islet",
-      "adipose tissue",
+      "pancreas",
       "blood"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Pancreas",
-      "Adipose Tissue",
-      "Liver",
-      "Whole Blood"
+      "Pancreas"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_1_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override"
   },
   {
     "zh_term": "肥胖",
     "zh_terms": [
       "肥胖",
-      "肥胖症"
+      "超重",
+      "体重指数"
     ],
-    "preferred_label_en": "obesity",
+    "preferred_label_en": "Obesity",
     "mapped_concept_ids": [
       "mini:obesity"
     ],
     "disease_terms_en": [
-      "obesity",
+      "Obesity",
       "obese",
-      "adiposity"
+      "overweight"
     ],
     "synonyms_en": [
-      "obese",
-      "adiposity"
+      "BMI",
+      "body mass index"
     ],
-    "abbreviations": [],
+    "abbreviations": [
+      "BMI"
+    ],
     "mesh_terms": [
-      "Obesity"
+      "Obesity",
+      "Body Mass Index"
     ],
     "tissue_terms": [
       "adipose tissue"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Adipose Tissue"
+      "Adipose"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_1_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "exposure_terms": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": []
+    "source": "zh_override",
+    "exposure_terms": [
+      "obesity",
+      "BMI",
+      "body mass index"
+    ]
   },
   {
     "zh_term": "高血压",
@@ -2243,7 +2238,7 @@
     "zh_term": "垂体腺瘤",
     "zh_terms": [
       "垂体腺瘤",
-      "脑垂体腺瘤"
+      "垂体瘤"
     ],
     "preferred_label_en": "pituitary adenoma",
     "mapped_concept_ids": [
@@ -2251,29 +2246,38 @@
     ],
     "disease_terms_en": [
       "pituitary adenoma",
-      "pituitary tumor"
+      "pituitary neuroendocrine tumor",
+      "pituitary neoplasm"
     ],
     "synonyms_en": [
-      "pituitary tumor"
+      "pituitary neuroendocrine tumor",
+      "pituitary neoplasm"
     ],
-    "abbreviations": [],
+    "abbreviations": [
+      "PitNET"
+    ],
     "mesh_terms": [
-      "Pituitary Neoplasms"
+      "Pituitary Neoplasms",
+      "Adenoma"
     ],
     "tissue_terms": [
-      "pituitary tissue"
+      "pituitary",
+      "brain"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Pituitary"
+      "Brain"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override",
+    "data_modality_terms": [
+      "expression profiling",
+      "transcriptome",
+      "RNA-seq",
+      "microarray"
+    ]
   },
   {
     "zh_term": "鼻咽癌",
@@ -3050,58 +3054,62 @@
     "zh_terms": [
       "1型糖尿病",
       "一型糖尿病",
-      "1型糖尿病"
+      "I型糖尿病"
     ],
-    "preferred_label_en": "type 1 diabetes mellitus",
+    "preferred_label_en": "Type 1 Diabetes Mellitus",
     "mapped_concept_ids": [
       "mini:type_1_diabetes_mellitus"
     ],
     "disease_terms_en": [
-      "type 1 diabetes mellitus",
+      "Type 1 Diabetes Mellitus",
       "type 1 diabetes",
-      "insulin-dependent diabetes mellitus"
+      "insulin-dependent diabetes mellitus",
+      "autoimmune diabetes"
     ],
     "synonyms_en": [
       "type 1 diabetes",
-      "insulin-dependent diabetes mellitus"
+      "insulin-dependent diabetes mellitus",
+      "autoimmune diabetes"
     ],
     "abbreviations": [
       "T1D",
       "T1DM"
     ],
     "mesh_terms": [
-      "Diabetes Mellitus, Type 1"
+      "Diabetes Mellitus, Type 1",
+      "Diabetes Mellitus"
     ],
     "tissue_terms": [
-      "pancreatic islet",
+      "pancreas",
       "blood"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Pancreas",
-      "Whole Blood"
+      "Pancreas"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "胰岛素抵抗",
     "zh_terms": [
-      "胰岛素抵抗",
-      "胰岛素敏感性降低"
+      "胰岛素抵抗"
     ],
     "preferred_label_en": "insulin resistance",
     "mapped_concept_ids": [
       "mini:insulin_resistance"
     ],
-    "disease_terms_en": [],
+    "disease_terms_en": [
+      "insulin resistance",
+      "insulin sensitivity",
+      "impaired insulin action"
+    ],
     "synonyms_en": [
-      "reduced insulin sensitivity"
+      "insulin sensitivity",
+      "impaired insulin action"
     ],
     "abbreviations": [
       "IR"
@@ -3111,32 +3119,25 @@
     ],
     "tissue_terms": [
       "adipose tissue",
-      "blood"
+      "muscle",
+      "liver"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Pancreas",
       "Adipose Tissue",
-      "Liver",
-      "Muscle - Skeletal",
-      "Whole Blood"
+      "Muscle",
+      "Liver"
     ],
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": [
-      "insulin resistance",
-      "reduced insulin sensitivity"
-    ]
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "代谢综合征",
     "zh_terms": [
-      "代谢综合征",
-      "代谢症候群"
+      "代谢综合征"
     ],
     "preferred_label_en": "metabolic syndrome",
     "mapped_concept_ids": [
@@ -3144,10 +3145,12 @@
     ],
     "disease_terms_en": [
       "metabolic syndrome",
-      "metabolic syndrome X"
+      "metabolic syndrome X",
+      "insulin resistance syndrome"
     ],
     "synonyms_en": [
-      "metabolic syndrome X"
+      "metabolic syndrome X",
+      "insulin resistance syndrome"
     ],
     "abbreviations": [
       "MetS"
@@ -3156,42 +3159,46 @@
       "Metabolic Syndrome"
     ],
     "tissue_terms": [
-      "blood",
       "adipose tissue",
-      "liver"
+      "liver",
+      "blood"
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
       "Adipose Tissue",
       "Liver",
-      "Pancreas",
       "Whole Blood"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "超重",
     "zh_terms": [
-      "超重",
-      "体重超重"
+      "超重"
     ],
     "preferred_label_en": "overweight",
     "mapped_concept_ids": [
       "mini:overweight"
     ],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "increased body weight"
+    "disease_terms_en": [
+      "overweight",
+      "high body mass index",
+      "increased BMI"
     ],
-    "abbreviations": [],
+    "synonyms_en": [
+      "high body mass index",
+      "increased BMI"
+    ],
+    "abbreviations": [
+      "BMI"
+    ],
     "mesh_terms": [
-      "Overweight"
+      "Overweight",
+      "Body Mass Index"
     ],
     "tissue_terms": [
       "adipose tissue"
@@ -3200,22 +3207,17 @@
     "gtex_tissue_candidates": [
       "Adipose Tissue"
     ],
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "concept_type": "disease",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": [
-      "overweight",
-      "increased body weight"
-    ]
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "高脂血症",
     "zh_terms": [
       "高脂血症",
-      "血脂升高"
+      "血脂异常"
     ],
     "preferred_label_en": "hyperlipidemia",
     "mapped_concept_ids": [
@@ -3223,12 +3225,16 @@
     ],
     "disease_terms_en": [
       "hyperlipidemia",
+      "dyslipidemia",
       "hyperlipidaemia"
     ],
     "synonyms_en": [
+      "dyslipidemia",
       "hyperlipidaemia"
     ],
-    "abbreviations": [],
+    "abbreviations": [
+      "HLD"
+    ],
     "mesh_terms": [
       "Hyperlipidemias"
     ],
@@ -3238,22 +3244,19 @@
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Liver",
-      "Whole Blood"
+      "Whole Blood",
+      "Liver"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "高胆固醇血症",
     "zh_terms": [
-      "高胆固醇血症",
-      "胆固醇升高"
+      "高胆固醇血症"
     ],
     "preferred_label_en": "hypercholesterolemia",
     "mapped_concept_ids": [
@@ -3261,10 +3264,12 @@
     ],
     "disease_terms_en": [
       "hypercholesterolemia",
-      "high cholesterol"
+      "high cholesterol",
+      "hypercholesterolaemia"
     ],
     "synonyms_en": [
-      "high cholesterol"
+      "high cholesterol",
+      "hypercholesterolaemia"
     ],
     "abbreviations": [],
     "mesh_terms": [
@@ -3276,16 +3281,14 @@
     ],
     "tcga_project_candidates": [],
     "gtex_tissue_candidates": [
-      "Liver",
-      "Whole Blood"
+      "Whole Blood",
+      "Liver"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "心力衰竭",
@@ -3816,31 +3819,30 @@
   {
     "zh_term": "非酒精性脂肪性肝病",
     "zh_terms": [
-      "非酒精性脂肪性肝病",
-      "非酒精性脂肪肝",
-      "脂肪肝"
+      "脂肪肝",
+      "脂肪性肝病",
+      "非酒精性脂肪性肝病"
     ],
-    "preferred_label_en": "nonalcoholic fatty liver disease",
+    "preferred_label_en": "Fatty Liver Disease",
     "mapped_concept_ids": [
       "mini:fatty_liver_disease"
     ],
     "disease_terms_en": [
-      "nonalcoholic fatty liver disease",
-      "non-alcoholic fatty liver disease",
-      "fatty liver disease",
-      "hepatic steatosis"
+      "Fatty Liver Disease",
+      "fatty liver",
+      "hepatic steatosis",
+      "nonalcoholic fatty liver disease"
     ],
     "synonyms_en": [
-      "non-alcoholic fatty liver disease",
-      "fatty liver disease",
-      "hepatic steatosis"
+      "metabolic dysfunction-associated steatotic liver disease"
     ],
     "abbreviations": [
-      "NAFLD"
+      "NAFLD",
+      "MASLD"
     ],
     "mesh_terms": [
-      "Non-alcoholic Fatty Liver Disease",
-      "Fatty Liver"
+      "Fatty Liver",
+      "Non-alcoholic Fatty Liver Disease"
     ],
     "tissue_terms": [
       "liver"
@@ -3850,12 +3852,10 @@
       "Liver"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
+    "term_source": "stage2_2_systematic_curated_zh_override",
     "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    "source": "zh_override",
+    "data_modality_terms": []
   },
   {
     "zh_term": "脂肪性肝病",
@@ -5132,41 +5132,41 @@
   },
   {
     "zh_term": "嗜铬细胞瘤",
-    "preferred_label_en": "pheochromocytoma",
+    "preferred_label_en": "pheochromocytoma and paraganglioma",
     "mapped_concept_ids": [
-      "mini:pheochromocytoma"
+      "mini:pheochromocytoma_paraganglioma"
     ],
     "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
+    "term_source": "stage2_4_gap_driven_reference_expansion",
+    "confidence": 0.9,
+    "source": "zh_override",
     "disease_terms_en": [
+      "pheochromocytoma and paraganglioma",
       "pheochromocytoma",
-      "phaeochromocytoma"
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
     ],
     "synonyms_en": [
-      "phaeochromocytoma"
+      "pheochromocytoma",
+      "paraganglioma",
+      "pheochromocytoma/paraganglioma"
     ],
     "abbreviations": [
-      "PCC"
+      "PCPG"
     ],
     "mesh_terms": [
-      "Pheochromocytoma"
+      "Pheochromocytoma",
+      "Paraganglioma"
     ],
     "tissue_terms": [
-      "adrenal tissue"
+      "adrenal gland"
     ],
-    "tcga_project_candidates": [],
+    "tcga_project_candidates": [
+      "TCGA-PCPG"
+    ],
     "gtex_tissue_candidates": [
       "Adrenal Gland"
-    ],
-    "zh_terms": [
-      "嗜铬细胞瘤",
-      "肾上腺嗜铬细胞瘤"
-    ],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "exposure_terms": []
+    ]
   },
   {
     "zh_term": "副神经节瘤",
@@ -8042,2456 +8042,6 @@
       "TCGA/GDC project labels where applicable",
       "MeSH heading names where applicable",
       "project-local oncology core curation"
-    ]
-  },
-  {
-    "zh_term": "糖尿病前期",
-    "preferred_label_en": "prediabetes",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:prediabetes"
-    ],
-    "zh_terms": [
-      "糖尿病前期",
-      "糖前期",
-      "前驱糖尿病"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Prediabetic State"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "pre-diabetes",
-      "intermediate hyperglycemia"
-    ],
-    "exposure_terms": [
-      "prediabetes",
-      "pre-diabetes",
-      "intermediate hyperglycemia"
-    ]
-  },
-  {
-    "zh_term": "空腹血糖受损",
-    "preferred_label_en": "impaired fasting glucose",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:impaired_fasting_glucose"
-    ],
-    "zh_terms": [
-      "空腹血糖受损",
-      "空腹葡萄糖受损"
-    ],
-    "abbreviations": [
-      "IFG"
-    ],
-    "mesh_terms": [
-      "Glucose Intolerance"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "impaired fasting glycaemia"
-    ],
-    "exposure_terms": [
-      "impaired fasting glucose",
-      "impaired fasting glycaemia"
-    ]
-  },
-  {
-    "zh_term": "糖耐量受损",
-    "preferred_label_en": "impaired glucose tolerance",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:impaired_glucose_tolerance"
-    ],
-    "zh_terms": [
-      "糖耐量受损",
-      "葡萄糖耐量受损"
-    ],
-    "abbreviations": [
-      "IGT"
-    ],
-    "mesh_terms": [
-      "Glucose Intolerance"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "impaired glucose tolerance test"
-    ],
-    "exposure_terms": [
-      "impaired glucose tolerance",
-      "impaired glucose tolerance test"
-    ]
-  },
-  {
-    "zh_term": "高血糖",
-    "preferred_label_en": "hyperglycemia",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hyperglycemia"
-    ],
-    "zh_terms": [
-      "高血糖",
-      "血糖升高"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hyperglycemia"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "high blood glucose",
-      "high blood sugar"
-    ],
-    "exposure_terms": [
-      "hyperglycemia",
-      "high blood glucose",
-      "high blood sugar"
-    ]
-  },
-  {
-    "zh_term": "低血糖",
-    "preferred_label_en": "hypoglycemia",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypoglycemia"
-    ],
-    "zh_terms": [
-      "低血糖",
-      "血糖过低"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypoglycemia"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "low blood glucose",
-      "low blood sugar"
-    ],
-    "exposure_terms": [
-      "hypoglycemia",
-      "low blood glucose",
-      "low blood sugar"
-    ]
-  },
-  {
-    "zh_term": "妊娠期糖尿病",
-    "preferred_label_en": "gestational diabetes mellitus",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:gestational_diabetes_mellitus"
-    ],
-    "zh_terms": [
-      "妊娠期糖尿病",
-      "妊娠糖尿病"
-    ],
-    "abbreviations": [
-      "GDM"
-    ],
-    "mesh_terms": [
-      "Diabetes, Gestational"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "gestational diabetes mellitus",
-      "gestational diabetes"
-    ],
-    "synonyms_en": [
-      "gestational diabetes"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "中心性肥胖",
-    "preferred_label_en": "central obesity",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:central_obesity"
-    ],
-    "zh_terms": [
-      "中心性肥胖",
-      "中央型肥胖"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Obesity, Abdominal"
-    ],
-    "tissue_terms": [
-      "visceral adipose tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose Tissue"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "central adiposity"
-    ],
-    "exposure_terms": [
-      "central obesity",
-      "central adiposity"
-    ]
-  },
-  {
-    "zh_term": "腹型肥胖",
-    "preferred_label_en": "abdominal obesity",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:abdominal_obesity"
-    ],
-    "zh_terms": [
-      "腹型肥胖",
-      "腹部肥胖"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Obesity, Abdominal"
-    ],
-    "tissue_terms": [
-      "visceral adipose tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose Tissue"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "visceral obesity",
-      "abdominal adiposity"
-    ],
-    "exposure_terms": [
-      "abdominal obesity",
-      "visceral obesity",
-      "abdominal adiposity"
-    ]
-  },
-  {
-    "zh_term": "病态肥胖",
-    "preferred_label_en": "morbid obesity",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:morbid_obesity"
-    ],
-    "zh_terms": [
-      "病态肥胖",
-      "重度肥胖"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Obesity, Morbid"
-    ],
-    "tissue_terms": [
-      "adipose tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose Tissue"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "morbid obesity",
-      "severe obesity"
-    ],
-    "synonyms_en": [
-      "severe obesity"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "体重指数",
-    "preferred_label_en": "body mass index",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:body_mass_index"
-    ],
-    "zh_terms": [
-      "体重指数",
-      "身体质量指数"
-    ],
-    "abbreviations": [
-      "BMI"
-    ],
-    "mesh_terms": [
-      "Body Mass Index"
-    ],
-    "tissue_terms": [
-      "anthropometric measure"
-    ],
-    "gtex_tissue_candidates": [],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "BMI",
-      "body-mass index"
-    ],
-    "exposure_terms": [
-      "body mass index",
-      "BMI",
-      "body-mass index"
-    ]
-  },
-  {
-    "zh_term": "血脂异常",
-    "preferred_label_en": "dyslipidemia",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:dyslipidemia"
-    ],
-    "zh_terms": [
-      "血脂异常",
-      "脂质异常"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Dyslipidemias"
-    ],
-    "tissue_terms": [
-      "blood",
-      "liver"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver",
-      "Adipose Tissue",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "dyslipidemia",
-      "dyslipidaemia"
-    ],
-    "synonyms_en": [
-      "dyslipidaemia"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "高甘油三酯血症",
-    "preferred_label_en": "hypertriglyceridemia",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypertriglyceridemia"
-    ],
-    "zh_terms": [
-      "高甘油三酯血症",
-      "甘油三酯升高"
-    ],
-    "abbreviations": [
-      "HTG"
-    ],
-    "mesh_terms": [
-      "Hypertriglyceridemia"
-    ],
-    "tissue_terms": [
-      "blood",
-      "liver"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver",
-      "Adipose Tissue",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hypertriglyceridemia",
-      "high triglycerides"
-    ],
-    "synonyms_en": [
-      "high triglycerides"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "低高密度脂蛋白胆固醇",
-    "preferred_label_en": "low HDL cholesterol",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:low_hdl_cholesterol"
-    ],
-    "zh_terms": [
-      "低高密度脂蛋白胆固醇",
-      "低HDL胆固醇"
-    ],
-    "abbreviations": [
-      "HDL",
-      "HDL-C"
-    ],
-    "mesh_terms": [
-      "Cholesterol, HDL"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "low HDL-C",
-      "decreased HDL cholesterol"
-    ],
-    "exposure_terms": [
-      "low HDL cholesterol",
-      "low HDL-C",
-      "decreased HDL cholesterol"
-    ]
-  },
-  {
-    "zh_term": "高低密度脂蛋白胆固醇",
-    "preferred_label_en": "high LDL cholesterol",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:high_ldl_cholesterol"
-    ],
-    "zh_terms": [
-      "高低密度脂蛋白胆固醇",
-      "高LDL胆固醇"
-    ],
-    "abbreviations": [
-      "LDL",
-      "LDL-C"
-    ],
-    "mesh_terms": [
-      "Cholesterol, LDL"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "high LDL-C",
-      "elevated LDL cholesterol"
-    ],
-    "exposure_terms": [
-      "high LDL cholesterol",
-      "high LDL-C",
-      "elevated LDL cholesterol"
-    ]
-  },
-  {
-    "zh_term": "代谢功能障碍相关脂肪性肝病",
-    "preferred_label_en": "metabolic dysfunction-associated steatotic liver disease",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:metabolic_dysfunction_associated_steatotic_liver_disease"
-    ],
-    "zh_terms": [
-      "代谢功能障碍相关脂肪性肝病",
-      "代谢相关脂肪性肝病"
-    ],
-    "abbreviations": [
-      "MASLD"
-    ],
-    "mesh_terms": [
-      "Fatty Liver"
-    ],
-    "tissue_terms": [
-      "liver"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "metabolic dysfunction-associated steatotic liver disease",
-      "metabolic dysfunction associated steatotic liver disease"
-    ],
-    "synonyms_en": [
-      "metabolic dysfunction associated steatotic liver disease"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "非酒精性脂肪性肝炎",
-    "preferred_label_en": "nonalcoholic steatohepatitis",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:nonalcoholic_steatohepatitis"
-    ],
-    "zh_terms": [
-      "非酒精性脂肪性肝炎",
-      "非酒精性脂肪肝炎"
-    ],
-    "abbreviations": [
-      "NASH"
-    ],
-    "mesh_terms": [
-      "Non-alcoholic Fatty Liver Disease"
-    ],
-    "tissue_terms": [
-      "liver"
-    ],
-    "gtex_tissue_candidates": [
-      "Liver"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "nonalcoholic steatohepatitis",
-      "non-alcoholic steatohepatitis"
-    ],
-    "synonyms_en": [
-      "non-alcoholic steatohepatitis"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "甲状腺功能减退症",
-    "preferred_label_en": "hypothyroidism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypothyroidism"
-    ],
-    "zh_terms": [
-      "甲状腺功能减退症",
-      "甲减",
-      "甲状腺功能低下"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypothyroidism"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hypothyroidism",
-      "underactive thyroid"
-    ],
-    "synonyms_en": [
-      "underactive thyroid"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "甲状腺功能亢进症",
-    "preferred_label_en": "hyperthyroidism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hyperthyroidism"
-    ],
-    "zh_terms": [
-      "甲状腺功能亢进症",
-      "甲亢"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hyperthyroidism"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hyperthyroidism",
-      "overactive thyroid",
-      "thyrotoxicosis"
-    ],
-    "synonyms_en": [
-      "overactive thyroid",
-      "thyrotoxicosis"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "桥本甲状腺炎",
-    "preferred_label_en": "Hashimoto thyroiditis",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hashimoto_thyroiditis"
-    ],
-    "zh_terms": [
-      "桥本甲状腺炎",
-      "桥本病",
-      "慢性淋巴细胞性甲状腺炎"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hashimoto Disease"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "Hashimoto thyroiditis",
-      "Hashimoto disease",
-      "chronic lymphocytic thyroiditis"
-    ],
-    "synonyms_en": [
-      "Hashimoto disease",
-      "chronic lymphocytic thyroiditis"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "Graves病",
-    "preferred_label_en": "Graves disease",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:graves_disease"
-    ],
-    "zh_terms": [
-      "Graves病",
-      "格雷夫斯病",
-      "毒性弥漫性甲状腺肿"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Graves Disease"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "Graves disease",
-      "Basedow disease",
-      "Graves-Basedow disease"
-    ],
-    "synonyms_en": [
-      "Basedow disease",
-      "Graves-Basedow disease"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "自身免疫性甲状腺炎",
-    "preferred_label_en": "autoimmune thyroiditis",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:autoimmune_thyroiditis"
-    ],
-    "zh_terms": [
-      "自身免疫性甲状腺炎",
-      "自身免疫甲状腺炎"
-    ],
-    "abbreviations": [
-      "AITD"
-    ],
-    "mesh_terms": [
-      "Thyroiditis, Autoimmune"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "autoimmune thyroiditis",
-      "autoimmune thyroid disease"
-    ],
-    "synonyms_en": [
-      "autoimmune thyroid disease"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "甲状腺结节",
-    "preferred_label_en": "thyroid nodule",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroid_nodule"
-    ],
-    "zh_terms": [
-      "甲状腺结节",
-      "甲状腺结节病变"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Thyroid Nodule"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "thyroid nodules"
-    ],
-    "exposure_terms": [
-      "thyroid nodule",
-      "thyroid nodules"
-    ]
-  },
-  {
-    "zh_term": "甲状腺肿",
-    "preferred_label_en": "goiter",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:goiter"
-    ],
-    "zh_terms": [
-      "甲状腺肿",
-      "甲状腺肿大"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Goiter"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "goiter",
-      "goitre"
-    ],
-    "synonyms_en": [
-      "goitre"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "甲状腺激素紊乱",
-    "preferred_label_en": "thyroid hormone disorder",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroid_hormone_disorder"
-    ],
-    "zh_terms": [
-      "甲状腺激素紊乱",
-      "甲状腺激素异常"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Thyroid Hormones"
-    ],
-    "tissue_terms": [
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "thyroid hormone abnormality"
-    ],
-    "exposure_terms": [
-      "thyroid hormone disorder",
-      "thyroid hormone abnormality"
-    ]
-  },
-  {
-    "zh_term": "甲状旁腺功能亢进症",
-    "preferred_label_en": "hyperparathyroidism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hyperparathyroidism"
-    ],
-    "zh_terms": [
-      "甲状旁腺功能亢进症",
-      "甲旁亢"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hyperparathyroidism"
-    ],
-    "tissue_terms": [
-      "parathyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hyperparathyroidism",
-      "overactive parathyroid"
-    ],
-    "synonyms_en": [
-      "overactive parathyroid"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "甲状旁腺功能减退症",
-    "preferred_label_en": "hypoparathyroidism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypoparathyroidism"
-    ],
-    "zh_terms": [
-      "甲状旁腺功能减退症",
-      "甲旁减"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypoparathyroidism"
-    ],
-    "tissue_terms": [
-      "parathyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hypoparathyroidism",
-      "underactive parathyroid"
-    ],
-    "synonyms_en": [
-      "underactive parathyroid"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "高钙血症",
-    "preferred_label_en": "hypercalcemia",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypercalcemia"
-    ],
-    "zh_terms": [
-      "高钙血症",
-      "血钙升高"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypercalcemia"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "high serum calcium"
-    ],
-    "exposure_terms": [
-      "hypercalcemia",
-      "high serum calcium"
-    ]
-  },
-  {
-    "zh_term": "低钙血症",
-    "preferred_label_en": "hypocalcemia",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypocalcemia"
-    ],
-    "zh_terms": [
-      "低钙血症",
-      "血钙降低"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypocalcemia"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "low serum calcium"
-    ],
-    "exposure_terms": [
-      "hypocalcemia",
-      "low serum calcium"
-    ]
-  },
-  {
-    "zh_term": "维生素D缺乏",
-    "preferred_label_en": "vitamin D deficiency",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:vitamin_d_deficiency"
-    ],
-    "zh_terms": [
-      "维生素D缺乏",
-      "维D缺乏"
-    ],
-    "abbreviations": [
-      "25(OH)D"
-    ],
-    "mesh_terms": [
-      "Vitamin D Deficiency"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood",
-      "Liver",
-      "Kidney"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "25-hydroxyvitamin D deficiency"
-    ],
-    "exposure_terms": [
-      "vitamin D deficiency",
-      "25-hydroxyvitamin D deficiency"
-    ]
-  },
-  {
-    "zh_term": "骨质疏松症",
-    "preferred_label_en": "osteoporosis",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:osteoporosis"
-    ],
-    "zh_terms": [
-      "骨质疏松症",
-      "骨质疏松"
-    ],
-    "abbreviations": [
-      "OP"
-    ],
-    "mesh_terms": [
-      "Osteoporosis"
-    ],
-    "tissue_terms": [
-      "bone tissue"
-    ],
-    "gtex_tissue_candidates": [],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "osteoporosis",
-      "low bone mineral density"
-    ],
-    "synonyms_en": [
-      "low bone mineral density"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "高泌乳素血症",
-    "preferred_label_en": "hyperprolactinemia",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hyperprolactinemia"
-    ],
-    "zh_terms": [
-      "高泌乳素血症",
-      "泌乳素升高"
-    ],
-    "abbreviations": [
-      "HPRL"
-    ],
-    "mesh_terms": [
-      "Hyperprolactinemia"
-    ],
-    "tissue_terms": [
-      "pituitary tissue",
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pituitary",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hyperprolactinemia",
-      "high prolactin"
-    ],
-    "synonyms_en": [
-      "high prolactin"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "肢端肥大症",
-    "preferred_label_en": "acromegaly",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:acromegaly"
-    ],
-    "zh_terms": [
-      "肢端肥大症",
-      "肢端肥大"
-    ],
-    "abbreviations": [
-      "GH excess"
-    ],
-    "mesh_terms": [
-      "Acromegaly"
-    ],
-    "tissue_terms": [
-      "pituitary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Pituitary"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "acromegaly",
-      "growth hormone excess"
-    ],
-    "synonyms_en": [
-      "growth hormone excess"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "库欣病",
-    "preferred_label_en": "Cushing disease",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:cushing_disease"
-    ],
-    "zh_terms": [
-      "库欣病",
-      "垂体性库欣病"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Cushing Syndrome"
-    ],
-    "tissue_terms": [
-      "pituitary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Pituitary",
-      "Adrenal Gland"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "Cushing disease",
-      "pituitary-dependent Cushing disease"
-    ],
-    "synonyms_en": [
-      "pituitary-dependent Cushing disease"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "垂体功能减退症",
-    "preferred_label_en": "hypopituitarism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypopituitarism"
-    ],
-    "zh_terms": [
-      "垂体功能减退症",
-      "垂体功能低下"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypopituitarism"
-    ],
-    "tissue_terms": [
-      "pituitary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Pituitary"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hypopituitarism",
-      "pituitary insufficiency"
-    ],
-    "synonyms_en": [
-      "pituitary insufficiency"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "库欣综合征",
-    "preferred_label_en": "Cushing syndrome",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:cushing_syndrome"
-    ],
-    "zh_terms": [
-      "库欣综合征",
-      "皮质醇增多症"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Cushing Syndrome"
-    ],
-    "tissue_terms": [
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland",
-      "Pituitary"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "Cushing syndrome",
-      "hypercortisolism"
-    ],
-    "synonyms_en": [
-      "hypercortisolism"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "肾上腺功能不全",
-    "preferred_label_en": "adrenal insufficiency",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:adrenal_insufficiency"
-    ],
-    "zh_terms": [
-      "肾上腺功能不全",
-      "肾上腺皮质功能不全"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Adrenal Insufficiency"
-    ],
-    "tissue_terms": [
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "adrenal insufficiency",
-      "adrenal failure"
-    ],
-    "synonyms_en": [
-      "adrenal failure"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "阿狄森病",
-    "preferred_label_en": "Addison disease",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:addison_disease"
-    ],
-    "zh_terms": [
-      "阿狄森病",
-      "艾迪生病",
-      "原发性肾上腺皮质功能减退"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Addison Disease"
-    ],
-    "tissue_terms": [
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "Addison disease",
-      "Addison's disease",
-      "primary adrenal insufficiency"
-    ],
-    "synonyms_en": [
-      "Addison's disease",
-      "primary adrenal insufficiency"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "原发性醛固酮增多症",
-    "preferred_label_en": "primary aldosteronism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:primary_aldosteronism"
-    ],
-    "zh_terms": [
-      "原发性醛固酮增多症",
-      "原醛症"
-    ],
-    "abbreviations": [
-      "PA"
-    ],
-    "mesh_terms": [
-      "Hyperaldosteronism"
-    ],
-    "tissue_terms": [
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland",
-      "Kidney"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "primary aldosteronism",
-      "Conn syndrome",
-      "primary hyperaldosteronism"
-    ],
-    "synonyms_en": [
-      "Conn syndrome",
-      "primary hyperaldosteronism"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "肾上腺腺瘤",
-    "preferred_label_en": "adrenal adenoma",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:adrenal_adenoma"
-    ],
-    "zh_terms": [
-      "肾上腺腺瘤",
-      "肾上腺良性腺瘤"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Adrenocortical Adenoma"
-    ],
-    "tissue_terms": [
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "adrenal adenoma",
-      "adrenocortical adenoma"
-    ],
-    "synonyms_en": [
-      "adrenocortical adenoma"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "多囊卵巢综合征",
-    "preferred_label_en": "polycystic ovary syndrome",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:polycystic_ovary_syndrome"
-    ],
-    "zh_terms": [
-      "多囊卵巢综合征",
-      "多囊卵巢综合症"
-    ],
-    "abbreviations": [
-      "PCOS"
-    ],
-    "mesh_terms": [
-      "Polycystic Ovary Syndrome"
-    ],
-    "tissue_terms": [
-      "ovary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Ovary",
-      "Adipose Tissue"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "polycystic ovary syndrome",
-      "polycystic ovarian syndrome"
-    ],
-    "synonyms_en": [
-      "polycystic ovarian syndrome"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "性腺功能减退症",
-    "preferred_label_en": "hypogonadism",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hypogonadism"
-    ],
-    "zh_terms": [
-      "性腺功能减退症",
-      "性腺功能低下"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hypogonadism"
-    ],
-    "tissue_terms": [
-      "ovary tissue",
-      "testis tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Ovary",
-      "Testis"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "hypogonadism",
-      "gonadal insufficiency"
-    ],
-    "synonyms_en": [
-      "gonadal insufficiency"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "卵巢早衰",
-    "preferred_label_en": "premature ovarian insufficiency",
-    "concept_type": "disease",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:premature_ovarian_insufficiency"
-    ],
-    "zh_terms": [
-      "卵巢早衰",
-      "早发性卵巢功能不全"
-    ],
-    "abbreviations": [
-      "POI",
-      "POF"
-    ],
-    "mesh_terms": [
-      "Primary Ovarian Insufficiency"
-    ],
-    "tissue_terms": [
-      "ovary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Ovary"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [
-      "premature ovarian insufficiency",
-      "primary ovarian insufficiency",
-      "premature ovarian failure"
-    ],
-    "synonyms_en": [
-      "primary ovarian insufficiency",
-      "premature ovarian failure"
-    ],
-    "exposure_terms": []
-  },
-  {
-    "zh_term": "绝经",
-    "preferred_label_en": "menopause",
-    "concept_type": "phenotype",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:menopause"
-    ],
-    "zh_terms": [
-      "绝经",
-      "围绝经期"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Menopause"
-    ],
-    "tissue_terms": [
-      "ovary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Ovary"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "menopausal status"
-    ],
-    "exposure_terms": [
-      "menopause",
-      "menopausal status"
-    ]
-  },
-  {
-    "zh_term": "脂联素",
-    "preferred_label_en": "adiponectin",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:adiponectin"
-    ],
-    "zh_terms": [
-      "脂联素",
-      "脂肪连接素"
-    ],
-    "abbreviations": [
-      "ADIPOQ"
-    ],
-    "mesh_terms": [
-      "Adiponectin"
-    ],
-    "tissue_terms": [
-      "adipose tissue",
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose Tissue",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "ADIPOQ protein"
-    ],
-    "exposure_terms": [
-      "adiponectin",
-      "ADIPOQ protein"
-    ]
-  },
-  {
-    "zh_term": "瘦素",
-    "preferred_label_en": "leptin",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:leptin"
-    ],
-    "zh_terms": [
-      "瘦素",
-      "瘦蛋白"
-    ],
-    "abbreviations": [
-      "LEP"
-    ],
-    "mesh_terms": [
-      "Leptin"
-    ],
-    "tissue_terms": [
-      "adipose tissue",
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Adipose Tissue",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "LEP protein"
-    ],
-    "exposure_terms": [
-      "leptin",
-      "LEP protein"
-    ]
-  },
-  {
-    "zh_term": "胰岛素",
-    "preferred_label_en": "insulin",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:insulin"
-    ],
-    "zh_terms": [
-      "胰岛素",
-      "胰岛素水平"
-    ],
-    "abbreviations": [
-      "INS"
-    ],
-    "mesh_terms": [
-      "Insulin"
-    ],
-    "tissue_terms": [
-      "pancreatic beta cell",
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "INS hormone"
-    ],
-    "exposure_terms": [
-      "insulin",
-      "INS hormone"
-    ]
-  },
-  {
-    "zh_term": "C肽",
-    "preferred_label_en": "C-peptide",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:c_peptide"
-    ],
-    "zh_terms": [
-      "C肽",
-      "连接肽"
-    ],
-    "abbreviations": [
-      "CPEP"
-    ],
-    "mesh_terms": [
-      "C-Peptide"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "connecting peptide"
-    ],
-    "exposure_terms": [
-      "C-peptide",
-      "connecting peptide"
-    ]
-  },
-  {
-    "zh_term": "胰高血糖素",
-    "preferred_label_en": "glucagon",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:glucagon"
-    ],
-    "zh_terms": [
-      "胰高血糖素",
-      "高血糖素"
-    ],
-    "abbreviations": [
-      "GCG"
-    ],
-    "mesh_terms": [
-      "Glucagon"
-    ],
-    "tissue_terms": [
-      "pancreatic alpha cell",
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Pancreas",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "GCG hormone"
-    ],
-    "exposure_terms": [
-      "glucagon",
-      "GCG hormone"
-    ]
-  },
-  {
-    "zh_term": "糖化血红蛋白",
-    "preferred_label_en": "hemoglobin A1c",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:hemoglobin_a1c"
-    ],
-    "zh_terms": [
-      "糖化血红蛋白",
-      "糖化血红蛋白A1c"
-    ],
-    "abbreviations": [
-      "HbA1c",
-      "A1c"
-    ],
-    "mesh_terms": [
-      "Glycated Hemoglobin A"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "glycated hemoglobin",
-      "HbA1c"
-    ],
-    "exposure_terms": [
-      "hemoglobin A1c",
-      "glycated hemoglobin",
-      "HbA1c"
-    ]
-  },
-  {
-    "zh_term": "空腹血糖",
-    "preferred_label_en": "fasting glucose",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:fasting_glucose"
-    ],
-    "zh_terms": [
-      "空腹血糖",
-      "空腹葡萄糖"
-    ],
-    "abbreviations": [
-      "FPG",
-      "FBG"
-    ],
-    "mesh_terms": [
-      "Blood Glucose"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood",
-      "Pancreas",
-      "Liver"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "fasting plasma glucose",
-      "fasting blood glucose"
-    ],
-    "exposure_terms": [
-      "fasting glucose",
-      "fasting plasma glucose",
-      "fasting blood glucose"
-    ]
-  },
-  {
-    "zh_term": "促甲状腺激素",
-    "preferred_label_en": "thyroid-stimulating hormone",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroid_stimulating_hormone"
-    ],
-    "zh_terms": [
-      "促甲状腺激素",
-      "促甲状腺素"
-    ],
-    "abbreviations": [
-      "TSH"
-    ],
-    "mesh_terms": [
-      "Thyrotropin"
-    ],
-    "tissue_terms": [
-      "blood",
-      "pituitary tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Pituitary",
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "thyrotropin"
-    ],
-    "exposure_terms": [
-      "thyroid-stimulating hormone",
-      "thyrotropin"
-    ]
-  },
-  {
-    "zh_term": "三碘甲状腺原氨酸",
-    "preferred_label_en": "triiodothyronine",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:triiodothyronine"
-    ],
-    "zh_terms": [
-      "三碘甲状腺原氨酸",
-      "总T3"
-    ],
-    "abbreviations": [
-      "T3"
-    ],
-    "mesh_terms": [
-      "Triiodothyronine"
-    ],
-    "tissue_terms": [
-      "blood",
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "total T3",
-      "thyroid hormone T3"
-    ],
-    "exposure_terms": [
-      "triiodothyronine",
-      "total T3",
-      "thyroid hormone T3"
-    ]
-  },
-  {
-    "zh_term": "甲状腺素",
-    "preferred_label_en": "thyroxine",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroxine"
-    ],
-    "zh_terms": [
-      "甲状腺素",
-      "总T4"
-    ],
-    "abbreviations": [
-      "T4"
-    ],
-    "mesh_terms": [
-      "Thyroxine"
-    ],
-    "tissue_terms": [
-      "blood",
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "total T4",
-      "thyroid hormone T4"
-    ],
-    "exposure_terms": [
-      "thyroxine",
-      "total T4",
-      "thyroid hormone T4"
-    ]
-  },
-  {
-    "zh_term": "游离三碘甲状腺原氨酸",
-    "preferred_label_en": "free triiodothyronine",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:free_triiodothyronine"
-    ],
-    "zh_terms": [
-      "游离三碘甲状腺原氨酸",
-      "游离T3"
-    ],
-    "abbreviations": [
-      "FT3",
-      "free T3"
-    ],
-    "mesh_terms": [
-      "Triiodothyronine"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "free T3"
-    ],
-    "exposure_terms": [
-      "free triiodothyronine",
-      "free T3"
-    ]
-  },
-  {
-    "zh_term": "游离甲状腺素",
-    "preferred_label_en": "free thyroxine",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:free_thyroxine"
-    ],
-    "zh_terms": [
-      "游离甲状腺素",
-      "游离T4"
-    ],
-    "abbreviations": [
-      "FT4",
-      "free T4"
-    ],
-    "mesh_terms": [
-      "Thyroxine"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "free T4"
-    ],
-    "exposure_terms": [
-      "free thyroxine",
-      "free T4"
-    ]
-  },
-  {
-    "zh_term": "甲状腺球蛋白",
-    "preferred_label_en": "thyroglobulin",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroglobulin"
-    ],
-    "zh_terms": [
-      "甲状腺球蛋白",
-      "甲球蛋白"
-    ],
-    "abbreviations": [
-      "Tg"
-    ],
-    "mesh_terms": [
-      "Thyroglobulin"
-    ],
-    "tissue_terms": [
-      "blood",
-      "thyroid tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "Tg protein"
-    ],
-    "exposure_terms": [
-      "thyroglobulin",
-      "Tg protein"
-    ]
-  },
-  {
-    "zh_term": "甲状腺过氧化物酶抗体",
-    "preferred_label_en": "thyroid peroxidase antibody",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroid_peroxidase_antibody"
-    ],
-    "zh_terms": [
-      "甲状腺过氧化物酶抗体",
-      "抗甲状腺过氧化物酶抗体"
-    ],
-    "abbreviations": [
-      "TPOAb",
-      "TPO-Ab"
-    ],
-    "mesh_terms": [
-      "Thyroid Peroxidase Antibodies"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "anti-thyroid peroxidase antibody",
-      "anti-TPO antibody"
-    ],
-    "exposure_terms": [
-      "thyroid peroxidase antibody",
-      "anti-thyroid peroxidase antibody",
-      "anti-TPO antibody"
-    ]
-  },
-  {
-    "zh_term": "甲状腺球蛋白抗体",
-    "preferred_label_en": "thyroglobulin antibody",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:thyroglobulin_antibody"
-    ],
-    "zh_terms": [
-      "甲状腺球蛋白抗体",
-      "抗甲状腺球蛋白抗体"
-    ],
-    "abbreviations": [
-      "TgAb",
-      "Tg-Ab"
-    ],
-    "mesh_terms": [
-      "Thyroglobulin Antibodies"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Thyroid",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "anti-thyroglobulin antibody"
-    ],
-    "exposure_terms": [
-      "thyroglobulin antibody",
-      "anti-thyroglobulin antibody"
-    ]
-  },
-  {
-    "zh_term": "皮质醇",
-    "preferred_label_en": "cortisol",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:cortisol"
-    ],
-    "zh_terms": [
-      "皮质醇",
-      "氢化可的松"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Hydrocortisone"
-    ],
-    "tissue_terms": [
-      "blood",
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "hydrocortisone"
-    ],
-    "exposure_terms": [
-      "cortisol",
-      "hydrocortisone"
-    ]
-  },
-  {
-    "zh_term": "醛固酮",
-    "preferred_label_en": "aldosterone",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:aldosterone"
-    ],
-    "zh_terms": [
-      "醛固酮",
-      "醛甾酮"
-    ],
-    "abbreviations": [],
-    "mesh_terms": [
-      "Aldosterone"
-    ],
-    "tissue_terms": [
-      "blood",
-      "adrenal tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Adrenal Gland",
-      "Kidney",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "mineralocorticoid aldosterone"
-    ],
-    "exposure_terms": [
-      "aldosterone",
-      "mineralocorticoid aldosterone"
-    ]
-  },
-  {
-    "zh_term": "肾素",
-    "preferred_label_en": "renin",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:renin"
-    ],
-    "zh_terms": [
-      "肾素",
-      "血浆肾素"
-    ],
-    "abbreviations": [
-      "PRA"
-    ],
-    "mesh_terms": [
-      "Renin"
-    ],
-    "tissue_terms": [
-      "blood",
-      "kidney tissue"
-    ],
-    "gtex_tissue_candidates": [
-      "Kidney",
-      "Whole Blood"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "plasma renin"
-    ],
-    "exposure_terms": [
-      "renin",
-      "plasma renin"
-    ]
-  },
-  {
-    "zh_term": "甲状旁腺激素",
-    "preferred_label_en": "parathyroid hormone",
-    "concept_type": "hormone",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:parathyroid_hormone"
-    ],
-    "zh_terms": [
-      "甲状旁腺激素",
-      "甲旁素"
-    ],
-    "abbreviations": [
-      "PTH"
-    ],
-    "mesh_terms": [
-      "Parathyroid Hormone"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood",
-      "Kidney"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "parathormone"
-    ],
-    "exposure_terms": [
-      "parathyroid hormone",
-      "parathormone"
-    ]
-  },
-  {
-    "zh_term": "维生素D",
-    "preferred_label_en": "vitamin D",
-    "concept_type": "biomarker",
-    "term_source": "project_curated_endocrine_metabolic_core_v1",
-    "confidence": 0.94,
-    "source": "endocrine_metabolic_core_v1",
-    "mapped_concept_ids": [
-      "mini:vitamin_d"
-    ],
-    "zh_terms": [
-      "维生素D",
-      "25羟维生素D"
-    ],
-    "abbreviations": [
-      "VitD",
-      "25(OH)D"
-    ],
-    "mesh_terms": [
-      "Vitamin D"
-    ],
-    "tissue_terms": [
-      "blood"
-    ],
-    "gtex_tissue_candidates": [
-      "Whole Blood",
-      "Liver",
-      "Kidney"
-    ],
-    "tcga_project_candidates": [],
-    "data_modality_terms": [],
-    "modifier_terms_en": [],
-    "disease_terms_en": [],
-    "synonyms_en": [
-      "25-hydroxyvitamin D",
-      "25(OH)D"
-    ],
-    "exposure_terms": [
-      "vitamin D",
-      "25-hydroxyvitamin D",
-      "25(OH)D"
     ]
   }
 ]

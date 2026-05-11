@@ -50,8 +50,6 @@ def build_coverage_audit_report() -> dict[str, Any]:
             section = _audit_meta_terms(checklist, corpus)
         elif coverage_type == "oncology_core":
             section = _audit_oncology_core(checklist, corpus)
-        elif coverage_type == "endocrine_metabolic_core":
-            section = _audit_endocrine_metabolic_core(checklist, corpus)
         else:
             section = _audit_generic_terms(checklist, corpus)
         sections[str(checklist.get("checklist_id"))] = section
@@ -117,23 +115,6 @@ def render_markdown_report(report: dict[str, Any]) -> str:
                 "## Oncology Core Summary",
                 "",
                 _oncology_summary_lines(sections["oncology_core"]),
-                "",
-            ]
-        )
-    if "endocrine_metabolic_core" in sections:
-        lines.extend(
-            [
-                "## Endocrine And Metabolic Core Covered/Missing",
-                "",
-                _details_table(
-                    sections["endocrine_metabolic_core"],
-                    label_key="label",
-                    extra_keys=("matched_terms", "matched_gtex_tissues"),
-                ),
-                "",
-                "## Endocrine And Metabolic Core Summary",
-                "",
-                _endocrine_metabolic_summary_lines(sections["endocrine_metabolic_core"]),
                 "",
             ]
         )
@@ -321,41 +302,6 @@ def _audit_oncology_core(checklist: dict[str, Any], corpus: VocabularyCorpus) ->
     return section
 
 
-def _audit_endocrine_metabolic_core(checklist: dict[str, Any], corpus: VocabularyCorpus) -> dict[str, Any]:
-    details = []
-    missing_terms: list[dict[str, Any]] = []
-    for item in checklist["items"]:
-        expected_terms = _list(item.get("expected_terms"))
-        expected_tissues = _list(item.get("expected_gtex_tissues") or item.get("gtex_tissue_candidates"))
-        matched_terms = _matched_terms(expected_terms, corpus.all_text)
-        matched_tissues = [tissue for tissue in expected_tissues if _norm(tissue) in corpus.gtex_tissues]
-        missing_for_item = [term for term in expected_terms if term not in matched_terms]
-        if expected_terms and not missing_for_item:
-            status = "covered"
-        elif matched_terms:
-            status = "partially_covered"
-        else:
-            status = "missing"
-        detail = _detail(
-            item,
-            status,
-            matched_terms=matched_terms,
-            matched_gtex_tissues=matched_tissues,
-            missing_terms=missing_for_item,
-            subcategory=str(item.get("subcategory") or ""),
-            concept_type=str(item.get("concept_type") or ""),
-            avoid_expansion_to=_list(item.get("avoid_expansion_to")),
-            ambiguity_notes=str(item.get("ambiguity_notes") or ""),
-        )
-        details.append(detail)
-        if missing_for_item:
-            missing_terms.append({"id": detail["id"], "label": detail["label"], "missing_terms": missing_for_item})
-    section = _section(checklist, details)
-    section["missing_terms"] = missing_terms
-    section["high_risk_ambiguity_terms"] = checklist.get("ambiguity_terms", [])
-    return section
-
-
 def _section(checklist: dict[str, Any], details: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(details)
     covered = sum(1 for item in details if item["status"] == "covered")
@@ -451,39 +397,16 @@ def _quality_gates(sections: dict[str, Any], gaps: dict[str, list[dict[str, str]
             sections["meta_terms"]["coverage_rate"],
             0.90,
         ),
-        *(
-            [
-                _threshold_gate(
-                    "oncology_core_coverage",
-                    "Oncology core checklist coverage must stay >= 95%.",
-                    sections["oncology_core"]["coverage_rate"],
-                    0.95,
-                ),
-                _zero_gate(
-                    "oncology_core_missing_tcga_projects",
-                    "Oncology core must cover all TCGA 33 project candidates.",
-                    sections["oncology_core"]["tcga_project_coverage"]["missing_count"],
-                ),
-            ]
-            if "oncology_core" in sections
-            else []
+        _threshold_gate(
+            "oncology_core_coverage",
+            "Oncology core checklist coverage must stay >= 95%.",
+            sections["oncology_core"]["coverage_rate"],
+            0.95,
         ),
-        *(
-            [
-                _threshold_gate(
-                    "endocrine_metabolic_core_coverage",
-                    "Endocrine/metabolic core checklist coverage must stay >= 95%.",
-                    sections["endocrine_metabolic_core"]["coverage_rate"],
-                    0.95,
-                ),
-                _zero_gate(
-                    "endocrine_metabolic_missing_terms",
-                    "Endocrine/metabolic core should not have missing expected terms.",
-                    len(sections["endocrine_metabolic_core"].get("missing_terms", [])),
-                ),
-            ]
-            if "endocrine_metabolic_core" in sections
-            else []
+        _zero_gate(
+            "oncology_core_missing_tcga_projects",
+            "Oncology core must cover all TCGA 33 project candidates.",
+            sections["oncology_core"]["tcga_project_coverage"]["missing_count"],
         ),
         _zero_gate(
             "missing_items",
@@ -690,29 +613,6 @@ def _oncology_summary_lines(section: dict[str, Any]) -> str:
         lines.append(f"- missing common oncology concepts: {rendered}")
     else:
         lines.append("- missing common oncology concepts: none")
-    if ambiguity_terms:
-        rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
-        lines.append(f"- high-risk ambiguity terms: {rendered_terms}")
-    else:
-        lines.append("- high-risk ambiguity terms: none")
-    return "\n".join(lines)
-
-
-def _endocrine_metabolic_summary_lines(section: dict[str, Any]) -> str:
-    ambiguity_terms = section.get("high_risk_ambiguity_terms", [])
-    missing_terms = section.get("missing_terms", [])
-    lines = [
-        f"- endocrine/metabolic checklist total count: {section['total_checklist_items']}",
-        f"- covered count: {section['covered']}",
-        f"- missing count: {section['missing']}",
-        f"- coverage percentage: {section['coverage_rate']:.3f}",
-        f"- missing terms: {len(missing_terms)}",
-    ]
-    if missing_terms:
-        rendered = ", ".join(f"{item['id']}: {', '.join(item['missing_terms'])}" for item in missing_terms[:10])
-        lines.append(f"- missing term details: {rendered}")
-    else:
-        lines.append("- missing term details: none")
     if ambiguity_terms:
         rendered_terms = ", ".join(str(item.get("term") or item.get("id") or "") for item in ambiguity_terms)
         lines.append(f"- high-risk ambiguity terms: {rendered_terms}")

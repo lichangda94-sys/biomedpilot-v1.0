@@ -73,9 +73,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
         elif concept.concept_type in {"intervention", "treatment"}:
             _append_unique(intervention_terms, concept.preferred_label_en)
             _extend_unique(intervention_terms, concept.synonyms_en)
-        elif concept.concept_type in {"biomarker", "hormone", "laboratory_marker", "phenotype"}:
-            _append_unique(exposure_terms, concept.preferred_label_en)
-            _extend_unique(exposure_terms, concept.synonyms_en)
         elif concept.concept_type == "outcome":
             _append_unique(outcome_terms, concept.preferred_label_en)
             _extend_unique(outcome_terms, concept.synonyms_en)
@@ -103,8 +100,6 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     if registry_matches:
         _append_unique(term_sources, "biomedical_term_registry")
     for concept in registry_matches:
-        if _should_skip_registry_concept(concept.concept_id, normalized):
-            continue
         if concept.semantic_group == "disease":
             _extend_unique(disease_terms, concept.en_terms)
             _extend_unique(synonyms, concept.synonyms)
@@ -131,18 +126,7 @@ def lookup_medical_terms(query: str, target_context: str = "bioinformatics") -> 
     return TermLookupResult(
         original_term=query,
         normalized_term=normalized,
-        matched=bool(
-            matched_zh_terms
-            or disease_terms
-            or tissue_terms
-            or data_modalities
-            or modifier_terms
-            or exposure_terms
-            or intervention_terms
-            or outcome_terms
-            or study_design_terms
-            or publication_type_terms
-        ),
+        matched=bool(matched_zh_terms or disease_terms or tissue_terms or data_modalities or modifier_terms),
         matched_zh_terms=matched_zh_terms,
         disease_terms_en=disease_terms,
         synonyms_en=synonyms,
@@ -170,7 +154,7 @@ def _matched_overrides(normalized_query: str) -> list[ChineseTermOverride]:
     for override in load_zh_overrides():
         if not override.normalized_zh:
             continue
-        if override.normalized_zh == normalized_query or _term_matches_query(override.normalized_zh, normalized_query, override.zh_term):
+        if override.normalized_zh == normalized_query or override.normalized_zh in normalized_query:
             candidates.append(override)
     return _rank_override_matches(candidates)
 
@@ -210,7 +194,7 @@ def _term_matches_query(normalized_term: str, normalized_query: str, raw_term: s
 
 
 def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[ChineseTermOverride]:
-    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5}
+    priority = {"disease": 0, "modifier": 1, "tissue": 2, "data_modality": 3}
     candidates.sort(key=lambda item: (priority.get(item.concept_type, 9), -len(item.normalized_zh), -item.confidence))
     disease_spans = [item.normalized_zh for item in candidates if item.concept_type == "disease"]
     result: list[ChineseTermOverride] = []
@@ -222,7 +206,7 @@ def _rank_override_matches(candidates: list[ChineseTermOverride]) -> list[Chines
 
 
 def _rank_concept_matches(candidates: list[TermConcept]) -> list[TermConcept]:
-    priority = {"disease": 0, "phenotype": 1, "biomarker": 2, "hormone": 2, "laboratory_marker": 2, "modifier": 3, "tissue": 4, "data_modality": 5}
+    priority = {"disease": 0, "modifier": 1, "tissue": 2, "data_modality": 3}
     unique: dict[str, TermConcept] = {candidate.concept_id: candidate for candidate in candidates}
     items = list(unique.values())
     items.sort(key=lambda item: (priority.get(item.concept_type, 9), -max((len(term) for term in item.normalized_terms), default=0)))
@@ -244,34 +228,6 @@ def _gtex_from_database_terms(terms: tuple[str, ...]) -> list[str]:
         if "esoph" in lowered:
             _append_unique(values, "Esophagus")
     return values
-
-
-def _should_skip_registry_concept(concept_id: str, normalized_query: str) -> bool:
-    if concept_id != "thyroid_cancer":
-        return False
-    non_cancer_thyroid_terms = {
-        "甲状腺结节",
-        "桥本甲状腺炎",
-        "桥本病",
-        "graves病",
-        "格雷夫斯病",
-        "甲状腺功能减退症",
-        "甲减",
-        "甲状腺功能亢进症",
-        "甲亢",
-        "自身免疫性甲状腺炎",
-        "甲状腺肿",
-        "甲状腺激素紊乱",
-        "hypothyroidism",
-        "hyperthyroidism",
-        "hashimoto thyroiditis",
-        "graves disease",
-        "autoimmune thyroiditis",
-        "thyroid nodule",
-        "goiter",
-        "thyroid hormone disorder",
-    }
-    return any(term in normalized_query for term in non_cancer_thyroid_terms)
 
 
 def _extend_unique(items: list[str], values: object) -> None:
