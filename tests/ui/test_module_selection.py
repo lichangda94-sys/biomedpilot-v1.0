@@ -190,7 +190,7 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
         "workflow_home",
         "pico_workspace",
         "search_strategy",
-        "literature_acquisition",
+        "title_abstract_screening",
     )
 
 
