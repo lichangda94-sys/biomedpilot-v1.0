@@ -4363,6 +4363,10 @@ class BioinformaticsReportViewerWidget(QWidget):
         root.addLayout(actions)
         self._status_label = _status_label("没有报告时请点击生成 / 刷新项目报告。PDF 当前未正式支持。")
         root.addWidget(self._status_label)
+        root.addWidget(_muted("可纳入报告的内容"))
+        self._reportable_content = _read_only_report_view(100)
+        self._reportable_content.setObjectName("reportableContentSummary")
+        root.addWidget(self._reportable_content)
         self._markdown = _text_preview(320)
         root.addWidget(self._markdown)
         self._manifest = _text_preview(140)
@@ -4371,6 +4375,8 @@ class BioinformaticsReportViewerWidget(QWidget):
     def _render(self, payload: dict[str, object]) -> None:
         markdown = str(payload.get("markdown") or "")
         manifest = payload.get("manifest")
+        if self._project_root is not None:
+            self._reportable_content.setPlainText(_reportable_content_summary(load_result_index(self._project_root)))
         if not markdown:
             self._status_label.setText("尚未生成项目报告。PDF 当前未正式支持。")
             self._markdown.setPlainText("")
@@ -7823,6 +7829,26 @@ def _analysis_task_run_row(run: dict[str, object]) -> list[object]:
         task_run_status_label(str(run.get("status") or "")),
         "查看详情",
     ]
+
+
+def _reportable_content_summary(result_index: dict[str, object]) -> str:
+    items = [item for item in result_index.get("items", []) or [] if isinstance(item, dict)]
+    if not items:
+        return "暂无可纳入报告的结果内容。尚未完成的 dry-run 任务不会被写成真实结果。"
+    imported = [item for item in items if item.get("item_type") == "imported_deg_result"]
+    task_runs = [item for item in items if item.get("item_type") == "analysis_task_run"]
+    completed = [item for item in items if item.get("item_type") == "completed_result"]
+    lines = ["可纳入报告的内容："]
+    if imported:
+        lines.append(f"- 导入表格中的已有差异分析结果：{len(imported)} 项")
+    if completed:
+        lines.append(f"- 已完成分析结果：{len(completed)} 项")
+    if task_runs:
+        dry_count = sum(1 for item in task_runs if item.get("status") == "skipped_dry_run")
+        suffix = f"，其中 {dry_count} 项为 dry-run 任务记录" if dry_count else ""
+        lines.append(f"- 尚未完成的任务记录：{len(task_runs)} 项{suffix}")
+        lines.append("  任务记录只保存输入、比较设计和参数，不代表 DEG 已完成。")
+    return "\n".join(lines)
 
 
 def _imported_deg_user_summary(view: dict[str, object], *, comparison_count: int = 0) -> str:

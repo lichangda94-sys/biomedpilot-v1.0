@@ -2165,6 +2165,16 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
         if task_center._tasks.item(row, column) is not None
     )
 
+    report = BioinformaticsReportViewerWidget()
+    report.refresh_project(project_summary)
+    reportable = report.findChild(QTextEdit, "reportableContentSummary")
+    assert reportable is not None
+    reportable_text = reportable.toPlainText()
+    assert "可纳入报告的内容" in reportable_text
+    assert "导入表格中的已有差异分析结果" in reportable_text
+    assert "尚未完成的任务记录" in reportable_text
+    assert "不代表 DEG 已完成" in reportable_text
+
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
     from app.bioinformatics.services.geo_metadata_profile_service import (

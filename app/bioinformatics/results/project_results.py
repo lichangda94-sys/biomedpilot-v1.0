@@ -3,17 +3,20 @@ from __future__ import annotations
 import csv
 import gzip
 import json
+import os
 import re
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+from app.bioinformatics.analysis_task_runs import list_analysis_task_runs
 from app.bioinformatics.standardized_asset_selection import resolve_standardized_assets
 
 
 RESULT_MANAGER = Path("manifests") / "result_manager.json"
 RESULT_INDEX = Path("results") / "summaries" / "result_index.json"
+RESULT_INDEX_SCHEMA_VERSION = "bioinformatics_result_index.v1"
 
 
 def load_result_index(project_root: str | Path) -> dict[str, object]:
@@ -22,11 +25,10 @@ def load_result_index(project_root: str | Path) -> dict[str, object]:
     manager_path = root / RESULT_MANAGER
     index = _read_json(index_path) if index_path.exists() else None
     manager = _read_json(manager_path) if manager_path.exists() else None
-    entries = []
-    if isinstance(index, dict):
-        raw_entries = index.get("results") or index.get("entries") or []
-        entries = [item for item in raw_entries if isinstance(item, dict)]
+    entries = _stored_completed_entries(index)
     entries.extend(_imported_deg_result_entries(root))
+    entries.extend(_analysis_task_run_entries(root))
+    entries = _dedupe_entries(entries)
     warnings = _deg_asset_selection_warnings(root)
     for entry in entries:
         path = Path(str(entry.get("path") or entry.get("file_path") or ""))
@@ -35,10 +37,21 @@ def load_result_index(project_root: str | Path) -> dict[str, object]:
         if path and not path.exists():
             warnings.append(f"结果文件缺失：{path}")
             entry["warning"] = entry.get("warning") or "文件缺失"
+    items = [_result_item_from_entry(entry, index + 1) for index, entry in enumerate(entries)]
+    generated_index = {
+        "schema_version": RESULT_INDEX_SCHEMA_VERSION,
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "items": items,
+        "results": entries,
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+    _write_json(index_path, generated_index)
+    _write_json(root / RESULT_MANAGER, {"schema_version": "biomedpilot.result_manager.v1", "result_count": len(entries), "item_count": len(items)})
     return {
-        "index": index,
+        "index": generated_index,
         "manager": manager,
         "entries": entries,
+        "items": items,
         "warnings": warnings,
         "index_path": str(index_path),
         "manager_path": str(manager_path),
@@ -168,18 +181,62 @@ def build_imported_deg_view(
 def write_result_index(project_root: str | Path, entries: list[dict[str, object]]) -> Path:
     root = Path(project_root).expanduser().resolve()
     path = root / RESULT_INDEX
-    payload = {"schema_version": "biomedpilot.result_index.v1", "results": entries}
+    normalized_entries = [_completed_result_entry(entry, index + 1) for index, entry in enumerate(entries)]
+    items = [_result_item_from_entry(entry, index + 1) for index, entry in enumerate(normalized_entries)]
+    payload = {
+        "schema_version": RESULT_INDEX_SCHEMA_VERSION,
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "items": items,
+        "results": normalized_entries,
+        "warnings": [],
+    }
     _write_json(path, payload)
-    _write_json(root / RESULT_MANAGER, {"schema_version": "biomedpilot.result_manager.v1", "result_count": len(entries)})
+    _write_json(root / RESULT_MANAGER, {"schema_version": "biomedpilot.result_manager.v1", "result_count": len(normalized_entries), "item_count": len(items)})
     return path
+
+
+def _stored_completed_entries(index: dict[str, object] | None) -> list[dict[str, object]]:
+    if not isinstance(index, dict):
+        return []
+    raw_entries = index.get("results") or index.get("entries") or []
+    entries = [dict(item) for item in raw_entries if isinstance(item, dict)]
+    raw_items = [item for item in index.get("items", []) or [] if isinstance(item, dict)]
+    for item in raw_items:
+        if str(item.get("item_type") or "") in {"imported_deg_result", "analysis_task_run", "task_run_record"}:
+            continue
+        if any(entry.get("item_id") == item.get("item_id") for entry in entries):
+            continue
+        entries.append(dict(item))
+    completed = []
+    for index, entry in enumerate(entries, start=1):
+        if str(entry.get("item_type") or "") in {"imported_deg_result", "analysis_task_run", "task_run_record"}:
+            continue
+        if str(entry.get("analysis_type") or "") in {"imported_deg_result", "analysis_task_run"}:
+            continue
+        completed.append(_completed_result_entry(entry, index))
+    return completed
+
+
+def _completed_result_entry(entry: dict[str, object], index: int) -> dict[str, object]:
+    item = dict(entry)
+    item.setdefault("item_id", str(item.get("result_id") or f"completed_result_{index:03d}"))
+    item.setdefault("item_type", "completed_result")
+    item.setdefault("analysis_type", item.get("task_type") or "analysis_result")
+    item.setdefault("status", "created")
+    item.setdefault("source", "analysis_output")
+    item.setdefault("description", item.get("result_name") or "分析输出结果")
+    return item
 
 
 def _imported_deg_result_entries(root: Path) -> list[dict[str, object]]:
     entries = []
-    for asset in _deg_result_assets(root):
+    for index, asset in enumerate(_deg_result_assets(root), start=1):
         comparisons = [comparison for comparison in asset.get("comparisons", []) or [] if isinstance(comparison, dict)]
+        item_id = f"imported_deg_{index:03d}"
         entries.append(
             {
+                "item_id": item_id,
+                "item_type": "imported_deg_result",
                 "result_name": f"导入 DEG：{asset.get('source_file_name') or Path(str(asset.get('source_file') or '')).name}",
                 "analysis_type": "imported_deg_result",
                 "file_type": "xlsx/csv table",
@@ -187,7 +244,9 @@ def _imported_deg_result_entries(root: Path) -> list[dict[str, object]]:
                 "path": asset.get("source_file", ""),
                 "status": "available",
                 "warning": "",
-                "source": "导入文件中的已有差异分析结果",
+                "source": "imported_table",
+                "description": "导入表格中的已有差异分析结果",
+                "source_label": "导入文件中的已有差异分析结果",
                 "source_asset_id": asset.get("asset_id", ""),
                 "source_asset_type": "deg_result_table",
                 "comparison_count": asset.get("comparison_count", len(comparisons)),
@@ -198,6 +257,73 @@ def _imported_deg_result_entries(root: Path) -> list[dict[str, object]]:
             }
         )
     return entries
+
+
+def _analysis_task_run_entries(root: Path) -> list[dict[str, object]]:
+    entries = []
+    for run in list_analysis_task_runs(root):
+        run_id = str(run.get("run_id") or "")
+        run_dir = Path(str(run.get("run_dir") or ""))
+        path = run_dir / "task_run.json" if run_dir else Path(str(run.get("task_run_path") or ""))
+        try:
+            display_path = str(path.relative_to(root))
+        except ValueError:
+            display_path = str(path)
+        entries.append(
+            {
+                "item_id": run_id,
+                "item_type": "analysis_task_run",
+                "result_name": f"分析任务记录：{run_id}",
+                "analysis_type": "analysis_task_run",
+                "task_type": run.get("task_type", ""),
+                "task_family": run.get("task_family", ""),
+                "file_type": "task_run.json",
+                "created_at": run.get("created_at", ""),
+                "path": display_path,
+                "source_run_path": display_path,
+                "status": run.get("status", ""),
+                "warning": "",
+                "source": "analysis_task_run_record",
+                "description": "重新差异分析任务记录；当前版本尚未执行真实 DEG。",
+                "source_assets": run.get("source_assets", []),
+                "comparison_count": len([item for item in run.get("comparisons", []) or [] if isinstance(item, dict)]),
+                "comparisons": run.get("comparisons", []),
+                "parameters": run.get("parameters", {}),
+                "outputs": run.get("outputs", []),
+            }
+        )
+    return entries
+
+
+def _dedupe_entries(entries: list[dict[str, object]]) -> list[dict[str, object]]:
+    seen: set[tuple[str, str]] = set()
+    deduped: list[dict[str, object]] = []
+    for entry in entries:
+        key = (str(entry.get("item_type") or entry.get("analysis_type") or ""), str(entry.get("item_id") or entry.get("source_asset_id") or entry.get("path") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(entry)
+    return deduped
+
+
+def _result_item_from_entry(entry: dict[str, object], index: int) -> dict[str, object]:
+    item_type = str(entry.get("item_type") or ("analysis_task_run" if entry.get("analysis_type") == "analysis_task_run" else "completed_result"))
+    item_id = str(entry.get("item_id") or f"{item_type}_{index:03d}")
+    return {
+        "item_id": item_id,
+        "item_type": item_type,
+        "status": entry.get("status", ""),
+        "result_name": entry.get("result_name", ""),
+        "analysis_type": entry.get("analysis_type", ""),
+        "task_type": entry.get("task_type", ""),
+        "source_asset_id": entry.get("source_asset_id", ""),
+        "source": entry.get("source", ""),
+        "description": entry.get("description") or entry.get("source_label") or entry.get("result_name") or "",
+        "path": entry.get("path", ""),
+        "source_run_path": entry.get("source_run_path", ""),
+        "comparison_count": entry.get("comparison_count", 0),
+    }
 
 
 def _deg_result_assets(root: Path) -> list[dict[str, object]]:
@@ -305,4 +431,10 @@ def _read_json(path: Path) -> dict[str, object]:
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path = path.with_name(f".{path.name}.tmp")
+    data = json.dumps(payload, ensure_ascii=False, indent=2)
+    with temp_path.open("w", encoding="utf-8") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
