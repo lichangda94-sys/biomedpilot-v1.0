@@ -305,6 +305,7 @@ def _dedup_state(project_dir: Path, order: int, definition: dict[str, str]) -> M
             "deduplication/dedup_decisions_v2.json",
             "deduplication/deduplicated_literature_v2.json",
             "deduplication/pubmed_candidate_duplicate_groups.json",
+            "screening/title_abstract_queue_v2.json",
         ),
     )
     group_count = 0
@@ -316,9 +317,30 @@ def _dedup_state(project_dir: Path, order: int, definition: dict[str, str]) -> M
         for group in groups:
             risk = str(group.get("risk_level") or group.get("risk") or group.get("duplicate_type") or "unknown")
             risk_counts[risk] = risk_counts.get(risk, 0) + 1
-    status = "待确认" if group_count else "草稿" if library_count else "已完成" if paths else "未开始"
-    warnings = ("需要人工确认去重决定",) if group_count else ("文献库已有记录，下一步需要生成重复组",) if library_count else ()
-    summary = f"records={library_count} duplicate_groups={group_count} risk_counts={risk_counts}"
+    dedup_payload = _load_json(project_dir / "deduplication" / "deduplicated_literature_v2.json")
+    queue_payload = _load_json(project_dir / "screening" / "title_abstract_queue_v2.json")
+    queue_count = int(queue_payload.get("record_count", 0) or 0) if queue_payload else 0
+    unresolved = len(dedup_payload.get("unresolved_group_ids", [])) if dedup_payload else 0
+    if queue_count:
+        status = "待筛选"
+        warnings = ()
+    elif dedup_payload and unresolved:
+        status = "有警告"
+        warnings = ("仍有重复组待处理",)
+    elif dedup_payload:
+        status = "已完成"
+        warnings = ()
+    elif group_count:
+        status = "待确认"
+        warnings = ("需要人工确认去重决定",)
+    elif library_count:
+        status = "草稿"
+        warnings = ("文献库已有记录，下一步需要生成重复组",)
+    else:
+        status = "已完成" if paths else "未开始"
+        warnings = ()
+    active_count = int(dedup_payload.get("active_record_count", dedup_payload.get("deduplicated_count", 0)) or 0) if dedup_payload else library_count
+    summary = f"records={library_count} active_records={active_count} duplicate_groups={group_count} screening_queue={queue_count} risk_counts={risk_counts}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
 
 
@@ -445,6 +467,8 @@ def _aggregate_stage_state(
     statuses = [child.status for child in children]
     if statuses and all(status == "已完成" for status in statuses):
         status = "已完成"
+    elif any(status == "待筛选" for status in statuses):
+        status = "待筛选"
     elif any(status == "待确认" for status in statuses):
         status = "待确认"
     elif any(status == "有警告" for status in statuses):

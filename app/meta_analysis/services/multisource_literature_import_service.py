@@ -238,17 +238,23 @@ class MultiSourceLiteratureImportService:
             "source_format": parsed.source_format,
             "source_database": source_database,
             "source_path": parsed.source_path,
+            "source_file_name": Path(parsed.source_path).name,
             "search_date": search_date,
             "raw_record_count": parsed.raw_record_count,
             "parsed_record_count": parsed.parsed_record_count,
             "failed_record_count": parsed.failed_record_count,
+            "error_examples": [],
             "warning_count": parsed.diagnostics.get("warning_count", 0),
             "warning_counts": parsed.diagnostics.get("warning_counts", {}),
             "field_coverage": parsed.diagnostics.get("field_coverage", {}),
+            "field_mapping_warnings": parsed.diagnostics.get("field_mapping_warnings", []),
+            "title_abnormality_count": parsed.diagnostics.get("title_abnormality_count", 0),
+            "title_abnormality_examples": parsed.diagnostics.get("title_abnormality_examples", [])[:5],
             "online_execution": False,
             "screening_status": "not_started",
             "prisma_status": "not_updated",
             "created_at": _now(),
+            "imported_at": _now(),
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -497,8 +503,11 @@ def _diagnostics(records: list[dict[str, Any]], *, source_format: str) -> dict[s
         "缺少 PMID": 0,
         "缺少摘要": 0,
         "缺少年份": 0,
+        "缺少期刊": 0,
         "作者字段不完整": 0,
+        "标题可能异常": 0,
     }
+    title_examples: list[str] = []
     for record in records:
         if not record.get("doi"):
             warning_counts["缺少 DOI"] += 1
@@ -508,8 +517,15 @@ def _diagnostics(records: list[dict[str, Any]], *, source_format: str) -> dict[s
             warning_counts["缺少摘要"] += 1
         if not record.get("year"):
             warning_counts["缺少年份"] += 1
+        if not record.get("journal"):
+            warning_counts["缺少期刊"] += 1
         if not record.get("authors"):
             warning_counts["作者字段不完整"] += 1
+        title = str(record.get("title") or "")
+        if _title_looks_abnormal(title):
+            warning_counts["标题可能异常"] += 1
+            if len(title_examples) < 5:
+                title_examples.append(title[:160] or "(empty title)")
     return {
         "schema_version": MULTISOURCE_IMPORT_DIAGNOSTICS_SCHEMA_VERSION,
         "source_format": source_format,
@@ -521,8 +537,37 @@ def _diagnostics(records: list[dict[str, Any]], *, source_format: str) -> dict[s
             "pmid": sum(1 for record in records if record.get("pmid")),
             "abstract": sum(1 for record in records if record.get("abstract")),
             "authors": sum(1 for record in records if record.get("authors")),
+            "journal": sum(1 for record in records if record.get("journal")),
         },
+        "field_mapping_warnings": _field_mapping_warnings(records, source_format=source_format),
+        "title_abnormality_count": warning_counts["标题可能异常"],
+        "title_abnormality_examples": title_examples,
     }
+
+
+def _title_looks_abnormal(title: str) -> bool:
+    text = title.strip()
+    if not text:
+        return True
+    if "\ufffd" in text or "�" in text:
+        return True
+    if text.count("?") >= 3:
+        return True
+    letters = sum(1 for char in text if char.isalpha())
+    return len(text) >= 12 and letters == 0
+
+
+def _field_mapping_warnings(records: list[dict[str, Any]], *, source_format: str) -> list[str]:
+    if not records:
+        return [f"{source_format}: 未解析到可导入记录"]
+    warnings: list[str] = []
+    if all(not record.get("title") for record in records):
+        warnings.append("未映射到标题字段")
+    if all(not record.get("authors") for record in records):
+        warnings.append("未映射到作者字段")
+    if all(not record.get("journal") for record in records):
+        warnings.append("未映射到期刊字段")
+    return warnings[:5]
 
 
 def _first(payload: dict[str, list[str]], *keys: str) -> str:

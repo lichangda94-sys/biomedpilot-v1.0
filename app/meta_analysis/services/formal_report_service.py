@@ -76,6 +76,33 @@ class PRISMAService:
         self._finish_task(task, success=True, summary="PRISMA flow summary collected.")
         return summary
 
+    def collect_literature_acquisition_summary(self, project_dir: Path) -> dict[str, object]:
+        project_dir = project_dir.expanduser().resolve()
+        from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
+
+        records = LiteratureLibraryService().list_records(project_dir)
+        dedup_payload = _load_json(project_dir / "deduplication" / "deduplicated_literature_v2.json")
+        queue_payload = _load_json(project_dir / "screening" / "title_abstract_queue_v2.json")
+        flow = self.collect_prisma_numbers(project_dir)
+        pubmed_count = sum(1 for record in records if _is_pubmed_source(record))
+        total = len(records)
+        has_dedup = bool(dedup_payload)
+        unresolved = list(dedup_payload.get("unresolved_group_ids", [])) if isinstance(dedup_payload, dict) else []
+        after_dedup = int(dedup_payload.get("deduplicated_count", 0) or flow.records_after_deduplication) if has_dedup else flow.records_after_deduplication
+        ready = int(queue_payload.get("record_count", 0) or after_dedup or total) if has_dedup or queue_payload else 0
+        return {
+            "records_identified_from_pubmed": pubmed_count,
+            "records_identified_from_local_imports": max(total - pubmed_count, 0),
+            "total_records_before_deduplication": total,
+            "duplicate_records_removed": int(dedup_payload.get("duplicate_records_removed", flow.duplicates_removed) if has_dedup else flow.duplicates_removed),
+            "records_after_deduplication": after_dedup,
+            "records_ready_for_title_abstract_screening": ready,
+            "deduplication_status": "completed" if has_dedup and not unresolved else "preliminary",
+            "unresolved_duplicate_group_count": len(unresolved),
+            "screening_queue_record_count": int(queue_payload.get("record_count", 0) or 0) if isinstance(queue_payload, dict) else 0,
+            "notes": ["去重完成后数字会更新"] if not has_dedup or unresolved else [],
+        }
+
     def _audit_source_refs(self, project_dir: Path) -> list[str]:
         refs: list[str] = []
         for event in self._audit_log.list_events(project_dir):
@@ -326,6 +353,16 @@ def _load_project_json_payloads(project_dir: Path) -> list[tuple[Path, dict[str,
     return payloads
 
 
+def _load_json(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _max_count(payloads: list[tuple[Path, dict[str, object]]], keys: tuple[str, ...], path_contains: str = "") -> int:
     counts: list[int] = []
     for path, payload in payloads:
@@ -353,6 +390,11 @@ def _decision_counts(records: list[dict[str, object]]) -> dict[str, int]:
         decision = str(record.get("decision", "pending")).lower()
         counts[decision] = counts.get(decision, 0) + 1
     return counts
+
+
+def _is_pubmed_source(record: dict[str, object]) -> bool:
+    source = f"{record.get('source_type', '')} {record.get('database_source', '')} {record.get('source_database', '')}".lower()
+    return "pubmed" in source or bool(str(record.get("pmid", "")).strip() and not source.strip())
 
 
 def _duplicates_removed_from_decisions(payloads: list[tuple[Path, dict[str, object]]]) -> int:

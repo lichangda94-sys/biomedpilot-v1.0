@@ -329,6 +329,15 @@ class DedupReviewV2Service:
                 replacement = dict(decision.merged_record or self.preview_merge(project_dir, group_id=group_id, selected_record_id=decision.selected_record_id))
                 replacement["dedup_status"] = "deduplicated_merged"
                 replacement["record_status"] = "deduplicated_set_member"
+                replacement["merged_from"] = list(group.record_ids)
+                replacement["merge_decision"] = decision.decision
+                replacement["decision_time"] = decision.created_at
+                replacement["user_decision"] = {
+                    "decision_id": decision.decision_id,
+                    "actor": decision.actor,
+                    "selected_record_id": decision.selected_record_id,
+                    "note": decision.note,
+                }
                 replacements.append(replacement)
                 continue
             if decision.decision == DECISION_EXCLUDE_DUPLICATE:
@@ -347,6 +356,11 @@ class DedupReviewV2Service:
             "decisions_path": str(self.decisions_path(project_dir).relative_to(project_dir)),
             "original_count": len(records),
             "deduplicated_count": len(deduplicated),
+            "active_record_count": len(deduplicated),
+            "merged_record_count": sum(1 for decision in decisions.values() if decision.decision in {DECISION_MERGE, DECISION_SET_MASTER_RECORD}),
+            "non_duplicate_record_count": sum(1 for decision in decisions.values() if decision.decision in {DECISION_KEEP_BOTH, DECISION_MARK_NOT_DUPLICATE}),
+            "duplicate_records_removed": max(len(records) - len(deduplicated), 0),
+            "pending_duplicate_group_count": len(unresolved),
             "unresolved_group_ids": unresolved,
             "records": deduplicated,
             "auto_deleted": False,
@@ -354,7 +368,23 @@ class DedupReviewV2Service:
             "screening_status": "not_started",
         }
         _write_json(self.deduplicated_set_path(project_dir), payload)
+        self._update_library_manifest_dedup_summary(project_dir, payload)
         return payload
+
+    def _update_library_manifest_dedup_summary(self, project_dir: Path, payload: dict[str, Any]) -> None:
+        manifest_path = self._library.update_manifest(project_dir, project_id=str(payload.get("project_id") or project_dir.name))
+        manifest = _load_json(manifest_path)
+        manifest["deduplication"] = {
+            "deduplicated_set_path": str(self.deduplicated_set_path(project_dir).relative_to(project_dir)),
+            "active_record_count": int(payload.get("active_record_count", 0) or 0),
+            "merged_record_count": int(payload.get("merged_record_count", 0) or 0),
+            "non_duplicate_record_count": int(payload.get("non_duplicate_record_count", 0) or 0),
+            "duplicate_records_removed": int(payload.get("duplicate_records_removed", 0) or 0),
+            "pending_duplicate_group_count": int(payload.get("pending_duplicate_group_count", 0) or 0),
+            "dedup_completed_at": str(payload.get("created_at", "")),
+            "original_records_retained": True,
+        }
+        _write_json(manifest_path, manifest)
 
     def _identify_groups(self, records: list[dict[str, Any]]) -> list[DuplicateGroupV2]:
         pairs: dict[tuple[str, str], tuple[str, float]] = {}

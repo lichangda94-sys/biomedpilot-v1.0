@@ -362,6 +362,7 @@ if QWidget is not None:
         DECISION_MARK_NOT_DUPLICATE,
         DECISION_MERGE,
         DECISION_SET_MASTER_RECORD,
+        DECISION_SKIP,
         DedupReviewV2Service,
     )
     from app.meta_analysis.services.ai_assisted_extraction_queue_service import AIAssistedExtractionQueueService
@@ -634,7 +635,7 @@ if QWidget is not None:
             if step.route_key == "literature_import":
                 return _literature_acquisition_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("screening_review"))
             if step.route_key == "screening_review":
-                return _title_abstract_screening_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
+                return _dedup_review_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
             if step.route_key == "manual_extraction":
                 return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
             if step.route_key == "statistics_analysis":
@@ -1206,7 +1207,9 @@ if QWidget is not None:
     def _literature_acquisition_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         preview_paths = sorted((project_dir / "protocol" / "pubmed_candidates").glob("*_candidates_preview.json"))
         library = LiteratureLibraryService()
+        records = library.list_records(project_dir)
         manifest = library.read_manifest(project_dir)
+        library_diagnostics = _literature_library_diagnostics(project_dir, records=records)
         frame = QFrame()
         frame.setObjectName("metaLiteratureAcquisitionPage")
         layout = QVBoxLayout(frame)
@@ -1250,7 +1253,59 @@ if QWidget is not None:
         local_layout.addWidget(import_file)
         layout.addWidget(local_card)
         layout.addWidget(_info_card("文献库摘要", _literature_import_summary_lines(project_dir, manifest), object_name="metaImportBatchSummary"))
+        layout.addWidget(_info_card("文献库诊断", _literature_diagnostics_lines(library_diagnostics), object_name="metaLiteratureDiagnosticsSummary"))
         layout.addWidget(_info_card("最近导入诊断", _latest_multisource_diagnostics_lines(project_dir), object_name="metaImportDiagnosticsSummary"))
+
+        library_card = _card("文献列表")
+        library_layout = library_card.layout()
+        filter_row = QHBoxLayout()
+        search_input = QLineEdit()
+        search_input.setObjectName("metaLiteratureSearchInput")
+        search_input.setPlaceholderText("搜索标题 / 作者 / DOI / PMID")
+        source_filter = QComboBox()
+        source_filter.setObjectName("metaLiteratureSourceFilter")
+        source_filter.addItem("全部来源", "")
+        for source in _literature_source_filter_values(records):
+            source_filter.addItem(_source_label(source), source)
+        missing_filter = QComboBox()
+        missing_filter.setObjectName("metaLiteratureMissingFilter")
+        for label, value in (
+            ("全部字段", ""),
+            ("缺 DOI", "doi"),
+            ("缺 PMID", "pmid"),
+            ("缺 Abstract", "abstract"),
+            ("缺年份", "year"),
+            ("缺期刊", "journal"),
+        ):
+            missing_filter.addItem(label, value)
+        export_summary = QPushButton("导出文献库摘要")
+        export_summary.setObjectName("metaSecondaryButton")
+        filter_row.addWidget(search_input, 2)
+        filter_row.addWidget(source_filter)
+        filter_row.addWidget(missing_filter)
+        filter_row.addWidget(export_summary)
+        library_layout.addLayout(filter_row)
+        literature_table = QTableWidget()
+        literature_table.setObjectName("metaLiteratureRecordsTable")
+        literature_table.setColumnCount(8)
+        literature_table.setHorizontalHeaderLabels(["标题", "年份", "期刊", "PMID", "DOI", "来源", "Abstract", "状态"])
+        literature_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        literature_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        library_layout.addWidget(literature_table)
+        detail = QTextEdit()
+        detail.setObjectName("metaLiteratureDetailPanel")
+        detail.setReadOnly(True)
+        note_input = QPlainTextEdit()
+        note_input.setObjectName("metaLiteratureUserNote")
+        note_input.setPlaceholderText("用户备注，仅作为人工备注保存，不参与检索、去重、筛选、提取或统计。")
+        note_input.setMaximumHeight(80)
+        save_note = QPushButton("保存备注")
+        save_note.setObjectName("metaSecondaryButton")
+        library_layout.addWidget(detail)
+        library_layout.addWidget(note_input)
+        library_layout.addWidget(save_note)
+        layout.addWidget(library_card)
+
         next_button = QPushButton("下一步：去重与筛选")
         next_button.setObjectName("metaSecondaryButton")
         layout.addWidget(next_button)
@@ -1308,6 +1363,59 @@ if QWidget is not None:
             _show_message(result.message)
             on_refresh()
 
+        row_records: list[dict[str, object]] = []
+
+        def populate_literature_table() -> None:
+            row_records.clear()
+            for record in records:
+                if _record_matches_literature_filters(
+                    record,
+                    query=search_input.text(),
+                    source_type=str(source_filter.currentData() or ""),
+                    missing_field=str(missing_filter.currentData() or ""),
+                ):
+                    row_records.append(record)
+            literature_table.setRowCount(len(row_records))
+            for row, record in enumerate(row_records):
+                values = [
+                    str(record.get("title", "")),
+                    str(record.get("year", "")),
+                    str(record.get("journal") or record.get("publication_title") or ""),
+                    str(record.get("pmid", "")),
+                    str(record.get("doi", "")),
+                    _source_label(str(record.get("source_type") or record.get("source") or "")),
+                    "有" if str(record.get("abstract", "")).strip() else "无",
+                    _record_status_label(record),
+                ]
+                for col, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    if col == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
+                    literature_table.setItem(row, col, item)
+            update_literature_detail(literature_table.currentRow())
+
+        def update_literature_detail(row: int = 0, _col: int = 0) -> None:
+            if 0 <= row < len(row_records):
+                record = row_records[row]
+                detail.setPlainText(_record_detail(record, user_note=_load_literature_note(project_dir, str(record.get("record_id", "")))))
+                note_input.setPlainText(_load_literature_note(project_dir, str(record.get("record_id", ""))))
+            else:
+                detail.setPlainText("暂无文献。")
+                note_input.setPlainText("")
+
+        def do_save_note() -> None:
+            row = literature_table.currentRow()
+            if row < 0 or row >= len(row_records):
+                _show_message("请先选择文献")
+                return
+            _save_literature_note(project_dir, str(row_records[row].get("record_id", "")), note_input.toPlainText())
+            update_literature_detail(row)
+            _show_message("备注已保存。")
+
+        def do_export_summary() -> None:
+            path = _export_literature_library_summary(project_dir, diagnostics=library_diagnostics, records=records)
+            _show_message(f"已导出：{path}")
+
         preview_selector.currentIndexChanged.connect(load_preview)
         candidate_list.currentRowChanged.connect(lambda _row: update_detail())
         select_all.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, True))
@@ -1315,8 +1423,15 @@ if QWidget is not None:
         ignore_batch.clicked.connect(lambda: (_set_all_list_items_selected(candidate_list, False), _show_message("已忽略当前候选批次；未写入文献库。")))
         import_selected.clicked.connect(do_import_selected)
         import_file.clicked.connect(do_import_file)
+        search_input.textChanged.connect(lambda _text: populate_literature_table())
+        source_filter.currentIndexChanged.connect(lambda _index: populate_literature_table())
+        missing_filter.currentIndexChanged.connect(lambda _index: populate_literature_table())
+        literature_table.cellClicked.connect(update_literature_detail)
+        save_note.clicked.connect(do_save_note)
+        export_summary.clicked.connect(do_export_summary)
         next_button.clicked.connect(on_next)
         load_preview(0)
+        populate_literature_table()
         return frame
 
 
@@ -1373,11 +1488,15 @@ if QWidget is not None:
         groups = list(queue.groups)
         decisions_payload = _load_json_object(service.decisions_path(project_dir))
         decisions = _items_from_payload(decisions_payload, "decisions")
+        decisions_by_group = {str(item.get("group_id", "")): str(item.get("decision", "")) for item in decisions}
+        deduplicated_payload = _load_json_object(service.deduplicated_set_path(project_dir))
+        screening_queue = TitleAbstractScreeningV2Service().load_queue(project_dir)
+        prisma_summary = PRISMAService().collect_literature_acquisition_summary(project_dir)
         frame = QFrame()
-        frame.setObjectName("metaDedupReviewPage")
+        frame.setObjectName("metaTitleAbstractScreeningPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("去重复核", "显示重复组、merge preview 和人工决定。", "人工复核"))
+        layout.addWidget(_page_header("去重与筛选", "人工检查重复文献，准备标题摘要筛选队列。", "人工复核"))
         risk_counts: dict[str, int] = {}
         for group in groups:
             risk_counts[group.risk_level] = risk_counts.get(group.risk_level, 0) + 1
@@ -1385,14 +1504,17 @@ if QWidget is not None:
             _info_card(
                 "去重摘要",
                 [
-                    f"duplicate groups：{len(groups)}",
-                    f"risk levels：{risk_counts}",
+                    f"重复组：{len(groups)}",
+                    f"风险等级：{_risk_counts_text(risk_counts)}",
                     f"已保存决定：{len(decisions)}",
-                    "不会自动删除，不会自动 merge，不创建 screening artifact，不推进 PRISMA。",
+                    f"active record：{deduplicated_payload.get('active_record_count') or deduplicated_payload.get('deduplicated_count') or '未生成'}",
+                    f"待筛选队列：{screening_queue.get('record_count', 0) if isinstance(screening_queue, dict) else 0}",
+                    "不自动删除原始记录。",
                 ],
                 object_name="metaDedupSummary",
             )
         )
+        layout.addWidget(_info_card("PRISMA 数字", _stage_m3_prisma_lines(prisma_summary), object_name="metaPrismaDedupSummary"))
 
         actions = _card("主操作")
         action_layout = actions.layout()
@@ -1400,11 +1522,17 @@ if QWidget is not None:
         build_queue.setObjectName("metaPrimaryButton")
         save_decision = QPushButton("保存人工决定")
         save_decision.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：排除标准")
+        generate_deduped = QPushButton("生成去重后文献库")
+        generate_deduped.setObjectName("metaPrimaryButton")
+        build_screening_queue = QPushButton("创建标题摘要筛选队列")
+        build_screening_queue.setObjectName("metaPrimaryButton")
+        next_button = QPushButton("下一步：数据提取与质量评价")
         next_button.setObjectName("metaSecondaryButton")
         action_row = QHBoxLayout()
         action_row.addWidget(build_queue)
         action_row.addWidget(save_decision)
+        action_row.addWidget(generate_deduped)
+        action_row.addWidget(build_screening_queue)
         action_row.addWidget(next_button)
         action_row.addStretch(1)
         action_layout.addLayout(action_row)
@@ -1415,7 +1543,8 @@ if QWidget is not None:
         group_list.setObjectName("metaDedupGroupList")
         group_list.setMinimumWidth(320)
         for group in groups:
-            item = QListWidgetItem(f"{_risk_label(group.risk_level)} · {group.group_id}\n{group.duplicate_rule} · {len(group.record_ids)} records")
+            decision_text = _dedup_decision_label(decisions_by_group.get(group.group_id, ""))
+            item = QListWidgetItem(f"{_risk_label(group.risk_level)} · {decision_text}\n{group.duplicate_rule} · {len(group.record_ids)} 篇")
             item.setData(Qt.ItemDataRole.UserRole, group.group_id)
             group_list.addItem(item)
         content_row.addWidget(group_list, 1)
@@ -1434,10 +1563,11 @@ if QWidget is not None:
         decision_selector = QComboBox()
         decision_selector.setObjectName("metaDedupDecisionSelector")
         for label, value in (
-            ("确认 merge", DECISION_MERGE),
+            ("确认为重复并合并", DECISION_MERGE),
             ("保留全部", DECISION_KEEP_BOTH),
-            ("不是重复", DECISION_MARK_NOT_DUPLICATE),
-            ("设为保留候选", DECISION_SET_MASTER_RECORD),
+            ("标记为不是重复", DECISION_MARK_NOT_DUPLICATE),
+            ("选择主记录", DECISION_SET_MASTER_RECORD),
+            ("跳过稍后处理", DECISION_SKIP),
         ):
             decision_selector.addItem(label, value)
         note = QPlainTextEdit()
@@ -1453,6 +1583,12 @@ if QWidget is not None:
         right_layout.addWidget(QLabel("人工决定"))
         right_layout.addWidget(decision_selector)
         right_layout.addWidget(note)
+        log_detail = QTextEdit()
+        log_detail.setObjectName("metaDedupDecisionLog")
+        log_detail.setReadOnly(True)
+        log_detail.setPlainText(_dedup_log_text(decisions))
+        right_layout.addWidget(QLabel("去重日志"))
+        right_layout.addWidget(log_detail)
         content_row.addWidget(right_panel, 2)
         layout.addLayout(content_row)
         layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
@@ -1505,13 +1641,33 @@ if QWidget is not None:
                 merged_record=merged_record,
                 note=note.toPlainText(),
             )
-            _show_message("已保存人工去重决定；未自动删除或 merge。")
+            _show_message("已保存人工去重决定；原始记录已保留。")
+            on_refresh()
+
+        def do_generate_deduped() -> None:
+            result = service.generate_deduplicated_set(project_dir, project_id=project_dir.name)
+            unresolved = len(result.get("unresolved_group_ids", []))
+            if unresolved:
+                _show_message(f"已生成去重后文献库，仍有 {unresolved} 个重复组待处理。")
+            else:
+                _show_message("去重后文献库已生成。")
+            on_refresh()
+
+        def do_build_screening_queue() -> None:
+            skipped_all = bool(groups) and all(decisions_by_group.get(group.group_id) == DECISION_SKIP for group in groups)
+            if not service.deduplicated_set_path(project_dir).exists() and groups and not skipped_all:
+                _show_message("请先生成去重后文献库，或将重复组标记为稍后处理。")
+                return
+            result = TitleAbstractScreeningV2Service().build_queue(project_dir, project_id=project_dir.name)
+            _show_message(f"筛选队列已创建：{result.record_count} 篇。")
             on_refresh()
 
         group_list.currentRowChanged.connect(refresh_group_detail)
         record_selector.currentIndexChanged.connect(update_preview)
         build_queue.clicked.connect(do_build_queue)
         save_decision.clicked.connect(do_save_decision)
+        generate_deduped.clicked.connect(do_generate_deduped)
+        build_screening_queue.clicked.connect(do_build_screening_queue)
         next_button.clicked.connect(on_next)
         group_list.setCurrentRow(0 if groups else -1)
         refresh_group_detail(group_list.currentRow())
@@ -2707,6 +2863,168 @@ if QWidget is not None:
         ]
 
 
+    def _literature_library_diagnostics(project_dir: Path, *, records: list[dict[str, object]] | None = None) -> dict[str, object]:
+        records = records if records is not None else LiteratureLibraryService().list_records(project_dir)
+        batches_payload = _load_json_object(project_dir.expanduser().resolve() / "literature" / "import_batches.json")
+        batches = _items_from_payload(batches_payload, "import_batches")
+        latest = batches[-1] if batches else {}
+        source_counts: dict[str, int] = {"PubMed": 0, "NBIB": 0, "RIS": 0, "CSV": 0, "PubMed XML": 0, "WOS": 0, "CNKI": 0, "其他": 0}
+        for record in records:
+            label = _source_bucket(str(record.get("source_type") or record.get("source") or record.get("database_source") or ""))
+            source_counts[label] = source_counts.get(label, 0) + 1
+        missing = {
+            "doi": len([record for record in records if not str(record.get("doi", "")).strip()]),
+            "pmid": len([record for record in records if not str(record.get("pmid", "")).strip()]),
+            "abstract": len([record for record in records if not str(record.get("abstract", "")).strip()]),
+            "year": len([record for record in records if not str(record.get("year", "")).strip()]),
+            "journal": len([record for record in records if not str(record.get("journal") or record.get("publication_title") or "").strip()]),
+        }
+        title_abnormal = [str(record.get("title") or "") for record in records if _title_looks_abnormal(str(record.get("title") or ""))]
+        diagnostics = latest.get("diagnostics", {}) if isinstance(latest.get("diagnostics"), dict) else {}
+        warning_counts = dict(diagnostics.get("warning_counts", {})) if isinstance(diagnostics.get("warning_counts"), dict) else {}
+        return {
+            "total_records": len(records),
+            "source_counts": source_counts,
+            "latest_batch": latest,
+            "imported_count": int(latest.get("imported_count", 0) or 0),
+            "skipped_count": int(latest.get("skipped_count", 0) or 0),
+            "failed_count": int(diagnostics.get("failed_record_count", 0) or latest.get("failed_count", 0) or 0),
+            "missing": missing,
+            "field_mapping_warnings": list(diagnostics.get("field_mapping_warnings", [])) if isinstance(diagnostics.get("field_mapping_warnings"), list) else [],
+            "warning_counts": warning_counts,
+            "title_abnormality_count": len(title_abnormal),
+            "title_abnormality_examples": title_abnormal[:5],
+        }
+
+
+    def _literature_diagnostics_lines(diagnostics: dict[str, object]) -> list[str]:
+        missing = dict(diagnostics.get("missing", {})) if isinstance(diagnostics.get("missing"), dict) else {}
+        source_counts = dict(diagnostics.get("source_counts", {})) if isinstance(diagnostics.get("source_counts"), dict) else {}
+        latest = dict(diagnostics.get("latest_batch", {})) if isinstance(diagnostics.get("latest_batch"), dict) else {}
+        mapping = diagnostics.get("field_mapping_warnings", [])
+        return [
+            f"当前文献总数：{diagnostics.get('total_records', 0)}",
+            "按来源统计：" + "；".join(f"{key} {value}" for key, value in source_counts.items()),
+            f"最近导入批次：{latest.get('import_batch_id') or latest.get('batch_id') or '暂无'}",
+            f"导入成功数：{diagnostics.get('imported_count', 0)}",
+            f"跳过数：{diagnostics.get('skipped_count', 0)}",
+            f"失败数：{diagnostics.get('failed_count', 0)}",
+            f"缺 DOI 数：{missing.get('doi', 0)}",
+            f"缺 PMID 数：{missing.get('pmid', 0)}",
+            f"缺 abstract 数：{missing.get('abstract', 0)}",
+            f"缺年份数：{missing.get('year', 0)}",
+            f"缺期刊数：{missing.get('journal', 0)}",
+            f"字段映射警告：{'；'.join(str(item) for item in mapping[:3]) if mapping else '暂无'}",
+            f"可能乱码或标题异常：{diagnostics.get('title_abnormality_count', 0)}",
+        ]
+
+
+    def _literature_source_filter_values(records: list[dict[str, object]]) -> list[str]:
+        values = sorted({str(record.get("source_type") or record.get("source") or "") for record in records if str(record.get("source_type") or record.get("source") or "").strip()})
+        return values
+
+
+    def _record_matches_literature_filters(record: dict[str, object], *, query: str, source_type: str, missing_field: str) -> bool:
+        if source_type and str(record.get("source_type") or record.get("source") or "") != source_type:
+            return False
+        if missing_field:
+            value = record.get("journal") or record.get("publication_title") if missing_field == "journal" else record.get(missing_field)
+            if str(value or "").strip():
+                return False
+        needle = query.strip().lower()
+        if not needle:
+            return True
+        haystack = " ".join(
+            [
+                str(record.get("title", "")),
+                str(record.get("authors", "")),
+                str(record.get("authors_text", "")),
+                str(record.get("doi", "")),
+                str(record.get("pmid", "")),
+            ]
+        ).lower()
+        return needle in haystack
+
+
+    def _record_status_label(record: dict[str, object]) -> str:
+        return str(record.get("record_status") or record.get("dedup_status") or record.get("screening_status") or "未开始")
+
+
+    def _source_bucket(source: str) -> str:
+        text = source.lower()
+        if "pubmed_confirmed" in text or text == "pubmed" or text.startswith("pubmed_"):
+            return "PubMed"
+        if "nbib" in text:
+            return "NBIB"
+        if "ris" in text:
+            return "RIS"
+        if text == "csv":
+            return "CSV"
+        if "pubmed_xml" in text:
+            return "PubMed XML"
+        if "wos" in text or "web_of_science" in text:
+            return "WOS"
+        if "cnki" in text:
+            return "CNKI"
+        return "其他"
+
+
+    def _source_label(source: str) -> str:
+        if not source:
+            return "未知"
+        return {
+            "pubmed_confirmed_candidates": "PubMed",
+            "pubmed_xml": "PubMed XML",
+            "nbib": "NBIB",
+            "ris": "RIS",
+            "csv": "CSV",
+            "wos_plain_text": "WOS",
+            "wos_tab_delimited": "WOS",
+            "cnki_export": "CNKI",
+        }.get(source, source)
+
+
+    def _title_looks_abnormal(title: str) -> bool:
+        text = title.strip()
+        if not text:
+            return True
+        if "\ufffd" in text or "�" in text:
+            return True
+        if text.count("?") >= 3:
+            return True
+        letters = sum(1 for char in text if char.isalpha())
+        return len(text) >= 12 and letters == 0
+
+
+    def _literature_notes_path(project_dir: Path) -> Path:
+        return project_dir.expanduser().resolve() / "literature" / "literature_record_notes.json"
+
+
+    def _load_literature_note(project_dir: Path, record_id: str) -> str:
+        payload = _load_json_object(_literature_notes_path(project_dir))
+        notes = payload.get("notes", {}) if isinstance(payload, dict) else {}
+        return str(notes.get(record_id, "")) if isinstance(notes, dict) else ""
+
+
+    def _save_literature_note(project_dir: Path, record_id: str, note: str) -> None:
+        path = _literature_notes_path(project_dir)
+        payload = _load_json_object(path)
+        notes = dict(payload.get("notes", {})) if isinstance(payload.get("notes"), dict) else {}
+        notes[record_id] = note.strip()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"schema_version": "meta_literature_user_notes.v1", "notes": notes}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+    def _export_literature_library_summary(project_dir: Path, *, diagnostics: dict[str, object], records: list[dict[str, object]]) -> Path:
+        path = project_dir.expanduser().resolve() / "literature" / "literature_library_summary.md"
+        lines = ["# 文献库摘要", "", *_literature_diagnostics_lines(diagnostics), "", "## 文献", ""]
+        for record in records:
+            lines.append(f"- {record.get('title') or 'Untitled'} | {record.get('year') or '-'} | PMID {record.get('pmid') or '-'} | DOI {record.get('doi') or '-'}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+
     def _items_from_payload(payload: dict[str, object], key: str) -> list[dict[str, object]]:
         value = payload.get(key)
         if isinstance(value, list):
@@ -2714,19 +3032,74 @@ if QWidget is not None:
         return []
 
 
-    def _record_detail(record: dict[str, object]) -> str:
+    def _record_detail(record: dict[str, object], *, user_note: str = "") -> str:
+        authors = record.get("authors", "")
+        authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or record.get("authors_text", ""))
         return "\n".join(
             [
-                f"题名：{record.get('title', '')}",
-                f"作者：{record.get('authors', '')}",
+                f"英文标题：{record.get('title', '')}",
+                f"作者：{authors_text}",
                 f"期刊：{record.get('journal', '')}",
                 f"年份：{record.get('year', '')}",
-                f"DOI：{record.get('doi', '')}",
                 f"PMID：{record.get('pmid', '')}",
-                f"来源：{record.get('source_type', '')}",
-                f"摘要：{record.get('abstract', '')}",
+                f"DOI：{record.get('doi', '')}",
+                f"Abstract：{record.get('abstract', '')}",
+                f"来源数据库：{record.get('database_source') or record.get('source_type', '')}",
+                f"导入批次：{record.get('import_batch_id') or record.get('batch_id') or ''}",
+                f"当前筛选状态：{record.get('screening_status', '')}",
+                f"用户备注：{user_note}",
             ]
         )
+
+
+    def _risk_counts_text(risk_counts: dict[str, int]) -> str:
+        if not risk_counts:
+            return "暂无"
+        return "；".join(f"{_risk_label(key)} {value}" for key, value in risk_counts.items())
+
+
+    def _dedup_decision_label(decision: str) -> str:
+        return {
+            "merge": "已合并",
+            "set_master_record": "已合并",
+            "keep_both": "标记非重复",
+            "mark_not_duplicate": "标记非重复",
+            "skip": "跳过",
+        }.get(decision, "未处理")
+
+
+    def _dedup_log_text(decisions: list[dict[str, object]]) -> str:
+        if not decisions:
+            return "暂无去重日志。"
+        lines = []
+        for decision in decisions[-20:]:
+            lines.append(
+                " · ".join(
+                    str(item)
+                    for item in (
+                        decision.get("created_at", ""),
+                        decision.get("group_id", ""),
+                        _dedup_decision_label(str(decision.get("decision", ""))),
+                        decision.get("selected_record_id", ""),
+                    )
+                    if item
+                )
+            )
+        return "\n".join(lines)
+
+
+    def _stage_m3_prisma_lines(summary: dict[str, object]) -> list[str]:
+        lines = [
+            f"records identified from PubMed：{summary.get('records_identified_from_pubmed', 0)}",
+            f"records identified from local imports：{summary.get('records_identified_from_local_imports', 0)}",
+            f"total records before deduplication：{summary.get('total_records_before_deduplication', 0)}",
+            f"duplicate records removed：{summary.get('duplicate_records_removed', 0)}",
+            f"records after deduplication：{summary.get('records_after_deduplication', 0)}",
+            f"records ready for title/abstract screening：{summary.get('records_ready_for_title_abstract_screening', 0)}",
+        ]
+        if str(summary.get("deduplication_status", "")) == "preliminary":
+            lines.append("preliminary：去重完成后数字会更新")
+        return lines
 
 
     def _dedup_group_detail(group: dict[str, object]) -> str:
@@ -2735,8 +3108,21 @@ if QWidget is not None:
         if isinstance(records, list):
             for record in records:
                 if isinstance(record, dict):
+                    authors = record.get("authors", [])
+                    authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or record.get("authors_text", ""))
+                    abstract = str(record.get("abstract") or "")
                     record_lines.append(
-                        f"- {record.get('record_id', '')} · {record.get('title', '')} · DOI {record.get('doi', '-') or '-'} · PMID {record.get('pmid', '-') or '-'}"
+                        "\n".join(
+                            [
+                                f"- {record.get('record_id', '')}",
+                                f"  标题：{record.get('title', '')}",
+                                f"  作者：{authors_text}",
+                                f"  年份/期刊：{record.get('year', '')} / {record.get('journal', '')}",
+                                f"  PMID/DOI：{record.get('pmid', '-') or '-'} / {record.get('doi', '-') or '-'}",
+                                f"  Abstract：{abstract[:240]}",
+                                f"  来源/批次：{record.get('source_type', '')} / {record.get('import_batch_id', '')}",
+                            ]
+                        )
                     )
         differences = group.get("field_differences", [])
         diff_lines: list[str] = []
