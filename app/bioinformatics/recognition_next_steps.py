@@ -43,27 +43,27 @@ def build_recognition_next_steps(
         primary = {"label": "返回数据导入", "target": "data_source"}
         secondary = [
             {"label": "查看识别详情", "target": "detail"},
-            {"label": "导出识别报告", "target": "export_recognition_report"},
+            {"label": "导出数据识别报告", "target": "export_recognition_report"},
         ]
     elif current_status["status"] != "current":
         primary = {"label": "设为当前标准化输入", "target": "set_current_recognition_run", "run_id": run_id}
         secondary = [
             {"label": "查看详情", "target": "detail"},
-            {"label": "导出识别报告", "target": "export_recognition_report"},
+            {"label": "导出数据识别报告", "target": "export_recognition_report"},
         ]
     elif has_assets:
         primary = {"label": "进入分析任务中心", "target": "analysis_tasks"}
         secondary = [
             {"label": "查看已有 DEG 结果", "target": "result_browser"},
             {"label": "查看标准化资产", "target": "standardization"},
-            {"label": "导出识别报告", "target": "export_recognition_report"},
+            {"label": "导出数据识别报告", "target": "export_recognition_report"},
         ]
     else:
         primary = {"label": "继续数据标准化", "target": "standardization"}
         secondary = [
             {"label": "查看识别详情", "target": "detail"},
             {"label": "进入分析任务中心", "target": "analysis_tasks"},
-            {"label": "导出识别报告", "target": "export_recognition_report"},
+            {"label": "导出数据识别报告", "target": "export_recognition_report"},
         ]
         if has_imported_deg:
             secondary.insert(1, {"label": "查看已有 DEG 结果", "target": "result_browser"})
@@ -77,7 +77,7 @@ def build_recognition_next_steps(
         direct.extend(["表达热图", "样本相关性"])
     if has_assets:
         direct.append("进入分析任务中心")
-    direct.append("导出识别报告")
+    direct.append("导出数据识别报告")
 
     needs_confirmation = []
     if "count_expression_matrix" in block_types or "count_matrix" in standardized["asset_types"]:
@@ -137,7 +137,7 @@ def recognition_run_current_status(project_root: str | Path, run: dict[str, obje
         return {"status": "current", "label": "当前使用中", "note": note}
     if run.get("recognition_report") and not run.get("recognition_report_path"):
         return {"status": "transient", "label": "本次识别结果，尚未设为当前输入", "note": "该识别记录当前不会被标准化模块使用。"}
-    return {"status": "history", "label": "历史记录", "note": "该识别记录当前不会被标准化模块使用。如需用于后续流程，请点击“设为当前标准化输入”。"}
+    return {"status": "history", "label": "历史记录", "note": "该识别记录仅供查看，不会修改本次识别结果或标准化输入。"}
 
 
 def standardization_current_input_summary(project_root: str | Path) -> str:

@@ -1550,6 +1550,8 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
     assert "刷新" in button_texts
     assert "技术详情" not in button_texts
     assert "技术操作" not in button_texts
+    assert "设为当前结果" not in button_texts
+    assert "为当前结" not in button_texts
     assert widget.findChild(QFrame, "recognitionTechnicalOperations") is None
     assert widget._counts.isReadOnly()
 
@@ -1656,6 +1658,10 @@ def test_recognition_history_view_and_delete_are_isolated(qt_app, project_summar
     assert table.rowCount() == 0
     assert history is not None
     assert history.rowCount() == 2
+    assert history.isHidden()
+    summary = widget.findChild(QLabel, "recognitionHistorySummary")
+    assert summary is not None
+    assert "共 2 条历史记录" in summary.text()
     history_buttons = [
         button.text()
         for row in range(history.rowCount())
@@ -1680,6 +1686,7 @@ def test_recognition_history_view_and_delete_are_isolated(qt_app, project_summar
     assert "设为当前" not in next_steps.toPlainText()
     assert next_button is not None
     assert next_button.text() != "设为当前标准化输入"
+    assert "仅供查看" in detail.toPlainText()
 
     widget._delete_history_run(second_current["run_id"])
     assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
@@ -2377,8 +2384,9 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     assert table.item(0, 3).text() == "70%"
     assert table.item(0, 4).text() == "5.5 MB"
     assert table.item(0, 1).text().startswith("...")
-    assert table.horizontalHeaderItem(1).text() == "当前位置"
-    assert table.item(0, 1).toolTip() == str(project_summary.project_root / "recognized_data/expression_matrix/GSE54350_series_matrix.txt")
+    assert table.horizontalHeaderItem(1).text() == "文件位置"
+    assert table.item(0, 1).toolTip() == str(long_path)
+    assert "recognized_data" not in table.item(0, 1).text()
     assert table.item(0, 2).text() == "GEO SOFT 容器（含：表达矩阵、样本注释）"
     assert "可用角色：表达矩阵、样本注释" in table.item(0, 2).toolTip()
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
@@ -2495,6 +2503,7 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     assert detail is not None
     assert technical is None
     detail_text = detail.toPlainText()
+    assert "文件级详情" in detail_text
     assert "RNA-seq 综合表达结果表" in detail_text
     assert "Mus musculus" in detail_text
     assert "Ensembl mouse gene ID" in detail_text
@@ -2512,6 +2521,7 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
 
     export_button = widget.findChild(QPushButton, "recognitionDetailExportButton")
     assert export_button is not None
+    assert export_button.text() == "导出数据识别报告"
     export_button.click()
     export_path = project_summary.project_root / "recognized_data" / "runs" / "current_session" / "recognition_report_user.md"
     assert export_path.exists()
@@ -2604,7 +2614,7 @@ def test_recognition_duplicate_filter_marks_and_hides_duplicates(qt_app, project
     warnings = [table.item(row, 6).text() for row in range(table.rowCount())]
     assert any("检测到可能重复导入的文件" in warning for warning in warnings)
     assert "已识别 2 个文件" in widget._counts.toPlainText()
-    assert "表达矩阵可用" in widget._counts.toPlainText()
+    assert "表达矩阵已识别" in widget._counts.toPlainText()
 
     widget._duplicate_filter.setCurrentText("隐藏疑似重复文件")
     assert table.rowCount() == 1

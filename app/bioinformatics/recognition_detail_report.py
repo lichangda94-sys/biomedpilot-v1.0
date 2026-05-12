@@ -27,6 +27,7 @@ def build_recognition_detail_payload(project_root: str | Path, run: dict[str, ob
         "run_id": run_id,
         "status": status,
         "status_note": str(current_status.get("note") or ""),
+        "detail_scope": "file" if isinstance(file_record, dict) else "batch",
         "is_current": is_current,
         "is_legacy": bool(run.get("legacy")),
         "generated_at": str(run.get("generated_at") or report.get("generated_at") or ""),
@@ -42,8 +43,9 @@ def build_recognition_detail_payload(project_root: str | Path, run: dict[str, ob
 def format_recognition_detail_text(payload: dict[str, object]) -> str:
     files = [item for item in payload.get("files", []) or [] if isinstance(item, dict)]
     first = files[0] if files else {}
+    scope_title = "文件级详情" if payload.get("detail_scope") == "file" else "批次级详情"
     lines = [
-        "识别详情",
+        scope_title,
         _record_title(files),
         f"当前状态：{payload.get('status') or '历史记录'}",
     ]
@@ -78,7 +80,7 @@ def format_recognition_detail_text(payload: dict[str, object]) -> str:
     lines.extend(_warning_lines([str(item) for item in payload.get("warnings", []) or [] if str(item)]))
     lines.extend(["", "后续建议"])
     lines.extend(_next_step_lines(files))
-    lines.extend(["", "技术详情折叠区摘要"])
+    lines.extend(["", "技术信息"])
     lines.extend(_technical_summary_lines(payload, files))
     return "\n".join(lines)
 
@@ -88,7 +90,7 @@ def format_recognition_report_markdown(payload: dict[str, object]) -> str:
     technical = _technical_appendix(payload)
     return "\n".join(
         [
-            "# BioMedPilot Recognition Detail Report",
+            "# BioMedPilot 数据识别报告",
             "",
             detail,
             "",
@@ -193,7 +195,7 @@ def _file_info_lines(files: list[dict[str, object]], run_id: str, generated_at: 
                 f"  文件格式：{_file_format(item)}",
                 f"  文件大小：{_format_file_size(item.get('file_size'))}",
                 f"  行数 / 列数：{profile.get('sampled_row_count', '未记录')} / {profile.get('column_count', '未记录')}",
-                f"  recognition run id：{run_id or '未记录'}",
+                f"  识别批次编号：{run_id or '未记录'}",
                 f"  识别时间：{_format_datetime(generated_at)}",
             ]
         )

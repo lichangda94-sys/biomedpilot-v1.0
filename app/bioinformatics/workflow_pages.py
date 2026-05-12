@@ -2595,6 +2595,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._next_step_actions: list[dict[str, object]] = []
         self._pre_recognition_rows: list[RegisteredSourceRow] = []
         self._pre_recognition_checks: dict[str, QCheckBox] = {}
+        self._history_expanded = False
         self.setObjectName("bioinformaticsRecognitionPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -2677,7 +2678,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._set_status("请先查看一个识别详情，再导出报告。")
             return None
         path = export_recognition_report_markdown(self._project_root, self._selected_detail_run, self._selected_detail_file)
-        self._set_status(f"识别报告已导出：{path}")
+        self._set_status("数据识别报告已导出，可在该识别批次详情中查看。")
         return path
 
     def continue_to_readiness(self) -> None:
@@ -2698,7 +2699,8 @@ class BioinformaticsRecognitionWidget(QWidget):
         pre_layout.addWidget(self._pre_recognition_empty_label)
         self._pre_recognition_table = _table(["选择", "来源类型", "名称 / 编号", "简化位置", "数据状态"])
         self._pre_recognition_table.setObjectName("preRecognitionInputList")
-        self._pre_recognition_table.setMinimumHeight(130)
+        self._pre_recognition_table.setMinimumHeight(88)
+        self._pre_recognition_table.setMaximumHeight(150)
         self._pre_recognition_table.horizontalHeader().sectionClicked.connect(self._toggle_pre_recognition_header)
         pre_layout.addWidget(self._pre_recognition_table)
         pre_actions = QHBoxLayout()
@@ -2727,23 +2729,13 @@ class BioinformaticsRecognitionWidget(QWidget):
         filter_row.addWidget(self._duplicate_filter)
         filter_row.addStretch(1)
         result_layout.addLayout(filter_row)
-        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning", "操作"])
-        self._table.setObjectName("recognitionResultTable")
-        confidence_header = self._table.horizontalHeaderItem(3)
-        if confidence_header is not None:
-            confidence_header.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
-        result_layout.addWidget(self._table)
+        result_layout.addWidget(_muted("本次识别结果摘要"))
         self._counts = _read_only_report_view(58)
         self._counts.setObjectName("recognitionSummaryReport")
+        self._counts.setMinimumHeight(48)
+        self._counts.setMaximumHeight(58)
         result_layout.addWidget(self._counts)
-        self._asset_summary = _read_only_report_view(150)
-        self._asset_summary.setObjectName("recognitionAssetSummary")
-        result_layout.addWidget(self._asset_summary)
         next_card, next_layout = _card("下一步操作")
-        self._next_steps_summary = _read_only_report_view(62)
-        self._next_steps_summary.setObjectName("recognitionNextStepSummary")
-        self._next_steps_summary.setPlainText("完成本次识别后，可继续进入数据准备与标准化。")
-        next_layout.addWidget(self._next_steps_summary)
         next_actions = QHBoxLayout()
         self._next_action_buttons: list[QPushButton] = []
         for index in range(2):
@@ -2753,7 +2745,24 @@ class BioinformaticsRecognitionWidget(QWidget):
             next_actions.addWidget(button)
         next_actions.addStretch(1)
         next_layout.addLayout(next_actions)
+        self._next_steps_summary = _read_only_report_view(44)
+        self._next_steps_summary.setObjectName("recognitionNextStepSummary")
+        self._next_steps_summary.setMinimumHeight(40)
+        self._next_steps_summary.setMaximumHeight(48)
+        self._next_steps_summary.setPlainText("完成本次识别后，可继续进入数据准备与标准化。")
+        next_layout.addWidget(self._next_steps_summary)
         result_layout.addWidget(next_card)
+        self._table = _table(["文件名", "文件位置", "识别类型", "识别可信度", "文件大小", "识别理由", "提醒", "操作"])
+        self._table.setObjectName("recognitionResultTable")
+        self._table.setMinimumHeight(110)
+        self._table.setMaximumHeight(170)
+        confidence_header = self._table.horizontalHeaderItem(3)
+        if confidence_header is not None:
+            confidence_header.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
+        result_layout.addWidget(self._table)
+        self._asset_summary = _read_only_report_view(150)
+        self._asset_summary.setObjectName("recognitionAssetSummary")
+        result_layout.addWidget(self._asset_summary)
         group_card, group_layout = _card("样本与分组预览")
         group_card.setObjectName("recognitionGroupPreviewCard")
         self._group_preview = _read_only_report_view(130)
@@ -2764,9 +2773,20 @@ class BioinformaticsRecognitionWidget(QWidget):
 
         history_card, history_layout = _card("历史识别记录")
         history_layout.addWidget(_muted("这里保存之前运行过的识别结果，不属于本次操作。"))
-        self._history_table = _table(["时间", "批次名称", "输入数据源", "识别文件数", "内容摘要", "Warning 数量", "当前状态", "操作"])
+        history_summary_row = QHBoxLayout()
+        self._history_summary_label = _muted("暂无历史识别记录。")
+        self._history_toggle_button = _button("展开历史记录", "secondaryButton", self._toggle_history_table)
+        self._history_summary_label.setObjectName("recognitionHistorySummary")
+        self._history_toggle_button.setObjectName("recognitionHistoryToggleButton")
+        self._history_toggle_button.setEnabled(False)
+        history_summary_row.addWidget(self._history_summary_label)
+        history_summary_row.addStretch(1)
+        history_summary_row.addWidget(self._history_toggle_button)
+        history_layout.addLayout(history_summary_row)
+        self._history_table = _table(["时间", "批次名称", "输入数据源", "识别文件数", "内容摘要", "提醒数量", "当前状态", "操作"])
         self._history_table.setObjectName("recognitionHistoryTable")
-        self._history_table.setMinimumHeight(150)
+        self._history_table.setMinimumHeight(120)
+        self._history_table.setVisible(False)
         history_layout.addWidget(self._history_table)
         root.addWidget(history_card)
 
@@ -2777,7 +2797,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._detail_report.setPlainText("请选择本次识别文件或历史识别记录查看详情。")
         detail_layout.addWidget(self._detail_report)
         detail_actions = QHBoxLayout()
-        self._detail_export_button = _button("导出识别报告", "recognitionDetailExportButton", self.export_recognition_detail_report)
+        self._detail_export_button = _button("导出数据识别报告", "recognitionDetailExportButton", self.export_recognition_detail_report)
         self._detail_export_button.setEnabled(False)
         detail_actions.addWidget(self._detail_export_button)
         detail_actions.addStretch(1)
@@ -2798,7 +2818,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         files = _filter_recognition_files(annotated, self._duplicate_filter.currentText())
         warnings = [str(item) for item in report.get("warnings", []) or []]
         duplicate_count = sum(1 for item in annotated if item.get("_duplicate"))
-        self._set_status(f"已读取识别报告：{len(annotated)} 个文件，{len(warnings)} 条 warning。")
+        self._set_status(f"已读取识别报告：{len(annotated)} 个文件，{len(warnings)} 条提醒。")
         self._fill_recognition_table(files)
         self._counts.setPlainText(_recognition_status_bar_summary(report, annotated))
         self._asset_summary.setPlainText(_recognition_asset_summary(files))
@@ -2832,6 +2852,10 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def _render_recognition_history(self) -> None:
         runs = list_recognition_runs(self._project_root) if self._project_root is not None else []
+        self._history_summary_label.setText(_recognition_history_summary_text(runs))
+        self._history_toggle_button.setEnabled(bool(runs))
+        self._history_toggle_button.setText("收起历史记录" if self._history_expanded else "展开历史记录")
+        self._history_table.setVisible(bool(runs) and self._history_expanded)
         rows = [
             [
                 _format_history_time(str(run.get("generated_at") or "")),
@@ -2859,6 +2883,10 @@ class BioinformaticsRecognitionWidget(QWidget):
             actions_layout.addWidget(view_button)
             actions_layout.addWidget(delete_button)
             self._history_table.setCellWidget(row_index, 7, actions)
+
+    def _toggle_history_table(self) -> None:
+        self._history_expanded = not self._history_expanded
+        self._render_recognition_history()
 
     def _view_history_run(self, run_id: str) -> None:
         run = _recognition_run_by_id(self._project_root, run_id)
@@ -2897,7 +2925,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._next_steps_summary.setPlainText(_recognition_primary_next_step_text(next_steps))
         self._next_step_actions = [
             {"label": "继续：数据准备与标准化", "target": "continue_to_readiness"},
-            {"label": "导出识别报告", "target": "export_recognition_report"},
+            {"label": "导出数据识别报告", "target": "export_recognition_report"},
         ]
         for index, button in enumerate(self._next_action_buttons):
             if index < len(self._next_step_actions):
@@ -3033,10 +3061,11 @@ class BioinformaticsRecognitionWidget(QWidget):
             warning = str(item.get("warning") or "")
             if item.get("_duplicate"):
                 warning = "检测到可能重复导入的文件。" if not warning else f"{warning}；检测到可能重复导入的文件。"
+            display_path, tooltip_path = _recognition_file_display_path(item)
             rows.append(
                 [
                     str(item.get("file_name", "")),
-                    _compact_path(str(item.get("route_path") or item.get("original_path") or ""), max_chars=54),
+                    display_path,
                     _recognition_type_text(item),
                     _format_confidence(item.get("confidence")),
                     _format_file_size(item.get("file_size")),
@@ -3050,7 +3079,7 @@ class BioinformaticsRecognitionWidget(QWidget):
                 table_item = QTableWidgetItem(value)
                 source = files[row_index]
                 if col_index == 1:
-                    table_item.setToolTip(str(source.get("route_path") or source.get("original_path") or ""))
+                    table_item.setToolTip(_recognition_file_display_path(source)[1])
                 elif col_index == 2:
                     table_item.setToolTip(_recognition_roles_tooltip(source))
                 elif col_index == 3:
@@ -7896,15 +7925,23 @@ def _filter_recognition_files(files: list[dict[str, object]], mode: str) -> list
     return files
 
 
+def _recognition_file_display_path(item: dict[str, object]) -> tuple[str, str]:
+    source_path = str(item.get("original_path") or item.get("input_path") or item.get("source_path") or "").strip()
+    if source_path:
+        return _compact_path(source_path, max_chars=54), source_path
+    file_name = str(item.get("file_name") or "未记录")
+    return file_name, file_name
+
+
 def _recognition_status_bar_summary(report: dict[str, object], files: list[dict[str, object]]) -> str:
     file_count = len(files)
     type_text = _recognition_type_brief(files)
-    expression_text = "表达矩阵可用" if _recognition_has_expression_asset(files) else "表达矩阵未识别"
+    expression_text = "表达矩阵已识别" if _recognition_has_expression_asset(files) else "表达矩阵未识别"
     preview = report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}
     if _group_preview_has_candidate(preview) or str(preview.get("status") or "") == "confirmed_comparison_exists":
         group_text = "分组信息已生成候选，需在标准化阶段确认。"
     else:
-        group_text = "分组信息未识别，需在标准化阶段确认。"
+        group_text = "分组信息未识别，需在标准化阶段确认后才能做 DEG 分析。"
     return f"已识别 {file_count} 个文件：{type_text}；{expression_text}；{group_text}"
 
 
@@ -7943,7 +7980,7 @@ def _recognition_has_expression_asset(files: list[dict[str, object]]) -> bool:
 def _recognition_primary_next_step_text(next_steps: dict[str, object]) -> str:
     confirm = [str(item) for item in next_steps.get("needs_confirmation", []) or [] if str(item)]
     if confirm:
-        return "可以继续进入数据准备与标准化；涉及差异分析前，需要确认分组信息。"
+        return "可以继续进入数据准备与标准化；做 DEG 分析前，需要确认分组信息。"
     return "可以继续进入数据准备与标准化。"
 
 
@@ -7995,7 +8032,13 @@ def _history_input_text(run: dict[str, object]) -> str:
 def _history_status_text(run: dict[str, object]) -> str:
     if run.get("legacy"):
         return "由旧版项目结构导入"
-    return str(run.get("status") or "completed")
+    status = str(run.get("status") or "completed")
+    return {
+        "completed": "已完成",
+        "completed_with_warnings": "完成但有警告",
+        "failed": "识别失败",
+        "history": "历史记录",
+    }.get(status, status or "历史记录")
 
 
 def _history_content_summary(run: dict[str, object]) -> str:
@@ -8015,6 +8058,20 @@ def _history_content_summary(run: dict[str, object]) -> str:
     suffix = f"；另有 {remaining} 个文件" if remaining > 0 else ""
     legacy = "；由旧版项目结构导入" if run.get("legacy") else ""
     return f"{'、'.join(labels) if labels else '未知文件'}{suffix}{legacy}"
+
+
+def _recognition_history_summary_text(runs: list[dict[str, object]]) -> str:
+    if not runs:
+        return "暂无历史识别记录。"
+    current_count = sum(1 for run in runs if run.get("is_current"))
+    warning_count = sum(int(run.get("warning_count") or 0) for run in runs)
+    latest = _format_history_time(str(runs[0].get("generated_at") or ""))
+    parts = [f"共 {len(runs)} 条历史记录", f"最近：{latest}"]
+    if current_count:
+        parts.append("包含当前标准化输入")
+    if warning_count:
+        parts.append(f"提醒 {warning_count} 条")
+    return "；".join(parts)
 
 
 def _history_run_detail_text(run: dict[str, object]) -> str:
