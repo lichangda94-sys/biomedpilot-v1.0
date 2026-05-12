@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -56,7 +57,7 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
                     in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "gmt_gene_set"},
                 }
             )
-    assets = _dedupe_standardized_assets(assets)
+    assets = _assign_unique_asset_ids(_dedupe_standardized_assets(assets))
     warnings.extend(_content_block_warnings(assets))
     readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
     usable = [
@@ -247,8 +248,6 @@ def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str
                     analysis_ready=True,
                 )
             )
-    for index, asset in enumerate(assets, start=1):
-        asset["asset_id"] = _asset_id(str(asset.get("asset_type") or "asset"), index)
     return assets
 
 
@@ -335,6 +334,21 @@ def _asset_id(asset_type: str, index: int) -> str:
         "gene_identifier_metadata": "gene_identifier",
     }.get(asset_type, asset_type or "asset")
     return f"{prefix}_{index:03d}"
+
+
+def _assign_unique_asset_ids(assets: list[dict[str, object]]) -> list[dict[str, object]]:
+    counters: dict[str, int] = {}
+    assigned: set[str] = set()
+    for asset in assets:
+        asset_type = str(asset.get("asset_type") or "asset")
+        while True:
+            counters[asset_type] = counters.get(asset_type, 0) + 1
+            asset_id = _asset_id(asset_type, counters[asset_type])
+            if asset_id not in assigned:
+                break
+        asset["asset_id"] = asset_id
+        assigned.add(asset_id)
+    return assets
 
 
 def _content_block_warnings(assets: list[dict[str, object]]) -> list[str]:
@@ -439,5 +453,15 @@ def _read_json(path: Path) -> dict[str, object]:
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
+    _atomic_write_json(path, payload)
+
+
+def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    data = json.dumps(payload, ensure_ascii=False, indent=2)
+    temp_path = path.with_name(f".{path.name}.tmp")
+    with temp_path.open("w", encoding="utf-8") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)

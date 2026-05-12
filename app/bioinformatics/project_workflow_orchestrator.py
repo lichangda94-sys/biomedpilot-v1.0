@@ -167,7 +167,7 @@ def _standardization(root: Path) -> dict[str, object]:
     artifacts = generate_standardized_assets(root)
     registry = artifacts.get("registry", {}) if isinstance(artifacts, dict) else {}
     return {
-        "input": ["logs/recognition/recognition_report.json"],
+        "input": ["当前识别批次：recognized_data/current.json"],
         "output": [str(root / "manifests/standardized_assets_registry.json"), str(root / "standardized_data/analysis_ready_assets/analysis_ready_manifest.json")],
         "warnings": registry.get("warnings", []) if isinstance(registry, dict) else [],
     }
