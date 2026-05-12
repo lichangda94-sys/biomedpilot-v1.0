@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.comparison_config import load_confirmed_comparison_config
+from app.bioinformatics.group_comparison_design import has_confirmed_group_comparison_design
 from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN
 from app.bioinformatics.project_standardization import load_standardization_artifacts
 
@@ -36,7 +37,7 @@ def build_recognition_next_steps(
         }
     ) or any(str(item.get("recognized_type") or "") in {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} for item in files)
     is_unknown = not has_standardizable
-    has_group_config = load_confirmed_comparison_config(root) is not None
+    has_group_config = load_confirmed_comparison_config(root) is not None or has_confirmed_group_comparison_design(root)
 
     if is_unknown:
         primary = {"label": "返回数据导入", "target": "data_source"}
@@ -83,6 +84,9 @@ def build_recognition_next_steps(
         if not has_group_config:
             needs_confirmation.append("重新差异表达分析需要确认分组")
             needs_confirmation.append("样本 QC 需要确认样本分组和批次信息")
+            secondary.insert(1, {"label": "确认分组与比较设计", "target": "group_design"})
+        else:
+            direct.append("分组设计已确认，可进入分析任务中心配置差异分析")
 
     not_recommended = []
     if species_group == "mouse":

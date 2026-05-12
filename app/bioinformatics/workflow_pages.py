@@ -39,6 +39,14 @@ from PySide6.QtWidgets import (
 )
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
+from app.bioinformatics.group_comparison_design import (
+    build_default_comparison_rows,
+    build_default_group_rows,
+    design_status_summary,
+    load_group_design_context,
+    save_group_comparison_design,
+    validate_group_comparison_design,
+)
 from app.bioinformatics.comparison_config import (
     build_geo_comparison_config_text,
     comparison_summary_text,
@@ -2947,7 +2955,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         if target == "data_source":
             self.navigate_requested.emit("data_source", self._project_root)
             return
-        if target in {"standardization", "analysis_tasks", "result_browser"}:
+        if target in {"standardization", "analysis_tasks", "result_browser", "group_design"}:
             self.navigate_requested.emit(target, self._project_root)
             return
         self._set_status(f"下一步操作暂未接入：{action.get('label') or target}")
@@ -3411,6 +3419,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
 class BioinformaticsStandardizedAssetsWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
+    group_design_requested = Signal(object)
 
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -3468,6 +3477,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         actions = QHBoxLayout()
         actions.addWidget(_button("生成标准化资产", "primaryButton", self.generate_assets))
         actions.addWidget(_button("刷新资产状态", "secondaryButton", self.refresh_assets))
+        actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.open_group_design))
         actions.addWidget(_button("打开 standardized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "standardized_data" if self._project_root else None)))
         actions.addStretch(1)
         root.addLayout(actions)
@@ -3485,6 +3495,12 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._manifest)))
         root.addWidget(self._manifest)
         root.addWidget(_button("继续：生信工作流总控", "primaryButton", self.continue_to_workflow), alignment=Qt.AlignLeft)
+
+    def open_group_design(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.group_design_requested.emit(self._project_root)
 
     def _render(self, artifacts: dict[str, object]) -> None:
         registry = artifacts.get("registry") or {}
@@ -3511,8 +3527,225 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
                 if isinstance(item, dict)
             ],
         )
-        self._summary.setPlainText(_standardization_user_summary(registry if isinstance(registry, dict) else {}, manifest if isinstance(manifest, dict) else {}))
+        summary_text = _standardization_user_summary(registry if isinstance(registry, dict) else {}, manifest if isinstance(manifest, dict) else {})
+        if self._project_root is not None:
+            summary_text = f"{summary_text}\n{design_status_summary(self._project_root)}"
+        self._summary.setPlainText(summary_text)
         self._manifest.setPlainText(_json({"analysis-ready manifest": manifest, "warning": warnings}))
+
+
+class BioinformaticsGroupComparisonDesignWidget(QWidget):
+    continue_requested = Signal(object)
+    back_requested = Signal()
+
+    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self._context: dict[str, object] = {}
+        self.setObjectName("bioinformaticsGroupComparisonDesignPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_continue is not None:
+            self.continue_requested.connect(on_continue)
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_design()
+
+    def refresh_design(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self._context = load_group_design_context(self._project_root)
+        self._render(self._context)
+        return self._context
+
+    def add_comparison_row(
+        self,
+        comparison_name: str = "",
+        case_group: str = "",
+        control_group: str = "",
+        *,
+        source: str = "user_confirmed",
+        status: str = "待保存",
+    ) -> None:
+        row = self._comparison_table.rowCount()
+        self._comparison_table.insertRow(row)
+        for column, value in enumerate([comparison_name, case_group, control_group, source, status]):
+            self._comparison_table.setItem(row, column, QTableWidgetItem(str(value)))
+
+    def add_one_vs_control_suggestions(self) -> None:
+        groups = self._group_rows_from_table()
+        suggestions = build_default_comparison_rows(self._context, groups)
+        self._comparison_table.setRowCount(0)
+        for item in suggestions:
+            self.add_comparison_row(
+                str(item.get("comparison_name") or ""),
+                str(item.get("case_group") or ""),
+                str(item.get("control_group") or ""),
+                source=str(item.get("source") or "one_vs_control_suggestion"),
+                status="待保存",
+            )
+        self._status_label.setText(f"已生成 {len(suggestions)} 个 one-vs-control 比较建议，请检查后保存。")
+
+    def save_design(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        groups = self._group_rows_from_table()
+        comparisons = self._comparison_rows_from_table()
+        warnings = validate_group_comparison_design(groups, comparisons)
+        payload = save_group_comparison_design(
+            self._project_root,
+            groups,
+            comparisons,
+            imported_deg_references=[
+                item
+                for item in self._context.get("imported_deg_references", []) or []
+                if isinstance(item, dict)
+            ],
+        )
+        load_analysis_task_center(self._project_root)
+        self._context = load_group_design_context(self._project_root)
+        self._status_label.setText(
+            "已保存分组与比较设计。"
+            if not warnings
+            else "已保存分组与比较设计，但仍需检查：" + "；".join(warnings)
+        )
+        self._summary.setPlainText(_group_design_context_summary(self._context))
+        return payload
+
+    def continue_to_tasks(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.continue_requested.emit(self._project_root)
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(_header("分组与比较设计", "确认样本组、用户组名、对照组和比较关系。", back_text="返回标准化资产", back_signal=self.back_requested))
+        actions = QHBoxLayout()
+        actions.addWidget(_button("刷新分组设计", "secondaryButton", self.refresh_design))
+        actions.addWidget(_button("从对照组生成比较", "secondaryButton", self.add_one_vs_control_suggestions))
+        actions.addWidget(_button("保存分组与比较设计", "primaryButton", self.save_design))
+        actions.addStretch(1)
+        root.addLayout(actions)
+        self._status_label = _status_label("尚未读取分组设计。")
+        root.addWidget(self._status_label)
+        self._summary = _read_only_report_view(145)
+        self._summary.setObjectName("groupDesignSummary")
+        root.addWidget(self._summary)
+        self._sample_group_table = _table(["推断组", "用户组名", "组角色", "样本数", "样本 ID", "备注"])
+        self._sample_group_table.setObjectName("groupDesignSampleGroupsTable")
+        root.addWidget(self._sample_group_table)
+        self._comparison_table = _table(["比较名称", "实验组", "对照组", "来源", "状态"])
+        self._comparison_table.setObjectName("groupDesignComparisonsTable")
+        root.addWidget(self._comparison_table)
+        self._imported_deg_table = _table(["已有比较", "状态", "可用路径"])
+        self._imported_deg_table.setObjectName("groupDesignImportedDegTable")
+        root.addWidget(self._imported_deg_table)
+        self._technical = _text_preview(140)
+        self._technical.setObjectName("groupDesignTechnical")
+        self._technical.setVisible(False)
+        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._technical)))
+        root.addWidget(self._technical)
+        root.addWidget(_button("继续：分析任务中心", "primaryButton", self.continue_to_tasks), alignment=Qt.AlignLeft)
+
+    def _render(self, context: dict[str, object]) -> None:
+        groups = build_default_group_rows(context)
+        comparisons = build_default_comparison_rows(context, groups)
+        imported = [item for item in context.get("imported_deg_references", []) or [] if isinstance(item, dict)]
+        warnings = [str(item) for item in context.get("warnings", []) or [] if str(item)]
+        self._status_label.setText(
+            "状态：已确认分组设计" if context.get("has_confirmed_design") else "状态：尚未确认分组设计"
+        )
+        self._summary.setPlainText(_group_design_context_summary(context))
+        _fill_table(
+            self._sample_group_table,
+            [
+                [
+                    item.get("inferred_group_id", ""),
+                    item.get("user_group_name", ""),
+                    item.get("group_role", "unknown"),
+                    item.get("sample_count", ""),
+                    _preview_list([str(value) for value in item.get("sample_ids", []) or []], limit=6, more_label="样本"),
+                    item.get("note", ""),
+                ]
+                for item in groups
+            ],
+        )
+        _fill_table(
+            self._comparison_table,
+            [
+                [
+                    item.get("comparison_name", ""),
+                    item.get("case_group", ""),
+                    item.get("control_group", ""),
+                    item.get("source", "user_confirmed"),
+                    "已确认" if item.get("status") == "confirmed" else "待保存",
+                ]
+                for item in comparisons
+            ],
+        )
+        _fill_table(
+            self._imported_deg_table,
+            [
+                [
+                    item.get("comparison_name", ""),
+                    "完整" if item.get("is_complete") else "不完整",
+                    "可直接浏览、筛选、富集输入" if item.get("is_complete") else "可查看，部分筛选功能受限",
+                ]
+                for item in imported
+            ],
+        )
+        self._technical.setPlainText(_json({"context": context, "warnings": warnings}))
+
+    def _group_rows_from_table(self) -> list[dict[str, object]]:
+        original = {
+            str(item.get("inferred_group_id") or ""): item
+            for item in self._context.get("sample_groups", []) or []
+            if isinstance(item, dict)
+        }
+        rows: list[dict[str, object]] = []
+        for row in range(self._sample_group_table.rowCount()):
+            inferred = _table_text(self._sample_group_table, row, 0)
+            source = original.get(inferred, {})
+            rows.append(
+                {
+                    "inferred_group_id": inferred,
+                    "user_group_name": _table_text(self._sample_group_table, row, 1) or inferred,
+                    "group_role": _table_text(self._sample_group_table, row, 2) or "unknown",
+                    "sample_count": int(source.get("sample_count") or _table_text(self._sample_group_table, row, 3) or 0),
+                    "sample_ids": list(source.get("sample_ids", []) or []),
+                    "source_columns": list(source.get("source_columns", []) or []),
+                    "note": _table_text(self._sample_group_table, row, 5),
+                }
+            )
+        return rows
+
+    def _comparison_rows_from_table(self) -> list[dict[str, object]]:
+        groups = {str(item.get("user_group_name") or ""): item for item in self._group_rows_from_table()}
+        rows: list[dict[str, object]] = []
+        for row in range(self._comparison_table.rowCount()):
+            case = _table_text(self._comparison_table, row, 1)
+            control = _table_text(self._comparison_table, row, 2)
+            rows.append(
+                {
+                    "comparison_name": _table_text(self._comparison_table, row, 0),
+                    "case_group": case,
+                    "control_group": control,
+                    "case_inferred_group_id": groups.get(case, {}).get("inferred_group_id", ""),
+                    "control_inferred_group_id": groups.get(control, {}).get("inferred_group_id", ""),
+                    "status": "confirmed",
+                    "source": _table_text(self._comparison_table, row, 3) or "user_confirmed",
+                }
+            )
+        return rows
 
 
 class BioinformaticsWorkflowStatusWidget(QWidget):
@@ -3617,6 +3850,7 @@ class BioinformaticsWorkflowStatusWidget(QWidget):
 class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
+    group_design_requested = Signal(object)
 
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -3750,6 +3984,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._task_type_input = QLineEdit()
         self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
         actions.addWidget(self._task_type_input)
+        actions.addWidget(_button("去确认分组", "secondaryButton", self.open_group_design))
         actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
         actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
@@ -3763,6 +3998,12 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._records = _text_preview(120)
         root.addWidget(self._records)
         root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
+
+    def open_group_design(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.group_design_requested.emit(self._project_root)
 
     def _render(self, center: dict[str, object]) -> None:
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
@@ -4292,6 +4533,11 @@ def _fill_table(table: QTableWidget, rows: list[list[object]]) -> None:
             item = QTableWidgetItem(str(value))
             table.setItem(row_index, col_index, item)
     table.resizeColumnsToContents()
+
+
+def _table_text(table: QTableWidget, row: int, column: int) -> str:
+    item = table.item(row, column)
+    return item.text().strip() if item is not None else ""
 
 
 def _clear_layout(layout: QVBoxLayout) -> None:
@@ -7141,6 +7387,43 @@ def _standardization_user_summary(registry: dict[str, object], manifest: dict[st
     return "\n".join(lines)
 
 
+def _group_design_context_summary(context: dict[str, object]) -> str:
+    has_count = bool(context.get("has_count_matrix"))
+    has_normalized = bool(context.get("has_normalized_expression_matrix"))
+    group_count = int(context.get("group_count") or 0)
+    imported_count = int(context.get("imported_deg_count") or 0)
+    warnings = [str(item) for item in context.get("warnings", []) or [] if str(item)]
+    matrix_text = "count matrix" if has_count else ("FPKM/TPM matrix" if has_normalized else "未检测到")
+    match = context.get("count_fpkm_sample_match")
+    match_text = ""
+    if match is True:
+        match_text = "Count 与 FPKM 样本匹配"
+    elif match is False:
+        match_text = "Count 与 FPKM 样本不完全一致，请检查。"
+    status = "已确认分组设计" if context.get("has_confirmed_design") else "尚未确认分组设计"
+    lines = [
+        f"当前数据来源：{'综合 RNA-seq 表' if (has_count and imported_count) else '当前标准化资产'}",
+        f"表达矩阵：{matrix_text}",
+        f"推断分组：{group_count} 组",
+        f"已有 DEG comparisons：{imported_count} 个",
+        f"物种：{context.get('species') or 'unknown'}",
+        f"状态：{status}",
+    ]
+    if match_text:
+        lines.append(match_text)
+    if has_count and not context.get("has_confirmed_design"):
+        lines.append("重新差异分析前，请先确认分组。")
+    if not has_count and has_normalized:
+        lines.append("当前仅检测到 FPKM/TPM 表达矩阵。可用于表达展示、热图和相关性；如需重新差异分析，请提供 count matrix 或确认适用方法。")
+    if not has_count and not has_normalized:
+        lines.append("未检测到可用于分组设计的表达矩阵。")
+    if imported_count:
+        lines.append("已有导入差异结果可直接用于结果浏览和富集分析；如需重新计算，请保存上方分组和比较设计。")
+    if warnings:
+        lines.append("提醒：" + "；".join(dict.fromkeys(warnings)))
+    return "\n".join(lines)
+
+
 def _format_confidence(value: object) -> str:
     try:
         numeric = float(value)
@@ -7290,9 +7573,14 @@ def _analysis_task_group_summary(center: dict[str, object]) -> str:
     capabilities = [item for item in center.get("capabilities", []) or [] if isinstance(item, dict)]
     available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection"}}
     lines: list[str] = []
+    count_group_title = (
+        "需要确认分组后运行"
+        if available.get("differential_expression_recompute", {}).get("status") == "ready_with_group_confirmation"
+        else "已确认分组后可运行"
+    )
     groups = [
         ("可直接使用已有结果", [("deg_result_browse", "查看差异基因结果"), ("deg_filtering", "DEG 筛选"), ("volcano_plot", "火山图"), ("enrichment_from_deg", "富集分析输入")]),
-        ("需要确认分组后运行", [("differential_expression_recompute", "重新差异表达分析"), ("qc", "样本 QC"), ("normalization", "count 矩阵标准化")]),
+        (count_group_title, [("differential_expression_recompute", "重新差异表达分析"), ("qc", "样本 QC"), ("normalization", "count 矩阵标准化")]),
         ("表达数据探索", [("heatmap", "表达热图"), ("correlation", "样本相关性"), ("gene_expression_browse", "候选基因表达查看")]),
         ("注释与报告", [("gene_annotation_display", "gene annotation 浏览"), ("protein_coding_filter", "protein-coding 筛选"), ("report_annotation", "报告注释")]),
     ]

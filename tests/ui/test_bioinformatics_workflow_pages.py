@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPushButton, QFrame, QPlainTextEdit, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPushButton, QFrame, QPlainTextEdit, QScrollArea, QTableWidget, QTableWidgetItem, QTextEdit
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -23,6 +23,7 @@ try:
         BioinformaticsAnalysisTaskCenterWidget,
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
+        BioinformaticsGroupComparisonDesignWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -2052,6 +2053,69 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
     assert "imported_deg_result" in details
     assert "mouse" in details
     assert "PFFvsPBS_log2FoldChange" in details
+
+
+def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "gene_id,A1_count,A2_count,B1_count,B2_count,A1_fpkm,A2_fpkm,B1_fpkm,B2_fpkm,PFFvsPBS_log2FoldChange,PFFvsPBS_pvalue,PFFvsPBS_padj,gene_name,gene_biotype,gene_description\n"
+        "ENSMUSG00000026193,10,12,30,32,1.1,1.2,3.0,3.2,1.5,0.01,0.04,Sox17,protein_coding,SRY-box transcription factor 17\n"
+        "ENSMUSG00000064351,20,18,6,5,2.1,2.2,0.6,0.5,-1.7,0.02,0.03,mt-Nd1,protein_coding,mitochondrially encoded NADH\n",
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+    before_current = (project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8")
+
+    widget = BioinformaticsGroupComparisonDesignWidget()
+    widget.refresh_project(project_summary)
+    summary = widget.findChild(QTextEdit, "groupDesignSummary")
+    groups = widget.findChild(QTableWidget, "groupDesignSampleGroupsTable")
+    comparisons = widget.findChild(QTableWidget, "groupDesignComparisonsTable")
+    imported = widget.findChild(QTableWidget, "groupDesignImportedDegTable")
+
+    assert summary is not None
+    assert "推断分组：2 组" in summary.toPlainText()
+    assert "Count 与 FPKM 样本匹配" in summary.toPlainText()
+    assert groups is not None
+    assert comparisons is not None
+    assert imported is not None
+    assert groups.item(0, 0).text() == "A"
+    assert "A1" in groups.item(0, 4).text()
+    assert "A1_count" not in groups.item(0, 4).text()
+    assert imported.rowCount() == 1
+    assert imported.item(0, 0).text() == "PFFvsPBS"
+
+    groups.setItem(0, 1, QTableWidgetItem("PBS"))
+    groups.setItem(0, 2, QTableWidgetItem("control"))
+    groups.setItem(1, 1, QTableWidgetItem("PFF"))
+    groups.setItem(1, 2, QTableWidgetItem("treatment"))
+    widget.add_comparison_row("PFF_vs_PBS", "PFF", "PBS")
+    payload = widget.save_design()
+
+    assert payload is not None
+    assert "已保存分组与比较设计" in widget.status_message()
+    design_path = project_summary.project_root / "manifests" / "group_comparison_design.json"
+    assert design_path.exists()
+    design = json.loads(design_path.read_text(encoding="utf-8"))
+    assert design["source_recognition_run_id"]
+    assert design["comparisons"][0]["status"] == "confirmed"
+    assert design["imported_deg_references"][0]["comparison_name"] == "PFFvsPBS"
+    assert (project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8") == before_current
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+    task_text = " ".join(
+        task_center._tasks.item(row, column).text()
+        for row in range(task_center._tasks.rowCount())
+        for column in range(task_center._tasks.columnCount())
+        if task_center._tasks.item(row, column) is not None
+    )
+    grouped = task_center.findChild(QTextEdit, "analysisCapabilityGroupedSummary")
+    assert grouped is not None
+    assert "已确认分组后可运行" in grouped.toPlainText()
+    assert "available" in task_text
 
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:

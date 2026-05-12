@@ -33,6 +33,7 @@ try:
         BioinformaticsAnalysisTaskCenterWidget,
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
+        BioinformaticsGroupComparisonDesignWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -86,6 +87,11 @@ if QWidget is not None:
                 on_continue=self.show_workflow_status,
                 on_back=self.show_readiness,
             )
+            self._standardized_assets_page.group_design_requested.connect(self.show_group_design)
+            self._group_design_page = BioinformaticsGroupComparisonDesignWidget(
+                on_continue=self.show_analysis_tasks,
+                on_back=self.show_standardization,
+            )
             self._workflow_status_page = BioinformaticsWorkflowStatusWidget(
                 on_continue=self.show_analysis_tasks,
                 on_back=self.show_project_home,
@@ -94,6 +100,7 @@ if QWidget is not None:
                 on_continue=self.show_results_browser,
                 on_back=self.show_workflow_status,
             )
+            self._analysis_task_page.group_design_requested.connect(self.show_group_design)
             self._results_browser_page = BioinformaticsResultsBrowserWidget(
                 on_continue=self.show_report_viewer,
                 on_back=self.show_analysis_tasks,
@@ -112,6 +119,7 @@ if QWidget is not None:
                 self._recognition_page,
                 self._readiness_page,
                 self._standardized_assets_page,
+                self._group_design_page,
                 self._workflow_status_page,
                 self._analysis_task_page,
                 self._results_browser_page,
@@ -162,6 +170,11 @@ if QWidget is not None:
             self._workflow_status_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._workflow_status_page)
 
+        def show_group_design(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._group_design_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._group_design_page)
+
         def show_analysis_tasks(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._analysis_task_page.refresh_project(self._current_project)
@@ -187,6 +200,8 @@ if QWidget is not None:
                 self.show_standardization(summary)
             elif target == "analysis_tasks":
                 self.show_analysis_tasks(summary)
+            elif target == "group_design":
+                self.show_group_design(summary)
             elif target == "result_browser":
                 self.show_results_browser(summary)
 

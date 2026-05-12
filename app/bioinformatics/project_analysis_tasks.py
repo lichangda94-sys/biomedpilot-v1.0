@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.bioinformatics.comparison_config import load_confirmed_comparison_config
+from app.bioinformatics.group_comparison_design import has_confirmed_group_comparison_design
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.project_standardization import load_standardization_artifacts
 
@@ -146,7 +147,7 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
     if not isinstance(registry, dict):
         return []
     assets = [asset for asset in registry.get("assets", []) or registry.get("standardized_assets", []) or [] if isinstance(asset, dict)]
-    has_confirmed_group_config = load_confirmed_comparison_config(root) is not None
+    has_confirmed_group_config = load_confirmed_comparison_config(root) is not None or has_confirmed_group_comparison_design(root)
     capabilities: list[dict[str, object]] = []
     for asset in assets:
         asset_type = str(asset.get("asset_type") or "")
@@ -251,8 +252,10 @@ def _task_groups_from_capabilities(capabilities: list[dict[str, object]]) -> lis
     groups = []
     if {"deg_result_browse", "volcano_plot", "deg_filtering", "enrichment_from_deg"} & set(available):
         groups.append({"group": "可直接使用已有结果", "tasks": [task for task in ("deg_result_browse", "volcano_plot", "deg_filtering", "enrichment_from_deg") if task in available]})
-    if {"differential_expression_recompute", "qc", "normalization"} & set(available):
-        groups.append({"group": "需要确认分组后运行", "tasks": [task for task in ("differential_expression_recompute", "qc", "normalization") if task in available]})
+    count_tasks = [task for task in ("differential_expression_recompute", "qc", "normalization") if task in available]
+    if count_tasks:
+        needs_group_confirmation = available.get("differential_expression_recompute", {}).get("status") == "ready_with_group_confirmation"
+        groups.append({"group": "需要确认分组后运行" if needs_group_confirmation else "已确认分组后可运行", "tasks": count_tasks})
     if {"heatmap", "correlation", "gene_expression_browse", "pca"} & set(available):
         groups.append({"group": "表达数据探索", "tasks": [task for task in ("heatmap", "correlation", "gene_expression_browse", "pca") if task in available]})
     if {"gene_annotation_display", "protein_coding_filter", "report_annotation"} & set(available):
