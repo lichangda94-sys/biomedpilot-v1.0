@@ -8,11 +8,12 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from app.meta_analysis.pages.workflow_integration_page import meta_workflow_integration_state_from_project
 from app.meta_analysis.project_workspace import META_PROJECT_DIRECTORIES, create_meta_analysis_project
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
+    from PySide6.QtWidgets import QApplication, QComboBox, QFrame, QLabel, QLineEdit, QPlainTextEdit, QPushButton
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -37,7 +38,12 @@ def _visible_text(widget) -> str:
     return "\n".join(texts)
 
 
-def test_meta_workspace_layout_state_uses_seven_user_facing_stages() -> None:
+def _current_step_widget(widget):
+    scroll = widget._page_stack.currentWidget()
+    return scroll.widget()
+
+
+def test_meta_workspace_layout_state_uses_eight_user_facing_stages() -> None:
     state = meta_workspace_layout_state()
 
     assert "0.1.0-internal-beta" in state.status_label
@@ -47,17 +53,19 @@ def test_meta_workspace_layout_state_uses_seven_user_facing_stages() -> None:
         "workflow_home",
         "pico_workspace",
         "search_strategy",
-        "title_abstract_screening",
+        "literature_import",
+        "screening_review",
         "manual_extraction",
         "statistics_analysis",
         "report_export",
     ]
     assert [item.label for item in state.navigation_items] == [
-        "Meta 项目首页",
-        "研究问题 / PICO",
-        "检索与导入",
-        "文献筛选",
-        "提取与质量评价",
+        "项目首页",
+        "研究问题与 PICO",
+        "检索策略",
+        "文献库与导入",
+        "去重与筛选",
+        "数据提取与质量评价",
         "统计分析",
         "报告导出",
     ]
@@ -77,7 +85,8 @@ def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path:
         "workflow_home",
         "pico_workspace",
         "search_strategy",
-        "title_abstract_screening",
+        "literature_import",
+        "screening_review",
         "manual_extraction",
         "statistics_analysis",
         "report_export",
@@ -87,6 +96,7 @@ def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path:
         "metaProjectHomePage",
         "metaPicoPage",
         "metaSearchStrategyPage",
+        "metaLiteratureAcquisitionPage",
         "metaTitleAbstractScreeningPage",
         "metaManualExtractionPage",
         "metaStatisticsAnalysisPage",
@@ -161,3 +171,66 @@ def test_meta_home_collapses_repeated_status_and_developer_terms(qt_app, tmp_pat
     assert visible.count("Developer Preview / 本地测试版") == 1
     assert "下一步：填写研究问题 / PICO" in visible
     assert "继续：研究问题 / PICO" in visible
+
+
+def test_meta_workspace_pico_protocol_round_trip_updates_status(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("PICO Round Trip", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("pico_workspace")
+
+    before = {step.step_id: step.status for step in meta_workflow_integration_state_from_project(summary.project_root).steps}
+    assert before["pico_workspace"] == "未开始"
+
+    question = widget.findChild(QPlainTextEdit, "metaPicoQuestionInput")
+    assert question is not None
+    question.setPlainText("高血压患者降压药与常规治疗相比对卒中风险的影响")
+    mode = widget.findChild(QComboBox, "metaPicoModeSelector")
+    assert mode is not None
+    mode.setCurrentIndex(mode.findData("pico"))
+    current = _current_step_widget(widget)
+    generate = next(button for button in current.findChildren(QPushButton) if button.text() == "生成 PICO 草稿")
+    generate.click()
+    qt_app.processEvents()
+
+    draft_state = {step.step_id: step.status for step in meta_workflow_integration_state_from_project(summary.project_root).steps}
+    assert draft_state["pico_workspace"] == "草稿"
+    assert (summary.project_root / "protocol" / "pico_workspace_draft.json").exists()
+
+    widget.show_step("pico_workspace")
+    current = _current_step_widget(widget)
+    primary = current.findChild(QLineEdit, "metaPicoPrimaryOutcomesInput")
+    effect = current.findChild(QLineEdit, "metaPicoEffectMeasureInput")
+    assert primary is not None
+    assert effect is not None
+    primary.setText("卒中发生率")
+    effect.setText("RR")
+    save = next(button for button in current.findChildren(QPushButton) if button.text() == "保存草稿编辑")
+    save.click()
+    qt_app.processEvents()
+
+    widget.show_step("pico_workspace")
+    current = _current_step_widget(widget)
+    confirm = next(button for button in current.findChildren(QPushButton) if button.text() == "确认研究问题")
+    confirm.click()
+    qt_app.processEvents()
+
+    confirmed_path = summary.project_root / "protocol" / "pico_workspace_confirmed.json"
+    protocol_manifest = summary.project_root / "protocol" / "pico_workspace_manifest.json"
+    assert confirmed_path.exists()
+    assert protocol_manifest.exists()
+    confirmed = json.loads(confirmed_path.read_text(encoding="utf-8"))
+    manifest = json.loads(protocol_manifest.read_text(encoding="utf-8"))
+    assert confirmed["confirmed_pico_mode"] == "pico"
+    assert "卒中发生率" in confirmed["confirmed_outcomes"]
+    assert "推荐效应量类型：RR" in confirmed["user_notes"]
+    assert manifest["confirmed_status"] == "confirmed"
+
+    complete_state = {step.step_id: step.status for step in meta_workflow_integration_state_from_project(summary.project_root).steps}
+    assert complete_state["pico_workspace"] == "已完成"
+
+    widget.show_step("search_strategy")
+    visible = _visible_text(widget)
+    assert "下一阶段将基于该方案生成检索策略" in visible

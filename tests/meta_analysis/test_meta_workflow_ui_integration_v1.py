@@ -20,16 +20,17 @@ def step_by_id(project_dir: Path) -> dict[str, object]:
     return {step.step_id: step for step in state.steps}
 
 
-def test_meta_workflow_integration_state_has_seven_chinese_stages(tmp_path: Path) -> None:
+def test_meta_workflow_integration_state_has_eight_chinese_stages(tmp_path: Path) -> None:
     state = meta_workflow_integration_state_from_project(tmp_path)
 
-    assert state.step_count == 7
+    assert state.step_count == 8
     assert [step.title_zh for step in state.steps] == [
-        "Meta 项目首页",
-        "研究问题 / PICO",
-        "检索与导入",
-        "文献筛选",
-        "提取与质量评价",
+        "项目首页",
+        "研究问题与 PICO",
+        "检索策略",
+        "文献库与导入",
+        "去重与筛选",
+        "数据提取与质量评价",
         "统计分析",
         "报告导出",
     ]
@@ -48,15 +49,15 @@ def test_pico_and_search_steps_show_draft_and_confirmed_states(tmp_path: Path) -
     pico = PICOWorkspaceService()
     pico.generate_draft(tmp_path, "高血压患者降压药对卒中风险的影响", pico_mode="pico")
     draft_steps = step_by_id(tmp_path)
-    assert draft_steps["pico_workspace"].status == "草稿待确认"
+    assert draft_steps["pico_workspace"].status == "草稿"
 
     pico.confirm_protocol(tmp_path, actor="reviewer", confirmed_meta_type="treatment_comparative_meta")
     SearchStrategyBuilderService().generate_from_confirmed_protocol(tmp_path)
     confirmed_steps = step_by_id(tmp_path)
 
-    assert confirmed_steps["pico_workspace"].status == "已确认"
-    assert confirmed_steps["search_import"].status == "需要确认"
-    assert "drafts=7" in confirmed_steps["search_import"].artifact_summary
+    assert confirmed_steps["pico_workspace"].status == "已完成"
+    assert confirmed_steps["search_strategy"].status == "草稿"
+    assert "drafts=7" in confirmed_steps["search_strategy"].artifact_summary
 
 
 def test_literature_pubmed_dedup_extraction_quality_and_analysis_plan_summaries(tmp_path: Path) -> None:
@@ -103,9 +104,9 @@ def test_literature_pubmed_dedup_extraction_quality_and_analysis_plan_summaries(
 
     steps = step_by_id(tmp_path)
 
-    assert "previews=1" in steps["search_import"].artifact_summary
-    assert "selected=1" in steps["search_import"].artifact_summary
-    assert "records=1" in steps["search_import"].artifact_summary
+    assert "previews=1" in steps["literature_import"].artifact_summary
+    assert "selected=1" in steps["literature_import"].artifact_summary
+    assert "records=1" in steps["literature_import"].artifact_summary
     assert "duplicate_groups=1" in steps["screening"].artifact_summary
     assert "fulltext_records=1" in steps["screening"].artifact_summary
     assert "effect_rows=1" in steps["extraction_quality"].artifact_summary
@@ -122,6 +123,7 @@ def test_placeholder_pages_do_not_generate_statistics_figures_reports_or_prisma(
     steps = step_by_id(tmp_path)
 
     assert steps["analysis_results"].safety_flags["runs_statistics"] is False
+    assert steps["analysis_results"].status == "有警告"
     assert "不自动运行统计" in steps["analysis_results"].artifact_summary
     assert steps["prisma_reporting"].placeholder is True
     assert steps["prisma_reporting"].safety_flags["advances_prisma"] is False

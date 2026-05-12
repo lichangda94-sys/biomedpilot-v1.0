@@ -53,7 +53,7 @@ class MetaWorkflowIntegrationState:
 WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
     {
         "step_id": "project_home",
-        "title_zh": "Meta 项目首页",
+        "title_zh": "项目首页",
         "route_key": "workflow_home",
         "primary_action_zh": "查看流程状态",
         "next_action_zh": "继续：研究问题 / PICO",
@@ -61,31 +61,39 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
     },
     {
         "step_id": "pico_workspace",
-        "title_zh": "研究问题 / PICO",
+        "title_zh": "研究问题与 PICO",
         "route_key": "pico_workspace",
         "primary_action_zh": "生成 PICO 草稿",
         "next_action_zh": "确认后生成检索策略",
-        "next_step_id": "search_import",
+        "next_step_id": "search_strategy",
     },
     {
-        "step_id": "search_import",
-        "title_zh": "检索与导入",
+        "step_id": "search_strategy",
+        "title_zh": "检索策略",
         "route_key": "search_strategy",
         "primary_action_zh": "生成检索策略",
-        "next_action_zh": "导入文献后进入筛选",
+        "next_action_zh": "确认检索策略后导入文献",
+        "next_step_id": "literature_import",
+    },
+    {
+        "step_id": "literature_import",
+        "title_zh": "文献库与导入",
+        "route_key": "literature_import",
+        "primary_action_zh": "导入文献",
+        "next_action_zh": "导入文献后进入去重与筛选",
         "next_step_id": "screening",
     },
     {
         "step_id": "screening",
-        "title_zh": "文献筛选",
-        "route_key": "title_abstract_screening",
+        "title_zh": "去重与筛选",
+        "route_key": "screening_review",
         "primary_action_zh": "查看筛选队列",
         "next_action_zh": "完成筛选后进入数据提取",
         "next_step_id": "extraction_quality",
     },
     {
         "step_id": "extraction_quality",
-        "title_zh": "提取与质量评价",
+        "title_zh": "数据提取与质量评价",
         "route_key": "manual_extraction",
         "primary_action_zh": "新建提取行",
         "next_action_zh": "完成质量评价后进入统计分析",
@@ -113,11 +121,11 @@ WORKFLOW_STEP_DEFINITIONS: tuple[dict[str, str], ...] = (
 def meta_workflow_integration_state_from_project(project_dir: Path) -> MetaWorkflowIntegrationState:
     project_dir = project_dir.expanduser().resolve()
     steps = tuple(_step_state(project_dir, index + 1, definition) for index, definition in enumerate(WORKFLOW_STEP_DEFINITIONS))
-    next_step = next((step.step_id for step in steps if step.status not in {"已确认", "已生成", "已有记录", "testing-level"}), steps[-1].step_id)
+    next_step = next((step.step_id for step in steps if step.status != "已完成"), steps[-1].step_id)
     return MetaWorkflowIntegrationState(
         schema_version=WORKFLOW_INTEGRATION_SCHEMA_VERSION,
         title_zh="Meta 分析工作流",
-        status_label_zh=f"{APP_VERSION} · Developer Preview / testing",
+        status_label_zh=f"{APP_VERSION} · 内部测试",
         project_dir=str(project_dir),
         step_count=len(steps),
         steps=steps,
@@ -142,13 +150,14 @@ def _step_state(project_dir: Path, order: int, definition: dict[str, str]) -> Me
         return _project_home_state(project_dir, order, definition)
     if step_id == "pico_workspace":
         return _pico_state(project_dir, order, definition)
-    if step_id == "search_import":
+    if step_id == "search_strategy":
+        return _search_strategy_state(project_dir, order, definition)
+    if step_id == "literature_import":
         return _aggregate_stage_state(
             project_dir,
             order,
             definition,
             (
-                _search_strategy_state(project_dir, order, {**definition, "step_id": "search_strategy"}),
                 _pubmed_handoff_state(project_dir, order, {**definition, "step_id": "literature_acquisition"}),
                 _literature_library_state(project_dir, order, {**definition, "step_id": "literature_library"}),
             ),
@@ -194,7 +203,7 @@ def _step_state(project_dir: Path, order: int, definition: dict[str, str]) -> Me
                 _placeholder_state(project_dir, order, {**definition, "step_id": "report_export"}, "报告导出仍为测试版"),
             ),
         )
-    return _base_state(project_dir, order, definition, status="待开发", artifact_summary="暂不可用")
+    return _base_state(project_dir, order, definition, status="阻塞", artifact_summary="暂不可用")
 
 
 def _project_home_state(project_dir: Path, order: int, definition: dict[str, str]) -> MetaWorkflowStepState:
@@ -208,7 +217,7 @@ def _project_home_state(project_dir: Path, order: int, definition: dict[str, str
             "analysis/analysis_plan_confirmed_v1.json",
         ),
     )
-    status = "已有项目" if artifact_paths else "未开始"
+    status = "已完成" if artifact_paths else "未开始"
     warnings = () if artifact_paths else ("尚未生成项目 artifact",)
     return _base_state(
         project_dir,
@@ -227,7 +236,7 @@ def _pico_state(project_dir: Path, order: int, definition: dict[str, str]) -> Me
     draft = service.load_draft(project_dir)
     confirmed = service.load_confirmed(project_dir)
     paths = _existing_paths(project_dir, ("protocol/pico_workspace_draft.json", "protocol/pico_workspace_confirmed.json"))
-    status = "已确认" if confirmed is not None else "草稿待确认" if draft is not None else "未开始"
+    status = "已完成" if confirmed is not None else "草稿" if draft is not None else "未开始"
     warnings: tuple[str, ...] = tuple(draft.warnings) if draft is not None else ("需要输入中文研究问题",)
     summary = f"draft={bool(draft)} confirmed={bool(confirmed)}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -246,7 +255,14 @@ def _search_strategy_state(project_dir: Path, order: int, definition: dict[str, 
             "protocol/search_strategy_v2/search_strategy_draft.txt",
         ),
     )
-    status = "已确认" if confirmed else "草稿待确认" if drafts else "未开始"
+    if confirmed:
+        status = "已完成"
+    elif drafts:
+        status = "草稿"
+    elif not (project_dir / "protocol" / "pico_workspace_confirmed.json").exists():
+        status = "阻塞"
+    else:
+        status = "未开始"
     warnings = tuple(_dedupe([*(warning for draft in drafts for warning in draft.warnings), *("没有已确认研究问题" if not (project_dir / "protocol" / "pico_workspace_confirmed.json").exists() else "",)]))
     summary = f"drafts={len(drafts)} confirmed={len(confirmed)}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -260,7 +276,7 @@ def _pubmed_handoff_state(project_dir: Path, order: int, definition: dict[str, s
     selected = sum(_count_decisions(path, "selected") for path in selections)
     rejected = sum(_count_decisions(path, "rejected") for path in selections)
     imported = _imported_count_from_batches(project_dir, "pubmed_confirmed_candidates")
-    status = "已导入选中项" if imported else "等待用户选择" if previews else "未开始"
+    status = "已完成" if imported else "待确认" if previews else "未开始"
     warnings = () if previews else ("暂无 PubMed candidates preview",)
     paths = tuple(str(path) for path in [*previews, *selections, *handoff_audits])
     summary = f"previews={len(previews)} selected={selected} rejected={rejected} imported={imported}"
@@ -274,7 +290,7 @@ def _literature_library_state(project_dir: Path, order: int, definition: dict[st
     total_batches = int(manifest.get("total_batches", 0) or 0)
     source_counts = dict(manifest.get("source_counts", {})) if isinstance(manifest.get("source_counts"), dict) else {}
     paths = _existing_paths(project_dir, ("literature/literature_records.json", "literature/import_batches.json", "literature/library_manifest.json"))
-    status = "已有记录" if records else "未开始"
+    status = "已完成" if records else "未开始"
     warnings = () if records else ("文献库为空",)
     summary = f"records={len(records)} batches={total_batches} sources={source_counts}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -299,7 +315,7 @@ def _dedup_state(project_dir: Path, order: int, definition: dict[str, str]) -> M
         for group in groups:
             risk = str(group.get("risk_level") or group.get("risk") or group.get("duplicate_type") or "unknown")
             risk_counts[risk] = risk_counts.get(risk, 0) + 1
-    status = "待人工复核" if group_count else "未发现重复组" if paths else "未开始"
+    status = "待确认" if group_count else "已完成" if paths else "未开始"
     warnings = ("需要人工确认去重决定",) if group_count else ()
     summary = f"duplicate_groups={group_count} risk_counts={risk_counts}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -319,7 +335,7 @@ def _fulltext_state(project_dir: Path, order: int, definition: dict[str, str]) -
     records = _items(registry, "records")
     parse_manifest = _load_json(project_dir / "fulltext" / "fulltext_parse_manifest_v1.json")
     parse_total = int(parse_manifest.get("total_count", parse_manifest.get("total", 0)) or 0) if parse_manifest else 0
-    status = "已有全文状态" if records or parse_total else "未开始"
+    status = "已完成" if records or parse_total else "未开始"
     warnings = () if records or parse_total else ("暂无全文管理记录",)
     summary = f"fulltext_records={len(records)} parse_total={parse_total}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -340,7 +356,7 @@ def _manual_extraction_state(project_dir: Path, order: int, definition: dict[str
             "extraction/extraction_validation_report.json",
         ),
     )
-    status = "已有草稿" if effect_rows else "未开始"
+    status = "有警告" if missing_count else "草稿" if effect_rows else "未开始"
     warnings = (f"缺失关键字段：{missing_count}",) if missing_count else ()
     summary = f"study_units={len(study_units)} effect_rows={len(effect_rows)} missing_required_fields={missing_count}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -353,7 +369,7 @@ def _ai_extraction_state(project_dir: Path, order: int, definition: dict[str, st
     suggestions = _items(queue, "suggestions")
     pending = len([item for item in suggestions if str(item.get("status", "pending")) == "pending"])
     paths = tuple(str(path) for path in (queue_path, application_path) if path.exists())
-    status = "有待审核建议" if pending else "已有建议" if suggestions else "未开始"
+    status = "待确认" if pending else "草稿" if suggestions else "未开始"
     warnings = ("AI 建议必须人工审核",) if suggestions else ()
     summary = f"suggestions={len(suggestions)} pending={pending}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -372,7 +388,7 @@ def _quality_state(project_dir: Path, order: int, definition: dict[str, str]) ->
             "quality/quality_table.csv",
         ),
     )
-    status = "已有人工评分" if completed or assessments else "未开始"
+    status = "已完成" if completed else "有警告" if assessments else "未开始"
     warnings = ("质量评价未完成",) if not completed else ()
     artifact_summary = f"assessments={len(assessments) + len(records_v1)} completed={completed}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=artifact_summary, artifact_paths=paths, warnings=warnings)
@@ -390,7 +406,7 @@ def _analysis_plan_state(project_dir: Path, order: int, definition: dict[str, st
             "analysis/analysis_plan_manifest_v1.json",
         ),
     )
-    status = "已确认" if confirmed else "草稿待确认" if draft else "未开始"
+    status = "已完成" if confirmed else "草稿" if draft else "未开始"
     warnings = tuple(str(item) for item in draft.get("warnings", []) if item) if draft else ("尚未生成分析计划草稿",)
     summary = f"draft={bool(draft)} confirmed={bool(confirmed)}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
@@ -399,11 +415,11 @@ def _analysis_plan_state(project_dir: Path, order: int, definition: dict[str, st
 def _statistics_placeholder_state(project_dir: Path, order: int, definition: dict[str, str]) -> MetaWorkflowStepState:
     confirmed_plan = (project_dir / "analysis" / "analysis_plan_confirmed_v1.json").exists()
     if confirmed_plan:
-        status = "testing-level"
+        status = "有警告"
         summary = "统计引擎将在 M17 接入；本流程页不自动运行统计"
         warnings: tuple[str, ...] = ()
     else:
-        status = "暂不可用"
+        status = "阻塞"
         summary = "请先确认分析计划"
         warnings = ("缺少 confirmed analysis plan",)
     return _base_state(
@@ -426,16 +442,18 @@ def _aggregate_stage_state(
     children: tuple[MetaWorkflowStepState, ...],
 ) -> MetaWorkflowStepState:
     statuses = [child.status for child in children]
-    complete = {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "已有人工评分", "已有全文状态", "已导入选中项"}
-    needs_confirm = {"草稿待确认", "待人工复核", "等待用户选择", "有待审核建议"}
-    if statuses and all(status in complete for status in statuses):
+    if statuses and all(status == "已完成" for status in statuses):
         status = "已完成"
-    elif any(status in needs_confirm for status in statuses):
-        status = "需要确认"
-    elif any(status not in {"未开始", "暂不可用", "testing-level"} for status in statuses):
-        status = "进行中"
-    elif any(status == "暂不可用" for status in statuses):
-        status = "暂不可用"
+    elif any(status == "待确认" for status in statuses):
+        status = "待确认"
+    elif any(status == "有警告" for status in statuses):
+        status = "有警告"
+    elif any(status == "草稿" for status in statuses):
+        status = "草稿"
+    elif any(status == "阻塞" for status in statuses):
+        status = "阻塞"
+    elif any(status == "已完成" for status in statuses):
+        status = "草稿"
     else:
         status = "未开始"
     artifact_paths = tuple(path for child in children for path in child.artifact_paths)
@@ -460,7 +478,7 @@ def _placeholder_state(project_dir: Path, order: int, definition: dict[str, str]
         project_dir,
         order,
         definition,
-        status="暂不可用",
+        status="阻塞",
         artifact_summary=message,
         artifact_paths=(),
         warnings=(message,),

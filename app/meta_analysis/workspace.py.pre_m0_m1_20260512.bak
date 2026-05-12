@@ -285,41 +285,32 @@ def _compact_path(path: Path | None) -> str:
 def _workflow_stage_zh(stage: str) -> str:
     return {
         "project_home": "项目首页",
-        "pico_workspace": "研究问题与 PICO",
-        "search_strategy": "检索策略",
-        "literature_import": "文献库与导入",
-        "screening": "去重与筛选",
-        "extraction_quality": "数据提取与质量评价",
+        "pico_workspace": "研究问题 / PICO",
+        "search_import": "检索与导入",
+        "screening": "文献筛选",
+        "extraction_quality": "提取与质量评价",
         "analysis_results": "统计分析",
         "prisma_reporting": "报告导出",
     }.get(stage, "项目首页")
 
 
 def _main_stage_status_label(status: str) -> str:
-    if status in {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "已有人工评分", "已创建", "已完成"}:
+    if status in {"已确认", "已生成", "已有记录", "已有项目", "已有草稿", "已有人工评分", "已创建"}:
         return "已完成"
-    if status in {"草稿待确认", "已有建议"}:
-        return "草稿"
-    if status in {"待人工复核", "等待用户选择", "有待审核建议", "需要确认"}:
-        return "待确认"
-    if status in {"testing-level", "待开发", "暂不可用"}:
-        return "阻塞"
+    if status in {"草稿待确认", "待人工复核", "等待用户选择", "有待审核建议"}:
+        return "需要确认"
+    if status in {"testing-level", "待开发"}:
+        return "暂不可用"
     return status or "未开始"
 
 
 def _nav_stage_label(title: str) -> str:
     return {
         "Meta 项目首页": "项目首页",
-        "项目首页": "项目首页",
-        "研究问题 / PICO": "研究问题与 PICO",
-        "研究问题与 PICO": "研究问题与 PICO",
-        "检索与导入": "检索策略",
-        "检索策略": "检索策略",
-        "文献库与导入": "文献库与导入",
-        "文献筛选": "去重与筛选",
-        "去重与筛选": "去重与筛选",
-        "提取与质量评价": "数据提取与质量评价",
-        "数据提取与质量评价": "数据提取与质量评价",
+        "研究问题 / PICO": "研究问题 / PICO",
+        "检索与导入": "检索与导入",
+        "文献筛选": "文献筛选",
+        "提取与质量评价": "提取与质量评价",
         "统计分析": "统计分析",
         "报告导出": "报告导出",
     }.get(title, title)
@@ -596,7 +587,7 @@ if QWidget is not None:
             self._update_project_summary()
             state = meta_workflow_integration_state_from_project(self._project_dir_for_state())
             for step in state.steps:
-                status = _main_stage_status_label(step.status)
+                status = "当前" if not self._page_keys else _main_stage_status_label(step.status)
                 item = QListWidgetItem(f"{step.order}. {_nav_stage_label(step.title_zh)} · {status}")
                 item.setToolTip(f"{step.primary_action_zh}\n{step.next_action_zh}")
                 self._navigation_list.addItem(item)
@@ -628,10 +619,8 @@ if QWidget is not None:
             if step.route_key == "pico_workspace":
                 return _pico_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("search_strategy"))
             if step.route_key == "search_strategy":
-                return _search_strategy_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("literature_import"))
-            if step.route_key == "literature_import":
-                return _literature_acquisition_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("screening_review"))
-            if step.route_key == "screening_review":
+                return _search_strategy_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("title_abstract_screening"))
+            if step.route_key == "title_abstract_screening":
                 return _title_abstract_screening_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("manual_extraction"))
             if step.route_key == "manual_extraction":
                 return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
@@ -646,7 +635,7 @@ if QWidget is not None:
             frame.setObjectName("metaProjectHomePage")
             layout = QVBoxLayout(frame)
             layout.setSpacing(12)
-            layout.addWidget(_meta_home_header(None, "项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
+            layout.addWidget(_meta_home_header(None, "Meta 项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
             layout.addWidget(self._meta_project_management_card(compact=True))
             action_card = _card("下一步")
             action_layout = action_card.layout()
@@ -735,7 +724,7 @@ if QWidget is not None:
         frame.setObjectName("metaProjectHomePage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_meta_home_header(summary, "项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
+        layout.addWidget(_meta_home_header(summary, "Meta 项目首页", "管理 Meta 项目，并继续研究问题、检索、筛选、提取、分析与报告流程。"))
         action_card = _card("当前项目已打开")
         action_layout = action_card.layout()
         action_layout.addWidget(QLabel("下一步：填写研究问题 / PICO"))
@@ -769,12 +758,11 @@ if QWidget is not None:
         service = PICOWorkspaceService()
         draft = service.load_draft(project_dir)
         confirmed = service.load_confirmed(project_dir)
-        ui_draft = _load_json_object(_pico_ui_draft_path(project_dir))
         frame = QFrame()
         frame.setObjectName("metaPicoPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("研究问题与 PICO", "输入中文研究问题，选择 PICO/PICOS/PECO，生成草稿并由用户确认 Protocol。", "需要人工确认"))
+        layout.addWidget(_page_header("中文研究问题 / PICO", "生成草稿、编辑字段，再由用户确认。", "需要人工确认"))
         input_card = _card("输入研究问题")
         input_layout = input_card.layout()
         question = QPlainTextEdit()
@@ -783,50 +771,25 @@ if QWidget is not None:
         if draft:
             question.setPlainText(draft.research_question_original)
         input_layout.addWidget(question)
-        mode_selector = QComboBox()
-        mode_selector.setObjectName("metaPicoModeSelector")
-        for label, value in (("PICO", "pico"), ("PICOS", "picos"), ("PECO", "peco")):
-            mode_selector.addItem(label, value)
-        selected_mode = draft.pico_mode if draft else "pico"
-        mode_selector.setCurrentIndex(max(0, mode_selector.findData(selected_mode)))
-        input_layout.addWidget(mode_selector)
         generate = QPushButton("生成 PICO 草稿")
         generate.setObjectName("metaPrimaryButton")
         input_layout.addWidget(generate)
         layout.addWidget(input_card)
 
         draft_fields = {
+            "pico_mode": QLineEdit(draft.pico_mode if draft else "pico"),
             "population": QLineEdit(draft.population if draft else ""),
             "intervention": QLineEdit(draft.intervention if draft else ""),
             "exposure": QLineEdit(draft.exposure if draft else ""),
             "comparator": QLineEdit(draft.comparator if draft else ""),
             "outcome": QLineEdit(draft.outcome if draft else ""),
             "study_design": QLineEdit(draft.study_design if draft else ""),
-            "inclusion_criteria": QLineEdit(str(ui_draft.get("inclusion_criteria") or (_default_inclusion_criteria(draft) if draft else ""))),
-            "exclusion_criteria": QLineEdit(str(ui_draft.get("exclusion_criteria") or ("；".join(draft.exclusion_scope) if draft else ""))),
-            "primary_outcomes": QLineEdit(str(ui_draft.get("primary_outcomes") or (draft.outcome if draft else ""))),
-            "secondary_outcomes": QLineEdit(str(ui_draft.get("secondary_outcomes") or "")),
-            "effect_measure": QLineEdit(str(ui_draft.get("effect_measure") or (_recommended_effect_measure(draft) if draft else ""))),
         }
-        for key, field in draft_fields.items():
-            field.setObjectName(f"metaPico{''.join(part.title() for part in key.split('_'))}Input")
         draft_card = _card("PICO / PICOS / PECO 草稿")
         draft_layout = draft_card.layout()
         if draft:
             draft_layout.addWidget(_kv_label("Draft ID", draft.protocol_id))
-            for label, key in (
-                ("P 研究对象", "population"),
-                ("I 干预", "intervention"),
-                ("E 暴露", "exposure"),
-                ("C 对照", "comparator"),
-                ("O 结局", "outcome"),
-                ("S 研究类型", "study_design"),
-                ("纳入标准草稿", "inclusion_criteria"),
-                ("排除标准草稿", "exclusion_criteria"),
-                ("主要结局", "primary_outcomes"),
-                ("次要结局", "secondary_outcomes"),
-                ("推荐效应量类型", "effect_measure"),
-            ):
+            for label, key in (("模式", "pico_mode"), ("P 研究对象", "population"), ("I 干预", "intervention"), ("E 暴露", "exposure"), ("C 对照", "comparator"), ("O 结局", "outcome"), ("S 研究类型", "study_design")):
                 draft_layout.addWidget(QLabel(label))
                 draft_layout.addWidget(draft_fields[key])
             if draft.warnings:
@@ -837,7 +800,7 @@ if QWidget is not None:
         save.setObjectName("metaSecondaryButton")
         confirm = QPushButton("确认研究问题")
         confirm.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：检索策略")
+        next_button = QPushButton("下一步：检索与导入")
         next_button.setObjectName("metaSecondaryButton")
         row = QHBoxLayout()
         row.addWidget(save)
@@ -857,7 +820,6 @@ if QWidget is not None:
                 f"C：{confirmed.confirmed_comparator}",
                 f"O：{'；'.join(confirmed.confirmed_outcomes)}",
                 f"Meta 类型：{confirmed.confirmed_meta_type}",
-                f"补充说明：{confirmed.user_notes or '无'}",
             ]
         layout.addWidget(_info_card("已确认研究问题", confirmed_lines, object_name="metaConfirmedProtocolCard"))
         layout.addWidget(_developer_details(f"project_dir={project_dir}\ndraft={bool(draft)} confirmed={bool(confirmed)}"))
@@ -868,7 +830,7 @@ if QWidget is not None:
             if not text:
                 _show_message("请输入研究问题")
                 return
-            service.generate_draft(project_dir, text, pico_mode=str(mode_selector.currentData()), actor="reviewer")
+            service.generate_draft(project_dir, text, actor="reviewer")
             on_refresh()
 
         def do_save() -> None:
@@ -878,18 +840,8 @@ if QWidget is not None:
             service.edit_draft(
                 project_dir,
                 actor="reviewer",
-                updates={
-                    "pico_mode": str(mode_selector.currentData()),
-                    "population": draft_fields["population"].text().strip(),
-                    "intervention": draft_fields["intervention"].text().strip(),
-                    "exposure": draft_fields["exposure"].text().strip(),
-                    "comparator": draft_fields["comparator"].text().strip(),
-                    "outcome": draft_fields["primary_outcomes"].text().strip() or draft_fields["outcome"].text().strip(),
-                    "study_design": draft_fields["study_design"].text().strip(),
-                    "exclusion_scope": [item.strip() for item in draft_fields["exclusion_criteria"].text().split("；") if item.strip()],
-                },
+                updates={key: field.text().strip() for key, field in draft_fields.items()},
             )
-            _save_pico_ui_draft(project_dir, draft_fields)
             on_refresh()
 
         def do_confirm() -> None:
@@ -902,25 +854,12 @@ if QWidget is not None:
                 project_dir,
                 actor="reviewer",
                 confirmed_meta_type=meta_type,
-                user_notes="\n".join(
-                    [
-                        f"纳入标准草稿：{draft_fields['inclusion_criteria'].text().strip()}",
-                        f"排除标准草稿：{draft_fields['exclusion_criteria'].text().strip()}",
-                        f"主要结局：{draft_fields['primary_outcomes'].text().strip()}",
-                        f"次要结局：{draft_fields['secondary_outcomes'].text().strip()}",
-                        f"推荐效应量类型：{draft_fields['effect_measure'].text().strip()}",
-                    ]
-                ),
                 overrides={
-                    "confirmed_pico_mode": str(mode_selector.currentData()),
+                    "confirmed_pico_mode": draft_fields["pico_mode"].text().strip(),
                     "confirmed_population": draft_fields["population"].text().strip(),
                     "confirmed_intervention_or_exposure": draft_fields["exposure"].text().strip() or draft_fields["intervention"].text().strip(),
                     "confirmed_comparator": draft_fields["comparator"].text().strip(),
-                    "confirmed_outcomes": [
-                        item.strip()
-                        for item in (draft_fields["primary_outcomes"].text() + "；" + draft_fields["secondary_outcomes"].text()).split("；")
-                        if item.strip()
-                    ],
+                    "confirmed_outcomes": draft_fields["outcome"].text().strip(),
                     "confirmed_study_design": draft_fields["study_design"].text().strip(),
                 },
             )
@@ -941,27 +880,11 @@ if QWidget is not None:
         frame.setObjectName("metaSearchStrategyPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        confirmed_protocol = PICOWorkspaceService().load_confirmed(project_dir)
-        layout.addWidget(_page_header("检索策略", "读取已确认 Protocol，生成可人工复核的多数据库检索草稿。", "草稿阶段"))
+        layout.addWidget(_page_header("检索与导入", "基于已确认研究问题生成检索式，并汇总文献导入状态。", "需要确认"))
         if not (project_dir / "protocol" / "pico_workspace_confirmed.json").exists():
             layout.addWidget(_info_card("请先确认研究问题", ["没有 confirmed protocol 时不能生成正式检索策略草稿。"]))
             layout.addStretch(1)
             return frame
-        if confirmed_protocol:
-            layout.addWidget(
-                _info_card(
-                    "已确认 Protocol",
-                    [
-                        f"研究类型：{confirmed_protocol.confirmed_pico_mode.upper()}",
-                        f"研究对象：{confirmed_protocol.confirmed_population or '待补充'}",
-                        f"干预/暴露：{confirmed_protocol.confirmed_intervention_or_exposure or '待补充'}",
-                        f"对照：{confirmed_protocol.confirmed_comparator or '待补充'}",
-                        f"结局：{'；'.join(confirmed_protocol.confirmed_outcomes) or '待补充'}",
-                        "下一阶段将基于该方案生成检索策略",
-                    ],
-                    object_name="metaSearchConfirmedProtocolCard",
-                )
-            )
         actions = _card("主操作")
         action_layout = actions.layout()
         generate = QPushButton("生成检索策略")
@@ -969,7 +892,7 @@ if QWidget is not None:
         save_edit = QPushButton("保存当前编辑")
         confirm = QPushButton("确认检索式")
         export = QPushButton("导出 Markdown / TXT")
-        next_button = QPushButton("下一步：文献库与导入")
+        next_button = QPushButton("下一步：文献筛选")
         for button in (save_edit, confirm, export, next_button):
             button.setObjectName("metaSecondaryButton")
         row = QHBoxLayout()
@@ -1059,7 +982,7 @@ if QWidget is not None:
         frame.setObjectName("metaLiteratureAcquisitionPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("文献库与导入", "PubMed candidates 和本地 NBIB/RIS/CSV 导入；不把数据库检索伪装为已执行。", "人工导入"))
+        layout.addWidget(_page_header("文献获取", "PubMed candidates 和本地 NBIB/RIS/CSV 导入。", "不自动筛选"))
         candidate_card = _card("PubMed candidates preview")
         candidate_layout = candidate_card.layout()
         preview_selector = QComboBox()
@@ -1085,7 +1008,7 @@ if QWidget is not None:
         local_layout.addWidget(import_file)
         layout.addWidget(local_card)
         layout.addWidget(_info_card("Import batch 摘要", [f"total_records={manifest.get('total_records', 0)}", f"total_batches={manifest.get('total_batches', 0)}", f"sources={manifest.get('source_counts', {})}"], object_name="metaImportBatchSummary"))
-        next_button = QPushButton("下一步：去重与筛选")
+        next_button = QPushButton("下一步：文献库")
         next_button.setObjectName("metaSecondaryButton")
         layout.addWidget(next_button)
         layout.addWidget(_developer_details(f"previews={len(previews)} project_dir={project_dir}"))
@@ -1427,12 +1350,12 @@ if QWidget is not None:
         frame.setObjectName("metaTitleAbstractScreeningPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("去重与筛选", "从去重结果进入逐篇人工筛选；AI 只能作为 suggestion。", "人工决定"))
+        layout.addWidget(_page_header("文献筛选", "逐篇人工筛选；AI 只能作为 suggestion。", "人工决定"))
         layout.addWidget(_info_card("筛选摘要", [f"队列文献：{len(records)}", f"人工决定：{len(decisions)}", "PRISMA screened/excluded 只来自用户决定。"], object_name="metaScreeningSummary"))
         actions = QHBoxLayout()
         build_queue = QPushButton("生成筛选队列")
         save_decision = QPushButton("保存人工决定")
-        next_button = QPushButton("下一步：数据提取与质量评价")
+        next_button = QPushButton("下一步：提取与质量评价")
         for button in (build_queue, save_decision, next_button):
             button.setObjectName("metaPrimaryButton" if button is build_queue else "metaSecondaryButton")
             actions.addWidget(button)
@@ -1643,7 +1566,7 @@ if QWidget is not None:
         frame.setObjectName("metaManualExtractionPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("数据提取与质量评价", "逐篇文献提取数据，并由用户完成质量评价。", "草稿"))
+        layout.addWidget(_page_header("提取与质量评价", "逐篇文献提取数据，并由用户完成质量评价。", "草稿"))
         layout.addWidget(_info_card("提取概览", [f"文献：{len(records)}", f"study unit：{len(units)}", f"effect row：{len(rows)}", f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}", "completed_by_user 不等于 analysis-ready。"], object_name="metaExtractionSummary"))
         action_row = QHBoxLayout()
         create_unit = QPushButton("新建 study unit")
@@ -2225,15 +2148,14 @@ if QWidget is not None:
     def _progress_summary(state) -> QFrame:
         stage_labels = {
             "project_home": "项目首页",
-            "pico_workspace": "研究问题与 PICO",
-            "search_strategy": "检索策略",
-            "literature_import": "文献库与导入",
-            "screening": "去重与筛选",
-            "extraction_quality": "数据提取与质量评价",
+            "pico_workspace": "研究问题",
+            "search_import": "检索与导入",
+            "screening": "文献筛选",
+            "extraction_quality": "提取与质量评价",
             "analysis_results": "统计分析",
             "prisma_reporting": "报告导出",
         }
-        complete_statuses = {"已完成", "已有项目", "已确认", "已生成", "已有记录", "已有人工评分"}
+        complete_statuses = {"已有项目", "已确认", "已生成", "已有记录", "已有草稿", "已有人工评分"}
         current = next((step for step in state.steps if step.status not in complete_statuses), state.steps[-1])
         if current.step_id == "pico_workspace":
             current_line = "当前进度：项目已创建"
@@ -2245,7 +2167,9 @@ if QWidget is not None:
         for step in state.steps:
             label = stage_labels.get(step.step_id, step.title_zh)
             if step.step_id == current.step_id:
-                status = f"当前（{_main_stage_status_label(step.status)}）"
+                status = "当前"
+            elif step.status in complete_statuses:
+                status = "已完成"
             else:
                 status = _main_stage_status_label(step.status)
             chips.append(f"{label} {status}")
@@ -2330,54 +2254,6 @@ if QWidget is not None:
             if value and "coming_soon" not in value:
                 return value
         return "treatment_comparative_meta"
-
-
-    def _default_inclusion_criteria(draft) -> str:
-        if draft is None:
-            return ""
-        parts = [
-            f"研究对象符合：{draft.population}" if draft.population else "",
-            f"干预/暴露符合：{draft.exposure or draft.intervention}" if draft.exposure or draft.intervention else "",
-            f"对照符合：{draft.comparator}" if draft.comparator else "",
-            f"结局包含：{draft.outcome}" if draft.outcome else "",
-            f"研究类型：{draft.study_design}" if draft.study_design else "",
-        ]
-        return "；".join(part for part in parts if part)
-
-
-    def _recommended_effect_measure(draft) -> str:
-        if draft is None:
-            return ""
-        meta_type = _default_meta_type(draft.meta_type_candidates)
-        if "diagnostic" in meta_type:
-            return "敏感度、特异度、诊断比值比"
-        if "prevalence" in meta_type or "incidence" in meta_type:
-            return "比例、发生率或率比"
-        if "correlation" in meta_type:
-            return "相关系数 r 或 Fisher z"
-        if "survival" in meta_type or "prognostic" in meta_type:
-            return "HR"
-        if draft.pico_mode == "peco" or "risk" in meta_type:
-            return "OR、RR 或 HR"
-        return "RR、OR、MD 或 SMD"
-
-
-    def _pico_ui_draft_path(project_dir: Path) -> Path:
-        return project_dir.expanduser().resolve() / "protocol" / "pico_workspace_ui_draft.json"
-
-
-    def _save_pico_ui_draft(project_dir: Path, draft_fields: dict[str, QLineEdit]) -> None:
-        payload = {
-            "schema_version": "meta_pico_workspace_ui_draft.v1",
-            "inclusion_criteria": draft_fields["inclusion_criteria"].text().strip(),
-            "exclusion_criteria": draft_fields["exclusion_criteria"].text().strip(),
-            "primary_outcomes": draft_fields["primary_outcomes"].text().strip(),
-            "secondary_outcomes": draft_fields["secondary_outcomes"].text().strip(),
-            "effect_measure": draft_fields["effect_measure"].text().strip(),
-        }
-        path = _pico_ui_draft_path(project_dir)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
     def _database_label(database: str) -> str:
