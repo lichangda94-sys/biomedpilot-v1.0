@@ -327,6 +327,7 @@ def _nav_stage_label(title: str) -> str:
 
 try:
     from PySide6.QtWidgets import (
+        QApplication,
         QComboBox,
         QFileDialog,
         QFrame,
@@ -348,12 +349,13 @@ try:
     )
     from PySide6.QtCore import Qt
 except Exception:  # pragma: no cover
-    QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
+    QApplication = QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
     Qt = None
 
 
 if QWidget is not None:
     from app.meta_analysis.search.pubmed_candidates_handoff_service import PubMedCandidatesHandoffService
+    from app.meta_analysis.search.pubmed_search_service import PubMedSearchService
     from app.meta_analysis.search.search_strategy_builder_service import SearchStrategyBuilderService
     from app.meta_analysis.services.dedup_review_v2_service import (
         DECISION_KEEP_BOTH,
@@ -937,6 +939,8 @@ if QWidget is not None:
         service = SearchStrategyBuilderService()
         drafts = list(service.load_drafts(project_dir))
         confirmed = list(service.load_confirmed(project_dir))
+        draft_by_database = {draft.database: draft for draft in drafts}
+        confirmed_by_database = {item.database: item for item in confirmed}
         frame = QFrame()
         frame.setObjectName("metaSearchStrategyPage")
         layout = QVBoxLayout(frame)
@@ -962,53 +966,130 @@ if QWidget is not None:
                     object_name="metaSearchConfirmedProtocolCard",
                 )
             )
-        actions = _card("主操作")
-        action_layout = actions.layout()
+        workbench = _card("检索策略工作台")
+        workbench_layout = workbench.layout()
+        split = QHBoxLayout()
+        database_list = QListWidget()
+        database_list.setObjectName("metaSearchDatabaseList")
+        for database in _search_database_order():
+            draft = draft_by_database.get(database)
+            item = QListWidgetItem(f"{_database_label(database)} · {_search_strategy_status(draft, confirmed_by_database.get(database))}")
+            item.setData(Qt.ItemDataRole.UserRole, database)
+            database_list.addItem(item)
+        split.addWidget(database_list, 1)
+
+        editor_panel = QFrame()
+        editor_layout = QVBoxLayout(editor_panel)
+        selected_database_label = QLabel("请选择数据库")
+        selected_database_label.setObjectName("metaSearchSelectedDatabaseLabel")
+        editor = QPlainTextEdit()
+        editor.setObjectName("metaSearchQueryEditor")
+        editor.setPlaceholderText("生成检索策略后可编辑当前数据库检索式。")
+        status_label = QLabel("状态：未生成")
+        status_label.setObjectName("metaSearchStatusLabel")
+        status_label.setWordWrap(True)
+        database_notice = QLabel("")
+        database_notice.setObjectName("metaMutedText")
+        database_notice.setWordWrap(True)
+        editor_layout.addWidget(selected_database_label)
+        editor_layout.addWidget(editor)
+        editor_layout.addWidget(status_label)
+        editor_layout.addWidget(database_notice)
+        split.addWidget(editor_panel, 3)
+        workbench_layout.addLayout(split)
+
+        actions = QHBoxLayout()
         generate = QPushButton("生成检索策略")
         generate.setObjectName("metaPrimaryButton")
         save_edit = QPushButton("保存当前编辑")
-        confirm = QPushButton("确认检索式")
-        export = QPushButton("导出 Markdown / TXT")
+        save_edit.setObjectName("metaSecondaryButton")
+        confirm_one = QPushButton("确认当前检索式")
+        confirm_one.setObjectName("metaSecondaryButton")
+        confirm_all = QPushButton("确认全部检索式")
+        confirm_all.setObjectName("metaSecondaryButton")
+        export = QPushButton("导出 TXT / MD / JSON")
+        export.setObjectName("metaSecondaryButton")
+        copy_query = QPushButton("复制检索式")
+        copy_query.setObjectName("metaSecondaryButton")
+        pubmed_execute = QPushButton("执行 PubMed testing-level 检索")
+        pubmed_execute.setObjectName("metaPubMedExecuteButton")
         next_button = QPushButton("下一步：文献库与导入")
-        for button in (save_edit, confirm, export, next_button):
+        next_button.setObjectName("metaSecondaryButton")
+        for button in (generate, save_edit, confirm_one, confirm_all, export, copy_query, pubmed_execute, next_button):
+            actions.addWidget(button)
+        actions.addStretch(1)
+        workbench_layout.addLayout(actions)
+        layout.addWidget(workbench)
+
+        preview = _latest_pubmed_preview_payload(project_dir)
+        candidate_card = _card("PubMed 候选文献")
+        candidate_layout = candidate_card.layout()
+        candidate_summary = QLabel(_pubmed_preview_summary(preview))
+        candidate_summary.setObjectName("metaMutedText")
+        candidate_summary.setWordWrap(True)
+        candidate_layout.addWidget(candidate_summary)
+        candidate_list = QListWidget()
+        candidate_list.setObjectName("metaPubMedCandidateList")
+        candidate_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        candidate_detail = QTextEdit()
+        candidate_detail.setObjectName("metaPubMedCandidateDetail")
+        candidate_detail.setReadOnly(True)
+        user_note = QPlainTextEdit()
+        user_note.setObjectName("metaPubMedCandidateUserNote")
+        user_note.setPlaceholderText("用户备注，仅显示在当前界面，不参与检索、识别或去重。")
+        user_note.setMaximumHeight(70)
+        for candidate in _items_from_payload(preview, "candidates"):
+            item = QListWidgetItem(_candidate_row_text(candidate))
+            item.setData(Qt.ItemDataRole.UserRole, str(candidate.get("candidate_id", "")))
+            item.setToolTip(_candidate_detail_text(candidate))
+            candidate_list.addItem(item)
+        candidate_actions = QHBoxLayout()
+        select_all = QPushButton("全选")
+        clear_selection = QPushButton("取消全选")
+        import_selected = QPushButton("选择加入文献库")
+        ignore_batch = QPushButton("忽略本批次")
+        for button in (select_all, clear_selection, import_selected, ignore_batch):
             button.setObjectName("metaSecondaryButton")
-        row = QHBoxLayout()
-        for button in (generate, save_edit, confirm, export, next_button):
-            row.addWidget(button)
-        row.addStretch(1)
-        action_layout.addLayout(row)
-        layout.addWidget(actions)
-        selector = QComboBox()
-        selector.setObjectName("metaSearchDraftSelector")
-        editor = QPlainTextEdit()
-        editor.setObjectName("metaSearchQueryEditor")
-        for draft in drafts:
-            selector.addItem(f"{_database_label(draft.database)} · {draft.search_execution_status}", draft.search_strategy_id)
-        if drafts:
-            editor.setPlainText(drafts[0].boolean_query)
-        draft_card = _card("多数据库 query draft")
-        draft_layout = draft_card.layout()
-        draft_layout.addWidget(selector)
-        draft_layout.addWidget(editor)
-        if drafts:
-            for draft in drafts:
-                status = "PubMed 可执行入口" if draft.database == "pubmed" else "draft-only / 手动检索"
-                draft_layout.addWidget(_info_card(_database_label(draft.database), [status, draft.boolean_query[:600] or "暂无 query"], object_name="metaQueryDraftCard"))
-        else:
-            draft_layout.addWidget(QLabel("尚未生成检索策略草稿。"))
-        layout.addWidget(draft_card)
-        layout.addWidget(_info_card("已确认检索式", [f"confirmed={len(confirmed)}", "确认后不会自动执行检索；PubMed 仍需明确入口。"], object_name="metaConfirmedSearchCard"))
-        pubmed_hint = QPushButton("PubMed 可执行入口（本轮不自动执行）")
-        pubmed_hint.setObjectName("metaSecondaryButton")
-        pubmed_hint.setEnabled(False)
-        layout.addWidget(pubmed_hint)
+            candidate_actions.addWidget(button)
+        candidate_actions.addStretch(1)
+        candidate_layout.addLayout(candidate_actions)
+        candidate_layout.addWidget(candidate_list)
+        candidate_layout.addWidget(candidate_detail)
+        candidate_layout.addWidget(user_note)
+        layout.addWidget(candidate_card)
+
+        layout.addWidget(
+            _info_card(
+                "导出与限制",
+                [
+                    f"已生成草稿：{len(drafts)} 个数据库",
+                    f"已确认检索式：{len(confirmed)} 个数据库",
+                    "PubMed 仅为 testing-level 在线执行；其他数据库支持检索式生成、编辑、确认、复制和导出。",
+                ],
+                object_name="metaConfirmedSearchCard",
+            )
+        )
         layout.addWidget(_developer_details(f"drafts={len(drafts)} confirmed={len(confirmed)} project_dir={project_dir}"))
         layout.addStretch(1)
 
-        def update_editor(index: int) -> None:
-            if index < 0 or index >= len(drafts):
-                return
-            editor.setPlainText(drafts[index].boolean_query)
+        def selected_database() -> str:
+            item = database_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item else "pubmed"
+
+        def update_editor(_index: int = 0) -> None:
+            database = selected_database()
+            draft = draft_by_database.get(database)
+            confirmed_strategy = confirmed_by_database.get(database)
+            selected_database_label.setText(_database_label(database))
+            editor.setPlainText(draft.boolean_query if draft else "")
+            status_label.setText(f"状态：{_search_strategy_status(draft, confirmed_strategy)}")
+            database_notice.setText(_database_manual_notice(database))
+            has_confirmed_pubmed = database == "pubmed" and confirmed_strategy is not None and bool(confirmed_strategy.confirmed_query)
+            pubmed_execute.setVisible(database == "pubmed")
+            pubmed_execute.setEnabled(has_confirmed_pubmed)
+            save_edit.setEnabled(draft is not None)
+            confirm_one.setEnabled(draft is not None)
+            copy_query.setEnabled(bool(draft and draft.boolean_query))
 
         def do_generate() -> None:
             try:
@@ -1019,14 +1100,24 @@ if QWidget is not None:
             on_refresh()
 
         def do_save_edit() -> None:
-            strategy_id = selector.currentData()
-            if not strategy_id:
+            database = selected_database()
+            draft = draft_by_database.get(database)
+            if draft is None:
                 _show_message("请先生成检索策略")
                 return
-            service.edit_draft(project_dir, search_strategy_id=str(strategy_id), updates={"boolean_query": editor.toPlainText()}, actor="reviewer")
+            service.edit_draft(project_dir, search_strategy_id=draft.search_strategy_id, updates={"boolean_query": editor.toPlainText()}, actor="reviewer")
             on_refresh()
 
-        def do_confirm() -> None:
+        def do_confirm_one() -> None:
+            database = selected_database()
+            try:
+                service.confirm_strategies(project_dir, actor="reviewer", database_ids=(database,))
+            except Exception as exc:
+                _show_message(str(exc))
+                return
+            on_refresh()
+
+        def do_confirm_all() -> None:
             try:
                 service.confirm_strategies(project_dir, actor="reviewer")
             except Exception as exc:
@@ -1037,17 +1128,78 @@ if QWidget is not None:
         def do_export() -> None:
             try:
                 md_path, txt_path = service.export_drafts(project_dir)
+                json_path = service.draft_set_path(project_dir)
             except Exception as exc:
                 _show_message(str(exc))
                 return
-            _show_message(f"已导出：{md_path.name} / {txt_path.name}")
+            _show_message(f"已导出：{txt_path.name} / {md_path.name} / {json_path.name}")
 
-        selector.currentIndexChanged.connect(update_editor)
+        def do_copy_query() -> None:
+            clipboard = QApplication.clipboard() if QApplication is not None else None
+            if clipboard is not None:
+                clipboard.setText(editor.toPlainText())
+
+        def do_pubmed_execute() -> None:
+            confirmed_strategy = confirmed_by_database.get("pubmed")
+            if confirmed_strategy is None or not confirmed_strategy.confirmed_query.strip():
+                _show_message("请先确认 PubMed 检索式。")
+                return
+            execution = PubMedSearchService().search_pubmed(confirmed_strategy.confirmed_query, max_results=20)
+            report_path = _write_pubmed_execution_report(project_dir, execution)
+            preview = PubMedCandidatesHandoffService().create_candidates_preview(
+                project_dir,
+                execution=execution,
+                execution_report_path=str(report_path.relative_to(project_dir)),
+                search_strategy_snapshot_path=str(service.confirmed_set_path(project_dir).relative_to(project_dir)),
+                project_id=project_dir.name,
+            )
+            _show_message(f"PubMed testing-level 检索完成：候选 {len(preview.candidates)} 条。")
+            on_refresh()
+
+        def update_candidate_detail() -> None:
+            item = candidate_list.currentItem()
+            if item is None:
+                candidate_detail.setPlainText("暂无候选文献。")
+                return
+            candidate_id = str(item.data(Qt.ItemDataRole.UserRole))
+            candidate = next((item for item in _items_from_payload(preview, "candidates") if str(item.get("candidate_id", "")) == candidate_id), {})
+            candidate_detail.setPlainText(_candidate_detail_text(candidate))
+
+        def do_import_selected() -> None:
+            preview_id = str(preview.get("preview_id", ""))
+            selected_ids = tuple(str(item.data(Qt.ItemDataRole.UserRole)) for item in candidate_list.selectedItems())
+            if not preview_id or not selected_ids:
+                _show_message("请先选择候选文献。")
+                return
+            result = PubMedCandidatesHandoffService().import_selected_candidates(
+                project_dir,
+                preview_id=preview_id,
+                selected_candidate_ids=selected_ids,
+                actor="reviewer",
+            )
+            _show_message(result.message)
+            on_refresh()
+
+        def do_ignore_batch() -> None:
+            candidate_list.clearSelection()
+            _show_message("已忽略当前候选批次；未写入文献库。")
+
+        database_list.currentRowChanged.connect(update_editor)
         generate.clicked.connect(do_generate)
         save_edit.clicked.connect(do_save_edit)
-        confirm.clicked.connect(do_confirm)
+        confirm_one.clicked.connect(do_confirm_one)
+        confirm_all.clicked.connect(do_confirm_all)
         export.clicked.connect(do_export)
+        copy_query.clicked.connect(do_copy_query)
+        pubmed_execute.clicked.connect(do_pubmed_execute)
         next_button.clicked.connect(on_next)
+        select_all.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, True))
+        clear_selection.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, False))
+        import_selected.clicked.connect(do_import_selected)
+        ignore_batch.clicked.connect(do_ignore_batch)
+        candidate_list.currentRowChanged.connect(lambda _row: update_candidate_detail())
+        database_list.setCurrentRow(0)
+        update_candidate_detail()
         return frame
 
 
@@ -1067,24 +1219,38 @@ if QWidget is not None:
         candidate_list = QListWidget()
         candidate_list.setObjectName("metaPubMedCandidateList")
         candidate_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        candidate_detail = QTextEdit()
+        candidate_detail.setObjectName("metaLiteraturePubMedCandidateDetail")
+        candidate_detail.setReadOnly(True)
         previews = [_load_json_object(path) for path in preview_paths]
         for path, preview in zip(preview_paths, previews):
             preview_id = str(preview.get("preview_id") or path.name.replace("_candidates_preview.json", ""))
             preview_selector.addItem(f"{preview_id} · {len(_items_from_payload(preview, 'candidates'))} 条", preview_id)
         candidate_layout.addWidget(preview_selector)
+        selection_row = QHBoxLayout()
+        select_all = QPushButton("全选")
+        clear_selection = QPushButton("取消全选")
+        ignore_batch = QPushButton("忽略本批次")
+        for button in (select_all, clear_selection, ignore_batch):
+            button.setObjectName("metaSecondaryButton")
+            selection_row.addWidget(button)
+        selection_row.addStretch(1)
+        candidate_layout.addLayout(selection_row)
         candidate_layout.addWidget(candidate_list)
         import_selected = QPushButton("导入选中文献")
         import_selected.setObjectName("metaPrimaryButton")
         candidate_layout.addWidget(import_selected)
+        candidate_layout.addWidget(candidate_detail)
         layout.addWidget(candidate_card)
         local_card = _card("本地文献导入")
         local_layout = local_card.layout()
-        local_layout.addWidget(QLabel("支持 NBIB / RIS / CSV。导入后进入统一文献库，不进入筛选。"))
+        local_layout.addWidget(QLabel("支持 NBIB / RIS / CSV / PubMed XML。其他格式仅按 testing-level preview 解析，不做过度承诺。"))
         import_file = QPushButton("选择文件导入")
         import_file.setObjectName("metaSecondaryButton")
         local_layout.addWidget(import_file)
         layout.addWidget(local_card)
-        layout.addWidget(_info_card("Import batch 摘要", [f"total_records={manifest.get('total_records', 0)}", f"total_batches={manifest.get('total_batches', 0)}", f"sources={manifest.get('source_counts', {})}"], object_name="metaImportBatchSummary"))
+        layout.addWidget(_info_card("文献库摘要", _literature_import_summary_lines(project_dir, manifest), object_name="metaImportBatchSummary"))
+        layout.addWidget(_info_card("最近导入诊断", _latest_multisource_diagnostics_lines(project_dir), object_name="metaImportDiagnosticsSummary"))
         next_button = QPushButton("下一步：去重与筛选")
         next_button.setObjectName("metaSecondaryButton")
         layout.addWidget(next_button)
@@ -1101,7 +1267,21 @@ if QWidget is not None:
                 text = f"{candidate.get('title') or 'Untitled'} · PMID {candidate.get('pmid') or '-'}"
                 item = QListWidgetItem(text)
                 item.setData(Qt.ItemDataRole.UserRole, candidate_id)
+                item.setToolTip(_candidate_detail_text(candidate))
                 candidate_list.addItem(item)
+            update_detail()
+
+        def update_detail() -> None:
+            index = candidate_list.currentRow()
+            if index < 0:
+                candidate_detail.setPlainText("暂无候选文献。")
+                return
+            preview_index = preview_selector.currentIndex()
+            if preview_index < 0 or preview_index >= len(previews):
+                candidate_detail.setPlainText("暂无候选文献。")
+                return
+            candidates = _items_from_payload(previews[preview_index], "candidates")
+            candidate_detail.setPlainText(_candidate_detail_text(candidates[index] if index < len(candidates) else {}))
 
         def do_import_selected() -> None:
             preview_id = preview_selector.currentData()
@@ -1121,7 +1301,7 @@ if QWidget is not None:
             on_refresh()
 
         def do_import_file() -> None:
-            filename, _ = QFileDialog.getOpenFileName(frame, "选择文献文件", str(project_dir), "Literature (*.nbib *.ris *.csv);;All files (*)")
+            filename, _ = QFileDialog.getOpenFileName(frame, "选择文献文件", str(project_dir), "Literature (*.nbib *.ris *.csv *.xml);;All files (*)")
             if not filename:
                 return
             result = MultiSourceLiteratureImportService().import_file(project_dir, source_path=Path(filename), source_format="auto")
@@ -1129,6 +1309,10 @@ if QWidget is not None:
             on_refresh()
 
         preview_selector.currentIndexChanged.connect(load_preview)
+        candidate_list.currentRowChanged.connect(lambda _row: update_detail())
+        select_all.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, True))
+        clear_selection.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, False))
+        ignore_batch.clicked.connect(lambda: (_set_all_list_items_selected(candidate_list, False), _show_message("已忽略当前候选批次；未写入文献库。")))
         import_selected.clicked.connect(do_import_selected)
         import_file.clicked.connect(do_import_file)
         next_button.clicked.connect(on_next)
@@ -2391,6 +2575,136 @@ if QWidget is not None:
             "vip": "维普",
         }
         return labels.get(database, database)
+
+
+    def _search_database_order() -> tuple[str, ...]:
+        return ("pubmed", "web_of_science", "embase", "cochrane", "cnki", "wanfang", "vip")
+
+
+    def _search_strategy_status(draft, confirmed) -> str:
+        if confirmed is not None and str(confirmed.execution_status) not in {"", "not_executed"}:
+            if str(confirmed.execution_status) == "ready_for_pubmed_execution":
+                return "已确认"
+            return "已确认"
+        if confirmed is not None:
+            return "已确认"
+        if draft is None:
+            return "未生成"
+        if draft.warnings:
+            return "有警告" if "draft_only" not in draft.warnings else "草稿"
+        return "已编辑" if int(draft.version) > 1 else "草稿"
+
+
+    def _database_manual_notice(database: str) -> str:
+        if database == "pubmed":
+            return "PubMed 检索式确认后可执行 testing-level 在线检索；结果仍需人工复核。"
+        return "当前版本支持检索式生成与本地导入，不执行联网检索。"
+
+
+    def _write_pubmed_execution_report(project_dir: Path, execution) -> Path:
+        path = project_dir.expanduser().resolve() / "protocol" / "search_execution_report.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(execution.to_report(), ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
+
+    def _latest_pubmed_preview_payload(project_dir: Path) -> dict[str, object]:
+        preview_paths = sorted((project_dir.expanduser().resolve() / "protocol" / "pubmed_candidates").glob("*_candidates_preview.json"))
+        if not preview_paths:
+            return {}
+        return _load_json_object(preview_paths[-1])
+
+
+    def _pubmed_preview_summary(preview: dict[str, object]) -> str:
+        if not preview:
+            return "尚无 PubMed 候选文献。请先确认 PubMed 检索式并执行 testing-level 检索。"
+        candidates = _items_from_payload(preview, "candidates")
+        with_abstract = len([item for item in candidates if str(item.get("abstract", "")).strip()])
+        return f"候选 {len(candidates)} 条；有摘要 {with_abstract} 条；preview={preview.get('preview_id', '')}"
+
+
+    def _candidate_row_text(candidate: dict[str, object]) -> str:
+        authors = candidate.get("authors", [])
+        first_author = authors[0] if isinstance(authors, list) and authors else ""
+        abstract_flag = "有摘要" if str(candidate.get("abstract", "")).strip() else "无摘要"
+        return " · ".join(
+            item
+            for item in (
+                str(candidate.get("title") or "Untitled"),
+                str(first_author),
+                str(candidate.get("year") or ""),
+                str(candidate.get("journal") or ""),
+                f"PMID {candidate.get('pmid') or '-'}",
+                f"DOI {candidate.get('doi') or '-'}",
+                abstract_flag,
+                str(candidate.get("user_decision") or "pending"),
+            )
+            if item
+        )
+
+
+    def _candidate_detail_text(candidate: dict[str, object]) -> str:
+        if not candidate:
+            return "暂无候选文献。"
+        authors = candidate.get("authors", [])
+        authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or "")
+        return "\n".join(
+            [
+                f"英文标题：{candidate.get('title') or ''}",
+                f"英文摘要：{candidate.get('abstract') or ''}",
+                f"DOI：{candidate.get('doi') or ''}",
+                f"PMID：{candidate.get('pmid') or ''}",
+                f"期刊：{candidate.get('journal') or ''}",
+                f"年份：{candidate.get('year') or ''}",
+                f"作者：{authors_text}",
+                "来源数据库：PubMed",
+                "用户备注：仅用于人工查看，不参与内部识别、检索和去重逻辑。",
+            ]
+        )
+
+
+    def _set_all_list_items_selected(widget: QListWidget, selected: bool) -> None:
+        for index in range(widget.count()):
+            widget.item(index).setSelected(selected)
+
+
+    def _literature_import_summary_lines(project_dir: Path, manifest: dict[str, object]) -> list[str]:
+        batches_payload = _load_json_object(project_dir.expanduser().resolve() / "literature" / "import_batches.json")
+        batches = _items_from_payload(batches_payload, "import_batches")
+        latest = batches[-1] if batches else {}
+        source_counts = dict(manifest.get("source_counts", {})) if isinstance(manifest.get("source_counts"), dict) else {}
+        pubmed_count = int(source_counts.get("pubmed_confirmed_candidates", 0) or 0)
+        diagnostics = latest.get("diagnostics", {}) if isinstance(latest.get("diagnostics"), dict) else {}
+        warning_counts = dict(diagnostics.get("warning_counts", {})) if isinstance(diagnostics.get("warning_counts"), dict) else {}
+        return [
+            f"当前文献总数：{manifest.get('total_records', 0)}",
+            f"PubMed 来源数量：{pubmed_count}",
+            f"最近导入批次：{latest.get('import_batch_id') or latest.get('batch_id') or '暂无'}",
+            f"导入成功数量：{latest.get('imported_count', 0)}",
+            f"跳过/失败数量：{latest.get('skipped_count', 0)}",
+            f"缺 DOI：{warning_counts.get('缺少 DOI', 0)}",
+            f"缺摘要：{warning_counts.get('缺少摘要', 0)}",
+            f"缺年份：{warning_counts.get('缺少年份', 0)}",
+        ]
+
+
+    def _latest_multisource_diagnostics_lines(project_dir: Path) -> list[str]:
+        diagnostics_dir = project_dir.expanduser().resolve() / "literature" / "multisource_import_diagnostics"
+        paths = sorted(diagnostics_dir.glob("*_diagnostics.json"))
+        if not paths:
+            return ["暂无本地导入诊断。"]
+        payload = _load_json_object(paths[-1])
+        warning_counts = dict(payload.get("warning_counts", {})) if isinstance(payload.get("warning_counts"), dict) else {}
+        return [
+            f"导入文件名：{Path(str(payload.get('source_path', ''))).name or '未知'}",
+            f"来源格式：{payload.get('source_format', '')}",
+            f"成功条数：{payload.get('parsed_record_count', 0)}",
+            f"失败条数：{payload.get('failed_record_count', 0)}",
+            f"缺 DOI 条数：{warning_counts.get('缺少 DOI', 0)}",
+            f"缺摘要条数：{warning_counts.get('缺少摘要', 0)}",
+            f"缺年份条数：{warning_counts.get('缺少年份', 0)}",
+            f"字段映射警告：{payload.get('warning_count', 0)}",
+        ]
 
 
     def _items_from_payload(payload: dict[str, object], key: str) -> list[dict[str, object]]:

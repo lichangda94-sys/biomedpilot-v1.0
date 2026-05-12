@@ -297,6 +297,7 @@ def _literature_library_state(project_dir: Path, order: int, definition: dict[st
 
 
 def _dedup_state(project_dir: Path, order: int, definition: dict[str, str]) -> MetaWorkflowStepState:
+    library_count = len(LiteratureLibraryService().list_records(project_dir))
     paths = _existing_paths(
         project_dir,
         (
@@ -315,9 +316,9 @@ def _dedup_state(project_dir: Path, order: int, definition: dict[str, str]) -> M
         for group in groups:
             risk = str(group.get("risk_level") or group.get("risk") or group.get("duplicate_type") or "unknown")
             risk_counts[risk] = risk_counts.get(risk, 0) + 1
-    status = "待确认" if group_count else "已完成" if paths else "未开始"
-    warnings = ("需要人工确认去重决定",) if group_count else ()
-    summary = f"duplicate_groups={group_count} risk_counts={risk_counts}"
+    status = "待确认" if group_count else "草稿" if library_count else "已完成" if paths else "未开始"
+    warnings = ("需要人工确认去重决定",) if group_count else ("文献库已有记录，下一步需要生成重复组",) if library_count else ()
+    summary = f"records={library_count} duplicate_groups={group_count} risk_counts={risk_counts}"
     return _base_state(project_dir, order, definition, status=status, artifact_count=len(paths), artifact_summary=summary, artifact_paths=paths, warnings=warnings)
 
 

@@ -130,6 +130,24 @@ def test_multisource_import_missing_fields_do_not_crash_and_do_not_advance_prism
     assert prisma.studies_included == 0
 
 
+def test_multisource_import_diagnostics_summary_contains_stage_m2_fields(tmp_path: Path) -> None:
+    source = tmp_path / "records.csv"
+    source.write_text("title,authors,doi,abstract,year\nComplete,Alice A,10.1000/one,Abstract,2024\nSparse,,,,\n", encoding="utf-8")
+
+    result = MultiSourceLiteratureImportService().import_file(tmp_path, source_path=source, source_format="csv")
+    diagnostics = json.loads(Path(result.diagnostics_path).read_text(encoding="utf-8"))
+
+    assert result.success
+    assert diagnostics["source_path"].endswith("records.csv")
+    assert diagnostics["source_format"] == "csv"
+    assert diagnostics["parsed_record_count"] == 2
+    assert diagnostics["failed_record_count"] == 0
+    assert diagnostics["warning_counts"]["缺少 DOI"] == 1
+    assert diagnostics["warning_counts"]["缺少摘要"] == 1
+    assert diagnostics["warning_counts"]["缺少年份"] == 1
+    assert diagnostics["warning_count"] >= 3
+
+
 def test_multisource_import_page_preview_and_helper_support_new_formats(tmp_path: Path) -> None:
     cnki = tmp_path / "cnki.txt"
     cnki.write_text("题名：中文研究\n作者：张三\n来源：中文期刊\n年：2024\n", encoding="utf-8")
