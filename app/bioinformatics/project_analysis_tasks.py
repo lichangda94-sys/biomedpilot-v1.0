@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from app.bioinformatics.analysis_task_runs import list_analysis_task_runs
 from app.bioinformatics.comparison_config import load_confirmed_comparison_config
 from app.bioinformatics.deg_task_plan import load_deg_task_plan
 from app.bioinformatics.group_comparison_design import has_confirmed_group_comparison_design
@@ -141,6 +142,7 @@ def load_analysis_task_center(project_root: str | Path) -> dict[str, object]:
         "tasks": tasks,
         "capabilities": asset_capabilities,
         "task_groups": _task_groups_from_capabilities(asset_capabilities),
+        "task_runs": list_analysis_task_runs(root),
     }
     _write_json(root / TASK_CENTER, center)
     return center
@@ -151,6 +153,8 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
     assets = [asset for asset in resolved.get("assets", []) or [] if isinstance(asset, dict)]
     has_confirmed_group_config = load_confirmed_comparison_config(root) is not None or has_confirmed_group_comparison_design(root)
     deg_plan = load_deg_task_plan(root)
+    deg_runs = list_analysis_task_runs(root, task_family="deg")
+    latest_deg_run = deg_runs[0] if deg_runs else {}
     capabilities: list[dict[str, object]] = []
     for asset_type in resolved.get("blocked_asset_types", []) or []:
         capabilities.extend(_asset_selection_required_capabilities(str(asset_type)))
@@ -158,7 +162,10 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
         asset_type = str(asset.get("asset_type") or "")
         if asset_type == "count_matrix":
             group_count = len(asset.get("inferred_groups", []) or [])
-            if deg_plan:
+            if latest_deg_run:
+                status = str(latest_deg_run.get("status") or "configured_not_run")
+                reason = f"已生成 DEG task run：{latest_deg_run.get('run_id') or ''}；当前版本尚未执行真实差异表达分析。"
+            elif deg_plan:
                 status = "configured_not_run"
                 reason = "已创建 DEG task plan；当前只保存配置，尚未执行真实差异表达分析。"
             elif has_confirmed_group_config:
@@ -281,7 +288,11 @@ def _dedupe_capabilities(capabilities: list[dict[str, object]]) -> list[dict[str
 
 
 def _task_groups_from_capabilities(capabilities: list[dict[str, object]]) -> list[dict[str, object]]:
-    available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_threshold_selection", "ready_with_group_confirmation"}}
+    available = {
+        str(item.get("task_id") or ""): item
+        for item in capabilities
+        if item.get("status") in {"available", "ready_with_threshold_selection", "ready_with_group_confirmation", "configured_not_run", "skipped_dry_run"}
+    }
     needs_selection = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") == "needs_asset_selection"}
     groups = []
     if needs_selection:

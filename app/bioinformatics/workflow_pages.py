@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.bioinformatics.analysis_task_runs import create_deg_task_run, list_analysis_task_runs, task_run_status_label
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
 from app.bioinformatics.deg_task_plan import save_deg_task_plan
 from app.bioinformatics.group_comparison_design import (
@@ -4025,6 +4026,35 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._records.setPlainText(_json({"DEG task plan": payload}))
         return payload
 
+    def create_deg_task_run_record(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            payload = create_deg_task_run(self._project_root)
+        except ValueError as exc:
+            self._status_label.setText(str(exc))
+            return None
+        center = load_analysis_task_center(self._project_root)
+        self._render(center)
+        self._status_label.setText(f"已生成 DEG 任务记录：{payload.get('run_id')}；当前版本尚未执行真实差异分析。")
+        self._records.setPlainText(_json({"DEG task run": payload}))
+        return payload
+
+    def show_selected_task_run_detail(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        row = self._task_runs.currentRow()
+        runs = list_analysis_task_runs(self._project_root)
+        if row < 0 or row >= len(runs):
+            self._status_label.setText("请选择一条任务历史记录。")
+            return None
+        run = runs[row]
+        self._records.setPlainText(_json({"任务运行详情": run}))
+        self._status_label.setText(f"任务详情：{run.get('run_id')} · {task_run_status_label(str(run.get('status') or ''))}")
+        return run
+
     def continue_to_results(self) -> None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -4051,6 +4081,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("去确认分组", "secondaryButton", self.open_group_design))
         actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("配置 DEG 任务", "primaryButton", self.configure_deg_task_plan))
+        actions.addWidget(_button("生成 DEG 分析任务记录", "primaryButton", self.create_deg_task_run_record))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
         actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
         actions.addStretch(1)
@@ -4060,6 +4091,11 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         root.addWidget(self._capability_summary)
         self._tasks = _table(["任务", "是否可运行", "来源与状态", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
         root.addWidget(self._tasks)
+        root.addWidget(_muted("任务历史记录"))
+        self._task_runs = _table(["时间", "任务类型", "run id", "输入资产", "比较数量", "状态", "操作"])
+        self._task_runs.setObjectName("analysisTaskRunHistoryTable")
+        root.addWidget(self._task_runs)
+        root.addWidget(_button("查看任务记录详情", "secondaryButton", self.show_selected_task_run_detail), alignment=Qt.AlignLeft)
         self._records = _text_preview(120)
         root.addWidget(self._records)
         root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
@@ -4090,7 +4126,9 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                 for item in tasks
             ],
         )
-        self._records.setPlainText(_json({"已创建任务": load_task_records(self._project_root) if self._project_root else []}))
+        runs = [item for item in center.get("task_runs", []) or [] if isinstance(item, dict)]
+        _fill_table(self._task_runs, [_analysis_task_run_row(item) for item in runs])
+        self._records.setPlainText(_json({"已创建任务": load_task_records(self._project_root) if self._project_root else [], "任务运行记录": runs}))
 
 
 class BioinformaticsResultsBrowserWidget(QWidget):
@@ -7684,13 +7722,19 @@ def _preferred_annotation_fields(fields: list[str]) -> list[str]:
 
 def _analysis_task_group_summary(center: dict[str, object]) -> str:
     capabilities = [item for item in center.get("capabilities", []) or [] if isinstance(item, dict)]
-    available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection", "configured_not_run"}}
+    available = {
+        str(item.get("task_id") or ""): item
+        for item in capabilities
+        if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection", "configured_not_run", "skipped_dry_run"}
+    }
     lines: list[str] = []
     count_status = available.get("differential_expression_recompute", {}).get("status")
     if count_status == "ready_with_group_confirmation":
         count_group_title = "需要确认分组后运行"
     elif count_status == "configured_not_run":
         count_group_title = "DEG 任务已配置未运行"
+    elif count_status == "skipped_dry_run":
+        count_group_title = "DEG 任务记录已生成"
     else:
         count_group_title = "已确认分组后可运行"
     groups = [
@@ -7727,6 +7771,7 @@ def _task_source_status_text(item: dict[str, object]) -> str:
         "ready_with_threshold_selection": "可用；需选择阈值",
         "needs_asset_selection": "需要选择默认资产",
         "configured_not_run": "已配置未运行",
+        "skipped_dry_run": "当前版本仅生成任务记录",
         "planned": "已规划",
         "not_available": "不可用",
     }.get(status, status or "未知状态")
@@ -7734,6 +7779,21 @@ def _task_source_status_text(item: dict[str, object]) -> str:
     if reason:
         return f"来源：{source_label}；状态：{status_label}；{reason}"
     return f"来源：{source_label}；状态：{status_label}"
+
+
+def _analysis_task_run_row(run: dict[str, object]) -> list[object]:
+    source_assets = [item for item in run.get("source_assets", []) or [] if isinstance(item, dict)]
+    asset_text = "、".join(str(item.get("asset_id") or item.get("asset_type") or "") for item in source_assets if item)
+    comparisons = [item for item in run.get("comparisons", []) or [] if isinstance(item, dict)]
+    return [
+        run.get("created_at", ""),
+        run.get("task_type", ""),
+        run.get("run_id", ""),
+        asset_text,
+        len(comparisons),
+        task_run_status_label(str(run.get("status") or "")),
+        "查看详情",
+    ]
 
 
 def _imported_deg_user_summary(view: dict[str, object], *, comparison_count: int = 0) -> str:

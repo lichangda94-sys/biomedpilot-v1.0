@@ -2129,6 +2129,35 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
     assert "configured_not_run" in refreshed_text
     assert "导入表格中的 DEG comparison" in refreshed_text
 
+    run_payload = task_center.create_deg_task_run_record()
+    assert run_payload is not None
+    assert run_payload["status"] == "skipped_dry_run"
+    assert (project_summary.project_root / "analysis_runs" / "deg" / str(run_payload["run_id"]) / "task_run.json").exists()
+    assert "尚未执行真实差异分析" in task_center.status_message()
+    history = task_center.findChild(QTableWidget, "analysisTaskRunHistoryTable")
+    assert history is not None
+    assert history.rowCount() == 1
+    history_text = " ".join(
+        history.item(row, column).text()
+        for row in range(history.rowCount())
+        for column in range(history.columnCount())
+        if history.item(row, column) is not None
+    )
+    assert "当前版本仅生成任务记录" in history_text
+    assert "count_matrix_001" in history_text
+    assert "PFF_vs_PBS" not in history_text
+    history.setCurrentCell(0, 0)
+    detail = task_center.show_selected_task_run_detail()
+    assert detail is not None
+    assert "PFF_vs_PBS" in task_center._records.toPlainText()
+    assert "planned_placeholder" in task_center._records.toPlainText()
+    assert "导入表格中的 DEG comparison" in " ".join(
+        task_center._tasks.item(row, column).text()
+        for row in range(task_center._tasks.rowCount())
+        for column in range(task_center._tasks.columnCount())
+        if task_center._tasks.item(row, column) is not None
+    )
+
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
     from app.bioinformatics.services.geo_metadata_profile_service import (

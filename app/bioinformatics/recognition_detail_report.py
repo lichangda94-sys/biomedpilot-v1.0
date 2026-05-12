@@ -92,7 +92,7 @@ def format_recognition_report_markdown(payload: dict[str, object]) -> str:
             "",
             detail,
             "",
-            "## Technical Appendix",
+            "## Technical Appendix / 技术附录",
             "",
             "```json",
             technical,
