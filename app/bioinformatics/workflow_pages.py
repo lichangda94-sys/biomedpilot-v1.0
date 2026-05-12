@@ -2693,7 +2693,9 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("数据识别", "Developer Preview / 本地测试版", back_text="返回数据导入与检索", back_signal=self.back_requested))
+        header = _header("数据识别", "Developer Preview / 本地测试版", back_text="返回数据导入与检索", back_signal=self.back_requested)
+        _apply_button_semantics_by_text(header, "返回数据导入与检索", "back")
+        root.addWidget(header)
         pre_card, pre_layout = _card("待识别数据源")
         self._pre_recognition_empty_label = _muted("尚未选择数据。")
         pre_layout.addWidget(self._pre_recognition_empty_label)
@@ -2704,15 +2706,15 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._pre_recognition_table.horizontalHeader().sectionClicked.connect(self._toggle_pre_recognition_header)
         pre_layout.addWidget(self._pre_recognition_table)
         pre_actions = QHBoxLayout()
-        self._delete_selected_inputs_button = _button("删除所选", "secondaryButton", self._delete_selected_pre_recognition_sources)
+        self._delete_selected_inputs_button = _button("删除所选", "secondaryButton", self._delete_selected_pre_recognition_sources, role="danger")
         self._delete_selected_inputs_button.setEnabled(False)
         pre_actions.addStretch(1)
         pre_actions.addWidget(self._delete_selected_inputs_button)
         pre_layout.addLayout(pre_actions)
         root.addWidget(pre_card)
         actions = QHBoxLayout()
-        actions.addWidget(_button("开始识别", "primaryButton", self.run_recognition))
-        actions.addWidget(_button("刷新", "secondaryButton", self.refresh_report))
+        actions.addWidget(_button("开始识别", "primaryButton", self.run_recognition, role="primary_action"))
+        actions.addWidget(_button("刷新", "secondaryButton", self.refresh_report, role="secondary"))
         actions.addStretch(1)
         root.addLayout(actions)
         root.addWidget(_muted("开始识别只处理上方勾选的数据；刷新只更新当前报告显示。"))
@@ -2740,6 +2742,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._next_action_buttons: list[QPushButton] = []
         for index in range(2):
             button = _button("", f"recognitionNextActionButton_{index}", lambda _checked=False, i=index: self._execute_next_step_action(i))
+            _apply_button_semantics(button, "primary_next" if index == 0 else "secondary")
             button.setVisible(False)
             self._next_action_buttons.append(button)
             next_actions.addWidget(button)
@@ -2775,7 +2778,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         history_layout.addWidget(_muted("这里保存之前运行过的识别结果，不属于本次操作。"))
         history_summary_row = QHBoxLayout()
         self._history_summary_label = _muted("暂无历史识别记录。")
-        self._history_toggle_button = _button("展开历史记录", "secondaryButton", self._toggle_history_table)
+        self._history_toggle_button = _button("展开历史记录", "secondaryButton", self._toggle_history_table, role="secondary")
         self._history_summary_label.setObjectName("recognitionHistorySummary")
         self._history_toggle_button.setObjectName("recognitionHistoryToggleButton")
         self._history_toggle_button.setEnabled(False)
@@ -2797,7 +2800,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._detail_report.setPlainText("请选择本次识别文件或历史识别记录查看详情。")
         detail_layout.addWidget(self._detail_report)
         detail_actions = QHBoxLayout()
-        self._detail_export_button = _button("导出数据识别报告", "recognitionDetailExportButton", self.export_recognition_detail_report)
+        self._detail_export_button = _button("导出数据识别报告", "recognitionDetailExportButton", self.export_recognition_detail_report, role="secondary")
         self._detail_export_button.setEnabled(False)
         detail_actions.addWidget(self._detail_export_button)
         detail_actions.addStretch(1)
@@ -2878,8 +2881,8 @@ class BioinformaticsRecognitionWidget(QWidget):
             actions_layout.setContentsMargins(0, 0, 0, 0)
             actions_layout.setSpacing(4)
             run_id = str(run.get("run_id") or "")
-            view_button = _button("查看批次详情", "secondaryButton", lambda _checked=False, rid=run_id: self._view_history_run(rid))
-            delete_button = _button("删除记录", "secondaryButton", lambda _checked=False, rid=run_id: self._delete_history_run(rid))
+            view_button = _button("查看批次详情", "secondaryButton", lambda _checked=False, rid=run_id: self._view_history_run(rid), role="secondary", small=True)
+            delete_button = _button("删除记录", "secondaryButton", lambda _checked=False, rid=run_id: self._delete_history_run(rid), role="danger", small=True)
             actions_layout.addWidget(view_button)
             actions_layout.addWidget(delete_button)
             self._history_table.setCellWidget(row_index, 7, actions)
@@ -2930,6 +2933,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         for index, button in enumerate(self._next_action_buttons):
             if index < len(self._next_step_actions):
                 button.setText(str(self._next_step_actions[index].get("label") or "操作"))
+                _apply_button_semantics(button, "primary_next" if index == 0 else "secondary")
                 button.setVisible(True)
                 button.setEnabled(True)
             else:
@@ -3087,7 +3091,7 @@ class BioinformaticsRecognitionWidget(QWidget):
                 elif col_index == 4:
                     table_item.setToolTip(f"原始 bytes：{source.get('file_size', '未记录')}")
                 self._table.setItem(row_index, col_index, table_item)
-            detail_button = _button("查看文件详情", "secondaryButton", lambda _checked=False, record=dict(files[row_index]): self._view_current_file_detail(record))
+            detail_button = _button("查看文件详情", "secondaryButton", lambda _checked=False, record=dict(files[row_index]): self._view_current_file_detail(record), role="secondary", small=True)
             detail_button.setObjectName(f"recognitionFileDetailButton_{row_index}")
             self._table.setCellWidget(row_index, 7, detail_button)
         self._table.resizeColumnsToContents()
@@ -4619,11 +4623,31 @@ def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPus
     return frame, state_label
 
 
-def _button(text: str, object_name: str, callback: Callable[..., Any]) -> QPushButton:
+def _button(text: str, object_name: str, callback: Callable[..., Any], *, role: str | None = None, small: bool = False) -> QPushButton:
     button = QPushButton(text)
     button.setObjectName(object_name)
+    if role is not None or small:
+        _apply_button_semantics(button, role or "secondary", small=small)
     button.clicked.connect(callback)
     return button
+
+
+def _apply_button_semantics(button: QPushButton, role: str, *, small: bool = False) -> QPushButton:
+    button.setProperty("buttonRole", role)
+    if small:
+        button.setProperty("buttonSize", "small")
+    elif button.property("buttonSize") == "small":
+        button.setProperty("buttonSize", "")
+    button.style().unpolish(button)
+    button.style().polish(button)
+    button.update()
+    return button
+
+
+def _apply_button_semantics_by_text(parent: QWidget, text: str, role: str, *, small: bool = False) -> None:
+    for button in parent.findChildren(QPushButton):
+        if button.text() == text:
+            _apply_button_semantics(button, role, small=small)
 
 
 def _muted(text: str) -> QLabel:

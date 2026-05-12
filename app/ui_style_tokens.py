@@ -596,4 +596,50 @@ def bioinformatics_project_home_stylesheet() -> str:
         border: 1px solid {COLORS["border"]};
         font-weight: 600;
     }}
+    QPushButton[buttonRole="primary_next"] {{
+        color: #FFFFFF;
+        background: {COLORS["bio"]};
+        border: 1px solid {COLORS["bio"]};
+        min-height: {CONTROL_HEIGHT["primary"] - 14}px;
+        padding: 9px 16px;
+        font-weight: 800;
+    }}
+    QPushButton[buttonRole="primary_action"] {{
+        color: #FFFFFF;
+        background: {COLORS["bio_accent"]};
+        border: 1px solid {COLORS["bio_accent"]};
+        min-height: {CONTROL_HEIGHT["primary"] - 16}px;
+        font-weight: 750;
+    }}
+    QPushButton[buttonRole="back"], QPushButton[buttonRole="secondary"] {{
+        color: {COLORS["bio"]};
+        background: {COLORS["bio_soft"]};
+        border: 1px solid #D6E2EA;
+        font-weight: 650;
+    }}
+    QPushButton[buttonRole="danger"] {{
+        color: {COLORS["danger"]};
+        background: #FFFFFF;
+        border: 1px solid #FFD0CC;
+        font-weight: 650;
+    }}
+    QPushButton[buttonRole="primary_next"]:hover {{
+        background: #0D273B;
+        border: 1px solid #0D273B;
+    }}
+    QPushButton[buttonRole="primary_action"]:hover {{
+        background: #138F83;
+        border: 1px solid #138F83;
+    }}
+    QPushButton[buttonRole="back"]:hover, QPushButton[buttonRole="secondary"]:hover {{
+        background: #F4F8FB;
+    }}
+    QPushButton[buttonRole="danger"]:hover {{
+        background: #FFF7F7;
+    }}
+    QPushButton[buttonSize="small"] {{
+        padding: 5px 9px;
+        min-height: 24px;
+        font-size: {FONT_SIZE["secondary"]}px;
+    }}
     """

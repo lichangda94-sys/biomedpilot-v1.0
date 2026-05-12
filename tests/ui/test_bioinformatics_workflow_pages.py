@@ -1545,6 +1545,7 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
     widget = BioinformaticsRecognitionWidget()
     widget.refresh_project(project_summary)
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    buttons_by_text = {button.text(): button for button in widget.findChildren(QPushButton)}
 
     assert "开始识别" in button_texts
     assert "刷新" in button_texts
@@ -1554,6 +1555,11 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
     assert "为当前结" not in button_texts
     assert widget.findChild(QFrame, "recognitionTechnicalOperations") is None
     assert widget._counts.isReadOnly()
+    assert buttons_by_text["开始识别"].property("buttonRole") == "primary_action"
+    assert buttons_by_text["刷新"].property("buttonRole") == "secondary"
+    assert buttons_by_text["返回数据导入与检索"].property("buttonRole") == "back"
+    assert buttons_by_text["删除所选"].property("buttonRole") == "danger"
+    assert buttons_by_text["展开历史记录"].property("buttonRole") == "secondary"
 
 
 def test_recognition_opening_old_project_keeps_legacy_report_in_history(qt_app, project_summary, tmp_path: Path) -> None:
@@ -1663,14 +1669,19 @@ def test_recognition_history_view_and_delete_are_isolated(qt_app, project_summar
     assert summary is not None
     assert "共 2 条历史记录" in summary.text()
     history_buttons = [
-        button.text()
+        button
         for row in range(history.rowCount())
         for button in history.cellWidget(row, 7).findChildren(QPushButton)
     ]
-    assert "查看批次详情" in history_buttons
-    assert "删除记录" in history_buttons
-    assert "设为当前结果" not in history_buttons
-    assert "设为当前标准化输入" not in history_buttons
+    history_button_texts = [button.text() for button in history_buttons]
+    assert "查看批次详情" in history_button_texts
+    assert "删除记录" in history_button_texts
+    assert "设为当前结果" not in history_button_texts
+    assert "设为当前标准化输入" not in history_button_texts
+    assert next(button for button in history_buttons if button.text() == "查看批次详情").property("buttonRole") == "secondary"
+    assert next(button for button in history_buttons if button.text() == "查看批次详情").property("buttonSize") == "small"
+    assert next(button for button in history_buttons if button.text() == "删除记录").property("buttonRole") == "danger"
+    assert next(button for button in history_buttons if button.text() == "删除记录").property("buttonSize") == "small"
 
     widget._view_history_run(first_current["run_id"])
     viewed_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
@@ -2501,11 +2512,22 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     assert "PFFvsPBS_log2FoldChange" not in text
     assert "gene_start" not in text
     assert "Homo sapiens" not in text
+    primary_next = widget.findChild(QPushButton, "recognitionNextActionButton_0")
+    secondary_next = widget.findChild(QPushButton, "recognitionNextActionButton_1")
+    assert primary_next is not None
+    assert primary_next.text() == "继续：数据准备与标准化"
+    assert primary_next.property("buttonRole") == "primary_next"
+    assert len([button for button in widget.findChildren(QPushButton) if button.property("buttonRole") == "primary_next" and not button.isHidden()]) == 1
+    assert secondary_next is not None
+    assert secondary_next.text() == "导出数据识别报告"
+    assert secondary_next.property("buttonRole") == "secondary"
 
     detail_button = table.cellWidget(0, 7)
     assert detail_button is not None
     assert isinstance(detail_button, QPushButton)
     assert detail_button.text() == "查看文件详情"
+    assert detail_button.property("buttonRole") == "secondary"
+    assert detail_button.property("buttonSize") == "small"
     detail_button.click()
 
     detail = widget.findChild(QTextEdit, "recognitionDetailReport")
@@ -2532,6 +2554,7 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     export_button = widget.findChild(QPushButton, "recognitionDetailExportButton")
     assert export_button is not None
     assert export_button.text() == "导出数据识别报告"
+    assert export_button.property("buttonRole") == "secondary"
     export_button.click()
     export_path = project_summary.project_root / "recognized_data" / "runs" / "current_session" / "recognition_report_user.md"
     assert export_path.exists()
