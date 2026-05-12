@@ -2650,6 +2650,98 @@ def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) ->
     assert "已完成" in settings._geo_check_status.text()
 
 
+def _write_integrated_asset_selection_csv(path: Path, *, comparison: str, groups: tuple[str, str] = ("A", "B")) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    left, right = groups
+    path.write_text(
+        "\n".join(
+            [
+                f"gene_id,{left}1_count,{left}2_count,{right}1_count,{right}2_count,"
+                f"{left}1_fpkm,{left}2_fpkm,{right}1_fpkm,{right}2_fpkm,"
+                f"{comparison}_log2FoldChange,{comparison}_pvalue,{comparison}_padj,"
+                "gene_name,gene_biotype,gene_description",
+                "ENSMUSG00000026193,10,11,20,21,1.1,1.2,2.1,2.2,1.5,0.01,0.04,Sox17,protein_coding,SRY-box transcription factor 17",
+                "ENSMUSG00000064351,30,31,18,17,3.1,3.2,1.8,1.7,-1.6,0.02,0.03,mt-Nd1,protein_coding,mitochondrially encoded NADH",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_standardized_assets_page_shows_and_saves_default_asset_selection(qt_app, project_summary) -> None:
+    _write_integrated_asset_selection_csv(project_summary.project_root / "raw_data" / "local_import" / "integrated_a.csv", comparison="PFFvsPBS")
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    assets = widget.findChild(QTableWidget, "standardizedAssetsTable")
+    selection = widget.findChild(QTableWidget, "standardizedAssetSelectionTable")
+    assert assets is not None
+    assert selection is not None
+    table_text = " ".join(
+        assets.item(row, column).text()
+        for row in range(assets.rowCount())
+        for column in range(assets.columnCount())
+        if assets.item(row, column) is not None
+    )
+    selection_text = " ".join(
+        selection.item(row, column).text()
+        for row in range(selection.rowCount())
+        for column in range(selection.columnCount())
+        if selection.item(row, column) is not None
+    )
+
+    assert "count_matrix_001" in table_text
+    assert "Mus musculus" in table_text
+    assert "differential_expression" in table_text
+    assert "DESeq2/edgeR" in table_text
+    assert "推荐默认" in table_text
+    assert "推荐默认" in selection_text
+
+    payload = widget.save_asset_selection()
+    assert payload is not None
+    assert (project_summary.project_root / "manifests" / "standardized_asset_selection.json").exists()
+    assert "已保存默认资产选择" in widget.status_message()
+
+
+def test_multi_asset_without_selection_blocks_task_center_and_results(qt_app, project_summary) -> None:
+    _write_integrated_asset_selection_csv(project_summary.project_root / "raw_data" / "local_import" / "integrated_a.csv", comparison="PFFvsPBS", groups=("A", "B"))
+    _write_integrated_asset_selection_csv(project_summary.project_root / "raw_data" / "local_import" / "integrated_b.csv", comparison="MMP3vsPBS", groups=("X", "Y"))
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    standardization = BioinformaticsStandardizedAssetsWidget()
+    standardization.refresh_project(project_summary)
+    selection = standardization.findChild(QTableWidget, "standardizedAssetSelectionTable")
+    assert selection is not None
+    selection_text = " ".join(
+        selection.item(row, column).text()
+        for row in range(selection.rowCount())
+        for column in range(selection.columnCount())
+        if selection.item(row, column) is not None
+    )
+    assert "需要选择默认资产" in selection_text
+
+    task_center = BioinformaticsAnalysisTaskCenterWidget()
+    task_center.refresh_project(project_summary)
+    task_text = " ".join(
+        task_center._tasks.item(row, column).text()
+        for row in range(task_center._tasks.rowCount())
+        for column in range(task_center._tasks.columnCount())
+        if task_center._tasks.item(row, column) is not None
+    )
+    assert "需要选择默认资产" in task_text
+    assert "default_standardized_asset_selection" in task_text
+
+    results = BioinformaticsResultsBrowserWidget()
+    results.refresh_project(project_summary)
+    summary = results.findChild(QTextEdit, "importedDegSummary")
+    assert summary is not None
+    assert "选择默认资产" in summary.toPlainText()
+
+
 def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> None:
     widget = BioinformaticsWorkspaceWidget()
 

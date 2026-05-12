@@ -9,7 +9,7 @@ from uuid import uuid4
 from app.bioinformatics.comparison_config import load_confirmed_comparison_config
 from app.bioinformatics.group_comparison_design import has_confirmed_group_comparison_design
 from app.bioinformatics.project_readiness import load_readiness_artifacts
-from app.bioinformatics.project_standardization import load_standardization_artifacts
+from app.bioinformatics.standardized_asset_selection import resolve_standardized_assets
 
 
 TASK_CENTER = Path("manifests") / "analysis_task_center.json"
@@ -105,6 +105,8 @@ def load_analysis_task_center(project_root: str | Path) -> dict[str, object]:
         missing = [str(item) for item in capability.get("missing_inputs", []) or []] if isinstance(capability, dict) else []
         if isinstance(asset_capability, dict) and asset_capability.get("status") == "ready_with_group_confirmation":
             missing = list(dict.fromkeys([*missing, "confirmed_group_config"]))
+        if isinstance(asset_capability, dict) and asset_capability.get("status") == "needs_asset_selection":
+            missing = list(dict.fromkeys([*missing, "default_standardized_asset_selection"]))
         available = [str(item) for item in capability.get("available_inputs", []) or []] if isinstance(capability, dict) else []
         if isinstance(asset_capability, dict) and asset_capability.get("source_asset_type"):
             available = list(dict.fromkeys([*available, str(asset_capability.get("source_asset_type"))]))
@@ -112,6 +114,8 @@ def load_analysis_task_center(project_root: str | Path) -> dict[str, object]:
         if isinstance(asset_capability, dict) and asset_capability.get("status") == "available":
             can_run = True
         elif isinstance(asset_capability, dict) and asset_capability.get("status") == "ready_with_group_confirmation":
+            can_run = False
+        elif isinstance(asset_capability, dict) and asset_capability.get("status") == "needs_asset_selection":
             can_run = False
         capability_status = asset_capability.get("status") if isinstance(asset_capability, dict) and asset_capability else ("available" if can_run else "not_available")
         tasks.append(
@@ -142,13 +146,12 @@ def load_analysis_task_center(project_root: str | Path) -> dict[str, object]:
 
 
 def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
-    artifacts = load_standardization_artifacts(root)
-    registry = artifacts.get("registry")
-    if not isinstance(registry, dict):
-        return []
-    assets = [asset for asset in registry.get("assets", []) or registry.get("standardized_assets", []) or [] if isinstance(asset, dict)]
+    resolved = resolve_standardized_assets(root)
+    assets = [asset for asset in resolved.get("assets", []) or [] if isinstance(asset, dict)]
     has_confirmed_group_config = load_confirmed_comparison_config(root) is not None or has_confirmed_group_comparison_design(root)
     capabilities: list[dict[str, object]] = []
+    for asset_type in resolved.get("blocked_asset_types", []) or []:
+        capabilities.extend(_asset_selection_required_capabilities(str(asset_type)))
     for asset in assets:
         asset_type = str(asset.get("asset_type") or "")
         if asset_type == "count_matrix":
@@ -239,6 +242,26 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
     return _dedupe_capabilities(capabilities)
 
 
+def _asset_selection_required_capabilities(asset_type: str) -> list[dict[str, object]]:
+    reason = "检测到多个同类标准化资产，请先在标准化资产页选择默认资产。"
+    task_map = {
+        "count_matrix": ("differential_expression_recompute", "normalization", "qc"),
+        "normalized_expression_matrix": ("heatmap", "correlation", "gene_expression_browse", "pca"),
+        "deg_result_table": ("deg_result_browse", "volcano_plot", "deg_filtering", "enrichment_from_deg"),
+        "gene_annotation": ("gene_annotation_display", "protein_coding_filter", "report_annotation"),
+    }
+    return [
+        {
+            "task_id": task_id,
+            "status": "needs_asset_selection",
+            "source_asset_type": asset_type,
+            "source_asset_id": "",
+            "reason": reason,
+        }
+        for task_id in task_map.get(asset_type, ())
+    ]
+
+
 def _dedupe_capabilities(capabilities: list[dict[str, object]]) -> list[dict[str, object]]:
     deduped: dict[tuple[str, str], dict[str, object]] = {}
     for capability in capabilities:
@@ -249,7 +272,10 @@ def _dedupe_capabilities(capabilities: list[dict[str, object]]) -> list[dict[str
 
 def _task_groups_from_capabilities(capabilities: list[dict[str, object]]) -> list[dict[str, object]]:
     available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_threshold_selection", "ready_with_group_confirmation"}}
+    needs_selection = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") == "needs_asset_selection"}
     groups = []
+    if needs_selection:
+        groups.append({"group": "需要选择默认资产", "tasks": list(needs_selection)})
     if {"deg_result_browse", "volcano_plot", "deg_filtering", "enrichment_from_deg"} & set(available):
         groups.append({"group": "可直接使用已有结果", "tasks": [task for task in ("deg_result_browse", "volcano_plot", "deg_filtering", "enrichment_from_deg") if task in available]})
     count_tasks = [task for task in ("differential_expression_recompute", "qc", "normalization") if task in available]

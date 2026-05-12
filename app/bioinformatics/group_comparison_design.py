@@ -8,6 +8,7 @@ from typing import Any
 
 from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN
 from app.bioinformatics.project_standardization import load_standardization_artifacts
+from app.bioinformatics.standardized_asset_selection import resolve_standardized_assets
 
 
 GROUP_COMPARISON_DESIGN = Path("manifests") / "group_comparison_design.json"
@@ -39,7 +40,8 @@ def has_confirmed_group_comparison_design(project_root: str | Path) -> bool:
 
 def load_group_design_context(project_root: str | Path) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
-    assets = _standardized_assets(root)
+    resolved_assets = _standardized_assets(root)
+    assets = resolved_assets["assets"]
     count_assets = [asset for asset in assets if asset.get("asset_type") == "count_matrix"]
     normalized_assets = [asset for asset in assets if asset.get("asset_type") == "normalized_expression_matrix"]
     deg_assets = [asset for asset in assets if asset.get("asset_type") == "deg_result_table"]
@@ -50,7 +52,8 @@ def load_group_design_context(project_root: str | Path) -> dict[str, object]:
     imported = _imported_deg_references(deg_assets)
     existing_design = load_group_comparison_design(root)
     current = _current_recognition(root)
-    warnings = _context_warnings(count_asset, normalized_asset, sample_groups)
+    warnings = [str(item) for item in resolved_assets.get("warnings", []) or [] if str(item)]
+    warnings.extend(_context_warnings(count_asset, normalized_asset, sample_groups))
     species = str(primary_asset.get("species") or _first_value(assets, "species") or "")
     gene_id_type = str(primary_asset.get("gene_id_type") or _first_value(assets, "gene_id_type") or "")
     return {
@@ -218,13 +221,16 @@ def design_status_summary(project_root: str | Path) -> str:
     )
 
 
-def _standardized_assets(root: Path) -> list[dict[str, object]]:
+def _standardized_assets(root: Path) -> dict[str, object]:
     artifacts = load_standardization_artifacts(root)
     registry = artifacts.get("registry")
     if not isinstance(registry, dict):
-        return []
-    assets = registry.get("assets") or registry.get("standardized_assets") or []
-    return [asset for asset in assets if isinstance(asset, dict)]
+        return {"assets": [], "warnings": []}
+    resolved = resolve_standardized_assets(root, asset_types={"count_matrix", "normalized_expression_matrix", "deg_result_table"})
+    return {
+        "assets": [asset for asset in resolved.get("assets", []) or [] if isinstance(asset, dict)],
+        "warnings": [str(item) for item in resolved.get("warnings", []) or [] if str(item)],
+    }
 
 
 def _current_recognition(root: Path) -> dict[str, object]:

@@ -71,7 +71,8 @@ def test_standardized_asset_ids_are_unique_across_multiple_integrated_files(proj
         and item.get("task_id") == "differential_expression_recompute"
         and item.get("source_asset_type") == "count_matrix"
     ]
-    assert len(count_capabilities) == 2
+    assert len(count_capabilities) == 1
+    assert count_capabilities[0]["status"] == "needs_asset_selection"
 
 
 def test_standardization_manifests_are_written_with_atomic_helper(project_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:

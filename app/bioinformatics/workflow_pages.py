@@ -77,6 +77,11 @@ from app.bioinformatics.recognition_next_steps import (
     standardization_current_input_summary,
 )
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
+from app.bioinformatics.standardized_asset_selection import (
+    build_asset_selection_context,
+    save_standardized_asset_selection,
+    selection_status_label,
+)
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
     load_workflow_state,
@@ -3452,6 +3457,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         if artifacts.get("registry") is None:
             self._status_label.setText("尚未生成标准化资产。")
             self._assets.setRowCount(0)
+            self._selection_table.setRowCount(0)
             self._current_input_summary.setPlainText(standardization_current_input_summary(self._project_root))
             self._summary.setPlainText("")
             self._manifest.setPlainText("")
@@ -3477,6 +3483,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         actions = QHBoxLayout()
         actions.addWidget(_button("生成标准化资产", "primaryButton", self.generate_assets))
         actions.addWidget(_button("刷新资产状态", "secondaryButton", self.refresh_assets))
+        actions.addWidget(_button("保存默认资产选择", "primaryButton", self.save_asset_selection))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.open_group_design))
         actions.addWidget(_button("打开 standardized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "standardized_data" if self._project_root else None)))
         actions.addStretch(1)
@@ -3486,8 +3493,12 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._current_input_summary = _read_only_report_view(100)
         self._current_input_summary.setObjectName("standardizationCurrentRecognitionInput")
         root.addWidget(self._current_input_summary)
-        self._assets = _table(["资产类型", "中文名称", "文件路径", "来源文件", "materialize 策略", "validation 状态", "warning", "analysis-ready"])
+        self._assets = _table(["资产 ID", "资产类型", "来源文件", "样本数", "物种", "用途", "限制", "状态", "默认"])
+        self._assets.setObjectName("standardizedAssetsTable")
         root.addWidget(self._assets)
+        self._selection_table = _table(["资产类型", "候选数", "默认资产", "状态", "说明"])
+        self._selection_table.setObjectName("standardizedAssetSelectionTable")
+        root.addWidget(self._selection_table)
         self._summary = _text_preview(140)
         root.addWidget(self._summary)
         self._manifest = _text_preview(150)
@@ -3502,11 +3513,35 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             return
         self.group_design_requested.emit(self._project_root)
 
+    def save_asset_selection(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        selections: dict[str, str] = {}
+        for row in range(self._selection_table.rowCount()):
+            asset_type_item = self._selection_table.item(row, 0)
+            combo = self._selection_table.cellWidget(row, 2)
+            if asset_type_item is None or not isinstance(combo, QComboBox):
+                continue
+            selected = combo.currentData()
+            if selected:
+                selections[asset_type_item.text()] = str(selected)
+        payload = save_standardized_asset_selection(self._project_root, selections)
+        self.refresh_assets()
+        self._status_label.setText(f"已保存默认资产选择：{len(payload.get('asset_selections', []) or [])} 类资产。")
+        return payload
+
     def _render(self, artifacts: dict[str, object]) -> None:
         registry = artifacts.get("registry") or {}
         manifest = artifacts.get("analysis_ready_manifest") or {}
         assets = registry.get("assets", []) if isinstance(registry, dict) else []
         warnings = registry.get("warnings", []) if isinstance(registry, dict) else []
+        selection_context = build_asset_selection_context(self._project_root) if self._project_root is not None else {"groups": []}
+        selection_by_type = {
+            str(group.get("asset_type") or ""): group
+            for group in selection_context.get("groups", []) or []
+            if isinstance(group, dict)
+        }
         self._status_label.setText(f"标准化资产：{len(assets)} 个，warning {len(warnings)} 条。")
         if self._project_root is not None:
             self._current_input_summary.setPlainText(standardization_current_input_summary(self._project_root))
@@ -3514,24 +3549,50 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             self._assets,
             [
                 [
+                    item.get("asset_id", ""),
                     item.get("asset_type", ""),
-                    item.get("label_zh", ""),
-                    item.get("file_path", ""),
                     item.get("source_file", ""),
-                    item.get("materialize_strategy", ""),
+                    item.get("sample_count", ""),
+                    item.get("species", "") or item.get("species_group", ""),
+                    _asset_usage_text(item),
+                    _asset_limitations_text(item),
                     item.get("validation_status", ""),
-                    item.get("warning", ""),
-                    "是" if item.get("analysis_ready") else "否",
+                    _asset_default_text(item, selection_by_type),
                 ]
                 for item in assets
                 if isinstance(item, dict)
             ],
         )
+        self._render_selection_table(selection_context)
         summary_text = _standardization_user_summary(registry if isinstance(registry, dict) else {}, manifest if isinstance(manifest, dict) else {})
         if self._project_root is not None:
-            summary_text = f"{summary_text}\n{design_status_summary(self._project_root)}"
+            summary_text = f"{summary_text}\n{_asset_selection_summary_text(selection_context)}\n{design_status_summary(self._project_root)}"
         self._summary.setPlainText(summary_text)
-        self._manifest.setPlainText(_json({"analysis-ready manifest": manifest, "warning": warnings}))
+        self._manifest.setPlainText(_json({"analysis-ready manifest": manifest, "asset_selection": selection_context, "warning": warnings}))
+
+    def _render_selection_table(self, context: dict[str, object]) -> None:
+        groups = [group for group in context.get("groups", []) or [] if isinstance(group, dict)]
+        self._selection_table.clearContents()
+        self._selection_table.setRowCount(len(groups))
+        for row, group in enumerate(groups):
+            self._selection_table.setItem(row, 0, QTableWidgetItem(str(group.get("asset_type") or "")))
+            self._selection_table.setItem(row, 1, QTableWidgetItem(str(group.get("candidate_count") or 0)))
+            combo = QComboBox()
+            for asset in group.get("candidates", []) or []:
+                if not isinstance(asset, dict):
+                    continue
+                asset_id = str(asset.get("asset_id") or "")
+                source = Path(str(asset.get("source_file") or asset.get("file_path") or "")).name
+                combo.addItem(f"{asset_id} · {source}", asset_id)
+            selected_id = str(group.get("selected_asset_id") or "")
+            if selected_id:
+                index = combo.findData(selected_id)
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+            self._selection_table.setCellWidget(row, 2, combo)
+            self._selection_table.setItem(row, 3, QTableWidgetItem(str(group.get("status_label") or selection_status_label(str(group.get("selection_state") or "")))))
+            self._selection_table.setItem(row, 4, QTableWidgetItem(str(group.get("reason") or "")))
+        self._selection_table.resizeColumnsToContents()
 
 
 class BioinformaticsGroupComparisonDesignWidget(QWidget):
@@ -4143,7 +4204,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def _render_selected_imported_deg(self) -> None:
         if self._project_root is None or self._imported_deg_selector.count() == 0:
             self._deg_preview.setRowCount(0)
-            self._imported_deg_summary.setPlainText("")
+            if self._project_root is None:
+                self._imported_deg_summary.setPlainText("")
+            else:
+                view = build_imported_deg_view(self._project_root)
+                warnings = [str(item) for item in view.get("warnings", []) or [] if str(item)]
+                self._imported_deg_summary.setPlainText("；".join(warnings) if warnings else "")
             return
         item = self._imported_deg_selector.currentData()
         if not isinstance(item, dict):
@@ -7387,6 +7453,43 @@ def _standardization_user_summary(registry: dict[str, object], manifest: dict[st
     return "\n".join(lines)
 
 
+def _asset_usage_text(asset: dict[str, object]) -> str:
+    recommended = [str(item) for item in asset.get("recommended_for", []) or [] if str(item)]
+    if recommended:
+        return "、".join(recommended)
+    return "后续分析输入" if asset.get("analysis_ready") else "待确认"
+
+
+def _asset_limitations_text(asset: dict[str, object]) -> str:
+    limitations = [str(item) for item in asset.get("limitations", []) or [] if str(item)]
+    return "；".join(limitations) if limitations else str(asset.get("warning") or "")
+
+
+def _asset_default_text(asset: dict[str, object], selection_by_type: dict[str, dict[str, object]]) -> str:
+    asset_id = str(asset.get("asset_id") or "")
+    group = selection_by_type.get(str(asset.get("asset_type") or ""), {})
+    if asset_id and asset_id == str(group.get("selected_asset_id") or ""):
+        return str(group.get("status_label") or selection_status_label(str(group.get("selection_state") or "")))
+    if group.get("selection_state") == "needs_selection":
+        return "候选"
+    return ""
+
+
+def _asset_selection_summary_text(context: dict[str, object]) -> str:
+    groups = [group for group in context.get("groups", []) or [] if isinstance(group, dict)]
+    if not groups:
+        return "默认资产选择：暂无可选择资产"
+    counts: dict[str, int] = {}
+    for group in groups:
+        state = str(group.get("selection_state") or "")
+        counts[state] = counts.get(state, 0) + 1
+    parts = []
+    for state in ("confirmed", "recommended_default", "needs_selection", "invalid"):
+        if counts.get(state):
+            parts.append(f"{selection_status_label(state)} {counts[state]} 类")
+    return "默认资产选择：" + "，".join(parts)
+
+
 def _group_design_context_summary(context: dict[str, object]) -> str:
     has_count = bool(context.get("has_count_matrix"))
     has_normalized = bool(context.get("has_normalized_expression_matrix"))
@@ -7610,6 +7713,7 @@ def _task_source_status_text(item: dict[str, object]) -> str:
         "available": "可直接使用",
         "ready_with_group_confirmation": "需要确认分组",
         "ready_with_threshold_selection": "可用；需选择阈值",
+        "needs_asset_selection": "需要选择默认资产",
         "planned": "已规划",
         "not_available": "不可用",
     }.get(status, status or "未知状态")

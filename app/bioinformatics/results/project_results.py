@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+from app.bioinformatics.standardized_asset_selection import resolve_standardized_assets
+
 
 RESULT_MANAGER = Path("manifests") / "result_manager.json"
 RESULT_INDEX = Path("results") / "summaries" / "result_index.json"
@@ -25,7 +27,7 @@ def load_result_index(project_root: str | Path) -> dict[str, object]:
         raw_entries = index.get("results") or index.get("entries") or []
         entries = [item for item in raw_entries if isinstance(item, dict)]
     entries.extend(_imported_deg_result_entries(root))
-    warnings = []
+    warnings = _deg_asset_selection_warnings(root)
     for entry in entries:
         path = Path(str(entry.get("path") or entry.get("file_path") or ""))
         if path and not path.is_absolute():
@@ -85,7 +87,8 @@ def build_imported_deg_view(
     else:
         selected_comparison = next((comparison for comparison in comparisons if comparison.get("is_complete")), comparisons[0] if comparisons else {})
     if not selected_asset or not selected_comparison:
-        return {"rows": [], "statistics": {}, "warnings": ["未找到 imported DEG comparison。"], "gene_lists": {}}
+        warnings = _deg_asset_selection_warnings(root) or ["未找到 imported DEG comparison。"]
+        return {"rows": [], "statistics": {}, "warnings": warnings, "gene_lists": {}}
     source_file = Path(str(selected_asset.get("source_file") or "")).expanduser()
     if not source_file.is_absolute():
         source_file = root / source_file
@@ -198,15 +201,15 @@ def _imported_deg_result_entries(root: Path) -> list[dict[str, object]]:
 
 
 def _deg_result_assets(root: Path) -> list[dict[str, object]]:
-    registry_path = root / "manifests" / "standardized_assets_registry.json"
-    if not registry_path.exists():
+    resolved = resolve_standardized_assets(root, asset_types={"deg_result_table"})
+    return [asset for asset in resolved.get("assets", []) or [] if isinstance(asset, dict) and asset.get("asset_type") == "deg_result_table"]
+
+
+def _deg_asset_selection_warnings(root: Path) -> list[str]:
+    resolved = resolve_standardized_assets(root, asset_types={"deg_result_table"})
+    if "deg_result_table" not in set(resolved.get("blocked_asset_types", []) or []):
         return []
-    try:
-        registry = _read_json(registry_path)
-    except (OSError, json.JSONDecodeError):
-        return []
-    assets = registry.get("assets") or registry.get("standardized_assets") or []
-    return [asset for asset in assets if isinstance(asset, dict) and asset.get("asset_type") == "deg_result_table"]
+    return [str(item) for item in resolved.get("warnings", []) or [] if str(item)] or ["请先在标准化资产页选择默认 DEG 结果资产。"]
 
 
 def _read_table_rows(path: Path) -> list[list[str]]:
