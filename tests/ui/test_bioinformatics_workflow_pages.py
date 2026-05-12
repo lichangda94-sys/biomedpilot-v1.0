@@ -1486,7 +1486,7 @@ def test_recognition_readiness_standardization_pages(qt_app, project_summary) ->
     standardization.refresh_project(project_summary)
     generated = standardization.generate_assets()
     assert generated is not None
-    assert "标准化资产" in standardization.status_message()
+    assert "标准化结果已生成" in standardization.status_message()
 
 
 def test_recognition_requires_selected_inputs(qt_app, project_summary) -> None:
