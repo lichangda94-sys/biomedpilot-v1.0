@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
+from app.bioinformatics.deg_task_plan import save_deg_task_plan
 from app.bioinformatics.group_comparison_design import (
     build_default_comparison_rows,
     build_default_group_rows,
@@ -4009,6 +4010,21 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._status_label.setText("已保存比较组设置，并重新检查分析任务。")
         return True
 
+    def configure_deg_task_plan(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            payload = save_deg_task_plan(self._project_root)
+        except ValueError as exc:
+            self._status_label.setText(str(exc))
+            return None
+        center = load_analysis_task_center(self._project_root)
+        self._render(center)
+        self._status_label.setText(f"已创建 DEG task plan：{len(payload.get('comparisons', []) or [])} 个比较；未执行真实 DEG。")
+        self._records.setPlainText(_json({"DEG task plan": payload}))
+        return payload
+
     def continue_to_results(self) -> None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -4034,6 +4050,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(self._task_type_input)
         actions.addWidget(_button("去确认分组", "secondaryButton", self.open_group_design))
         actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
+        actions.addWidget(_button("配置 DEG 任务", "primaryButton", self.configure_deg_task_plan))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
         actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
         actions.addStretch(1)
@@ -7667,13 +7684,15 @@ def _preferred_annotation_fields(fields: list[str]) -> list[str]:
 
 def _analysis_task_group_summary(center: dict[str, object]) -> str:
     capabilities = [item for item in center.get("capabilities", []) or [] if isinstance(item, dict)]
-    available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection"}}
+    available = {str(item.get("task_id") or ""): item for item in capabilities if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection", "configured_not_run"}}
     lines: list[str] = []
-    count_group_title = (
-        "需要确认分组后运行"
-        if available.get("differential_expression_recompute", {}).get("status") == "ready_with_group_confirmation"
-        else "已确认分组后可运行"
-    )
+    count_status = available.get("differential_expression_recompute", {}).get("status")
+    if count_status == "ready_with_group_confirmation":
+        count_group_title = "需要确认分组后运行"
+    elif count_status == "configured_not_run":
+        count_group_title = "DEG 任务已配置未运行"
+    else:
+        count_group_title = "已确认分组后可运行"
     groups = [
         ("可直接使用已有结果", [("deg_result_browse", "查看差异基因结果"), ("deg_filtering", "DEG 筛选"), ("volcano_plot", "火山图"), ("enrichment_from_deg", "富集分析输入")]),
         (count_group_title, [("differential_expression_recompute", "重新差异表达分析"), ("qc", "样本 QC"), ("normalization", "count 矩阵标准化")]),
@@ -7685,7 +7704,7 @@ def _analysis_task_group_summary(center: dict[str, object]) -> str:
         if labels:
             lines.append(f"{title}：{'、'.join(labels)}")
     count_capability = available.get("differential_expression_recompute")
-    if count_capability and count_capability.get("status") == "ready_with_group_confirmation":
+    if count_capability and count_capability.get("status") in {"ready_with_group_confirmation", "configured_not_run"}:
         lines.append(str(count_capability.get("reason") or "检测到推断分组，请确认实验分组后重新差异分析。"))
     mouse_capability = next((item for item in capabilities if item.get("task_id") == "human_cohort_integration" and item.get("status") == "not_available"), None)
     if mouse_capability:
@@ -7707,6 +7726,7 @@ def _task_source_status_text(item: dict[str, object]) -> str:
         "ready_with_group_confirmation": "需要确认分组",
         "ready_with_threshold_selection": "可用；需选择阈值",
         "needs_asset_selection": "需要选择默认资产",
+        "configured_not_run": "已配置未运行",
         "planned": "已规划",
         "not_available": "不可用",
     }.get(status, status or "未知状态")

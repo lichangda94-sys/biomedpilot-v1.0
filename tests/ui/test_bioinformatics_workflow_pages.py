@@ -2115,6 +2115,20 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
     assert "已确认分组后可运行" in grouped.toPlainText()
     assert "available" in task_text
 
+    plan = task_center.configure_deg_task_plan()
+    assert plan is not None
+    assert plan["status"] == "configured_not_run"
+    assert (project_summary.project_root / "manifests" / "analysis_tasks" / "deg_task_plan.json").exists()
+    assert "未执行真实 DEG" in task_center.status_message()
+    refreshed_text = " ".join(
+        task_center._tasks.item(row, column).text()
+        for row in range(task_center._tasks.rowCount())
+        for column in range(task_center._tasks.columnCount())
+        if task_center._tasks.item(row, column) is not None
+    )
+    assert "configured_not_run" in refreshed_text
+    assert "导入表格中的 DEG comparison" in refreshed_text
+
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
     from app.bioinformatics.services.geo_metadata_profile_service import (

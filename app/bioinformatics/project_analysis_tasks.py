@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.bioinformatics.comparison_config import load_confirmed_comparison_config
+from app.bioinformatics.deg_task_plan import load_deg_task_plan
 from app.bioinformatics.group_comparison_design import has_confirmed_group_comparison_design
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.standardized_asset_selection import resolve_standardized_assets
@@ -149,6 +150,7 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
     resolved = resolve_standardized_assets(root)
     assets = [asset for asset in resolved.get("assets", []) or [] if isinstance(asset, dict)]
     has_confirmed_group_config = load_confirmed_comparison_config(root) is not None or has_confirmed_group_comparison_design(root)
+    deg_plan = load_deg_task_plan(root)
     capabilities: list[dict[str, object]] = []
     for asset_type in resolved.get("blocked_asset_types", []) or []:
         capabilities.extend(_asset_selection_required_capabilities(str(asset_type)))
@@ -156,7 +158,15 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
         asset_type = str(asset.get("asset_type") or "")
         if asset_type == "count_matrix":
             group_count = len(asset.get("inferred_groups", []) or [])
-            status = "available" if has_confirmed_group_config else "ready_with_group_confirmation"
+            if deg_plan:
+                status = "configured_not_run"
+                reason = "已创建 DEG task plan；当前只保存配置，尚未执行真实差异表达分析。"
+            elif has_confirmed_group_config:
+                status = "available"
+                reason = "检测到 count matrix，已确认分组，可创建 DEG task plan。"
+            else:
+                status = "ready_with_group_confirmation"
+                reason = f"检测到 {group_count} 个推断分组，请确认实验分组后重新差异分析。"
             capabilities.extend(
                 [
                     {
@@ -164,7 +174,7 @@ def _standardized_asset_capabilities(root: Path) -> list[dict[str, object]]:
                         "status": status,
                         "source_asset_type": "count_matrix",
                         "source_asset_id": asset.get("asset_id", ""),
-                        "reason": "检测到 count matrix，已确认分组可重新差异分析。" if has_confirmed_group_config else f"检测到 {group_count} 个推断分组，请确认实验分组后重新差异分析。",
+                        "reason": reason,
                     },
                     {
                         "task_id": "normalization",
