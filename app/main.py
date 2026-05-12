@@ -5,6 +5,7 @@ import argparse
 
 from app.shell.dashboard import build_dashboard_model
 from app.shared.environment.checks import check_local_environment
+from app.shared.qt_lifecycle import cleanup_qt_top_level_widgets
 from app.version import app_version_summary
 
 
@@ -54,7 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     apply_app_identity(qt_app)
     window = MainWindow()
     window.show()
-    return qt_app.exec()
+    try:
+        return qt_app.exec()
+    finally:
+        window.close()
+        cleanup_qt_top_level_widgets(qt_app)
 
 
 if __name__ == "__main__":
