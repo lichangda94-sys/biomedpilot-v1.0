@@ -27,6 +27,8 @@ IGNORE_NAMES = {
     ".pytest_cache",
     ".DS_Store",
 }
+BACKUP_SUFFIXES = (".bak", ".orig", ".rej")
+LOCAL_CONFLICT_COPY_MARKERS = (" 2.", " 3.")
 
 
 @dataclass(frozen=True)
@@ -144,11 +146,19 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
     ignored: set[str] = set()
     for name in names:
         path = Path(directory) / name
-        if name in IGNORE_NAMES or name.endswith(".pyc"):
+        if name in IGNORE_NAMES or name.endswith(".pyc") or _is_local_backup_or_conflict_copy(name):
             ignored.add(name)
         elif path.is_dir() and name in {"dist", "build", ".git", ".venv", ".venv-meta"}:
             ignored.add(name)
     return ignored
+
+
+def _is_local_backup_or_conflict_copy(name: str) -> bool:
+    if name.endswith(BACKUP_SUFFIXES):
+        return True
+    if name.endswith(" 2") or name.endswith(" 3"):
+        return True
+    return any(marker in name for marker in LOCAL_CONFLICT_COPY_MARKERS)
 
 
 def _create_project_storage(storage_root: Path) -> None:

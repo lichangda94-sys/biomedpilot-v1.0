@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from scripts.package_app import PackagingOptions, build_launcher_app
+from scripts.package_app import PackagingOptions, _copy_ignore, build_launcher_app
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -68,3 +68,20 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
+
+
+def test_package_app_ignores_local_conflict_copies_and_backups(tmp_path) -> None:
+    ignored = _copy_ignore(
+        str(tmp_path),
+        [
+            "workspace.py.pre_m0_m1_20260512.bak",
+            "analysis_task_runs 2.py",
+            "sample 3.csv",
+            "valid_module.py",
+        ],
+    )
+
+    assert "workspace.py.pre_m0_m1_20260512.bak" in ignored
+    assert "analysis_task_runs 2.py" in ignored
+    assert "sample 3.csv" in ignored
+    assert "valid_module.py" not in ignored
