@@ -1548,7 +1548,9 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
 
     assert "开始识别" in button_texts
     assert "刷新" in button_texts
-    assert widget.findChild(QFrame, "recognitionTechnicalOperations").isHidden()
+    assert "技术详情" not in button_texts
+    assert "技术操作" not in button_texts
+    assert widget.findChild(QFrame, "recognitionTechnicalOperations") is None
     assert widget._counts.isReadOnly()
 
 
@@ -1633,7 +1635,7 @@ def test_recognition_archives_legacy_recognized_data_report(qt_app, project_summ
     assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
 
 
-def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, project_summary) -> None:
+def test_recognition_history_view_and_delete_are_isolated(qt_app, project_summary) -> None:
     raw_dir = project_summary.project_root / "raw_data" / "local_import"
     raw_dir.mkdir(parents=True, exist_ok=True)
     first = raw_dir / "first_expression.tsv"
@@ -1654,6 +1656,15 @@ def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, pr
     assert table.rowCount() == 0
     assert history is not None
     assert history.rowCount() == 2
+    history_buttons = [
+        button.text()
+        for row in range(history.rowCount())
+        for button in history.cellWidget(row, 7).findChildren(QPushButton)
+    ]
+    assert "查看批次详情" in history_buttons
+    assert "删除记录" in history_buttons
+    assert "设为当前结果" not in history_buttons
+    assert "设为当前标准化输入" not in history_buttons
 
     widget._view_history_run(first_current["run_id"])
     viewed_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
@@ -1666,23 +1677,11 @@ def test_recognition_history_view_set_current_and_delete_are_isolated(qt_app, pr
     assert "历史记录" in detail.toPlainText()
     assert first.name in detail.toPlainText()
     assert next_steps is not None
-    assert "该识别记录当前不会被标准化模块使用" in next_steps.toPlainText()
+    assert "设为当前" not in next_steps.toPlainText()
     assert next_button is not None
-    assert next_button.text() == "设为当前标准化输入"
+    assert next_button.text() != "设为当前标准化输入"
 
-    next_button.click()
-    updated_current = json.loads((project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8"))
-    assert updated_current["run_id"] == first_current["run_id"]
-    assert widget.status_message() == "已将该识别记录设为当前标准化输入。"
-    assert table.rowCount() == 0
-    status_by_run = {
-        table_widget.item(row, 1).text() + ":" + table_widget.item(row, 2).text(): table_widget.item(row, 6).text()
-        for table_widget in [history]
-        for row in range(table_widget.rowCount())
-    }
-    assert "当前使用中" in status_by_run.values()
-
-    widget._delete_history_run(first_current["run_id"])
+    widget._delete_history_run(second_current["run_id"])
     assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
     assert widget.status_message() == "当前识别结果已删除，请重新识别或选择另一条历史记录。"
     standardization = workflow_pages.generate_standardized_assets(project_summary.project_root)
@@ -1992,12 +1991,11 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
     next_steps = recognition_widget.findChild(QTextEdit, "recognitionNextStepSummary")
     primary_next = recognition_widget.findChild(QPushButton, "recognitionNextActionButton_0")
     assert next_steps is not None
-    assert "当前使用中" in next_steps.toPlainText()
-    assert "查看已有 DEG 结果" in next_steps.toPlainText()
-    assert "需要确认分组" in next_steps.toPlainText()
-    assert "TCGA/GTEx" in next_steps.toPlainText()
+    assert "数据准备与标准化" in next_steps.toPlainText()
+    assert "查看已有 DEG 结果" not in next_steps.toPlainText()
+    assert "进入分析任务中心" not in next_steps.toPlainText()
     assert primary_next is not None
-    assert primary_next.text() == "继续数据标准化"
+    assert primary_next.text() == "继续：数据准备与标准化"
 
     workflow_pages.generate_standardized_assets(project_summary.project_root)
 
@@ -2446,12 +2444,13 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     detail_button = table.cellWidget(0, 7)
     assert detail_button is not None
     assert isinstance(detail_button, QPushButton)
+    assert detail_button.text() == "查看文件详情"
     detail_button.click()
 
     detail = widget.findChild(QTextEdit, "recognitionDetailReport")
     technical = widget.findChild(QPlainTextEdit, "recognitionDetailTechnical")
     assert detail is not None
-    assert technical is not None
+    assert technical is None
     detail_text = detail.toPlainText()
     assert "RNA-seq 综合表达结果表" in detail_text
     assert "Mus musculus" in detail_text
@@ -2466,7 +2465,6 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     sample_section = detail_text.split("样本列与分组推断", 1)[1].split("DEG comparison 识别", 1)[0]
     assert "gene_start" not in sample_section
     assert "PFFvsPBS_log2FoldChange" not in sample_section
-    assert technical.isHidden()
     assert not (project_summary.project_root / "recognized_data" / "current.json").exists()
 
     export_button = widget.findChild(QPushButton, "recognitionDetailExportButton")
@@ -2562,7 +2560,8 @@ def test_recognition_duplicate_filter_marks_and_hides_duplicates(qt_app, project
     assert table.rowCount() == 2
     warnings = [table.item(row, 6).text() for row in range(table.rowCount())]
     assert any("检测到可能重复导入的文件" in warning for warning in warnings)
-    assert "疑似重复文件：1 个" in widget._counts.toPlainText()
+    assert "已识别 2 个文件" in widget._counts.toPlainText()
+    assert "表达矩阵可用" in widget._counts.toPlainText()
 
     widget._duplicate_filter.setCurrentText("隐藏疑似重复文件")
     assert table.rowCount() == 1
