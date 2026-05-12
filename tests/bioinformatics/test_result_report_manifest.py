@@ -93,16 +93,30 @@ def test_project_report_manifest_links_upstream_bioinformatics_manifests(tmp_pat
 
     payload = generate_project_report(project_root)
     manifest = payload["manifest"]  # type: ignore[index]
+    markdown = Path(str(payload["markdown_path"])).read_text(encoding="utf-8")
     sections = {str(section["section_id"]): section for section in manifest["sections"]}  # type: ignore[index]
+    draft_sections = {str(section["section_id"]): section for section in manifest["draft_sections"]}  # type: ignore[index]
     result_items = {str(item["item_type"]): item for item in manifest["result_items"]}  # type: ignore[index]
 
     assert manifest["schema_version"] == "bioinformatics_report_manifest.v1"
+    assert Path(str(manifest["draft_path"])).exists()
     assert sections["data_recognition"]["source"] == "recognized_data/current.json"
     assert sections["standardized_assets"]["source"] == "manifests/standardized_assets_registry.json"
     assert sections["asset_selection"]["source"] == "manifests/standardized_asset_selection.json"
     assert sections["group_design"]["status"] == "available"
     assert sections["imported_deg_results"]["status"] == "available"
     assert sections["analysis_task_runs"]["status"] == "available"
+    assert draft_sections["data_recognition"]["title"] == "数据识别摘要"
+    assert draft_sections["standardized_assets"]["title"] == "标准化资产与默认选择"
+    assert draft_sections["group_design"]["title"] == "分组与比较设计"
+    assert draft_sections["imported_deg_results"]["title"] == "导入 DEG 结果"
+    assert draft_sections["analysis_task_runs"]["title"] == "分析任务记录"
     assert result_items["imported_deg_result"]["description"] == "导入表格中的已有差异分析结果"
     assert result_items["analysis_task_run"]["status"] == "skipped_dry_run"
     assert result_items["analysis_task_run"]["item_type"] != "completed_result"
+    assert "BioMedPilot 生信项目报告草稿" in markdown
+    assert "导入表格中的已有差异分析结果" in markdown
+    assert "尚未执行真实 DEG" in markdown
+    assert "不代表真实 DEG 已完成" in markdown
+    assert "假火山图" in markdown
+    assert "PFFvsPBS_log2FoldChange" not in markdown

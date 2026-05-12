@@ -2185,6 +2185,13 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
     assert "导入表格中的已有差异分析结果" in reportable_text
     assert "尚未完成的任务记录" in reportable_text
     assert "不代表 DEG 已完成" in reportable_text
+    report_payload = report.generate_report()
+    assert report_payload is not None
+    report_text = report._markdown.toPlainText()
+    assert "BioMedPilot 生信项目报告草稿" in report_text
+    assert "导入表格中的已有差异分析结果" in report_text
+    assert "尚未执行真实 DEG" in report_text
+    assert "假火山图" in report_text
 
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
@@ -2763,8 +2770,28 @@ def test_standardized_assets_page_shows_and_saves_default_asset_selection(qt_app
     widget.refresh_project(project_summary)
     assets = widget.findChild(QTableWidget, "standardizedAssetsTable")
     selection = widget.findChild(QTableWidget, "standardizedAssetSelectionTable")
+    input_summary = widget.findChild(QTextEdit, "standardizationCurrentRecognitionInput")
+    expression_status = widget.findChild(QTextEdit, "standardizationExpressionStatus")
+    group_status = widget.findChild(QTextEdit, "standardizationGroupStatus")
+    continue_button = next(button for button in widget.findChildren(QPushButton) if button.text() == "继续：分析任务中心")
+    confirm_button = next(button for button in widget.findChildren(QPushButton) if button.text() == "确认分组与比较设计")
+    generate_button = next(button for button in widget.findChildren(QPushButton) if "生成标准化资产" in button.text())
     assert assets is not None
     assert selection is not None
+    assert input_summary is not None
+    assert expression_status is not None
+    assert group_status is not None
+    assert assets.parentWidget().isHidden()
+    assert selection.parentWidget().isHidden()
+    assert "recognition run id" not in input_summary.toPlainText()
+    assert "standardized_data" not in input_summary.toPlainText()
+    assert "表达矩阵：可用" in expression_status.toPlainText()
+    assert "分组信息未确认" in group_status.toPlainText()
+    assert confirm_button.property("buttonRole") == "primary_action"
+    assert continue_button.property("buttonRole") == "primary_next"
+    assert generate_button.property("buttonRole") == "secondary"
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    assert "打开 standardized_data 文件夹" not in button_texts
     table_text = " ".join(
         assets.item(row, column).text()
         for row in range(assets.rowCount())

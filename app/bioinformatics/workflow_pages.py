@@ -45,6 +45,7 @@ from app.bioinformatics.group_comparison_design import (
     build_default_comparison_rows,
     build_default_group_rows,
     design_status_summary,
+    has_confirmed_group_comparison_design,
     load_group_design_context,
     save_group_comparison_design,
     validate_group_comparison_design,
@@ -3480,9 +3481,9 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             self._status_label.setText("尚未生成标准化资产。")
             self._assets.setRowCount(0)
             self._selection_table.setRowCount(0)
-            self._current_input_summary.setPlainText(standardization_current_input_summary(self._project_root))
+            self._render_user_overview(artifacts)
             self._summary.setPlainText("")
-            self._manifest.setPlainText("")
+            self._manifest.setPlainText(_json({"current_input": standardization_current_input_summary(self._project_root)}))
         else:
             self._render(artifacts)
 
@@ -3501,39 +3502,132 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("标准化资产", "当前为资产注册和轻量校验，不等于正式 biological normalization。", back_text="返回 Ready 检查", back_signal=self.back_requested))
-        actions = QHBoxLayout()
-        actions.addWidget(_button("生成标准化资产", "primaryButton", self.generate_assets))
-        actions.addWidget(_button("刷新资产状态", "secondaryButton", self.refresh_assets))
-        actions.addWidget(_button("保存默认资产选择", "primaryButton", self.save_asset_selection))
-        actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.open_group_design))
-        actions.addWidget(_button("打开 standardized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "standardized_data" if self._project_root else None)))
-        actions.addStretch(1)
-        root.addLayout(actions)
+        root.addWidget(_header("数据准备与标准化", "确认表达矩阵和样本分组，生成后续分析可用的标准化资产。", back_text="返回 Ready 检查", back_signal=self.back_requested))
         self._status_label = _status_label("尚未生成标准化资产。")
         root.addWidget(self._status_label)
+
+        input_card, input_layout = _card("当前输入数据")
         self._current_input_summary = _read_only_report_view(100)
         self._current_input_summary.setObjectName("standardizationCurrentRecognitionInput")
-        root.addWidget(self._current_input_summary)
+        input_layout.addWidget(self._current_input_summary)
+        self._input_detail = _text_preview(120)
+        self._input_detail.setObjectName("standardizationInputDetail")
+        self._input_detail.setVisible(False)
+        input_actions = QHBoxLayout()
+        input_actions.addWidget(_button("查看输入详情", "secondaryButton", lambda: _toggle_details(self._input_detail), role="secondary"))
+        input_actions.addStretch(1)
+        input_layout.addLayout(input_actions)
+        input_layout.addWidget(self._input_detail)
+        root.addWidget(input_card)
+
+        expression_card, expression_layout = _card("表达矩阵状态")
+        self._expression_status = _read_only_report_view(100)
+        self._expression_status.setObjectName("standardizationExpressionStatus")
+        expression_layout.addWidget(self._expression_status)
+        root.addWidget(expression_card)
+
+        group_card, group_layout = _card("分组确认")
+        self._group_status = _read_only_report_view(110)
+        self._group_status.setObjectName("standardizationGroupStatus")
+        group_layout.addWidget(self._group_status)
+        root.addWidget(group_card)
+
+        status_card, status_layout = _card("标准化状态")
+        status_grid = QGridLayout()
+        status_grid.setHorizontalSpacing(SPACING["sm"])
+        status_grid.setVerticalSpacing(SPACING["sm"])
+        self._standardization_status_blocks: dict[str, tuple[QLabel, QLabel]] = {}
+        for index, key in enumerate(("expression", "sample_metadata", "group_design", "gene_annotation", "standardized_result")):
+            block = QFrame()
+            block.setObjectName("bioProjectMiniStatusBlock")
+            block_layout = QVBoxLayout(block)
+            block_layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
+            block_layout.setSpacing(2)
+            title = QLabel("")
+            title.setObjectName("bioProjectMiniStatusTitle")
+            value = QLabel("")
+            value.setObjectName("bioProjectMiniStatusValue")
+            value.setWordWrap(True)
+            block_layout.addWidget(title)
+            block_layout.addWidget(value)
+            self._standardization_status_blocks[key] = (title, value)
+            status_grid.addWidget(block, index // 3, index % 3)
+        status_layout.addLayout(status_grid)
+        root.addWidget(status_card)
+
+        main_card, main_layout = _card("主操作")
+        main_actions = QHBoxLayout()
+        self._confirm_group_button = _button("确认分组与比较设计", "primaryButton", self.open_group_design, role="primary_action")
+        self._generate_assets_button = _button("生成标准化资产", "primaryButton", self.generate_assets, role="primary_action")
+        self._continue_tasks_button = _button("继续：分析任务中心", "primaryButton", self.continue_to_workflow, role="primary_next")
+        self._refresh_assets_button = _button("刷新状态", "secondaryButton", self.refresh_assets, role="secondary")
+        self._export_report_button = _button("导出标准化报告", "secondaryButton", self.export_standardization_report, role="secondary")
+        for button in (self._confirm_group_button, self._generate_assets_button, self._continue_tasks_button, self._refresh_assets_button, self._export_report_button):
+            main_actions.addWidget(button)
+        main_actions.addStretch(1)
+        main_layout.addLayout(main_actions)
+        self._workflow_note = _muted("可进入分析任务中心不等于可以直接启动 DEG；DEG 需要表达矩阵可用，并且分组与比较设计已确认。")
+        self._workflow_note.setObjectName("standardizationWorkflowGateNote")
+        main_layout.addWidget(self._workflow_note)
+        root.addWidget(main_card)
+
+        diagnostic_card, diagnostic_layout = _card("标准化详情 / 开发者诊断")
+        diagnostic_layout.addWidget(_muted("普通流程不需要查看这些内容；仅用于排错、审计和开发者诊断。"))
+        self._diagnostic_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_diagnostics, role="secondary")
+        diagnostic_layout.addWidget(self._diagnostic_toggle_button, alignment=Qt.AlignLeft)
+        self._diagnostic_frame = QFrame()
+        self._diagnostic_frame.setVisible(False)
+        diagnostic_inner = QVBoxLayout(self._diagnostic_frame)
+        diagnostic_inner.setContentsMargins(0, 0, 0, 0)
         self._assets = _table(["资产 ID", "资产类型", "来源文件", "样本数", "物种", "用途", "限制", "状态", "默认"])
         self._assets.setObjectName("standardizedAssetsTable")
-        root.addWidget(self._assets)
+        diagnostic_inner.addWidget(self._assets)
         self._selection_table = _table(["资产类型", "候选数", "默认资产", "状态", "说明"])
         self._selection_table.setObjectName("standardizedAssetSelectionTable")
-        root.addWidget(self._selection_table)
+        diagnostic_inner.addWidget(self._selection_table)
+        diagnostic_actions = QHBoxLayout()
+        diagnostic_actions.addWidget(_button("保存默认资产选择", "secondaryButton", self.save_asset_selection, role="secondary"))
+        diagnostic_actions.addWidget(_button("打开标准化结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "standardized_data" if self._project_root else None), role="secondary"))
+        diagnostic_actions.addStretch(1)
+        diagnostic_inner.addLayout(diagnostic_actions)
         self._summary = _text_preview(140)
-        root.addWidget(self._summary)
+        diagnostic_inner.addWidget(self._summary)
         self._manifest = _text_preview(150)
-        self._manifest.setVisible(False)
-        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._manifest)))
-        root.addWidget(self._manifest)
-        root.addWidget(_button("继续：生信工作流总控", "primaryButton", self.continue_to_workflow), alignment=Qt.AlignLeft)
+        diagnostic_inner.addWidget(self._manifest)
+        diagnostic_layout.addWidget(self._diagnostic_frame)
+        root.addWidget(diagnostic_card)
 
     def open_group_design(self) -> None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return
         self.group_design_requested.emit(self._project_root)
+
+    def export_standardization_report(self) -> Path | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        report_dir = self._project_root / "reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        path = report_dir / "standardization_report.md"
+        text = "\n\n".join(
+            [
+                "# 数据准备与标准化报告",
+                "## 当前输入",
+                self._current_input_summary.toPlainText(),
+                "## 分组状态",
+                self._group_status.toPlainText(),
+                "## 流程提示",
+                self._workflow_note.text(),
+            ]
+        )
+        path.write_text(text, encoding="utf-8")
+        self._status_label.setText("标准化报告已导出。")
+        return path
+
+    def _toggle_diagnostics(self) -> None:
+        self._diagnostic_frame.setVisible(not self._diagnostic_frame.isVisible())
+        self._diagnostic_toggle_button.setText("收起开发者诊断" if self._diagnostic_frame.isVisible() else "展开开发者诊断")
 
     def save_asset_selection(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -3591,6 +3685,49 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             summary_text = f"{summary_text}\n{_asset_selection_summary_text(selection_context)}\n{design_status_summary(self._project_root)}"
         self._summary.setPlainText(summary_text)
         self._manifest.setPlainText(_json({"analysis-ready manifest": manifest, "asset_selection": selection_context, "warning": warnings}))
+        self._render_user_overview(artifacts)
+
+    def _render_user_overview(self, artifacts: dict[str, object]) -> None:
+        if self._project_root is None:
+            return
+        registry = artifacts.get("registry") if isinstance(artifacts.get("registry"), dict) else {}
+        assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)] if registry else []
+        report = load_recognition_report(self._project_root) or {}
+        files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+        assets_generated = bool(registry)
+        group_confirmed = has_confirmed_group_comparison_design(self._project_root)
+        self._status_label.setText(_standardization_status_message(assets, assets_generated))
+        self._current_input_summary.setPlainText(_standardization_current_input_user_summary(self._project_root, report))
+        self._input_detail.setPlainText(_standardization_input_detail_text(self._project_root, report))
+        self._expression_status.setPlainText(_standardization_expression_user_summary(report, assets))
+        self._group_status.setPlainText(_standardization_group_user_summary(self._project_root, report, assets))
+        status_values = _standardization_status_values(report, assets, assets_generated, group_confirmed)
+        for key, title_text, value_text in status_values:
+            title, value = self._standardization_status_blocks[key]
+            title.setText(title_text)
+            value.setText(value_text)
+        self._update_main_actions(assets_generated=assets_generated, group_confirmed=group_confirmed, has_expression=_standardization_has_expression_asset(files, assets))
+
+    def _update_main_actions(self, *, assets_generated: bool, group_confirmed: bool, has_expression: bool) -> None:
+        if group_confirmed:
+            self._confirm_group_button.setText("编辑分组设计")
+            _apply_button_semantics(self._confirm_group_button, "secondary")
+        else:
+            self._confirm_group_button.setText("确认分组与比较设计")
+            _apply_button_semantics(self._confirm_group_button, "primary_action")
+        self._confirm_group_button.setVisible(True)
+
+        self._generate_assets_button.setText("重新生成标准化资产" if assets_generated else "生成标准化资产")
+        _apply_button_semantics(self._generate_assets_button, "secondary" if (not group_confirmed or assets_generated) else "primary_action")
+        self._generate_assets_button.setVisible(True)
+
+        self._continue_tasks_button.setVisible(assets_generated and has_expression)
+        self._continue_tasks_button.setEnabled(assets_generated and has_expression)
+        _apply_button_semantics(self._continue_tasks_button, "primary_next")
+
+        self._export_report_button.setVisible(assets_generated)
+        self._export_report_button.setEnabled(assets_generated)
+        self._refresh_assets_button.setVisible(True)
 
     def _render_selection_table(self, context: dict[str, object]) -> None:
         groups = [group for group in context.get("groups", []) or [] if isinstance(group, dict)]
@@ -4333,11 +4470,6 @@ class BioinformaticsReportViewerWidget(QWidget):
     def generate_report(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        payload = load_result_index(self._project_root)
-        entries = [item for item in payload.get("entries", []) or [] if isinstance(item, dict)]
-        if not entries:
-            self._status_label.setText("不能生成报告：暂无可用于报告的结果。请返回数据来源补充文件，完成分析并生成结果后再生成报告。")
             return None
         payload = generate_project_report(self._project_root)
         self._render(payload)
@@ -7530,6 +7662,186 @@ def _save_manual_supplement(project_root: Path, normalized: str, text: str) -> P
     return target
 
 
+def _standardization_status_message(assets: list[dict[str, object]], assets_generated: bool) -> str:
+    if not assets_generated:
+        return "尚未生成标准化资产。请确认输入与分组状态后生成。"
+    reminder_count = sum(1 for item in assets if str(item.get("warning") or "").strip())
+    return f"标准化结果已生成：{len(assets)} 项；提醒 {reminder_count} 条。"
+
+
+def _standardization_current_input_user_summary(project_root: Path, report: dict[str, object]) -> str:
+    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+    if not files:
+        return "尚未选择当前识别结果。\n请先完成数据识别。"
+    current_run = next((run for run in list_recognition_runs(project_root) if run.get("is_current")), {})
+    generated_at = _format_history_time(str(current_run.get("generated_at") or report.get("generated_at") or ""))
+    names = [str(item.get("file_name") or Path(str(item.get("original_path") or "")).name or "未命名文件") for item in files]
+    shown = "、".join(names[:3])
+    if len(names) > 3:
+        shown += f"；另有 {len(names) - 3} 个文件"
+    return "\n".join(
+        [
+            "已选择识别结果",
+            f"输入文件数量：{len(files)}",
+            f"输入文件：{shown}",
+            f"识别批次时间：{generated_at or '未记录'}",
+            f"内容摘要：{_standardization_content_summary(files)}",
+        ]
+    )
+
+
+def _standardization_input_detail_text(project_root: Path, report: dict[str, object]) -> str:
+    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+    if not files:
+        return "暂无输入详情。"
+    lines = ["输入文件详情"]
+    for item in files:
+        path = str(item.get("original_path") or item.get("source_file") or item.get("file_name") or "")
+        lines.append(f"- {item.get('file_name') or Path(path).name or '未命名文件'}：{_compact_path(path, max_chars=72)}")
+    lines.append(f"项目位置：{_compact_path(str(project_root), max_chars=72)}")
+    return "\n".join(lines)
+
+
+def _standardization_content_summary(files: list[dict[str, object]]) -> str:
+    labels: list[str] = []
+    for item in files:
+        blocks = _content_blocks_by_type(item)
+        if "count_expression_matrix" in blocks:
+            labels.append("count 矩阵")
+        if "fpkm_expression_matrix" in blocks:
+            labels.append("FPKM")
+        if "tpm_expression_matrix" in blocks:
+            labels.append("TPM")
+        if "deg_comparisons" in blocks:
+            labels.append("差异结果")
+        if "gene_annotation" in blocks:
+            labels.append("基因注释")
+        if not blocks:
+            labels.append(_recognition_type_text(item))
+    return "、".join(dict.fromkeys(label for label in labels if label)) or "未识别明确内容"
+
+
+def _standardization_expression_user_summary(report: dict[str, object], assets: list[dict[str, object]]) -> str:
+    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+    expression_assets = [item for item in assets if str(item.get("asset_type") or "") in {"count_matrix", "expression_matrix", "raw_count_matrix", "normalized_expression_matrix"}]
+    expression_available = bool(expression_assets) or _recognition_has_expression_asset(files)
+    if not expression_available:
+        return "表达矩阵：缺失\n请返回数据识别或数据来源页补充表达矩阵。"
+    matrix_types = _standardization_matrix_type_text(files, expression_assets)
+    primary = expression_assets[0] if expression_assets else _first_expression_record(files)
+    gene_id = str(primary.get("gene_id_type") or _standardization_profile_value(primary, "gene_id_type") or "")
+    species = str(primary.get("species") or _standardization_profile_value(primary, "species") or "未识别")
+    sample_count = _standardization_sample_count(files, expression_assets)
+    gene_count = int(primary.get("gene_count") or primary.get("feature_count") or 0)
+    gene_text = str(gene_count) if gene_count else "未记录"
+    return "\n".join(
+        [
+            "表达矩阵：可用",
+            f"矩阵类型：{matrix_types}",
+            f"基因 ID 类型：{_gene_id_type_label(gene_id)}",
+            f"物种：{species}",
+            f"数据规模：基因数 {gene_text}；样本数 {sample_count if sample_count else '未记录'}",
+        ]
+    )
+
+
+def _standardization_matrix_type_text(files: list[dict[str, object]], assets: list[dict[str, object]]) -> str:
+    labels: list[str] = []
+    for asset in assets:
+        value_type = str(asset.get("value_type") or "")
+        asset_type = str(asset.get("asset_type") or "")
+        if value_type:
+            labels.append(value_type.upper() if value_type != "count" else "count")
+        elif asset_type == "count_matrix":
+            labels.append("count")
+        elif asset_type == "normalized_expression_matrix":
+            labels.append("FPKM/TPM")
+        elif asset_type in {"expression_matrix", "raw_count_matrix"}:
+            labels.append("表达矩阵")
+    for item in files:
+        blocks = _content_blocks_by_type(item)
+        if "count_expression_matrix" in blocks:
+            labels.append("count")
+        if "fpkm_expression_matrix" in blocks:
+            labels.append("FPKM")
+        if "tpm_expression_matrix" in blocks:
+            labels.append("TPM")
+    return " / ".join(dict.fromkeys(label for label in labels if label)) or "表达矩阵"
+
+
+def _first_expression_record(files: list[dict[str, object]]) -> dict[str, object]:
+    return next((item for item in files if _recognition_has_expression_asset([item])), files[0] if files else {})
+
+
+def _standardization_profile_value(item: dict[str, object], key: str) -> object:
+    profile = item.get("content_profile") if isinstance(item.get("content_profile"), dict) else {}
+    return profile.get(key)
+
+
+def _standardization_sample_count(files: list[dict[str, object]], assets: list[dict[str, object]]) -> int:
+    values = [int(item.get("sample_count") or 0) for item in assets if int(item.get("sample_count") or 0) > 0]
+    for item in files:
+        for block in _content_blocks_by_type(item).values():
+            if str(block.get("block_type") or "") in {"count_expression_matrix", "fpkm_expression_matrix", "tpm_expression_matrix"}:
+                count = int(block.get("sample_count") or len(block.get("sample_columns", []) or []))
+                if count:
+                    values.append(count)
+    return max(values) if values else 0
+
+
+def _standardization_group_user_summary(project_root: Path, report: dict[str, object], assets: list[dict[str, object]]) -> str:
+    preview = report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}
+    confirmed = has_confirmed_group_comparison_design(project_root)
+    context = load_group_design_context(project_root) if assets else {}
+    groups = [item for item in context.get("sample_groups", []) or [] if isinstance(item, dict)] if context else []
+    sample_count = sum(int(item.get("sample_count") or 0) for item in groups) or int(preview.get("sample_count") or 0) or _standardization_sample_count([item for item in report.get("files", []) or [] if isinstance(item, dict)], assets)
+    group_sizes = {str(item.get("inferred_group_id") or item.get("user_group_name") or ""): int(item.get("sample_count") or 0) for item in groups if item.get("inferred_group_id") or item.get("user_group_name")}
+    if not group_sizes and isinstance(preview.get("group_sizes"), dict):
+        group_sizes = {str(key): int(value) for key, value in preview.get("group_sizes", {}).items()}
+    group_count = len(group_sizes) or int(preview.get("group_count") or 0)
+    group_text = "、".join(f"{key} {value}" for key, value in group_sizes.items()) if group_sizes else "未识别"
+    confidence = _group_preview_confidence_zh(str(preview.get("confidence") or "low"))
+    source = "人工确认" if confirmed else ("系统推断" if group_count else "未识别")
+    lines = [
+        f"样本数：{sample_count if sample_count else '未记录'}",
+        f"分组数量：{group_count if group_count else 0}",
+        f"每组样本数：{group_text}",
+        f"分组来源：{source}",
+        f"分组置信度：{confidence}",
+        f"是否人工确认：{'是' if confirmed else '否'}",
+    ]
+    if not confirmed:
+        lines.append("分组信息未确认，可以进入分析任务中心查看任务，但不能直接启动 DEG 分析。请先确认分组与比较设计。")
+    return "\n".join(lines)
+
+
+def _standardization_status_values(
+    report: dict[str, object],
+    assets: list[dict[str, object]],
+    assets_generated: bool,
+    group_confirmed: bool,
+) -> list[tuple[str, str, str]]:
+    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+    has_expression = _standardization_has_expression_asset(files, assets)
+    has_sample = any(str(asset.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata"} for asset in assets) or any(
+        "sample_metadata" in [str(role) for role in item.get("recognized_roles", []) or []] for item in files
+    )
+    has_annotation = any(str(asset.get("asset_type") or "") == "gene_annotation" for asset in assets) or any("gene_annotation" in _content_blocks_by_type(item) for item in files)
+    return [
+        ("expression", "表达矩阵", "可用" if has_expression else "缺失"),
+        ("sample_metadata", "样本信息表", "可用" if has_sample else "需补充"),
+        ("group_design", "分组设计", "已确认" if group_confirmed else "未确认"),
+        ("gene_annotation", "基因注释", "已识别" if has_annotation else "需确认"),
+        ("standardized_result", "标准化结果", "已生成" if assets_generated else "未生成"),
+    ]
+
+
+def _standardization_has_expression_asset(files: list[dict[str, object]], assets: list[dict[str, object]]) -> bool:
+    if any(str(asset.get("asset_type") or "") in {"count_matrix", "expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} for asset in assets):
+        return True
+    return _recognition_has_expression_asset(files)
+
+
 def _standardization_user_summary(registry: dict[str, object], manifest: dict[str, object]) -> str:
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
     ready_assets = [item for item in assets if item.get("analysis_ready")]
@@ -8212,9 +8524,9 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     if not isinstance(registry, dict):
         return False, "尚未生成标准化资产。"
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
-    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "raw_count_matrix"} for item in assets)
+    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "raw_count_matrix", "count_matrix", "normalized_expression_matrix"} for item in assets)
     if not has_ready_core:
-        return False, "没有 analysis-ready 表达矩阵资产。"
+        return False, "没有可用于分析的表达矩阵。"
     return True, ""
 
 
