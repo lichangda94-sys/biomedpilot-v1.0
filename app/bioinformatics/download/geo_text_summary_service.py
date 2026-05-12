@@ -16,6 +16,7 @@ class GeoStudyTextInput:
     title_en: str = ""
     summary_en: str = ""
     overall_design_en: str = ""
+    sample_overview_en: str = ""
 
 
 @dataclass(frozen=True)
@@ -191,6 +192,7 @@ class GeoTextSummaryService:
             f"title_en:\n{text.title_en or ''}\n\n"
             f"summary_en:\n{text.summary_en or ''}\n\n"
             f"overall_design_en:\n{text.overall_design_en or ''}\n"
+            f"sample_overview_en:\n{text.sample_overview_en or ''}\n"
         )
         raw = self._generate(self.translate_model, prompt)
         payload = _parse_json_object(raw, required_keys=("title_zh", "summary_zh", "overall_design_zh"))
@@ -202,7 +204,7 @@ class GeoTextSummaryService:
 
     def _build_brief(self, text: GeoStudyTextInput, translated: dict[str, str]) -> tuple[str, tuple[str, ...]]:
         prompt = (
-            "你是医学研究设计提炼助手。请只根据给定标题、摘要和 overall design，"
+            "你是医学研究设计提炼助手。请只根据给定标题、摘要、overall design 和样本预览，"
             "输出一句中文总结。必须写清楚疾病或肿瘤类型，必须写清楚比较组；"
             "如果是多组比较，列出组别；如果原文没有比较组，明确写“比较组未说明”。"
             "必须保留关键数据类型，例如 microarray、RNA-seq、expression profiling 或 single-cell。"
@@ -212,6 +214,7 @@ class GeoTextSummaryService:
             f"title_en:\n{text.title_en or ''}\n\n"
             f"summary_en:\n{text.summary_en or ''}\n\n"
             f"overall_design_en:\n{text.overall_design_en or ''}\n\n"
+            f"sample_overview_en:\n{text.sample_overview_en or ''}\n\n"
             f"title_zh:\n{translated.get('title_zh', '')}\n\n"
             f"summary_zh:\n{translated.get('summary_zh', '')}\n\n"
             f"overall_design_zh:\n{translated.get('overall_design_zh', '')}\n"
@@ -305,7 +308,7 @@ def _translation_quality_warnings(text: GeoStudyTextInput, translated: dict[str,
 
 
 def _brief_quality_warnings(text: GeoStudyTextInput, translated: dict[str, str], brief: str) -> tuple[str, ...]:
-    source_text = " ".join([text.title_en, text.summary_en, text.overall_design_en, *translated.values()]).lower()
+    source_text = " ".join([text.title_en, text.summary_en, text.overall_design_en, text.sample_overview_en, *translated.values()]).lower()
     warnings: list[str] = []
     if _has_comparison_cue(source_text) and not any(token in brief for token in ("比较", "对照", "正常", "肿瘤", "腺瘤", "病例", "样本", "组")):
         warnings.append("一句话简介可能未覆盖比较组。")

@@ -303,7 +303,7 @@ def test_gse_preview_preserves_geo_organism_for_detail_profile(qt_app) -> None:
 
     assert preview.organism == "Mus musculus"
     assert candidate.organism == "Mus musculus"
-    assert row_map["物种"] == "Mus musculus"
+    assert row_map["物种"] == "小鼠（Mus musculus）"
     assert profile.organism == "Mus musculus"
     assert profile.species_group == "mouse"
     assert "人类或疑似人类" not in profile.analysis_potential_reason
@@ -479,7 +479,7 @@ def test_data_source_infers_local_data_types_in_single_import_card(qt_app, proje
 
 
 def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(qt_app, project_summary, monkeypatch) -> None:
-    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id: f"当前 GSE 编号：{gse_id}\n处理状态：已添加到项目。")
+    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id, *_args: f"当前 GSE 编号：{gse_id}\n处理状态：已添加到项目。")
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
     widget.set_gse_input("gse60024")
@@ -517,7 +517,32 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
 
 
 def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_summary, monkeypatch) -> None:
-    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id: f"当前 GSE 编号：{gse_id}\n数据集标题：Glioma expression profile\n样本数：12\n平台信息：GPL570")
+    monkeypatch.setattr(
+        workflow_pages,
+        "_fetch_geo_accession_metadata",
+        lambda gse_id, *_args: (
+            f"当前 GSE 编号：{gse_id}\n"
+            "数据集标题：Glioma expression profile\n"
+            "英文摘要：Glioma and normal brain samples.\n"
+            "Overall design：Tumor and control samples.\n"
+            "样本数：12\n平台信息：GPL570\n"
+            "GEO detail metadata JSON："
+            + json.dumps(
+                {
+                    "accession": gse_id,
+                    "title_en": "Glioma expression profile",
+                    "summary_en": "Glioma and normal brain samples.",
+                    "overall_design_en": "Tumor and control samples.",
+                    "organism": "Homo sapiens",
+                    "organism_display_name": "人类（Homo sapiens）",
+                    "sample_count": 12,
+                    "platform_accessions": ["GPL570"],
+                    "platforms": [{"accession": "GPL570", "title": "Affymetrix Human Genome U133 Plus 2.0 Array"}],
+                },
+                ensure_ascii=False,
+            )
+        ),
+    )
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
     widget.set_gse_input("GSE33630")
@@ -550,6 +575,59 @@ def test_data_source_geo_detail_generates_summary_inside_detail(qt_app, project_
     assert "与检索主题匹配：" not in text
     assert "推荐等级：" not in text
     assert "医学实体一致性状态" not in text
+
+
+def test_data_source_gse60235_detail_displays_enriched_geo_metadata(qt_app, project_summary, monkeypatch) -> None:
+    from tests.bioinformatics.test_geo_detail_enrichment import GSE60235_GSM_SOFT, GSE60235_HTML, GSE60235_SELF_SOFT
+
+    detail = workflow_pages.build_geo_detail_metadata("GSE60235", self_text=GSE60235_SELF_SOFT, gsm_text=GSE60235_GSM_SOFT, html_text=GSE60235_HTML)
+    monkeypatch.setattr(
+        workflow_pages,
+        "_fetch_geo_accession_metadata",
+        lambda gse_id, *_args: workflow_pages._geo_accession_metadata_text_from_detail(detail.to_candidate_metadata()),
+    )
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    widget.set_gse_input("GSE60235")
+
+    widget.search_gse_dataset()
+    candidate = widget._gse_geo_detail_panel.current_candidate()
+
+    assert candidate is not None
+    assert candidate.organism == "Homo sapiens"
+    basic = "\n".join(
+        widget._gse_geo_detail_panel._basic_table.item(row, 1).text()
+        for row in range(widget._gse_geo_detail_panel._basic_table.rowCount())
+        if widget._gse_geo_detail_panel._basic_table.item(row, 1) is not None
+    )
+    english = widget._gse_geo_detail_panel._english_text.toPlainText()
+    profile = widget._gse_geo_detail_panel._profile_text.toPlainText()
+    assert "人类（Homo sapiens）" in basic
+    assert "ImmVar" in english
+    assert "Overall design：We collected peripheral blood" in english
+    assert "GPL6244，" in basic
+    assert "Affymetrix Human Gene 1.0 ST Array" in basic
+    assert "GSM1468447" in profile
+    assert "GSE60235_RAW.tar" in profile
+    assert "PMID：25214635" in english
+    assert "BioProject：PRJNA257802" in english
+    assert "Summary：未记录" not in english
+
+
+def test_data_source_geo_summary_reports_missing_source_metadata(qt_app, project_summary, monkeypatch) -> None:
+    monkeypatch.setattr(workflow_pages, "_fetch_geo_accession_metadata", lambda gse_id, *_args: f"当前 GSE 编号：{gse_id}\n数据集标题：Only title\n样本数：2")
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+    widget.set_gse_input("GSE00001")
+    widget.search_gse_dataset()
+
+    candidate = widget._gse_geo_detail_panel.current_candidate()
+    assert candidate is not None
+    payload = widget._generate_gse_geo_summary(candidate)
+
+    assert payload is not None
+    text = widget._gse_geo_detail_panel._translation_text.toPlainText()
+    assert "未抓取到 GEO Summary / Overall design" in text
 
 
 def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
@@ -2082,6 +2160,7 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
     )
     workflow_pages.run_project_recognition(project_summary.project_root)
     workflow_pages.generate_standardized_assets(project_summary.project_root)
+    workflow_pages.save_standardized_asset_selection(project_summary.project_root, {"count_matrix": "count_matrix_001"})
     before_current = (project_summary.project_root / "recognized_data" / "current.json").read_text(encoding="utf-8")
 
     widget = BioinformaticsGroupComparisonDesignWidget()
@@ -2122,6 +2201,7 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
 
     task_center = BioinformaticsAnalysisTaskCenterWidget()
     task_center.refresh_project(project_summary)
+    assert any(button.text() == "生成并校验 DEG 输入" for button in task_center.findChildren(QPushButton))
     task_text = " ".join(
         task_center._tasks.item(row, column).text()
         for row in range(task_center._tasks.rowCount())
@@ -2165,8 +2245,16 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
     assert "count_matrix_001" in history_text
     assert "PFF_vs_PBS" not in history_text
     history.setCurrentCell(0, 0)
+    preflight_payload = task_center.generate_deg_executor_preflight()
+    assert preflight_payload is not None
+    assert preflight_payload["status"] == "passed_with_warnings"
+    assert "DEG 输入校验：通过，但有提示" in task_center.status_message()
+    assert (project_summary.project_root / "analysis_runs" / "deg" / str(run_payload["run_id"]) / "inputs.json").exists()
+    history.setCurrentCell(0, 0)
     detail = task_center.show_selected_task_run_detail()
     assert detail is not None
+    assert "deg_preflight_manifest" in task_center._records.toPlainText()
+    assert "passed_with_warnings" in task_center._records.toPlainText()
     assert "PFF_vs_PBS" in task_center._records.toPlainText()
     assert "planned_placeholder" in task_center._records.toPlainText()
     assert "导入表格中的 DEG comparison" in " ".join(
@@ -2190,6 +2278,8 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
     report_text = report._markdown.toPlainText()
     assert "BioMedPilot 生信项目报告草稿" in report_text
     assert "导入表格中的已有差异分析结果" in report_text
+    assert "DEG 输入准备状态" in report_text
+    assert "DEG 输入校验：通过" in report_text
     assert "尚未执行真实 DEG" in report_text
     assert "假火山图" in report_text
 

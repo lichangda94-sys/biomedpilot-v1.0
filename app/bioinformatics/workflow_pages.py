@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 
 from app.bioinformatics.analysis_task_runs import create_deg_task_run, list_analysis_task_runs, task_run_status_label
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
+from app.bioinformatics.deg_executor_preflight import run_deg_executor_preflight
 from app.bioinformatics.deg_task_plan import save_deg_task_plan
 from app.bioinformatics.group_comparison_design import (
     build_default_comparison_rows,
@@ -106,6 +107,7 @@ from app.bioinformatics.project_workspace_binding import (
 )
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
 from app.bioinformatics.download import DatasetDownloadService, GeoDatasetProfile, GeoDatasetProfileService, GeoStudyTextInput, GeoTextSummaryService
+from app.bioinformatics.retrieval.geo_detail_enrichment import GeoDetailEnrichmentService, build_geo_detail_metadata
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import build_imported_deg_view, load_imported_deg_comparisons, load_result_index, write_result_index
 from app.bioinformatics.search_center import (
@@ -118,6 +120,7 @@ from app.bioinformatics.search_center import (
     UnifiedDatasetCandidate,
 )
 from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
+from app.bioinformatics.services.organism_display import get_organism_display_name
 from app.shared.ai_gateway import (
     create_ai_draft_record,
     desktop_local_ollama_config,
@@ -191,6 +194,7 @@ class GseDatasetPreview:
     platform: str = "未记录"
     sample_count: str = "未记录"
     status: str = "尚未添加"
+    detail_metadata: dict[str, object] | None = None
 
 
 class GeoDatasetDetailPanel(QFrame):
@@ -292,7 +296,7 @@ class GeoDatasetDetailPanel(QFrame):
         _fill_table(self._basic_table, _geo_detail_basic_rows(candidate))
         self._english_text.setPlainText(_geo_detail_english_text(candidate))
         profile = _build_geo_detail_profile(project_root, candidate, summary_payload)
-        self._profile_text.setPlainText(_geo_profile_user_display(profile))
+        self._profile_text.setPlainText(_geo_profile_user_display(profile, candidate))
         self._confirm_comparison_button.setEnabled(bool(profile.candidate_comparisons and project_root is not None))
         self._manual_comparison_button.setEnabled(project_root is not None)
         self._asset_text.setPlainText(_geo_asset_detail_text(project_root, candidate.accession_or_project))
@@ -604,7 +608,10 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("请输入 GSE 编号。", error=True)
             return None
         self._gse_input.setText(gse_id)
-        metadata_text = _fetch_geo_accession_metadata(gse_id)
+        try:
+            metadata_text = _fetch_geo_accession_metadata(gse_id, self._project_root)
+        except TypeError:
+            metadata_text = _fetch_geo_accession_metadata(gse_id)
         self._gse_preview = _gse_preview_from_metadata(gse_id, metadata_text)
         candidate = _geo_candidate_from_gse_preview(self._gse_preview)
         self._geo_candidates[candidate.accession_or_project] = candidate
@@ -1097,11 +1104,29 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_geo_detail_panel.set_busy_text("正在生成中文翻译与提炼，请稍候。")
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
+        summary_en = str(metadata.get("summary_en") or "")
+        overall_design_en = str(metadata.get("overall_design_en") or "")
+        sample_overview_en = str(metadata.get("sample_summary") or _geo_sample_overview_for_summary(metadata))
+        if not summary_en.strip() and not overall_design_en.strip():
+            payload = {
+                "status": "missing_source_metadata",
+                "title_zh": "",
+                "summary_zh": "",
+                "overall_design_zh": "",
+                "brief_zh": "未抓取到 GEO Summary / Overall design，无法生成可靠中文提炼。",
+                "error_message": "未抓取到 GEO Summary / Overall design，无法翻译。",
+                "quality_warnings": ["未抓取到 GEO Summary / Overall design，无法翻译。"],
+            }
+            self._geo_brief_cache[candidate.accession_or_project] = payload
+            self._gse_geo_detail_panel.render_summary(candidate, payload)
+            self._set_status("未抓取到 GEO Summary / Overall design，无法翻译。", error=True)
+            return payload
         text_input = GeoStudyTextInput(
             accession=candidate.accession_or_project,
             title_en=str(metadata.get("title_en") or candidate.display_title),
-            summary_en=str(metadata.get("summary_en") or ""),
-            overall_design_en=str(metadata.get("overall_design_en") or ""),
+            summary_en=summary_en,
+            overall_design_en=overall_design_en,
+            sample_overview_en=sample_overview_en,
         )
         summary = self._text_summary_service.summarize(text_input)
         payload = summary.to_dict()
@@ -4211,6 +4236,28 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._records.setPlainText(_json({"DEG task run": payload}))
         return payload
 
+    def generate_deg_executor_preflight(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        task_run_id = ""
+        row = self._task_runs.currentRow()
+        runs = list_analysis_task_runs(self._project_root, task_family="deg")
+        if 0 <= row < len(runs):
+            task_run_id = str(runs[row].get("run_id") or "")
+        payload = run_deg_executor_preflight(self._project_root, task_run_id=task_run_id or None)
+        center = load_analysis_task_center(self._project_root)
+        self._render(center)
+        status = str(payload.get("status") or "")
+        status_text = {
+            "passed": "DEG 输入校验：通过",
+            "passed_with_warnings": "DEG 输入校验：通过，但有提示",
+            "failed": "DEG 输入校验：未通过，请查看错误",
+        }.get(status, f"DEG 输入校验：{status}")
+        self._status_label.setText(f"{status_text}；当前版本尚未执行真实差异分析。")
+        self._records.setPlainText(_json({"DEG executor preflight": payload}))
+        return payload
+
     def show_selected_task_run_detail(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -4252,6 +4299,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("配置 DEG 任务", "primaryButton", self.configure_deg_task_plan))
         actions.addWidget(_button("生成 DEG 分析任务记录", "primaryButton", self.create_deg_task_run_record))
+        actions.addWidget(_button("生成并校验 DEG 输入", "primaryButton", self.generate_deg_executor_preflight))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
         actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
         actions.addStretch(1)
@@ -5651,30 +5699,36 @@ def _geo_candidate_from_download_entry(project_root: Path | None, accession: str
         if _geo_accession_from_record(payload, metadata) != normalized:
             continue
         title = _geo_record_title(payload, metadata)
+        source_metadata = metadata.get("source_specific_metadata") if isinstance(metadata.get("source_specific_metadata"), dict) else {}
+        candidate_metadata = {
+            **dict(source_metadata or {}),
+            "title_en": title,
+            "platform_accessions": metadata.get("platform_accessions") or dict(source_metadata or {}).get("platform_accessions", []),
+            "geo_url": metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={normalized}",
+            "query_used": metadata.get("query_used") or normalized,
+            "match_reason": metadata.get("match_reason") or "待处理数据集记录",
+        }
+        if metadata.get("organism"):
+            candidate_metadata.setdefault("organism", metadata.get("organism"))
+        candidate_metadata.setdefault("organism_display_name", get_organism_display_name(candidate_metadata.get("organism") or metadata.get("organism")))
         return UnifiedDatasetCandidate(
             source="geo",
             accession_or_project=normalized,
             display_title=title,
-            organism=str(metadata.get("organism") or "未记录"),
+            organism=str(candidate_metadata.get("organism") or metadata.get("organism") or "未记录"),
             disease="",
             tissue="",
-            data_modality=str(metadata.get("data_modality") or "GEO dataset"),
-            sample_count=metadata.get("sample_count") or "待确认",
+            data_modality=str(candidate_metadata.get("experiment_type") or metadata.get("data_modality") or "GEO dataset"),
+            sample_count=candidate_metadata.get("sample_count") or metadata.get("sample_count") or "待确认",
             has_expression_matrix=False,
             has_sample_metadata=False,
             has_clinical_metadata=False,
-            has_platform_annotation=bool(metadata.get("platform_accessions")),
+            has_platform_annotation=bool(candidate_metadata.get("platform_accessions") or metadata.get("platform_accessions")),
             recommended_analyses=("data_recognition",),
             download_plan_available=True,
             score=55,
             warnings=tuple(str(item) for item in metadata.get("warnings", []) or []) if isinstance(metadata.get("warnings"), list) else (),
-            source_specific_metadata={
-                "title_en": title,
-                "platform_accessions": metadata.get("platform_accessions", []),
-                "geo_url": metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={normalized}",
-                "query_used": metadata.get("query_used") or normalized,
-                "match_reason": metadata.get("match_reason") or "待处理数据集记录",
-            },
+            source_specific_metadata=candidate_metadata,
         )
     return None
 
@@ -6154,7 +6208,13 @@ def _geo_fetcher_class() -> type[Any] | None:
         return None
 
 
-def _fetch_geo_accession_metadata(gse_id: str) -> str:
+def _fetch_geo_accession_metadata(gse_id: str, project_root: Path | None = None) -> str:
+    try:
+        detail = GeoDetailEnrichmentService(timeout=12).enrich(gse_id, project_root=project_root)
+        if detail.summary or detail.overall_design or detail.sample_preview:
+            return _geo_accession_metadata_text_from_detail(detail.to_candidate_metadata())
+    except Exception:
+        pass
     fetcher_cls = _geo_fetcher_class()
     if fetcher_cls is None:
         return (
@@ -6180,6 +6240,25 @@ def _fetch_geo_accession_metadata(gse_id: str) -> str:
             "当前不会自动下载数据。请确认编号，或导入已下载的 Series Matrix 文件。"
         )
     info = matched[0]
+    try:
+        detail = build_geo_detail_metadata(
+            info.gse_id,
+            existing_metadata={
+                "title_en": info.title_en,
+                "summary_en": info.summary_en,
+                "overall_design_en": info.overall_design_en,
+                "organism": info.organism,
+                "experiment_type": info.experiment_type,
+                "sample_count": info.sample_count,
+                "platform_accessions": [item.strip() for item in str(info.platform or "").replace(";", ",").split(",") if item.strip().startswith("GPL")],
+                "platform_titles": [info.platform] if info.platform and not str(info.platform).strip().startswith("GPL") else [],
+                "pmid": info.pubmed_id,
+            },
+        )
+        if detail.summary or detail.overall_design:
+            return _geo_accession_metadata_text_from_detail(detail.to_candidate_metadata())
+    except Exception:
+        pass
     return "\n".join(
         [
             f"当前 GSE 编号：{info.gse_id}",
@@ -6194,13 +6273,49 @@ def _fetch_geo_accession_metadata(gse_id: str) -> str:
     )
 
 
+def _geo_accession_metadata_text_from_detail(metadata: dict[str, object]) -> str:
+    accession = str(metadata.get("accession") or metadata.get("gse_id") or metadata.get("query_used") or "")
+    platforms = metadata.get("platforms")
+    platform_text = _geo_platform_summary(metadata)
+    supplementary = metadata.get("supplementary_files")
+    raw_files = []
+    if isinstance(supplementary, list):
+        raw_files = [str(item.get("file_name") or "") for item in supplementary if isinstance(item, dict) and str(item.get("file_name") or "").strip()]
+    return "\n".join(
+        [
+            f"当前 GSE 编号：{accession}",
+            "处理状态：已获取 GEO 详情元数据；当前不会自动下载数据。",
+            f"数据集标题：{metadata.get('title_en') or '未记录'}",
+            f"样本数：{metadata.get('sample_count') or '未记录'}",
+            f"平台信息：{platform_text or '未记录'}",
+            f"物种：{metadata.get('organism') or '未记录'}",
+            f"实验类型：{metadata.get('experiment_type') or '未记录'}",
+            f"公开日期：{metadata.get('public_date') or '未记录'}",
+            f"PMID：{metadata.get('pmid') or '未记录'}",
+            f"BioProject：{metadata.get('bioproject') or '未记录'}",
+            f"SuperSeries：{metadata.get('superseries') or '未记录'}",
+            f"可用文件：{', '.join(raw_files) if raw_files else '请在 GEO 页面或已下载 Series Matrix 中确认。'}",
+            "下一步建议：查看样本标题和 characteristics 后确认分组，再下载或导入数据。",
+            "GEO detail metadata JSON：" + json.dumps(metadata, ensure_ascii=False, separators=(",", ":")),
+        ]
+    )
+
+
 def _gse_preview_from_metadata(gse_id: str, metadata_text: str) -> GseDatasetPreview:
     values: dict[str, str] = {}
+    detail_metadata: dict[str, object] | None = None
     for line in metadata_text.splitlines():
         if "：" not in line:
             continue
         key, value = line.split("：", 1)
         values[key.strip()] = value.strip() or "未记录"
+        if key.strip() == "GEO detail metadata JSON":
+            try:
+                payload = json.loads(value)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict):
+                detail_metadata = payload
     return GseDatasetPreview(
         gse_id=values.get("当前 GSE 编号", gse_id),
         title=values.get("数据集标题", "未记录"),
@@ -6208,21 +6323,39 @@ def _gse_preview_from_metadata(gse_id: str, metadata_text: str) -> GseDatasetPre
         sample_count=values.get("样本数", "未记录"),
         organism=values.get("物种", "未记录"),
         status="尚未添加",
+        detail_metadata=detail_metadata,
     )
 
 
 def _geo_candidate_from_gse_preview(preview: GseDatasetPreview) -> UnifiedDatasetCandidate:
     platform = preview.platform if preview.platform != "未记录" else ""
     platforms = [item.strip() for item in platform.replace(";", ",").split(",") if item.strip()]
+    detail_metadata = dict(preview.detail_metadata or {})
+    if detail_metadata:
+        raw_platforms = detail_metadata.get("platform_accessions")
+        platforms = [str(item) for item in raw_platforms if str(item).strip()] if isinstance(raw_platforms, list) else platforms
+    display_title = str(detail_metadata.get("title_en") or preview.title)
+    organism = str(detail_metadata.get("organism") or ("" if preview.organism == "未记录" else preview.organism))
+    experiment_type = str(detail_metadata.get("experiment_type") or "GEO dataset")
+    sample_count = detail_metadata.get("sample_count") or preview.sample_count
+    metadata = {
+        "title_en": display_title,
+        "platform_accessions": platforms,
+        "geo_url": f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={preview.gse_id}",
+        "match_reason": "GSE 编号精确匹配",
+        "query_used": preview.gse_id,
+    }
+    metadata.update(detail_metadata)
+    metadata.setdefault("organism_display_name", get_organism_display_name(organism))
     return UnifiedDatasetCandidate(
         source="geo",
         accession_or_project=preview.gse_id,
-        display_title=preview.title,
-        organism="" if preview.organism == "未记录" else preview.organism,
+        display_title=display_title,
+        organism=organism,
         disease="",
         tissue="",
-        data_modality="GEO dataset",
-        sample_count=preview.sample_count,
+        data_modality=experiment_type,
+        sample_count=sample_count,
         has_expression_matrix=False,
         has_sample_metadata=False,
         has_clinical_metadata=False,
@@ -6231,13 +6364,7 @@ def _geo_candidate_from_gse_preview(preview: GseDatasetPreview) -> UnifiedDatase
         download_plan_available=True,
         score=55,
         warnings=(),
-        source_specific_metadata={
-            "title_en": preview.title,
-            "platform_accessions": platforms,
-            "geo_url": f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={preview.gse_id}",
-            "match_reason": "GSE 编号精确匹配",
-            "query_used": preview.gse_id,
-        },
+        source_specific_metadata=metadata,
     )
 
 
@@ -6462,17 +6589,17 @@ def _candidate_match_reason(candidate: UnifiedDatasetCandidate) -> str:
 
 def _geo_detail_basic_rows(candidate: UnifiedDatasetCandidate) -> list[list[object]]:
     metadata = candidate.source_specific_metadata
-    platforms = metadata.get("platform_accessions") or metadata.get("platform_titles") or "未记录"
-    if isinstance(platforms, list):
-        platforms = ", ".join(str(item) for item in platforms) or "未记录"
+    platforms = _geo_platform_summary(metadata) or "未记录"
+    organism_display = str(metadata.get("organism_display_name") or get_organism_display_name(candidate.organism))
     return [
         ["GSE 编号", candidate.accession_or_project],
         ["英文标题", candidate.display_title or "未记录"],
         ["数据来源", "GEO"],
-        ["物种", candidate.organism or "未记录"],
+        ["物种", organism_display],
         ["样本数", candidate.sample_count or "待确认"],
-        ["平台 GPL", platforms],
-        ["数据类型", candidate.data_modality or "待确认"],
+        ["平台", platforms],
+        ["数据类型", _geo_data_type_display(metadata.get("experiment_type") or candidate.data_modality)],
+        ["公开日期", metadata.get("public_date") or metadata.get("status") or "未记录"],
         ["匹配原因", _candidate_match_reason(candidate)],
         ["分析潜力", _geo_candidate_potential_text(None, candidate)],
         ["GEO 链接", metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={candidate.accession_or_project}"],
@@ -6481,17 +6608,73 @@ def _geo_detail_basic_rows(candidate: UnifiedDatasetCandidate) -> list[list[obje
 
 def _geo_detail_english_text(candidate: UnifiedDatasetCandidate) -> str:
     metadata = candidate.source_specific_metadata
+    summary = str(metadata.get("summary_en") or "").strip()
+    design = str(metadata.get("overall_design_en") or metadata.get("sample_summary") or "").strip()
+    contributors = metadata.get("contributors")
+    if isinstance(contributors, list):
+        contributor_text = ", ".join(str(item) for item in contributors[:8] if str(item).strip()) or "未记录"
+    else:
+        contributor_text = str(contributors or "未记录")
     lines = [
-        f"英文标题：{metadata.get('title_en') or candidate.display_title or '未记录'}",
-        f"英文摘要：{metadata.get('summary_en') or '未记录'}",
-        f"样本信息：{metadata.get('sample_summary') or metadata.get('overall_design_en') or '未记录'}",
+        f"English title：{metadata.get('title_en') or candidate.display_title or '未记录'}",
+        f"Summary：{summary or '未记录'}",
+        f"Overall design：{design or '未记录'}",
         f"样本数量：{candidate.sample_count or '待确认'}",
-        f"平台信息：{metadata.get('platform_titles') or metadata.get('platform_accessions') or '未记录'}",
-        f"实验类型：{candidate.data_modality or '待确认'}",
+        f"平台信息：{_geo_platform_summary(metadata) or '未记录'}",
+        f"实验类型：{metadata.get('experiment_type') or candidate.data_modality or '待确认'}",
+        f"Contributors：{contributor_text}",
+        f"Citation：{metadata.get('citation') or '未记录'}",
+        f"PMID：{metadata.get('pmid') or metadata.get('pubmed_id') or '未记录'}",
+        f"BioProject：{metadata.get('bioproject') or '未记录'}",
+        f"SuperSeries：{metadata.get('superseries') or '未记录'}",
         f"原始关键词：{metadata.get('query_used') or metadata.get('executed_query') or '未记录'}",
-        f"PMID/DOI/GEO link：{metadata.get('pmid') or metadata.get('doi') or metadata.get('geo_url') or '未记录'}",
+        f"GEO link：{metadata.get('geo_url') or '未记录'}",
     ]
     return "\n".join(lines)
+
+
+def _geo_platform_summary(metadata: dict[str, object]) -> str:
+    platforms = metadata.get("platforms")
+    if isinstance(platforms, list) and platforms:
+        rows: list[str] = []
+        for item in platforms:
+            if not isinstance(item, dict):
+                continue
+            accession = str(item.get("accession") or "").strip()
+            title = str(item.get("title") or "").strip()
+            if accession and title:
+                rows.append(f"{accession}，{title}")
+            elif accession:
+                rows.append(accession)
+            elif title:
+                rows.append(title)
+        if rows:
+            return "；".join(rows)
+    accessions = metadata.get("platform_accessions")
+    titles = metadata.get("platform_titles")
+    if isinstance(accessions, list):
+        rows = []
+        for index, accession in enumerate(accessions):
+            title = str(titles[index]) if isinstance(titles, list) and index < len(titles) else ""
+            rows.append(f"{accession}，{title}" if title else str(accession))
+        return "；".join(row for row in rows if row.strip())
+    if isinstance(titles, list):
+        return "；".join(str(item) for item in titles if str(item).strip())
+    return str(accessions or titles or "").strip()
+
+
+def _geo_data_type_display(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "待确认"
+    lowered = text.lower()
+    if "array" in lowered or "microarray" in lowered:
+        return f"芯片表达谱（{text}）"
+    if "rna-seq" in lowered or "sequencing" in lowered:
+        return f"测序表达谱（{text}）"
+    if "single-cell" in lowered or "single cell" in lowered:
+        return f"单细胞数据（{text}）"
+    return text
 
 
 def _geo_candidate_potential_text(project_root: Path | None, candidate: UnifiedDatasetCandidate) -> str:
@@ -6546,7 +6729,7 @@ def _geo_recognition_report_for_accession(project_root: Path | None, accession: 
     return None
 
 
-def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
+def _geo_profile_user_display(profile: GeoDatasetProfile, candidate: UnifiedDatasetCandidate | None = None) -> str:
     lines = [
         f"分析潜力：{profile.analysis_potential_level}",
         f"判断依据：{profile.analysis_potential_reason or '结构化元数据不足，需人工判断。'}",
@@ -6586,6 +6769,8 @@ def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
                 )
     else:
         lines.append("候选比较组：未识别到明确候选比较组。")
+    if candidate is not None:
+        lines.extend(_geo_detail_sample_platform_download_lines(candidate))
     lines.extend(_geo_download_recommendation_lines(profile))
     if profile.supplementary_file_preview:
         lines.append("补充文件预览：")
@@ -6601,6 +6786,69 @@ def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
     warnings = [warning for warning in profile.warnings if warning]
     if warnings:
         lines.append("提示：" + "；".join(warnings[:3]))
+    return "\n".join(lines)
+
+
+def _geo_detail_sample_platform_download_lines(candidate: UnifiedDatasetCandidate) -> list[str]:
+    metadata = candidate.source_specific_metadata
+    lines: list[str] = []
+    platforms = _geo_platform_summary(metadata)
+    if platforms:
+        lines.append(f"平台：{platforms}")
+    sample_preview = metadata.get("sample_preview")
+    if isinstance(sample_preview, list) and sample_preview:
+        lines.append("样本预览：")
+        for item in sample_preview[:20]:
+            if not isinstance(item, dict):
+                continue
+            accession = str(item.get("accession") or "")
+            title = str(item.get("title") or "")
+            chars = item.get("characteristics")
+            char_text = ""
+            if isinstance(chars, list) and chars:
+                char_text = "；" + "；".join(str(value) for value in chars[:2] if str(value).strip())
+            lines.append(f"- {accession}：{title}{char_text}".rstrip("："))
+        if len(sample_preview) > 20:
+            lines.append(f"- 另有 {len(sample_preview) - 20} 个样本。")
+    supplementary = metadata.get("supplementary_files")
+    if isinstance(supplementary, list) and supplementary:
+        lines.append("下载文件：")
+        for item in supplementary[:8]:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("file_name") or "")
+            size = str(item.get("file_size") or "")
+            file_type = str(item.get("file_type") or "")
+            detail = "，".join(value for value in (file_type, size) if value)
+            lines.append(f"- {name}：{detail or 'GEO supplementary file'}")
+    download_links = metadata.get("download_links")
+    if isinstance(download_links, list) and download_links:
+        labels = [str(item.get("label") or "") for item in download_links if isinstance(item, dict) and str(item.get("label") or "").strip()]
+        if labels:
+            lines.append("处理数据：可查看 " + " / ".join(dict.fromkeys(labels)))
+    title_and_design = " ".join(str(metadata.get(key) or "") for key in ("title_en", "summary_en", "overall_design_en")).lower()
+    if "cd4" in title_and_design and ("anti-cd3" in title_and_design or "activation" in title_and_design):
+        lines.append("分析建议：该数据包含 CD4+ T 细胞静息和多种刺激条件；后续分组识别需要读取 GSM title/characteristics，不能只凭 GSE 标题判断。")
+    return lines
+
+
+def _geo_sample_overview_for_summary(metadata: dict[str, object]) -> str:
+    sample_preview = metadata.get("sample_preview")
+    if not isinstance(sample_preview, list):
+        return ""
+    lines: list[str] = []
+    for item in sample_preview[:20]:
+        if not isinstance(item, dict):
+            continue
+        accession = str(item.get("accession") or "")
+        title = str(item.get("title") or "")
+        characteristics = item.get("characteristics")
+        chars = ""
+        if isinstance(characteristics, list) and characteristics:
+            chars = "; ".join(str(value) for value in characteristics[:3] if str(value).strip())
+        line = " | ".join(value for value in (accession, title, chars) if value)
+        if line:
+            lines.append(line)
     return "\n".join(lines)
 
 
@@ -6882,7 +7130,7 @@ def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, o
             str(payload.get("brief_zh") or ""),
         ]
     )
-    input_text = "\n".join([text.title_en, text.summary_en, text.overall_design_en])
+    input_text = "\n".join([text.title_en, text.summary_en, text.overall_design_en, text.sample_overview_en])
     status = "suggested" if payload.get("status") == "completed" else "suggested"
     return create_ai_draft_record(
         module="bioinformatics",
