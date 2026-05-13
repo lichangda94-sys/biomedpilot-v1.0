@@ -30,6 +30,23 @@ def _fluorescence_result(tmp_path):
     )
 
 
+def _wound_result(tmp_path):
+    from app.labtools.image_analysis.wound_healing import (
+        WoundHealingParameters,
+        WoundHealingROI,
+        analyze_wound_healing_area,
+    )
+
+    image_path = tmp_path / "wound-ui.png"
+    image = Image.new("L", (10, 10))
+    image.putdata([250] * 25 + [20] * 75)
+    image.save(image_path)
+    return analyze_wound_healing_area(
+        WoundHealingParameters(str(image_path), WoundHealingROI("analysis ROI", 0, 0, 10, 10), 200, "bright"),
+        task_id="ui-export",
+    )
+
+
 @pytest.fixture()
 def image_widget():
     try:
@@ -46,8 +63,14 @@ def image_widget():
 
 
 def test_image_export_button_disabled_until_result_exists(image_widget, tmp_path) -> None:
-    result = _fluorescence_result(tmp_path)
+    from PySide6.QtWidgets import QLabel, QPushButton
 
+    result = _fluorescence_result(tmp_path)
+    buttons = [button.text() for button in image_widget.findChildren(QPushButton)]
+    labels = "\n".join(label.text() for label in image_widget.findChildren(QLabel))
+
+    assert "导出当前 ROI 结果" in buttons
+    assert "仅在用户选择目录后写入 JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG" in labels
     assert image_widget._export_button.isEnabled() is False
     assert image_widget.has_exportable_result() is False
 
@@ -107,4 +130,24 @@ def test_image_export_success_shows_four_file_roles(image_widget, tmp_path, monk
     assert "Markdown 片段" in text
     assert "ROI overlay PNG" in text
     assert "manual-review / semi-quantitative 辅助结果" in text
+    assert len(list(Path(export_dir).iterdir())) == 4
+
+
+def test_image_export_wound_success_keeps_manual_review_semantics(image_widget, tmp_path, monkeypatch) -> None:
+    result = _wound_result(tmp_path)
+    export_dir = tmp_path / "wound-exports"
+    image_widget.set_export_result_for_testing("wound_healing", result)
+    monkeypatch.setattr(image_widget, "_select_export_directory", lambda: str(export_dir))
+
+    image_widget._handle_export_current_result()
+
+    text = image_widget._task_summary.toPlainText()
+    assert "ROI 结果导出完成" in text
+    assert "分析类型：wound_healing" in text
+    assert "JSON manifest" in text
+    assert "CSV summary" in text
+    assert "Markdown 片段" in text
+    assert "ROI overlay PNG" in text
+    assert "manual-review / semi-quantitative 辅助结果" in text
+    assert "实验 SOP" in text
     assert len(list(Path(export_dir).iterdir())) == 4

@@ -37,8 +37,11 @@ def recipe_widget():
     app = QApplication.instance() or QApplication([])
     widget = LabToolsRecipeWidget()
     assert app is not None
-    assert any(button.text() == "保存用户配方 JSON" for button in widget.findChildren(QPushButton))
-    assert any(button.text() == "载入用户配方 JSON" for button in widget.findChildren(QPushButton))
+    buttons = {button.text(): button for button in widget.findChildren(QPushButton)}
+    assert "保存用户配方 JSON" in buttons
+    assert "载入用户配方 JSON" in buttons
+    assert buttons["保存用户配方 JSON"].isEnabled() is True
+    assert buttons["载入用户配方 JSON"].isEnabled() is True
     return widget
 
 
@@ -91,6 +94,18 @@ def test_recipe_persistence_ui_save_and_load_success(recipe_widget, tmp_path, mo
     assert "recipe_id 冲突数：0" in load_text
     assert "载入版本：user-confirmed-draft" in load_text
     assert second_widget.user_recipe_store().list_recipes()[0].name == "UI 用户配方"
+
+
+def test_recipe_persistence_ui_save_failure_is_user_visible(recipe_widget, tmp_path, monkeypatch) -> None:
+    recipe_widget.user_recipe_store().confirm_draft(_draft())
+    monkeypatch.setattr(recipe_widget, "_select_user_recipe_save_path", lambda: str(tmp_path / "missing" / "drafts.json"))
+
+    recipe_widget._handle_save_user_recipes()
+
+    text = recipe_widget._user_recipe_summary.toPlainText()
+    assert "保存需要调整" in text
+    assert "保存路径所在文件夹不存在" in text
+    assert "用户配方 JSON 已保存" not in text
 
 
 def test_recipe_persistence_ui_load_failure_is_user_visible(recipe_widget, tmp_path, monkeypatch) -> None:

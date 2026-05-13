@@ -28,6 +28,7 @@ def test_template_widget_lists_lightweight_templates(template_widget) -> None:
     assert template_widget.objectName() == "labToolsTemplateWorkspace"
     assert template_widget.template_count() == 5
     buttons = [button.text() for button in template_widget.findChildren(QPushButton)]
+    button_map = {button.text(): button for button in template_widget.findChildren(QPushButton)}
 
     text = "\n".join(
         [
@@ -41,6 +42,8 @@ def test_template_widget_lists_lightweight_templates(template_widget) -> None:
     assert "正式 ELN" in text
     assert "保存记录草稿 JSON" in buttons
     assert "载入记录草稿 JSON" in buttons
+    assert button_map["保存记录草稿 JSON"].isEnabled() is True
+    assert button_map["载入记录草稿 JSON"].isEnabled() is True
 
 
 def test_template_widget_creates_record_draft(template_widget) -> None:
@@ -108,6 +111,8 @@ def test_template_widget_save_and_load_success(template_widget, tmp_path, monkey
     save_text = template_widget._draft_preview.toPlainText()
     assert "实验记录草稿 JSON 已保存" in save_text
     assert "schema" in save_text
+    assert "人工核对" in save_text
+    assert "完整 ELN" in save_text
 
     from app.labtools.ui.template_widgets import LabToolsTemplateWidget
 
@@ -120,6 +125,18 @@ def test_template_widget_save_and_load_success(template_widget, tmp_path, monkey
     assert "载入草稿数：1" in load_text
     assert "LabTools 实验记录结构化草稿" in load_text
     assert len(second_widget.record_drafts()) == 1
+
+
+def test_template_widget_save_failure_is_user_visible(template_widget, tmp_path, monkeypatch) -> None:
+    _create_valid_ui_draft(template_widget)
+    monkeypatch.setattr(template_widget, "_select_draft_save_path", lambda: str(tmp_path / "missing" / "drafts.json"))
+
+    template_widget._handle_save_drafts()
+
+    text = template_widget._draft_preview.toPlainText()
+    assert "保存需要调整" in text
+    assert "保存路径所在文件夹不存在" in text
+    assert "实验记录草稿 JSON 已保存" not in text
 
 
 def test_template_widget_load_failure_is_user_visible(template_widget, tmp_path, monkeypatch) -> None:

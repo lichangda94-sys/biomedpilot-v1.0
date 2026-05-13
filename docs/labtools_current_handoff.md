@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6B.1，commit 以最终交接为准
+- 当前最近完成阶段：LabTools Stage L6D，commit 以最终交接为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -35,6 +35,7 @@
 | LabTools Stage L6B.1 | 最终交接记录 | 补充 recipe draft store schema 文档，载入时显示 recipe_id 冲突 summary，冲突导入不会覆盖现有用户配方，并在 UI 显示用户草稿 version。 |
 | LabTools Stage L6C | 最终交接记录 | 新增轻量实验模板和结构化记录草稿中心，覆盖 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录；不做完整 ELN、签名、权限或合规审计。 |
 | LabTools Stage L6C.1 | 最终交接记录 | 新增实验记录草稿本地 JSON 持久化 schema、no-overwrite 保存、载入校验和 UI 保存/载入反馈；仍不做完整 ELN、数据库、自动保存、签名或合规审计。 |
+| LabTools Stage L6D | 最终交接记录 | 新增 LabTools schema index，扩展 ROI export / recipe draft / experiment record draft persistence UI 回归测试，并完成写盘安全审计；不新增 persistence 功能或算法。 |
 
 ## 3. 当前已实现功能
 
@@ -57,6 +58,7 @@
   - `QpcrMixInput` / `QpcrMixResult` / `calculate_qpcr_mix_v1()`：输出 qPCR 单反应用量、总用量和 overage 后总用量。
   - `WesternBlotLoadingInput` / `WesternBlotLoadingResult` / `calculate_western_blot_loading_v1()`：根据蛋白浓度、目标蛋白量、目标上样体积和 loading buffer 倍数估算样品、buffer 和水体积。
 - L5C WB/SDS-PAGE 仅为上样体积计算，不进行 WB/凝胶灰度、条带检测、归一化或图像解释。
+- L6D 新增 `docs/labtools_schema_index.md`，统一记录 LabTools 当前 schema / JSON-compatible 结构、用途、字段、用户语义、公开分享风险、本地路径风险和 draft / auxiliary / local persistence 边界。
 
 ### 3.2 本地试剂与配方库
 
@@ -246,19 +248,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6B.1 结果：152 passed
+  - 当前 L6D 结果：154 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6B.1 结果：153 passed
+  - 当前 L6D 结果：156 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6B.1 结果：18 passed
+  - 当前 L6D 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6B.1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6D 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6B.1 结果：通过
+  - 当前 L6D 结果：通过
 - `git diff --check`
-  - 当前 L6B.1 结果：通过
+  - 当前 L6D 结果：通过
 - `git diff --cached --check`
-  - 当前 L6B.1 提交前运行。
+  - 当前 L6D 提交前运行。
 
 ## 7. Shell / UI 接入状态
 
@@ -331,6 +333,13 @@
   - L6A 新增 `export_wound_healing_analysis_package()`，仅在调用方传入用户确认的目录后写入 JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG。
   - L6A.1 固化 schema 为 `labtools_roi_export_manifest.v1`；导出文件 no-overwrite；CSV summary 稳定记录 threshold value/mode；Markdown fragment 保持 manual-review / semi-quantitative 辅助语义。
 - 当前没有 LabTools 数据库、项目目录自动写入或后台持久化机制。
+- L6D persistence safety audit 覆盖：
+  - `export_fluorescence_analysis_package()`。
+  - `export_wound_healing_analysis_package()`。
+  - `save_user_recipe_store()` / `load_user_recipe_store()`。
+  - `save_experiment_draft_store()` / `load_experiment_draft_store()`。
+  - 对应 UI handlers。
+- L6D 确认现有写盘路径仍保持用户触发、无自动保存、无 silent overwrite、失败可见、schema version 存在和 draft/manual-review/auxiliary 语义。
 
 后续如需保存用户实验数据，必须先设计本地项目存储策略、用户选择位置、隐私边界、审计字段和迁移/清理规则。
 
@@ -356,7 +365,7 @@
 
 ## 13. 后续推荐路线
 
-1. L6A.2：图像导出 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
+1. L6A.2：ROI export 用户体验微调和更多目录选择体验测试，但仍不得新增算法。
 2. L6C.2：实验记录草稿 Markdown 片段导出体验和导入冲突提示，但仍不做完整 ELN、签名、权限或合规审计。
 3. L6B.2：recipe JSON 导入预览/选择性导入，但仍不做数据库、云同步或正式 SOP 管理。
 4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
