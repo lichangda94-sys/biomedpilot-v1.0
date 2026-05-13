@@ -657,7 +657,7 @@ class BioinformaticsDataSourceWidget(QWidget):
 
     def search_research_topic(self) -> str:
         self.open_chinese_search()
-        return "中文研究问题检索已移动到独立页面。"
+        return "中文研究主题检索已移动到独立页面。"
 
     def pending_chinese_query(self) -> str:
         return self._pending_chinese_query
@@ -802,7 +802,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _research_card(self) -> QFrame:
-        card, layout = _card("中文研究问题检索")
+        card, layout = _card("中文研究主题检索")
         card.setObjectName("chineseResearchSearchEntryCard")
         layout.addWidget(_muted("输入中文研究方向，生成英文检索词并推荐 GEO、TCGA、GTEx 候选数据集。"))
         self._chinese_query_input = QLineEdit()
@@ -812,7 +812,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(self._chinese_query_input)
         self._chinese_search_status_label = _status_label("尚未进行中文检索。")
         layout.addWidget(self._chinese_search_status_label)
-        button = _button("进入检索界面", "primaryButton", self.open_chinese_search)
+        button = _button("进入中文主题检索", "primaryButton", self.open_chinese_search)
         button.setMinimumHeight(44)
         layout.addWidget(button, alignment=Qt.AlignLeft)
         return card
@@ -1720,7 +1720,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self, max_width=1080)
-        root.addWidget(_header("中文研究问题检索", "输入中文研究方向，选择 GEO、TCGA/GDC、GTEx 数据源后进入数据识别。", back_text="返回数据来源", back_signal=self.back_requested))
+        root.addWidget(_header("中文研究主题检索", "输入中文研究方向，选择 GEO、TCGA/GDC、GTEx 数据源后进入数据识别。", back_text="返回数据来源", back_signal=self.back_requested))
         self._project_label = _status_label("请先创建或打开生信分析项目。")
         root.addWidget(self._project_label)
         input_card, input_layout = _card("研究主题输入")

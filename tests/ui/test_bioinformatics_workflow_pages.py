@@ -295,16 +295,16 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
 
     assert "本地数据导入" in card_titles
     assert "GSE 编号检索" in card_titles
-    assert "中文研究问题检索" in card_titles
+    assert "中文研究主题检索" in card_titles
     assert "GEO Series Matrix 文件" not in card_titles
     assert "TCGA 本地数据" not in card_titles
     assert "GTEx 本地数据" not in card_titles
     assert "TCGA + GTEx 联合数据" not in card_titles
     assert "本地 AI 检索助手" not in card_titles
-    assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究问题检索"]
+    assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究主题检索"]
     assert "选择本地数据" in button_texts
     assert "选择本地文件夹" in button_texts
-    assert "进入检索界面" in button_texts
+    assert "进入中文主题检索" in button_texts
     assert any(input_box.placeholderText() == "请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据" for input_box in inputs)
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
@@ -504,7 +504,7 @@ def test_data_source_chinese_search_is_entry_only(qt_app) -> None:
     result = widget.search_research_topic()
     card_titles = [label.text() for label in widget.findChildren(QLabel, "bioProjectCardTitle")]
 
-    assert result == "中文研究问题检索已移动到独立页面。"
+    assert result == "中文研究主题检索已移动到独立页面。"
     assert events == ["open"]
     assert "GEO 检索关键词" not in " ".join(label.text() for label in widget.findChildren(QLabel))
     assert "本地 AI 检索助手" not in card_titles
