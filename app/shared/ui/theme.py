@@ -9,6 +9,7 @@ class BioMedPilotColors:
     """Cross-module color tokens for BioMedPilot UI surfaces."""
 
     PRIMARY_NAVY = "#12324A"
+    PRIMARY_NAVY_HOVER = "#0D273B"
     ACCENT_TEAL = "#1BAE9F"
     BACKGROUND_LIGHT = "#F5F7F9"
     SURFACE_WHITE = "#FFFFFF"
@@ -181,6 +182,14 @@ _STATUS_STYLES: Mapping[str, BioMedPilotStatusStyle] = MappingProxyType(
         "completed": BioMedPilotStatusColors.COMPLETED,
         "testing": BioMedPilotStatusColors.TESTING,
         "blocked": BioMedPilotStatusColors.BLOCKED,
+        "pending": BioMedPilotStatusColors.NOT_READY,
+        "saved": BioMedPilotStatusColors.CONFIRMED,
+        "ignored": BioMedPilotStatusColors.DRAFT,
+        "added": BioMedPilotStatusColors.CONFIRMED,
+        "added_to_download_list": BioMedPilotStatusColors.CONFIRMED,
+        "analysis_ready": BioMedPilotStatusColors.READY,
+        "developer_preview": BioMedPilotStatusColors.TESTING,
+        "testing_level": BioMedPilotStatusColors.TESTING,
     }
 )
 
@@ -192,6 +201,19 @@ def status_style(status: str) -> BioMedPilotStatusStyle:
 
 def status_styles() -> dict[str, BioMedPilotStatusStyle]:
     return dict(_STATUS_STYLES)
+
+
+def status_badge_qss(status: str) -> str:
+    style = status_style(status)
+    return (
+        f"color: {style.text}; "
+        f"background: {style.background}; "
+        f"border: 1px solid {style.border}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"padding: {BioMedPilotSpacing.XS}px {BioMedPilotSpacing.SM}px; "
+        f"font-size: {BioMedPilotTypography.STATUS_TEXT}px; "
+        "font-weight: 700;"
+    )
 
 
 def surface_card_qss(selector: str = "QFrame") -> str:
@@ -222,6 +244,117 @@ def error_text_qss() -> str:
 
 def warning_text_qss() -> str:
     return f"color: {BioMedPilotColors.STATUS_WARNING};"
+
+
+def primary_button_qss() -> str:
+    return (
+        "QPushButton { "
+        f"color: {BioMedPilotColors.TEXT_INVERSE}; "
+        f"background: {BioMedPilotColors.PRIMARY_NAVY}; "
+        f"border: 1px solid {BioMedPilotColors.PRIMARY_NAVY}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"padding: {BioMedPilotSpacing.SM}px {BioMedPilotSpacing.LG}px; "
+        f"font-size: {BioMedPilotTypography.BUTTON_TEXT}px; "
+        "font-weight: 700; "
+        "}"
+        "QPushButton:hover { "
+        f"background: {BioMedPilotColors.PRIMARY_NAVY_HOVER}; "
+        f"border: 1px solid {BioMedPilotColors.PRIMARY_NAVY_HOVER}; "
+        "}"
+        "QPushButton:disabled { "
+        f"color: {BioMedPilotColors.DISABLED_TEXT}; "
+        f"background: {BioMedPilotColors.SURFACE_MUTED}; "
+        f"border: 1px solid {BioMedPilotColors.BORDER_SUBTLE}; "
+        "}"
+    )
+
+
+def secondary_button_qss() -> str:
+    return (
+        "QPushButton { "
+        f"color: {BioMedPilotColors.PRIMARY_NAVY}; "
+        f"background: {BioMedPilotColors.BIO_SOFT}; "
+        f"border: 1px solid {BioMedPilotColors.BORDER_SUBTLE}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"padding: {BioMedPilotSpacing.SM}px {BioMedPilotSpacing.LG}px; "
+        f"font-size: {BioMedPilotTypography.BUTTON_TEXT}px; "
+        "font-weight: 700; "
+        "}"
+        "QPushButton:hover { "
+        f"background: {BioMedPilotColors.SURFACE_MUTED}; "
+        "}"
+        "QPushButton:disabled { "
+        f"color: {BioMedPilotColors.DISABLED_TEXT}; "
+        f"background: {BioMedPilotColors.SURFACE_MUTED}; "
+        "}"
+    )
+
+
+def quiet_button_qss() -> str:
+    return (
+        "QPushButton { "
+        f"color: {BioMedPilotColors.PRIMARY_NAVY}; "
+        "background: transparent; "
+        "border: 0; "
+        f"padding: {BioMedPilotSpacing.XS}px {BioMedPilotSpacing.SM}px; "
+        f"font-size: {BioMedPilotTypography.BUTTON_TEXT}px; "
+        "}"
+        "QPushButton:hover { "
+        f"background: {BioMedPilotColors.BIO_SOFT}; "
+        "}"
+    )
+
+
+def danger_button_qss() -> str:
+    return (
+        "QPushButton { "
+        f"color: {BioMedPilotColors.STATUS_ERROR}; "
+        f"background: {BioMedPilotColors.SURFACE_WHITE}; "
+        f"border: 1px solid {BioMedPilotColors.ERROR_BORDER}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"padding: {BioMedPilotSpacing.SM}px {BioMedPilotSpacing.LG}px; "
+        f"font-size: {BioMedPilotTypography.BUTTON_TEXT}px; "
+        "font-weight: 700; "
+        "}"
+        "QPushButton:hover { "
+        f"background: {BioMedPilotColors.ERROR_SOFT}; "
+        "}"
+    )
+
+
+def navigation_button_qss() -> str:
+    return primary_button_qss()
+
+
+def button_qss(role: str) -> str:
+    normalized = role.strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {
+        BioMedPilotButtonRoles.PRIMARY_ACTION,
+        BioMedPilotButtonRoles.CONFIRM_ACTION,
+        BioMedPilotButtonRoles.NAVIGATION_NEXT,
+        "primary",
+        "primary_next",
+    }:
+        return primary_button_qss()
+    if normalized in {BioMedPilotButtonRoles.DESTRUCTIVE_ACTION, "danger", "destructive"}:
+        return danger_button_qss()
+    if normalized in {BioMedPilotButtonRoles.QUIET_ACTION, BioMedPilotButtonRoles.DETAIL_ACTION, "quiet", "text"}:
+        return quiet_button_qss()
+    return secondary_button_qss()
+
+
+def section_card_qss(selector: str = "QFrame") -> str:
+    return surface_card_qss(selector)
+
+
+def diagnostic_card_qss(selector: str = "QFrame") -> str:
+    return (
+        f"{selector} {{ "
+        f"border: 1px solid {BioMedPilotColors.WARNING_BORDER}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"background: {BioMedPilotColors.WARNING_SOFT}; "
+        "}"
+    )
 
 
 def shell_sidebar_qss() -> str:

@@ -5,7 +5,15 @@ from dataclasses import dataclass
 from app.bioinformatics.models.expression_import import ExpressionImportResult
 from app.bioinformatics.services.local_expression_import_service import LocalExpressionImportService
 from app.shared.feature_availability import get_feature
-from app.shared.ui import error_text_qss, page_title_qss, surface_card_qss, warning_text_qss
+from app.shared.ui import (
+    error_text_qss,
+    navigation_button_qss,
+    page_title_qss,
+    primary_button_qss,
+    status_badge_qss,
+    surface_card_qss,
+    warning_text_qss,
+)
 
 
 @dataclass(frozen=True)
@@ -68,18 +76,22 @@ if QWidget is not None:
             description = QLabel(self._state.description)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            feature_status = QLabel(f"功能状态：{self._state.status_label}")
+            feature_status.setStyleSheet(status_badge_qss("testing"))
+            root.addWidget(feature_status)
 
             self._path_input = QLineEdit()
             self._path_input.setPlaceholderText(self._state.file_path_placeholder)
             root.addWidget(self._path_input)
 
             import_button = QPushButton(self._state.import_button_label)
+            import_button.setStyleSheet(primary_button_qss())
             import_button.clicked.connect(self._import_matrix)
             root.addWidget(import_button)
 
             self._status_label = QLabel("导入状态：等待本地表达矩阵文件")
             self._status_label.setWordWrap(True)
+            self._status_label.setStyleSheet(status_badge_qss("pending"))
             root.addWidget(self._status_label)
 
             summary_card = QFrame()
@@ -102,6 +114,7 @@ if QWidget is not None:
 
             next_button = QPushButton(self._state.next_step)
             next_button.setEnabled(False)
+            next_button.setStyleSheet(navigation_button_qss())
             root.addWidget(next_button)
             root.addStretch(1)
 
@@ -112,6 +125,7 @@ if QWidget is not None:
             )
             if result.success:
                 self._status_label.setText("导入状态：表达矩阵导入预检已完成")
+                self._status_label.setStyleSheet(status_badge_qss("warning" if result.warnings else "completed"))
                 self._summary_label.setText(
                     f"来源：{result.source_path}\n"
                     f"格式：{result.source_type.upper()}\n"
@@ -131,6 +145,7 @@ if QWidget is not None:
                 self._error_label.setText("")
             else:
                 self._status_label.setText("导入状态：失败")
+                self._status_label.setStyleSheet(status_badge_qss("error"))
                 self._summary_label.setText("没有生成表达矩阵数据资产。")
                 self._warnings_label.setText("")
                 self._error_label.setText(result.message)

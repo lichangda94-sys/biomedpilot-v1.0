@@ -9,9 +9,14 @@ from app.shared.ui.theme import (
     BioMedPilotTypography,
     as_legacy_color_dict,
     as_legacy_spacing_dict,
+    button_qss,
+    danger_button_qss,
+    diagnostic_card_qss,
     error_text_qss,
     page_title_qss,
+    primary_button_qss,
     shell_sidebar_qss,
+    status_badge_qss,
     status_style,
     status_styles,
     surface_card_qss,
@@ -41,8 +46,12 @@ def test_status_styles_cover_cross_module_status_language() -> None:
     styles = status_styles()
 
     assert styles["ready"] == BioMedPilotStatusColors.READY
+    assert styles["pending"] == BioMedPilotStatusColors.NOT_READY
+    assert styles["analysis_ready"] == BioMedPilotStatusColors.READY
+    assert styles["developer_preview"] == BioMedPilotStatusColors.TESTING
     assert status_style("Ready").label_zh == "已就绪"
     assert status_style("not-ready").label_zh == "未就绪"
+    assert status_style("testing-level").label_zh == "测试中"
     assert status_style("unknown").label_zh == "未就绪"
 
 
@@ -65,3 +74,18 @@ def test_shared_qss_helpers_generate_token_backed_styles() -> None:
     assert "font-weight: 700" in page_title_qss()
     assert BioMedPilotColors.STATUS_ERROR in error_text_qss()
     assert BioMedPilotColors.STATUS_WARNING in warning_text_qss()
+
+
+def test_status_badge_and_button_helpers_generate_role_styles() -> None:
+    ready_badge = status_badge_qss("analysis-ready")
+    primary_button = primary_button_qss()
+    danger_button = danger_button_qss()
+
+    assert BioMedPilotColors.STATUS_READY in ready_badge
+    assert BioMedPilotColors.TEAL_SOFT in ready_badge
+    assert BioMedPilotColors.PRIMARY_NAVY in primary_button
+    assert BioMedPilotColors.TEXT_INVERSE in primary_button
+    assert BioMedPilotColors.STATUS_ERROR in danger_button
+    assert button_qss("primary_action") == primary_button
+    assert button_qss("destructive_action") == danger_button
+    assert BioMedPilotColors.WARNING_SOFT in diagnostic_card_qss()

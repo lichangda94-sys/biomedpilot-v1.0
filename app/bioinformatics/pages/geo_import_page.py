@@ -4,7 +4,15 @@ from dataclasses import dataclass
 
 from app.bioinformatics.services.geo_import_service import GeoImportPlanResult, GeoImportService
 from app.shared.feature_availability import get_feature
-from app.shared.ui import error_text_qss, page_title_qss, surface_card_qss
+from app.shared.ui import (
+    error_text_qss,
+    navigation_button_qss,
+    page_title_qss,
+    primary_button_qss,
+    secondary_button_qss,
+    status_badge_qss,
+    surface_card_qss,
+)
 
 
 @dataclass(frozen=True)
@@ -47,7 +55,9 @@ if QWidget is not None:
             description = QLabel(self._state.description)
             description.setWordWrap(True)
             root.addWidget(description)
-            root.addWidget(QLabel(f"功能状态：{self._state.status_label}"))
+            feature_status = QLabel(f"功能状态：{self._state.status_label}")
+            feature_status.setStyleSheet(status_badge_qss("testing"))
+            root.addWidget(feature_status)
 
             self._query_input = QLineEdit()
             self._query_input.setPlaceholderText("输入疾病或主题，例如 脑胶质瘤、肺腺癌、糖尿病相关转录组")
@@ -60,14 +70,17 @@ if QWidget is not None:
             root.addWidget(self._max_results_input)
 
             draft_button = QPushButton("生成检索草稿")
+            draft_button.setStyleSheet(secondary_button_qss())
             draft_button.clicked.connect(self._create_plan)
             root.addWidget(draft_button)
             search_button = QPushButton("检索 GEO/GSE")
+            search_button.setStyleSheet(primary_button_qss())
             search_button.clicked.connect(self._search_geo)
             root.addWidget(search_button)
 
             self._status_label = QLabel("导入状态：等待检索词或 accession")
             self._status_label.setWordWrap(True)
+            self._status_label.setStyleSheet(status_badge_qss("pending"))
             root.addWidget(self._status_label)
             summary_card = QFrame()
             summary_card.setStyleSheet(surface_card_qss())
@@ -97,10 +110,12 @@ if QWidget is not None:
             root.addWidget(self._error_label)
             self._register_first_button = QPushButton("登记首条结果为数据来源")
             self._register_first_button.setEnabled(False)
+            self._register_first_button.setStyleSheet(secondary_button_qss())
             self._register_first_button.clicked.connect(self._register_first_result)
             root.addWidget(self._register_first_button)
             next_button = QPushButton("下一步：数据下载")
             next_button.setEnabled(False)
+            next_button.setStyleSheet(navigation_button_qss())
             root.addWidget(next_button)
             root.addStretch(1)
 
@@ -136,6 +151,7 @@ if QWidget is not None:
         def _render_result(self, result: GeoImportPlanResult) -> None:
             if result.success:
                 self._status_label.setText("检索状态：" + ("GEO/GSE 检索完成" if result.search_status == "completed" else "检索草稿已生成"))
+                self._status_label.setStyleSheet(status_badge_qss("completed" if result.search_status == "completed" else "draft"))
                 self._summary_label.setText(
                     f"识别疾病：{', '.join(result.recognized_diseases_zh) or '未识别到明确疾病'}\n"
                     f"英文疾病词：{', '.join(result.disease_terms_en[:6]) or '无'}\n"
@@ -153,6 +169,7 @@ if QWidget is not None:
                 self._error_label.setText("")
             else:
                 self._status_label.setText("导入状态：失败")
+                self._status_label.setStyleSheet(status_badge_qss("error"))
                 self._summary_label.setText("没有生成 GEO 查询计划。")
                 self._clear_tables()
                 self._register_first_button.setEnabled(False)
@@ -223,6 +240,7 @@ if QWidget is not None:
                 result=self._last_result.geo_results[0],
             )
             self._status_label.setText(f"登记状态：已登记为数据来源 {output_path}")
+            self._status_label.setStyleSheet(status_badge_qss("saved"))
 
 else:
 
