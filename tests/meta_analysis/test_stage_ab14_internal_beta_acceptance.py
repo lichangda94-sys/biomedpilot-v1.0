@@ -112,7 +112,8 @@ def test_ab14_treatment_sample_generates_acceptance_artifacts(tmp_path: Path) ->
     report_text = (project_dir / "reports" / "formal_meta_report.md").read_text(encoding="utf-8")
     assert "Developer Preview / testing" in report_text
     assert "not a production journal submission" in report_text
-    assert "analysis/applicability_warnings.json" in report_text
+    assert "analysis/applicability_warnings.json" not in report_text
+    assert "统计分析结果尚未作为正式可发表结论生成" in report_text
 
     dashboard = workflow_dashboard_state_from_project(project_dir)
     step_status = {step.title: step.workflow_status for step in dashboard.steps}

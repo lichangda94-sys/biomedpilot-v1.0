@@ -44,8 +44,10 @@ def test_stage_m_example_project_runs_from_import_to_reproducibility_package(tmp
 
     formal_report = paths["formal_report"].read_text(encoding="utf-8")
     assert "testing / developer preview" in formal_report
-    assert str(paths["forest_plot"]) in formal_report
-    assert str(paths["result_table"]) in formal_report
+    assert str(paths["forest_plot"]) not in formal_report
+    assert str(paths["result_table"]) not in formal_report
+    assert "图表状态" in formal_report
+    assert "表格状态" in formal_report
     assert "Network meta-analysis" in formal_report
 
     assert result["warnings"]["publication_bias"]
