@@ -12,7 +12,7 @@ It is not production-ready, not clinical-grade, and not submission-grade. UI lab
 
 Do not describe draft, dry-run, testing-level, imported, or preflight outputs as formal computed results.
 
-## 2. Local Worktree Structure
+## 2. Local Development Root And Worktree Structure
 
 The v1.0 local root is:
 
@@ -20,19 +20,42 @@ The v1.0 local root is:
 /Users/changdali/Developer/biomedpilot v1.0
 ```
 
+This local root is the development management layer. It contains the bare repository, worktrees, migration bundles, local project control documents, handoff documents, and archive material.
+
+`MainLine` is only one worktree under this root. It is the stable mainline code workspace, not the whole development management layer.
+
+`_repo.git` is the bare repository. Do not edit code in `_repo.git` directly.
+
 Worktrees:
 
-- `MainLine`: stable mainline, shell, login, module selection, settings, testing mode, Bioinformatics stable flow, shared interfaces, minimal Meta entry.
-- `Bioinformatics`: Bioinformatics Analysis development.
-- `Meta`: Meta Analysis workflow development.
-- `Vocabulary`: shared medical vocabulary and query intelligence vocabulary work.
-- `UIShell`: desktop shell and unified UI work.
-- `LabTools`: basic laboratory tools module.
-- `AI`: AI Gateway, local model integration, privacy policy, audit policy.
-- `Integration`: staged merges, conflict handling, full validation, internal test preparation.
-- `ReleaseBuild`: internal release packaging worktree.
+- `MainLine`: stable mainline, desktop shell, stable entry points, shared interfaces, Bioinformatics stable flow, minimal Meta entry, and current testable baseline.
+- `Bioinformatics`: Bioinformatics module development for GEO / TCGA / GTEx / local expression data. It must not perform PubMed literature retrieval.
+- `Meta`: Meta Analysis workflow development for PICO, search strategy, literature library, deduplication, screening, full text, extraction, quality assessment, statistics, and reporting. It must not perform GEO / TCGA / GTEx data analysis.
+- `Vocabulary`: shared medical vocabulary, query intelligence vocabulary work, context isolation, audit, and tests.
+- `UIShell`: desktop shell, login, main window, module selection, navigation, theme, and visual consistency. It must not change business logic.
+- `LabTools`: basic laboratory tools module. It must not pollute Bioinformatics or Meta project manifests.
+- `AI`: AI Gateway, local model integration, privacy policy, audit policy, and disabled-by-default AI capability.
+- `Integration`: staged merges, conflict handling, cross-module validation, and full or staged test verification. It must not be used for large feature development.
+- `ReleaseBuild`: internal test packaging, package metadata validation, and packaged smoke tests. It must not be used for feature development.
 
-Do not edit `_repo.git` directly.
+Support directories at the v1.0 local root:
+
+- `Archive`: migration bundle, historical snapshots, old material, or external archive material.
+- `00_HandoffDocs`: cross-stage handoff material when used by the project control flow.
+- `01_ProjectControl`: local control documents, migration reports, global manual, and stage control material.
+
+## 2.1 MainLine, Integration, And Release Flow
+
+Module work may happen in module worktrees. Before module work becomes part of the stable baseline:
+
+1. Run the module worktree's required tests.
+2. Update the module stage report, handoff, or audit document.
+3. Enter `Integration` or an equivalent integration validation flow.
+4. Verify cross-module behavior, UI entry points, boundaries, and result labels.
+5. Merge only validated work into `MainLine`.
+6. Use `ReleaseBuild` only from a validated MainLine or validated release source.
+
+An internal beta or packaged test build must not be produced directly from an unvalidated single module worktree.
 
 ## 3. Business Module Boundaries
 
@@ -61,6 +84,8 @@ It must not pollute Bioinformatics or Meta project manifests.
 Shared capabilities include AI Gateway, query intelligence, shared medical vocabulary, project center, data center, task center, report center, environment checks, localization, config, rules, audit, and packaging support.
 
 Shared code must not become a hidden business workflow. Business-specific workflow decisions belong to the relevant module.
+
+Shared search, report, task, and data-entry infrastructure must remain infrastructure. Bioinformatics search and Meta search have different meanings and must stay inside their modules. Shared report center code may provide common interfaces, manifests, export helpers, or audit fields, but it must not write Bioinformatics, Meta, or LabTools business conclusions.
 
 ## 5. Required Reading Before Each Codex Development Task
 
@@ -113,6 +138,7 @@ Codex must stop and request human confirmation when:
 - Do not mix GEO / TCGA / GTEx data analysis into Meta.
 - Do not delete current effective tests.
 - Do not expose large amounts of manifest, schema, branch, or raw path detail in the main UI.
+- Do not expose large amounts of asset id, internal manifest, schema, branch, raw path, or debug detail in the ordinary main UI; use developer diagnostics when this information is needed.
 - Do not produce clinical conclusions.
 - Do not claim production-ready status.
 
@@ -176,6 +202,8 @@ Documentation must not overstate maturity. Use precise labels such as draft, dry
 - AI must not automatically execute downloads, screening, analysis, or final report generation.
 - Do not save raw prompts or raw responses.
 - Store only necessary audit summaries when required.
+- External network capability must be declared by module and should require user confirmation by default.
+- Enabling AI, local model access, external network access, downloads, automatic screening, automatic analysis, or final report generation is a manual review boundary.
 
 ## 13. Reports And Results Rules
 
@@ -194,7 +222,68 @@ Do not claim production-ready, clinical-grade, or submission-grade status.
 
 Imported results must be labeled as imported. Dry-run task records must not be presented as completed analysis. Preflight manifests must not be presented as DEG execution.
 
-## 14. Manual Review Boundaries
+## 14. Feature Status Rules
+
+Feature status must be explicit in UI, reports, handoff documents, and stage reports when relevant.
+
+Allowed status labels include:
+
+- 可用 / `available`
+- 测试级 / `testing-level`
+- 草稿 / `draft`
+- 待确认 / `pending confirmation`
+- 阻塞 / `blocked`
+- 未接入 / `not connected`
+- 开发者预览 / `developer preview`
+
+Do not present testing-level, draft, pending, blocked, or not connected features as generally available.
+
+## 15. Data, Cache, And Git Rules
+
+The following should not enter Git by default:
+
+- User project data.
+- Downloaded datasets.
+- PDFs.
+- Intermediate analysis outputs.
+- Runtime caches.
+- Python and pytest caches.
+- Build and packaging outputs.
+- Local runtime logs.
+
+Small, explainable, reproducible `tests/fixtures` may be tracked. Demo projects may be tracked only when they are small, explainable, reproducible, and do not contain real user data.
+
+Tracked logs, generated test data, example projects, historical audits, old snapshots, and legacy directories are manual-confirmation items unless a cleanup stage explicitly authorizes their handling.
+
+## 16. Packaging And Internal Beta Rules
+
+Before packaging or internal beta handoff, record and verify:
+
+- `git_head`
+- `branch`
+- `build_time`
+- `app_version`
+- `enabled_modules`
+- `feature_flags`
+- Developer Preview / internal beta labeling
+- smoke test result
+- whether unfinished or testing-level features are included
+
+Internal beta and packaged builds must not come directly from an unvalidated single module worktree. Use validated MainLine or ReleaseBuild sources.
+
+## 17. MainLine Entry Conditions
+
+Work may enter MainLine only after:
+
+- Module tests pass.
+- Relevant UI or integration tests pass.
+- No cross-module pollution is introduced.
+- Documentation or stage reports are updated.
+- Result maturity labels are clear.
+- AI Gateway and module boundaries are respected.
+- Integration or an equivalent validation flow has confirmed the merge surface.
+
+## 18. Manual Review Boundaries
 
 When in doubt, stop and ask before:
 
@@ -203,5 +292,6 @@ When in doubt, stop and ask before:
 - Pushing to remote.
 - Handling credentials.
 - Enabling AI or external network behavior.
+- Enabling automatic downloads, screening, analysis, or final reporting.
 - Reclassifying result maturity.
 - Making irreversible changes.
