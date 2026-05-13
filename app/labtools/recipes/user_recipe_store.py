@@ -1,10 +1,22 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import uuid4
 
 from app.labtools.recipes.recipe_models import Recipe, RecipeDraft
 from app.labtools.recipes.recipe_persistence import clone_imported_user_recipe, evaluate_recipe_safety
 from app.labtools.recipes.recipe_validation import validate_recipe_draft
+
+
+@dataclass(frozen=True)
+class UserRecipeImportResult:
+    imported_recipes: tuple[Recipe, ...]
+    conflict_count: int
+    warnings: tuple[str, ...] = ()
+
+    @property
+    def imported_count(self) -> int:
+        return len(self.imported_recipes)
 
 
 class UserRecipeStore:
@@ -42,7 +54,11 @@ class UserRecipeStore:
         return recipe
 
     def import_recipes(self, recipes: tuple[Recipe, ...]) -> tuple[Recipe, ...]:
+        return self.import_recipes_with_summary(recipes).imported_recipes
+
+    def import_recipes_with_summary(self, recipes: tuple[Recipe, ...]) -> UserRecipeImportResult:
         imported: list[Recipe] = []
+        conflict_count = 0
         for recipe in recipes:
             review = evaluate_recipe_safety(recipe)
             if not review.allowed:
@@ -51,10 +67,16 @@ class UserRecipeStore:
                 raise RecipeError(review.errors[0])
             candidate = recipe
             if candidate.recipe_id in self._confirmed:
+                conflict_count += 1
                 candidate = clone_imported_user_recipe(candidate)
             self._confirmed[candidate.recipe_id] = candidate
             imported.append(candidate)
-        return tuple(imported)
+        warnings = ()
+        if conflict_count:
+            warnings = (
+                f"检测到 {conflict_count} 个 recipe_id 冲突；已作为 imported copy 保存，未覆盖现有用户配方。",
+            )
+        return UserRecipeImportResult(imported_recipes=tuple(imported), conflict_count=conflict_count, warnings=warnings)
 
     def list_recipes(self) -> tuple[Recipe, ...]:
         return tuple(self._confirmed.values())

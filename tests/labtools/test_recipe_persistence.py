@@ -119,3 +119,19 @@ def test_safe_recipe_review_keeps_auxiliary_draft_semantics() -> None:
     assert review.allowed is True
     assert review.status == "manual_review_required"
     assert "SOP" in review.review_notice
+
+
+def test_user_recipe_import_summary_reports_id_conflicts_without_overwrite() -> None:
+    store = UserRecipeStore()
+    recipe = store.confirm_draft(_draft())
+
+    result = store.import_recipes_with_summary((recipe,))
+
+    recipes = store.list_recipes()
+    assert result.imported_count == 1
+    assert result.conflict_count == 1
+    assert "未覆盖现有用户配方" in result.warnings[0]
+    assert len(recipes) == 2
+    assert recipes[0].recipe_id == recipe.recipe_id
+    assert result.imported_recipes[0].recipe_id != recipe.recipe_id
+    assert result.imported_recipes[0].version == recipe.version

@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6C.1，commit 以最终交接为准
+- 当前最近完成阶段：LabTools Stage L6B.1，commit 以最终交接为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -32,6 +32,7 @@
 | LabTools Stage L6A | 最终交接记录 | 新增 fluorescence manual ROI 与 wound manual ROI threshold 结果的用户确认导出包：JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG；默认仍不自动写盘。 |
 | LabTools Stage L6A.1 | 最终交接记录 | 硬化 ROI export package schema、文件命名、no-overwrite、CSV header、Markdown manual-review 语义和 UI 导出取消/失败/成功反馈；不新增图像算法。 |
 | LabTools Stage L6B | 最终交接记录 | 新增用户配方草稿本地 JSON 持久化和安全范围检查；保存/载入均需用户选择路径，不自动保存、不联网、不调用 AI、不新增 recipe 算法。 |
+| LabTools Stage L6B.1 | 最终交接记录 | 补充 recipe draft store schema 文档，载入时显示 recipe_id 冲突 summary，冲突导入不会覆盖现有用户配方，并在 UI 显示用户草稿 version。 |
 | LabTools Stage L6C | 最终交接记录 | 新增轻量实验模板和结构化记录草稿中心，覆盖 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录；不做完整 ELN、签名、权限或合规审计。 |
 | LabTools Stage L6C.1 | 最终交接记录 | 新增实验记录草稿本地 JSON 持久化 schema、no-overwrite 保存、载入校验和 UI 保存/载入反馈；仍不做完整 ELN、数据库、自动保存、签名或合规审计。 |
 
@@ -71,6 +72,11 @@
   - 保存文件采用 no-overwrite 策略，同名文件自动使用 `_001` 等 suffix。
   - 保存/载入前进行基础安全范围检查，阻断高风险化学品、毒物、高风险合成、动物/人体实验或病毒相关草稿。
   - UI 明确“本地草稿，使用前需人工核对 SOP、SDS 和试剂说明书”。
+- L6B.1 硬化：
+  - 新增 `docs/labtools_recipe_draft_store_schema.md`，记录 `labtools_recipe_draft_store.v1` 顶层字段、recipe 字段、component 字段、导入冲突规则和安全边界。
+  - 用户配方列表和 summary 显示草稿 `version`。
+  - 载入 JSON 时如果 `recipe_id` 已存在，会 clone 为 `user_recipe_imported_<token>`，保留原有配方不覆盖。
+  - UI 显示实际写入数量、`recipe_id` 冲突数和“未覆盖现有用户配方”提示。
 
 ### 3.3 来源草稿框架
 
@@ -240,19 +246,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6C.1 结果：151 passed
+  - 当前 L6B.1 结果：152 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6C.1 结果：152 passed
+  - 当前 L6B.1 结果：153 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6C.1 结果：18 passed
+  - 当前 L6B.1 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6C.1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6B.1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6C.1 结果：通过
+  - 当前 L6B.1 结果：通过
 - `git diff --check`
-  - 当前 L6C.1 结果：通过
+  - 当前 L6B.1 结果：通过
 - `git diff --cached --check`
-  - 当前 L6C.1 提交前运行。
+  - 当前 L6B.1 提交前运行。
 
 ## 7. Shell / UI 接入状态
 
@@ -311,6 +317,7 @@
   - 确认后进入 `UserRecipeStore` 内存结构。
   - L6B 可由用户手动保存为本地 JSON 文件，schema 为 `labtools_recipe_draft_store.v1`。
   - L6B 可由用户手动载入同 schema JSON，并合并到当前 `UserRecipeStore`。
+  - L6B.1 显示导入冲突 summary；重复 `recipe_id` 会作为 imported copy 保存，不覆盖现有用户配方。
   - 保存/载入不会自动发生，不写数据库，不联网，不调用 AI。
   - 保存使用 no-overwrite 策略，避免 silent overwrite。
 - 来源草稿：手动来源和摘录草稿在 UI / 模型层流转，确认后才进入用户配方 store。
@@ -349,9 +356,9 @@
 
 ## 13. 后续推荐路线
 
-1. L6B.1：recipe JSON schema 文档、更多导入冲突策略和用户草稿版本展示。
-2. L6A.2：图像导出 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
-3. L6C.2：实验记录草稿 Markdown 片段导出体验和导入冲突提示，但仍不做完整 ELN、签名、权限或合规审计。
+1. L6A.2：图像导出 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
+2. L6C.2：实验记录草稿 Markdown 片段导出体验和导入冲突提示，但仍不做完整 ELN、签名、权限或合规审计。
+3. L6B.2：recipe JSON 导入预览/选择性导入，但仍不做数据库、云同步或正式 SOP 管理。
 4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
 
 ## 14. Handoff 结论

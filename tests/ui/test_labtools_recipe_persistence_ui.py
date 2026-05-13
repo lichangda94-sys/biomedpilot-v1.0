@@ -87,6 +87,9 @@ def test_recipe_persistence_ui_save_and_load_success(recipe_widget, tmp_path, mo
     load_text = second_widget._user_recipe_summary.toPlainText()
     assert "用户配方 JSON 已载入" in load_text
     assert "载入配方数：1" in load_text
+    assert "实际写入当前内存配方数：1" in load_text
+    assert "recipe_id 冲突数：0" in load_text
+    assert "载入版本：user-confirmed-draft" in load_text
     assert second_widget.user_recipe_store().list_recipes()[0].name == "UI 用户配方"
 
 
@@ -112,3 +115,19 @@ def test_recipe_persistence_ui_cancel_load_keeps_existing_recipes(recipe_widget,
     text = recipe_widget._user_recipe_summary.toPlainText()
     assert "已取消载入" in text
     assert recipe_widget.user_recipe_store().list_recipes()[0].name == "UI 用户配方"
+
+
+def test_recipe_persistence_ui_reports_import_conflict_without_overwrite(recipe_widget, tmp_path, monkeypatch) -> None:
+    recipe_widget.user_recipe_store().confirm_draft(_draft())
+    save_path = tmp_path / "conflict.json"
+    monkeypatch.setattr(recipe_widget, "_select_user_recipe_save_path", lambda: str(save_path))
+    recipe_widget._handle_save_user_recipes()
+
+    saved_file = next(tmp_path.iterdir())
+    monkeypatch.setattr(recipe_widget, "_select_user_recipe_load_path", lambda: str(saved_file))
+    recipe_widget._handle_load_user_recipes()
+
+    text = recipe_widget._user_recipe_summary.toPlainText()
+    assert "recipe_id 冲突数：1" in text
+    assert "未覆盖现有用户配方" in text
+    assert len(recipe_widget.user_recipe_store().list_recipes()) == 2

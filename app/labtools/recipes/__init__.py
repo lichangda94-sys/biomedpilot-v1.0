@@ -15,7 +15,7 @@ from app.labtools.recipes.recipe_persistence import (
 from app.labtools.recipes.recipe_scaling import calculate_stock_dilution, scale_recipe
 from app.labtools.recipes.recipe_source_importer import RecipeSourceImporter
 from app.labtools.recipes.recipe_source_models import RecipeExtractionDraft, RecipeSourceCard, RecipeSourceRequest
-from app.labtools.recipes.user_recipe_store import UserRecipeStore
+from app.labtools.recipes.user_recipe_store import UserRecipeImportResult, UserRecipeStore
 
 __all__ = [
     "Recipe",
@@ -31,6 +31,7 @@ __all__ = [
     "RecipeStoreLoadResult",
     "RecipeStorePersistenceResult",
     "UserRecipeStore",
+    "UserRecipeImportResult",
     "LABTOOLS_RECIPE_DRAFT_STORE_SCHEMA_VERSION",
     "build_user_recipe_store_payload",
     "calculate_stock_dilution",

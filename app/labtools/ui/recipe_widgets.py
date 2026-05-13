@@ -386,7 +386,7 @@ if QWidget is not None:
             self._recipe_list.clear()
             selected_row = 0
             for index, recipe in enumerate(self._recipes):
-                item = QListWidgetItem(f"{recipe.name}\n{recipe.category}")
+                item = QListWidgetItem(f"{recipe.name}\n{recipe.category} · {recipe.version}")
                 item.setData(Qt.UserRole, recipe.recipe_id)
                 self._recipe_list.addItem(item)
                 if recipe.recipe_id == current_id:
@@ -405,7 +405,7 @@ if QWidget is not None:
             lines = ["已确认用户配方"]
             for recipe in recipes:
                 source = recipe.source_title or recipe.source_label
-                lines.append(f"- {recipe.name}；来源：{source}")
+                lines.append(f"- {recipe.name}；版本：{recipe.version}；来源：{source}")
             lines.extend(["", "本地持久化", "点击“保存用户配方 JSON”并选择路径后才写盘；保存时会进行基础安全范围检查并避免覆盖同名文件。"])
             lines.extend(["", "复核提示", RECIPE_REVIEW_NOTICE])
             self._user_recipe_summary.setText("\n".join(lines))
@@ -633,6 +633,19 @@ if QWidget is not None:
             except RecipeError as exc:
                 self._user_recipe_summary.setText(f"载入需要调整\n{exc}")
                 return
+            import_result = getattr(self, "_last_recipe_import_result", None)
+            import_lines: list[str] = []
+            if import_result is not None:
+                import_lines.extend(
+                    [
+                        f"实际写入当前内存配方数：{import_result.imported_count}",
+                        f"recipe_id 冲突数：{import_result.conflict_count}",
+                    ]
+                )
+                versions = sorted({recipe.version for recipe in import_result.imported_recipes if recipe.version})
+                if versions:
+                    import_lines.append(f"载入版本：{', '.join(versions)}")
+                import_lines.extend(import_result.warnings)
             self._refresh_recipes()
             self._user_recipe_summary.setText(
                 "\n".join(
@@ -641,6 +654,7 @@ if QWidget is not None:
                         f"路径：{result.path}",
                         f"schema：{result.schema_version}",
                         f"载入配方数：{result.recipe_count}",
+                        *import_lines,
                         "",
                         "复核提示",
                         result.review_notice,
@@ -671,7 +685,7 @@ if QWidget is not None:
 
         def _perform_load_user_recipes(self, path: str):
             result = load_user_recipe_store(path)
-            self._user_store.import_recipes(result.recipes)
+            self._last_recipe_import_result = self._user_store.import_recipes_with_summary(result.recipes)
             return result
 
         def _stylesheet(self) -> str:
