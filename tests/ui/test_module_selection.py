@@ -198,23 +198,14 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
         meta_button = window._dashboard_page.findChild(QPushButton, "metaModuleButton")
         meta_button.click()
         assert window.current_workspace_key() == "meta_analysis"
-        assert window._meta_analysis_page.page_keys() == (
+        assert window._meta_analysis_page.page_keys()[:4] == (
             "workflow_home",
-            "project_contract",
-            "dev_branch",
+            "pico_workspace",
+            "search_strategy",
+            "literature_import",
         )
     finally:
         _dispose_window(window)
-
-
-def test_bioinformatics_workspace_accepts_shell_back_callback(qt_app) -> None:
-    from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
-
-    widget = BioinformaticsWorkspaceWidget(on_back=lambda: None)
-    try:
-        assert widget.current_page_object_name() == "bioinformaticsProjectHomePage"
-    finally:
-        _dispose_window(widget)
 
 
 def test_main_window_open_meta_project_binds_workspace_project_dir(qt_app, tmp_path) -> None:

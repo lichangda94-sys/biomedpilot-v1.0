@@ -3,15 +3,16 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout
 
 from app.shared.environment.checks import EnvironmentStatus
+from app.shared.ui import card_title_qss, surface_card_qss
 
 
 class StatusPanel(QFrame):
     def __init__(self, environment: EnvironmentStatus, test_mode_label: str) -> None:
         super().__init__()
-        self.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        self.setStyleSheet(surface_card_qss())
         layout = QVBoxLayout(self)
         header = QLabel("本地环境状态")
-        header.setStyleSheet("font-weight: 700;")
+        header.setStyleSheet(card_title_qss())
         layout.addWidget(header)
         for line in (
             f"Python: {environment.python_version}",
@@ -24,4 +25,3 @@ class StatusPanel(QFrame):
             label.setWordWrap(True)
             layout.addWidget(label)
         layout.addStretch(1)
-

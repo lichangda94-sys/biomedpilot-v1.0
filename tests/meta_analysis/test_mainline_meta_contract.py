@@ -29,8 +29,17 @@ def test_mainline_meta_layout_is_shell_contract() -> None:
     state = meta_workspace_layout_state()
 
     assert state.default_page_key == "workflow_home"
-    assert [item.page_key for item in state.navigation_items] == ["workflow_home", "project_contract", "dev_branch"]
-    assert "dev/meta-analysis" in state.testing_notice
+    assert [item.page_key for item in state.navigation_items] == [
+        "workflow_home",
+        "pico_workspace",
+        "search_strategy",
+        "literature_import",
+        "screening_review",
+        "manual_extraction",
+        "statistics_analysis",
+        "report_export",
+    ]
+    assert "内部测试版" in state.testing_notice
 
 
 def test_meta_project_contract_can_create_and_open_project(tmp_path) -> None:
@@ -61,6 +70,15 @@ def test_mainline_meta_workspace_binds_project_record(qt_app, tmp_path) -> None:
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_record(record)
 
-    assert widget.page_keys() == ("workflow_home", "project_contract", "dev_branch")
+    assert widget.page_keys() == (
+        "workflow_home",
+        "pico_workspace",
+        "search_strategy",
+        "literature_import",
+        "screening_review",
+        "manual_extraction",
+        "statistics_analysis",
+        "report_export",
+    )
     assert widget.current_project_dir() == project.project_root
-    assert "Meta UI" in widget._status_label.text()
+    assert "Meta UI" in widget._project_summary_label.text()

@@ -4130,7 +4130,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         except ValueError as exc:
             self._status_label.setText(str(exc))
             return None
-        self._status_label.setText(f"已创建任务：{task.task_id} · {task.label} · {task.status}")
+        self._status_label.setText(f"已创建任务：{task.label} · {task.status}")
         self._records.setPlainText(_json({"任务记录": [task.__dict__ | {"record_path": str(task.record_path)}]}))
         return task
 
@@ -4217,7 +4217,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             return None
         center = load_analysis_task_center(self._project_root)
         self._render(center)
-        self._status_label.setText(f"已创建 DEG task plan：{len(payload.get('comparisons', []) or [])} 个比较；未执行真实 DEG。")
+        self._status_label.setText(f"已创建 DEG 配置草稿：{len(payload.get('comparisons', []) or [])} 个比较；未执行真实 DEG。")
         self._records.setPlainText(_json({"DEG task plan": payload}))
         return payload
 
@@ -4232,7 +4232,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             return None
         center = load_analysis_task_center(self._project_root)
         self._render(center)
-        self._status_label.setText(f"已生成 DEG 任务记录：{payload.get('run_id')}；当前版本尚未执行真实差异分析。")
+        self._status_label.setText("已生成 DEG 任务记录；当前版本尚未执行真实差异分析。")
         self._records.setPlainText(_json({"DEG task run": payload}))
         return payload
 
@@ -4269,7 +4269,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             return None
         run = runs[row]
         self._records.setPlainText(_json({"任务运行详情": run}))
-        self._status_label.setText(f"任务详情：{run.get('run_id')} · {task_run_status_label(str(run.get('status') or ''))}")
+        self._status_label.setText(f"任务详情已载入：{task_run_status_label(str(run.get('status') or ''))}")
         return run
 
     def continue_to_results(self) -> None:
@@ -4291,17 +4291,17 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._status_label = _status_label("没有 task center 时请先运行工作流或生成任务中心。")
         root.addWidget(self._status_label)
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新任务中心", "secondaryButton", self.refresh_task_center))
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_task_center, role="secondary"))
         self._task_type_input = QLineEdit()
         self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
         actions.addWidget(self._task_type_input)
-        actions.addWidget(_button("去确认分组", "secondaryButton", self.open_group_design))
-        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
-        actions.addWidget(_button("配置 DEG 任务", "primaryButton", self.configure_deg_task_plan))
-        actions.addWidget(_button("生成 DEG 分析任务记录", "primaryButton", self.create_deg_task_run_record))
-        actions.addWidget(_button("生成并校验 DEG 输入", "primaryButton", self.generate_deg_executor_preflight))
-        actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
-        actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
+        actions.addWidget(_button("确认分组", "secondaryButton", self.open_group_design, role="secondary"))
+        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups, role="secondary"))
+        actions.addWidget(_button("创建 DEG 配置草稿", "primaryButton", self.configure_deg_task_plan, role="primary_action"))
+        actions.addWidget(_button("生成任务记录", "secondaryButton", self.create_deg_task_run_record, role="secondary"))
+        actions.addWidget(_button("校验 DEG 输入", "secondaryButton", self.generate_deg_executor_preflight, role="secondary"))
+        actions.addWidget(_button("创建通用任务", "secondaryButton", self.create_task, role="secondary"))
+        actions.addWidget(_button("运行 GEO 差异分析", "secondaryButton", self.run_geo_differential_expression_task, role="secondary"))
         actions.addStretch(1)
         root.addLayout(actions)
         self._capability_summary = _read_only_report_view(150)
@@ -4310,13 +4310,24 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._tasks = _table(["任务", "是否可运行", "来源与状态", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
         root.addWidget(self._tasks)
         root.addWidget(_muted("任务历史记录"))
-        self._task_runs = _table(["时间", "任务类型", "run id", "输入资产", "比较数量", "状态", "操作"])
+        self._task_runs = _table(["时间", "任务类型", "记录", "输入摘要", "比较数量", "状态", "操作"])
         self._task_runs.setObjectName("analysisTaskRunHistoryTable")
         root.addWidget(self._task_runs)
-        root.addWidget(_button("查看任务记录详情", "secondaryButton", self.show_selected_task_run_detail), alignment=Qt.AlignLeft)
+        root.addWidget(_button("查看详情", "secondaryButton", self.show_selected_task_run_detail, role="secondary"), alignment=Qt.AlignLeft)
+        diagnostic_card, diagnostic_layout = _card("开发者诊断")
+        diagnostic_layout.addWidget(_muted("普通流程不需要查看这些内容；用于任务记录、预检 manifest、run id 和原始 JSON 排错。"))
+        self._records_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_records_diagnostics, role="secondary")
+        diagnostic_layout.addWidget(self._records_toggle_button, alignment=Qt.AlignLeft)
         self._records = _text_preview(120)
-        root.addWidget(self._records)
-        root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
+        self._records.setObjectName("analysisTaskDeveloperDiagnostics")
+        self._records.setVisible(False)
+        diagnostic_layout.addWidget(self._records)
+        root.addWidget(diagnostic_card)
+        root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results, role="primary_next"), alignment=Qt.AlignLeft)
+
+    def _toggle_records_diagnostics(self) -> None:
+        self._records.setVisible(not self._records.isVisible())
+        self._records_toggle_button.setText("收起开发者诊断" if self._records.isVisible() else "展开开发者诊断")
 
     def open_group_design(self) -> None:
         if self._project_root is None:
@@ -4396,10 +4407,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._status_label = _status_label("暂无结果，请先在分析任务中心创建并运行分析任务。")
         root.addWidget(self._status_label)
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results))
-        actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None)))
-        actions.addWidget(_button("打开参数 JSON", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None)))
-        actions.addWidget(_button("加入报告", "secondaryButton", lambda: self._status_label.setText("加入报告：占位功能。")))
+        actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results, role="secondary"))
+        actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None), role="secondary"))
+        actions.addWidget(_button("继续到项目报告", "primaryButton", self.continue_to_report, role="primary_next"))
         actions.addStretch(1)
         root.addLayout(actions)
         comparison_row = QHBoxLayout()
@@ -4413,14 +4423,29 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._imported_deg_summary = _read_only_report_view(120)
         self._imported_deg_summary.setObjectName("importedDegSummary")
         root.addWidget(self._imported_deg_summary)
-        self._results = _table(["结果名称", "分析类型", "文件类型", "创建时间", "路径", "状态", "warning"])
+        self._results = _table(["结果名称", "分析类型", "文件类型", "创建时间", "可打开", "状态", "备注"])
         root.addWidget(self._results)
         self._deg_preview = _table(["gene_id", "gene_name", "log2FC", "p value", "adjusted p value", "gene_biotype", "gene_description"])
         self._deg_preview.setObjectName("importedDegPreviewTable")
         root.addWidget(self._deg_preview)
+        diagnostic_card, diagnostic_layout = _card("开发者诊断")
+        diagnostic_layout.addWidget(_muted("完整路径、result index、manifest 和原始 JSON 仅用于排错，不默认展示在主界面。"))
+        diagnostic_actions = QHBoxLayout()
+        self._details_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_result_diagnostics, role="secondary")
+        diagnostic_actions.addWidget(self._details_toggle_button)
+        diagnostic_actions.addWidget(_button("打开结果索引", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None), role="secondary"))
+        diagnostic_actions.addWidget(_button("加入报告（占位）", "secondaryButton", lambda: self._status_label.setText("加入报告：testing placeholder，未正式支持。"), role="secondary"))
+        diagnostic_actions.addStretch(1)
+        diagnostic_layout.addLayout(diagnostic_actions)
         self._details = _text_preview(130)
-        root.addWidget(self._details)
-        root.addWidget(_button("继续：报告查看", "primaryButton", self.continue_to_report), alignment=Qt.AlignLeft)
+        self._details.setObjectName("resultsDeveloperDiagnostics")
+        self._details.setVisible(False)
+        diagnostic_layout.addWidget(self._details)
+        root.addWidget(diagnostic_card)
+
+    def _toggle_result_diagnostics(self) -> None:
+        self._details.setVisible(not self._details.isVisible())
+        self._details_toggle_button.setText("收起开发者诊断" if self._details.isVisible() else "展开开发者诊断")
 
     def _render(self, payload: dict[str, object]) -> None:
         entries = [item for item in payload.get("entries", []) or [] if isinstance(item, dict)]
@@ -4437,7 +4462,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                     item.get("analysis_type", "未知"),
                     item.get("file_type", "未知"),
                     item.get("created_at", "未记录"),
-                    item.get("path") or item.get("file_path", ""),
+                    "可打开" if (item.get("path") or item.get("file_path")) else "未记录",
                     item.get("status", "未知"),
                     item.get("warning", ""),
                 ]
@@ -4538,11 +4563,11 @@ class BioinformaticsReportViewerWidget(QWidget):
         root = _scroll_root(self)
         root.addWidget(_header("项目报告", "Developer Preview / 本地测试版", back_text="返回结果浏览", back_signal=self.back_requested))
         actions = QHBoxLayout()
-        actions.addWidget(_button("生成 / 刷新项目报告", "primaryButton", self.generate_report))
-        actions.addWidget(_button("打开报告文件", "secondaryButton", lambda: _open_path(self._project_root / "reports/project_analysis_report.md" if self._project_root else None)))
-        actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
-        actions.addWidget(_button("导出 DOCX", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：testing placeholder，未正式支持。")))
-        actions.addWidget(_button("导出 HTML", "secondaryButton", lambda: self._status_label.setText("HTML 导出：testing placeholder。")))
+        actions.addWidget(_button("生成 / 刷新项目报告", "primaryButton", self.generate_report, role="primary_action"))
+        actions.addWidget(_button("打开报告文件", "secondaryButton", lambda: _open_path(self._project_root / "reports/project_analysis_report.md" if self._project_root else None), role="secondary"))
+        actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None), role="secondary"))
+        actions.addWidget(_button("导出 DOCX", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：testing placeholder，未正式支持。"), role="secondary"))
+        actions.addWidget(_button("导出 HTML", "secondaryButton", lambda: self._status_label.setText("HTML 导出：testing placeholder。"), role="secondary"))
         actions.addStretch(1)
         root.addLayout(actions)
         self._status_label = _status_label("没有报告时请点击生成 / 刷新项目报告。PDF 当前未正式支持。")
@@ -4551,10 +4576,22 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._reportable_content = _read_only_report_view(100)
         self._reportable_content.setObjectName("reportableContentSummary")
         root.addWidget(self._reportable_content)
+        root.addWidget(_muted("报告预览（草稿）"))
         self._markdown = _text_preview(320)
         root.addWidget(self._markdown)
+        diagnostic_card, diagnostic_layout = _card("开发者诊断")
+        diagnostic_layout.addWidget(_muted("报告 manifest、上游 manifest 引用和导出占位状态默认折叠，仅用于审计和排错。"))
+        self._manifest_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_manifest_diagnostics, role="secondary")
+        diagnostic_layout.addWidget(self._manifest_toggle_button, alignment=Qt.AlignLeft)
         self._manifest = _text_preview(140)
-        root.addWidget(self._manifest)
+        self._manifest.setObjectName("reportDeveloperDiagnostics")
+        self._manifest.setVisible(False)
+        diagnostic_layout.addWidget(self._manifest)
+        root.addWidget(diagnostic_card)
+
+    def _toggle_manifest_diagnostics(self) -> None:
+        self._manifest.setVisible(not self._manifest.isVisible())
+        self._manifest_toggle_button.setText("收起开发者诊断" if self._manifest.isVisible() else "展开开发者诊断")
 
     def _render(self, payload: dict[str, object]) -> None:
         markdown = str(payload.get("markdown") or "")
@@ -8402,12 +8439,12 @@ def _task_source_status_text(item: dict[str, object]) -> str:
 
 def _analysis_task_run_row(run: dict[str, object]) -> list[object]:
     source_assets = [item for item in run.get("source_assets", []) or [] if isinstance(item, dict)]
-    asset_text = "、".join(str(item.get("asset_id") or item.get("asset_type") or "") for item in source_assets if item)
+    asset_text = f"{len(source_assets)} 个输入资产" if source_assets else "未记录"
     comparisons = [item for item in run.get("comparisons", []) or [] if isinstance(item, dict)]
     return [
         run.get("created_at", ""),
         run.get("task_type", ""),
-        run.get("run_id", ""),
+        "任务记录",
         asset_text,
         len(comparisons),
         task_run_status_label(str(run.get("status") or "")),
