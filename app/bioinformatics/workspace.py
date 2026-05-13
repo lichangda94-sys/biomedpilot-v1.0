@@ -33,6 +33,7 @@ try:
         BioinformaticsAnalysisTaskCenterWidget,
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
+        BioinformaticsDegConfigWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -92,6 +93,10 @@ if QWidget is not None:
             self._analysis_task_page = BioinformaticsAnalysisTaskCenterWidget(
                 on_continue=self.show_results_browser,
                 on_back=self.show_standardization,
+                on_configure_deg=self.show_deg_config,
+            )
+            self._deg_config_page = BioinformaticsDegConfigWidget(
+                on_back=self.show_analysis_tasks,
             )
             self._results_browser_page = BioinformaticsResultsBrowserWidget(
                 on_continue=self.show_report_viewer,
@@ -113,6 +118,7 @@ if QWidget is not None:
                 self._standardized_assets_page,
                 self._workflow_status_page,
                 self._analysis_task_page,
+                self._deg_config_page,
                 self._results_browser_page,
                 self._report_viewer_page,
                 self._settings_page,
@@ -165,6 +171,11 @@ if QWidget is not None:
             self._set_current_project(summary)
             self._analysis_task_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._analysis_task_page)
+
+        def show_deg_config(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._deg_config_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._deg_config_page)
 
         def show_results_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

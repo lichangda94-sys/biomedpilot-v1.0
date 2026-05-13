@@ -41,12 +41,15 @@ from PySide6.QtWidgets import (
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
 from app.bioinformatics.comparison_config import (
     build_geo_comparison_config_text,
+    comparison_sample_match_status,
     comparison_summary_text,
     evidence_field_label_zh,
+    expression_samples_from_recognition_report,
     group_label_zh,
     confirmed_group_assignments,
     load_confirmed_comparison_config,
 )
+from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
@@ -3561,8 +3564,16 @@ class BioinformaticsWorkflowStatusWidget(QWidget):
 class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
+    deg_config_requested = Signal(object)
 
-    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        on_continue: Callable[[Path], None] | None = None,
+        on_back: Callable[[], None] | None = None,
+        on_configure_deg: Callable[[Path], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsAnalysisTaskCenterPage")
@@ -3572,6 +3583,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self.continue_requested.connect(on_continue)
         if on_back is not None:
             self.back_requested.connect(on_back)
+        if on_configure_deg is not None:
+            self.deg_config_requested.connect(on_configure_deg)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -3600,7 +3613,12 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         return task
 
     def create_deg_task_draft(self) -> object | None:
-        return self.create_task("differential_expression")
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.deg_config_requested.emit(self._project_root)
+        self._status_label.setText("已打开差异分析配置页；当前只做配置和 preflight，不执行真实 DEG。")
+        return {"next_page": "deg_config", "project_root": str(self._project_root)}
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -3708,7 +3726,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions = QHBoxLayout()
         actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
-        actions.addWidget(_button("创建差异分析配置草稿", "primaryButton", self.create_deg_task_draft))
+        actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
         actions.addStretch(1)
         root.addLayout(actions)
 
@@ -3752,6 +3770,166 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._records.setPlainText(_json(payload))
+
+
+class BioinformaticsDegConfigWidget(QWidget):
+    back_requested = Signal()
+
+    def __init__(self, *, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self.setObjectName("bioinformaticsDegConfigPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_preflight_state()
+
+    def refresh_preflight_state(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            self._set_developer_details({})
+            return None
+        state = _deg_config_user_state(self._project_root)
+        manifest = load_deg_preflight_manifest(self._project_root)
+        self._render(state, manifest)
+        return {"state": state, "preflight_manifest": manifest}
+
+    def run_preflight_check(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            result = build_deg_preflight(
+                self._project_root,
+                method=self._method_input.text().strip() or "DEG executor not connected",
+                log2fc_threshold=float(self._log2fc_input.text().strip() or "1.0"),
+                p_value_threshold=float(self._p_value_input.text().strip() or "0.05"),
+                fdr_threshold=float(self._fdr_input.text().strip() or "0.05"),
+            )
+        except ValueError:
+            self._status_label.setText("阈值格式不正确，请输入数字。")
+            return None
+        self.refresh_preflight_state()
+        status_text = {
+            "passed": "preflight 已通过",
+            "warning": "preflight 已生成，但存在警告",
+            "blocked": "preflight 已生成，但存在阻塞",
+            "draft": "配置草稿",
+        }.get(result.status, "preflight 已生成")
+        self._status_label.setText(f"{status_text}；这是输入校验记录，不是 DEG 结果，也不会进入正式结果页。")
+        return result.manifest
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(
+            _header(
+                "DEG 配置与 preflight 输入校验",
+                "确认差异分析运行前输入是否齐备；本页仅配置、仅校验，未运行真实差异分析。",
+                back_text="返回分析任务中心",
+                back_signal=self.back_requested,
+            )
+        )
+        self._status_label = _status_label("请先完成数据标准化，并确认分组与比较设计。")
+        root.addWidget(self._status_label)
+
+        input_card, input_layout = _card("当前分析输入")
+        self._input_summary_label = _muted("表达矩阵、样本信息和分组状态待检查。")
+        self._input_summary_label.setObjectName("degInputSummary")
+        self._comparison_summary_label = _muted("比较设计：待确认。")
+        self._comparison_summary_label.setObjectName("degComparisonSummary")
+        self._boundary_label = _muted("边界：仅配置 / 仅校验 / 未运行真实差异分析。")
+        self._boundary_label.setObjectName("degConfigBoundary")
+        input_layout.addWidget(self._input_summary_label)
+        input_layout.addWidget(self._comparison_summary_label)
+        input_layout.addWidget(self._boundary_label)
+        root.addWidget(input_card)
+
+        config_card, config_layout = _card("DEG 配置草稿")
+        config_layout.addWidget(_muted("方法状态：DESeq2 / edgeR / limma 待接入；本阶段不连接真实执行器。"))
+        method_row = QHBoxLayout()
+        self._method_input = QLineEdit("DEG executor not connected")
+        self._method_input.setPlaceholderText("方法草稿，例如 DESeq2 待接入")
+        self._log2fc_input = QLineEdit("1.0")
+        self._log2fc_input.setPlaceholderText("log2FC")
+        self._p_value_input = QLineEdit("0.05")
+        self._p_value_input.setPlaceholderText("p value")
+        self._fdr_input = QLineEdit("0.05")
+        self._fdr_input.setPlaceholderText("FDR")
+        for editor in (self._method_input, self._log2fc_input, self._p_value_input, self._fdr_input):
+            method_row.addWidget(editor)
+        config_layout.addLayout(method_row)
+        root.addWidget(config_card)
+
+        actions = QHBoxLayout()
+        actions.addWidget(_button("生成 preflight 输入校验", "primaryButton", self.run_preflight_check))
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_preflight_state))
+        actions.addWidget(_button("返回分析任务中心", "secondaryButton", self.back_requested.emit))
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self._checks_table = _table(["检查项", "状态", "说明"])
+        self._checks_table.setObjectName("degPreflightCheckTable")
+        root.addWidget(self._checks_table)
+        _set_table_widths(self._checks_table, [180, 120, 520])
+        self._checks_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+
+        self._next_step_label = _muted("下一步建议：先返回标准化或确认分组。")
+        self._next_step_label.setObjectName("degNextStep")
+        root.addWidget(self._next_step_label)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(160)
+        self._developer_details.setObjectName("degPreflightDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        root.addWidget(developer_card)
+
+    def _render(self, state: dict[str, object], manifest: dict[str, object] | None) -> None:
+        self._input_summary_label.setText(str(state.get("input_summary_zh") or "当前输入状态待检查。"))
+        self._comparison_summary_label.setText(str(state.get("comparison_summary_zh") or "比较设计：待确认。"))
+        self._boundary_label.setText("配置草稿：仅配置 / 仅校验 / 未运行真实差异分析；preflight passed 不等于 real computed result。")
+        if manifest is None:
+            self._status_label.setText("DEG 配置页：尚未生成 preflight；当前是配置草稿。")
+            _fill_table(
+                self._checks_table,
+                [
+                    ["表达矩阵", str(state.get("expression_status_zh") or "待检查"), "需要 count matrix 或可用表达矩阵。"],
+                    ["样本信息", str(state.get("metadata_status_zh") or "待检查"), "需要样本信息或可由已确认分组构建。"],
+                    ["分组与比较设计", str(state.get("comparison_status_zh") or "待确认"), "需要 case/control 或用户确认比较。"],
+                    ["真实执行", "未运行", "本页不会运行真实 DEG，也不会生成结果图。"],
+                ],
+            )
+        else:
+            status = str(manifest.get("status_label_zh") or manifest.get("status") or "未知状态")
+            self._status_label.setText(f"DEG preflight 状态：{status}；该记录不是 DEG 结果。")
+            rows = []
+            for check in manifest.get("checks", []) or []:
+                if not isinstance(check, dict):
+                    continue
+                rows.append(
+                    [
+                        _deg_check_label(str(check.get("check_id") or "")),
+                        _deg_preflight_check_status_label(str(check.get("status") or "")),
+                        str(check.get("message_zh") or ""),
+                    ]
+                )
+            _fill_table(self._checks_table, rows)
+        self._next_step_label.setText(str(state.get("next_step_zh") or "下一步建议：返回分析任务中心。"))
+        self._set_developer_details({"deg_config_state": state, "preflight_manifest": manifest or {}})
+
+    def _set_developer_details(self, payload: dict[str, object]) -> None:
+        self._developer_details.setPlainText(_json(payload))
 
 
 class BioinformaticsResultsBrowserWidget(QWidget):
@@ -6920,6 +7098,118 @@ def _analysis_suggested_action(row: dict[str, object], group_preview: dict[str, 
     return "查看说明"
 
 
+def _deg_config_user_state(project_root: Path) -> dict[str, object]:
+    recognition = load_recognition_report(project_root) or {}
+    artifacts = load_standardization_artifacts(project_root)
+    registry = artifacts.get("registry")
+    assets = [item for item in (registry or {}).get("assets", []) or [] if isinstance(item, dict)] if isinstance(registry, dict) else []
+    expression_assets = [item for item in assets if str(item.get("asset_type") or "") in {"raw_count_matrix", "expression_matrix", "normalized_expression_matrix"}]
+    metadata_assets = [item for item in assets if str(item.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata"}]
+    imported_deg_assets = [item for item in assets if str(item.get("asset_type") or "") == "differential_result_table"]
+    imported_deg_detected = bool(imported_deg_assets or _deg_recognition_has_imported_result(recognition if isinstance(recognition, dict) else {}))
+    comparison_config = load_confirmed_comparison_config(project_root)
+    expression_samples = expression_samples_from_recognition_report(recognition if isinstance(recognition, dict) else {})
+    comparison_match = comparison_sample_match_status(comparison_config, expression_samples)
+    group_sizes = dict(getattr(comparison_config, "group_sizes", {}) or {}) if comparison_config is not None else {}
+    case_group = str(getattr(comparison_config, "case_group", "") or "")
+    control_group = str(getattr(comparison_config, "control_group", "") or "")
+    has_count = any(str(item.get("asset_type") or "") == "raw_count_matrix" for item in expression_assets)
+    has_normalized = any(str(item.get("asset_type") or "") == "normalized_expression_matrix" for item in expression_assets)
+    input_parts = [
+        f"表达矩阵 {len(expression_assets)} 个",
+        f"count matrix {'已找到' if has_count else '未确认'}",
+        f"normalized matrix {'已找到' if has_normalized else '未确认'}",
+        f"样本信息 {'已找到或可构建' if metadata_assets or comparison_config is not None else '未确认'}",
+    ]
+    if imported_deg_detected:
+        input_parts.append("检测到 imported DEG，但不作为重新计算输入")
+    if expression_samples:
+        input_parts.append(f"识别到样本列 {len(expression_samples)} 个")
+    expression_status = "已找到可校验表达矩阵" if expression_assets else "阻塞：缺 count matrix 或可用表达矩阵"
+    metadata_status = "已找到或可由分组构建" if metadata_assets or comparison_config is not None else "阻塞：缺 sample metadata"
+    if comparison_config is None:
+        comparison_status = "阻塞：缺分组设计"
+        comparison_summary = "比较设计：尚未确认 case/control 或用户比较。"
+        next_step = "下一步建议：返回标准化页，确认分组与比较设计。"
+    else:
+        match_label = _sample_match_user_label(str(comparison_match.get("sample_id_match_status") or "not_checked"))
+        comparison_status = f"已确认：{case_group or 'case'} vs {control_group or 'control'}"
+        comparison_summary = (
+            f"比较设计：{comparison_summary_text(comparison_config)}"
+            f"样本匹配：{match_label}；每组样本数：{_group_sizes_text(group_sizes) or '待确认'}。"
+        )
+        if not expression_assets:
+            next_step = "下一步建议：返回数据选择或标准化，补充可用表达矩阵。"
+        elif str(comparison_match.get("sample_id_match_status") or "") == "mismatch":
+            next_step = "下一步建议：修正样本名或重新确认分组与比较设计。"
+        else:
+            next_step = "下一步建议：生成 preflight 输入校验；通过后仍需后续真实执行器接入前审计。"
+    return {
+        "input_summary_zh": "当前分析输入：" + "；".join(input_parts) + "。",
+        "comparison_summary_zh": comparison_summary,
+        "expression_status_zh": expression_status,
+        "metadata_status_zh": metadata_status,
+        "comparison_status_zh": comparison_status,
+        "next_step_zh": next_step,
+        "developer_diagnostics": {
+            "standardization_artifacts": artifacts,
+            "expression_asset_count": len(expression_assets),
+            "metadata_asset_count": len(metadata_assets),
+            "imported_deg_detected": imported_deg_detected,
+            "comparison_match": comparison_match,
+        },
+    }
+
+
+def _deg_check_label(check_id: str) -> str:
+    return {
+        "expression_matrix": "表达矩阵",
+        "sample_columns": "样本列",
+        "sample_metadata": "样本信息",
+        "group_design": "分组设计",
+        "comparison_design": "比较设计",
+        "case_control_non_empty": "case/control 样本",
+        "sample_name_match": "样本名匹配",
+        "numeric_matrix": "数值矩阵",
+    }.get(check_id, check_id or "检查项")
+
+
+def _deg_preflight_check_status_label(status: str) -> str:
+    return {
+        "passed": "通过",
+        "blocked": "阻塞",
+        "warning": "警告",
+        "draft": "草稿",
+    }.get(status, status or "未知")
+
+
+def _sample_match_user_label(status: str) -> str:
+    return {
+        "matched": "完全匹配",
+        "partial": "部分匹配",
+        "mismatch": "不匹配",
+        "not_checked": "未完成校验",
+    }.get(status, status or "未完成校验")
+
+
+def _group_sizes_text(group_sizes: dict[str, object]) -> str:
+    return "、".join(f"{group} {count} 个" for group, count in group_sizes.items() if str(group))
+
+
+def _deg_recognition_has_imported_result(recognition: dict[str, object]) -> bool:
+    for item in recognition.get("files", []) or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("recognized_type") or "") == "differential_result_table":
+            return True
+        if any(str(role) == "differential_result_table" for role in item.get("recognized_roles", []) or []):
+            return True
+        for asset in item.get("detected_assets", []) or []:
+            if isinstance(asset, dict) and str(asset.get("asset_type") or asset.get("role") or "") == "differential_result_table":
+                return True
+    return False
+
+
 def _analysis_task_user_rows(
     tasks: list[dict[str, object]],
     project_root: Path | None,
@@ -7021,7 +7311,7 @@ def _analysis_task_next_action(
         if "expression_matrix" in missing:
             return "请返回数据选择或数据识别补充表达矩阵。"
         if task.get("can_run"):
-            return "进入差异分析配置；当前只创建配置草稿，未执行真实分析。"
+            return "进入差异分析配置与 preflight；当前只做配置和输入校验，未执行真实分析。"
         return "补齐缺失输入后再配置差异分析。"
     if task_type == "enrichment":
         return "需要差异分析结果或基因列表；不要生成假富集结果。"
@@ -7050,7 +7340,7 @@ def _analysis_task_input_summary(tasks: list[dict[str, object]]) -> str:
         return "核心输入：尚未生成分析任务中心。"
     missing = _analysis_task_missing_text(diff)
     if diff.get("can_run"):
-        return "核心输入：已具备表达矩阵、样本信息和分组设计，可创建差异分析配置草稿。"
+        return "核心输入：已具备表达矩阵、样本信息和分组设计，可进入 DEG 配置与 preflight。"
     return f"核心输入：差异表达分析仍缺少 {missing}。"
 
 
@@ -7081,7 +7371,7 @@ def _analysis_task_next_step(tasks: list[dict[str, object]], entries: list[dict[
     if imported_deg:
         return "下一步建议：进入结果浏览或补充原始表达矩阵与分组；导入 DEG 不等于本软件计算结果。"
     if isinstance(diff, dict) and diff.get("can_run"):
-        return "下一步建议：创建差异分析配置草稿；当前不会执行真实 DEG。"
+        return "下一步建议：进入差异分析配置与 preflight；当前不会执行真实 DEG。"
     if records:
         return "下一步建议：继续补充任务参数或返回标准化页确认输入。"
     return "下一步建议：返回数据标准化或确认分组与比较设计。"

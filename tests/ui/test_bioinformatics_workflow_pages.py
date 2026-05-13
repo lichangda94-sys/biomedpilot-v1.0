@@ -15,6 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
 
+    from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
     import app.bioinformatics.workflow_pages as workflow_pages
@@ -23,6 +24,7 @@ try:
         BioinformaticsAnalysisTaskCenterWidget,
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
+        BioinformaticsDegConfigWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -243,6 +245,7 @@ def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
         BioinformaticsStandardizedAssetsWidget(),
         BioinformaticsWorkflowStatusWidget(),
         BioinformaticsAnalysisTaskCenterWidget(),
+        BioinformaticsDegConfigWidget(),
         BioinformaticsResultsBrowserWidget(),
         BioinformaticsReportViewerWidget(),
         BioinformaticsSettingsAndLocalAIWidget(),
@@ -257,6 +260,7 @@ def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
         "bioinformaticsStandardizedAssetsPage",
         "bioinformaticsWorkflowStatusPage",
         "bioinformaticsAnalysisTaskCenterPage",
+        "bioinformaticsDegConfigPage",
         "bioinformaticsResultsBrowserPage",
         "bioinformaticsReportViewerPage",
         "bioinformaticsSettingsLocalAIPage",
@@ -1877,7 +1881,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     widget.refresh_project(project_summary)
 
     buttons = {button.text() for button in widget.findChildren(QPushButton)}
-    assert {"刷新任务状态", "确认分组与比较设计", "创建差异分析配置草稿", "继续：结果浏览"}.issubset(buttons)
+    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "继续：结果浏览"}.issubset(buttons)
     assert widget.findChild(QLabel, "analysisTaskInputSummary") is not None
     assert "核心输入" in widget.findChild(QLabel, "analysisTaskInputSummary").text()
     assert "下一步建议" in widget.findChild(QLabel, "analysisTaskNextStep").text()
@@ -1908,7 +1912,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
 
 
 def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, project_summary, tmp_path: Path) -> None:
-    imported_deg = tmp_path / "imported_deg_results.csv"
+    imported_deg = tmp_path / "diffexpr-results.csv"
     imported_deg.write_text("gene,logFC,P.Value,adj.P.Val\nTP53,1.2,0.01,0.05\n", encoding="utf-8")
     workflow_pages.register_acquisition(
         project_summary.project_root,
@@ -1933,6 +1937,110 @@ def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, 
     assert "已有导入结果" in table_text
     assert "导入表格中的已有差异分析结果，不是本软件重新计算" in table_text
     assert "真实 DEG" not in table_text
+
+
+def test_deg_config_page_userized_preflight_blocks_missing_group(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "counts_matrix.tsv"
+    expression_file.write_text("gene\tcase_1\tcontrol_1\nTP53\t10\t2\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="counts",
+        strategy="reference",
+        selected_paths=[expression_file],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    widget = BioinformaticsDegConfigWidget()
+    widget.refresh_project(project_summary)
+
+    assert "DEG 配置页" in widget.status_message()
+    assert "仅配置 / 仅校验 / 未运行真实差异分析" in widget.findChild(QLabel, "degConfigBoundary").text()
+    assert "raw path" not in widget.findChild(QLabel, "degInputSummary").text().lower()
+    assert "manifest" not in widget.findChild(QLabel, "degInputSummary").text().lower()
+    buttons = {button.text() for button in widget.findChildren(QPushButton)}
+    assert {"生成 preflight 输入校验", "刷新状态", "返回分析任务中心"}.issubset(buttons)
+
+    manifest = widget.run_preflight_check()
+
+    assert manifest is not None
+    assert manifest["status"] == "blocked"
+    assert "输入校验记录，不是 DEG 结果" in widget.status_message()
+    table = widget.findChild(QTableWidget, "degPreflightCheckTable")
+    assert table is not None
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "分组设计" in table_text
+    assert "阻塞" in table_text
+    assert "真实差异分析" not in table_text
+    diagnostics = widget.findChild(QPlainTextEdit, "degPreflightDeveloperDiagnostics")
+    assert diagnostics is not None
+    assert not diagnostics.isVisible()
+    assert "preflight_manifest" in diagnostics.toPlainText()
+    assert str(expression_file) in diagnostics.toPlainText()
+
+
+def test_deg_config_preflight_passed_is_not_real_analysis_and_imported_deg_is_excluded(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "counts_matrix.tsv"
+    expression_file.write_text(
+        "gene\tcase_1\tcase_2\tcontrol_1\tcontrol_2\n"
+        "TP53\t10\t12\t2\t3\n"
+        "EGFR\t4\t5\t9\t10\n",
+        encoding="utf-8",
+    )
+    imported_deg = tmp_path / "diffexpr-results.csv"
+    imported_deg.write_text("gene,logFC,P.Value,adj.P.Val\nTP53,1.2,0.01,0.05\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="counts",
+        strategy="reference",
+        selected_paths=[expression_file, imported_deg],
+    )
+    config_path = comparison_config_path(project_summary.project_root)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        build_comparison_config_text(
+            comparison_id="case_vs_control",
+            group_column="group",
+            case_group="case",
+            control_group="control",
+            assignments=(
+                ComparisonSampleAssignment("case_1", "case"),
+                ComparisonSampleAssignment("case_2", "case"),
+                ComparisonSampleAssignment("control_1", "control"),
+                ComparisonSampleAssignment("control_2", "control"),
+            ),
+        ),
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    widget = BioinformaticsDegConfigWidget()
+    widget.refresh_project(project_summary)
+    assert "imported DEG" in widget.findChild(QLabel, "degInputSummary").text()
+    manifest = widget.run_preflight_check()
+
+    assert manifest is not None
+    assert manifest["status"] == "passed"
+    assert "不是 DEG 结果" in widget.status_message()
+    assert not (project_summary.project_root / "results" / "tables").exists()
+    table = widget.findChild(QTableWidget, "degPreflightCheckTable")
+    assert table is not None
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "通过" in table_text
+    assert "real computed result" not in table_text
 
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
@@ -2520,6 +2628,8 @@ def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> Non
     assert widget.current_page_object_name() == "bioinformaticsWorkflowStatusPage"
     widget.show_analysis_tasks(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsAnalysisTaskCenterPage"
+    widget.show_deg_config(project_summary)
+    assert widget.current_page_object_name() == "bioinformaticsDegConfigPage"
     widget.show_results_browser(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsResultsBrowserPage"
     widget.show_report_viewer(project_summary)
