@@ -161,6 +161,7 @@ class GeoDatasetDetailPanel(QFrame):
     save_requested = Signal(object)
     ignore_requested = Signal(object)
     remove_requested = Signal(object)
+    add_to_download_list_requested = Signal(object)
     download_assets_requested = Signal(object)
     translate_requested = Signal(object)
     brief_requested = Signal(object)
@@ -180,7 +181,7 @@ class GeoDatasetDetailPanel(QFrame):
         self._title.setObjectName("bioProjectCardTitle")
         self._title.setWordWrap(True)
         layout.addWidget(self._title)
-        self._saved_status = _status_label("尚未加入待处理数据集。")
+        self._saved_status = _status_label("尚未加入下载列表 / 待处理数据来源。")
         layout.addWidget(self._saved_status)
 
         layout.addWidget(_muted("基础信息"))
@@ -226,13 +227,15 @@ class GeoDatasetDetailPanel(QFrame):
         layout.addWidget(self._asset_text)
 
         decision_actions = QHBoxLayout()
-        self._save_button = _button("添加到项目", "primaryButton", lambda: self._emit_save())
+        self._save_button = _button("保存", "primaryButton", lambda: self._emit_save())
+        self._download_list_button = _button("加入下载列表", "secondaryButton", lambda: self._emit_add_to_download_list())
         self._download_assets_button = _button("下载补充文件", "primaryButton", lambda: self._emit_download_assets())
         self._remove_button = _button("从项目列表移除", "secondaryButton", lambda: self._emit_remove())
-        self._ignore_button = _button("忽略该数据集", "secondaryButton", lambda: self._emit_ignore())
+        self._ignore_button = _button("忽略", "secondaryButton", lambda: self._emit_ignore())
         self._download_assets_button.setVisible(False)
         self._remove_button.setVisible(False)
         decision_actions.addWidget(self._save_button)
+        decision_actions.addWidget(self._download_list_button)
         decision_actions.addWidget(self._download_assets_button)
         decision_actions.addWidget(self._remove_button)
         decision_actions.addWidget(self._ignore_button)
@@ -268,9 +271,11 @@ class GeoDatasetDetailPanel(QFrame):
             self._translation_text.setPlainText("尚未生成中文翻译。")
 
     def set_saved(self, saved: bool) -> None:
-        self._saved_status.setText("已在待处理数据集中。" if saved else "尚未加入待处理数据集。")
-        self._save_button.setText("已添加" if saved else "添加到项目")
+        self._saved_status.setText("已在下载列表 / 待处理数据来源中。" if saved else "尚未加入下载列表 / 待处理数据来源。")
+        self._save_button.setText("已保存" if saved else "保存")
         self._save_button.setEnabled(not saved)
+        self._download_list_button.setEnabled(not saved)
+        self._download_list_button.setVisible(not saved)
         self._remove_button.setVisible(saved)
 
     def set_pending_assets(self, pending: bool) -> None:
@@ -286,6 +291,10 @@ class GeoDatasetDetailPanel(QFrame):
     def _emit_save(self) -> None:
         if self._candidate is not None:
             self.save_requested.emit(self._candidate)
+
+    def _emit_add_to_download_list(self) -> None:
+        if self._candidate is not None:
+            self.add_to_download_list_requested.emit(self._candidate)
 
     def _emit_ignore(self) -> None:
         if self._candidate is not None:
@@ -791,6 +800,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(self._gse_search_details)
         self._gse_geo_detail_panel = GeoDatasetDetailPanel()
         self._gse_geo_detail_panel.save_requested.connect(self._save_gse_geo_candidate)
+        self._gse_geo_detail_panel.add_to_download_list_requested.connect(self._save_gse_geo_candidate)
         self._gse_geo_detail_panel.ignore_requested.connect(self._ignore_gse_geo_candidate)
         self._gse_geo_detail_panel.remove_requested.connect(self._remove_gse_geo_candidate)
         self._gse_geo_detail_panel.translate_requested.connect(self._generate_gse_geo_summary)
@@ -1345,6 +1355,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._candidates: dict[tuple[str, str], UnifiedDatasetCandidate] = {}
         self._candidate_register_buttons: dict[tuple[str, str], QPushButton] = {}
         self._candidate_download_buttons: dict[tuple[str, str], QPushButton] = {}
+        self._candidate_ignore_buttons: dict[tuple[str, str], QPushButton] = {}
+        self._ignored_candidates: set[tuple[str, str]] = set()
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
         self._selected_candidate: UnifiedDatasetCandidate | None = None
         self._source_detail_titles: dict[str, QLabel] = {}
@@ -1757,25 +1769,62 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self, max_width=1080)
-        root.addWidget(_header("中文研究主题检索", "输入中文研究方向，选择 GEO、TCGA/GDC、GTEx 数据源后进入数据识别。", back_text="返回数据来源", back_signal=self.back_requested))
+        root.addWidget(_header("中文研究主题检索", "生成 GEO / TCGA / GTEx 数据检索草稿，用户确认后再进入候选数据选择。", back_text="返回数据来源", back_signal=self.back_requested))
         self._project_label = _status_label("请先创建或打开生信分析项目。")
         root.addWidget(self._project_label)
-        input_card, input_layout = _card("研究主题输入")
+        input_card, input_layout = _card("中文研究主题输入")
+        input_layout.addWidget(_muted("用于生成 GEO / TCGA / GTEx 数据检索草稿，确认草稿后再选择候选数据来源。"))
         self._query_input = QLineEdit()
-        self._query_input.setPlaceholderText("例如：甲状腺癌、乳腺癌转移、肺癌免疫治疗耐药")
+        self._query_input.setPlaceholderText("例如：甲状腺癌 脂质代谢 免疫浸润")
         self._query_input.setMinimumHeight(44)
         input_layout.addWidget(self._query_input)
         action_row = QHBoxLayout()
         action_row.addWidget(_button("生成草稿", "primaryButton", self.generate_terms))
         action_row.addStretch(1)
         input_layout.addLayout(action_row)
-        self._status_label = _status_label("未生成检索词")
+        self._status_label = _status_label("未生成 query draft")
         input_layout.addWidget(self._status_label)
         self._topic_summary_label = _status_label("主题识别：尚未开始。")
         input_layout.addWidget(self._topic_summary_label)
         root.addWidget(input_card)
 
-        result_card, result_layout = _card("数据库区")
+        draft_card, draft_layout = _card("Query draft（草稿 / 待确认）")
+        draft_card.setObjectName("chineseQueryDraftOverviewCard")
+        self._draft_overview_status = _status_label("草稿状态：尚未生成")
+        self._draft_overview_geo = _muted("GEO：尚未生成草稿")
+        self._draft_overview_tcga = _muted("TCGA：尚未生成草稿")
+        self._draft_overview_gtex = _muted("GTEx：尚未生成草稿")
+        draft_layout.addWidget(self._draft_overview_status)
+        draft_layout.addWidget(self._draft_overview_geo)
+        draft_layout.addWidget(self._draft_overview_tcga)
+        draft_layout.addWidget(self._draft_overview_gtex)
+        draft_actions = QHBoxLayout()
+        draft_actions.addWidget(_button("展开分区草稿", "secondaryButton", self._toggle_full_drafts))
+        draft_actions.addWidget(_button("确认草稿", "secondaryButton", lambda: self.confirm_query_draft()))
+        draft_actions.addStretch(1)
+        draft_layout.addLayout(draft_actions)
+        root.addWidget(draft_card)
+
+        status_card, status_layout = _card("检索状态")
+        status_card.setObjectName("chineseSearchStatusSummaryCard")
+        self._chinese_draft_status_label = _status_label("Query draft：未生成")
+        self._chinese_partition_status_label = _status_label("分区候选：GEO 0 个，TCGA 0 个，GTEx 0 个")
+        self._chinese_saved_count_label = _status_label("已保存候选：0 个")
+        self._chinese_download_count_label = _status_label("加入下载列表：0 个")
+        self._chinese_next_step_label = _muted("下一步：先输入中文研究主题并生成草稿。")
+        status_grid = QGridLayout()
+        status_grid.setContentsMargins(0, 0, 0, 0)
+        status_grid.setHorizontalSpacing(SPACING["md"])
+        status_grid.setVerticalSpacing(SPACING["xs"])
+        status_grid.addWidget(self._chinese_draft_status_label, 0, 0)
+        status_grid.addWidget(self._chinese_partition_status_label, 0, 1)
+        status_grid.addWidget(self._chinese_saved_count_label, 1, 0)
+        status_grid.addWidget(self._chinese_download_count_label, 1, 1)
+        status_layout.addLayout(status_grid)
+        status_layout.addWidget(self._chinese_next_step_label)
+        root.addWidget(status_card)
+
+        result_card, result_layout = _card("数据库分区结果")
         self._tabs = QTabWidget()
         self._draft_detail_widgets: list[QWidget] = []
         self._geo_tab_page = self._build_database_tab(
@@ -1822,11 +1871,11 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         result_layout.addWidget(self._tabs)
         root.addWidget(result_card)
 
-        log_card, log_layout = _card("高级信息")
+        log_card, log_layout = _card("开发者诊断")
         self._mapping_log = _text_preview(180)
         self._mapping_log.setObjectName("chineseMappingLog")
         self._mapping_log.setVisible(False)
-        log_layout.addWidget(_button("查看映射日志", "secondaryButton", lambda: _toggle_details(self._mapping_log)), alignment=Qt.AlignLeft)
+        log_layout.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._mapping_log)), alignment=Qt.AlignLeft)
         log_layout.addWidget(self._mapping_log)
         root.addWidget(log_card)
 
@@ -1919,12 +1968,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         detail_title = _status_label("候选详情")
         detail_text = _text_preview(140)
         detail_text.setObjectName(f"{source_key}CandidateDetailText")
-        detail_text.setPlainText("点击候选结果的“详情”查看标题、中文简介、匹配原因、资产状态和下载建议。")
+        detail_text.setPlainText("点击候选结果的“查看详情”查看标题、摘要、匹配原因、资产状态和下载建议。")
         detail_layout.addWidget(detail_title)
         detail_layout.addWidget(detail_text)
         detail_actions = QHBoxLayout()
-        select_button = _button("选择", "secondaryButton", self._select_current_candidate)
-        download_button = _button("下载并添加" if source_key == "geo" else "创建下载任务", "secondaryButton", self._download_current_candidate)
+        select_button = _button("保存", "secondaryButton", self._select_current_candidate)
+        download_button = _button("加入下载列表", "secondaryButton", self._download_current_candidate)
         brief_button = _button("生成中文简介", "secondaryButton", self._brief_current_candidate)
         select_button.setEnabled(False)
         download_button.setEnabled(False)
@@ -1942,6 +1991,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_dataset_detail_panel.save_requested.connect(self._save_geo_candidate_from_detail)
             self._geo_dataset_detail_panel.ignore_requested.connect(self._ignore_geo_candidate_from_detail)
             self._geo_dataset_detail_panel.remove_requested.connect(self._remove_geo_candidate_from_detail)
+            self._geo_dataset_detail_panel.add_to_download_list_requested.connect(lambda candidate: self.generate_candidate_download_task(candidate.source, candidate.accession_or_project))
             self._geo_dataset_detail_panel.download_assets_requested.connect(lambda candidate: self.download_geo_supplementary_assets(candidate.accession_or_project))
             self._geo_dataset_detail_panel.translate_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
             self._geo_dataset_detail_panel.brief_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
@@ -2047,19 +2097,59 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._candidates = {(candidate.source, candidate.accession_or_project): candidate for candidate in result.candidates}
         self._candidate_register_buttons.clear()
         self._candidate_download_buttons.clear()
+        self._candidate_ignore_buttons.clear()
         self._candidate_status_labels.clear()
         self._render_candidate_tables(result, searched=searched)
         self._refresh_candidate_registration_buttons()
         self._mapping_log.setPlainText(_mapping_log_text(result))
+        self._refresh_query_draft_overview(result)
+        self._refresh_chinese_search_status_summary()
 
     def _render_candidate_tables(self, result: BioinformaticsSearchCenterResult, *, searched: bool) -> None:
         grouped: dict[str, list[UnifiedDatasetCandidate]] = {"geo": [], "tcga_gdc": [], "gtex": []}
         for candidate in result.candidates:
-            if candidate.source in grouped:
+            if candidate.source in grouped and (candidate.source, candidate.accession_or_project) not in self._ignored_candidates:
                 grouped[candidate.source].append(candidate)
         self._fill_geo_candidates(grouped["geo"], result.source_results.get("geo"), searched=searched)
         self._fill_tcga_candidates(grouped["tcga_gdc"])
         self._fill_gtex_candidates(grouped["gtex"])
+        self._refresh_chinese_search_status_summary()
+
+    def _refresh_query_draft_overview(self, result: BioinformaticsSearchCenterResult) -> None:
+        query = result.query
+        self._draft_overview_status.setText("草稿状态：已生成，待用户确认")
+        self._draft_overview_geo.setText("GEO：" + ("；".join(query.geo_query_candidates) if query.geo_query_candidates else "未生成草稿"))
+        self._draft_overview_tcga.setText("TCGA：" + (", ".join(query.tcga_project_ids) if query.tcga_project_ids else "未生成草稿"))
+        self._draft_overview_gtex.setText("GTEx：" + (", ".join(query.gtex_tissues) if query.gtex_tissues else "未生成草稿"))
+        self._chinese_draft_status_label.setText("Query draft：已生成，待确认")
+
+    def _refresh_chinese_search_status_summary(self) -> None:
+        visible_candidates = [
+            candidate
+            for key, candidate in self._candidates.items()
+            if key not in self._ignored_candidates
+        ]
+        candidate_counts = {
+            "geo": sum(1 for candidate in visible_candidates if candidate.source == "geo"),
+            "tcga_gdc": sum(1 for candidate in visible_candidates if candidate.source == "tcga_gdc"),
+            "gtex": sum(1 for candidate in visible_candidates if candidate.source == "gtex"),
+        }
+        rows = self._registered_chinese_rows()
+        ready_count = _ready_chinese_source_count(self._project_root)
+        download_list_count = _download_list_row_count(self._project_root, rows)
+        self._chinese_partition_status_label.setText(
+            f"分区候选：GEO {candidate_counts['geo']} 个，TCGA {candidate_counts['tcga_gdc']} 个，GTEx {candidate_counts['gtex']} 个"
+        )
+        self._chinese_saved_count_label.setText(f"已保存候选：{len(rows)} 个")
+        self._chinese_download_count_label.setText(f"加入下载列表：{download_list_count} 个")
+        if self._last_result is None:
+            self._chinese_next_step_label.setText("下一步：先输入中文研究主题并生成草稿。")
+        elif not rows:
+            self._chinese_next_step_label.setText("下一步：查看候选详情，保存或加入下载列表。")
+        elif ready_count:
+            self._chinese_next_step_label.setText("下一步：可以进入数据识别；仍可继续补充候选数据来源。")
+        else:
+            self._chinese_next_step_label.setText("下一步：完成下载或确认数据来源后进入数据识别。")
 
     def _fill_geo_candidates(self, candidates: list[UnifiedDatasetCandidate], source_result: object | None = None, *, searched: bool = False) -> None:
         self._geo_empty_label.setVisible(not candidates)
@@ -2082,7 +2172,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             ],
         )
         self._install_candidate_action_buttons(self._geo_table, candidates)
-        _set_table_widths(self._geo_table, [140, 92, 300, 70, 160, 72, 150])
+        _set_table_widths(self._geo_table, [300, 92, 300, 70, 160, 72, 150])
 
     def _fill_tcga_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
         self._tcga_empty_label.setVisible(not candidates)
@@ -2104,6 +2194,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._candidate_register_buttons.pop(key, None)
         for key in [key for key in self._candidate_download_buttons if key[0] == source_key]:
             self._candidate_download_buttons.pop(key, None)
+        for key in [key for key in self._candidate_ignore_buttons if key[0] == source_key]:
+            self._candidate_ignore_buttons.pop(key, None)
         for key in [key for key in self._candidate_status_labels if key[0] == source_key]:
             self._candidate_status_labels.pop(key, None)
         cards_widget.setVisible(bool(candidates))
@@ -2142,18 +2234,21 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         layout.addLayout(grid)
 
         actions = QHBoxLayout()
-        register_text = "选择项目" if candidate.source == "tcga_gdc" else "选择组织"
-        register_button = QPushButton(register_text)
+        register_button = QPushButton("保存")
         register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
         register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
-        detail_button = QPushButton("查看说明")
+        detail_button = QPushButton("查看详情")
         detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
         detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-        download_button = QPushButton("创建下载清单")
+        ignore_button = QPushButton("忽略")
+        ignore_button.setObjectName(f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+        ignore_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.ignore_candidate(s, a))
+        download_button = QPushButton("加入下载列表")
         download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
         download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
         actions.addWidget(register_button)
         actions.addWidget(detail_button)
+        actions.addWidget(ignore_button)
         actions.addWidget(download_button)
         actions.addStretch(1)
         layout.addLayout(actions)
@@ -2161,6 +2256,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         key = (candidate.source, candidate.accession_or_project)
         self._candidate_register_buttons[key] = register_button
         self._candidate_download_buttons[key] = download_button
+        self._candidate_ignore_buttons[key] = ignore_button
         self._candidate_status_labels[key] = status_label
         return frame
 
@@ -2203,6 +2299,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._continue_button.setEnabled(can_continue)
         self._continue_button.setText("下一步：进入数据识别")
         self._refresh_geo_download_list()
+        self._refresh_chinese_search_status_summary()
 
     def _refresh_geo_download_list(self) -> None:
         panel = getattr(self, "_geo_download_list_panel", None)
@@ -2229,7 +2326,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
         action_col = _table_column_index(table, "操作")
-        table.setColumnWidth(action_col, 140)
+        table.setColumnWidth(action_col, 300)
         for row_index, candidate in enumerate(candidates):
             key = (candidate.source, candidate.accession_or_project)
             action_widget = QWidget()
@@ -2238,15 +2335,24 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             detail_button = QPushButton("查看详情")
             detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
             detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-            if candidate.source != "geo":
-                register_button = QPushButton("选择")
-                register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
-                register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
-                layout.addWidget(register_button)
-                self._candidate_register_buttons[key] = register_button
             layout.addWidget(detail_button)
+            register_button = QPushButton("保存")
+            register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
+            ignore_button = QPushButton("忽略")
+            ignore_button.setObjectName(f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            ignore_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.ignore_candidate(s, a))
+            download_button = QPushButton("加入下载列表")
+            download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
+            download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
+            layout.addWidget(register_button)
+            layout.addWidget(ignore_button)
+            layout.addWidget(download_button)
             layout.addStretch(1)
             table.setCellWidget(row_index, action_col, action_widget)
+            self._candidate_register_buttons[key] = register_button
+            self._candidate_ignore_buttons[key] = ignore_button
+            self._candidate_download_buttons[key] = download_button
         self._refresh_candidate_registration_buttons()
 
     def _show_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
@@ -2265,7 +2371,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._detail_select_button.setEnabled(not self._is_candidate_registered(candidate.source, candidate.accession_or_project))
         self._detail_download_button.setEnabled(True)
         self._detail_download_button.setVisible(candidate.source == "geo" or candidate.source in {"tcga_gdc", "gtex"})
-        self._detail_download_button.setText("下载并添加" if candidate.source == "geo" else "创建下载任务")
+        self._detail_download_button.setText("加入下载列表")
         self._detail_brief_button.setVisible(candidate.source == "geo")
         self._detail_brief_button.setEnabled(candidate.source == "geo")
         self._set_status(f"正在查看：{candidate.accession_or_project}")
@@ -2296,8 +2402,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._refresh_geo_download_list()
 
     def _ignore_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
-        self._geo_dataset_detail_panel.setVisible(False)
-        self._set_status(f"已忽略：{candidate.accession_or_project}")
+        self.ignore_candidate(candidate.source, candidate.accession_or_project)
 
     def _remove_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
         self._remove_geo_accession_from_download_list(candidate.accession_or_project)
@@ -2312,6 +2417,28 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status(f"已从待处理数据集中移除：{accession}")
         else:
             self._set_status(f"待处理数据集中未找到：{accession}", error=True)
+
+    def ignore_candidate(self, source: str, accession_or_project: str) -> bool:
+        key = (source, accession_or_project)
+        candidate = self._candidates.get(key)
+        if candidate is None:
+            self._set_status("候选结果不存在。", error=True)
+            return False
+        self._ignored_candidates.add(key)
+        if self._selected_candidate is not None and (self._selected_candidate.source, self._selected_candidate.accession_or_project) == key:
+            self._selected_candidate = None
+        if source == "geo":
+            self._geo_dataset_detail_panel.setVisible(False)
+        else:
+            bucket = _candidate_source_bucket(source)
+            self._source_detail_titles[bucket].setText("候选详情")
+            self._source_detail_texts[bucket].setPlainText("已忽略该候选；不会删除真实数据，也不会写入项目数据来源。")
+            self._source_detail_select_buttons[bucket].setEnabled(False)
+            self._source_detail_download_buttons[bucket].setEnabled(False)
+        if self._last_result is not None:
+            self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
+        self._set_status(f"已忽略：{accession_or_project}。仅从当前候选展示中移除。")
+        return True
 
     def _select_current_candidate(self) -> None:
         if self._selected_candidate is None:
@@ -2339,13 +2466,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         for (source, accession), button in self._candidate_register_buttons.items():
             registered = self._is_candidate_registered(source, accession)
             if registered:
-                button.setText("已选择")
-            elif source == "tcga_gdc":
-                button.setText("选择项目")
-            elif source == "gtex":
-                button.setText("选择组织")
+                button.setText("已保存")
             else:
-                button.setText("选择")
+                button.setText("保存")
             button.setEnabled(not registered)
         for (source, accession), button in self._candidate_download_buttons.items():
             ready = self._is_candidate_ready_for_recognition(source, accession)
@@ -2357,7 +2480,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     button.setEnabled(True)
                 else:
                     status_text = _candidate_record_status_text(self._project_root, source, accession)
-                    button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "下载并添加"))
+                    button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "加入下载列表"))
                     button.setEnabled(not ready)
             else:
                 manifest_created = _candidate_has_download_manifest(self._project_root, source, accession)
@@ -2365,7 +2488,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     button.setText("下载清单已创建")
                     button.setEnabled(False)
                 else:
-                    button.setText("创建下载清单")
+                    button.setText("加入下载列表")
                     button.setEnabled(True)
 
     def _refresh_candidate_status_cells(self) -> None:
@@ -3984,6 +4107,7 @@ def _clear_layout(layout: QVBoxLayout) -> None:
         item = layout.takeAt(0)
         widget = item.widget()
         if widget is not None:
+            widget.setParent(None)
             widget.deleteLater()
 
 
@@ -4937,6 +5061,15 @@ def _ready_chinese_source_count(project_root: Path | None) -> int:
         key = (str(metadata.get("source") or payload.get("source_type") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
         ready_keys.add(key)
     return len(ready_keys)
+
+
+def _download_list_row_count(project_root: Path | None, rows: Iterable[RegisteredSourceRow]) -> int:
+    count = 0
+    for row in rows:
+        status = _current_registered_row_status(project_root, row)
+        if row.strategy == "plan_only" or "下载" in status or "清单" in status or "待补充" in status:
+            count += 1
+    return count
 
 
 def _candidate_record_status_text(project_root: Path | None, source: str, accession_or_project: str) -> str:

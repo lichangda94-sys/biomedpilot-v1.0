@@ -448,7 +448,7 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert isinstance(widget._gse_geo_detail_panel, workflow_pages.GeoDatasetDetailPanel)
     assert not widget._gse_geo_detail_panel.isHidden()
     assert "GSE60024" in widget._gse_geo_detail_panel._title.text()
-    assert widget._gse_geo_detail_panel._save_button.text() == "添加到项目"
+    assert widget._gse_geo_detail_panel._save_button.text() == "保存"
     summary = widget.register_gse_dataset()
 
     text = widget.source_summary_text("geo_gse")
@@ -738,6 +738,14 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert widget.objectName() == "bioinformaticsChineseDatasetSearchPage"
     assert not widget._continue_button.isEnabled()
     assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 0 个，GTEx 0 个；0 个可进入识别。"
+    assert widget._query_input.placeholderText() == "例如：甲状腺癌 脂质代谢 免疫浸润"
+    assert widget.findChild(QFrame, "chineseQueryDraftOverviewCard") is not None
+    assert widget.findChild(QFrame, "chineseSearchStatusSummaryCard") is not None
+    assert widget._draft_overview_status.text() == "草稿状态：尚未生成"
+    assert widget._chinese_draft_status_label.text() == "Query draft：未生成"
+    assert widget._chinese_partition_status_label.text() == "分区候选：GEO 0 个，TCGA 0 个，GTEx 0 个"
+    assert widget._chinese_saved_count_label.text() == "已保存候选：0 个"
+    assert widget._chinese_download_count_label.text() == "加入下载列表：0 个"
     assert widget._geo_query_box.toPlainText() == "暂无 GEO/GSE 检索草稿"
     assert widget._geo_query_box.isHidden()
     assert widget._tcga_query_box.toPlainText() == "暂无 TCGA/GDC 项目草稿"
@@ -747,7 +755,8 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert not widget._gtex_empty_label.isHidden()
     assert widget._mapping_log.isHidden()
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
-    assert button_texts.count("确认草稿") == 3
+    assert button_texts.count("确认草稿") == 4
+    assert "展开分区草稿" in button_texts
     assert "在线检索 GEO/GSE" in button_texts
     assert "在线检查 TCGA/GDC" in button_texts
     assert "在线检查 GTEx" in button_texts
@@ -788,9 +797,10 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "RNA-seq 表达、临床信息、突变数据" in tcga_card
     assert "适用说明：" in tcga_card
     assert "适合肿瘤样本分析" in tcga_card
-    assert "选择项目" in tcga_card
-    assert "查看说明" in tcga_card
-    assert "创建下载清单" in tcga_card
+    assert "保存" in tcga_card
+    assert "查看详情" in tcga_card
+    assert "忽略" in tcga_card
+    assert "加入下载列表" in tcga_card
     assert "待创建下载任务" in tcga_card
     assert "组织名称：" in gtex_card
     assert "Thyroid" in gtex_card
@@ -802,10 +812,18 @@ def test_chinese_dataset_search_page_empty_state_and_terms(qt_app) -> None:
     assert "正常组织 RNA 表达" in gtex_card
     assert "适用说明：" in gtex_card
     assert "GTEx 是正常组织表达参考，不是肿瘤样本数据库" in gtex_card
-    assert "选择组织" in gtex_card
-    assert "查看说明" in gtex_card
-    assert "创建下载清单" in gtex_card
+    assert "保存" in gtex_card
+    assert "查看详情" in gtex_card
+    assert "忽略" in gtex_card
+    assert "加入下载列表" in gtex_card
     assert "待创建下载任务" in gtex_card
+    assert widget._draft_overview_status.text() == "草稿状态：已生成，待用户确认"
+    assert "thyroid cancer" in widget._draft_overview_geo.text()
+    assert "TCGA-THCA" in widget._draft_overview_tcga.text()
+    assert "Thyroid" in widget._draft_overview_gtex.text()
+    assert widget._chinese_draft_status_label.text() == "Query draft：已生成，待确认"
+    assert widget._chinese_partition_status_label.text() == "分区候选：GEO 0 个，TCGA 1 个，GTEx 1 个"
+    assert widget._chinese_next_step_label.text() == "下一步：查看候选详情，保存或加入下载列表。"
     assert widget._mapping_log.isHidden()
     visible_text = " ".join(
         [label.text() for label in widget.findChildren(QLabel)]
@@ -965,18 +983,35 @@ def test_chinese_dataset_search_geo_candidate_has_registration_button(qt_app) ->
 
     assert not widget._geo_table.isHidden()
     assert widget._geo_table.horizontalHeaderItem(0).text() == "操作"
-    assert widget._geo_table.columnWidth(0) >= 120
+    assert widget._geo_table.columnWidth(0) >= 250
     buttons = widget._geo_table.cellWidget(0, 0).findChildren(QPushButton)
-    assert [button.text() for button in buttons] == ["查看详情"]
+    assert [button.text() for button in buttons] == ["查看详情", "保存", "忽略", "加入下载列表"]
     buttons[0].click()
     assert not widget._geo_dataset_detail_panel.isHidden()
     assert "GSE33630" in widget._geo_dataset_detail_panel._title.text()
-    assert widget._geo_dataset_detail_panel._save_button.text() == "添加到项目"
+    assert widget._geo_dataset_detail_panel._save_button.text() == "保存"
+    assert widget._geo_dataset_detail_panel._download_list_button.text() == "加入下载列表"
+    assert widget._geo_dataset_detail_panel._ignore_button.text() == "忽略"
     assert widget._geo_dataset_detail_panel._translation_text.toPlainText() == "尚未生成中文翻译。"
     profile_text = widget._geo_dataset_detail_panel._profile_text.toPlainText()
     assert "样本结构预览" in profile_text
     assert "候选比较组" in profile_text
     assert "需用户确认" in profile_text
+
+
+def test_chinese_dataset_search_ignore_hides_candidate_without_project_write(qt_app, project_summary) -> None:
+    widget = BioinformaticsChineseDatasetSearchWidget()
+    widget.refresh_project(project_summary)
+    widget.set_query_text("甲状腺癌")
+    widget.generate_terms()
+
+    assert "TCGA-THCA" in _source_card_text(widget, "tcga_gdc")
+    assert widget.ignore_candidate("tcga_gdc", "TCGA-THCA") is True
+
+    assert "TCGA-THCA" not in _source_card_text(widget, "tcga_gdc")
+    assert widget.status_message() == "已忽略：TCGA-THCA。仅从当前候选展示中移除。"
+    records = [path for path in (project_summary.project_root / "acquisition" / "records").glob("*.json") if path.name != "latest_acquisition_record.json"]
+    assert records == []
 
 
 def test_register_geo_requires_open_project(qt_app) -> None:
@@ -1315,7 +1350,7 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert "GDC 下载任务清单" in widget.status_message()
     assert "下载清单已创建" in _source_card_text(widget, "tcga_gdc")
     registered_button = widget.findChild(QPushButton, "registerCandidateButton_tcga_gdc_TCGA-THCA")
-    assert registered_button.text() == "已选择"
+    assert registered_button.text() == "已保存"
     assert not registered_button.isEnabled()
     duplicate = widget.register_candidate("tcga_gdc", "TCGA-THCA")
     assert duplicate is None
