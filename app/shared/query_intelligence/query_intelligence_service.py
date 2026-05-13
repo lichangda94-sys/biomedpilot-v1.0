@@ -72,7 +72,9 @@ def build_search_translation_draft(
             [*term_lookup.disease_terms_en, *term_lookup.synonyms_en, *registry["main_concepts_en"]]
         )
         registry["modifier_terms_en"] = _unique([*registry["modifier_terms_en"], *term_lookup.modifier_terms_en])
-        registry["data_type_terms_en"] = _unique([*term_lookup.data_modality_terms, *registry["data_type_terms_en"]])
+        registry["data_type_terms_en"] = _unique(
+            [*term_lookup.data_modality_terms, *term_lookup.assay_terms, *registry["data_type_terms_en"]]
+        )
     term_lookup_audit = _term_lookup_audit_for_context(term_lookup.to_dict(), target_context)
     audit: dict[str, object] = {
         "registry_concepts": [concept.to_dict() for concept in intelligence.concepts],
@@ -82,8 +84,17 @@ def build_search_translation_draft(
         "medical_terms_index_scope": "BioMedPilot shared medical vocabulary",
         "context_output_policy": _context_output_policy(target_context),
         "tcga_project_candidates": term_lookup.tcga_project_candidates if target_context == "bioinformatics" else [],
+        "tcga_primary_site_candidates": term_lookup.tcga_primary_site_candidates if target_context == "bioinformatics" else [],
         "gtex_tissue_candidates": term_lookup.gtex_tissue_candidates if target_context == "bioinformatics" else [],
         "tissue_terms": term_lookup.tissue_terms if target_context == "bioinformatics" else [],
+        "assay_terms": term_lookup.assay_terms,
+        "platform_candidates": term_lookup.platform_candidates if target_context == "bioinformatics" else [],
+        "pico_terms": term_lookup.pico_terms if target_context == "meta_analysis" else [],
+        "effect_measures": term_lookup.effect_measures if target_context == "meta_analysis" else [],
+        "diagnostic_accuracy_terms": term_lookup.diagnostic_accuracy_terms if target_context == "meta_analysis" else [],
+        "exclusion_type_terms": term_lookup.exclusion_type_terms if target_context == "meta_analysis" else [],
+        "quality_assessment_terms": term_lookup.quality_assessment_terms if target_context == "meta_analysis" else [],
+        "pubmed_query_terms": term_lookup.pubmed_query_terms if target_context == "meta_analysis" else [],
     }
     warnings = list(intelligence.warnings)
     warnings.extend(term_lookup.warnings)
@@ -216,6 +227,12 @@ def build_search_translation_draft(
         search_execution_status="draft_only",
         audit=audit,
         candidate_terms=candidate_terms,
+        pico_terms=term_lookup.pico_terms if target_context == "meta_analysis" else [],
+        effect_measures=term_lookup.effect_measures if target_context == "meta_analysis" else [],
+        diagnostic_accuracy_terms=term_lookup.diagnostic_accuracy_terms if target_context == "meta_analysis" else [],
+        exclusion_type_terms=term_lookup.exclusion_type_terms if target_context == "meta_analysis" else [],
+        quality_assessment_terms=term_lookup.quality_assessment_terms if target_context == "meta_analysis" else [],
+        pubmed_query_terms=term_lookup.pubmed_query_terms if target_context == "meta_analysis" else [],
     )
 
 
@@ -379,8 +396,11 @@ def _database_terms_for_context(
             [
                 *intelligence.database_terms,
                 *getattr(term_lookup, "tcga_project_candidates", []),
+                *getattr(term_lookup, "tcga_primary_site_candidates", []),
                 *getattr(term_lookup, "gtex_tissue_candidates", []),
                 *getattr(term_lookup, "tissue_terms", []),
+                *getattr(term_lookup, "assay_terms", []),
+                *getattr(term_lookup, "platform_candidates", []),
             ]
         )
     if target_context == "meta_analysis":
@@ -402,14 +422,21 @@ def _term_lookup_audit_for_context(payload: dict[str, object], target_context: s
             "outcome_terms",
             "study_design_terms",
             "publication_type_terms",
+            "pico_terms",
+            "effect_measures",
+            "diagnostic_accuracy_terms",
+            "exclusion_type_terms",
+            "quality_assessment_terms",
+            "pubmed_query_terms",
         ):
             result.pop(key, None)
     elif target_context == "meta_analysis":
         for key in (
             "tissue_terms",
             "tcga_project_candidates",
+            "tcga_primary_site_candidates",
             "gtex_tissue_candidates",
-            "data_modality_terms",
+            "platform_candidates",
         ):
             result.pop(key, None)
     return result
@@ -422,7 +449,10 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "disease_terms_en",
                 "tissue_terms",
                 "data_modality_terms",
+                "assay_terms",
+                "platform_candidates",
                 "tcga_project_candidates",
+                "tcga_primary_site_candidates",
                 "gtex_tissue_candidates",
                 "geo_query_terms",
             ],
@@ -440,15 +470,25 @@ def _context_output_policy(target_context: str) -> dict[str, object]:
                 "synonyms_en",
                 "abbreviations",
                 "mesh_terms",
+                "data_modality_terms",
+                "assay_terms",
                 "exposure_terms",
                 "intervention_terms",
                 "outcome_terms",
                 "study_design_terms",
                 "publication_type_terms",
+                "pico_terms",
+                "effect_measures",
+                "diagnostic_accuracy_terms",
+                "exclusion_type_terms",
+                "quality_assessment_terms",
+                "pubmed_query_terms",
             ],
             "blocks": [
                 "tcga_project_candidates",
+                "tcga_primary_site_candidates",
                 "gtex_tissue_candidates",
+                "platform_candidates",
                 "geo_query_candidates",
             ],
         }

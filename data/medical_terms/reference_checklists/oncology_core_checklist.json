@@ -1,0 +1,2147 @@
+{
+  "schema_version": "medical_vocabulary_reference_checklist.v1",
+  "checklist_id": "oncology_core",
+  "title": "Oncology Core Vocabulary v1 Checklist",
+  "source": "BioMedPilot curated oncology core based on TCGA/GDC project labels, common translational oncology concepts, and MeSH heading names",
+  "source_version": "oncology_core_v1_2026-05-11",
+  "coverage_type": "oncology_core",
+  "items": [
+    {
+      "id": "ACC",
+      "label": "adrenocortical carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肾上腺皮质癌"
+      ],
+      "preferred_en": "adrenocortical carcinoma",
+      "expected_terms": [
+        "adrenocortical carcinoma",
+        "adrenal cortical carcinoma",
+        "肾上腺皮质癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-ACC"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "organ_tissue": "adrenal gland",
+      "parent_concept": "endocrine tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "BLCA",
+      "label": "bladder urothelial carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "膀胱癌",
+        "膀胱尿路上皮癌"
+      ],
+      "preferred_en": "bladder cancer",
+      "expected_terms": [
+        "bladder cancer",
+        "bladder urothelial carcinoma",
+        "膀胱癌",
+        "膀胱尿路上皮癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-BLCA"
+      ],
+      "expected_gtex_tissues": [
+        "Bladder"
+      ],
+      "organ_tissue": "bladder",
+      "parent_concept": "urinary system tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "BRCA",
+      "label": "breast cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "乳腺癌"
+      ],
+      "preferred_en": "breast cancer",
+      "expected_terms": [
+        "breast cancer",
+        "breast carcinoma",
+        "breast invasive carcinoma",
+        "乳腺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-BRCA"
+      ],
+      "expected_gtex_tissues": [
+        "Breast"
+      ],
+      "organ_tissue": "breast",
+      "parent_concept": "breast tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "CESC",
+      "label": "cervical cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "宫颈癌"
+      ],
+      "preferred_en": "cervical cancer",
+      "expected_terms": [
+        "cervical cancer",
+        "cervical squamous cell carcinoma",
+        "endocervical adenocarcinoma",
+        "宫颈癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-CESC"
+      ],
+      "expected_gtex_tissues": [
+        "Uterus"
+      ],
+      "organ_tissue": "cervix",
+      "parent_concept": "gynecologic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "CHOL",
+      "label": "cholangiocarcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "胆管癌"
+      ],
+      "preferred_en": "cholangiocarcinoma",
+      "expected_terms": [
+        "cholangiocarcinoma",
+        "bile duct cancer",
+        "intrahepatic cholangiocarcinoma",
+        "胆管癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-CHOL"
+      ],
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "organ_tissue": "bile duct",
+      "parent_concept": "gastrointestinal tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "hepatocellular carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "COAD",
+      "label": "colon cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "结肠癌"
+      ],
+      "preferred_en": "colon cancer",
+      "expected_terms": [
+        "colon cancer",
+        "colon adenocarcinoma",
+        "结肠癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-COAD"
+      ],
+      "expected_gtex_tissues": [
+        "Colon"
+      ],
+      "organ_tissue": "colon",
+      "parent_concept": "colorectal cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "rectal cancer unless colorectal context is explicit"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "DLBC",
+      "label": "diffuse large B-cell lymphoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "弥漫大B细胞淋巴瘤"
+      ],
+      "preferred_en": "diffuse large B-cell lymphoma",
+      "expected_terms": [
+        "diffuse large B-cell lymphoma",
+        "DLBCL",
+        "弥漫大B细胞淋巴瘤"
+      ],
+      "abbreviations": [
+        "DLBCL"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-DLBC"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "lymph node",
+      "parent_concept": "lymphoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "ESCA",
+      "label": "esophageal cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "食管癌"
+      ],
+      "preferred_en": "esophageal cancer",
+      "expected_terms": [
+        "esophageal cancer",
+        "esophageal squamous cell carcinoma",
+        "esophageal carcinoma",
+        "食管癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-ESCA"
+      ],
+      "expected_gtex_tissues": [
+        "Esophagus"
+      ],
+      "organ_tissue": "esophagus",
+      "parent_concept": "gastrointestinal tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "PTC"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "GBM",
+      "label": "glioblastoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "胶质母细胞瘤"
+      ],
+      "preferred_en": "glioblastoma",
+      "expected_terms": [
+        "glioblastoma",
+        "glioblastoma multiforme",
+        "胶质母细胞瘤"
+      ],
+      "abbreviations": [
+        "GBM"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-GBM"
+      ],
+      "expected_gtex_tissues": [
+        "Brain"
+      ],
+      "organ_tissue": "brain",
+      "parent_concept": "brain glioma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "lower grade glioma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "HNSC",
+      "label": "head and neck squamous cell carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "头颈鳞癌"
+      ],
+      "preferred_en": "head and neck squamous cell carcinoma",
+      "expected_terms": [
+        "head and neck squamous cell carcinoma",
+        "HNSCC",
+        "头颈鳞癌"
+      ],
+      "abbreviations": [
+        "HNSCC"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-HNSC"
+      ],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "head and neck",
+      "parent_concept": "squamous cell carcinoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "lung squamous cell carcinoma",
+        "cervical squamous cell carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "KICH",
+      "label": "kidney chromophobe carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肾嫌色细胞癌"
+      ],
+      "preferred_en": "kidney chromophobe carcinoma",
+      "expected_terms": [
+        "kidney chromophobe carcinoma",
+        "chromophobe renal cell carcinoma",
+        "chromophobe RCC",
+        "肾嫌色细胞癌"
+      ],
+      "abbreviations": [
+        "KICH",
+        "chRCC"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-KICH"
+      ],
+      "expected_gtex_tissues": [
+        "Kidney"
+      ],
+      "organ_tissue": "kidney",
+      "parent_concept": "renal cell carcinoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "clear cell RCC",
+        "papillary RCC"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "KIRC",
+      "label": "clear cell renal cell carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肾透明细胞癌"
+      ],
+      "preferred_en": "kidney clear cell carcinoma",
+      "expected_terms": [
+        "kidney clear cell carcinoma",
+        "clear cell renal cell carcinoma",
+        "clear cell RCC",
+        "肾透明细胞癌"
+      ],
+      "abbreviations": [
+        "ccRCC",
+        "KIRC"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-KIRC"
+      ],
+      "expected_gtex_tissues": [
+        "Kidney"
+      ],
+      "organ_tissue": "kidney",
+      "parent_concept": "renal cell carcinoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "papillary RCC",
+        "chromophobe RCC"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "KIRP",
+      "label": "papillary renal cell carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "乳头状肾细胞癌"
+      ],
+      "preferred_en": "kidney papillary cell carcinoma",
+      "expected_terms": [
+        "kidney papillary cell carcinoma",
+        "papillary renal cell carcinoma",
+        "papillary RCC",
+        "乳头状肾细胞癌"
+      ],
+      "abbreviations": [
+        "pRCC",
+        "KIRP"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-KIRP"
+      ],
+      "expected_gtex_tissues": [
+        "Kidney"
+      ],
+      "organ_tissue": "kidney",
+      "parent_concept": "renal cell carcinoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "clear cell RCC",
+        "chromophobe RCC"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "LAML",
+      "label": "acute myeloid leukemia",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "急性髓系白血病"
+      ],
+      "preferred_en": "acute myeloid leukemia",
+      "expected_terms": [
+        "acute myeloid leukemia",
+        "acute myelogenous leukemia",
+        "急性髓系白血病"
+      ],
+      "abbreviations": [
+        "AML"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-LAML"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "blood",
+      "parent_concept": "leukemia",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "LGG",
+      "label": "lower grade glioma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "低级别胶质瘤"
+      ],
+      "preferred_en": "lower grade glioma",
+      "expected_terms": [
+        "lower grade glioma",
+        "brain lower grade glioma",
+        "低级别胶质瘤"
+      ],
+      "abbreviations": [
+        "LGG"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-LGG"
+      ],
+      "expected_gtex_tissues": [
+        "Brain"
+      ],
+      "organ_tissue": "brain",
+      "parent_concept": "brain glioma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "glioblastoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "LIHC",
+      "label": "hepatocellular carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肝细胞癌"
+      ],
+      "preferred_en": "hepatocellular carcinoma",
+      "expected_terms": [
+        "hepatocellular carcinoma",
+        "liver cancer",
+        "肝细胞癌"
+      ],
+      "abbreviations": [
+        "HCC",
+        "LIHC"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-LIHC"
+      ],
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "organ_tissue": "liver",
+      "parent_concept": "liver cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "cholangiocarcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "LUAD",
+      "label": "lung adenocarcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肺腺癌"
+      ],
+      "preferred_en": "lung adenocarcinoma",
+      "expected_terms": [
+        "lung adenocarcinoma",
+        "adenocarcinoma of lung",
+        "肺腺癌"
+      ],
+      "abbreviations": [
+        "LUAD"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-LUAD"
+      ],
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "organ_tissue": "lung",
+      "parent_concept": "lung cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "lung squamous cell carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "LUSC",
+      "label": "lung squamous cell carcinoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肺鳞癌"
+      ],
+      "preferred_en": "lung squamous cell carcinoma",
+      "expected_terms": [
+        "lung squamous cell carcinoma",
+        "squamous cell carcinoma of lung",
+        "肺鳞癌"
+      ],
+      "abbreviations": [
+        "LUSC"
+      ],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-LUSC"
+      ],
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "organ_tissue": "lung",
+      "parent_concept": "lung cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "lung adenocarcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "MESO",
+      "label": "mesothelioma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "间皮瘤"
+      ],
+      "preferred_en": "mesothelioma",
+      "expected_terms": [
+        "mesothelioma",
+        "malignant mesothelioma",
+        "间皮瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-MESO"
+      ],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "pleura",
+      "parent_concept": "thoracic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "OV",
+      "label": "ovarian cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "卵巢癌"
+      ],
+      "preferred_en": "ovarian cancer",
+      "expected_terms": [
+        "ovarian cancer",
+        "ovarian serous carcinoma",
+        "卵巢癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-OV"
+      ],
+      "expected_gtex_tissues": [
+        "Ovary"
+      ],
+      "organ_tissue": "ovary",
+      "parent_concept": "gynecologic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "PAAD",
+      "label": "pancreatic cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "胰腺癌"
+      ],
+      "preferred_en": "pancreatic cancer",
+      "expected_terms": [
+        "pancreatic cancer",
+        "pancreatic ductal adenocarcinoma",
+        "pancreatic adenocarcinoma",
+        "胰腺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-PAAD"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas"
+      ],
+      "organ_tissue": "pancreas",
+      "parent_concept": "gastrointestinal tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "PCPG",
+      "label": "pheochromocytoma and paraganglioma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "嗜铬细胞瘤",
+        "副神经节瘤"
+      ],
+      "preferred_en": "pheochromocytoma and paraganglioma",
+      "expected_terms": [
+        "pheochromocytoma and paraganglioma",
+        "pheochromocytoma",
+        "paraganglioma",
+        "嗜铬细胞瘤",
+        "副神经节瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-PCPG"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "organ_tissue": "adrenal gland",
+      "parent_concept": "neuroendocrine tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "PRAD",
+      "label": "prostate cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "前列腺癌"
+      ],
+      "preferred_en": "prostate cancer",
+      "expected_terms": [
+        "prostate cancer",
+        "prostate adenocarcinoma",
+        "前列腺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-PRAD"
+      ],
+      "expected_gtex_tissues": [
+        "Prostate"
+      ],
+      "organ_tissue": "prostate",
+      "parent_concept": "urinary system tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "READ",
+      "label": "rectal cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "直肠癌"
+      ],
+      "preferred_en": "rectal cancer",
+      "expected_terms": [
+        "rectal cancer",
+        "rectum adenocarcinoma",
+        "直肠癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-READ"
+      ],
+      "expected_gtex_tissues": [
+        "Colon"
+      ],
+      "organ_tissue": "rectum",
+      "parent_concept": "colorectal cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "colon cancer unless colorectal context is explicit"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "SARC",
+      "label": "sarcoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "肉瘤"
+      ],
+      "preferred_en": "sarcoma",
+      "expected_terms": [
+        "sarcoma",
+        "soft tissue sarcoma",
+        "肉瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-SARC"
+      ],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "soft tissue",
+      "parent_concept": "sarcoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "SKCM",
+      "label": "melanoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "黑色素瘤"
+      ],
+      "preferred_en": "melanoma",
+      "expected_terms": [
+        "melanoma",
+        "skin cutaneous melanoma",
+        "黑色素瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-SKCM"
+      ],
+      "expected_gtex_tissues": [
+        "Skin"
+      ],
+      "organ_tissue": "skin",
+      "parent_concept": "skin tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "STAD",
+      "label": "gastric cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "胃癌"
+      ],
+      "preferred_en": "gastric cancer",
+      "expected_terms": [
+        "gastric cancer",
+        "stomach cancer",
+        "gastric adenocarcinoma",
+        "胃癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-STAD"
+      ],
+      "expected_gtex_tissues": [
+        "Stomach"
+      ],
+      "organ_tissue": "stomach",
+      "parent_concept": "gastrointestinal tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "TGCT",
+      "label": "testicular germ cell tumor",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "睾丸生殖细胞肿瘤"
+      ],
+      "preferred_en": "testicular germ cell tumor",
+      "expected_terms": [
+        "testicular germ cell tumor",
+        "testicular cancer",
+        "睾丸生殖细胞肿瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-TGCT"
+      ],
+      "expected_gtex_tissues": [
+        "Testis"
+      ],
+      "organ_tissue": "testis",
+      "parent_concept": "germ cell tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "THCA",
+      "label": "thyroid cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "甲状腺癌"
+      ],
+      "preferred_en": "thyroid cancer",
+      "expected_terms": [
+        "thyroid cancer",
+        "papillary thyroid carcinoma",
+        "follicular thyroid carcinoma",
+        "medullary thyroid carcinoma",
+        "anaplastic thyroid carcinoma",
+        "甲状腺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-THCA"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "organ_tissue": "thyroid",
+      "parent_concept": "endocrine tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "ESCC"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "THYM",
+      "label": "thymoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "胸腺瘤"
+      ],
+      "preferred_en": "thymoma",
+      "expected_terms": [
+        "thymoma",
+        "thymic epithelial tumor",
+        "胸腺瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-THYM"
+      ],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "thymus",
+      "parent_concept": "thoracic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "UCEC",
+      "label": "endometrial cancer",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "子宫内膜癌"
+      ],
+      "preferred_en": "endometrial cancer",
+      "expected_terms": [
+        "endometrial cancer",
+        "uterine corpus endometrial carcinoma",
+        "子宫内膜癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-UCEC"
+      ],
+      "expected_gtex_tissues": [
+        "Uterus"
+      ],
+      "organ_tissue": "endometrium",
+      "parent_concept": "gynecologic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "UCS",
+      "label": "uterine carcinosarcoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "子宫癌肉瘤"
+      ],
+      "preferred_en": "uterine carcinosarcoma",
+      "expected_terms": [
+        "uterine carcinosarcoma",
+        "malignant mixed Mullerian tumor",
+        "子宫癌肉瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-UCS"
+      ],
+      "expected_gtex_tissues": [
+        "Uterus"
+      ],
+      "organ_tissue": "uterus",
+      "parent_concept": "gynecologic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "UVM",
+      "label": "uveal melanoma",
+      "group": "tcga_33",
+      "zh_common_names": [
+        "葡萄膜黑色素瘤"
+      ],
+      "preferred_en": "uveal melanoma",
+      "expected_terms": [
+        "uveal melanoma",
+        "ocular melanoma",
+        "葡萄膜黑色素瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-UVM"
+      ],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "uvea",
+      "parent_concept": "melanoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "follicular_thyroid_carcinoma",
+      "label": "follicular thyroid carcinoma",
+      "group": "thyroid_tumor",
+      "zh_common_names": [
+        "滤泡性甲状腺癌",
+        "甲状腺滤泡癌"
+      ],
+      "preferred_en": "follicular thyroid carcinoma",
+      "expected_terms": [
+        "follicular thyroid carcinoma",
+        "follicular thyroid cancer",
+        "滤泡性甲状腺癌",
+        "甲状腺滤泡癌"
+      ],
+      "abbreviations": [
+        "FTC"
+      ],
+      "mesh_terms": [
+        "Thyroid Neoplasms"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-THCA"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "thyroid cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "papillary thyroid carcinoma",
+        "medullary thyroid carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "medullary_thyroid_carcinoma",
+      "label": "medullary thyroid carcinoma",
+      "group": "thyroid_tumor",
+      "zh_common_names": [
+        "髓样甲状腺癌",
+        "甲状腺髓样癌"
+      ],
+      "preferred_en": "medullary thyroid carcinoma",
+      "expected_terms": [
+        "medullary thyroid carcinoma",
+        "medullary thyroid cancer",
+        "髓样甲状腺癌",
+        "甲状腺髓样癌"
+      ],
+      "abbreviations": [
+        "MTC"
+      ],
+      "mesh_terms": [
+        "Thyroid Neoplasms"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-THCA"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "thyroid cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "papillary thyroid carcinoma",
+        "follicular thyroid carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "kidney_chromophobe_carcinoma",
+      "label": "kidney chromophobe carcinoma",
+      "group": "kidney_tumor",
+      "zh_common_names": [
+        "肾嫌色细胞癌",
+        "嫌色细胞肾癌"
+      ],
+      "preferred_en": "kidney chromophobe carcinoma",
+      "expected_terms": [
+        "kidney chromophobe carcinoma",
+        "chromophobe renal cell carcinoma",
+        "chromophobe RCC",
+        "kidney chromophobe",
+        "肾嫌色细胞癌",
+        "嫌色细胞肾癌"
+      ],
+      "abbreviations": [
+        "chRCC",
+        "KICH"
+      ],
+      "mesh_terms": [
+        "Kidney Neoplasms",
+        "Carcinoma, Renal Cell"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-KICH"
+      ],
+      "expected_gtex_tissues": [
+        "Kidney"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "kidney cancer, renal cell carcinoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "clear cell renal cell carcinoma",
+        "papillary renal cell carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "bladder_urothelial_carcinoma",
+      "label": "bladder urothelial carcinoma",
+      "group": "bladder_tumor",
+      "zh_common_names": [
+        "膀胱尿路上皮癌",
+        "膀胱移行细胞癌"
+      ],
+      "preferred_en": "bladder urothelial carcinoma",
+      "expected_terms": [
+        "bladder urothelial carcinoma",
+        "urothelial carcinoma of bladder",
+        "bladder transitional cell carcinoma",
+        "膀胱尿路上皮癌",
+        "膀胱移行细胞癌"
+      ],
+      "abbreviations": [
+        "BLCA"
+      ],
+      "mesh_terms": [
+        "Urinary Bladder Neoplasms",
+        "Carcinoma, Transitional Cell"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-BLCA"
+      ],
+      "expected_gtex_tissues": [
+        "Bladder"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "bladder cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "breast_invasive_ductal_carcinoma",
+      "label": "breast invasive ductal carcinoma",
+      "group": "breast_tumor",
+      "zh_common_names": [
+        "乳腺浸润性导管癌",
+        "浸润性导管乳腺癌"
+      ],
+      "preferred_en": "breast invasive ductal carcinoma",
+      "expected_terms": [
+        "breast invasive ductal carcinoma",
+        "invasive ductal carcinoma of breast",
+        "ductal breast carcinoma",
+        "乳腺浸润性导管癌",
+        "浸润性导管乳腺癌"
+      ],
+      "abbreviations": [
+        "IDC"
+      ],
+      "mesh_terms": [
+        "Breast Neoplasms"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-BRCA"
+      ],
+      "expected_gtex_tissues": [
+        "Breast"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "breast cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "invasive lobular breast carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "invasive_lobular_breast_carcinoma",
+      "label": "invasive lobular breast carcinoma",
+      "group": "breast_tumor",
+      "zh_common_names": [
+        "乳腺浸润性小叶癌",
+        "浸润性小叶乳腺癌"
+      ],
+      "preferred_en": "invasive lobular breast carcinoma",
+      "expected_terms": [
+        "invasive lobular breast carcinoma",
+        "lobular breast carcinoma",
+        "乳腺浸润性小叶癌",
+        "浸润性小叶乳腺癌"
+      ],
+      "abbreviations": [
+        "ILC"
+      ],
+      "mesh_terms": [
+        "Breast Neoplasms"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-BRCA"
+      ],
+      "expected_gtex_tissues": [
+        "Breast"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "breast cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "breast invasive ductal carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "ovarian_serous_carcinoma",
+      "label": "ovarian serous carcinoma",
+      "group": "ovarian_tumor",
+      "zh_common_names": [
+        "卵巢浆液性癌",
+        "高级别浆液性卵巢癌"
+      ],
+      "preferred_en": "ovarian serous carcinoma",
+      "expected_terms": [
+        "ovarian serous carcinoma",
+        "high-grade serous ovarian carcinoma",
+        "serous ovarian cancer",
+        "卵巢浆液性癌",
+        "高级别浆液性卵巢癌"
+      ],
+      "abbreviations": [
+        "HGSOC"
+      ],
+      "mesh_terms": [
+        "Ovarian Neoplasms"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-OV"
+      ],
+      "expected_gtex_tissues": [
+        "Ovary"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "ovarian cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "cervical_squamous_cell_carcinoma",
+      "label": "cervical squamous cell carcinoma",
+      "group": "cervical_tumor",
+      "zh_common_names": [
+        "宫颈鳞癌",
+        "宫颈鳞状细胞癌"
+      ],
+      "preferred_en": "cervical squamous cell carcinoma",
+      "expected_terms": [
+        "cervical squamous cell carcinoma",
+        "squamous cell carcinoma of cervix",
+        "宫颈鳞癌",
+        "宫颈鳞状细胞癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Uterine Cervical Neoplasms",
+        "Carcinoma, Squamous Cell"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-CESC"
+      ],
+      "expected_gtex_tissues": [
+        "Uterus"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "cervical cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "endocervical adenocarcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "endocervical_adenocarcinoma",
+      "label": "endocervical adenocarcinoma",
+      "group": "cervical_tumor",
+      "zh_common_names": [
+        "宫颈腺癌",
+        "子宫颈腺癌"
+      ],
+      "preferred_en": "endocervical adenocarcinoma",
+      "expected_terms": [
+        "endocervical adenocarcinoma",
+        "cervical adenocarcinoma",
+        "宫颈腺癌",
+        "子宫颈腺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Uterine Cervical Neoplasms",
+        "Adenocarcinoma"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-CESC"
+      ],
+      "expected_gtex_tissues": [
+        "Uterus"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "cervical cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "cervical squamous cell carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "prostate_adenocarcinoma",
+      "label": "prostate adenocarcinoma",
+      "group": "prostate_tumor",
+      "zh_common_names": [
+        "前列腺腺癌"
+      ],
+      "preferred_en": "prostate adenocarcinoma",
+      "expected_terms": [
+        "prostate adenocarcinoma",
+        "adenocarcinoma of prostate",
+        "前列腺腺癌"
+      ],
+      "abbreviations": [
+        "PRAD"
+      ],
+      "mesh_terms": [
+        "Prostatic Neoplasms",
+        "Adenocarcinoma"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-PRAD"
+      ],
+      "expected_gtex_tissues": [
+        "Prostate"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "prostate cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "lung_large_cell_carcinoma",
+      "label": "large cell lung carcinoma",
+      "group": "lung_tumor",
+      "zh_common_names": [
+        "肺大细胞癌"
+      ],
+      "preferred_en": "large cell lung carcinoma",
+      "expected_terms": [
+        "large cell lung carcinoma",
+        "large cell carcinoma of lung",
+        "肺大细胞癌"
+      ],
+      "abbreviations": [
+        "LCLC"
+      ],
+      "mesh_terms": [
+        "Lung Neoplasms",
+        "Carcinoma, Large Cell"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "lung cancer, non-small cell lung cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "lung adenocarcinoma",
+        "lung squamous cell carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "lung_carcinoid_tumor",
+      "label": "lung carcinoid tumor",
+      "group": "lung_tumor",
+      "zh_common_names": [
+        "肺类癌",
+        "支气管类癌"
+      ],
+      "preferred_en": "lung carcinoid tumor",
+      "expected_terms": [
+        "lung carcinoid tumor",
+        "bronchial carcinoid tumor",
+        "pulmonary carcinoid",
+        "肺类癌",
+        "支气管类癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Lung Neoplasms",
+        "Carcinoid Tumor"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "lung cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "small cell lung cancer"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "intrahepatic_cholangiocarcinoma",
+      "label": "intrahepatic cholangiocarcinoma",
+      "group": "biliary_tumor",
+      "zh_common_names": [
+        "肝内胆管癌"
+      ],
+      "preferred_en": "intrahepatic cholangiocarcinoma",
+      "expected_terms": [
+        "intrahepatic cholangiocarcinoma",
+        "intrahepatic bile duct carcinoma",
+        "肝内胆管癌"
+      ],
+      "abbreviations": [
+        "iCCA"
+      ],
+      "mesh_terms": [
+        "Cholangiocarcinoma",
+        "Bile Duct Neoplasms"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-CHOL"
+      ],
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "cholangiocarcinoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "hepatocellular carcinoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "colorectal_adenocarcinoma",
+      "label": "colorectal adenocarcinoma",
+      "group": "colorectal_tumor",
+      "zh_common_names": [
+        "结直肠腺癌"
+      ],
+      "preferred_en": "colorectal adenocarcinoma",
+      "expected_terms": [
+        "colorectal adenocarcinoma",
+        "colon and rectal adenocarcinoma",
+        "结直肠腺癌"
+      ],
+      "abbreviations": [
+        "CRC"
+      ],
+      "mesh_terms": [
+        "Colorectal Neoplasms",
+        "Adenocarcinoma"
+      ],
+      "expected_tcga_projects": [
+        "TCGA-COAD",
+        "TCGA-READ"
+      ],
+      "expected_gtex_tissues": [
+        "Colon"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "colorectal cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "acute_lymphoblastic_leukemia",
+      "label": "acute lymphoblastic leukemia",
+      "group": "leukemia",
+      "zh_common_names": [
+        "急性淋巴细胞白血病",
+        "急性淋巴母细胞白血病"
+      ],
+      "preferred_en": "acute lymphoblastic leukemia",
+      "expected_terms": [
+        "acute lymphoblastic leukemia",
+        "acute lymphocytic leukemia",
+        "急性淋巴细胞白血病",
+        "急性淋巴母细胞白血病"
+      ],
+      "abbreviations": [
+        "ALL"
+      ],
+      "mesh_terms": [
+        "Precursor Cell Lymphoblastic Leukemia-Lymphoma"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "leukemia",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "ALL is an oncology abbreviation but should be treated cautiously outside hematology context.",
+      "priority": "P1"
+    },
+    {
+      "id": "chronic_lymphocytic_leukemia",
+      "label": "chronic lymphocytic leukemia",
+      "group": "leukemia",
+      "zh_common_names": [
+        "慢性淋巴细胞白血病"
+      ],
+      "preferred_en": "chronic lymphocytic leukemia",
+      "expected_terms": [
+        "chronic lymphocytic leukemia",
+        "B-cell chronic lymphocytic leukemia",
+        "慢性淋巴细胞白血病"
+      ],
+      "abbreviations": [
+        "CLL"
+      ],
+      "mesh_terms": [
+        "Leukemia, Lymphocytic, Chronic, B-Cell"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "leukemia",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "chronic_myeloid_leukemia",
+      "label": "chronic myeloid leukemia",
+      "group": "leukemia",
+      "zh_common_names": [
+        "慢性髓系白血病",
+        "慢性粒细胞白血病"
+      ],
+      "preferred_en": "chronic myeloid leukemia",
+      "expected_terms": [
+        "chronic myeloid leukemia",
+        "chronic myelogenous leukemia",
+        "慢性髓系白血病",
+        "慢性粒细胞白血病"
+      ],
+      "abbreviations": [
+        "CML"
+      ],
+      "mesh_terms": [
+        "Leukemia, Myelogenous, Chronic, BCR-ABL Positive"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "leukemia",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "hodgkin_lymphoma",
+      "label": "Hodgkin lymphoma",
+      "group": "lymphoma",
+      "zh_common_names": [
+        "霍奇金淋巴瘤"
+      ],
+      "preferred_en": "Hodgkin lymphoma",
+      "expected_terms": [
+        "Hodgkin lymphoma",
+        "Hodgkin disease",
+        "霍奇金淋巴瘤"
+      ],
+      "abbreviations": [
+        "HL"
+      ],
+      "mesh_terms": [
+        "Hodgkin Disease"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "lymphoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "non-Hodgkin lymphoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "follicular_lymphoma",
+      "label": "follicular lymphoma",
+      "group": "lymphoma",
+      "zh_common_names": [
+        "滤泡性淋巴瘤"
+      ],
+      "preferred_en": "follicular lymphoma",
+      "expected_terms": [
+        "follicular lymphoma",
+        "follicular non-Hodgkin lymphoma",
+        "滤泡性淋巴瘤"
+      ],
+      "abbreviations": [
+        "FL"
+      ],
+      "mesh_terms": [
+        "Lymphoma, Follicular"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "lymphoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "mantle_cell_lymphoma",
+      "label": "mantle cell lymphoma",
+      "group": "lymphoma",
+      "zh_common_names": [
+        "套细胞淋巴瘤"
+      ],
+      "preferred_en": "mantle cell lymphoma",
+      "expected_terms": [
+        "mantle cell lymphoma",
+        "mantle-zone lymphoma",
+        "套细胞淋巴瘤"
+      ],
+      "abbreviations": [
+        "MCL"
+      ],
+      "mesh_terms": [
+        "Lymphoma, Mantle-Cell"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "lymphoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "medulloblastoma",
+      "label": "medulloblastoma",
+      "group": "cns_tumor",
+      "zh_common_names": [
+        "髓母细胞瘤"
+      ],
+      "preferred_en": "medulloblastoma",
+      "expected_terms": [
+        "medulloblastoma",
+        "cerebellar medulloblastoma",
+        "髓母细胞瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Medulloblastoma"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Brain"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "brain tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "glioblastoma"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "neuroblastoma",
+      "label": "neuroblastoma",
+      "group": "pediatric_solid_tumor",
+      "zh_common_names": [
+        "神经母细胞瘤"
+      ],
+      "preferred_en": "neuroblastoma",
+      "expected_terms": [
+        "neuroblastoma",
+        "neuroblastic tumor",
+        "神经母细胞瘤"
+      ],
+      "abbreviations": [
+        "NB"
+      ],
+      "mesh_terms": [
+        "Neuroblastoma"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "neuroblastic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "cutaneous_squamous_cell_carcinoma",
+      "label": "cutaneous squamous cell carcinoma",
+      "group": "skin_tumor",
+      "zh_common_names": [
+        "皮肤鳞癌",
+        "皮肤鳞状细胞癌"
+      ],
+      "preferred_en": "cutaneous squamous cell carcinoma",
+      "expected_terms": [
+        "cutaneous squamous cell carcinoma",
+        "skin squamous cell carcinoma",
+        "squamous cell carcinoma of skin",
+        "皮肤鳞癌",
+        "皮肤鳞状细胞癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Skin Neoplasms",
+        "Carcinoma, Squamous Cell"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Skin"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "skin cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "head and neck squamous cell carcinoma",
+        "lung squamous cell carcinoma"
+      ],
+      "confusion_notes": "SCC alone is ambiguous and should not strongly expand without an anatomic site.",
+      "priority": "P1"
+    },
+    {
+      "id": "basal_cell_carcinoma",
+      "label": "basal cell carcinoma",
+      "group": "skin_tumor",
+      "zh_common_names": [
+        "基底细胞癌",
+        "皮肤基底细胞癌"
+      ],
+      "preferred_en": "basal cell carcinoma",
+      "expected_terms": [
+        "basal cell carcinoma",
+        "basal cell skin cancer",
+        "基底细胞癌",
+        "皮肤基底细胞癌"
+      ],
+      "abbreviations": [
+        "BCC"
+      ],
+      "mesh_terms": [
+        "Carcinoma, Basal Cell"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Skin"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "skin cancer",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "gastrointestinal_stromal_tumor",
+      "label": "gastrointestinal stromal tumor",
+      "group": "sarcoma",
+      "zh_common_names": [
+        "胃肠道间质瘤"
+      ],
+      "preferred_en": "gastrointestinal stromal tumor",
+      "expected_terms": [
+        "gastrointestinal stromal tumor",
+        "GIST",
+        "胃肠道间质瘤"
+      ],
+      "abbreviations": [
+        "GIST"
+      ],
+      "mesh_terms": [
+        "Gastrointestinal Stromal Tumors"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Stomach"
+      ],
+      "organ_tissue": "",
+      "parent_concept": "sarcoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "osteosarcoma",
+      "label": "osteosarcoma",
+      "group": "bone_tumor",
+      "zh_common_names": [
+        "骨肉瘤"
+      ],
+      "preferred_en": "osteosarcoma",
+      "expected_terms": [
+        "osteosarcoma",
+        "osteogenic sarcoma",
+        "骨肉瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Osteosarcoma"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "",
+      "parent_concept": "sarcoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "ewing_sarcoma",
+      "label": "Ewing sarcoma",
+      "group": "bone_tumor",
+      "zh_common_names": [
+        "尤文肉瘤"
+      ],
+      "preferred_en": "Ewing sarcoma",
+      "expected_terms": [
+        "Ewing sarcoma",
+        "Ewing tumor",
+        "尤文肉瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Sarcoma, Ewing"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [],
+      "organ_tissue": "",
+      "parent_concept": "sarcoma",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "lung_cancer_parent",
+      "label": "lung cancer",
+      "group": "parent_subtype_relation",
+      "zh_common_names": [
+        "肺癌"
+      ],
+      "preferred_en": "lung cancer",
+      "expected_terms": [
+        "lung cancer",
+        "non-small cell lung cancer",
+        "small cell lung cancer",
+        "肺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-LUAD",
+        "TCGA-LUSC"
+      ],
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "organ_tissue": "lung",
+      "parent_concept": "thoracic tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "LUAD-only expansion",
+        "LUSC-only expansion"
+      ],
+      "confusion_notes": "",
+      "priority": "P0"
+    },
+    {
+      "id": "colorectal_cancer_parent",
+      "label": "colorectal cancer",
+      "group": "parent_subtype_relation",
+      "zh_common_names": [
+        "结直肠癌"
+      ],
+      "preferred_en": "colorectal cancer",
+      "expected_terms": [
+        "colorectal cancer",
+        "colon cancer",
+        "rectal cancer",
+        "结直肠癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-COAD",
+        "TCGA-READ"
+      ],
+      "expected_gtex_tissues": [
+        "Colon"
+      ],
+      "organ_tissue": "colon/rectum",
+      "parent_concept": "gastrointestinal tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P0"
+    },
+    {
+      "id": "brain_glioma_parent",
+      "label": "brain glioma",
+      "group": "parent_subtype_relation",
+      "zh_common_names": [
+        "脑胶质瘤"
+      ],
+      "preferred_en": "brain glioma",
+      "expected_terms": [
+        "brain glioma",
+        "glioblastoma",
+        "lower grade glioma",
+        "脑胶质瘤"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-GBM",
+        "TCGA-LGG"
+      ],
+      "expected_gtex_tissues": [
+        "Brain"
+      ],
+      "organ_tissue": "brain",
+      "parent_concept": "central nervous system tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P0"
+    },
+    {
+      "id": "kidney_cancer_parent",
+      "label": "kidney cancer",
+      "group": "parent_subtype_relation",
+      "zh_common_names": [
+        "肾癌"
+      ],
+      "preferred_en": "kidney cancer",
+      "expected_terms": [
+        "kidney cancer",
+        "clear cell renal cell carcinoma",
+        "papillary renal cell carcinoma",
+        "chromophobe renal cell carcinoma",
+        "肾癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-KIRC",
+        "TCGA-KIRP",
+        "TCGA-KICH"
+      ],
+      "expected_gtex_tissues": [
+        "Kidney"
+      ],
+      "organ_tissue": "kidney",
+      "parent_concept": "urinary system tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [
+        "RCC abbreviation alone"
+      ],
+      "confusion_notes": "",
+      "priority": "P1"
+    },
+    {
+      "id": "thyroid_cancer_parent",
+      "label": "thyroid cancer",
+      "group": "parent_subtype_relation",
+      "zh_common_names": [
+        "甲状腺癌"
+      ],
+      "preferred_en": "thyroid cancer",
+      "expected_terms": [
+        "thyroid cancer",
+        "papillary thyroid carcinoma",
+        "follicular thyroid carcinoma",
+        "medullary thyroid carcinoma",
+        "anaplastic thyroid carcinoma",
+        "甲状腺癌"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [],
+      "expected_tcga_projects": [
+        "TCGA-THCA"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "organ_tissue": "thyroid",
+      "parent_concept": "endocrine tumor",
+      "subtype_of": "",
+      "avoid_expansion_to": [],
+      "confusion_notes": "",
+      "priority": "P0"
+    },
+    {
+      "id": "small_cell_lung_cancer",
+      "label": "小细胞肺癌",
+      "priority": "P1",
+      "group": "respiratory",
+      "expected_terms": [
+        "small cell lung cancer",
+        "小细胞肺癌",
+        "SCLC"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "organ": "lung",
+      "parent_concept": "lung cancer",
+      "subtype_of": "lung cancer",
+      "avoid_expansion_to": [
+        "LUAD",
+        "LUSC"
+      ],
+      "confusion_notes": "Small cell lung cancer is a high-value lung subtype but not represented as a TCGA project in the core 33."
+    },
+    {
+      "id": "multiple_myeloma",
+      "label": "多发性骨髓瘤",
+      "priority": "P1",
+      "group": "hematologic",
+      "expected_terms": [
+        "multiple myeloma",
+        "多发性骨髓瘤",
+        "MM"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "organ": "plasma cell",
+      "parent_concept": "plasma cell neoplasm",
+      "subtype_of": "plasma cell neoplasm",
+      "avoid_expansion_to": [
+        "lymphoma",
+        "leukemia"
+      ],
+      "confusion_notes": "MM is useful in oncology but should be interpreted with context outside cancer queries."
+    },
+    {
+      "id": "meningioma",
+      "label": "脑膜瘤",
+      "priority": "P2",
+      "group": "central_nervous_system",
+      "expected_terms": [
+        "meningioma",
+        "脑膜瘤"
+      ],
+      "expected_tcga_projects": [],
+      "expected_gtex_tissues": [
+        "Brain"
+      ],
+      "organ": "meninges",
+      "parent_concept": "central nervous system tumor",
+      "subtype_of": "central nervous system tumor",
+      "avoid_expansion_to": [
+        "glioblastoma",
+        "lower-grade glioma"
+      ],
+      "confusion_notes": "Meningioma should not be collapsed into glioma."
+    }
+  ],
+  "ambiguity_terms": [
+    {
+      "term": "SCC",
+      "risk": "squamous cell carcinoma without anatomic site",
+      "policy": "do not strongly expand without site context"
+    },
+    {
+      "term": "RCC",
+      "risk": "renal cell carcinoma abbreviation without subtype",
+      "policy": "do not expand to all kidney cancer subtypes from RCC alone"
+    },
+    {
+      "term": "PTC",
+      "risk": "mostly papillary thyroid carcinoma in oncology but can be non-oncology outside context",
+      "policy": "allow oncology mapping but keep leakage tests"
+    },
+    {
+      "term": "CRC",
+      "risk": "colorectal cancer abbreviation",
+      "policy": "maps to colorectal parent, not isolated colon or rectal subtype"
+    },
+    {
+      "term": "MM",
+      "risk": "multiple myeloma abbreviation can be non-oncology outside context",
+      "policy": "prefer oncology mapping only with cancer or hematology context"
+    }
+  ]
+}

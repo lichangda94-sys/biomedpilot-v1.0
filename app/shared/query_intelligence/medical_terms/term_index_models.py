@@ -16,10 +16,29 @@ class TermConcept:
     abbreviations: list[str] = field(default_factory=list)
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
+    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
+    assay_terms: list[str] = field(default_factory=list)
+    platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
+    exposure_terms: list[str] = field(default_factory=list)
+    intervention_terms: list[str] = field(default_factory=list)
+    outcome_terms: list[str] = field(default_factory=list)
+    study_design_terms: list[str] = field(default_factory=list)
+    publication_type_terms: list[str] = field(default_factory=list)
+    pico_terms: list[str] = field(default_factory=list)
+    effect_measures: list[str] = field(default_factory=list)
+    diagnostic_accuracy_terms: list[str] = field(default_factory=list)
+    exclusion_type_terms: list[str] = field(default_factory=list)
+    quality_assessment_terms: list[str] = field(default_factory=list)
+    pubmed_query_terms: list[str] = field(default_factory=list)
     disease_group: str = ""
     concept_type: str = ""
+    category: str = ""
+    subcategory: str = ""
+    contexts: list[str] = field(default_factory=list)
     parent_terms: list[str] = field(default_factory=list)
     cross_refs: dict[str, list[str]] = field(default_factory=dict)
     license: str = ""
@@ -39,10 +58,29 @@ class TermConcept:
             abbreviations=_list(payload.get("abbreviations")),
             mesh_terms=_list(payload.get("mesh_terms")),
             tissue_terms=_list(payload.get("tissue_terms")),
+            tcga_primary_site_candidates=_list(payload.get("tcga_primary_site_candidates")),
             data_modality_terms=_list(payload.get("data_modality_terms")),
+            assay_terms=_list(payload.get("assay_terms")),
+            platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
+            immune_cell_terms=_list(payload.get("immune_cell_terms")),
+            biomarker_terms=_list(payload.get("biomarker_terms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
+            exposure_terms=_list(payload.get("exposure_terms")),
+            intervention_terms=_list(payload.get("intervention_terms")),
+            outcome_terms=_list(payload.get("outcome_terms")),
+            study_design_terms=_list(payload.get("study_design_terms")),
+            publication_type_terms=_list(payload.get("publication_type_terms")),
+            pico_terms=_list(payload.get("pico_terms")),
+            effect_measures=_list(payload.get("effect_measures")),
+            diagnostic_accuracy_terms=_list(payload.get("diagnostic_accuracy_terms")),
+            exclusion_type_terms=_list(payload.get("exclusion_type_terms")),
+            quality_assessment_terms=_list(payload.get("quality_assessment_terms")),
+            pubmed_query_terms=_list(payload.get("pubmed_query_terms") or payload.get("pubmed_terms")),
             disease_group=str(payload.get("disease_group", "")),
             concept_type=str(payload.get("concept_type", "")),
+            category=str(payload.get("category", "")),
+            subcategory=str(payload.get("subcategory", "")),
+            contexts=_list(payload.get("contexts")),
             parent_terms=_list(payload.get("parent_terms")),
             cross_refs=_cross_refs(payload.get("cross_refs")),
             license=str(payload.get("license", "")),
@@ -63,14 +101,26 @@ class ChineseTermOverride:
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
     tcga_project_candidates: list[str] = field(default_factory=list)
+    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     gtex_tissue_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
+    assay_terms: list[str] = field(default_factory=list)
+    platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
     outcome_terms: list[str] = field(default_factory=list)
     study_design_terms: list[str] = field(default_factory=list)
     publication_type_terms: list[str] = field(default_factory=list)
+    pico_terms: list[str] = field(default_factory=list)
+    effect_measures: list[str] = field(default_factory=list)
+    diagnostic_accuracy_terms: list[str] = field(default_factory=list)
+    exclusion_type_terms: list[str] = field(default_factory=list)
+    quality_assessment_terms: list[str] = field(default_factory=list)
+    pubmed_query_terms: list[str] = field(default_factory=list)
+    contexts: list[str] = field(default_factory=list)
     concept_type: str = ""
     confidence: float = 0.0
     source: str = "zh_override"
@@ -91,14 +141,26 @@ class ChineseTermOverride:
             mesh_terms=_list(payload.get("mesh_terms")),
             tissue_terms=_list(payload.get("tissue_terms")),
             tcga_project_candidates=_list(payload.get("tcga_project_candidates")),
+            tcga_primary_site_candidates=_list(payload.get("tcga_primary_site_candidates")),
             gtex_tissue_candidates=_list(payload.get("gtex_tissue_candidates")),
             data_modality_terms=_list(payload.get("data_modality_terms")),
+            assay_terms=_list(payload.get("assay_terms")),
+            platform_candidates=_list(payload.get("platform_candidates") or payload.get("related_platforms")),
+            immune_cell_terms=_list(payload.get("immune_cell_terms")),
+            biomarker_terms=_list(payload.get("biomarker_terms")),
             modifier_terms_en=_list(payload.get("modifier_terms_en")),
             exposure_terms=_list(payload.get("exposure_terms")),
             intervention_terms=_list(payload.get("intervention_terms")),
             outcome_terms=_list(payload.get("outcome_terms")),
             study_design_terms=_list(payload.get("study_design_terms")),
             publication_type_terms=_list(payload.get("publication_type_terms")),
+            pico_terms=_list(payload.get("pico_terms")),
+            effect_measures=_list(payload.get("effect_measures")),
+            diagnostic_accuracy_terms=_list(payload.get("diagnostic_accuracy_terms")),
+            exclusion_type_terms=_list(payload.get("exclusion_type_terms")),
+            quality_assessment_terms=_list(payload.get("quality_assessment_terms")),
+            pubmed_query_terms=_list(payload.get("pubmed_query_terms") or payload.get("pubmed_terms")),
+            contexts=_list(payload.get("contexts")),
             concept_type=str(payload.get("concept_type", "")),
             confidence=float(payload.get("confidence", 0.0) or 0.0),
             source=str(payload.get("source", "zh_override")),
@@ -117,14 +179,25 @@ class TermLookupResult:
     mesh_terms: list[str] = field(default_factory=list)
     tissue_terms: list[str] = field(default_factory=list)
     tcga_project_candidates: list[str] = field(default_factory=list)
+    tcga_primary_site_candidates: list[str] = field(default_factory=list)
     gtex_tissue_candidates: list[str] = field(default_factory=list)
     data_modality_terms: list[str] = field(default_factory=list)
+    assay_terms: list[str] = field(default_factory=list)
+    platform_candidates: list[str] = field(default_factory=list)
+    immune_cell_terms: list[str] = field(default_factory=list)
+    biomarker_terms: list[str] = field(default_factory=list)
     modifier_terms_en: list[str] = field(default_factory=list)
     exposure_terms: list[str] = field(default_factory=list)
     intervention_terms: list[str] = field(default_factory=list)
     outcome_terms: list[str] = field(default_factory=list)
     study_design_terms: list[str] = field(default_factory=list)
     publication_type_terms: list[str] = field(default_factory=list)
+    pico_terms: list[str] = field(default_factory=list)
+    effect_measures: list[str] = field(default_factory=list)
+    diagnostic_accuracy_terms: list[str] = field(default_factory=list)
+    exclusion_type_terms: list[str] = field(default_factory=list)
+    quality_assessment_terms: list[str] = field(default_factory=list)
+    pubmed_query_terms: list[str] = field(default_factory=list)
     concept_ids: list[str] = field(default_factory=list)
     term_sources: list[str] = field(default_factory=list)
     confidence: float = 0.0
@@ -142,14 +215,25 @@ class TermLookupResult:
             "mesh_terms": list(self.mesh_terms),
             "tissue_terms": list(self.tissue_terms),
             "tcga_project_candidates": list(self.tcga_project_candidates),
+            "tcga_primary_site_candidates": list(self.tcga_primary_site_candidates),
             "gtex_tissue_candidates": list(self.gtex_tissue_candidates),
             "data_modality_terms": list(self.data_modality_terms),
+            "assay_terms": list(self.assay_terms),
+            "platform_candidates": list(self.platform_candidates),
+            "immune_cell_terms": list(self.immune_cell_terms),
+            "biomarker_terms": list(self.biomarker_terms),
             "modifier_terms_en": list(self.modifier_terms_en),
             "exposure_terms": list(self.exposure_terms),
             "intervention_terms": list(self.intervention_terms),
             "outcome_terms": list(self.outcome_terms),
             "study_design_terms": list(self.study_design_terms),
             "publication_type_terms": list(self.publication_type_terms),
+            "pico_terms": list(self.pico_terms),
+            "effect_measures": list(self.effect_measures),
+            "diagnostic_accuracy_terms": list(self.diagnostic_accuracy_terms),
+            "exclusion_type_terms": list(self.exclusion_type_terms),
+            "quality_assessment_terms": list(self.quality_assessment_terms),
+            "pubmed_query_terms": list(self.pubmed_query_terms),
             "concept_ids": list(self.concept_ids),
             "term_sources": list(self.term_sources),
             "confidence": self.confidence,
