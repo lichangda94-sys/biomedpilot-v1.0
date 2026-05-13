@@ -3595,9 +3595,12 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         except ValueError as exc:
             self._status_label.setText(str(exc))
             return None
-        self._status_label.setText(f"已创建任务：{task.task_id} · {task.label} · {task.status}")
-        self._records.setPlainText(_json({"任务记录": [task.__dict__ | {"record_path": str(task.record_path)}]}))
+        self.refresh_task_center()
+        self._status_label.setText(f"已创建配置草稿：{task.label}。当前仅保存任务记录，未执行真实分析。")
         return task
+
+    def create_deg_task_draft(self) -> object | None:
+        return self.create_task("differential_expression")
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -3640,14 +3643,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             _append_geo_deg_results_to_index(self._project_root, summaries)
             load_analysis_task_center(self._project_root)
             comparison_message = f"；{comparison_summary_text(comparison_config)}" if comparison_config is not None else ""
-            self._status_label.setText(f"已运行 GEO 差异分析：{len(summaries)} 个表达矩阵{comparison_message}")
-            self._records.setPlainText(_json({"差异分析结果": summaries, "warnings": warnings, "comparison_config": comparison_config.to_dict() if comparison_config is not None else {}}))
+            self.refresh_task_center()
+            self._status_label.setText(f"已生成测试级 GEO 差异分析结果：{len(summaries)} 个表达矩阵{comparison_message}。该入口用于内部测试，不等于正式 DEG 分析。")
             return {"summaries": summaries, "warnings": warnings}
         if comparison_config is not None:
             self._status_label.setText("差异分析未运行：已确认比较组，但表达矩阵样本 ID 未能匹配。请修正比较组或选择其他表达文件。")
         else:
             self._status_label.setText("差异分析未运行：尚未确认比较组。请先点击“设置比较组”。")
-        self._records.setPlainText(_json({"warnings": warnings}))
+        self._set_developer_details({"warnings": warnings})
         return {"summaries": [], "warnings": warnings}
 
     def configure_comparison_groups(self, manual_text: str | None = None) -> bool:
@@ -3686,44 +3689,69 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("分析任务中心", "Developer Preview / 本地测试版", back_text="返回数据标准化", back_signal=self.back_requested))
-        self._status_label = _status_label("没有 task center 时请先运行工作流或生成任务中心。")
+        root.addWidget(_header("分析任务中心", "根据当前数据判断哪些分析可配置、哪些还需要补充信息。", back_text="返回数据标准化", back_signal=self.back_requested))
+        self._status_label = _status_label("请先完成数据识别和数据标准化，再查看可配置的分析任务。")
         root.addWidget(self._status_label)
+
+        summary_card, summary_layout = _card("当前分析条件")
+        self._analysis_input_label = _muted("核心输入：待检查。")
+        self._analysis_input_label.setObjectName("analysisTaskInputSummary")
+        self._analysis_result_label = _muted("结果状态：暂无结果。")
+        self._analysis_result_label.setObjectName("analysisTaskResultSummary")
+        self._analysis_next_step_label = _muted("下一步建议：先返回数据标准化确认输入。")
+        self._analysis_next_step_label.setObjectName("analysisTaskNextStep")
+        summary_layout.addWidget(self._analysis_input_label)
+        summary_layout.addWidget(self._analysis_result_label)
+        summary_layout.addWidget(self._analysis_next_step_label)
+        root.addWidget(summary_card)
+
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新任务中心", "secondaryButton", self.refresh_task_center))
-        self._task_type_input = QLineEdit()
-        self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
-        actions.addWidget(self._task_type_input)
-        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
-        actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
-        actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
+        actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
+        actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
+        actions.addWidget(_button("创建差异分析配置草稿", "primaryButton", self.create_deg_task_draft))
         actions.addStretch(1)
         root.addLayout(actions)
-        self._tasks = _table(["任务", "是否可运行", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
+
+        self._tasks = _table(["分析任务", "当前状态", "需要输入", "当前缺少", "下一步"])
+        self._tasks.setObjectName("analysisTaskUserTable")
         root.addWidget(self._tasks)
+        _set_table_widths(self._tasks, [160, 150, 220, 220, 300])
+        self._tasks.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._records)))
+        self._task_type_input = QLineEdit()
+        self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
+        developer_actions.addWidget(self._task_type_input)
+        developer_actions.addWidget(_button("创建指定任务记录", "secondaryButton", self.create_task))
+        developer_actions.addWidget(_button("生成测试级 GEO 差异结果", "secondaryButton", self.run_geo_differential_expression_task))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
         self._records = _text_preview(120)
-        root.addWidget(self._records)
+        self._records.setObjectName("analysisTaskDeveloperDiagnostics")
+        self._records.setVisible(False)
+        developer_layout.addWidget(self._records)
+        root.addWidget(developer_card)
         root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
 
     def _render(self, center: dict[str, object]) -> None:
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
-        self._status_label.setText(f"分析任务中心：{len(tasks)} 个任务模板。不可运行任务将显示缺失输入。")
-        _fill_table(
-            self._tasks,
-            [
-                [
-                    item.get("label", ""),
-                    "可运行" if item.get("can_run") else "不可运行",
-                    "、".join(str(v) for v in item.get("available_inputs", []) or []),
-                    "、".join(str(v) for v in item.get("missing_inputs", []) or []),
-                    "、".join(str(v) for v in item.get("warnings", []) or []),
-                    _json(item.get("default_parameters", {})),
-                    item.get("preview_status", ""),
-                ]
-                for item in tasks
-            ],
-        )
-        self._records.setPlainText(_json({"已创建任务": load_task_records(self._project_root) if self._project_root else []}))
+        records = load_task_records(self._project_root) if self._project_root else []
+        result_index = load_result_index(self._project_root) if self._project_root else {}
+        entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
+        imported_deg = _analysis_imported_deg_detected(self._project_root)
+        configurable = sum(1 for item in tasks if item.get("can_run"))
+        blocked = len(tasks) - configurable
+        self._status_label.setText(f"分析任务中心：{len(tasks)} 类任务；可配置 {configurable} 类，需要补充 {blocked} 类。")
+        self._analysis_input_label.setText(_analysis_task_input_summary(tasks))
+        self._analysis_result_label.setText(_analysis_task_result_summary(entries, records, imported_deg))
+        self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
+        _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
+        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index})
+
+    def _set_developer_details(self, payload: dict[str, object]) -> None:
+        self._records.setPlainText(_json(payload))
 
 
 class BioinformaticsResultsBrowserWidget(QWidget):
@@ -6839,6 +6867,207 @@ def _analysis_suggested_action(row: dict[str, object], group_preview: dict[str, 
     return "查看说明"
 
 
+def _analysis_task_user_rows(
+    tasks: list[dict[str, object]],
+    project_root: Path | None,
+    result_entries: list[dict[str, object]],
+    task_records: list[dict[str, object]],
+) -> list[list[object]]:
+    imported_deg = _analysis_imported_deg_detected(project_root)
+    rows: list[list[object]] = []
+    for task in tasks:
+        task_type = str(task.get("task_type") or "")
+        label = _analysis_task_display_label(task)
+        status = _analysis_task_user_status(task, task_records, result_entries, imported_deg)
+        required = _analysis_required_inputs_text(task_type)
+        missing = _analysis_task_missing_text(task)
+        next_step = _analysis_task_next_action(task, task_records, result_entries, imported_deg)
+        rows.append([label, status, required, missing, next_step])
+    return rows
+
+
+def _analysis_task_display_label(task: dict[str, object]) -> str:
+    task_type = str(task.get("task_type") or "")
+    if task_type == "reporting":
+        return "结果浏览与报告"
+    return str(task.get("label") or task_type or "未命名任务")
+
+
+def _analysis_task_user_status(
+    task: dict[str, object],
+    task_records: list[dict[str, object]],
+    result_entries: list[dict[str, object]],
+    imported_deg: bool,
+) -> str:
+    task_type = str(task.get("task_type") or "")
+    if task_type == "differential_expression":
+        if imported_deg and not task.get("can_run"):
+            return "已有导入结果"
+        if _analysis_has_result(result_entries, "differential_expression"):
+            return "已有测试级结果"
+        if task.get("can_run"):
+            return "可配置"
+        missing = {_normalize_missing_input(str(item)) for item in task.get("missing_inputs", []) or []}
+        if "comparison_config" in missing:
+            return "需要确认分组"
+        return "需要补充信息"
+    if task_type == "reporting":
+        if result_entries:
+            return "已有结果可浏览"
+        return "需要先有结果"
+    if task_type == "tcga_gtex_joint":
+        return "测试级 / 暂不可用"
+    if _analysis_has_task_record(task_records, task_type):
+        return "已有配置草稿"
+    if task.get("can_run"):
+        return "可配置"
+    return "暂不可用" if not task.get("missing_inputs") else "需要补充信息"
+
+
+def _analysis_required_inputs_text(task_type: str) -> str:
+    return {
+        "differential_expression": "表达矩阵、样本信息、分组设计",
+        "enrichment": "表达矩阵或差异分析结果",
+        "gsea": "表达矩阵、GMT 基因集",
+        "correlation": "表达矩阵、目标基因",
+        "survival": "表达矩阵、临床/生存信息",
+        "clinical_association": "临床信息",
+        "tcga_gtex_joint": "TCGA 数据、GTEx 数据、批次校正方案",
+        "reporting": "真实结果或明确标记的导入/测试级结果",
+    }.get(task_type, "按任务配置补充输入")
+
+
+def _analysis_task_missing_text(task: dict[str, object]) -> str:
+    missing = [str(item) for item in task.get("missing_inputs", []) or []]
+    if not missing:
+        return "无"
+    labels = []
+    for item in missing:
+        if "analysis_capability_matrix" in item:
+            labels.append("请先完成数据准备检查")
+        else:
+            labels.append(_missing_input_label(item))
+    return "、".join(dict.fromkeys(labels))
+
+
+def _analysis_task_next_action(
+    task: dict[str, object],
+    task_records: list[dict[str, object]],
+    result_entries: list[dict[str, object]],
+    imported_deg: bool,
+) -> str:
+    task_type = str(task.get("task_type") or "")
+    missing = {_normalize_missing_input(str(item)) for item in task.get("missing_inputs", []) or []}
+    if task_type == "differential_expression":
+        if imported_deg and not task.get("can_run"):
+            return "当前为导入表格中的已有差异分析结果，不是本软件重新计算；可进入结果浏览或补充表达矩阵与分组。"
+        if _analysis_has_result(result_entries, "differential_expression"):
+            return "进入结果浏览；这些结果需按结果状态区分测试级或导入来源。"
+        if "comparison_config" in missing:
+            return "请先确认分组与比较设计。"
+        if "expression_matrix" in missing:
+            return "请返回数据选择或数据识别补充表达矩阵。"
+        if task.get("can_run"):
+            return "进入差异分析配置；当前只创建配置草稿，未执行真实分析。"
+        return "补齐缺失输入后再配置差异分析。"
+    if task_type == "enrichment":
+        return "需要差异分析结果或基因列表；不要生成假富集结果。"
+    if task_type == "gsea":
+        return "上传 GMT 基因集后再配置 GSEA。"
+    if task_type == "correlation":
+        return "确认目标基因和样本数量后再配置。"
+    if task_type == "survival":
+        return "补充临床/生存信息后再配置。"
+    if task_type == "clinical_association":
+        return "补充临床信息后再配置。"
+    if task_type == "tcga_gtex_joint":
+        return "当前仅测试级准备，后续需正式批次校正方案。"
+    if task_type == "reporting":
+        if result_entries:
+            return "进入结果浏览，确认结果状态后再生成报告。"
+        return "先生成或导入明确标记的结果。"
+    if _analysis_has_task_record(task_records, task_type):
+        return "查看任务记录或继续补充参数。"
+    return "查看缺失输入并返回标准化页面补充。"
+
+
+def _analysis_task_input_summary(tasks: list[dict[str, object]]) -> str:
+    diff = next((item for item in tasks if item.get("task_type") == "differential_expression"), None)
+    if not isinstance(diff, dict):
+        return "核心输入：尚未生成分析任务中心。"
+    missing = _analysis_task_missing_text(diff)
+    if diff.get("can_run"):
+        return "核心输入：已具备表达矩阵、样本信息和分组设计，可创建差异分析配置草稿。"
+    return f"核心输入：差异表达分析仍缺少 {missing}。"
+
+
+def _analysis_task_result_summary(entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:
+    if entries:
+        imported_count = sum(1 for item in entries if _analysis_entry_semantics(item) == "imported result")
+        testing_count = sum(1 for item in entries if _analysis_entry_semantics(item) == "testing-level")
+        real_count = sum(1 for item in entries if _analysis_entry_semantics(item) == "real computed result")
+        parts = [f"结果 {len(entries)} 个"]
+        if imported_count:
+            parts.append(f"导入结果 {imported_count} 个")
+        if testing_count:
+            parts.append(f"测试级结果 {testing_count} 个")
+        if real_count:
+            parts.append(f"真实计算结果 {real_count} 个")
+        return "结果状态：" + "；".join(parts) + "。"
+    if imported_deg:
+        return "结果状态：识别到导入差异分析表格；这不是本软件重新计算的 DEG。"
+    if records:
+        return f"结果状态：已有 {len(records)} 个配置草稿，尚未产生结果。"
+    return "结果状态：暂无结果。"
+
+
+def _analysis_task_next_step(tasks: list[dict[str, object]], entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:
+    diff = next((item for item in tasks if item.get("task_type") == "differential_expression"), {})
+    if entries:
+        return "下一步建议：进入结果浏览，确认每个结果是导入、测试级还是真实计算。"
+    if imported_deg:
+        return "下一步建议：进入结果浏览或补充原始表达矩阵与分组；导入 DEG 不等于本软件计算结果。"
+    if isinstance(diff, dict) and diff.get("can_run"):
+        return "下一步建议：创建差异分析配置草稿；当前不会执行真实 DEG。"
+    if records:
+        return "下一步建议：继续补充任务参数或返回标准化页确认输入。"
+    return "下一步建议：返回数据标准化或确认分组与比较设计。"
+
+
+def _analysis_has_task_record(records: list[dict[str, object]], task_type: str) -> bool:
+    return any(str(item.get("task_type") or "") == task_type for item in records)
+
+
+def _analysis_has_result(entries: list[dict[str, object]], analysis_type: str) -> bool:
+    return any(str(item.get("analysis_type") or "") == analysis_type for item in entries)
+
+
+def _analysis_entry_semantics(entry: dict[str, object]) -> str:
+    explicit = str(entry.get("result_semantics") or entry.get("execution_level") or entry.get("status") or "").lower()
+    if "import" in explicit or "导入" in explicit:
+        return "imported result"
+    if "real" in explicit or "computed" in explicit and "testing" not in explicit:
+        return "real computed result"
+    if "testing" in explicit or "preview" in explicit or "generated" in explicit:
+        return "testing-level"
+    return "testing-level"
+
+
+def _analysis_imported_deg_detected(project_root: Path | None) -> bool:
+    if project_root is None:
+        return False
+    recognition = load_recognition_report(project_root)
+    if isinstance(recognition, dict):
+        for item in recognition.get("files", []) or []:
+            if isinstance(item, dict) and str(item.get("recognized_type") or "") == "differential_result_table":
+                return True
+    result_index = load_result_index(project_root)
+    for entry in result_index.get("entries", []) or []:
+        if isinstance(entry, dict) and str(entry.get("analysis_type") or "") == "differential_expression" and _analysis_entry_semantics(entry) == "imported result":
+            return True
+    return False
+
+
 def _project_group_preview(project_root: Path | None) -> dict[str, object]:
     if project_root is None:
         return {}
@@ -7394,15 +7623,17 @@ def _append_geo_deg_results_to_index(project_root: Path, summaries: list[dict[st
         dataset_id = str(summary.get("dataset_id") or Path(result_path).parent.name)
         entries.append(
             {
-                "result_name": f"{dataset_id} 差异表达结果",
+                "result_name": f"{dataset_id} 测试级差异表达结果",
                 "analysis_type": "differential_expression",
                 "file_type": "csv",
                 "created_at": str(summary.get("generated_at") or _utc_now_iso()),
                 "path": result_path,
-                "status": "generated",
+                "status": "testing-level",
+                "result_semantics": "testing-level",
+                "execution_level": "testing-level computed preview",
                 "summary_path": str(summary.get("summary_path") or ""),
                 "dataset_id": dataset_id,
-                "warning": "、".join(str(item) for item in summary.get("warnings", []) or []),
+                "warning": "测试级结果，不等于正式 DEG 分析。" + ("；" + "、".join(str(item) for item in summary.get("warnings", []) or []) if summary.get("warnings") else ""),
             }
         )
         seen_paths.add(result_path)

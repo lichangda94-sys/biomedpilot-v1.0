@@ -1854,7 +1854,85 @@ def test_analysis_task_center_runs_geo_differential_expression_and_indexes_resul
     index = workflow_pages.load_result_index(project_summary.project_root)
     entries = index["entries"]
     assert any(item["analysis_type"] == "differential_expression" for item in entries)
-    assert "已运行 GEO 差异分析" in task_center.status_message()
+    assert any(item["result_semantics"] == "testing-level" for item in entries)
+    assert "测试级 GEO 差异分析结果" in task_center.status_message()
+    assert "不等于正式 DEG 分析" in task_center.status_message()
+
+
+def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "expression_matrix.tsv"
+    expression_file.write_text("gene\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression",
+        strategy="reference",
+        selected_paths=[expression_file],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    widget = BioinformaticsAnalysisTaskCenterWidget()
+    widget.refresh_project(project_summary)
+
+    buttons = {button.text() for button in widget.findChildren(QPushButton)}
+    assert {"刷新任务状态", "确认分组与比较设计", "创建差异分析配置草稿", "继续：结果浏览"}.issubset(buttons)
+    assert widget.findChild(QLabel, "analysisTaskInputSummary") is not None
+    assert "核心输入" in widget.findChild(QLabel, "analysisTaskInputSummary").text()
+    assert "下一步建议" in widget.findChild(QLabel, "analysisTaskNextStep").text()
+
+    table = widget.findChild(QTableWidget, "analysisTaskUserTable")
+    assert table is not None
+    headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
+    assert headers == ["分析任务", "当前状态", "需要输入", "当前缺少", "下一步"]
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "差异表达分析" in table_text
+    assert "differential_expression" not in table_text
+    assert "analysis_capability_matrix" not in table_text
+    assert "manifest" not in table_text.lower()
+    assert "task_id" not in table_text
+    assert str(expression_file) not in table_text
+
+    diagnostics = widget.findChild(QPlainTextEdit, "analysisTaskDeveloperDiagnostics")
+    assert diagnostics is not None
+    assert not diagnostics.isVisible()
+    diagnostics_text = diagnostics.toPlainText()
+    assert "analysis_task_center" in diagnostics_text
+    assert "differential_expression" in diagnostics_text
+
+
+def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, project_summary, tmp_path: Path) -> None:
+    imported_deg = tmp_path / "imported_deg_results.csv"
+    imported_deg.write_text("gene,logFC,P.Value,adj.P.Val\nTP53,1.2,0.01,0.05\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="imported DEG",
+        strategy="reference",
+        selected_paths=[imported_deg],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+
+    widget = BioinformaticsAnalysisTaskCenterWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "analysisTaskUserTable")
+    assert table is not None
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "已有导入结果" in table_text
+    assert "导入表格中的已有差异分析结果，不是本软件重新计算" in table_text
+    assert "真实 DEG" not in table_text
 
 
 def test_geo_profile_display_uses_user_facing_comparison_and_download_categories(qt_app) -> None:
@@ -2274,3 +2352,25 @@ def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> Non
     assert widget.current_page_object_name() == "bioinformaticsResultsBrowserPage"
     widget.show_report_viewer(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsReportViewerPage"
+
+
+def test_standardization_continue_opens_analysis_task_center(qt_app, project_summary) -> None:
+    widget = BioinformaticsWorkspaceWidget()
+    source = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression_matrix.tsv",
+        strategy="reference",
+        selected_paths=[source],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+    workflow_pages.generate_standardized_assets(project_summary.project_root)
+
+    widget.show_standardization(project_summary)
+    widget._standardized_assets_page.continue_to_workflow()
+
+    assert widget.current_page_object_name() == "bioinformaticsAnalysisTaskCenterPage"
