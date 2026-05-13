@@ -104,6 +104,57 @@ def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path:
     } <= mounted_pages
 
 
+def test_meta_screening_workspace_renders_chinese_user_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
+    from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("Screening Workspace", tmp_path)
+    LiteratureLibraryService().import_records(
+        summary.project_root,
+        project_id="screening-workspace",
+        source_type="nbib",
+        source_name="PubMed",
+        raw_records=[
+            {
+                "record_id": "lit-screen-1",
+                "title": "Trial of treatment for hypertension",
+                "abstract": "Adults with hypertension were randomized to treatment or usual care.",
+                "authors": ["Zhang Wei", "Li Ming"],
+                "journal": "Journal A",
+                "year": "2024",
+                "database_source": "PubMed",
+            }
+        ],
+    )
+    TitleAbstractScreeningV2Service().build_queue(summary.project_root, project_id="screening-workspace")
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("screening_review")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "文献筛选" in visible
+    assert "标题摘要筛选" in visible
+    assert "当前文献库" in visible
+    assert "当前 PRISMA 计数" in visible
+    assert "排除原因" in visible
+    assert "下一步：全文管理" in visible
+    assert {"未筛选", "纳入", "排除", "不确定", "需要全文", "重置为未筛选"} <= set(combos["metaScreeningWorkspaceDecisionSelector"])
+    assert {"研究对象不符合", "干预/暴露不符合", "对照不符合", "结局不符合", "研究类型不符合", "重复文献", "非原始研究", "全文不可获取", "语言或获取限制", "其他"} <= set(combos["metaScreeningWorkspaceReasonSelector"])
+    assert str(summary.project_root) not in visible
+    assert "title_abstract_queue_v2.json" not in visible
+    assert "manifest" not in visible
+    assert "raw JSON" not in visible
+
+
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 

@@ -388,6 +388,10 @@ def _decision_counts(records: list[dict[str, object]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for record in records:
         decision = str(record.get("decision", "pending")).lower()
+        if decision not in {"included", "excluded", "maybe", "pending"}:
+            decision = str(record.get("legacy_decision") or decision).lower()
+        if decision == "need_full_text":
+            decision = "maybe"
         counts[decision] = counts.get(decision, 0) + 1
     return counts
 

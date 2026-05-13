@@ -11,11 +11,14 @@ from app.meta_analysis.services.screening_service import ScreeningQueueResult, S
 from app.meta_analysis.services.title_abstract_screening_v2_service import (
     DECISION_EXCLUDE,
     DECISION_INCLUDE,
+    DECISION_NEED_FULL_TEXT,
     DECISION_NEEDS_REVIEW,
     DECISION_NOT_SCREENED,
     DECISION_UNCERTAIN,
     DEFAULT_EXCLUSION_REASONS,
+    EXCLUSION_REASON_LABELS_ZH,
     TITLE_ABSTRACT_SCREENING_QUEUE_SCHEMA_VERSION,
+    ScreeningSummaryCounts,
     TitleAbstractScreeningV2Service,
 )
 from app.meta_analysis.ui_text import (
@@ -73,6 +76,12 @@ class TitleAbstractScreeningRecordView:
     decision_zh: str
     exclusion_reason_text: str
     notes: str
+    source_database: str = ""
+    abstract_snippet: str = ""
+    dedup_status: str = ""
+    current_screening_status: str = ""
+    exclusion_reason_code: str = ""
+    exclusion_reason_zh: str = ""
 
 
 @dataclass(frozen=True)
@@ -128,7 +137,10 @@ class TitleAbstractScreeningV2PageState:
     testing_limitations: tuple[str, ...]
     output_summary: str
     empty_state: str
-    title_zh: str = "标题摘要初筛 v2"
+    summary_counts: ScreeningSummaryCounts | None = None
+    prisma_summary_lines_zh: tuple[str, ...] = ()
+    developer_diagnostics_collapsed: bool = True
+    title_zh: str = "文献筛选"
     status_label_zh: str = "Developer Preview / 需要人工确认"
 
 
@@ -231,15 +243,19 @@ def title_abstract_screening_v2_state_from_project(
     service = service or TitleAbstractScreeningV2Service()
     exclusion_library_service = exclusion_library_service or ExclusionCriteriaLibraryService()
     queue_payload = service.load_queue(project_dir)
-    records = tuple(_v2_record_view(item) for item in queue_payload.get("queue_records", []) if isinstance(item, dict))
+    queue_records = [dict(item) for item in queue_payload.get("queue_records", []) if isinstance(item, dict)]
     decisions_payload = _load_json(Path(service.decisions_path(project_dir)))
     decisions = [dict(item) for item in decisions_payload.get("screening_records", []) if isinstance(item, dict)]
+    decisions_by_record = {str(item.get("record_id", "")): item for item in decisions}
+    records = tuple(_v2_record_view({**item, **decisions_by_record.get(str(item.get("record_id", "")), {})}) for item in queue_records)
+    summary = service.screening_summary(project_dir)
     counts = {
         "include": 0,
         "exclude": 0,
         "uncertain": 0,
+        "need_full_text": 0,
         "needs_review": 0,
-        "not_screened": max(len(records) - len(decisions), 0),
+        "not_screened": summary.title_abstract_unscreened,
         "total": len(records),
     }
     for item in decisions:
@@ -248,12 +264,13 @@ def title_abstract_screening_v2_state_from_project(
     warnings = list(str(item) for item in queue_payload.get("warnings", []) if str(item))
     if not records:
         warnings.append("empty_title_abstract_screening_queue_v2")
-    exclusion_options = tuple(
-        reason.english_label
+    library_options = tuple(
+        reason.chinese_label
         for reason in exclusion_library_service.list_reasons(project_dir, stage="title_abstract", enabled_only=True)
-    ) or DEFAULT_EXCLUSION_REASONS
+    )
+    exclusion_options = tuple(dict.fromkeys((*EXCLUSION_REASON_LABELS_ZH.values(), *library_options))) or DEFAULT_EXCLUSION_REASONS
     return TitleAbstractScreeningV2PageState(
-        title="Title / Abstract Screening v2",
+        title="Literature Screening Workspace",
         status_label="Developer Preview / reviewer decisions required",
         queue_path=str(service.queue_path(project_dir)),
         decisions_path=str(service.decisions_path(project_dir)),
@@ -263,18 +280,30 @@ def title_abstract_screening_v2_state_from_project(
         total_records=len(records),
         queue_records=records,
         decision_counts=counts,
-        decision_options=(DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN, DECISION_NEEDS_REVIEW),
-        decision_option_labels_zh=("纳入", "排除", "不确定", "需要复核"),
+        decision_options=(DECISION_NOT_SCREENED, DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN, DECISION_NEED_FULL_TEXT, "reset_to_unscreened"),
+        decision_option_labels_zh=("未筛选", "纳入", "排除", "不确定", "需要全文", "重置为未筛选"),
         exclusion_reason_options=exclusion_options,
         warnings=tuple(dict.fromkeys(warnings)),
-        next_step="下一步：仅 reviewer 决策为 include / uncertain 的记录可进入全文候选。",
+        next_step="下一步：全文管理",
         testing_limitations=(
             "生成队列不是筛选决定，不会自动纳入或排除文献。",
             "AI/model 输出只能作为 suggestion，不能直接写最终筛选结果。",
             "PRISMA screened / excluded 数字只应来自 reviewer 保存的真实决策记录。",
         ),
-        output_summary="输出：title_abstract_queue_v2.json、title_abstract_decisions_v2.json 和兼容 screening_decisions.json。",
+        output_summary="输出：标题摘要筛选决策、兼容筛选记录和 PRISMA 计数摘要。",
         empty_state="没有可筛选记录。请先完成文献导入和去重复核。" if not records else "",
+        summary_counts=summary,
+        prisma_summary_lines_zh=(
+            f"导入文献数：{summary.imported_total}",
+            f"去重后文献数：{summary.after_dedup_total}",
+            f"标题摘要筛选未筛选：{summary.title_abstract_unscreened}",
+            f"标题摘要筛选纳入：{summary.title_abstract_included}",
+            f"标题摘要筛选排除：{summary.title_abstract_excluded}",
+            f"不确定：{summary.title_abstract_uncertain}",
+            f"需要全文：{summary.full_text_needed}",
+            f"全文筛选纳入：{summary.full_text_included}",
+            f"全文筛选排除：{summary.full_text_excluded}",
+        ),
     )
 
 
@@ -340,6 +369,7 @@ def _v2_record_view(item: dict[str, object]) -> TitleAbstractScreeningRecordView
         DECISION_INCLUDE: "纳入",
         DECISION_EXCLUDE: "排除",
         DECISION_UNCERTAIN: "不确定",
+        DECISION_NEED_FULL_TEXT: "需要全文",
         DECISION_NEEDS_REVIEW: "需要复核",
         DECISION_NOT_SCREENED: "未筛选",
     }.get(decision, decision)
@@ -359,6 +389,12 @@ def _v2_record_view(item: dict[str, object]) -> TitleAbstractScreeningRecordView
         decision_zh=decision_zh,
         exclusion_reason_text=str(item.get("exclusion_reason_text") or ""),
         notes=str(item.get("notes") or ""),
+        source_database=str(item.get("database_source") or item.get("source_type") or ""),
+        abstract_snippet=_snippet(str(item.get("abstract") or "")),
+        dedup_status=str(item.get("dedup_status") or "去重后待筛选"),
+        current_screening_status=decision_zh,
+        exclusion_reason_code=str(item.get("exclusion_reason_code") or ""),
+        exclusion_reason_zh=EXCLUSION_REASON_LABELS_ZH.get(str(item.get("exclusion_reason_code") or ""), str(item.get("exclusion_reason_text") or "")),
     )
 
 
@@ -391,6 +427,11 @@ def _join_text(value: object) -> str:
     if isinstance(value, list):
         return "; ".join(str(item) for item in value)
     return str(value or "")
+
+
+def _snippet(value: str, *, limit: int = 180) -> str:
+    text = " ".join(value.split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
 
 
 def _load_json(path: Path) -> dict[str, object]:

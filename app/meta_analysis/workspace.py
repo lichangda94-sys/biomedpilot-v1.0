@@ -388,7 +388,15 @@ if QWidget is not None:
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
     from app.meta_analysis.services.publication_export_service import PublicationExportService
     from app.meta_analysis.services.quality_service import QualityAssessmentService
-    from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
+    from app.meta_analysis.services.title_abstract_screening_v2_service import (
+        DECISION_EXCLUDE,
+        DECISION_INCLUDE,
+        DECISION_NEED_FULL_TEXT,
+        DECISION_NOT_SCREENED,
+        DECISION_UNCERTAIN,
+        EXCLUSION_REASON_LABELS_ZH,
+        TitleAbstractScreeningV2Service,
+    )
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -1485,19 +1493,24 @@ if QWidget is not None:
 
     def _dedup_review_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         service = DedupReviewV2Service()
+        screening_service = TitleAbstractScreeningV2Service()
         queue = service.load_queue(project_dir)
         groups = list(queue.groups)
         decisions_payload = _load_json_object(service.decisions_path(project_dir))
         decisions = _items_from_payload(decisions_payload, "decisions")
         decisions_by_group = {str(item.get("group_id", "")): str(item.get("decision", "")) for item in decisions}
         deduplicated_payload = _load_json_object(service.deduplicated_set_path(project_dir))
-        screening_queue = TitleAbstractScreeningV2Service().load_queue(project_dir)
+        screening_queue = screening_service.load_queue(project_dir)
+        screening_records = _items_from_payload(screening_queue, "queue_records")
+        screening_decisions = _items_from_payload(_load_json_object(screening_service.decisions_path(project_dir)), "screening_records")
+        screening_decisions_by_record = {str(item.get("record_id", "")): item for item in screening_decisions}
+        screening_summary = screening_service.screening_summary(project_dir)
         prisma_summary = PRISMAService().collect_literature_acquisition_summary(project_dir)
         frame = QFrame()
         frame.setObjectName("metaTitleAbstractScreeningPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("去重与筛选", "人工检查重复文献，准备标题摘要筛选队列。", "人工复核"))
+        layout.addWidget(_page_header("文献筛选", "去重后逐篇完成标题摘要筛选；AI/规则只作为 suggestion。", "人工复核"))
         risk_counts: dict[str, int] = {}
         for group in groups:
             risk_counts[group.risk_level] = risk_counts.get(group.risk_level, 0) + 1
@@ -1527,7 +1540,7 @@ if QWidget is not None:
         generate_deduped.setObjectName("metaPrimaryButton")
         build_screening_queue = QPushButton("创建标题摘要筛选队列")
         build_screening_queue.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：数据提取与质量评价")
+        next_button = QPushButton("下一步：全文管理")
         next_button.setObjectName("metaSecondaryButton")
         action_row = QHBoxLayout()
         action_row.addWidget(build_queue)
@@ -1592,6 +1605,93 @@ if QWidget is not None:
         right_layout.addWidget(log_detail)
         content_row.addWidget(right_panel, 2)
         layout.addLayout(content_row)
+
+        screening_card = _card("标题摘要筛选")
+        screening_card.setObjectName("metaScreeningWorkspaceCard")
+        screening_layout = screening_card.layout()
+        screening_layout.addWidget(
+            _info_card(
+                "当前 PRISMA 计数",
+                [
+                    f"导入文献数：{screening_summary.imported_total}",
+                    f"去重后文献数：{screening_summary.after_dedup_total}",
+                    f"标题摘要筛选未筛选：{screening_summary.title_abstract_unscreened}",
+                    f"标题摘要筛选纳入：{screening_summary.title_abstract_included}",
+                    f"标题摘要筛选排除：{screening_summary.title_abstract_excluded}",
+                    f"不确定：{screening_summary.title_abstract_uncertain}",
+                    f"需要全文：{screening_summary.full_text_needed}",
+                    f"全文筛选纳入：{screening_summary.full_text_included}",
+                    f"全文筛选排除：{screening_summary.full_text_excluded}",
+                ],
+                object_name="metaScreeningPrismaCounts",
+            )
+        )
+        screening_content = QHBoxLayout()
+        screening_record_list = QListWidget()
+        screening_record_list.setObjectName("metaScreeningWorkspaceRecordList")
+        screening_record_list.setMinimumWidth(360)
+        for record in screening_records:
+            decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
+            decision_label = _screening_decision_label(str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED))
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(record.get("title") or "Untitled"),
+                        " · ".join(
+                            part
+                            for part in (
+                                _first_author(record),
+                                str(record.get("year") or ""),
+                                str(record.get("journal") or ""),
+                                decision_label,
+                            )
+                            if part
+                        ),
+                    ]
+                )
+            )
+            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
+            screening_record_list.addItem(item)
+        screening_content.addWidget(screening_record_list, 1)
+        screening_panel = _card("当前文献库")
+        screening_panel_layout = screening_panel.layout()
+        screening_detail = QTextEdit()
+        screening_detail.setObjectName("metaScreeningWorkspaceRecordDetail")
+        screening_detail.setReadOnly(True)
+        screening_decision = QComboBox()
+        screening_decision.setObjectName("metaScreeningWorkspaceDecisionSelector")
+        for label, value in (
+            ("未筛选", DECISION_NOT_SCREENED),
+            ("纳入", DECISION_INCLUDE),
+            ("排除", DECISION_EXCLUDE),
+            ("不确定", DECISION_UNCERTAIN),
+            ("需要全文", DECISION_NEED_FULL_TEXT),
+            ("重置为未筛选", "reset_to_unscreened"),
+        ):
+            screening_decision.addItem(label, value)
+        screening_reason = QComboBox()
+        screening_reason.setObjectName("metaScreeningWorkspaceReasonSelector")
+        screening_reason.addItem("排除原因", "")
+        for code, label in EXCLUSION_REASON_LABELS_ZH.items():
+            screening_reason.addItem(label, code)
+        screening_notes = QPlainTextEdit()
+        screening_notes.setObjectName("metaScreeningWorkspaceNotes")
+        screening_notes.setPlaceholderText("筛选备注；AI/规则建议需人工接受或编辑后才生效")
+        screening_notes.setMaximumHeight(86)
+        save_screening_decision = QPushButton("保存筛选决定")
+        save_screening_decision.setObjectName("metaPrimaryButton")
+        screening_panel_layout.addWidget(QLabel("文献信息"))
+        screening_panel_layout.addWidget(screening_detail)
+        screening_panel_layout.addWidget(QLabel("筛选决策"))
+        screening_panel_layout.addWidget(screening_decision)
+        screening_panel_layout.addWidget(QLabel("排除原因"))
+        screening_panel_layout.addWidget(screening_reason)
+        screening_panel_layout.addWidget(screening_notes)
+        screening_panel_layout.addWidget(save_screening_decision)
+        screening_content.addWidget(screening_panel, 2)
+        screening_layout.addLayout(screening_content)
+        screening_layout.addWidget(QLabel("下一步：全文管理"))
+        layout.addWidget(screening_card)
         layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -1659,19 +1759,56 @@ if QWidget is not None:
             if not service.deduplicated_set_path(project_dir).exists() and groups and not skipped_all:
                 _show_message("请先生成去重后文献库，或将重复组标记为稍后处理。")
                 return
-            result = TitleAbstractScreeningV2Service().build_queue(project_dir, project_id=project_dir.name)
+            result = screening_service.build_queue(project_dir, project_id=project_dir.name)
             _show_message(f"筛选队列已创建：{result.record_count} 篇。")
+            on_refresh()
+
+        def selected_screening_record_id() -> str:
+            item = screening_record_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def refresh_screening_detail(index: int = 0) -> None:
+            if index < 0 or index >= len(screening_records):
+                screening_detail.setPlainText("暂无待筛选文献。")
+                return
+            record = screening_records[index]
+            decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
+            screening_detail.setPlainText(_screening_record_user_detail(record, decision_payload))
+
+        def do_save_screening_decision() -> None:
+            record_id = selected_screening_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            selected_decision = str(screening_decision.currentData() or DECISION_NOT_SCREENED)
+            selected_reason = str(screening_reason.currentData() or "")
+            if selected_decision == DECISION_EXCLUDE and not selected_reason:
+                _show_message("排除必须选择排除原因")
+                return
+            result = screening_service.save_decision(
+                project_dir,
+                record_id=record_id,
+                decision=selected_decision,
+                actor="reviewer",
+                exclusion_reason_code=selected_reason,
+                notes=screening_notes.toPlainText(),
+            )
+            _show_message(result.message)
             on_refresh()
 
         group_list.currentRowChanged.connect(refresh_group_detail)
         record_selector.currentIndexChanged.connect(update_preview)
+        screening_record_list.currentRowChanged.connect(refresh_screening_detail)
         build_queue.clicked.connect(do_build_queue)
         save_decision.clicked.connect(do_save_decision)
         generate_deduped.clicked.connect(do_generate_deduped)
         build_screening_queue.clicked.connect(do_build_screening_queue)
+        save_screening_decision.clicked.connect(do_save_screening_decision)
         next_button.clicked.connect(on_next)
         group_list.setCurrentRow(0 if groups else -1)
         refresh_group_detail(group_list.currentRow())
+        screening_record_list.setCurrentRow(0 if screening_records else -1)
+        refresh_screening_detail(screening_record_list.currentRow())
         return frame
 
 
@@ -3049,6 +3186,52 @@ if QWidget is not None:
                 f"导入批次：{record.get('import_batch_id') or record.get('batch_id') or ''}",
                 f"当前筛选状态：{record.get('screening_status', '')}",
                 f"用户备注：{user_note}",
+            ]
+        )
+
+
+    def _screening_decision_label(decision: str) -> str:
+        return {
+            "not_screened": "未筛选",
+            "pending": "未筛选",
+            "include": "纳入",
+            "included": "纳入",
+            "exclude": "排除",
+            "excluded": "排除",
+            "uncertain": "不确定",
+            "maybe": "不确定",
+            "need_full_text": "需要全文",
+            "needs_review": "需要复核",
+        }.get(decision, decision or "未筛选")
+
+
+    def _first_author(record: dict[str, object]) -> str:
+        first = str(record.get("first_author") or "").strip()
+        if first:
+            return first
+        authors = record.get("authors")
+        if isinstance(authors, list) and authors:
+            return str(authors[0])
+        authors_text = str(record.get("authors_text") or "").strip()
+        return authors_text.split(";")[0].strip() if authors_text else ""
+
+
+    def _screening_record_user_detail(record: dict[str, object], decision_payload: dict[str, object]) -> str:
+        decision = str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED)
+        reason_code = str(decision_payload.get("exclusion_reason_code") or "")
+        abstract = " ".join(str(record.get("abstract") or "").split())
+        abstract_snippet = abstract if len(abstract) <= 320 else abstract[:319].rstrip() + "..."
+        return "\n".join(
+            [
+                f"title：{record.get('title', '')}",
+                f"作者：{_first_author(record)}",
+                f"年份：{record.get('year', '')}",
+                f"期刊：{record.get('journal', '')}",
+                f"来源数据库：{record.get('database_source') or record.get('source_type') or '未知'}",
+                f"摘要片段：{abstract_snippet or '暂无摘要'}",
+                f"去重状态：{record.get('dedup_status') or '去重后待筛选'}",
+                f"当前筛选状态：{_screening_decision_label(decision)}",
+                f"排除原因：{EXCLUSION_REASON_LABELS_ZH.get(reason_code, str(decision_payload.get('exclusion_reason_text') or '暂无'))}",
             ]
         )
 
