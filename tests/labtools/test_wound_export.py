@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 from io import StringIO
+from pathlib import Path
 
 from PIL import Image
 
@@ -84,29 +85,39 @@ def test_wound_export_package_writes_manifest_csv_markdown_and_overlay(tmp_path)
 
     package = export_wound_healing_analysis_package(result, export_dir)
 
-    manifest = json.loads((export_dir / f"{result.result_id}_manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(Path(package.manifest_path).read_text(encoding="utf-8"))
+    csv_text = Path(package.csv_path).read_text(encoding="utf-8")
+    markdown_text = Path(package.markdown_path).read_text(encoding="utf-8")
     assert package.analysis_type == "wound_healing"
-    assert set(package.files) == {
-        package.manifest_path,
-        package.csv_path,
-        package.markdown_path,
-        package.overlay_path,
-    }
-    assert manifest["schema_version"] == "labtools_image_analysis_export_package_v1"
+    assert package.success is True
+    assert set(package.files) == {"manifest_json", "summary_csv", "markdown_fragment", "roi_overlay_png"}
+    assert manifest["schema_version"] == "labtools_roi_export_manifest.v1"
+    assert manifest["export_type"] == "labtools_image_roi_export_package"
+    assert manifest["tool_slug"] == "wound_manual_roi_threshold"
+    assert manifest["analysis_mode"] == "manual_roi_threshold_area_estimation"
+    assert manifest["review_status"] == "manual_review_required"
     assert manifest["manual_review_required"] is True
     assert manifest["semi_quantitative"] is True
     assert manifest["algorithm"]["name"] == "manual_roi_threshold_wound_healing_v1"
-    assert "semi-quantitative area estimation" in manifest["result_semantics"]
+    assert "semi-quantitative area estimation" in manifest["interpretation_note"]
+    assert "人工复核" in manifest["safety_note"]
+    assert manifest["generated_files_count"] == 4
+    assert set(manifest["output_files"]) == {"manifest_json", "summary_csv", "markdown_fragment", "roi_overlay_png"}
     assert manifest["result"]["threshold"] == 200
     assert manifest["result"]["scratch_mode"] == "bright"
     assert "基于用户 ROI 和阈值" in manifest["result"]["review_notice"]
     assert "不自动保存、不上传、不联网" in manifest["persistence_note"]
-    assert (export_dir / f"{result.result_id}_summary.csv").read_text(encoding="utf-8").startswith(
-        "metric,value,unit,note\n"
+    assert csv_text.startswith(
+        "export_schema_version,tool_slug,review_status,measurement_id,roi_id,measurement_name,value,unit,note,"
     )
-    assert "## 划痕实验面积分析片段" in (
-        export_dir / f"{result.result_id}_report.md"
-    ).read_text(encoding="utf-8")
-    with Image.open(export_dir / f"{result.result_id}_roi_overlay.png") as overlay:
+    assert "threshold_value" in csv_text
+    assert "manual_review_required" in csv_text
+    assert "## LabTools 手动 ROI 辅助分析导出片段" in markdown_text
+    assert str(tmp_path) not in markdown_text
+    assert "人工复核" in markdown_text
+    assert "临床诊断" not in markdown_text
+    assert "无需人工复核" not in markdown_text
+    assert manifest["output_files"]["roi_overlay_png"]["filename"] == Path(package.overlay_path).name
+    with Image.open(package.overlay_path) as overlay:
         assert overlay.size == (10, 10)
         assert overlay.convert("RGB").getpixel((0, 0)) == (251, 140, 0)

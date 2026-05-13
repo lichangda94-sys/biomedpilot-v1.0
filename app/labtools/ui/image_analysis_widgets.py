@@ -73,6 +73,7 @@ if QWidget is not None:
             self._tasks: list[ImageAnalysisTask] = []
             self._latest_export_kind = ""
             self._latest_export_result = None
+            self._latest_analysis_text = ""
             self._build_ui()
 
         def image_records(self) -> tuple[LabImageRecord, ...]:
@@ -357,7 +358,8 @@ if QWidget is not None:
             self._latest_export_result = result
             self._export_button.setEnabled(True)
             audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
-            self._task_summary.setText(f"{self._render_fluorescence_result(result)}\n\n{audit_line}")
+            self._latest_analysis_text = f"{self._render_fluorescence_result(result)}\n\n{audit_line}"
+            self._task_summary.setText(self._latest_analysis_text)
 
         def _handle_run_wound_healing(self) -> None:
             try:
@@ -396,26 +398,45 @@ if QWidget is not None:
             self._latest_export_result = result
             self._export_button.setEnabled(True)
             audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
-            self._task_summary.setText(f"{self._render_wound_result(result)}\n\n{audit_line}")
+            self._latest_analysis_text = f"{self._render_wound_result(result)}\n\n{audit_line}"
+            self._task_summary.setText(self._latest_analysis_text)
+
+        def has_exportable_result(self) -> bool:
+            return self._latest_export_result is not None and self._latest_export_kind in {
+                "fluorescence_intensity",
+                "wound_healing",
+            }
+
+        def set_export_result_for_testing(self, export_kind: str, result) -> None:
+            self._latest_export_kind = export_kind
+            self._latest_export_result = result
+            self._latest_analysis_text = "测试分析结果已设置；仅用于 UI 导出行为测试。"
+            self._export_button.setEnabled(self.has_exportable_result())
 
         def _handle_export_current_result(self) -> None:
-            if self._latest_export_result is None:
+            if not self.has_exportable_result():
                 self._task_summary.setText("请先运行荧光 ROI 或划痕 ROI 分析，再导出结果。")
                 return
-            directory = QFileDialog.getExistingDirectory(self, "选择 ROI 结果导出目录")
+            directory = self._select_export_directory()
             if not directory:
+                self._task_summary.setText(self._export_cancelled_text())
                 return
             try:
-                if self._latest_export_kind == "fluorescence_intensity":
-                    package = export_fluorescence_analysis_package(self._latest_export_result, directory)
-                elif self._latest_export_kind == "wound_healing":
-                    package = export_wound_healing_analysis_package(self._latest_export_result, directory)
-                else:
-                    raise ImageAnalysisError("当前结果类型暂不支持导出。")
-            except ImageAnalysisError as exc:
-                self._task_summary.setText(f"导出需要调整\n{exc}")
+                package = self._perform_export_to_directory(directory)
+            except Exception as exc:
+                self._task_summary.setText(self._export_failed_text(str(exc)))
                 return
             self._task_summary.setText(self._render_export_package_summary(package))
+
+        def _select_export_directory(self) -> str:
+            return QFileDialog.getExistingDirectory(self, "选择 ROI 结果导出目录")
+
+        def _perform_export_to_directory(self, directory: str):
+            if self._latest_export_kind == "fluorescence_intensity":
+                return export_fluorescence_analysis_package(self._latest_export_result, directory)
+            if self._latest_export_kind == "wound_healing":
+                return export_wound_healing_analysis_package(self._latest_export_result, directory)
+            raise ImageAnalysisError("当前结果类型暂不支持导出。")
 
         def _parse_roi_int(self, value: str, field_name: str) -> int:
             if value is None or str(value).strip() == "":
@@ -490,6 +511,14 @@ if QWidget is not None:
                     "语义边界：导出文件为 manual-review / semi-quantitative 辅助结果，不构成自动算法结论、临床建议或实验 SOP。",
                 ]
             )
+
+        def _export_cancelled_text(self) -> str:
+            previous = self._latest_analysis_text or "当前分析结果仍保留在内存预览中。"
+            return "\n\n".join(["已取消导出；未写入任何文件。", previous])
+
+        def _export_failed_text(self, message: str) -> str:
+            previous = self._latest_analysis_text or "当前分析结果仍保留在内存预览中。"
+            return "\n\n".join(["导出需要调整", message, "当前分析结果保留如下", previous])
 
         def _render_task_summary(self, task: ImageAnalysisTask) -> None:
             image_line = "无图片记录" if not task.image_records else f"{len(task.image_records)} 个图片记录"

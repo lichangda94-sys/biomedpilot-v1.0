@@ -3,9 +3,11 @@ from __future__ import annotations
 import csv
 import json
 from io import StringIO
+from pathlib import Path
 
 from PIL import Image
 
+from app.labtools.image_analysis import export_fluorescence_analysis_package
 from app.labtools.image_analysis.fluorescence import (
     FluorescenceAnalysisParameters,
     FluorescenceROI,
@@ -14,7 +16,6 @@ from app.labtools.image_analysis.fluorescence import (
     fluorescence_csv_text,
     fluorescence_result_to_json_dict,
 )
-from app.labtools.image_analysis import export_fluorescence_analysis_package
 
 
 def _write_image(path) -> None:
@@ -89,29 +90,38 @@ def test_fluorescence_export_package_writes_manifest_csv_markdown_and_overlay(tm
 
     package = export_fluorescence_analysis_package(result, export_dir)
 
-    manifest = json.loads((export_dir / f"{result.result_id}_manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(Path(package.manifest_path).read_text(encoding="utf-8"))
+    csv_text = Path(package.csv_path).read_text(encoding="utf-8")
+    markdown_text = Path(package.markdown_path).read_text(encoding="utf-8")
     assert package.analysis_type == "fluorescence_intensity"
-    assert set(package.files) == {
-        package.manifest_path,
-        package.csv_path,
-        package.markdown_path,
-        package.overlay_path,
-    }
-    assert manifest["schema_version"] == "labtools_image_analysis_export_package_v1"
+    assert package.success is True
+    assert set(package.files) == {"manifest_json", "summary_csv", "markdown_fragment", "roi_overlay_png"}
+    assert manifest["schema_version"] == "labtools_roi_export_manifest.v1"
+    assert manifest["export_type"] == "labtools_image_roi_export_package"
+    assert manifest["tool_slug"] == "fluorescence_manual_roi"
+    assert manifest["analysis_mode"] == "manual_roi_auxiliary_analysis"
+    assert manifest["review_status"] == "manual_review_required"
     assert manifest["manual_review_required"] is True
     assert manifest["semi_quantitative"] is False
     assert manifest["algorithm"]["name"] == "manual_roi_grayscale_fluorescence_v1"
-    assert "manual ROI grayscale" in manifest["result_semantics"]
+    assert "manual ROI grayscale" in manifest["interpretation_note"]
+    assert "人工复核" in manifest["safety_note"]
+    assert manifest["generated_files_count"] == 4
+    assert set(manifest["output_files"]) == {"manifest_json", "summary_csv", "markdown_fragment", "roi_overlay_png"}
     assert "人工复核" in manifest["result"]["review_notice"]
     assert manifest["result"]["signal_roi"]["roi_type"] == "signal"
     assert manifest["result"]["background_roi"]["roi_type"] == "background"
     assert "不自动保存、不上传、不联网" in manifest["persistence_note"]
-    assert (export_dir / f"{result.result_id}_summary.csv").read_text(encoding="utf-8").startswith(
-        "metric,value,unit,note\n"
+    assert csv_text.startswith(
+        "export_schema_version,tool_slug,review_status,measurement_id,roi_id,measurement_name,value,unit,note,"
     )
-    assert "## 荧光强度 ROI 分析片段" in (
-        export_dir / f"{result.result_id}_report.md"
-    ).read_text(encoding="utf-8")
-    with Image.open(export_dir / f"{result.result_id}_roi_overlay.png") as overlay:
+    assert "labtools_roi_export_manifest.v1" in csv_text
+    assert "manual_review_required" in csv_text
+    assert "## LabTools 手动 ROI 辅助分析导出片段" in markdown_text
+    assert str(tmp_path) not in markdown_text
+    assert "人工复核" in markdown_text
+    assert "正式结论" not in markdown_text
+    assert manifest["output_files"]["roi_overlay_png"]["filename"] == Path(package.overlay_path).name
+    with Image.open(package.overlay_path) as overlay:
         assert overlay.size == (6, 3)
         assert overlay.convert("RGB").getpixel((0, 0)) == (229, 57, 53)
