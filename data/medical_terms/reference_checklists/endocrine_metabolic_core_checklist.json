@@ -1,0 +1,4257 @@
+{
+  "schema_version": "medical_vocabulary_reference_checklist.v1",
+  "checklist_id": "endocrine_metabolic_core",
+  "title": "Endocrine and Metabolic Core Vocabulary v1",
+  "source": "project-curated high-frequency endocrine/metabolic disease phenotype and biomarker checklist",
+  "source_version": "2026-05-11 curated v1",
+  "coverage_type": "endocrine_metabolic_core",
+  "items": [
+    {
+      "id": "diabetes_mellitus",
+      "label": "diabetes mellitus",
+      "priority": "P1",
+      "preferred_zh": "糖尿病",
+      "zh_synonyms": [
+        "糖尿病"
+      ],
+      "preferred_en": "diabetes mellitus",
+      "en_synonyms": [
+        "diabetes",
+        "diabetes mellitus"
+      ],
+      "abbreviations": [
+        "DM"
+      ],
+      "mesh_terms": [
+        "Diabetes Mellitus"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "disease",
+      "related_organs": [
+        "pancreas"
+      ],
+      "related_tissues": [
+        "pancreatic islet",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "type 1 diabetes",
+        "type 2 diabetes",
+        "gestational diabetes"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "diabetes mellitus",
+        "糖尿病",
+        "糖尿病",
+        "diabetes",
+        "diabetes mellitus",
+        "DM",
+        "Diabetes Mellitus"
+      ]
+    },
+    {
+      "id": "type_1_diabetes_mellitus",
+      "label": "type 1 diabetes mellitus",
+      "priority": "P1",
+      "preferred_zh": "1型糖尿病",
+      "zh_synonyms": [
+        "一型糖尿病",
+        "1型糖尿病"
+      ],
+      "preferred_en": "type 1 diabetes mellitus",
+      "en_synonyms": [
+        "type 1 diabetes",
+        "insulin-dependent diabetes mellitus"
+      ],
+      "abbreviations": [
+        "T1D",
+        "T1DM"
+      ],
+      "mesh_terms": [
+        "Diabetes Mellitus, Type 1"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "disease",
+      "related_organs": [
+        "pancreas"
+      ],
+      "related_tissues": [
+        "pancreatic islet",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "type 2 diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "type 1 diabetes mellitus",
+        "1型糖尿病",
+        "一型糖尿病",
+        "1型糖尿病",
+        "type 1 diabetes",
+        "insulin-dependent diabetes mellitus",
+        "T1D",
+        "T1DM",
+        "Diabetes Mellitus, Type 1"
+      ]
+    },
+    {
+      "id": "type_2_diabetes_mellitus",
+      "label": "type 2 diabetes mellitus",
+      "priority": "P1",
+      "preferred_zh": "2型糖尿病",
+      "zh_synonyms": [
+        "二型糖尿病",
+        "2型糖尿病"
+      ],
+      "preferred_en": "type 2 diabetes mellitus",
+      "en_synonyms": [
+        "type 2 diabetes",
+        "non-insulin-dependent diabetes mellitus"
+      ],
+      "abbreviations": [
+        "T2D",
+        "T2DM"
+      ],
+      "mesh_terms": [
+        "Diabetes Mellitus, Type 2"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "disease",
+      "related_organs": [
+        "pancreas",
+        "adipose tissue",
+        "liver"
+      ],
+      "related_tissues": [
+        "pancreatic islet",
+        "adipose tissue",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Adipose Tissue",
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Adipose Tissue",
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "type 1 diabetes mellitus",
+        "prediabetes"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "type 2 diabetes mellitus",
+        "2型糖尿病",
+        "二型糖尿病",
+        "2型糖尿病",
+        "type 2 diabetes",
+        "non-insulin-dependent diabetes mellitus",
+        "T2D",
+        "T2DM",
+        "Diabetes Mellitus, Type 2"
+      ]
+    },
+    {
+      "id": "prediabetes",
+      "label": "prediabetes",
+      "priority": "P1",
+      "preferred_zh": "糖尿病前期",
+      "zh_synonyms": [
+        "糖前期",
+        "前驱糖尿病"
+      ],
+      "preferred_en": "prediabetes",
+      "en_synonyms": [
+        "pre-diabetes",
+        "intermediate hyperglycemia"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Prediabetic State"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "pancreas",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "Prediabetes is a risk state and should not be expanded to established type 2 diabetes without explicit wording.",
+      "avoid_expansion_to": [
+        "type 2 diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "prediabetes",
+        "糖尿病前期",
+        "糖前期",
+        "前驱糖尿病",
+        "pre-diabetes",
+        "intermediate hyperglycemia",
+        "Prediabetic State"
+      ]
+    },
+    {
+      "id": "impaired_fasting_glucose",
+      "label": "impaired fasting glucose",
+      "priority": "P1",
+      "preferred_zh": "空腹血糖受损",
+      "zh_synonyms": [
+        "空腹葡萄糖受损"
+      ],
+      "preferred_en": "impaired fasting glucose",
+      "en_synonyms": [
+        "impaired fasting glycaemia"
+      ],
+      "abbreviations": [
+        "IFG"
+      ],
+      "mesh_terms": [
+        "Glucose Intolerance"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "pancreas",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "type 2 diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "impaired fasting glucose",
+        "空腹血糖受损",
+        "空腹葡萄糖受损",
+        "impaired fasting glycaemia",
+        "IFG",
+        "Glucose Intolerance"
+      ]
+    },
+    {
+      "id": "impaired_glucose_tolerance",
+      "label": "impaired glucose tolerance",
+      "priority": "P1",
+      "preferred_zh": "糖耐量受损",
+      "zh_synonyms": [
+        "葡萄糖耐量受损"
+      ],
+      "preferred_en": "impaired glucose tolerance",
+      "en_synonyms": [
+        "impaired glucose tolerance test"
+      ],
+      "abbreviations": [
+        "IGT"
+      ],
+      "mesh_terms": [
+        "Glucose Intolerance"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "pancreas",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "type 2 diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "impaired glucose tolerance",
+        "糖耐量受损",
+        "葡萄糖耐量受损",
+        "impaired glucose tolerance test",
+        "IGT",
+        "Glucose Intolerance"
+      ]
+    },
+    {
+      "id": "insulin_resistance",
+      "label": "insulin resistance",
+      "priority": "P1",
+      "preferred_zh": "胰岛素抵抗",
+      "zh_synonyms": [
+        "胰岛素敏感性降低"
+      ],
+      "preferred_en": "insulin resistance",
+      "en_synonyms": [
+        "reduced insulin sensitivity"
+      ],
+      "abbreviations": [
+        "IR"
+      ],
+      "mesh_terms": [
+        "Insulin Resistance"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "pancreas",
+        "adipose tissue",
+        "liver",
+        "skeletal muscle"
+      ],
+      "related_tissues": [
+        "adipose tissue",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Adipose Tissue",
+        "Liver",
+        "Muscle - Skeletal",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Adipose Tissue",
+        "Liver",
+        "Muscle - Skeletal",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "insulin resistance",
+        "胰岛素抵抗",
+        "胰岛素敏感性降低",
+        "reduced insulin sensitivity",
+        "IR",
+        "Insulin Resistance"
+      ]
+    },
+    {
+      "id": "hyperglycemia",
+      "label": "hyperglycemia",
+      "priority": "P1",
+      "preferred_zh": "高血糖",
+      "zh_synonyms": [
+        "血糖升高"
+      ],
+      "preferred_en": "hyperglycemia",
+      "en_synonyms": [
+        "high blood glucose",
+        "high blood sugar"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hyperglycemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "pancreas",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hyperglycemia",
+        "高血糖",
+        "血糖升高",
+        "high blood glucose",
+        "high blood sugar",
+        "Hyperglycemia"
+      ]
+    },
+    {
+      "id": "hypoglycemia",
+      "label": "hypoglycemia",
+      "priority": "P1",
+      "preferred_zh": "低血糖",
+      "zh_synonyms": [
+        "血糖过低"
+      ],
+      "preferred_en": "hypoglycemia",
+      "en_synonyms": [
+        "low blood glucose",
+        "low blood sugar"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypoglycemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "pancreas",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypoglycemia",
+        "低血糖",
+        "血糖过低",
+        "low blood glucose",
+        "low blood sugar",
+        "Hypoglycemia"
+      ]
+    },
+    {
+      "id": "gestational_diabetes_mellitus",
+      "label": "gestational diabetes mellitus",
+      "priority": "P1",
+      "preferred_zh": "妊娠期糖尿病",
+      "zh_synonyms": [
+        "妊娠糖尿病"
+      ],
+      "preferred_en": "gestational diabetes mellitus",
+      "en_synonyms": [
+        "gestational diabetes"
+      ],
+      "abbreviations": [
+        "GDM"
+      ],
+      "mesh_terms": [
+        "Diabetes, Gestational"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "glucose_metabolism",
+      "concept_type": "disease",
+      "related_organs": [
+        "pancreas",
+        "placenta"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "type 1 diabetes mellitus",
+        "type 2 diabetes mellitus"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "gestational diabetes mellitus",
+        "妊娠期糖尿病",
+        "妊娠糖尿病",
+        "gestational diabetes",
+        "GDM",
+        "Diabetes, Gestational"
+      ]
+    },
+    {
+      "id": "obesity",
+      "label": "obesity",
+      "priority": "P1",
+      "preferred_zh": "肥胖",
+      "zh_synonyms": [
+        "肥胖症"
+      ],
+      "preferred_en": "obesity",
+      "en_synonyms": [
+        "obese",
+        "adiposity"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Obesity"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "obesity_weight",
+      "concept_type": "disease",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "adipose tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "metabolic syndrome"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "obesity",
+        "肥胖",
+        "肥胖症",
+        "obese",
+        "adiposity",
+        "Obesity"
+      ]
+    },
+    {
+      "id": "overweight",
+      "label": "overweight",
+      "priority": "P1",
+      "preferred_zh": "超重",
+      "zh_synonyms": [
+        "体重超重"
+      ],
+      "preferred_en": "overweight",
+      "en_synonyms": [
+        "increased body weight"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Overweight"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "obesity_weight",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "adipose tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "obesity"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "overweight",
+        "超重",
+        "体重超重",
+        "increased body weight",
+        "Overweight"
+      ]
+    },
+    {
+      "id": "central_obesity",
+      "label": "central obesity",
+      "priority": "P1",
+      "preferred_zh": "中心性肥胖",
+      "zh_synonyms": [
+        "中央型肥胖"
+      ],
+      "preferred_en": "central obesity",
+      "en_synonyms": [
+        "central adiposity"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Obesity, Abdominal"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "obesity_weight",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "visceral adipose tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "metabolic syndrome"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "central obesity",
+        "中心性肥胖",
+        "中央型肥胖",
+        "central adiposity",
+        "Obesity, Abdominal"
+      ]
+    },
+    {
+      "id": "abdominal_obesity",
+      "label": "abdominal obesity",
+      "priority": "P1",
+      "preferred_zh": "腹型肥胖",
+      "zh_synonyms": [
+        "腹部肥胖"
+      ],
+      "preferred_en": "abdominal obesity",
+      "en_synonyms": [
+        "visceral obesity",
+        "abdominal adiposity"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Obesity, Abdominal"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "obesity_weight",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "visceral adipose tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "metabolic syndrome"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "abdominal obesity",
+        "腹型肥胖",
+        "腹部肥胖",
+        "visceral obesity",
+        "abdominal adiposity",
+        "Obesity, Abdominal"
+      ]
+    },
+    {
+      "id": "morbid_obesity",
+      "label": "morbid obesity",
+      "priority": "P1",
+      "preferred_zh": "病态肥胖",
+      "zh_synonyms": [
+        "重度肥胖"
+      ],
+      "preferred_en": "morbid obesity",
+      "en_synonyms": [
+        "severe obesity"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Obesity, Morbid"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "obesity_weight",
+      "concept_type": "disease",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "adipose tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "metabolic syndrome"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "morbid obesity",
+        "病态肥胖",
+        "重度肥胖",
+        "severe obesity",
+        "Obesity, Morbid"
+      ]
+    },
+    {
+      "id": "body_mass_index",
+      "label": "body mass index",
+      "priority": "P1",
+      "preferred_zh": "体重指数",
+      "zh_synonyms": [
+        "身体质量指数"
+      ],
+      "preferred_en": "body mass index",
+      "en_synonyms": [
+        "BMI",
+        "body-mass index"
+      ],
+      "abbreviations": [
+        "BMI"
+      ],
+      "mesh_terms": [
+        "Body Mass Index"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "obesity_weight",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "anthropometric measure"
+      ],
+      "expected_gtex_tissues": [],
+      "gtex_tissue_candidates": [],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "BMI is an anthropometric index, not a disease.",
+      "avoid_expansion_to": [
+        "obesity"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "body mass index",
+        "体重指数",
+        "身体质量指数",
+        "BMI",
+        "body-mass index",
+        "BMI",
+        "Body Mass Index"
+      ]
+    },
+    {
+      "id": "dyslipidemia",
+      "label": "dyslipidemia",
+      "priority": "P1",
+      "preferred_zh": "血脂异常",
+      "zh_synonyms": [
+        "脂质异常"
+      ],
+      "preferred_en": "dyslipidemia",
+      "en_synonyms": [
+        "dyslipidaemia"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Dyslipidemias"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "lipid_disorder",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver",
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "blood",
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver",
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver",
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "dyslipidemia",
+        "血脂异常",
+        "脂质异常",
+        "dyslipidaemia",
+        "Dyslipidemias"
+      ]
+    },
+    {
+      "id": "hyperlipidemia",
+      "label": "hyperlipidemia",
+      "priority": "P1",
+      "preferred_zh": "高脂血症",
+      "zh_synonyms": [
+        "血脂升高"
+      ],
+      "preferred_en": "hyperlipidemia",
+      "en_synonyms": [
+        "hyperlipidaemia"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hyperlipidemias"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "lipid_disorder",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "blood",
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hyperlipidemia",
+        "高脂血症",
+        "血脂升高",
+        "hyperlipidaemia",
+        "Hyperlipidemias"
+      ]
+    },
+    {
+      "id": "hypercholesterolemia",
+      "label": "hypercholesterolemia",
+      "priority": "P1",
+      "preferred_zh": "高胆固醇血症",
+      "zh_synonyms": [
+        "胆固醇升高"
+      ],
+      "preferred_en": "hypercholesterolemia",
+      "en_synonyms": [
+        "high cholesterol"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypercholesterolemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "lipid_disorder",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "blood",
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypercholesterolemia",
+        "高胆固醇血症",
+        "胆固醇升高",
+        "high cholesterol",
+        "Hypercholesterolemia"
+      ]
+    },
+    {
+      "id": "hypertriglyceridemia",
+      "label": "hypertriglyceridemia",
+      "priority": "P1",
+      "preferred_zh": "高甘油三酯血症",
+      "zh_synonyms": [
+        "甘油三酯升高"
+      ],
+      "preferred_en": "hypertriglyceridemia",
+      "en_synonyms": [
+        "high triglycerides"
+      ],
+      "abbreviations": [
+        "HTG"
+      ],
+      "mesh_terms": [
+        "Hypertriglyceridemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "lipid_disorder",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver",
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "blood",
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver",
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver",
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypertriglyceridemia",
+        "高甘油三酯血症",
+        "甘油三酯升高",
+        "high triglycerides",
+        "HTG",
+        "Hypertriglyceridemia"
+      ]
+    },
+    {
+      "id": "low_hdl_cholesterol",
+      "label": "low HDL cholesterol",
+      "priority": "P1",
+      "preferred_zh": "低高密度脂蛋白胆固醇",
+      "zh_synonyms": [
+        "低HDL胆固醇"
+      ],
+      "preferred_en": "low HDL cholesterol",
+      "en_synonyms": [
+        "low HDL-C",
+        "decreased HDL cholesterol"
+      ],
+      "abbreviations": [
+        "HDL",
+        "HDL-C"
+      ],
+      "mesh_terms": [
+        "Cholesterol, HDL"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "lipid_disorder",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "HDL alone is a biomarker token and should not imply disease without low/high context.",
+      "avoid_expansion_to": [
+        "hypercholesterolemia"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "low HDL cholesterol",
+        "低高密度脂蛋白胆固醇",
+        "低HDL胆固醇",
+        "low HDL-C",
+        "decreased HDL cholesterol",
+        "HDL",
+        "HDL-C",
+        "Cholesterol, HDL"
+      ]
+    },
+    {
+      "id": "high_ldl_cholesterol",
+      "label": "high LDL cholesterol",
+      "priority": "P1",
+      "preferred_zh": "高低密度脂蛋白胆固醇",
+      "zh_synonyms": [
+        "高LDL胆固醇"
+      ],
+      "preferred_en": "high LDL cholesterol",
+      "en_synonyms": [
+        "high LDL-C",
+        "elevated LDL cholesterol"
+      ],
+      "abbreviations": [
+        "LDL",
+        "LDL-C"
+      ],
+      "mesh_terms": [
+        "Cholesterol, LDL"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "lipid_disorder",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "LDL alone is a biomarker token and should not imply disease without low/high context.",
+      "avoid_expansion_to": [
+        "hypercholesterolemia"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "high LDL cholesterol",
+        "高低密度脂蛋白胆固醇",
+        "高LDL胆固醇",
+        "high LDL-C",
+        "elevated LDL cholesterol",
+        "LDL",
+        "LDL-C",
+        "Cholesterol, LDL"
+      ]
+    },
+    {
+      "id": "metabolic_syndrome",
+      "label": "metabolic syndrome",
+      "priority": "P1",
+      "preferred_zh": "代谢综合征",
+      "zh_synonyms": [
+        "代谢症候群"
+      ],
+      "preferred_en": "metabolic syndrome",
+      "en_synonyms": [
+        "metabolic syndrome X"
+      ],
+      "abbreviations": [
+        "MetS"
+      ],
+      "mesh_terms": [
+        "Metabolic Syndrome"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "metabolic_syndrome_fatty_liver",
+      "concept_type": "disease",
+      "related_organs": [
+        "adipose tissue",
+        "liver",
+        "pancreas"
+      ],
+      "related_tissues": [
+        "blood",
+        "adipose tissue",
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue",
+        "Liver",
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue",
+        "Liver",
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "obesity"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "metabolic syndrome",
+        "代谢综合征",
+        "代谢症候群",
+        "metabolic syndrome X",
+        "MetS",
+        "Metabolic Syndrome"
+      ]
+    },
+    {
+      "id": "fatty_liver_disease",
+      "label": "nonalcoholic fatty liver disease",
+      "priority": "P1",
+      "preferred_zh": "非酒精性脂肪性肝病",
+      "zh_synonyms": [
+        "非酒精性脂肪肝",
+        "脂肪肝"
+      ],
+      "preferred_en": "nonalcoholic fatty liver disease",
+      "en_synonyms": [
+        "non-alcoholic fatty liver disease",
+        "fatty liver disease",
+        "hepatic steatosis"
+      ],
+      "abbreviations": [
+        "NAFLD"
+      ],
+      "mesh_terms": [
+        "Non-alcoholic Fatty Liver Disease",
+        "Fatty Liver"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "metabolic_syndrome_fatty_liver",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "hepatocellular carcinoma",
+        "TCGA-LIHC"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "nonalcoholic fatty liver disease",
+        "非酒精性脂肪性肝病",
+        "非酒精性脂肪肝",
+        "脂肪肝",
+        "non-alcoholic fatty liver disease",
+        "fatty liver disease",
+        "hepatic steatosis",
+        "NAFLD",
+        "Non-alcoholic Fatty Liver Disease",
+        "Fatty Liver"
+      ]
+    },
+    {
+      "id": "metabolic_dysfunction_associated_steatotic_liver_disease",
+      "label": "metabolic dysfunction-associated steatotic liver disease",
+      "priority": "P1",
+      "preferred_zh": "代谢功能障碍相关脂肪性肝病",
+      "zh_synonyms": [
+        "代谢相关脂肪性肝病"
+      ],
+      "preferred_en": "metabolic dysfunction-associated steatotic liver disease",
+      "en_synonyms": [
+        "metabolic dysfunction associated steatotic liver disease"
+      ],
+      "abbreviations": [
+        "MASLD"
+      ],
+      "mesh_terms": [
+        "Fatty Liver"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "metabolic_syndrome_fatty_liver",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "hepatocellular carcinoma",
+        "TCGA-LIHC"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "metabolic dysfunction-associated steatotic liver disease",
+        "代谢功能障碍相关脂肪性肝病",
+        "代谢相关脂肪性肝病",
+        "metabolic dysfunction associated steatotic liver disease",
+        "MASLD",
+        "Fatty Liver"
+      ]
+    },
+    {
+      "id": "nonalcoholic_steatohepatitis",
+      "label": "nonalcoholic steatohepatitis",
+      "priority": "P1",
+      "preferred_zh": "非酒精性脂肪性肝炎",
+      "zh_synonyms": [
+        "非酒精性脂肪肝炎"
+      ],
+      "preferred_en": "nonalcoholic steatohepatitis",
+      "en_synonyms": [
+        "non-alcoholic steatohepatitis"
+      ],
+      "abbreviations": [
+        "NASH"
+      ],
+      "mesh_terms": [
+        "Non-alcoholic Fatty Liver Disease"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "metabolic_syndrome_fatty_liver",
+      "concept_type": "disease",
+      "related_organs": [
+        "liver"
+      ],
+      "related_tissues": [
+        "liver"
+      ],
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "gtex_tissue_candidates": [
+        "Liver"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "hepatocellular carcinoma",
+        "TCGA-LIHC"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "nonalcoholic steatohepatitis",
+        "非酒精性脂肪性肝炎",
+        "非酒精性脂肪肝炎",
+        "non-alcoholic steatohepatitis",
+        "NASH",
+        "Non-alcoholic Fatty Liver Disease"
+      ]
+    },
+    {
+      "id": "hypothyroidism",
+      "label": "hypothyroidism",
+      "priority": "P1",
+      "preferred_zh": "甲状腺功能减退症",
+      "zh_synonyms": [
+        "甲减",
+        "甲状腺功能低下"
+      ],
+      "preferred_en": "hypothyroidism",
+      "en_synonyms": [
+        "underactive thyroid"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypothyroidism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA",
+        "Hashimoto thyroiditis"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypothyroidism",
+        "甲状腺功能减退症",
+        "甲减",
+        "甲状腺功能低下",
+        "underactive thyroid",
+        "Hypothyroidism"
+      ]
+    },
+    {
+      "id": "hyperthyroidism",
+      "label": "hyperthyroidism",
+      "priority": "P1",
+      "preferred_zh": "甲状腺功能亢进症",
+      "zh_synonyms": [
+        "甲亢"
+      ],
+      "preferred_en": "hyperthyroidism",
+      "en_synonyms": [
+        "overactive thyroid",
+        "thyrotoxicosis"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hyperthyroidism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA",
+        "Graves disease"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hyperthyroidism",
+        "甲状腺功能亢进症",
+        "甲亢",
+        "overactive thyroid",
+        "thyrotoxicosis",
+        "Hyperthyroidism"
+      ]
+    },
+    {
+      "id": "hashimoto_thyroiditis",
+      "label": "Hashimoto thyroiditis",
+      "priority": "P1",
+      "preferred_zh": "桥本甲状腺炎",
+      "zh_synonyms": [
+        "桥本病",
+        "慢性淋巴细胞性甲状腺炎"
+      ],
+      "preferred_en": "Hashimoto thyroiditis",
+      "en_synonyms": [
+        "Hashimoto disease",
+        "chronic lymphocytic thyroiditis"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hashimoto Disease"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "Hashimoto thyroiditis can cause hypothyroidism but should not be collapsed into hypothyroidism.",
+      "avoid_expansion_to": [
+        "hypothyroidism",
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "Hashimoto thyroiditis",
+        "桥本甲状腺炎",
+        "桥本病",
+        "慢性淋巴细胞性甲状腺炎",
+        "Hashimoto disease",
+        "chronic lymphocytic thyroiditis",
+        "Hashimoto Disease"
+      ]
+    },
+    {
+      "id": "graves_disease",
+      "label": "Graves disease",
+      "priority": "P1",
+      "preferred_zh": "Graves病",
+      "zh_synonyms": [
+        "格雷夫斯病",
+        "毒性弥漫性甲状腺肿"
+      ],
+      "preferred_en": "Graves disease",
+      "en_synonyms": [
+        "Basedow disease",
+        "Graves-Basedow disease"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Graves Disease"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "Graves disease is related to hyperthyroidism but should not be collapsed into hyperthyroidism.",
+      "avoid_expansion_to": [
+        "hyperthyroidism",
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "Graves disease",
+        "Graves病",
+        "格雷夫斯病",
+        "毒性弥漫性甲状腺肿",
+        "Basedow disease",
+        "Graves-Basedow disease",
+        "Graves Disease"
+      ]
+    },
+    {
+      "id": "autoimmune_thyroiditis",
+      "label": "autoimmune thyroiditis",
+      "priority": "P1",
+      "preferred_zh": "自身免疫性甲状腺炎",
+      "zh_synonyms": [
+        "自身免疫甲状腺炎"
+      ],
+      "preferred_en": "autoimmune thyroiditis",
+      "en_synonyms": [
+        "autoimmune thyroid disease"
+      ],
+      "abbreviations": [
+        "AITD"
+      ],
+      "mesh_terms": [
+        "Thyroiditis, Autoimmune"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "autoimmune thyroiditis",
+        "自身免疫性甲状腺炎",
+        "自身免疫甲状腺炎",
+        "autoimmune thyroid disease",
+        "AITD",
+        "Thyroiditis, Autoimmune"
+      ]
+    },
+    {
+      "id": "thyroid_nodule",
+      "label": "thyroid nodule",
+      "priority": "P1",
+      "preferred_zh": "甲状腺结节",
+      "zh_synonyms": [
+        "甲状腺结节病变"
+      ],
+      "preferred_en": "thyroid nodule",
+      "en_synonyms": [
+        "thyroid nodules"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Thyroid Nodule"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "Thyroid nodule is not automatically thyroid cancer.",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "papillary thyroid carcinoma",
+        "PTC",
+        "TCGA-THCA"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroid nodule",
+        "甲状腺结节",
+        "甲状腺结节病变",
+        "thyroid nodules",
+        "Thyroid Nodule"
+      ]
+    },
+    {
+      "id": "goiter",
+      "label": "goiter",
+      "priority": "P1",
+      "preferred_zh": "甲状腺肿",
+      "zh_synonyms": [
+        "甲状腺肿大"
+      ],
+      "preferred_en": "goiter",
+      "en_synonyms": [
+        "goitre"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Goiter"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "goiter",
+        "甲状腺肿",
+        "甲状腺肿大",
+        "goitre",
+        "Goiter"
+      ]
+    },
+    {
+      "id": "thyroid_hormone_disorder",
+      "label": "thyroid hormone disorder",
+      "priority": "P1",
+      "preferred_zh": "甲状腺激素紊乱",
+      "zh_synonyms": [
+        "甲状腺激素异常"
+      ],
+      "preferred_en": "thyroid hormone disorder",
+      "en_synonyms": [
+        "thyroid hormone abnormality"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Thyroid Hormones"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "thyroid_disease",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer",
+        "PTC",
+        "TCGA-THCA"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroid hormone disorder",
+        "甲状腺激素紊乱",
+        "甲状腺激素异常",
+        "thyroid hormone abnormality",
+        "Thyroid Hormones"
+      ]
+    },
+    {
+      "id": "hyperparathyroidism",
+      "label": "hyperparathyroidism",
+      "priority": "P1",
+      "preferred_zh": "甲状旁腺功能亢进症",
+      "zh_synonyms": [
+        "甲旁亢"
+      ],
+      "preferred_en": "hyperparathyroidism",
+      "en_synonyms": [
+        "overactive parathyroid"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hyperparathyroidism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "parathyroid_calcium",
+      "concept_type": "disease",
+      "related_organs": [
+        "parathyroid"
+      ],
+      "related_tissues": [
+        "parathyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hyperparathyroidism",
+        "甲状旁腺功能亢进症",
+        "甲旁亢",
+        "overactive parathyroid",
+        "Hyperparathyroidism"
+      ]
+    },
+    {
+      "id": "hypoparathyroidism",
+      "label": "hypoparathyroidism",
+      "priority": "P1",
+      "preferred_zh": "甲状旁腺功能减退症",
+      "zh_synonyms": [
+        "甲旁减"
+      ],
+      "preferred_en": "hypoparathyroidism",
+      "en_synonyms": [
+        "underactive parathyroid"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypoparathyroidism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "parathyroid_calcium",
+      "concept_type": "disease",
+      "related_organs": [
+        "parathyroid"
+      ],
+      "related_tissues": [
+        "parathyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypoparathyroidism",
+        "甲状旁腺功能减退症",
+        "甲旁减",
+        "underactive parathyroid",
+        "Hypoparathyroidism"
+      ]
+    },
+    {
+      "id": "hypercalcemia",
+      "label": "hypercalcemia",
+      "priority": "P1",
+      "preferred_zh": "高钙血症",
+      "zh_synonyms": [
+        "血钙升高"
+      ],
+      "preferred_en": "hypercalcemia",
+      "en_synonyms": [
+        "high serum calcium"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypercalcemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "parathyroid_calcium",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "parathyroid",
+        "bone",
+        "kidney"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "hyperparathyroidism"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypercalcemia",
+        "高钙血症",
+        "血钙升高",
+        "high serum calcium",
+        "Hypercalcemia"
+      ]
+    },
+    {
+      "id": "hypocalcemia",
+      "label": "hypocalcemia",
+      "priority": "P1",
+      "preferred_zh": "低钙血症",
+      "zh_synonyms": [
+        "血钙降低"
+      ],
+      "preferred_en": "hypocalcemia",
+      "en_synonyms": [
+        "low serum calcium"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypocalcemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "parathyroid_calcium",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "parathyroid",
+        "bone",
+        "kidney"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "hypoparathyroidism"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypocalcemia",
+        "低钙血症",
+        "血钙降低",
+        "low serum calcium",
+        "Hypocalcemia"
+      ]
+    },
+    {
+      "id": "vitamin_d_deficiency",
+      "label": "vitamin D deficiency",
+      "priority": "P1",
+      "preferred_zh": "维生素D缺乏",
+      "zh_synonyms": [
+        "维D缺乏"
+      ],
+      "preferred_en": "vitamin D deficiency",
+      "en_synonyms": [
+        "25-hydroxyvitamin D deficiency"
+      ],
+      "abbreviations": [
+        "25(OH)D"
+      ],
+      "mesh_terms": [
+        "Vitamin D Deficiency"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "parathyroid_calcium",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "bone",
+        "kidney",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood",
+        "Liver",
+        "Kidney"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood",
+        "Liver",
+        "Kidney"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "osteoporosis"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "vitamin D deficiency",
+        "维生素D缺乏",
+        "维D缺乏",
+        "25-hydroxyvitamin D deficiency",
+        "25(OH)D",
+        "Vitamin D Deficiency"
+      ]
+    },
+    {
+      "id": "osteoporosis",
+      "label": "osteoporosis",
+      "priority": "P1",
+      "preferred_zh": "骨质疏松症",
+      "zh_synonyms": [
+        "骨质疏松"
+      ],
+      "preferred_en": "osteoporosis",
+      "en_synonyms": [
+        "low bone mineral density"
+      ],
+      "abbreviations": [
+        "OP"
+      ],
+      "mesh_terms": [
+        "Osteoporosis"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "parathyroid_calcium",
+      "concept_type": "disease",
+      "related_organs": [
+        "bone"
+      ],
+      "related_tissues": [
+        "bone tissue"
+      ],
+      "expected_gtex_tissues": [],
+      "gtex_tissue_candidates": [],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "vitamin D deficiency"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "osteoporosis",
+        "骨质疏松症",
+        "骨质疏松",
+        "low bone mineral density",
+        "OP",
+        "Osteoporosis"
+      ]
+    },
+    {
+      "id": "pituitary_adenoma",
+      "label": "pituitary adenoma",
+      "priority": "P1",
+      "preferred_zh": "垂体腺瘤",
+      "zh_synonyms": [
+        "脑垂体腺瘤"
+      ],
+      "preferred_en": "pituitary adenoma",
+      "en_synonyms": [
+        "pituitary tumor"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Pituitary Neoplasms"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "pituitary_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "pituitary"
+      ],
+      "related_tissues": [
+        "pituitary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Pituitary"
+      ],
+      "gtex_tissue_candidates": [
+        "Pituitary"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "pituitary adenoma",
+        "垂体腺瘤",
+        "脑垂体腺瘤",
+        "pituitary tumor",
+        "Pituitary Neoplasms"
+      ]
+    },
+    {
+      "id": "hyperprolactinemia",
+      "label": "hyperprolactinemia",
+      "priority": "P1",
+      "preferred_zh": "高泌乳素血症",
+      "zh_synonyms": [
+        "泌乳素升高"
+      ],
+      "preferred_en": "hyperprolactinemia",
+      "en_synonyms": [
+        "high prolactin"
+      ],
+      "abbreviations": [
+        "HPRL"
+      ],
+      "mesh_terms": [
+        "Hyperprolactinemia"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "pituitary_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "pituitary"
+      ],
+      "related_tissues": [
+        "pituitary tissue",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pituitary",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pituitary",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hyperprolactinemia",
+        "高泌乳素血症",
+        "泌乳素升高",
+        "high prolactin",
+        "HPRL",
+        "Hyperprolactinemia"
+      ]
+    },
+    {
+      "id": "acromegaly",
+      "label": "acromegaly",
+      "priority": "P1",
+      "preferred_zh": "肢端肥大症",
+      "zh_synonyms": [
+        "肢端肥大"
+      ],
+      "preferred_en": "acromegaly",
+      "en_synonyms": [
+        "growth hormone excess"
+      ],
+      "abbreviations": [
+        "GH excess"
+      ],
+      "mesh_terms": [
+        "Acromegaly"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "pituitary_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "pituitary"
+      ],
+      "related_tissues": [
+        "pituitary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Pituitary"
+      ],
+      "gtex_tissue_candidates": [
+        "Pituitary"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "acromegaly",
+        "肢端肥大症",
+        "肢端肥大",
+        "growth hormone excess",
+        "GH excess",
+        "Acromegaly"
+      ]
+    },
+    {
+      "id": "cushing_disease",
+      "label": "Cushing disease",
+      "priority": "P1",
+      "preferred_zh": "库欣病",
+      "zh_synonyms": [
+        "垂体性库欣病"
+      ],
+      "preferred_en": "Cushing disease",
+      "en_synonyms": [
+        "pituitary-dependent Cushing disease"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Cushing Syndrome"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "pituitary_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "pituitary",
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "pituitary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Pituitary",
+        "Adrenal Gland"
+      ],
+      "gtex_tissue_candidates": [
+        "Pituitary",
+        "Adrenal Gland"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "Cushing syndrome"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "Cushing disease",
+        "库欣病",
+        "垂体性库欣病",
+        "pituitary-dependent Cushing disease",
+        "Cushing Syndrome"
+      ]
+    },
+    {
+      "id": "hypopituitarism",
+      "label": "hypopituitarism",
+      "priority": "P1",
+      "preferred_zh": "垂体功能减退症",
+      "zh_synonyms": [
+        "垂体功能低下"
+      ],
+      "preferred_en": "hypopituitarism",
+      "en_synonyms": [
+        "pituitary insufficiency"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypopituitarism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "pituitary_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "pituitary"
+      ],
+      "related_tissues": [
+        "pituitary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Pituitary"
+      ],
+      "gtex_tissue_candidates": [
+        "Pituitary"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypopituitarism",
+        "垂体功能减退症",
+        "垂体功能低下",
+        "pituitary insufficiency",
+        "Hypopituitarism"
+      ]
+    },
+    {
+      "id": "cushing_syndrome",
+      "label": "Cushing syndrome",
+      "priority": "P1",
+      "preferred_zh": "库欣综合征",
+      "zh_synonyms": [
+        "皮质醇增多症"
+      ],
+      "preferred_en": "Cushing syndrome",
+      "en_synonyms": [
+        "hypercortisolism"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Cushing Syndrome"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "adrenal_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "adrenal gland",
+        "pituitary"
+      ],
+      "related_tissues": [
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland",
+        "Pituitary"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland",
+        "Pituitary"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "Cushing disease"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "Cushing syndrome",
+        "库欣综合征",
+        "皮质醇增多症",
+        "hypercortisolism",
+        "Cushing Syndrome"
+      ]
+    },
+    {
+      "id": "adrenal_insufficiency",
+      "label": "adrenal insufficiency",
+      "priority": "P1",
+      "preferred_zh": "肾上腺功能不全",
+      "zh_synonyms": [
+        "肾上腺皮质功能不全"
+      ],
+      "preferred_en": "adrenal insufficiency",
+      "en_synonyms": [
+        "adrenal failure"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Adrenal Insufficiency"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "adrenal_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "adrenal insufficiency",
+        "肾上腺功能不全",
+        "肾上腺皮质功能不全",
+        "adrenal failure",
+        "Adrenal Insufficiency"
+      ]
+    },
+    {
+      "id": "addison_disease",
+      "label": "Addison disease",
+      "priority": "P1",
+      "preferred_zh": "阿狄森病",
+      "zh_synonyms": [
+        "艾迪生病",
+        "原发性肾上腺皮质功能减退"
+      ],
+      "preferred_en": "Addison disease",
+      "en_synonyms": [
+        "Addison's disease",
+        "primary adrenal insufficiency"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Addison Disease"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "adrenal_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "Addison disease",
+        "阿狄森病",
+        "艾迪生病",
+        "原发性肾上腺皮质功能减退",
+        "Addison's disease",
+        "primary adrenal insufficiency",
+        "Addison Disease"
+      ]
+    },
+    {
+      "id": "primary_aldosteronism",
+      "label": "primary aldosteronism",
+      "priority": "P1",
+      "preferred_zh": "原发性醛固酮增多症",
+      "zh_synonyms": [
+        "原醛症"
+      ],
+      "preferred_en": "primary aldosteronism",
+      "en_synonyms": [
+        "Conn syndrome",
+        "primary hyperaldosteronism"
+      ],
+      "abbreviations": [
+        "PA"
+      ],
+      "mesh_terms": [
+        "Hyperaldosteronism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "adrenal_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "adrenal gland",
+        "kidney"
+      ],
+      "related_tissues": [
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland",
+        "Kidney"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland",
+        "Kidney"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "primary aldosteronism",
+        "原发性醛固酮增多症",
+        "原醛症",
+        "Conn syndrome",
+        "primary hyperaldosteronism",
+        "PA",
+        "Hyperaldosteronism"
+      ]
+    },
+    {
+      "id": "pheochromocytoma",
+      "label": "pheochromocytoma",
+      "priority": "P1",
+      "preferred_zh": "嗜铬细胞瘤",
+      "zh_synonyms": [
+        "肾上腺嗜铬细胞瘤"
+      ],
+      "preferred_en": "pheochromocytoma",
+      "en_synonyms": [
+        "phaeochromocytoma"
+      ],
+      "abbreviations": [
+        "PCC"
+      ],
+      "mesh_terms": [
+        "Pheochromocytoma"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "adrenal_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "pheochromocytoma",
+        "嗜铬细胞瘤",
+        "肾上腺嗜铬细胞瘤",
+        "phaeochromocytoma",
+        "PCC",
+        "Pheochromocytoma"
+      ]
+    },
+    {
+      "id": "adrenal_adenoma",
+      "label": "adrenal adenoma",
+      "priority": "P1",
+      "preferred_zh": "肾上腺腺瘤",
+      "zh_synonyms": [
+        "肾上腺良性腺瘤"
+      ],
+      "preferred_en": "adrenal adenoma",
+      "en_synonyms": [
+        "adrenocortical adenoma"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Adrenocortical Adenoma"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "adrenal_disease",
+      "concept_type": "disease",
+      "related_organs": [
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "adrenocortical carcinoma",
+        "TCGA-ACC"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "adrenal adenoma",
+        "肾上腺腺瘤",
+        "肾上腺良性腺瘤",
+        "adrenocortical adenoma",
+        "Adrenocortical Adenoma"
+      ]
+    },
+    {
+      "id": "polycystic_ovary_syndrome",
+      "label": "polycystic ovary syndrome",
+      "priority": "P1",
+      "preferred_zh": "多囊卵巢综合征",
+      "zh_synonyms": [
+        "多囊卵巢综合症"
+      ],
+      "preferred_en": "polycystic ovary syndrome",
+      "en_synonyms": [
+        "polycystic ovarian syndrome"
+      ],
+      "abbreviations": [
+        "PCOS"
+      ],
+      "mesh_terms": [
+        "Polycystic Ovary Syndrome"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "reproductive_endocrine",
+      "concept_type": "disease",
+      "related_organs": [
+        "ovary",
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "ovary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Ovary",
+        "Adipose Tissue"
+      ],
+      "gtex_tissue_candidates": [
+        "Ovary",
+        "Adipose Tissue"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "polycystic ovary syndrome",
+        "多囊卵巢综合征",
+        "多囊卵巢综合症",
+        "polycystic ovarian syndrome",
+        "PCOS",
+        "Polycystic Ovary Syndrome"
+      ]
+    },
+    {
+      "id": "hypogonadism",
+      "label": "hypogonadism",
+      "priority": "P1",
+      "preferred_zh": "性腺功能减退症",
+      "zh_synonyms": [
+        "性腺功能低下"
+      ],
+      "preferred_en": "hypogonadism",
+      "en_synonyms": [
+        "gonadal insufficiency"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hypogonadism"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "reproductive_endocrine",
+      "concept_type": "disease",
+      "related_organs": [
+        "ovary",
+        "testis"
+      ],
+      "related_tissues": [
+        "ovary tissue",
+        "testis tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Ovary",
+        "Testis"
+      ],
+      "gtex_tissue_candidates": [
+        "Ovary",
+        "Testis"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hypogonadism",
+        "性腺功能减退症",
+        "性腺功能低下",
+        "gonadal insufficiency",
+        "Hypogonadism"
+      ]
+    },
+    {
+      "id": "premature_ovarian_insufficiency",
+      "label": "premature ovarian insufficiency",
+      "priority": "P1",
+      "preferred_zh": "卵巢早衰",
+      "zh_synonyms": [
+        "早发性卵巢功能不全"
+      ],
+      "preferred_en": "premature ovarian insufficiency",
+      "en_synonyms": [
+        "primary ovarian insufficiency",
+        "premature ovarian failure"
+      ],
+      "abbreviations": [
+        "POI",
+        "POF"
+      ],
+      "mesh_terms": [
+        "Primary Ovarian Insufficiency"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "reproductive_endocrine",
+      "concept_type": "disease",
+      "related_organs": [
+        "ovary"
+      ],
+      "related_tissues": [
+        "ovary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Ovary"
+      ],
+      "gtex_tissue_candidates": [
+        "Ovary"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "premature ovarian insufficiency",
+        "卵巢早衰",
+        "早发性卵巢功能不全",
+        "primary ovarian insufficiency",
+        "premature ovarian failure",
+        "POI",
+        "POF",
+        "Primary Ovarian Insufficiency"
+      ]
+    },
+    {
+      "id": "menopause",
+      "label": "menopause",
+      "priority": "P1",
+      "preferred_zh": "绝经",
+      "zh_synonyms": [
+        "围绝经期"
+      ],
+      "preferred_en": "menopause",
+      "en_synonyms": [
+        "menopausal status"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Menopause"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "reproductive_endocrine",
+      "concept_type": "phenotype",
+      "related_organs": [
+        "ovary"
+      ],
+      "related_tissues": [
+        "ovary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Ovary"
+      ],
+      "gtex_tissue_candidates": [
+        "Ovary"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "premature ovarian insufficiency"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "menopause",
+        "绝经",
+        "围绝经期",
+        "menopausal status",
+        "Menopause"
+      ]
+    },
+    {
+      "id": "adiponectin",
+      "label": "adiponectin",
+      "priority": "P2",
+      "preferred_zh": "脂联素",
+      "zh_synonyms": [
+        "脂肪连接素"
+      ],
+      "preferred_en": "adiponectin",
+      "en_synonyms": [
+        "ADIPOQ protein"
+      ],
+      "abbreviations": [
+        "ADIPOQ"
+      ],
+      "mesh_terms": [
+        "Adiponectin"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "adipose tissue",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "Adiponectin is an adipokine biomarker, not a disease.",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "adiponectin",
+        "脂联素",
+        "脂肪连接素",
+        "ADIPOQ protein",
+        "ADIPOQ",
+        "Adiponectin"
+      ]
+    },
+    {
+      "id": "leptin",
+      "label": "leptin",
+      "priority": "P2",
+      "preferred_zh": "瘦素",
+      "zh_synonyms": [
+        "瘦蛋白"
+      ],
+      "preferred_en": "leptin",
+      "en_synonyms": [
+        "LEP protein"
+      ],
+      "abbreviations": [
+        "LEP"
+      ],
+      "mesh_terms": [
+        "Leptin"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "adipose tissue"
+      ],
+      "related_tissues": [
+        "adipose tissue",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Adipose Tissue",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "leptin",
+        "瘦素",
+        "瘦蛋白",
+        "LEP protein",
+        "LEP",
+        "Leptin"
+      ]
+    },
+    {
+      "id": "insulin",
+      "label": "insulin",
+      "priority": "P2",
+      "preferred_zh": "胰岛素",
+      "zh_synonyms": [
+        "胰岛素水平"
+      ],
+      "preferred_en": "insulin",
+      "en_synonyms": [
+        "INS hormone"
+      ],
+      "abbreviations": [
+        "INS"
+      ],
+      "mesh_terms": [
+        "Insulin"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "pancreas"
+      ],
+      "related_tissues": [
+        "pancreatic beta cell",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "insulin",
+        "胰岛素",
+        "胰岛素水平",
+        "INS hormone",
+        "INS",
+        "Insulin"
+      ]
+    },
+    {
+      "id": "c_peptide",
+      "label": "C-peptide",
+      "priority": "P2",
+      "preferred_zh": "C肽",
+      "zh_synonyms": [
+        "连接肽"
+      ],
+      "preferred_en": "C-peptide",
+      "en_synonyms": [
+        "connecting peptide"
+      ],
+      "abbreviations": [
+        "CPEP"
+      ],
+      "mesh_terms": [
+        "C-Peptide"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "pancreas"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "C-peptide",
+        "C肽",
+        "连接肽",
+        "connecting peptide",
+        "CPEP",
+        "C-Peptide"
+      ]
+    },
+    {
+      "id": "glucagon",
+      "label": "glucagon",
+      "priority": "P2",
+      "preferred_zh": "胰高血糖素",
+      "zh_synonyms": [
+        "高血糖素"
+      ],
+      "preferred_en": "glucagon",
+      "en_synonyms": [
+        "GCG hormone"
+      ],
+      "abbreviations": [
+        "GCG"
+      ],
+      "mesh_terms": [
+        "Glucagon"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "pancreas"
+      ],
+      "related_tissues": [
+        "pancreatic alpha cell",
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pancreas",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "glucagon",
+        "胰高血糖素",
+        "高血糖素",
+        "GCG hormone",
+        "GCG",
+        "Glucagon"
+      ]
+    },
+    {
+      "id": "hemoglobin_a1c",
+      "label": "hemoglobin A1c",
+      "priority": "P2",
+      "preferred_zh": "糖化血红蛋白",
+      "zh_synonyms": [
+        "糖化血红蛋白A1c"
+      ],
+      "preferred_en": "hemoglobin A1c",
+      "en_synonyms": [
+        "glycated hemoglobin",
+        "HbA1c"
+      ],
+      "abbreviations": [
+        "HbA1c",
+        "A1c"
+      ],
+      "mesh_terms": [
+        "Glycated Hemoglobin A"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "hemoglobin A1c",
+        "糖化血红蛋白",
+        "糖化血红蛋白A1c",
+        "glycated hemoglobin",
+        "HbA1c",
+        "HbA1c",
+        "A1c",
+        "Glycated Hemoglobin A"
+      ]
+    },
+    {
+      "id": "fasting_glucose",
+      "label": "fasting glucose",
+      "priority": "P2",
+      "preferred_zh": "空腹血糖",
+      "zh_synonyms": [
+        "空腹葡萄糖"
+      ],
+      "preferred_en": "fasting glucose",
+      "en_synonyms": [
+        "fasting plasma glucose",
+        "fasting blood glucose"
+      ],
+      "abbreviations": [
+        "FPG",
+        "FBG"
+      ],
+      "mesh_terms": [
+        "Blood Glucose"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "pancreas",
+        "liver"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood",
+        "Pancreas",
+        "Liver"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood",
+        "Pancreas",
+        "Liver"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "fasting glucose",
+        "空腹血糖",
+        "空腹葡萄糖",
+        "fasting plasma glucose",
+        "fasting blood glucose",
+        "FPG",
+        "FBG",
+        "Blood Glucose"
+      ]
+    },
+    {
+      "id": "thyroid_stimulating_hormone",
+      "label": "thyroid-stimulating hormone",
+      "priority": "P2",
+      "preferred_zh": "促甲状腺激素",
+      "zh_synonyms": [
+        "促甲状腺素"
+      ],
+      "preferred_en": "thyroid-stimulating hormone",
+      "en_synonyms": [
+        "thyrotropin"
+      ],
+      "abbreviations": [
+        "TSH"
+      ],
+      "mesh_terms": [
+        "Thyrotropin"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "pituitary",
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood",
+        "pituitary tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Pituitary",
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Pituitary",
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroid-stimulating hormone",
+        "促甲状腺激素",
+        "促甲状腺素",
+        "thyrotropin",
+        "TSH",
+        "Thyrotropin"
+      ]
+    },
+    {
+      "id": "triiodothyronine",
+      "label": "triiodothyronine",
+      "priority": "P2",
+      "preferred_zh": "三碘甲状腺原氨酸",
+      "zh_synonyms": [
+        "总T3"
+      ],
+      "preferred_en": "triiodothyronine",
+      "en_synonyms": [
+        "total T3",
+        "thyroid hormone T3"
+      ],
+      "abbreviations": [
+        "T3"
+      ],
+      "mesh_terms": [
+        "Triiodothyronine"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood",
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "T3 is a short token; runtime matching requires token boundary.",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "triiodothyronine",
+        "三碘甲状腺原氨酸",
+        "总T3",
+        "total T3",
+        "thyroid hormone T3",
+        "T3",
+        "Triiodothyronine"
+      ]
+    },
+    {
+      "id": "thyroxine",
+      "label": "thyroxine",
+      "priority": "P2",
+      "preferred_zh": "甲状腺素",
+      "zh_synonyms": [
+        "总T4"
+      ],
+      "preferred_en": "thyroxine",
+      "en_synonyms": [
+        "total T4",
+        "thyroid hormone T4"
+      ],
+      "abbreviations": [
+        "T4"
+      ],
+      "mesh_terms": [
+        "Thyroxine"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood",
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "T4 is a short token; runtime matching requires token boundary.",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroxine",
+        "甲状腺素",
+        "总T4",
+        "total T4",
+        "thyroid hormone T4",
+        "T4",
+        "Thyroxine"
+      ]
+    },
+    {
+      "id": "free_triiodothyronine",
+      "label": "free triiodothyronine",
+      "priority": "P2",
+      "preferred_zh": "游离三碘甲状腺原氨酸",
+      "zh_synonyms": [
+        "游离T3"
+      ],
+      "preferred_en": "free triiodothyronine",
+      "en_synonyms": [
+        "free T3"
+      ],
+      "abbreviations": [
+        "FT3",
+        "free T3"
+      ],
+      "mesh_terms": [
+        "Triiodothyronine"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "free triiodothyronine",
+        "游离三碘甲状腺原氨酸",
+        "游离T3",
+        "free T3",
+        "FT3",
+        "free T3",
+        "Triiodothyronine"
+      ]
+    },
+    {
+      "id": "free_thyroxine",
+      "label": "free thyroxine",
+      "priority": "P2",
+      "preferred_zh": "游离甲状腺素",
+      "zh_synonyms": [
+        "游离T4"
+      ],
+      "preferred_en": "free thyroxine",
+      "en_synonyms": [
+        "free T4"
+      ],
+      "abbreviations": [
+        "FT4",
+        "free T4"
+      ],
+      "mesh_terms": [
+        "Thyroxine"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "free thyroxine",
+        "游离甲状腺素",
+        "游离T4",
+        "free T4",
+        "FT4",
+        "free T4",
+        "Thyroxine"
+      ]
+    },
+    {
+      "id": "thyroglobulin",
+      "label": "thyroglobulin",
+      "priority": "P2",
+      "preferred_zh": "甲状腺球蛋白",
+      "zh_synonyms": [
+        "甲球蛋白"
+      ],
+      "preferred_en": "thyroglobulin",
+      "en_synonyms": [
+        "Tg protein"
+      ],
+      "abbreviations": [
+        "Tg"
+      ],
+      "mesh_terms": [
+        "Thyroglobulin"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood",
+        "thyroid tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroglobulin",
+        "甲状腺球蛋白",
+        "甲球蛋白",
+        "Tg protein",
+        "Tg",
+        "Thyroglobulin"
+      ]
+    },
+    {
+      "id": "thyroid_peroxidase_antibody",
+      "label": "thyroid peroxidase antibody",
+      "priority": "P2",
+      "preferred_zh": "甲状腺过氧化物酶抗体",
+      "zh_synonyms": [
+        "抗甲状腺过氧化物酶抗体"
+      ],
+      "preferred_en": "thyroid peroxidase antibody",
+      "en_synonyms": [
+        "anti-thyroid peroxidase antibody",
+        "anti-TPO antibody"
+      ],
+      "abbreviations": [
+        "TPOAb",
+        "TPO-Ab"
+      ],
+      "mesh_terms": [
+        "Thyroid Peroxidase Antibodies"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroid peroxidase antibody",
+        "甲状腺过氧化物酶抗体",
+        "抗甲状腺过氧化物酶抗体",
+        "anti-thyroid peroxidase antibody",
+        "anti-TPO antibody",
+        "TPOAb",
+        "TPO-Ab",
+        "Thyroid Peroxidase Antibodies"
+      ]
+    },
+    {
+      "id": "thyroglobulin_antibody",
+      "label": "thyroglobulin antibody",
+      "priority": "P2",
+      "preferred_zh": "甲状腺球蛋白抗体",
+      "zh_synonyms": [
+        "抗甲状腺球蛋白抗体"
+      ],
+      "preferred_en": "thyroglobulin antibody",
+      "en_synonyms": [
+        "anti-thyroglobulin antibody"
+      ],
+      "abbreviations": [
+        "TgAb",
+        "Tg-Ab"
+      ],
+      "mesh_terms": [
+        "Thyroglobulin Antibodies"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "thyroid"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Thyroid",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [
+        "thyroid cancer"
+      ],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "thyroglobulin antibody",
+        "甲状腺球蛋白抗体",
+        "抗甲状腺球蛋白抗体",
+        "anti-thyroglobulin antibody",
+        "TgAb",
+        "Tg-Ab",
+        "Thyroglobulin Antibodies"
+      ]
+    },
+    {
+      "id": "cortisol",
+      "label": "cortisol",
+      "priority": "P2",
+      "preferred_zh": "皮质醇",
+      "zh_synonyms": [
+        "氢化可的松"
+      ],
+      "preferred_en": "cortisol",
+      "en_synonyms": [
+        "hydrocortisone"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Hydrocortisone"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "blood",
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "cortisol",
+        "皮质醇",
+        "氢化可的松",
+        "hydrocortisone",
+        "Hydrocortisone"
+      ]
+    },
+    {
+      "id": "aldosterone",
+      "label": "aldosterone",
+      "priority": "P2",
+      "preferred_zh": "醛固酮",
+      "zh_synonyms": [
+        "醛甾酮"
+      ],
+      "preferred_en": "aldosterone",
+      "en_synonyms": [
+        "mineralocorticoid aldosterone"
+      ],
+      "abbreviations": [],
+      "mesh_terms": [
+        "Aldosterone"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "adrenal gland",
+        "kidney"
+      ],
+      "related_tissues": [
+        "blood",
+        "adrenal tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Adrenal Gland",
+        "Kidney",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Adrenal Gland",
+        "Kidney",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "aldosterone",
+        "醛固酮",
+        "醛甾酮",
+        "mineralocorticoid aldosterone",
+        "Aldosterone"
+      ]
+    },
+    {
+      "id": "renin",
+      "label": "renin",
+      "priority": "P2",
+      "preferred_zh": "肾素",
+      "zh_synonyms": [
+        "血浆肾素"
+      ],
+      "preferred_en": "renin",
+      "en_synonyms": [
+        "plasma renin"
+      ],
+      "abbreviations": [
+        "PRA"
+      ],
+      "mesh_terms": [
+        "Renin"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "kidney",
+        "adrenal gland"
+      ],
+      "related_tissues": [
+        "blood",
+        "kidney tissue"
+      ],
+      "expected_gtex_tissues": [
+        "Kidney",
+        "Whole Blood"
+      ],
+      "gtex_tissue_candidates": [
+        "Kidney",
+        "Whole Blood"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "renin",
+        "肾素",
+        "血浆肾素",
+        "plasma renin",
+        "PRA",
+        "Renin"
+      ]
+    },
+    {
+      "id": "parathyroid_hormone",
+      "label": "parathyroid hormone",
+      "priority": "P2",
+      "preferred_zh": "甲状旁腺激素",
+      "zh_synonyms": [
+        "甲旁素"
+      ],
+      "preferred_en": "parathyroid hormone",
+      "en_synonyms": [
+        "parathormone"
+      ],
+      "abbreviations": [
+        "PTH"
+      ],
+      "mesh_terms": [
+        "Parathyroid Hormone"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "hormone",
+      "related_organs": [
+        "parathyroid",
+        "bone",
+        "kidney"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood",
+        "Kidney"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood",
+        "Kidney"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "parathyroid hormone",
+        "甲状旁腺激素",
+        "甲旁素",
+        "parathormone",
+        "PTH",
+        "Parathyroid Hormone"
+      ]
+    },
+    {
+      "id": "vitamin_d",
+      "label": "vitamin D",
+      "priority": "P2",
+      "preferred_zh": "维生素D",
+      "zh_synonyms": [
+        "25羟维生素D"
+      ],
+      "preferred_en": "vitamin D",
+      "en_synonyms": [
+        "25-hydroxyvitamin D",
+        "25(OH)D"
+      ],
+      "abbreviations": [
+        "VitD",
+        "25(OH)D"
+      ],
+      "mesh_terms": [
+        "Vitamin D"
+      ],
+      "category": "endocrine_metabolic",
+      "subcategory": "biomarker",
+      "concept_type": "biomarker",
+      "related_organs": [
+        "liver",
+        "kidney",
+        "bone"
+      ],
+      "related_tissues": [
+        "blood"
+      ],
+      "expected_gtex_tissues": [
+        "Whole Blood",
+        "Liver",
+        "Kidney"
+      ],
+      "gtex_tissue_candidates": [
+        "Whole Blood",
+        "Liver",
+        "Kidney"
+      ],
+      "contexts": [
+        "bioinformatics",
+        "meta_analysis"
+      ],
+      "ambiguity_notes": "",
+      "avoid_expansion_to": [],
+      "confidence": 0.94,
+      "sources": [
+        "project_curated_endocrine_metabolic_core_v1"
+      ],
+      "expected_terms": [
+        "vitamin D",
+        "维生素D",
+        "25羟维生素D",
+        "25-hydroxyvitamin D",
+        "25(OH)D",
+        "VitD",
+        "25(OH)D",
+        "Vitamin D"
+      ]
+    }
+  ],
+  "ambiguity_terms": [
+    {
+      "term": "T1D",
+      "risk": "short diabetes abbreviation",
+      "policy": "map only as exact token for type 1 diabetes"
+    },
+    {
+      "term": "T2D",
+      "risk": "short diabetes abbreviation",
+      "policy": "map only as exact token for type 2 diabetes"
+    },
+    {
+      "term": "PCOS",
+      "risk": "reproductive endocrine abbreviation",
+      "policy": "map only as exact token"
+    },
+    {
+      "term": "TSH",
+      "risk": "short hormone abbreviation",
+      "policy": "biomarker only, not disease"
+    },
+    {
+      "term": "T3",
+      "risk": "two-character thyroid hormone token",
+      "policy": "require token boundary; do not match STAT3 or similar strings"
+    },
+    {
+      "term": "T4",
+      "risk": "two-character thyroid hormone token",
+      "policy": "require token boundary; do not match unrelated alphanumeric strings"
+    },
+    {
+      "term": "PTH",
+      "risk": "short hormone abbreviation",
+      "policy": "biomarker only"
+    },
+    {
+      "term": "BMI",
+      "risk": "anthropometric index",
+      "policy": "biomarker/phenotype only, not obesity by itself"
+    },
+    {
+      "term": "HDL",
+      "risk": "lipoprotein token",
+      "policy": "biomarker token; low HDL is phenotype"
+    },
+    {
+      "term": "LDL",
+      "risk": "lipoprotein token",
+      "policy": "biomarker token; high LDL is phenotype"
+    },
+    {
+      "term": "NAFLD",
+      "risk": "fatty liver abbreviation",
+      "policy": "do not expand to HCC or LIHC"
+    },
+    {
+      "term": "NASH",
+      "risk": "steatohepatitis abbreviation",
+      "policy": "do not expand to HCC or LIHC"
+    },
+    {
+      "term": "MASLD",
+      "risk": "new fatty liver nomenclature",
+      "policy": "do not expand to HCC or LIHC"
+    }
+  ]
+}

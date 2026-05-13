@@ -1,0 +1,230 @@
+{
+  "schema_version": "biomedpilot.medical_terms.source_metadata.v2",
+  "medical_terms_index_scope": "BioMedPilot shared medical vocabulary",
+  "runtime_strategy": "sqlite_first_optional_with_json_mini_fallback",
+  "runtime_inputs": [
+    "data/medical_terms/zh_term_overrides.json",
+    "data/medical_terms/medical_terms_index.sqlite if present",
+    "data/medical_terms/mini_medical_terms_index.json",
+    "app/shared/query_intelligence/biomedical_term_registry.py fallback"
+  ],
+  "vocabularies": [
+    {
+      "vocabulary_name": "zh_term_overrides",
+      "source_url": "project-local-curated",
+      "version": "stage2.4-gap-driven-2026-05-04",
+      "license": "project-local-curated",
+      "downloaded_at": null,
+      "processed_at": "2026-05-04",
+      "included_in_package": true
+    },
+    {
+      "vocabulary_name": "mini_medical_terms_index",
+      "source_url": "project-local-curated",
+      "version": "stage2.4-gap-driven-2026-05-04",
+      "license": "project-local-curated",
+      "downloaded_at": null,
+      "processed_at": "2026-05-04",
+      "included_in_package": true
+    },
+    {
+      "vocabulary_name": "MONDO",
+      "source_url": "https://purl.obolibrary.org/obo/mondo.owl",
+      "version": "optional-full-index",
+      "license": "CC BY 4.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "included_in_package": false
+    },
+    {
+      "vocabulary_name": "DOID",
+      "source_url": "https://purl.obolibrary.org/obo/doid.obo",
+      "version": "optional-full-index",
+      "license": "CC0 1.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "included_in_package": false
+    },
+    {
+      "vocabulary_name": "NCIt",
+      "source_url": "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/Thesaurus.owl.zip",
+      "version": "optional-full-index",
+      "license": "CC BY 4.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "included_in_package": false
+    },
+    {
+      "vocabulary_name": "MeSH",
+      "source_url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2024.xml",
+      "version": "optional-full-index",
+      "license": "NLM terms apply",
+      "downloaded_at": null,
+      "processed_at": null,
+      "included_in_package": false
+    },
+    {
+      "vocabulary_name": "EFO",
+      "source_url": "https://www.ebi.ac.uk/efo/efo.owl",
+      "version": "optional-full-index",
+      "license": "Apache 2.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "included_in_package": false
+    }
+  ],
+  "stage_2_4_gap_driven_expansion": {
+    "processed_at": "2026-05-04",
+    "basis": "reference coverage audit gaps for TCGA project abbreviations, GTEx tissue groups, and Meta effect-size/publication exclusion terms",
+    "added_concept_ids": [
+      "mini:adrenocortical_carcinoma",
+      "mini:diffuse_large_b_cell_lymphoma",
+      "mini:mesothelioma",
+      "mini:pheochromocytoma_paraganglioma",
+      "mini:sarcoma",
+      "mini:testicular_germ_cell_tumor",
+      "mini:thymoma",
+      "mini:uterine_carcinosarcoma",
+      "mini:uveal_melanoma",
+      "mini:spleen_tissue",
+      "mini:pituitary_tissue",
+      "mini:adrenal_gland_tissue",
+      "mini:testis_tissue",
+      "mini:effect_size_core",
+      "mini:publication_exclusion_gap_terms"
+    ],
+    "source_notes": [
+      "NCI GDC TCGA Study Abbreviations",
+      "GTEx Portal tissue groups and tissueSiteDetail identifiers",
+      "WHO major NCD categories and common Meta-analysis retrieval term practice"
+    ]
+  },
+  "stage_2_3_v7_reference_coverage_audit": {
+    "processed_at": "2026-05-05",
+    "report_paths": [
+      "data/medical_terms/coverage_audit_report.json",
+      "docs/stage_2_3_medical_vocabulary_reference_audit.md"
+    ],
+    "reference_checklists": [
+      "data/medical_terms/reference_checklists/tcga_projects_checklist.json",
+      "data/medical_terms/reference_checklists/common_cancers_checklist.json",
+      "data/medical_terms/reference_checklists/common_diseases_checklist.json",
+      "data/medical_terms/reference_checklists/gtex_tissues_checklist.json",
+      "data/medical_terms/reference_checklists/meta_terms_checklist.json"
+    ],
+    "source_notes": [
+      "NCI GDC TCGA Study Abbreviations",
+      "GLOBOCAN / Global Cancer Observatory common cancer sites",
+      "WHO noncommunicable diseases and major disease categories",
+      "GTEx Portal tissue groups",
+      "Cochrane-style Meta-analysis retrieval term categories"
+    ]
+  },
+  "stage_2_5_coverage_audit_gap_fix": {
+    "processed_at": "2026-05-05",
+    "stage": "Stage 2.5 coverage audit gap fix",
+    "scope": [
+      "cardiovascular common disease partial gap",
+      "neurodegenerative common disease partial gap",
+      "autoimmune common disease partial gap",
+      "GTEx Kidney approximate gap",
+      "GTEx Bladder approximate gap"
+    ],
+    "data_source_type": "manually curated mini vocabulary extension based on internal reference checklist audit",
+    "added_concept_ids": [
+      "mini:cardiovascular_disease_core",
+      "mini:neurodegenerative_disease_core",
+      "mini:autoimmune_disease_core"
+    ],
+    "updated_concept_ids": [
+      "mini:kidney_tissue",
+      "mini:bladder_tissue"
+    ],
+    "note": "No full ontology index enabled; mini vocabulary JSON remains the primary runtime path."
+  },
+  "stage_v6_optional_sqlite_index": {
+    "processed_at": "2026-05-11T14:21:25.123987+00:00",
+    "schema_version": "biomedpilot.medical_terms.sqlite.v6",
+    "generated_files": [
+      "data/medical_terms/medical_terms_index.sqlite",
+      "data/medical_terms/medical_terms_index_build_report.json"
+    ],
+    "fallback_mode": "mini_vocabulary_only",
+    "index_kind": "mini-derived sqlite index",
+    "terms_count": 572,
+    "synonyms_count": 7905,
+    "crossrefs_count": 1032,
+    "note": "Optional sqlite enhancement only; mini_medical_terms_index.json and zh_term_overrides.json remain stable fallback inputs."
+  },
+  "shared_vocabulary_release": {
+    "release_name": "shared_medical_vocabulary_core_v1",
+    "version": "core_v1.0.0",
+    "included_core_packages": [
+      "oncology_core",
+      "endocrine_metabolic_core",
+      "anatomy_tissue_core",
+      "bioinformatics_modality_core",
+      "meta_analysis_terms_core",
+      "cardiovascular_core",
+      "immune_inflammatory_core"
+    ],
+    "total_runtime_concepts": 572,
+    "total_zh_overrides": 1094,
+    "total_checklist_terms": 621,
+    "coverage_summary": {
+      "total_checklist_terms": 621,
+      "total_covered": 621,
+      "overall_coverage": 1.0,
+      "core_checklist_terms": 533,
+      "core_covered": 533,
+      "core_coverage": 1.0
+    },
+    "latest_audit_date": "2026-05-13T02:30:37.980392+00:00",
+    "quality_gate_status": "pass",
+    "high_risk_ambiguity_terms_total": 98,
+    "short_token_risk_terms": [
+      "PTC",
+      "SCC",
+      "RCC",
+      "CRC",
+      "HCC",
+      "GBM",
+      "LGG",
+      "RA",
+      "SLE",
+      "IBD",
+      "MS",
+      "CRP",
+      "IL-6",
+      "TNF",
+      "IFN",
+      "ANA",
+      "RF",
+      "ANCA",
+      "T3",
+      "T4",
+      "TSH",
+      "PTH",
+      "BMI",
+      "HDL",
+      "LDL",
+      "OS",
+      "HR",
+      "OR",
+      "RR",
+      "CI",
+      "MD",
+      "SMD",
+      "PR",
+      "SD",
+      "PD",
+      "WGS",
+      "WES",
+      "RNA",
+      "DNA",
+      "CNV",
+      "SNP"
+    ],
+    "governance_conflict_audit_status": "pass"
+  }
+}
