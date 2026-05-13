@@ -3015,19 +3015,32 @@ if QWidget is not None:
         frame.setObjectName("metaReportExportPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("报告导出", "生成 draft/testing 报告；discussion/conclusion 需人工编辑。", "draft"))
-        layout.addWidget(_info_card("报告状态", [f"Markdown：{'已存在' if report_path.exists() else '暂无'}", "不会自动生成强 conclusion。", "数字来自真实流程和 PRISMA summary。"], object_name="metaReportSummary"))
+        layout.addWidget(_page_header("报告导出", "生成中文 draft/testing 报告；明确区分确认、草稿、建议、缺失和未来统计占位。", "draft"))
+        missing_hint = "缺失内容提示：生成报告后会在 Markdown 末尾列出。"
+        layout.addWidget(
+            _info_card(
+                "报告状态",
+                [
+                    f"Markdown 草稿：{'已存在' if report_path.exists() else '暂无'}",
+                    "不会自动生成 pooled effect、p value、forest plot、funnel plot 或医学结论。",
+                    "统计分析结果尚未作为正式可发表结论生成。",
+                    missing_hint,
+                ],
+                object_name="metaReportSummary",
+            )
+        )
         preview = QTextEdit()
         preview.setObjectName("metaReportPreview")
         preview.setReadOnly(True)
         preview.setPlainText(report_path.read_text(encoding="utf-8")[:12000] if report_path.exists() else "暂无报告草稿。")
         layout.addWidget(preview)
         buttons = QHBoxLayout()
-        build_md = QPushButton("生成 Markdown 草稿")
+        build_md = QPushButton("生成报告草稿")
+        show_location = QPushButton("打开报告位置")
         export_html = QPushButton("导出 HTML")
         export_docx = QPushButton("导出 DOCX")
         next_button = QPushButton("返回项目首页")
-        for button in (build_md, export_html, export_docx, next_button):
+        for button in (build_md, show_location, export_html, export_docx, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_md.setObjectName("metaPrimaryButton")
@@ -3037,9 +3050,12 @@ if QWidget is not None:
         layout.addStretch(1)
 
         def do_build_md() -> None:
-            path = FormalMarkdownReportBuilder().build_formal_markdown_report(project_dir)
+            path = FormalMarkdownReportBuilder().build_draft_markdown_report(project_dir)
             _show_message(f"已生成：{path.name}")
             on_refresh()
+
+        def do_show_location() -> None:
+            _show_message("报告位置：项目 reports 目录。未自动打开外部应用。")
 
         def do_export_html() -> None:
             result = PublicationExportService().export_html_report(project_dir)
@@ -3052,6 +3068,7 @@ if QWidget is not None:
             on_refresh()
 
         build_md.clicked.connect(do_build_md)
+        show_location.clicked.connect(do_show_location)
         export_html.clicked.connect(do_export_html)
         export_docx.clicked.connect(do_export_docx)
         next_button.clicked.connect(on_next)

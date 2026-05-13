@@ -428,6 +428,29 @@ def test_meta_analysis_plan_workspace_renders_chinese_confirmation_controls_with
     assert "unit-internal-plan-1" not in visible
 
 
+def test_meta_report_workspace_renders_m8_draft_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("报告草稿 Meta", tmp_path, research_topic="报告草稿")
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("report_export")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+
+    assert "报告导出" in visible
+    assert "生成报告草稿" in visible
+    assert "打开报告位置" in visible
+    assert "报告状态" in visible
+    assert "缺失内容提示" in visible
+    assert "统计分析结果尚未作为正式可发表结论生成" in visible
+    assert str(summary.project_root) not in visible
+    assert "formal_meta_report.md" not in visible
+    assert "raw JSON" not in visible
+
+
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 

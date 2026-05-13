@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from app.meta_analysis.models.prisma import (
@@ -14,6 +15,9 @@ from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.report_manifest_service import ReportManifestService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
+
+
+DRAFT_REPORT_M8_SCHEMA_VERSION = "meta_draft_report.m8"
 
 
 class PRISMAService:
@@ -276,6 +280,9 @@ class FormalMarkdownReportBuilder:
         )
         self._finish_task(task, success=True, summary=f"Formal markdown report exported: {output_path}")
         return output_path
+
+    def build_draft_markdown_report(self, project_dir: Path) -> Path:
+        return self.build_formal_markdown_report(project_dir)
 
     def _start_task(self, *, project_id: str) -> TaskRecord:
         now = now_utc()
@@ -578,119 +585,456 @@ def _artifact_summary(project_dir: Path) -> dict[str, str]:
     return summary
 
 
+def _m8_report_state(project_dir: Path, prisma: PRISMAFlowSummary, artifacts: dict[str, str]) -> dict[str, Any]:
+    screening = _safe_screening_summary(project_dir)
+    fulltext = _safe_fulltext_summary(project_dir)
+    extraction_rows = _safe_extraction_rows(project_dir)
+    quality = _safe_quality_summary(project_dir, expected_study_ids=[str(row.get("study_id", "")) for row in extraction_rows if str(row.get("study_id", "")).strip()])
+    plan = _safe_analysis_plan_summary(project_dir)
+    literature_records = _load_literature_records(project_dir)
+    source_counts: dict[str, int] = {}
+    for record in literature_records:
+        source = str(record.get("source_database") or record.get("database_source") or record.get("source") or "未标注").strip() or "未标注"
+        source_counts[source] = source_counts.get(source, 0) + 1
+    final_count = len([row for row in extraction_rows if str(row.get("confirmation_status", "")) in {"已确认", "用户完成"}])
+    if final_count == 0:
+        final_count = _analysis_ready_count(project_dir)
+    missing_sections = _m8_missing_sections(artifacts, screening, fulltext, extraction_rows, quality, plan)
+    return {
+        "research_question_lines": _research_question_lines(project_dir),
+        "source_summary": _format_counts(source_counts) if source_counts else "缺失",
+        "dedup_status": _dedup_status(project_dir, prisma),
+        "prisma_counts": {
+            "imported_total": max(int(screening.get("imported_total", 0) or 0), prisma.records_identified),
+            "after_dedup_total": max(int(screening.get("after_dedup_total", 0) or 0), prisma.records_after_deduplication),
+            "title_abstract_included": int(screening.get("title_abstract_included", 0) or 0),
+            "title_abstract_excluded": int(screening.get("title_abstract_excluded", 0) or prisma.records_excluded_title_abstract),
+            "title_abstract_uncertain": int(screening.get("title_abstract_uncertain", 0) or 0),
+            "full_text_needed": max(int(screening.get("full_text_needed", 0) or 0), int(fulltext.get("full_text_needed", 0) or 0), prisma.full_text_reports_sought),
+            "full_text_confirmed": int(fulltext.get("full_text_confirmed", 0) or int(screening.get("full_text_included", 0) or 0)),
+            "full_text_excluded": int(fulltext.get("full_text_excluded", 0) or int(screening.get("full_text_excluded", 0) or prisma.full_text_reports_excluded)),
+            "full_text_unavailable": int(fulltext.get("full_text_unavailable", 0) or 0),
+            "final_included_for_extraction": final_count,
+        },
+        "extraction_rows": extraction_rows,
+        "quality_summary": quality,
+        "analysis_plan": plan,
+        "missing_sections": missing_sections,
+    }
+
+
+def _safe_screening_summary(project_dir: Path) -> dict[str, int]:
+    try:
+        from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
+
+        return {key: int(value) for key, value in TitleAbstractScreeningV2Service().screening_summary(project_dir).to_dict().items() if isinstance(value, int)}
+    except Exception:
+        payload = _load_json(project_dir / "screening" / "title_abstract_screening_summary_v1.json")
+        return {key: int(value) for key, value in payload.items() if isinstance(value, int)}
+
+
+def _safe_fulltext_summary(project_dir: Path) -> dict[str, int]:
+    try:
+        from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
+
+        return FullTextManagementService().summary_counts(project_dir)
+    except Exception:
+        return {}
+
+
+def _safe_extraction_rows(project_dir: Path) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    effect_payload = _load_json(project_dir / "extraction" / "extraction_effect_rows.json")
+    for item in effect_payload.get("effect_rows", []):
+        if not isinstance(item, dict):
+            continue
+        structured = item.get("m5_structured_fields", {}) if isinstance(item.get("m5_structured_fields"), dict) else {}
+        if not structured and str(item.get("study_unit_label", "")).strip():
+            structured = {
+                "first_author": str(item.get("study_unit_label", "")),
+                "outcome": str(item.get("outcome_name", "")),
+                "effect_measure_type": str(item.get("effect_measure", "")),
+            }
+        rows.append(
+            {
+                "study_id": str(structured.get("study_id") or item.get("study_unit_label") or ""),
+                "author_year": _author_year(structured),
+                "study_design": _safe_text(structured.get("study_design")),
+                "population": _safe_text(structured.get("population")),
+                "outcome": _safe_text(structured.get("outcome") or item.get("outcome_name")),
+                "effect_measure_type": _safe_text(structured.get("effect_measure_type") or item.get("effect_measure")),
+                "confirmation_status": _confirmation_status_label(str(item.get("evidence_state") or item.get("extraction_status") or "draft")),
+            }
+        )
+    if rows:
+        return rows
+    legacy = _load_json(project_dir / "extraction" / "extraction_records.json")
+    for item in legacy.get("records", []):
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "study_id": "",
+                "author_year": _safe_text(item.get("author_year") or item.get("first_author") or "未填写"),
+                "study_design": _safe_text(item.get("study_design")),
+                "population": _safe_text(item.get("population")),
+                "outcome": _safe_text(item.get("outcome") or item.get("outcome_name")),
+                "effect_measure_type": _safe_text(item.get("effect_measure_type") or item.get("effect_measure")),
+                "confirmation_status": _confirmation_status_label(str(item.get("evidence_state") or item.get("status") or "draft")),
+            }
+        )
+    return rows
+
+
+def _safe_quality_summary(project_dir: Path, *, expected_study_ids: list[str]) -> dict[str, Any]:
+    try:
+        from app.meta_analysis.services.quality_service import QualityAssessmentService
+
+        service = QualityAssessmentService()
+        records = service.load_quality_assessment_records_v1(project_dir)
+        m6 = service.quality_m6_summary(project_dir, expected_study_ids=expected_study_ids)
+        tools = sorted({str(record.get("tool_name", "")) for record in records if str(record.get("tool_name", "")).strip()})
+        return {
+            "tools_used": "、".join(tools) if tools else "缺失",
+            "studies_assessed": int(m6.get("studies_with_confirmed_quality", 0) or 0),
+            "risk_distribution": f"低风险/较好 {m6.get('low_risk_or_good', 0)}；不明确 {m6.get('unclear', 0)}；高风险/较差 {m6.get('high_risk_or_poor', 0)}",
+            "warning": "质量评价尚未全部确认" if int(m6.get("studies_pending_quality", 0) or 0) > 0 else "无",
+            "complete": int(m6.get("studies_pending_quality", 0) or 0) == 0 and bool(records),
+        }
+    except Exception:
+        payload = _load_json(project_dir / "quality" / "quality_assessment_records_v1.json") or _load_json(project_dir / "quality" / "quality_assessments.json")
+        records = payload.get("records") or payload.get("quality_assessments") or payload.get("assessments") or []
+        records = [dict(item) for item in records if isinstance(item, dict)] if isinstance(records, list) else []
+        tools = sorted({str(record.get("tool_name", "")) for record in records if str(record.get("tool_name", "")).strip()})
+        return {
+            "tools_used": "、".join(tools) if tools else "缺失",
+            "studies_assessed": len(records),
+            "risk_distribution": "缺失",
+            "warning": "质量评价尚未全部确认" if not records else "无",
+            "complete": bool(records),
+        }
+
+
+def _safe_analysis_plan_summary(project_dir: Path) -> dict[str, str]:
+    confirmed = _load_json(project_dir / "analysis" / "analysis_plan_confirmed_v1.json")
+    draft = _load_json(project_dir / "analysis" / "analysis_plan_draft_v1.json")
+    legacy = _load_json(project_dir / "analysis" / "analysis_plan.json")
+    legacy_plan = dict(legacy.get("plan", {})) if isinstance(legacy.get("plan", {}), dict) else legacy
+    plan = confirmed or draft or legacy_plan
+    status = "已确认" if confirmed else "草稿" if draft or legacy else "缺失"
+    warnings = plan.get("m7_warning_labels_zh", {}) if isinstance(plan.get("m7_warning_labels_zh"), dict) else {}
+    return {
+        "status_label": status,
+        "effect_measure_type": _safe_text(plan.get("effect_measure_type") or plan.get("confirmed_effect_measure") or plan.get("effect_measure")),
+        "model_preference": _model_label(str(plan.get("model_preference") or plan.get("confirmed_model") or plan.get("model_default") or "")),
+        "heterogeneity_plan": _safe_text(plan.get("heterogeneity_metrics") or "I2 / tau2 / Q"),
+        "subgroup_plan": _safe_plan(plan.get("subgroup_plan") or plan.get("confirmed_subgroup_plan")),
+        "sensitivity_plan": _safe_plan(plan.get("sensitivity_plan") or plan.get("confirmed_sensitivity_plan")),
+        "warnings": "；".join(str(value) for value in warnings.values()) if warnings else "无",
+        "complete": bool(confirmed),
+    }
+
+
+def _research_question_lines(project_dir: Path) -> list[str]:
+    confirmed = _load_json(project_dir / "protocol" / "pico_workspace_confirmed.json")
+    draft = _load_json(project_dir / "protocol" / "pico_workspace_draft.json")
+    legacy = _load_json(project_dir / "protocol" / "review_protocol.json")
+    lines: list[str] = []
+    if confirmed:
+        lines.extend(
+            [
+                f"- 用户确认内容：研究对象：{_safe_text(confirmed.get('confirmed_population'))}",
+                f"- 用户确认内容：干预/暴露：{_safe_text(confirmed.get('confirmed_intervention_or_exposure'))}",
+                f"- 用户确认内容：对照：{_safe_text(confirmed.get('confirmed_comparator'))}",
+                f"- 用户确认内容：结局：{_safe_text(confirmed.get('confirmed_outcomes'))}",
+                f"- 用户确认内容：研究类型：{_safe_text(confirmed.get('confirmed_study_design'))}",
+            ]
+        )
+    elif draft:
+        lines.extend(
+            [
+                f"- 草稿内容：研究问题：{_safe_text(draft.get('research_question_original'))}",
+                f"- 草稿内容：研究对象：{_safe_text(draft.get('population'))}",
+                f"- 草稿内容：结局：{_safe_text(draft.get('outcome'))}",
+            ]
+        )
+    elif legacy:
+        title = legacy.get("project_title") or legacy.get("research_question") or legacy.get("title")
+        lines.append(f"- 草稿内容：{_safe_text(title)}")
+    return lines or ["- 缺失内容：尚未找到研究问题或 PICO/PICOS/PECO 确认记录。"]
+
+
+def _load_literature_records(project_dir: Path) -> list[dict[str, Any]]:
+    for path in (
+        project_dir / "literature" / "literature_records.json",
+        project_dir / "literature" / "batch_literature_records.json",
+    ):
+        payload = _load_json(path)
+        records = payload.get("records") or payload.get("literature_records")
+        if isinstance(records, list):
+            return [dict(item) for item in records if isinstance(item, dict)]
+    return []
+
+
+def _dedup_status(project_dir: Path, prisma: PRISMAFlowSummary) -> str:
+    payload = _load_json(project_dir / "deduplication" / "deduplicated_literature_v2.json") or _load_json(project_dir / "deduplication" / "deduplicated_literature.json")
+    if payload:
+        unresolved = payload.get("unresolved_group_ids", [])
+        pending = int(payload.get("pending_duplicate_group_count", 0) or (len(unresolved) if isinstance(unresolved, list) else 0))
+        return "已生成去重结果" if pending == 0 else f"存在待处理重复组 {pending}"
+    return "缺失" if prisma.records_after_deduplication == 0 else "testing-level PRISMA fallback"
+
+
+def _analysis_ready_count(project_dir: Path) -> int:
+    payload = _load_json(project_dir / "analysis" / "analysis_ready_datasets.json")
+    datasets = payload.get("datasets")
+    if isinstance(datasets, list):
+        total = 0
+        for dataset in datasets:
+            if isinstance(dataset, dict):
+                included = dataset.get("included_study_count")
+                total += int(included) if isinstance(included, int) else 1
+        return total
+    return 0
+
+
+def _m8_missing_sections(
+    artifacts: dict[str, str],
+    screening: dict[str, int],
+    fulltext: dict[str, int],
+    extraction_rows: list[dict[str, str]],
+    quality: dict[str, Any],
+    plan: dict[str, str],
+) -> list[str]:
+    missing = [key for key, value in artifacts.items() if value == "missing / not generated" and key in {"literature_records", "deduplicated_literature", "screening_decisions", "analysis_plan"}]
+    if not screening:
+        missing.append("title_abstract_screening_summary")
+    if not fulltext:
+        missing.append("full_text_management")
+    if not extraction_rows:
+        missing.append("structured_extraction_rows")
+    if not quality.get("complete"):
+        missing.append("confirmed_quality_assessment")
+    if not plan.get("complete"):
+        missing.append("confirmed_analysis_plan")
+    return _dedupe_strings(missing)
+
+
+def _section_lines(lines: list[str]) -> list[str]:
+    return lines if lines else ["- 缺失内容：暂无。"]
+
+
+def _study_feature_lines(rows: list[dict[str, str]]) -> list[str]:
+    if not rows:
+        return ["- 缺失内容：尚无可展示的纳入研究基本特征。"]
+    return [
+        f"- {row.get('author_year') or '未填写'}；设计：{row.get('study_design') or '未填写'}；人群：{row.get('population') or '未填写'}"
+        for row in rows[:20]
+    ]
+
+
+def _extraction_summary_lines(rows: list[dict[str, str]]) -> list[str]:
+    if not rows:
+        return ["- 缺失内容：尚无结构化数据提取表。"]
+    return [
+        f"- {row.get('author_year') or '未填写'}；结局：{row.get('outcome') or '未填写'}；效应量：{row.get('effect_measure_type') or '未填写'}；状态：{row.get('confirmation_status') or '未填写'}"
+        for row in rows[:20]
+    ]
+
+
+def _author_year(fields: dict[str, Any]) -> str:
+    author = _safe_text(fields.get("first_author") or fields.get("author") or fields.get("title") or "未填写")
+    year = _safe_text(fields.get("year"))
+    return f"{author} {year}".strip()
+
+
+def _confirmation_status_label(value: str) -> str:
+    labels = {
+        "confirmed": "已确认",
+        "completed_by_user": "用户完成",
+        "user_accepted": "用户接受",
+        "user_edited": "用户编辑",
+        "suggested": "建议",
+        "draft": "草稿",
+        "rejected": "已拒绝",
+    }
+    return labels.get(value, value or "草稿")
+
+
+def _model_label(value: str) -> str:
+    labels = {
+        "fixed": "固定效应",
+        "fixed_effect": "固定效应",
+        "fixed_effects": "固定效应",
+        "random": "随机效应",
+        "random_effect": "随机效应",
+        "random_effects": "随机效应",
+        "both": "固定效应 + 随机效应",
+        "undecided": "暂不决定",
+    }
+    return labels.get(value.strip(), _safe_text(value))
+
+
+def _safe_plan(value: Any) -> str:
+    if isinstance(value, dict):
+        for key in ("user_plan", "status", "description"):
+            if str(value.get(key, "")).strip():
+                return _safe_text(value.get(key))
+        return "；".join(f"{key}: {_safe_text(item)}" for key, item in value.items() if _safe_text(item) != "缺失") or "缺失"
+    return _safe_text(value)
+
+
+def _safe_text(value: Any) -> str:
+    if isinstance(value, (list, tuple, set)):
+        return "、".join(_safe_text(item) for item in value if _safe_text(item) != "缺失") or "缺失"
+    if isinstance(value, dict):
+        return "；".join(f"{key}: {_safe_text(item)}" for key, item in value.items() if _safe_text(item) != "缺失") or "缺失"
+    text = str(value or "").strip()
+    if not text:
+        return "缺失"
+    if "/" in text or "\\" in text:
+        return Path(text).name if Path(text).name else "已登记"
+    return text
+
+
+def _format_counts(values: dict[str, int]) -> str:
+    return "；".join(f"{key} {value}" for key, value in sorted(values.items())) if values else "缺失"
+
+
+def _dedupe_strings(items: list[str]) -> list[str]:
+    result: list[str] = []
+    for item in items:
+        if item and item not in result:
+            result.append(item)
+    return result
+
+
 def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifacts: dict[str, str]) -> str:
-    missing = [key for key, value in artifacts.items() if value == "missing / not generated"]
+    state = _m8_report_state(project_dir, prisma, artifacts)
+    missing = list(state["missing_sections"])
+    extraction_rows = list(state["extraction_rows"])
+    quality = dict(state["quality_summary"])
+    plan = dict(state["analysis_plan"])
+    prisma_counts = dict(state["prisma_counts"])
     return "\n".join(
         [
-            "# Internal Beta Meta Analysis Report Draft",
+            "# 报告标题",
             "",
-            "> Current software status: Developer Preview / testing. This report is not a production journal submission.",
+            f"医研智析 Meta 分析报告草稿（{DRAFT_REPORT_M8_SCHEMA_VERSION}）",
             "",
-            "## Title",
-            "- Internal beta Meta Analysis report draft.",
+            "> 当前报告为 Developer Preview / testing 阶段草稿，不是生产、临床、监管、投稿或正式可发表统计结论；not a production journal submission.",
             "",
-            "## Project summary",
-            f"- Project directory: {project_dir}",
-            "- Current software status: Developer Preview / testing (testing / developer preview)",
-            "- Report type: Markdown internal beta draft; HTML/DOCX exports are testing conversions.",
+            "## 内容状态图例",
+            "- 用户确认内容：来自用户确认的研究问题、筛选、全文、提取、质量评价或分析计划。",
+            "- 草稿内容：已保存但尚未确认，需用户继续编辑。",
+            "- 建议内容：AI、规则或系统建议，不能当作已接受证据。",
+            "- testing-level output：测试阶段辅助输出，不代表正式结果。",
+            "- testing / developer preview：所有报告内容均保持测试阶段标签。",
+            "- 缺失内容：当前项目尚未生成或尚未确认的部分。",
+            "- 未来正式统计结果占位：只说明后续需要真实统计执行器与结果审计，不填充 pooled effect、p value、forest plot 或 funnel plot 结论。",
             "",
-            "## Protocol summary",
-            f"- Review protocol artifact: {artifacts['review_protocol']}",
-            f"- Search strategy preview: {artifacts['search_strategy_preview']}",
-            f"- Criteria summary: {artifacts['criteria_summary']}",
-            "- Protocol and strategy text remain draft / needs review when generated by the app.",
+            "## 研究问题 / Protocol summary",
+            *_section_lines(state["research_question_lines"]),
             "",
-            "## Search and import summary",
-            f"- Records identified: {prisma.records_identified}",
-            f"- Literature records artifact: {artifacts['literature_records']}",
+            "## 检索与导入概况",
+            f"- imported_total：{prisma_counts['imported_total']}",
+            f"- PubMed / 本地导入等来源统计：{state['source_summary']}",
+            "- WOS / Embase / CNKI 等非 PubMed 在线检索若未由当前代码证明，保持 draft/network-dependent 或未完整实现。",
             "",
-            "## Study selection",
-            f"- Records after deduplication: {prisma.records_after_deduplication}",
-            f"- Duplicates removed: {prisma.duplicates_removed}",
-            f"- Duplicate candidate artifact: {artifacts['duplicate_candidate_groups']}",
-            f"- Deduplicated literature artifact: {artifacts['deduplicated_literature']}",
-            f"- Records screened: {prisma.records_screened}",
-            f"- Title/abstract exclusions: {prisma.records_excluded_title_abstract}",
-            f"- Screening decisions artifact: {artifacts['screening_decisions']}",
+            "## 去重结果 / Study selection",
+            f"- after_dedup_total：{prisma_counts['after_dedup_total']}",
+            f"- duplicates_removed：{prisma.duplicates_removed}",
+            f"- 去重状态：{state['dedup_status']}",
             "",
-            "## PRISMA summary",
-            f"- Simplified PRISMA SVG: {artifacts['prisma_flow_svg']}",
-            f"- Records identified: {prisma.records_identified}",
-            f"- Records after deduplication: {prisma.records_after_deduplication}",
-            f"- Studies included: {prisma.studies_included}",
-            "- PRISMA source references are retained in the PRISMA summary artifacts.",
+            "## PRISMA 流程摘要 / PRISMA summary",
+            f"- imported_total：{prisma_counts['imported_total']}",
+            f"- after_dedup_total：{prisma_counts['after_dedup_total']}",
+            f"- title_abstract_included：{prisma_counts['title_abstract_included']}",
+            f"- title_abstract_excluded：{prisma_counts['title_abstract_excluded']}",
+            f"- full_text_needed：{prisma_counts['full_text_needed']}",
+            f"- full_text_confirmed：{prisma_counts['full_text_confirmed']}",
+            f"- full_text_excluded：{prisma_counts['full_text_excluded']}",
+            f"- final_included_for_extraction：{prisma_counts['final_included_for_extraction']}",
             "",
-            "## Full-text screening summary",
-            "- Full-text workflow incomplete for production use; testing registry and exclusion export are available.",
-            f"- Full-text reports sought estimate: {prisma.full_text_reports_sought}",
-            f"- Full-text registry: {artifacts['fulltext_registry']}",
-            f"- Full-text screening decisions: {artifacts['fulltext_screening_decisions']}",
-            f"- Full-text exclusion report: {artifacts['full_text_exclusion_report']}",
+            "## 标题摘要筛选结果",
+            f"- 纳入：{prisma_counts['title_abstract_included']}",
+            f"- 排除：{prisma_counts['title_abstract_excluded']}",
+            f"- 不确定 / 需要全文：{prisma_counts['title_abstract_uncertain'] + prisma_counts['full_text_needed']}",
+            "- 筛选结论只来自用户操作或用户确认；suggested 状态不写入正式纳入/排除结论。",
             "",
-            "## Included studies summary",
-            f"- Studies included: {prisma.studies_included}",
+            "## 全文筛选结果 / Full-text registry",
+            f"- 需要全文：{prisma_counts['full_text_needed']}",
+            f"- 全文已确认：{prisma_counts['full_text_confirmed']}",
+            f"- 全文已排除：{prisma_counts['full_text_excluded']}",
+            f"- 全文不可获取：{prisma_counts['full_text_unavailable']}",
+            "- PDF 或解析提示不会自动成为 confirmed evidence。",
             "",
-            "## Extraction summary",
-            f"- Extraction records artifact: {artifacts['extraction_records']}",
+            "## 纳入研究基本特征",
+            *_study_feature_lines(extraction_rows),
             "",
-            "## Quality assessment summary",
-            f"- Quality assessments: {artifacts['quality_assessments']}",
-            f"- Quality table path: {artifacts['quality_assessment_table']}",
+            "## 数据提取表摘要",
+            f"- 提取行数量：{len(extraction_rows)}",
+            *_extraction_summary_lines(extraction_rows),
             "",
-            "## Statistical methods",
-            f"- Analysis plan artifact: {artifacts['analysis_plan']}",
-            "- Supported testing core includes binary OR/RR/RD, continuous MD/SMD, and generic inverse variance where analysis-ready data exist.",
-            "- Fixed effect inverse variance and DerSimonian-Laird random effects are available in testing mode.",
-            "- Method applicability warnings must be reviewed before interpreting pooled estimates.",
+            "## 质量评价摘要 / Quality assessment summary",
+            f"- 评价工具：{quality.get('tools_used', '缺失')}",
+            f"- 已评价研究数：{quality.get('studies_assessed', 0)}",
+            f"- 总体风险分布：{quality.get('risk_distribution', '缺失')}",
+            f"- 质量评价提示：{quality.get('warning', '无')}",
             "",
-            "## Analysis summary",
-            f"- Analysis-ready dataset artifact: {artifacts['analysis_ready_dataset']}",
-            f"- Analysis result artifact: {artifacts['analysis_result']}",
-            f"- Applicability warnings artifact: {artifacts['applicability_warnings']}",
+            "## 分析计划 / Statistical methods",
+            f"- 状态：{plan.get('status_label', '缺失')}",
+            f"- 效应量类型：{plan.get('effect_measure_type', '缺失')}",
+            f"- 模型偏好：{plan.get('model_preference', '缺失')}",
+            f"- 异质性计划：{plan.get('heterogeneity_plan', '缺失')}",
+            f"- 亚组分析：{plan.get('subgroup_plan', '缺失')}",
+            f"- 敏感性分析：{plan.get('sensitivity_plan', '缺失')}",
+            f"- 警告：{plan.get('warnings', '无')}",
+            "",
+            "## 统计分析状态",
+            "- 当前报告为 Developer Preview / testing 阶段草稿。",
+            "- 统计分析结果尚未作为正式可发表结论生成。",
+            "- 后续需要经过真实统计执行器与结果审计。",
+            "- 本报告不生成 pooled effect、p value、forest plot、funnel plot 或医学结论。",
             "",
             "## Advanced method summary",
-            "- Testing support is available for prevalence / incidence, single-arm proportion, correlation, continuous biomarker difference, exposure-disease risk, and diagnostic basic result rows.",
-            "- Diagnostic support is basic only; bivariate diagnostic models and HSROC are not implemented.",
-            "- Network meta-analysis is listed as a placeholder only: Not implemented in current testing version.",
+            "- Network meta-analysis：未来正式统计执行器审计前不生成正式结果。",
+            "- Diagnostic bivariate / HSROC：当前报告只保留缺失或占位状态。",
             "",
             "## Advanced analysis add-ons summary",
-            f"- Subgroup analysis artifact: {artifacts['subgroup_analysis_result']}",
-            f"- Leave-one-out sensitivity artifact: {artifacts['leave_one_out_result']}",
-            f"- Publication bias artifact: {artifacts['publication_bias_result']}",
-            f"- Funnel plot artifact: {artifacts['funnel_plot']}",
-            "- Publication bias tests are marked unreliable when study count is small.",
+            "- Subgroup、leave-one-out、publication bias 和 funnel plot 仅作为未来审计后的结果占位；本报告不填充正式图表结论。",
             "",
-            "## Forest plot artifact path",
-            f"- {artifacts['forest_plot']}",
-            "",
-            "## Result table artifact path",
-            f"- {artifacts['analysis_result_table']}",
+            "## Analysis summary",
+            "- Analysis plan confirmation is summarized above; formal statistical execution is not part of M8.",
             "",
             "## Figures",
-            f"- Forest plot: {artifacts['forest_plot']}",
-            f"- Funnel plot: {artifacts['funnel_plot']}",
-            f"- Simplified PRISMA SVG: {artifacts['prisma_flow_svg']}",
+            "- 图表状态：未来正式统计结果占位；本报告不展示 forest/funnel artifact path。",
             "",
             "## Tables",
-            f"- Analysis result table: {artifacts['analysis_result_table']}",
-            f"- Quality table: {artifacts['quality_assessment_table']}",
+            "- 表格状态：仅展示用户可读摘要；不展示内部导出文件路径。",
             "",
             "## Applicability warnings",
-            f"- Source artifact: {artifacts['applicability_warnings']}",
-            "- Warnings may include small-study publication bias limits, random-effects stability warnings, zero-event correction notes, log-scale ratio effect notes, and not-implemented advanced methods.",
+            "- 任何 testing-level 输出都需要人工复核，不能被报告为正式统计证据。",
             "",
             "## Reproducibility notes",
-            "- Report generated from local project artifacts only.",
-            "- Missing artifacts are listed explicitly.",
-            "- Report manifest lists section-level source artifacts and missing/optional warnings.",
-            "- HTML/DOCX testing exports, supplementary exports, figure packages, project snapshots, and reproducibility packages can be generated from this draft.",
+            "- 报告从当前 Meta 项目内的结构化状态生成。",
+            "- 报告正文不展示原始清单路径、本地文件路径、原始结构化负载或内部对象 ID。",
+            "- Report manifest 可记录开发者级 source artifacts，但报告正文保持用户可读。",
             "",
-            "## Known limitations",
-            "- This is a Markdown report draft; HTML/DOCX outputs are testing exports, and PDF production output is not implemented.",
-            "- PRISMA full-text counts are incomplete until full-text workflow is implemented.",
-            "- Statistical limitations and applicability warnings must be reviewed before interpreting any testing pooled result.",
-            "- Diagnostic basic outputs are not bivariate diagnostic models or HSROC.",
-            "- Network meta-analysis is not implemented in this testing version.",
+            "## 局限性",
+            "- 本报告是 Markdown 草稿；HTML/DOCX 转换仍属于 testing export。",
+            "- 检索、筛选、全文、提取、质量评价和分析计划均依赖用户确认状态。",
+            "- 统计分析部分是未来正式执行器占位，不支持发表级结论。",
+            "- AI/rule/model 输出如存在，均只能作为建议，不能替代用户确认。",
+            "",
+            "## 下一步建议",
+            "- 补全缺失的筛选、全文、提取、质量评价或分析计划部分。",
+            "- 在 M9 对真实统计执行器输入、方法、验证基线和输出标签进行审计。",
+            "- 审计通过前，不将任何统计输出用于投稿、临床或监管用途。",
+            "",
+            "## 开发者预览声明",
+            "- BioMedPilot / 医研智析 Meta 当前为 Developer Preview / testing。",
+            "- 本报告用于工作流对齐和人工复核，不是 publication-ready、clinical-ready、regulatory-ready 或 submission-ready 文档。",
             "",
             "## Missing artifact warnings",
             *[f"- {item}: missing / not generated" for item in missing],
