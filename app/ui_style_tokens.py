@@ -1,54 +1,18 @@
 from __future__ import annotations
 
+from app.shared.ui.theme import (
+    as_legacy_color_dict,
+    as_legacy_control_height_dict,
+    as_legacy_font_size_dict,
+    as_legacy_radius_dict,
+    as_legacy_spacing_dict,
+)
 
-COLORS = {
-    "background": "#F5F7F9",
-    "surface": "#FFFFFF",
-    "surface_muted": "#F8FAFC",
-    "border": "#DDE3EA",
-    "text": "#1F2933",
-    "muted": "#6B7280",
-    "bio": "#12324A",
-    "bio_soft": "#EAF2F8",
-    "bio_accent": "#1BAE9F",
-    "meta": "#6B4FD8",
-    "meta_soft": "#F0EDFF",
-    "warning_soft": "#FFF7E6",
-    "warning": "#D99A00",
-    "success": "#22A66B",
-    "danger": "#D43832",
-}
-
-SPACING = {
-    "xs": 4,
-    "sm": 8,
-    "md": 12,
-    "lg": 16,
-    "xl": 24,
-    "xxl": 32,
-}
-
-CONTROL_HEIGHT = {
-    "field": 38,
-    "button": 38,
-    "primary": 42,
-}
-
-RADIUS = {
-    "sm": 8,
-    "md": 14,
-    "lg": 20,
-}
-
-FONT_SIZE = {
-    "app_title": 24,
-    "page_title": 18,
-    "card_title": 16,
-    "body": 13,
-    "secondary": 12,
-    "caption": 11,
-    "hero": 24,
-}
+COLORS = as_legacy_color_dict()
+SPACING = as_legacy_spacing_dict()
+CONTROL_HEIGHT = as_legacy_control_height_dict()
+RADIUS = as_legacy_radius_dict()
+FONT_SIZE = as_legacy_font_size_dict()
 
 
 def login_stylesheet() -> str:
