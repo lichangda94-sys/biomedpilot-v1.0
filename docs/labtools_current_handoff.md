@@ -6,8 +6,8 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6D，commit 以最终交接为准
-- 当前进行阶段：下一阶段待定。
+- 当前最近完成阶段：LabTools Stage L6A.2，commit 以当前 git log 为准
+- 当前进行阶段：LabTools Stage L6E / L7A / L7B 依次待执行。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
 
@@ -36,6 +36,7 @@
 | LabTools Stage L6C | 最终交接记录 | 新增轻量实验模板和结构化记录草稿中心，覆盖 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录；不做完整 ELN、签名、权限或合规审计。 |
 | LabTools Stage L6C.1 | 最终交接记录 | 新增实验记录草稿本地 JSON 持久化 schema、no-overwrite 保存、载入校验和 UI 保存/载入反馈；仍不做完整 ELN、数据库、自动保存、签名或合规审计。 |
 | LabTools Stage L6D | 最终交接记录 | 新增 LabTools schema index，扩展 ROI export / recipe draft / experiment record draft persistence UI 回归测试，并完成写盘安全审计；不新增 persistence 功能或算法。 |
+| LabTools Stage L6A.2 | 当前 git log | 优化 ROI export 用户反馈和目录选择回归测试：成功提示显示导出目录与四类输出，取消/失败均保留当前分析结果，同目录连续导出不覆盖；不新增图像算法。 |
 
 ## 3. 当前已实现功能
 
@@ -133,6 +134,11 @@
   - 导出文件使用 `fluorescence_manual_roi_<timestamp>_<token>` basename，并在同名冲突时自动追加 `_001`、`_002` 等 suffix，避免 silent overwrite。
   - CSV summary 使用稳定 header，包含 schema version、tool slug、review status、measurement id、ROI id、measurement name、value、unit 和 note。
   - Markdown fragment 使用 LabTools manual ROI 辅助分析标题，不包含原图绝对路径，保持人工复核和 testing 语义。
+- L6A.2 UI 回归硬化：
+  - 导出成功后 UI 明确显示“导出成功”、用户选择的导出目录、JSON manifest、CSV summary、Markdown fragment、ROI overlay PNG、Developer Preview / testing 和人工复核提示。
+  - 用户取消目录选择时不写盘、不显示成功，当前分析结果仍保留，导出按钮保持可用。
+  - 导出失败时显示可读错误，不暴露 traceback，不清空当前分析结果，导出按钮状态保持可用。
+  - 同一目录连续导出会继续使用 no-overwrite 文件命名策略，第一次导出文件仍保留。
 - UI 展示指标表、参数摘要、warning、复核提示和简洁导出预览；只有用户点击“导出当前 ROI 结果”并选择目录后才写盘。
 - 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
 
@@ -167,6 +173,10 @@
   - 导出文件使用 `wound_manual_roi_threshold_<timestamp>_<token>` basename，并在同名冲突时自动追加 suffix，避免 silent overwrite。
   - CSV summary 使用稳定 header，并记录 threshold value / mode。
   - Markdown fragment 保持 manual-review / semi-quantitative 辅助输出语义，不写成正式实验结论。
+- L6A.2 UI 回归硬化：
+  - 导出成功后 UI 明确显示导出目录和 JSON manifest / CSV summary / Markdown fragment / ROI overlay PNG 四类输出。
+  - 取消目录选择或导出失败均不清空当前 wound 结果，不写成成功状态。
+  - 同目录重复导出保持非覆盖策略，使用 suffix / token 文件名避免 silent overwrite。
 - UI 展示图片路径、ROI 输入、阈值输入、亮/暗模式、结果摘要、公式、warning、复核提示和简洁导出预览；只有用户点击“导出当前 ROI 结果”并选择目录后才写盘。
 - 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
 
@@ -248,16 +258,17 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6D 结果：154 passed
+  - 当前 L6A.2 结果：154 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6D 结果：156 passed
+  - 当前 L6A.2 结果：157 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6D 结果：18 passed
+  - 当前 L6A.2 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6D 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6A.2 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6D 结果：通过
+  - 当前 L6A.2 结果：通过
 - `git diff --check`
+  - 当前 L6A.2 结果：通过
   - 当前 L6D 结果：通过
 - `git diff --cached --check`
   - 当前 L6D 提交前运行。

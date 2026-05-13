@@ -492,33 +492,36 @@ if QWidget is not None:
             warnings = "\n".join(f"- {warning}" for warning in package.warnings) or "- 无"
             return "\n".join(
                 [
+                    "导出成功",
                     "ROI 结果导出完成",
+                    "软件状态：Developer Preview / testing",
                     f"分析类型：{package.analysis_type}",
                     f"导出目录：{package.output_dir}",
                     "",
                     "写入文件",
                     f"- JSON manifest：{package.manifest_path}",
                     f"- CSV summary：{package.csv_path}",
-                    f"- Markdown 片段：{package.markdown_path}",
+                    f"- Markdown fragment / 片段：{package.markdown_path}",
                     f"- ROI overlay PNG：{package.overlay_path}",
                     "",
-                    "复核提示",
+                    "人工复核提示",
                     package.review_notice,
                     "",
                     "warning",
                     warnings,
                     "",
-                    "语义边界：导出文件为 manual-review / semi-quantitative 辅助结果，不构成自动算法结论、临床建议或实验 SOP。",
+                    "语义边界：导出文件为 manual ROI auxiliary analysis / manual-review / semi-quantitative 辅助结果，不构成自动算法结论、临床建议或实验 SOP。",
                 ]
             )
 
         def _export_cancelled_text(self) -> str:
             previous = self._latest_analysis_text or "当前分析结果仍保留在内存预览中。"
-            return "\n\n".join(["已取消导出；未写入任何文件。", previous])
+            return "\n\n".join(["已取消导出，当前分析结果仍保留；未写入任何文件。", previous])
 
         def _export_failed_text(self, message: str) -> str:
             previous = self._latest_analysis_text or "当前分析结果仍保留在内存预览中。"
-            return "\n\n".join(["导出需要调整", message, "当前分析结果保留如下", previous])
+            clean_message = (message or "未知导出错误").splitlines()[0]
+            return "\n\n".join(["导出需要调整", clean_message, "当前分析结果保留如下", previous])
 
         def _render_task_summary(self, task: ImageAnalysisTask) -> None:
             image_line = "无图片记录" if not task.image_records else f"{len(task.image_records)} 个图片记录"

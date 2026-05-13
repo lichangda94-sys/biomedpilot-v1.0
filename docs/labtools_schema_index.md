@@ -25,6 +25,7 @@
 - User semantics：手动 ROI / threshold 辅助分析结果，必须人工复核；wound 结果为 semi-quantitative area estimation。
 - Public sharing：manifest 是本地审计文件，不建议直接作为公开报告分享。若需要分享，应先检查 source image reference、文件名、备注和所有实验上下文。
 - Local path handling：manifest 使用 source image name/reference 和输出文件相对文件名；Markdown fragment 不应包含 raw absolute source path。UI 成功提示可显示用户选择的导出目录，这是本地 UI 反馈，不是报告正文。
+- UI persistence behavior：导出只在用户点击“导出当前 ROI 结果”并选择目录后发生；取消目录选择不会写盘且会保留当前分析结果；导出失败显示可读错误且不清空当前结果；同一目录连续导出使用 no-overwrite 文件名策略保留既有文件。
 - Boundary：不构成自动图像算法结论、正式实验 SOP、临床诊断或 production-grade 报告。
 
 ## 3. `labtools_recipe_draft_store.v1`
