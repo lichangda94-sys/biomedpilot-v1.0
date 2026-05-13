@@ -1,7 +1,7 @@
 """LabTools image analysis framework.
 
-L4A only records local image paths and creates reviewable task drafts. It does
-not run image quantification algorithms.
+Current real image algorithm coverage is limited to manual ROI fluorescence
+intensity analysis. Other task types remain reviewable drafts.
 """
 
 from app.labtools.image_analysis.analysis_task import TASK_TYPES, ImageAnalysisTask, create_analysis_task
@@ -12,6 +12,8 @@ from app.labtools.image_analysis.fluorescence import (
     FluorescenceAnalysisResult,
     FluorescenceROI,
     analyze_fluorescence_roi,
+    fluorescence_markdown_report_fragment,
+    fluorescence_result_to_json_dict,
 )
 from app.labtools.image_analysis.image_io import create_image_record, validate_image_path
 from app.labtools.image_analysis.image_models import IMAGE_REVIEW_NOTICE, ImageAnalysisError, LabImageRecord
@@ -34,6 +36,8 @@ __all__ = [
     "analyze_fluorescence_roi",
     "create_analysis_task",
     "create_image_record",
+    "fluorescence_markdown_report_fragment",
+    "fluorescence_result_to_json_dict",
     "placeholder_result",
     "validate_image_path",
 ]

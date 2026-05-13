@@ -21,6 +21,11 @@ try:
         FluorescenceROI,
         analyze_fluorescence_roi,
         create_fluorescence_audit_records,
+        fluorescence_csv_text,
+        fluorescence_json_preview,
+        fluorescence_markdown_report_fragment,
+        fluorescence_metrics_table_text,
+        fluorescence_parameter_summary,
         fluorescence_result_summary,
     )
     from app.labtools.image_analysis.image_io import create_image_record
@@ -272,7 +277,7 @@ if QWidget is not None:
                 return
             self._tasks.append(task)
             audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
-            self._task_summary.setText(f"{fluorescence_result_summary(result)}\n\n{audit_line}")
+            self._task_summary.setText(f"{self._render_fluorescence_result(result)}\n\n{audit_line}")
 
         def _parse_roi_int(self, value: str, field_name: str) -> int:
             if value is None or str(value).strip() == "":
@@ -281,6 +286,24 @@ if QWidget is not None:
                 return int(str(value).strip())
             except ValueError as exc:
                 raise ValueError(f"{field_name} 必须是整数。") from exc
+
+        def _render_fluorescence_result(self, result) -> str:
+            warnings = "\n".join(f"- {warning}" for warning in result.warnings) or "- 无"
+            csv_preview = "\n".join(fluorescence_csv_text(result).splitlines()[:8])
+            markdown_preview = "\n".join(fluorescence_markdown_report_fragment(result).splitlines()[:28])
+            return "\n\n".join(
+                [
+                    fluorescence_result_summary(result),
+                    fluorescence_metrics_table_text(result),
+                    fluorescence_parameter_summary(result),
+                    "\n".join(["warning", warnings]),
+                    "\n".join(["复核提示", result.review_notice]),
+                    fluorescence_json_preview(result),
+                    "\n".join(["CSV 导出预览", csv_preview]),
+                    "\n".join(["Markdown 报告片段预览", markdown_preview]),
+                    "导出说明：以上内容仅为内存中的字符串或数据结构预览，本阶段不会自动写盘。",
+                ]
+            )
 
         def _render_task_summary(self, task: ImageAnalysisTask) -> None:
             image_line = "无图片记录" if not task.image_records else f"{len(task.image_records)} 个图片记录"

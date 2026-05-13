@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -14,10 +15,11 @@ from app.labtools.image_analysis.fluorescence.fluorescence_models import (
     FluorescenceAnalysisResult,
     FluorescenceROI,
 )
+from app.labtools.image_analysis.fluorescence.fluorescence_quality import evaluate_fluorescence_quality
 
 
 ALGORITHM_NAME = "manual_roi_grayscale_fluorescence_v1"
-ALGORITHM_VERSION = "L4B-MVP"
+ALGORITHM_VERSION = "L4B.1-review-export"
 
 
 def validate_roi_bounds(roi: FluorescenceROI, image_width: int, image_height: int) -> None:
@@ -65,10 +67,6 @@ def analyze_fluorescence_roi(parameters: FluorescenceAnalysisParameters, *, task
         corrected_total = signal_sum - signal_area * background_mean
     else:
         corrected_total = signal_sum
-    warnings: list[str] = []
-    if corrected_total < 0:
-        warnings.append("校正总荧光为负值，背景可能过高或 ROI 设置需要复核。")
-
     metrics = FluorescenceAnalysisMetrics(
         roi_area_pixels=signal_area,
         mean_intensity=signal_mean,
@@ -78,12 +76,14 @@ def analyze_fluorescence_roi(parameters: FluorescenceAnalysisParameters, *, task
         min_intensity=float(min(signal_values)),
         max_intensity=float(max(signal_values)),
     )
-    return FluorescenceAnalysisResult(
+    result = FluorescenceAnalysisResult(
         task_id=task_id or f"fluorescence_task_{uuid4().hex[:12]}",
         parameters=parameters,
         metrics=metrics,
-        warnings=tuple(warnings),
+        image_width=image_width,
+        image_height=image_height,
     )
+    return replace(result, warnings=evaluate_fluorescence_quality(result))
 
 
 def create_fluorescence_audit_records(
@@ -99,10 +99,15 @@ def create_fluorescence_audit_records(
                 "algorithm_name": ALGORITHM_NAME,
                 "algorithm_version": ALGORITHM_VERSION,
                 "source_path": str(source_path),
+                "source_filename": Path(source_path).name,
+                "image_dimensions": result.image_dimensions_dict(),
                 "result_id": result.result_id,
                 "task_id": result.task_id,
                 "manual_roi_required": True,
                 "background_correction_enabled": result.parameters.background_correction_enabled,
+                "formula": result.formula,
+                "warnings": list(result.warnings),
+                "review_notice": result.review_notice,
             },
         ),
     )

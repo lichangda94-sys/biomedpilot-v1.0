@@ -56,7 +56,8 @@ def test_fluorescence_analyzer_calculates_manual_roi_metrics(tmp_path) -> None:
     assert result.metrics.corrected_total_fluorescence == pytest.approx(94.0)
     assert result.metrics.min_intensity == pytest.approx(10.0)
     assert result.metrics.max_intensity == pytest.approx(40.0)
-    assert result.warnings == ()
+    assert any("signal ROI 面积小于 9 pixels" in warning for warning in result.warnings)
+    assert any("background ROI 面积小于 9 pixels" in warning for warning in result.warnings)
 
 
 def test_fluorescence_analyzer_warns_when_corrected_total_is_negative(tmp_path) -> None:

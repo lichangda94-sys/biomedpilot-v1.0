@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -100,6 +101,8 @@ class FluorescenceAnalysisResult:
     task_id: str
     parameters: FluorescenceAnalysisParameters
     metrics: FluorescenceAnalysisMetrics
+    image_width: int | None = None
+    image_height: int | None = None
     status: str = "completed"
     formula: str = FLUORESCENCE_FORMULA
     warnings: tuple[str, ...] = ()
@@ -107,11 +110,24 @@ class FluorescenceAnalysisResult:
     generated_at: str = field(default_factory=utc_timestamp)
     result_id: str = field(default_factory=lambda: f"fluorescence_result_{uuid4().hex[:12]}")
 
+    def image_dimensions_dict(self) -> dict[str, int | str | None]:
+        return {
+            "width": self.image_width,
+            "height": self.image_height,
+            "unit": "pixels",
+        }
+
     def to_dict(self) -> dict[str, Any]:
+        filename = Path(self.parameters.image_path).name or "未命名图片"
         return {
             "result_id": self.result_id,
             "task_id": self.task_id,
             "status": self.status,
+            "image_filename": filename,
+            "source_path_summary": filename,
+            "image_dimensions": self.image_dimensions_dict(),
+            "signal_roi": self.parameters.signal_roi.to_dict(),
+            "background_roi": self.parameters.background_roi.to_dict(),
             "parameters": self.parameters.to_dict(),
             "metrics": self.metrics.to_dict(),
             "formula": self.formula,
