@@ -9,6 +9,9 @@ from app.labtools.calculators.experiment_calculator_center import (
     calculate_cell_seeding_v1,
     calculate_dilution_v1,
     calculate_mass_molarity_v1,
+    format_cell_seeding_copy_text,
+    format_dilution_copy_text,
+    format_mass_molarity_copy_text,
 )
 
 
@@ -122,3 +125,62 @@ def test_l5b_cell_seeding_supports_cells_per_microliter_alias() -> None:
     assert result.valid is True
     assert result.required_cell_suspension_volume == pytest.approx(10)
     assert result.required_cell_suspension_volume_unit == "µL"
+
+
+def test_l7a_dilution_copy_text_is_user_facing_and_reviewable() -> None:
+    input_data = DilutionInput(10, "mM", 1, "mM", 1000, "uL")
+    result = calculate_dilution_v1(input_data)
+
+    text = format_dilution_copy_text(input_data, result)
+
+    assert "溶液稀释 C1V1=C2V2" in text
+    assert "stock volume" in text
+    assert "100 µL" in text
+    assert "solvent volume" in text
+    assert "900 µL" in text
+    assert "人工核对" in text
+    assert "实验辅助计算草稿，不替代实验 SOP" in text
+    assert "正式 SOP" not in text
+    assert "临床诊断" not in text
+    assert "production" not in text
+
+
+def test_l7a_mass_molarity_copy_text_includes_inputs_and_required_mass() -> None:
+    input_data = MassMolarityInput(100, 1, "mM", 10, "mL", "mg")
+    result = calculate_mass_molarity_v1(input_data)
+
+    text = format_mass_molarity_copy_text(input_data, result)
+
+    assert "摩尔浓度 / 称量质量换算" in text
+    assert "MW 100 g/mol" in text
+    assert "concentration 1 mM" in text
+    assert "volume 10 mL" in text
+    assert "required mass" in text
+    assert "1 mg" in text
+    assert "人工核对" in text
+
+
+def test_l7a_cell_seeding_copy_text_includes_cell_and_volume_outputs() -> None:
+    input_data = CellSeedingInput(1e6, "cells/mL", 10000, 24, 500, "uL", 10)
+    result = calculate_cell_seeding_v1(input_data)
+
+    text = format_cell_seeding_copy_text(input_data, result)
+
+    assert "细胞接种密度计算" in text
+    assert "total cells" in text
+    assert "264000 cells" in text
+    assert "suspension volume" in text
+    assert "264 µL" in text
+    assert "medium volume" in text
+    assert "12936 µL" in text
+    assert "实验辅助计算草稿，不替代实验 SOP" in text
+
+
+def test_l7a_invalid_results_do_not_generate_success_copy_text() -> None:
+    invalid_dilution_input = DilutionInput(1, "mM", 10, "mM", 1, "mL")
+    invalid_mass_input = MassMolarityInput(0, 1, "mM", 10, "mL", "mg")
+    invalid_cell_input = CellSeedingInput(0, "cells/mL", 10000, 24, 500, "µL", 10)
+
+    assert format_dilution_copy_text(invalid_dilution_input, calculate_dilution_v1(invalid_dilution_input)) == ""
+    assert format_mass_molarity_copy_text(invalid_mass_input, calculate_mass_molarity_v1(invalid_mass_input)) == ""
+    assert format_cell_seeding_copy_text(invalid_cell_input, calculate_cell_seeding_v1(invalid_cell_input)) == ""

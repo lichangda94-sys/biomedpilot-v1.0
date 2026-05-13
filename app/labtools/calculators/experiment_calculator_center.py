@@ -61,6 +61,25 @@ class DilutionResult:
         )
 
 
+def format_dilution_copy_text(input_data: DilutionInput, result: DilutionResult) -> str:
+    if not result.valid:
+        return ""
+    stock_unit = _safe_unit(input_data.stock_unit)
+    target_unit = _safe_unit(input_data.target_unit)
+    final_volume_unit = _safe_unit(input_data.final_volume_unit)
+    return "\n".join(
+        [
+            "工具：溶液稀释 C1V1=C2V2",
+            f"输入：stock {input_data.stock_concentration} {stock_unit}；target {input_data.target_concentration} {target_unit}；final volume {input_data.final_volume} {final_volume_unit}",
+            "计算结果：",
+            f"- stock volume / stock 体积：{format_number(result.stock_volume or 0)} {result.stock_volume_unit}",
+            f"- solvent volume / 溶剂体积：{format_number(result.solvent_volume or 0)} {result.solvent_volume_unit}",
+            f"- dilution factor / 稀释倍数：{format_number(result.dilution_factor or 0)}",
+            "人工核对提示：实验辅助计算草稿，不替代实验 SOP；使用前请核对单位、移液范围、溶剂兼容性和实验设计。",
+        ]
+    )
+
+
 @dataclass(frozen=True)
 class MassMolarityInput:
     molecular_weight: object
@@ -93,6 +112,23 @@ class MassMolarityResult:
             self.warnings,
             self.errors,
         )
+
+
+def format_mass_molarity_copy_text(input_data: MassMolarityInput, result: MassMolarityResult) -> str:
+    if not result.valid:
+        return ""
+    concentration_unit = _safe_unit(input_data.concentration_unit)
+    volume_unit = _safe_unit(input_data.volume_unit)
+    return "\n".join(
+        [
+            "工具：摩尔浓度 / 称量质量换算",
+            f"输入：MW {input_data.molecular_weight} g/mol；concentration {input_data.target_concentration} {concentration_unit}；volume {input_data.final_volume} {volume_unit}",
+            "计算结果：",
+            f"- required mass / 称量质量：{format_number(result.required_mass or 0)} {result.required_mass_unit}",
+            f"- moles / 物质的量：{format_number(result.moles or 0)} mol",
+            "人工核对提示：实验辅助计算草稿，不替代实验 SOP；使用前请核对试剂纯度、盐型/水合物形式、有效含量和实验设计。",
+        ]
+    )
 
 
 @dataclass(frozen=True)
@@ -139,6 +175,25 @@ class CellSeedingResult:
             self.warnings,
             self.errors,
         )
+
+
+def format_cell_seeding_copy_text(input_data: CellSeedingInput, result: CellSeedingResult) -> str:
+    if not result.valid:
+        return ""
+    concentration_unit = _safe_unit(input_data.concentration_unit)
+    volume_unit = _safe_unit(input_data.volume_unit)
+    return "\n".join(
+        [
+            "工具：细胞接种密度计算",
+            f"输入：current concentration {input_data.current_cell_concentration} {concentration_unit}；target {input_data.target_cells_per_well} cells/well；wells {input_data.well_count}；volume {input_data.volume_per_well} {volume_unit}/well；overage {input_data.overage_percentage}%",
+            "计算结果：",
+            f"- total cells / 总细胞需求量：{format_number(result.total_cells_required or 0)} cells",
+            f"- suspension volume / 细胞悬液体积：{format_number(result.required_cell_suspension_volume or 0)} {result.required_cell_suspension_volume_unit}",
+            f"- medium volume / 培养基体积：{format_number(result.required_medium_volume or 0)} {result.required_medium_volume_unit}",
+            f"- total final volume / 总终体积：{format_number(result.total_final_volume or 0)} {result.total_final_volume_unit}",
+            "人工核对提示：实验辅助计算草稿，不替代实验 SOP；实际接种前请核对细胞活率、混匀状态、计数误差、孔板设计和实验设计。",
+        ]
+    )
 
 
 @dataclass(frozen=True)

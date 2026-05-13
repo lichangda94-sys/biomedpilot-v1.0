@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 try:
     from PySide6.QtWidgets import (
+        QApplication,
         QComboBox,
         QFrame,
         QGridLayout,
@@ -35,6 +36,9 @@ try:
         calculate_mass_molarity_v1,
         calculate_qpcr_mix_v1,
         calculate_western_blot_loading_v1,
+        format_cell_seeding_copy_text,
+        format_dilution_copy_text,
+        format_mass_molarity_copy_text,
     )
     from app.labtools.calculators.solution_preparation_calculator import calculate_solution_preparation
     from app.labtools.calculators.unit_conversion import (
@@ -73,15 +77,48 @@ if QWidget is not None:
             self.setReadOnly(True)
             self.setMinimumHeight(180)
             self.setText("填写参数后点击计算。")
+            self._copyable_text = ""
+            self._copy_button: QPushButton | None = None
 
         def show_result(self, result: CalculationResult) -> None:
             self.setText(result.as_text())
+            self.set_copyable_text(result.as_text())
 
-        def show_text_result(self, text: str) -> None:
+        def show_text_result(self, text: str, *, copyable_text: str = "") -> None:
             self.setText(text)
+            self.set_copyable_text(copyable_text)
 
         def show_error(self, message: str) -> None:
             self.setText(f"输入需要调整\n{message}")
+            self.set_copyable_text("")
+
+        def set_copy_button(self, button: QPushButton) -> None:
+            self._copy_button = button
+            self._copy_button.setEnabled(False)
+            self._copy_button.clicked.connect(self.copy_to_clipboard)
+
+        def set_copyable_text(self, text: str) -> None:
+            self._copyable_text = text.strip()
+            if self._copy_button is not None:
+                self._copy_button.setEnabled(bool(self._copyable_text))
+
+        def copyable_text(self) -> str:
+            return self._copyable_text
+
+        def copy_to_clipboard(self) -> bool:
+            if not self._copyable_text:
+                return False
+            QApplication.clipboard().setText(self._copyable_text)
+            base_text = self.toPlainText().split("\n\n已复制计算结果，请使用前人工核对。")[0]
+            self.setText(f"{base_text}\n\n已复制计算结果，请使用前人工核对。")
+            return True
+
+
+    def _copy_button_for(panel: ResultPanel) -> QPushButton:
+        button = QPushButton("复制结果")
+        button.setObjectName("secondaryButton")
+        panel.set_copy_button(button)
+        return button
 
 
     class ConcentrationCalculatorWidget(QWidget):
@@ -170,6 +207,8 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
 
         def _card(self, title: str) -> QFrame:
             frame = QFrame()
@@ -215,20 +254,19 @@ if QWidget is not None:
 
         def _handle_mass(self) -> None:
             try:
-                result = calculate_mass_molarity_v1(
-                    MassMolarityInput(
-                        molecular_weight=self._target_mw.text(),
-                        target_concentration=self._target_molarity.text(),
-                        concentration_unit=self._target_molarity_unit.currentText(),
-                        final_volume=self._target_volume.text(),
-                        volume_unit=self._target_volume_unit.currentText(),
-                        output_mass_unit=self._mass_output_unit.currentText(),
-                    )
+                input_data = MassMolarityInput(
+                    molecular_weight=self._target_mw.text(),
+                    target_concentration=self._target_molarity.text(),
+                    concentration_unit=self._target_molarity_unit.currentText(),
+                    final_volume=self._target_volume.text(),
+                    volume_unit=self._target_volume_unit.currentText(),
+                    output_mass_unit=self._mass_output_unit.currentText(),
                 )
+                result = calculate_mass_molarity_v1(input_data)
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=format_mass_molarity_copy_text(input_data, result))
 
 
     class DilutionCalculatorWidget(QWidget):
@@ -273,24 +311,25 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_dilution_v1(
-                    DilutionInput(
-                        stock_concentration=self._stock_value.text(),
-                        stock_unit=self._stock_unit.currentText(),
-                        target_concentration=self._target_value.text(),
-                        target_unit=self._target_unit.currentText(),
-                        final_volume=self._volume_value.text(),
-                        final_volume_unit=self._volume_unit.currentText(),
-                    )
+                input_data = DilutionInput(
+                    stock_concentration=self._stock_value.text(),
+                    stock_unit=self._stock_unit.currentText(),
+                    target_concentration=self._target_value.text(),
+                    target_unit=self._target_unit.currentText(),
+                    final_volume=self._volume_value.text(),
+                    final_volume_unit=self._volume_unit.currentText(),
                 )
+                result = calculate_dilution_v1(input_data)
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=format_dilution_copy_text(input_data, result))
 
 
     class SolutionPreparationCalculatorWidget(QWidget):
@@ -336,6 +375,8 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
@@ -404,25 +445,26 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_cell_seeding_v1(
-                    CellSeedingInput(
-                        current_cell_concentration=self._cell_density.text(),
-                        concentration_unit=self._density_unit.currentText(),
-                        target_cells_per_well=self._target_cells.text(),
-                        well_count=self._wells.text(),
-                        volume_per_well=self._volume_per_well.text(),
-                        volume_unit=self._volume_unit.currentText(),
-                        overage_percentage=self._overage_percent.text(),
-                    )
+                input_data = CellSeedingInput(
+                    current_cell_concentration=self._cell_density.text(),
+                    concentration_unit=self._density_unit.currentText(),
+                    target_cells_per_well=self._target_cells.text(),
+                    well_count=self._wells.text(),
+                    volume_per_well=self._volume_per_well.text(),
+                    volume_unit=self._volume_unit.currentText(),
+                    overage_percentage=self._overage_percent.text(),
                 )
+                result = calculate_cell_seeding_v1(input_data)
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=format_cell_seeding_copy_text(input_data, result))
 
 
     class QpcrMixCalculatorWidget(QWidget):
@@ -476,6 +518,8 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
@@ -495,7 +539,7 @@ if QWidget is not None:
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=result.as_text() if result.valid else "")
 
 
     class WesternBlotLoadingCalculatorWidget(QWidget):
@@ -546,6 +590,8 @@ if QWidget is not None:
             root.addWidget(notice)
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
@@ -563,7 +609,7 @@ if QWidget is not None:
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=result.as_text() if result.valid else "")
 
 
     class LabToolsCalculatorWidget(QWidget):
@@ -654,6 +700,14 @@ if QWidget is not None:
                 border-radius: {RADIUS["sm"]}px;
                 min-height: {CONTROL_HEIGHT["primary"] - 12}px;
                 font-weight: 700;
+            }}
+            QPushButton#secondaryButton {{
+                color: {COLORS["bio"]};
+                background: {COLORS["bio_soft"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                min-height: {CONTROL_HEIGHT["primary"] - 12}px;
+                font-weight: 600;
             }}
             QTextEdit#labToolsResultPanel {{
                 background: {COLORS["surface"]};

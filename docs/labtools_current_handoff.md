@@ -6,8 +6,8 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6E，commit 以当前 git log 为准
-- 当前进行阶段：LabTools Stage L7A / L7B 依次待执行。
+- 当前最近完成阶段：LabTools Stage L7A，commit 以当前 git log 为准
+- 当前进行阶段：LabTools Stage L7B 待执行。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
 
@@ -38,6 +38,7 @@
 | LabTools Stage L6D | 最终交接记录 | 新增 LabTools schema index，扩展 ROI export / recipe draft / experiment record draft persistence UI 回归测试，并完成写盘安全审计；不新增 persistence 功能或算法。 |
 | LabTools Stage L6A.2 | 当前 git log | 优化 ROI export 用户反馈和目录选择回归测试：成功提示显示导出目录与四类输出，取消/失败均保留当前分析结果，同目录连续导出不覆盖；不新增图像算法。 |
 | LabTools Stage L6E | 当前 git log | 审计并校准 LabTools 用户可见状态语义：已实现功能显示为本地辅助/草稿/manual-review MVP，placeholder 功能继续显示占位或未开放；不新增功能。 |
+| LabTools Stage L7A | 当前 git log | 优化实验计算器结果复制体验：三个 v1 计算器提供 copyable formatter，UI 每个结果区新增“复制结果”按钮；不新增公式、导出、自动保存或历史记录。 |
 
 ## 3. 当前已实现功能
 
@@ -61,6 +62,11 @@
   - `QpcrMixInput` / `QpcrMixResult` / `calculate_qpcr_mix_v1()`：输出 qPCR 单反应用量、总用量和 overage 后总用量。
   - `WesternBlotLoadingInput` / `WesternBlotLoadingResult` / `calculate_western_blot_loading_v1()`：根据蛋白浓度、目标蛋白量、目标上样体积和 loading buffer 倍数估算样品、buffer 和水体积。
 - L5C WB/SDS-PAGE 仅为上样体积计算，不进行 WB/凝胶灰度、条带检测、归一化或图像解释。
+- L7A 新增结果复制体验：
+  - `format_dilution_copy_text()`、`format_mass_molarity_copy_text()`、`format_cell_seeding_copy_text()` 生成用户可复制文本。
+  - copyable text 包含工具名称、输入摘要、计算结果、单位和“实验辅助计算草稿，不替代实验 SOP”人工核对提示。
+  - 计算器 UI 每个结果区有“复制结果”按钮；无有效结果或 invalid 输入时禁用，成功计算后启用。
+  - 点击复制只写系统 clipboard，不写文件、不保存历史、不生成 JSON/CSV/manifest。
 - L6D 新增 `docs/labtools_schema_index.md`，统一记录 LabTools 当前 schema / JSON-compatible 结构、用途、字段、用户语义、公开分享风险、本地路径风险和 draft / auxiliary / local persistence 边界。
 
 ### 3.2 本地试剂与配方库
@@ -266,17 +272,17 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6E 结果：154 passed
+  - 当前 L7A 结果：158 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6E 结果：163 passed
+  - 当前 L7A 结果：168 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6E 结果：18 passed
+  - 当前 L7A 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6E 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L7A 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6E 结果：通过
+  - 当前 L7A 结果：通过
 - `git diff --check`
-  - 当前 L6E 结果：通过
+  - 当前 L7A 结果：通过
   - 当前 L6D 结果：通过
 - `git diff --cached --check`
   - 当前 L6D 提交前运行。
