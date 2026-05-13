@@ -13,7 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
@@ -36,6 +36,7 @@ except Exception as exc:  # pragma: no cover - depends on optional local GUI run
     QApplication = None  # type: ignore[assignment]
     QScrollArea = None  # type: ignore[assignment]
     QFrame = None  # type: ignore[assignment]
+    QPlainTextEdit = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
     IMPORT_ERROR = None
@@ -1487,7 +1488,59 @@ def test_recognition_readiness_standardization_pages(qt_app, project_summary) ->
     standardization.refresh_project(project_summary)
     generated = standardization.generate_assets()
     assert generated is not None
-    assert "标准化资产" in standardization.status_message()
+    assert "标准化数据" in standardization.status_message()
+
+
+def test_standardization_page_userized_surface_hides_technical_fields(qt_app, project_summary) -> None:
+    raw_file = project_summary.project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="expression_matrix.tsv",
+        strategy="reference",
+        selected_paths=[raw_file],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+    workflow_pages.run_project_readiness(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    widget.generate_assets()
+
+    button_texts = {button.text() for button in widget.findChildren(QPushButton)}
+    assert {"生成标准化数据", "确认分组与比较设计", "继续到分析任务中心"}.issubset(button_texts)
+    assert widget.findChild(QLabel, "standardizationExpressionStatus") is not None
+    assert "表达矩阵" in widget.findChild(QLabel, "standardizationExpressionStatus").text()
+    assert "样本信息" in widget.findChild(QLabel, "standardizationSampleStatus").text()
+    assert "分组与比较设计" in widget.findChild(QLabel, "standardizationGroupStatus").text()
+    assert "下一步建议" in widget.findChild(QLabel, "standardizationNextStep").text()
+
+    table = widget.findChild(QTableWidget, "standardizationUserAssetTable")
+    assert table is not None
+    headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
+    assert headers == ["数据内容", "当前状态", "用于后续分析", "说明"]
+    visible_table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert str(raw_file) not in visible_table_text
+    assert "materialize" not in visible_table_text
+    assert "validation_status" not in visible_table_text
+    assert "analysis-ready" not in visible_table_text
+    assert "manifest" not in visible_table_text.lower()
+    assert "schema" not in visible_table_text.lower()
+
+    diagnostics = widget.findChild(QPlainTextEdit, "standardizationDeveloperDiagnostics")
+    assert diagnostics is not None
+    assert not diagnostics.isVisible()
+    diagnostics_text = diagnostics.toPlainText()
+    assert "standardized_assets_registry" in diagnostics_text
+    assert "analysis_ready_manifest" in diagnostics_text
+    assert str(raw_file) in diagnostics_text
 
 
 def test_recognition_requires_selected_inputs(qt_app, project_summary) -> None:

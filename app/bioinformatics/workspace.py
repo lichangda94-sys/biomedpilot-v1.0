@@ -82,7 +82,7 @@ if QWidget is not None:
                 on_back=self.show_recognition,
             )
             self._standardized_assets_page = BioinformaticsStandardizedAssetsWidget(
-                on_continue=self.show_workflow_status,
+                on_continue=self.show_analysis_tasks,
                 on_back=self.show_readiness,
             )
             self._workflow_status_page = BioinformaticsWorkflowStatusWidget(
@@ -91,7 +91,7 @@ if QWidget is not None:
             )
             self._analysis_task_page = BioinformaticsAnalysisTaskCenterWidget(
                 on_continue=self.show_results_browser,
-                on_back=self.show_workflow_status,
+                on_back=self.show_standardization,
             )
             self._results_browser_page = BioinformaticsResultsBrowserWidget(
                 on_continue=self.show_report_viewer,
