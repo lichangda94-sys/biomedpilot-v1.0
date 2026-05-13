@@ -2120,6 +2120,12 @@ def test_task_center_and_results_show_imported_deg_content_blocks(qt_app, projec
 
     results = BioinformaticsResultsBrowserWidget()
     results.refresh_project(project_summary)
+    result_button_texts = [button.text() for button in results.findChildren(QPushButton)]
+    assert "打开参数 JSON" not in result_button_texts
+    assert "加入报告" not in result_button_texts
+    assert "加入报告（占位）" in result_button_texts
+    assert "继续到项目报告" in result_button_texts
+    assert results._details.isHidden()
     selector = results.findChild(QComboBox, "importedDegComparisonSelector")
     preview = results.findChild(QTableWidget, "importedDegPreviewTable")
 
@@ -2201,7 +2207,13 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
 
     task_center = BioinformaticsAnalysisTaskCenterWidget()
     task_center.refresh_project(project_summary)
-    assert any(button.text() == "生成并校验 DEG 输入" for button in task_center.findChildren(QPushButton))
+    buttons_by_text = {button.text(): button for button in task_center.findChildren(QPushButton)}
+    assert "校验 DEG 输入" in buttons_by_text
+    assert buttons_by_text["创建 DEG 配置草稿"].property("buttonRole") == "primary_action"
+    assert buttons_by_text["生成任务记录"].property("buttonRole") == "secondary"
+    assert buttons_by_text["运行 GEO 差异分析"].property("buttonRole") == "secondary"
+    assert buttons_by_text["继续：结果浏览"].property("buttonRole") == "primary_next"
+    assert task_center._records.isHidden()
     task_text = " ".join(
         task_center._tasks.item(row, column).text()
         for row in range(task_center._tasks.rowCount())
@@ -2242,7 +2254,8 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
         if history.item(row, column) is not None
     )
     assert "当前版本仅生成任务记录" in history_text
-    assert "count_matrix_001" in history_text
+    assert "1 个输入资产" in history_text
+    assert "count_matrix_001" not in history_text
     assert "PFF_vs_PBS" not in history_text
     history.setCurrentCell(0, 0)
     preflight_payload = task_center.generate_deg_executor_preflight()
@@ -2266,6 +2279,7 @@ def test_group_comparison_design_page_saves_confirmed_design(qt_app, project_sum
 
     report = BioinformaticsReportViewerWidget()
     report.refresh_project(project_summary)
+    assert report._manifest.isHidden()
     reportable = report.findChild(QTextEdit, "reportableContentSummary")
     assert reportable is not None
     reportable_text = reportable.toPlainText()
@@ -2789,9 +2803,11 @@ def test_workflow_task_results_report_and_settings_pages(qt_app, project_summary
     results = BioinformaticsResultsBrowserWidget()
     results.refresh_project(project_summary)
     assert "暂无结果" in results.status_message()
+    assert results._details.isHidden()
 
     report = BioinformaticsReportViewerWidget()
     report.refresh_project(project_summary)
+    assert report._manifest.isHidden()
     write_result_index(
         project_summary.project_root,
         [
