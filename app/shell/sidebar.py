@@ -19,6 +19,7 @@ COMMON_SIDEBAR_ITEMS = (
     SidebarItem("dashboard", "Dashboard"),
     SidebarItem("bioinformatics", "生信分析"),
     SidebarItem("meta_analysis", "Meta 分析"),
+    SidebarItem("labtools", "实验工具"),
     SidebarItem("project_center", "项目中心"),
     SidebarItem("data_center", "数据中心"),
     SidebarItem("task_center", "任务中心"),
@@ -39,6 +40,7 @@ if QFrame is not None:
             on_dashboard: Callable[[], None],
             on_bioinformatics: Callable[[], None],
             on_meta_analysis: Callable[[], None],
+            on_labtools: Callable[[], None],
             on_settings: Callable[[], None],
             on_testing: Callable[[], None],
         ) -> None:
@@ -59,6 +61,7 @@ if QFrame is not None:
                 ("Dashboard", on_dashboard),
                 ("生信分析", on_bioinformatics),
                 ("Meta 分析", on_meta_analysis),
+                ("实验工具", on_labtools),
                 ("设置中心", on_settings),
                 ("测试模式", on_testing),
             ):

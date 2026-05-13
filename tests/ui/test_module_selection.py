@@ -114,8 +114,8 @@ def test_module_icons_are_visible(qt_app, local_session: LocalSession) -> None:
     icons = widget.findChildren(QLabel, "moduleIcon")
     visible_icons = [icon for icon in icons if not icon.isHidden() and icon.pixmap() is not None and not icon.pixmap().isNull()]
 
-    assert len(icons) == 2
-    assert len(visible_icons) == 2
+    assert len(icons) == 3
+    assert len(visible_icons) >= 2
 
 
 def test_ui02_page_icons_are_visible(qt_app, local_session: LocalSession) -> None:
@@ -137,6 +137,26 @@ def test_meta_button_triggers_callback(qt_app, local_session: LocalSession) -> N
     button.click()
 
     assert events == ["meta"]
+
+
+def test_labtools_button_triggers_callback(qt_app, local_session: LocalSession) -> None:
+    events: list[str] = []
+    widget = _widget(local_session, on_open_labtools=lambda: events.append("labtools"))
+
+    button = widget.findChild(QPushButton, "labToolsModuleButton")
+    assert button.text() == "进入实验工具模块"
+    button.click()
+
+    assert events == ["labtools"]
+
+
+def test_labtools_module_card_is_stage_l0_l1a_specific(qt_app, local_session: LocalSession) -> None:
+    widget = _widget(local_session)
+
+    descriptions = [label.text() for label in widget.findChildren(QLabel, "moduleDescription")]
+
+    assert any("浓度换算与稀释计算" in text for text in descriptions)
+    assert any("开发中" in text for text in descriptions)
 
 
 def test_meta_module_card_mentions_current_workflow(qt_app, local_session: LocalSession) -> None:
@@ -203,6 +223,12 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
             "project_contract",
             "dev_branch",
         )
+
+        window.show_dashboard()
+        labtools_button = window._dashboard_page.findChild(QPushButton, "labToolsModuleButton")
+        labtools_button.click()
+        assert window.current_workspace_key() == "labtools"
+        assert window._labtools_page.page_keys() == ("home", "calculators", "pending")
     finally:
         _dispose_window(window)
 

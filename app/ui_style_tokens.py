@@ -344,14 +344,14 @@ def module_selection_stylesheet() -> str:
         color: {COLORS["muted"]};
         background: {COLORS["surface_muted"]};
     }}
-    QPushButton#primaryButton, QPushButton#bioModuleButton, QPushButton#metaModuleButton {{
+    QPushButton#primaryButton, QPushButton#bioModuleButton, QPushButton#metaModuleButton, QPushButton#labToolsModuleButton {{
         color: #FFFFFF;
         background: {COLORS["bio"]};
         border: 1px solid {COLORS["bio"]};
         min-height: {CONTROL_HEIGHT["primary"] - 18}px;
         font-weight: 700;
     }}
-    QPushButton#bioModuleButton:hover, QPushButton#metaModuleButton:hover {{
+    QPushButton#bioModuleButton:hover, QPushButton#metaModuleButton:hover, QPushButton#labToolsModuleButton:hover {{
         background: #0D273B;
     }}
     QPushButton#secondaryButton {{
