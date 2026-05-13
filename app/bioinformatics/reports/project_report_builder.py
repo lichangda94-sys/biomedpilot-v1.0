@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.bioinformatics.deg_executor_preflight import DEG_INPUTS_ROOT, load_latest_deg_preflight_manifest
 from app.bioinformatics.group_comparison_design import GROUP_COMPARISON_DESIGN
 from app.bioinformatics.project_analysis_tasks import load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
@@ -121,6 +122,7 @@ def _now() -> str:
 def _report_sections(root: Path, result_items: list[dict[str, object]]) -> list[dict[str, object]]:
     imported_deg = [item for item in result_items if item.get("item_type") == "imported_deg_result"]
     task_runs = [item for item in result_items if item.get("item_type") == "analysis_task_run"]
+    latest_preflight = load_latest_deg_preflight_manifest(root)
     return [
         _section(root, "data_recognition", CURRENT_RECOGNITION_RUN, "recognized_data/current.json"),
         _section(root, "standardized_assets", STANDARDIZED_REGISTRY, "manifests/standardized_assets_registry.json"),
@@ -139,6 +141,13 @@ def _report_sections(root: Path, result_items: list[dict[str, object]]) -> list[
             "source": "analysis_runs/",
             "item_count": len(task_runs),
             "description": "分析任务运行记录；dry-run 不代表真实分析完成。",
+        },
+        {
+            "section_id": "deg_input_preflight",
+            "status": "available" if latest_preflight else "not_available",
+            "source": str(DEG_INPUTS_ROOT),
+            "item_count": 1 if latest_preflight else 0,
+            "description": "DEG 输入准备状态；当前版本尚未执行真实差异分析。",
         },
     ]
 
@@ -166,6 +175,7 @@ def _draft_sections(
     imported = [item for item in result_items if item.get("item_type") == "imported_deg_result"]
     task_runs = [item for item in result_items if item.get("item_type") == "analysis_task_run"]
     completed = [item for item in result_items if item.get("item_type") == "completed_result"]
+    latest_preflight = load_latest_deg_preflight_manifest(root)
     return [
         {
             "section_id": "project_overview",
@@ -202,6 +212,12 @@ def _draft_sections(
             "title": "分析任务记录",
             "status": "available" if task_runs or task_records else "not_available",
             "body": _task_run_lines(task_runs, task_records),
+        },
+        {
+            "section_id": "deg_input_preflight",
+            "title": "DEG 输入准备状态",
+            "status": "available" if latest_preflight else "not_available",
+            "body": _deg_input_preflight_lines(latest_preflight),
         },
         {
             "section_id": "completed_results",
@@ -311,6 +327,29 @@ def _task_run_lines(task_runs: list[dict[str, object]], task_records: list[dict[
     for item in task_records:
         lines.append(f"- legacy task record {item.get('task_id', '')}：{item.get('task_type', '')}；状态：{item.get('status', '')}")
     return lines or ["- 暂无分析任务记录。"]
+
+
+def _deg_input_preflight_lines(preflight: dict[str, object] | None) -> list[str]:
+    if not preflight:
+        return ["- 尚未生成 DEG 输入 preflight。当前版本尚未执行真实差异分析。"]
+    materialized = preflight.get("materialized_inputs") if isinstance(preflight.get("materialized_inputs"), dict) else {}
+    summary = preflight.get("summary") if isinstance(preflight.get("summary"), dict) else {}
+    status_label = {
+        "passed": "通过",
+        "passed_with_warnings": "通过，但有提示",
+        "failed": "未通过，请查看错误",
+    }.get(str(preflight.get("status") or ""), str(preflight.get("status") or "未知"))
+    lines = [
+        f"- DEG 输入校验：{status_label}",
+        f"- Manifest：{preflight.get('manifest_relative_path') or materialized.get('manifest') or preflight.get('manifest_path') or '未记录'}",
+        f"- 样本数：{summary.get('sample_count', 0)}；比较数：{summary.get('comparison_count', 0)}；基因数：{summary.get('gene_count', 0)}",
+        "- 当前版本尚未执行真实差异分析；preflight 不代表真实 DEG 完成。",
+    ]
+    errors = [str(item) for item in preflight.get("errors", []) or [] if str(item)]
+    warnings = [str(item) for item in preflight.get("warnings", []) or [] if str(item)]
+    lines.extend(f"- 错误：{item}" for item in errors[:5])
+    lines.extend(f"- 提示：{item}" for item in warnings[:5])
+    return lines
 
 
 def _completed_result_lines(completed: list[dict[str, object]]) -> list[str]:
