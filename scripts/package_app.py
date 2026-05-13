@@ -88,7 +88,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _create_project_storage(resource_root / "project_storage")
     git_head = _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
-    _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
+    _write_build_info(build_info_path, repo_root=repo_root, app_name=options.app_name, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
 
@@ -180,9 +180,9 @@ def _create_project_storage(storage_root: Path) -> None:
         (target / ".gitkeep").write_text("", encoding="utf-8")
 
 
-def _write_build_info(path: Path, *, repo_root: Path, git_head: str) -> None:
+def _write_build_info(path: Path, *, repo_root: Path, app_name: str, git_head: str) -> None:
     payload = {
-        "app_name": DEFAULT_APP_NAME,
+        "app_name": app_name,
         "version": APP_VERSION,
         "bundle_version": APP_BUNDLE_VERSION,
         "channel": APP_CHANNEL,

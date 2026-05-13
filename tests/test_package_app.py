@@ -44,6 +44,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert not (medical_terms / "raw").exists()
 
     build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
+    assert build_info["app_name"] == "BioMedPilotTest"
     assert build_info["version"] == "0.1.0-internal-beta"
     assert build_info["launch_mode"] == "packaged-local-python"
 
