@@ -19,6 +19,7 @@ def test_supported_unit_aliases_are_canonicalized() -> None:
     assert canonical_unit("uM") == "µM"
     assert canonical_unit("ng/uL") == "ng/µL"
     assert canonical_unit("ug/mL") == "µg/mL"
+    assert canonical_unit("ug/uL") == "µg/µL"
     assert canonical_unit("cells/uL") == "cells/µL"
 
 
@@ -27,6 +28,7 @@ def test_mass_volume_and_concentration_convert_to_base_units() -> None:
     assert volume_to_l(500, "µL") == pytest.approx(0.0005)
     assert molarity_to_m(250, "µM") == pytest.approx(0.00025)
     assert mass_concentration_to_g_per_l(1, "mg/mL") == pytest.approx(1.0)
+    assert mass_concentration_to_g_per_l(1, "µg/µL") == pytest.approx(1.0)
     assert mass_concentration_to_g_per_l(1, "ng/mL") == pytest.approx(1e-6)
     assert mass_concentration_to_g_per_l(1, "ng/µL") == pytest.approx(0.001)
 

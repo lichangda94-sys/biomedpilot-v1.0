@@ -47,7 +47,7 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "实验计算器",
-                    "浓度、稀释、配制计算",
+                    "稀释、摩尔浓度、细胞接种、qPCR、WB 上样",
                     "可用",
                     "进入实验计算器",
                     self.calculators_requested.emit,

@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L5B，commit 以最终交接为准
+- 当前最近完成阶段：LabTools Stage L5C，commit 以最终交接为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -28,6 +28,7 @@
 | LabTools Stage L4C | `ab262cb3166140055bb328c6e07eb2a59c0673a5` | 新增单张本地图片、手动 ROI、用户阈值、亮/暗模式的划痕实验面积估算 MVP；结果为基于阈值的 measurement assistance，不自动判断迁移效果。 |
 | LabTools Stage L5A | `32cb27c` | 校准 LabTools UI、feature status、handoff 和测试中的用户可见能力边界；不新增算法、不新增持久化、不启用网络/AI/外部图像依赖。 |
 | LabTools Stage L5B | 最终交接记录 | 新增实验计算器中心 v1 结构化服务层和 UI 对齐，覆盖稀释、摩尔浓度/称量质量、细胞接种密度三类本地辅助计算；不做历史记录、导出或持久化。 |
+| LabTools Stage L5C | 最终交接记录 | 新增 qPCR 配液 v1 和 WB/SDS-PAGE 上样计算 v1 结构化结果与 UI tab；不做 WB/凝胶灰度、条带分析、历史记录或导出。 |
 
 ## 3. 当前已实现功能
 
@@ -38,6 +39,7 @@
 - 溶液配制计算器。
 - 细胞接种计算器。
 - qPCR 配液计算器。
+- WB / SDS-PAGE 上样计算器。
 - `CalculationRecord` 计算记录结构，支持 JSON-compatible dict。
 - 中文友好错误提示和人工复核提示。
 - L5B 新增 `experiment_calculator_center` 结构化 v1 服务层：
@@ -45,6 +47,10 @@
   - `MassMolarityInput` / `MassMolarityResult` / `calculate_mass_molarity_v1()`：根据分子量、目标摩尔浓度和终体积估算称量质量。
   - `CellSeedingInput` / `CellSeedingResult` / `calculate_cell_seeding_v1()`：根据细胞悬液浓度、目标每孔细胞数、孔数、每孔体积和 overage 估算细胞悬液体积、培养基体积和总需求量。
 - L5B v1 结果均为结构化辅助计算草稿，使用前需人工核对，不替代实验 SOP、临床建议或安全操作规范。
+- L5C 新增：
+  - `QpcrMixInput` / `QpcrMixResult` / `calculate_qpcr_mix_v1()`：输出 qPCR 单反应用量、总用量和 overage 后总用量。
+  - `WesternBlotLoadingInput` / `WesternBlotLoadingResult` / `calculate_western_blot_loading_v1()`：根据蛋白浓度、目标蛋白量、目标上样体积和 loading buffer 倍数估算样品、buffer 和水体积。
+- L5C WB/SDS-PAGE 仅为上样体积计算，不进行 WB/凝胶灰度、条带检测、归一化或图像解释。
 
 ### 3.2 本地试剂与配方库
 
@@ -128,7 +134,7 @@
 - 未实现批量分析。
 - 未实现自动划痕边界识别或全自动迁移效果判断。
 - 未实现细胞计数。
-- 未实现 WB / 凝胶灰度分析。
+- 未实现 WB / 凝胶灰度分析；L5C 只提供 WB/SDS-PAGE 上样体积计算。
 - 未实现 ImageJ/Fiji 接入。
 - 未实现 OpenCV / scikit-image / imageio / napari / cellpose / stardist 等依赖接入。
 - 未实现 ROI 绘制器、overlay 复核、图像预览器。
@@ -163,19 +169,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L5B 结果：113 passed
+  - 当前 L5C 结果：119 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L5B 结果：135 passed
+  - 当前 L5C 结果：135 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L5B 结果：18 passed
+  - 当前 L5C 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L5B 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L5C 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L5B 结果：通过
+  - 当前 L5C 结果：通过
 - `git diff --check`
-  - 当前 L5B 结果：通过
+  - 当前 L5C 结果：通过
 - `git diff --cached --check`
-  - 当前 L5B 结果：通过。
+  - 当前 L5C 提交前运行。
 
 ## 7. Shell / UI 接入状态
 
@@ -222,7 +228,7 @@
 ## 10. 数据持久化状态
 
 - 计算记录：内存结构 / JSON-compatible dict。
-- L5B 实验计算器 v1 结果：结构化 dataclass 结果和 UI 文本展示；不自动保存、不写 CSV、不写 manifest、不创建项目目录。
+- L5B/L5C 实验计算器 v1 结果：结构化 dataclass 结果和 UI 文本展示；不自动保存、不写 CSV、不写 manifest、不创建项目目录。
 - 用户自定义配方：确认后进入 `UserRecipeStore` 内存结构。
 - 来源草稿：手动来源和摘录草稿在 UI / 模型层流转，确认后才进入用户配方 store。
 - 图片记录：引用本地路径并生成 `LabImageRecord`，不复制、不上传、不自动写盘。
@@ -254,11 +260,10 @@
 
 ## 13. 后续推荐路线
 
-1. L5C：在保持本地计算和人工核对边界的前提下，评估 qPCR / WB-SDS-PAGE loading calculator 的结构化 v1 化。
-2. L6A：图像 ROI 结果持久化设计与 CSV/manifest/overlay preview 导出；继续保持 manual-review / semi-quantitative 表述。
-3. L6B：常用 reagent recipe draft center 的本地持久化和安全边界硬化；现有本地配方库、用户草稿和手动来源草稿作为基础。
-4. L6C：轻量实验模板和记录草稿；先做结构化草稿，不做完整 ELN、权限、签名或合规审计。
-5. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
+1. L6A：图像 ROI 结果持久化设计与 CSV/manifest/overlay preview 导出；继续保持 manual-review / semi-quantitative 表述。
+2. L6B：常用 reagent recipe draft center 的本地持久化和安全边界硬化；现有本地配方库、用户草稿和手动来源草稿作为基础。
+3. L6C：轻量实验模板和记录草稿；先做结构化草稿，不做完整 ELN、权限、签名或合规审计。
+4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
 
 ## 14. Handoff 结论
 

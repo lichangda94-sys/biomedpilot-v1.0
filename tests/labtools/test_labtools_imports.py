@@ -17,6 +17,7 @@ def test_labtools_module_exports_features() -> None:
     assert features[1].status.value == "测试中"
     assert features[2].status.value == "测试中"
     assert all(feature.module == "labtools" for feature in features)
+    assert "WB/SDS-PAGE 上样计算" in features[0].description
 
     image_feature = features[2]
     assert "荧光 manual ROI grayscale" in image_feature.description
@@ -45,7 +46,7 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     widget.show_calculators()
     tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
     assert tabs is not None
-    assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制", "细胞接种", "qPCR 配液"]
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制", "细胞接种", "qPCR 配液", "WB 上样"]
     calculator_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
     assert "实验计算器中心" in calculator_labels
     assert "本地辅助计算：稀释、摩尔浓度换算、细胞接种" in calculator_labels
@@ -53,6 +54,8 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert "溶液稀释" in calculator_labels or "C1V1 = C2V2 稀释计算" in calculator_labels
     assert "摩尔浓度" in calculator_labels
     assert "细胞接种" in calculator_labels
+    assert "WB / SDS-PAGE 上样计算" in calculator_labels
+    assert "不做 WB/凝胶灰度或条带分析" in calculator_labels
     assert "人工复核" in calculator_labels or "结果仅供实验前核对" in calculator_labels
     widget.show_recipes()
     assert widget.current_page_key() == "recipes"

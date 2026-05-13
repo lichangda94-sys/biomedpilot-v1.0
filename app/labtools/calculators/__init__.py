@@ -19,9 +19,15 @@ from app.labtools.calculators.experiment_calculator_center import (
     DilutionResult,
     MassMolarityInput,
     MassMolarityResult,
+    QpcrMixInput,
+    QpcrMixResult,
+    WesternBlotLoadingInput,
+    WesternBlotLoadingResult,
     calculate_cell_seeding_v1,
     calculate_dilution_v1,
     calculate_mass_molarity_v1,
+    calculate_qpcr_mix_v1,
+    calculate_western_blot_loading_v1,
 )
 
 __all__ = [
@@ -35,6 +41,10 @@ __all__ = [
     "DilutionResult",
     "MassMolarityInput",
     "MassMolarityResult",
+    "QpcrMixInput",
+    "QpcrMixResult",
+    "WesternBlotLoadingInput",
+    "WesternBlotLoadingResult",
     "calculate_cell_seeding",
     "calculate_cell_seeding_v1",
     "calculate_dilution",
@@ -43,6 +53,8 @@ __all__ = [
     "calculate_mass_molarity_v1",
     "calculate_molar_concentration",
     "calculate_qpcr_mix",
+    "calculate_qpcr_mix_v1",
     "calculate_solution_preparation",
+    "calculate_western_blot_loading_v1",
     "convert_concentration",
 ]

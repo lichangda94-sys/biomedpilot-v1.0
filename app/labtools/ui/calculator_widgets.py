@@ -28,11 +28,14 @@ try:
         CellSeedingInput,
         DilutionInput,
         MassMolarityInput,
+        QpcrMixInput,
+        WesternBlotLoadingInput,
         calculate_cell_seeding_v1,
         calculate_dilution_v1,
         calculate_mass_molarity_v1,
+        calculate_qpcr_mix_v1,
+        calculate_western_blot_loading_v1,
     )
-    from app.labtools.calculators.qpcr_mix_calculator import calculate_qpcr_mix
     from app.labtools.calculators.solution_preparation_calculator import calculate_solution_preparation
     from app.labtools.calculators.unit_conversion import (
         supported_cell_density_units,
@@ -477,22 +480,90 @@ if QWidget is not None:
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_qpcr_mix(
-                    self._reactions.text(),
-                    self._reaction_volume.text(),
-                    self._master_mix_value.text(),
-                    self._forward.text(),
-                    self._reverse.text(),
-                    self._template.text(),
-                    master_mix_mode="ratio" if self._master_mix_mode.currentText() == "比例（%）" else "volume",
-                    loss_percent=self._loss_percent.text(),
+                result = calculate_qpcr_mix_v1(
+                    QpcrMixInput(
+                        reactions=self._reactions.text(),
+                        reaction_volume_ul=self._reaction_volume.text(),
+                        master_mix_value=self._master_mix_value.text(),
+                        forward_primer_ul=self._forward.text(),
+                        reverse_primer_ul=self._reverse.text(),
+                        template_ul=self._template.text(),
+                        master_mix_mode="ratio" if self._master_mix_mode.currentText() == "比例（%）" else "volume",
+                        overage_percentage=self._loss_percent.text(),
+                    )
                 )
-            except CalculationError as exc:
+            except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_result(result)
-            if self._on_record is not None:
-                self._on_record(result.to_record(result.title))
+            self._result.show_text_result(result.as_text())
+
+
+    class WesternBlotLoadingCalculatorWidget(QWidget):
+        def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsWesternBlotLoadingCalculator")
+            self._on_record = on_record
+            self._build_ui()
+
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            root.setSpacing(SPACING["md"])
+            title = QLabel("WB / SDS-PAGE 上样计算")
+            title.setObjectName("labToolsSectionTitle")
+            root.addWidget(title)
+
+            card = QFrame()
+            card.setObjectName("labToolsCard")
+            grid = QGridLayout(card)
+            grid.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._protein_concentration = _line_edit("例如 2")
+            self._protein_concentration_unit = _combo(("mg/mL", "µg/µL"), "mg/mL")
+            self._target_mass = _line_edit("例如 20")
+            self._final_volume = _line_edit("例如 20")
+            self._volume_unit = _combo(supported_volume_units(), "µL")
+            self._loading_buffer_x = _line_edit("例如 4")
+            self._loading_buffer_x.setText("4")
+            button = QPushButton("计算上样体系")
+            button.setObjectName("primaryButton")
+            button.clicked.connect(self._handle_calculate)
+            grid.addWidget(QLabel("蛋白浓度"), 0, 0)
+            grid.addWidget(self._protein_concentration, 0, 1)
+            grid.addWidget(self._protein_concentration_unit, 0, 2)
+            grid.addWidget(QLabel("目标上样蛋白量 µg"), 1, 0)
+            grid.addWidget(self._target_mass, 1, 1, 1, 2)
+            grid.addWidget(QLabel("目标上样体积"), 2, 0)
+            grid.addWidget(self._final_volume, 2, 1)
+            grid.addWidget(self._volume_unit, 2, 2)
+            grid.addWidget(QLabel("loading buffer 倍数"), 3, 0)
+            grid.addWidget(self._loading_buffer_x, 3, 1, 1, 2)
+            grid.addWidget(button, 4, 0, 1, 3)
+            root.addWidget(card)
+
+            notice = QLabel("仅估算样品、loading buffer 和水的体积；不做 WB/凝胶灰度或条带分析。")
+            notice.setObjectName("labToolsCalculatorNotice")
+            notice.setWordWrap(True)
+            root.addWidget(notice)
+            self._result = ResultPanel()
+            root.addWidget(self._result)
+            root.addStretch(1)
+
+        def _handle_calculate(self) -> None:
+            try:
+                result = calculate_western_blot_loading_v1(
+                    WesternBlotLoadingInput(
+                        protein_concentration=self._protein_concentration.text(),
+                        concentration_unit=self._protein_concentration_unit.currentText(),
+                        target_protein_mass_ug=self._target_mass.text(),
+                        final_loading_volume=self._final_volume.text(),
+                        volume_unit=self._volume_unit.currentText(),
+                        loading_buffer_x=self._loading_buffer_x.text(),
+                    )
+                )
+            except Exception as exc:  # pragma: no cover - defensive UI guard
+                self._result.show_error(str(exc))
+                return
+            self._result.show_text_result(result.as_text())
 
 
     class LabToolsCalculatorWidget(QWidget):
@@ -526,6 +597,7 @@ if QWidget is not None:
             tabs.addTab(SolutionPreparationCalculatorWidget(on_record=self._set_latest_record), "溶液配制")
             tabs.addTab(CellSeedingCalculatorWidget(on_record=self._set_latest_record), "细胞接种")
             tabs.addTab(QpcrMixCalculatorWidget(on_record=self._set_latest_record), "qPCR 配液")
+            tabs.addTab(WesternBlotLoadingCalculatorWidget(on_record=self._set_latest_record), "WB 上样")
             root.addWidget(tabs)
 
         def latest_record(self) -> CalculationRecord | None:

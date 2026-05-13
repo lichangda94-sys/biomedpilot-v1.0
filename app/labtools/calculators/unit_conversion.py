@@ -27,6 +27,7 @@ MOLARITY_UNITS: dict[str, float] = {
 
 MASS_CONCENTRATION_UNITS: dict[str, float] = {
     "mg/mL": 1.0,
+    "µg/µL": 1.0,
     "µg/mL": 1e-3,
     "ng/mL": 1e-6,
     "ng/µL": 1e-3,
@@ -48,6 +49,11 @@ UNIT_ALIASES = {
     "μM": "µM",
     "ug/mL": "µg/mL",
     "μg/mL": "µg/mL",
+    "ug/uL": "µg/µL",
+    "ug/μL": "µg/µL",
+    "µg/uL": "µg/µL",
+    "μg/uL": "µg/µL",
+    "μg/μL": "µg/µL",
     "ng/uL": "ng/µL",
     "ng/μL": "ng/µL",
     "cells/uL": "cells/µL",
