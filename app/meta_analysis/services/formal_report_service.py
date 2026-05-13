@@ -15,6 +15,13 @@ from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.report_manifest_service import ReportManifestService
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskRecord, TaskStatus, TaskType
+from app.meta_analysis.models.statistical_result_state import (
+    STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+    STATISTICAL_RESULT_STATE_FAILED_VALIDATION,
+    STATISTICAL_RESULT_STATE_NOT_RUN,
+    blocks_formal_report_claim,
+    statistical_result_state_label_zh,
+)
 
 
 DRAFT_REPORT_M8_SCHEMA_VERSION = "meta_draft_report.m8"
@@ -591,6 +598,7 @@ def _m8_report_state(project_dir: Path, prisma: PRISMAFlowSummary, artifacts: di
     extraction_rows = _safe_extraction_rows(project_dir)
     quality = _safe_quality_summary(project_dir, expected_study_ids=[str(row.get("study_id", "")) for row in extraction_rows if str(row.get("study_id", "")).strip()])
     plan = _safe_analysis_plan_summary(project_dir)
+    statistical_result = _safe_statistical_result_state_summary(project_dir, plan_complete=bool(plan.get("complete")))
     literature_records = _load_literature_records(project_dir)
     source_counts: dict[str, int] = {}
     for record in literature_records:
@@ -619,7 +627,38 @@ def _m8_report_state(project_dir: Path, prisma: PRISMAFlowSummary, artifacts: di
         "extraction_rows": extraction_rows,
         "quality_summary": quality,
         "analysis_plan": plan,
+        "statistical_result": statistical_result,
         "missing_sections": missing_sections,
+    }
+
+
+def _safe_statistical_result_state_summary(project_dir: Path, *, plan_complete: bool) -> dict[str, Any]:
+    result_payload = _load_json(project_dir / "analysis" / "analysis_result.json")
+    result = result_payload.get("result") if isinstance(result_payload.get("result"), dict) else {}
+    if not result:
+        collection = _load_json(project_dir / "analysis" / "analysis_results.json")
+        results = collection.get("results")
+        if isinstance(results, list) and results and isinstance(results[-1], dict):
+            result = dict(results[-1])
+    warnings_payload = _load_json(project_dir / "analysis" / "applicability_warnings.json")
+    errors = [str(item) for item in warnings_payload.get("errors", [])] if isinstance(warnings_payload.get("errors"), list) else []
+    warnings = [str(item) for item in warnings_payload.get("warnings", [])] if isinstance(warnings_payload.get("warnings"), list) else []
+    if errors:
+        state = STATISTICAL_RESULT_STATE_FAILED_VALIDATION
+    elif result:
+        state = str(result.get("result_state") or "testing_level")
+    elif plan_complete:
+        state = STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN
+    else:
+        state = STATISTICAL_RESULT_STATE_NOT_RUN
+    payload = dict(result) if result else {"result_state": state, "testing_level": False}
+    return {
+        "state": state,
+        "label_zh": statistical_result_state_label_zh(state),
+        "blocks_formal_report_claim": blocks_formal_report_claim(payload),
+        "warnings": "；".join(warnings) if warnings else "无",
+        "errors": "；".join(errors) if errors else "无",
+        "report_ready": not blocks_formal_report_claim(payload),
     }
 
 
@@ -915,6 +954,7 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
     extraction_rows = list(state["extraction_rows"])
     quality = dict(state["quality_summary"])
     plan = dict(state["analysis_plan"])
+    statistical_result = dict(state["statistical_result"])
     prisma_counts = dict(state["prisma_counts"])
     return "\n".join(
         [
@@ -992,9 +1032,17 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
             f"- 警告：{plan.get('warnings', '无')}",
             "",
             "## 统计分析状态",
+            f"- 结果状态：{statistical_result.get('label_zh', '尚未运行正式统计分析')}（{statistical_result.get('state', 'not_run')}）。",
+            f"- report_ready：{'是' if statistical_result.get('report_ready') else '否'}。",
+            f"- formal claim blocked：{'是' if statistical_result.get('blocks_formal_report_claim', True) else '否'}。",
+            f"- 校验错误：{statistical_result.get('errors', '无')}",
+            f"- 校验提示：{statistical_result.get('warnings', '无')}",
             "- 当前报告为 Developer Preview / testing 阶段草稿。",
+            "- not_run / configured_not_run：尚未运行正式统计分析。",
+            "- failed_validation：只展示校验失败摘要，不生成正式统计结论。",
+            "- testing_level：测试级结果不能作为正式 computed 结果或 formal report claim。",
             "- 统计分析结果尚未作为正式可发表结论生成。",
-            "- 后续需要经过真实统计执行器与结果审计。",
+            "- 只有未来真实执行器返回 report_ready 后，正式报告段落才可纳入统计结论。",
             "- 本报告不生成 pooled effect、p value、forest plot、funnel plot 或医学结论。",
             "",
             "## Advanced method summary",
