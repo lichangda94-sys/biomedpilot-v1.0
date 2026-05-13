@@ -18,10 +18,17 @@ def test_labtools_module_exports_features() -> None:
     assert features[2].status.value == "测试中"
     assert all(feature.module == "labtools" for feature in features)
 
+    image_feature = features[2]
+    assert "荧光 manual ROI grayscale" in image_feature.description
+    assert "scratch/wound manual ROI + threshold" in image_feature.description
+    assert "细胞计数、灰度/墨值仍为占位" in image_feature.description
+    assert "算法开发中" not in image_feature.description
+    assert "algorithm in development" not in image_feature.description.lower()
+
 
 def test_labtools_workspace_instantiates_when_qt_available() -> None:
     try:
-        from PySide6.QtWidgets import QApplication, QPushButton, QTabWidget
+        from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QTabWidget
 
         from app.labtools.workspace import LabToolsWorkspaceWidget
     except Exception as exc:  # pragma: no cover
@@ -46,3 +53,8 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert [recipe_tabs.tabText(index) for index in range(recipe_tabs.count())] == ["本地配方库", "用户配方", "外部来源草稿"]
     widget.show_image_analysis()
     assert widget.current_page_key() == "image_analysis"
+    image_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    assert "MVP 可用：manual ROI grayscale 指标；需人工复核" in image_labels
+    assert "MVP 可用：manual ROI + user threshold 面积估算；semi-quantitative" in image_labels
+    assert image_labels.count("占位：algorithm_not_available，未生成定量结果") == 2
+    assert "未启用自动 ROI、细胞计数或灰度/墨值算法" in image_labels

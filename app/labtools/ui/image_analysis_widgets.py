@@ -150,11 +150,11 @@ if QWidget is not None:
             title = QLabel(label)
             title.setObjectName("imageTaskTitle")
             if task_type == "fluorescence_intensity":
-                status_text = "MVP 可用：手动 ROI"
+                status_text = "MVP 可用：manual ROI grayscale 指标；需人工复核"
             elif task_type == "wound_healing":
-                status_text = "MVP 可用：手动 ROI + 阈值"
+                status_text = "MVP 可用：manual ROI + user threshold 面积估算；semi-quantitative"
             else:
-                status_text = "框架已建立，算法开发中"
+                status_text = "占位：algorithm_not_available，未生成定量结果"
             status = QLabel(status_text)
             status.setObjectName("imageTaskStatus")
             status.setWordWrap(True)
@@ -200,7 +200,7 @@ if QWidget is not None:
             grid.addWidget(run, 2, 0, 1, 5)
             layout.addWidget(heading)
             layout.addLayout(grid)
-            support = QLabel("仅支持单张本地图片和手动矩形 ROI；不会自动识别细胞、划痕或条带。")
+            support = QLabel("仅支持单张本地图片和手动矩形 ROI 的 grayscale 指标；不会自动识别细胞、划痕或条带，结果必须人工复核。")
             support.setObjectName("imageTaskStatus")
             support.setWordWrap(True)
             layout.addWidget(support)
@@ -239,7 +239,7 @@ if QWidget is not None:
             grid.addWidget(run, 2, 0, 1, 5)
             layout.addWidget(heading)
             layout.addLayout(grid)
-            support = QLabel("仅支持单张本地图片、手动矩形 ROI 和用户阈值；结果为基于阈值的划痕区域估算。")
+            support = QLabel("仅支持单张本地图片、手动矩形 ROI 和用户阈值；结果为基于阈值的划痕区域估算，不能自动解释迁移效果。")
             support.setObjectName("imageTaskStatus")
             support.setWordWrap(True)
             layout.addWidget(support)

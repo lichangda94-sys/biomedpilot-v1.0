@@ -9,7 +9,12 @@ def labtools_features() -> list[FeatureItem]:
     return [
         FeatureItem("labtools", "实验计算器", FeatureStatus.TESTING, "浓度、稀释、溶液配制、细胞接种与 qPCR 配液计算。"),
         FeatureItem("labtools", "试剂与配方", FeatureStatus.TESTING, "本地常用配方库、体积缩放和 stock-to-working 稀释。"),
-        FeatureItem("labtools", "图像定量", FeatureStatus.TESTING, "图像记录与分析任务草稿框架；算法开发中。"),
+        FeatureItem(
+            "labtools",
+            "图像定量",
+            FeatureStatus.TESTING,
+            "荧光 manual ROI grayscale 指标和 scratch/wound manual ROI + threshold 面积估算为 MVP 可用；细胞计数、灰度/墨值仍为占位。",
+        ),
         FeatureItem("labtools", "实验模板", FeatureStatus.PENDING, "开发中。"),
     ]
 

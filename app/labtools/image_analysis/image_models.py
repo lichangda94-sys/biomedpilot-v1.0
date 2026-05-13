@@ -7,7 +7,11 @@ from typing import Any
 from uuid import uuid4
 
 
-IMAGE_REVIEW_NOTICE = "当前阶段仅建立图像分析任务框架，尚未执行自动定量。请勿将占位状态作为实验结果。"
+IMAGE_REVIEW_NOTICE = (
+    "当前图像分析仅支持手动 ROI 荧光 grayscale 指标和手动 ROI + 阈值划痕面积估算；"
+    "未启用自动 ROI、细胞计数或灰度/墨值算法。所有结果都需要人工复核，"
+    "请勿将占位状态作为实验结果。"
+)
 
 SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif")
 

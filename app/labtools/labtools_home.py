@@ -71,7 +71,7 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "图像定量",
-                    "图片记录与任务草稿框架",
+                    "荧光 ROI 与划痕阈值分析 MVP",
                     "可用",
                     "进入图像定量",
                     self.image_quant_requested.emit,
