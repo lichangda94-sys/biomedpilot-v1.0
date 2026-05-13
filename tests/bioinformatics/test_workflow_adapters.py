@@ -213,6 +213,56 @@ def test_recognition_classifies_xlsx_gene_count_matrix(project_root: Path) -> No
     assert recognition["files"][0]["content_profile"]["possible_table_role"] == "raw_count_matrix"  # type: ignore[index]
 
 
+def test_mixed_detected_expression_assets_allow_standardization_but_not_deg(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_xlsx_count_matrix(source)
+    recognition_path = project_root / "logs" / "recognition" / "recognition_report.json"
+    recognition_path.parent.mkdir(parents=True, exist_ok=True)
+    recognition_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.recognition_report.v1",
+                "files": [
+                    {
+                        "file_name": source.name,
+                        "original_path": str(source),
+                        "recognized_type": "tabular_text_file",
+                        "recognized_type_zh": "RNA-seq 综合表达结果表",
+                        "recognized_roles": [],
+                        "detected_assets": [
+                            {"asset_type": "raw_count_matrix", "label_zh": "count 矩阵", "input_eligible": True},
+                            {"asset_type": "normalized_expression_matrix", "label_zh": "FPKM 矩阵", "input_eligible": True},
+                            {"asset_type": "differential_result_table", "label_zh": "差异分析结果", "input_eligible": False},
+                            {"asset_type": "gene_annotation", "label_zh": "基因注释", "input_eligible": True},
+                        ],
+                        "route_path": str(source),
+                    }
+                ],
+                "type_counts": {"tabular_text_file": 1},
+                "warnings": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert report["has_core_input"] is True
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert {"sample_metadata", "comparison_config"} <= set(diff_row["missing_inputs"])
+    assert diff_row["can_run"] is False
+
+    standardization = generate_standardized_assets(project_root)
+    asset_types = {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert {"raw_count_matrix", "normalized_expression_matrix", "gene_annotation"} <= asset_types
+
+
 def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "geo" / "GSE315375" / "supplementary" / "GSE315375_exp_tyroid_controlX5.xlsx"
     raw_file.parent.mkdir(parents=True, exist_ok=True)

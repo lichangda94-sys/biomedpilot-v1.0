@@ -51,7 +51,12 @@ from app.bioinformatics.comparison_config import (
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
-from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
+from app.bioinformatics.project_readiness import (
+    has_standardizable_expression_input,
+    load_readiness_artifacts,
+    readiness_status_zh,
+    run_project_readiness,
+)
 from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.project_workflow_orchestrator import (
@@ -8383,7 +8388,11 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         source_note = "当前版本会扫描项目 raw_data 中所有已选择文件，因此历史导入副本也可能显示在识别结果中。"
     else:
         source_note = f"当前有效数据来源文件：{effective_count} 个。"
-    next_step = "如果已识别到表达矩阵或原始计数矩阵，可以继续数据准备检查；否则请返回数据来源补充文件。"
+    has_core = has_standardizable_expression_input(files)
+    if has_core:
+        next_step = "已识别到表达矩阵或原始计数矩阵，可以继续数据准备检查；若分组信息未识别，请在标准化阶段确认分组后再做 DEG 分析。"
+    else:
+        next_step = "未识别到表达矩阵或原始计数矩阵，请返回数据来源补充文件。"
     return "\n".join(
         [
             f"识别文件总数：{len(files)}",
@@ -8415,12 +8424,7 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
     files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
     if not files:
         return False, "识别报告中没有任何文件。"
-    has_core = any(
-        str(item.get("recognized_type")) in {"expression_matrix", "raw_count_matrix"}
-        or any(str(role) in {"expression_matrix", "raw_count_matrix"} for role in item.get("recognized_roles", []) or [])
-        for item in files
-    )
-    if not has_core:
+    if not has_standardizable_expression_input(files):
         return False, "未识别到表达矩阵或原始计数矩阵。"
     return True, ""
 
@@ -8442,7 +8446,7 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     if not isinstance(registry, dict):
         return False, "尚未生成标准化资产。"
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
-    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "raw_count_matrix"} for item in assets)
+    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"} for item in assets)
     if not has_ready_core:
         return False, "没有 analysis-ready 表达矩阵资产。"
     return True, ""

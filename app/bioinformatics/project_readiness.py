@@ -50,6 +50,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     if "clinical_metadata" not in available:
         warnings.append("临床信息缺失。")
     rows = []
+    deg_ready = False
     for key, label, required in ANALYSIS_ROWS:
         missing = sorted(_missing_inputs_for_row(key, required, available, confirmed_comparison))
         can_run = bool(has_core_input) and not missing and (key not in {"tcga_gtex_joint", "reporting"})
@@ -77,6 +78,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         next_step = _next_step_for_row(key, can_run, missing, row_warnings)
         if key == "reporting":
             next_step = "请先创建并执行分析任务，生成结果后再进入报告。"
+        if key == "differential_expression":
+            deg_ready = can_run
         rows.append(
             {
                 "analysis_type": key,
@@ -104,6 +107,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         "overall_status": overall,
         "available_inputs": sorted(available),
         "has_core_input": has_core_input,
+        "standardization_ready": has_core_input,
+        "deg_ready": deg_ready,
         "warnings": warnings,
         "comparison_config_summary": confirmed_comparison.to_dict() if confirmed_comparison is not None else {},
         "comparison_group_summary_zh": comparison_summary_text(confirmed_comparison),
@@ -126,6 +131,10 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
 
 
 def _available_inputs(files: list[object]) -> set[str]:
+    return available_inputs_from_recognition_files(files)
+
+
+def available_inputs_from_recognition_files(files: list[object]) -> set[str]:
     available: set[str] = set()
     for item in files:
         if not isinstance(item, dict):
@@ -145,6 +154,10 @@ def _available_inputs(files: list[object]) -> set[str]:
         for role in item.get("secondary_roles", []) or []:
             _add_available_input(available, str(role))
     return available
+
+
+def has_standardizable_expression_input(files: list[object]) -> bool:
+    return bool(available_inputs_from_recognition_files(files) & CORE_INPUTS)
 
 
 def _missing_inputs_for_row(

@@ -2450,6 +2450,64 @@ def test_recognition_readiness_and_standardization_continue_gates(qt_app, projec
     assert "不能继续" in standardization.status_message()
 
 
+def test_mixed_expression_detection_separates_standardization_and_deg_readiness(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_xlsx_count_matrix(source)
+    _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "tabular_text_file",
+                "recognized_type_zh": "RNA-seq 综合表达结果表",
+                "recognized_roles": [],
+                "detected_assets": [
+                    {"asset_type": "raw_count_matrix", "label_zh": "count 矩阵", "input_eligible": True},
+                    {"asset_type": "normalized_expression_matrix", "label_zh": "FPKM 矩阵", "input_eligible": True},
+                    {"asset_type": "differential_result_table", "label_zh": "差异分析结果", "input_eligible": False},
+                    {"asset_type": "gene_annotation", "label_zh": "基因注释", "input_eligible": True},
+                ],
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    events: list[Path] = []
+    recognition = BioinformaticsRecognitionWidget(on_continue=events.append)
+    recognition.refresh_project(project_summary)
+    recognition.continue_to_readiness()
+
+    assert events == [project_summary.project_root]
+    assert "不能继续" not in recognition.status_message()
+    assert "可以继续数据准备检查" in recognition._counts.toPlainText()
+    assert "确认分组后再做 DEG 分析" in recognition._counts.toPlainText()
+
+    readiness = BioinformaticsReadinessDashboardWidget(on_continue=events.append)
+    readiness.refresh_project(project_summary)
+    artifacts = readiness.run_readiness_check()
+    assert artifacts is not None
+    report = artifacts["readiness_report"]  # type: ignore[index]
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert "已识别到的数据：表达矩阵" in readiness.findChild(QLabel, "readinessRecognizedInputs").text()
+    assert "仍需补充的数据" in readiness.findChild(QLabel, "readinessMissingInputs").text()
+    readiness.continue_to_standardization()
+    assert events[-1] == project_summary.project_root
+    assert "不能继续" not in readiness.status_message()
+
+    standardization = BioinformaticsStandardizedAssetsWidget(on_continue=events.append)
+    standardization.refresh_project(project_summary)
+    generated = standardization.generate_assets()
+    assert generated is not None
+    assert "表达矩阵：已识别到" in standardization.findChild(QLabel, "standardizationExpressionStatus").text()
+    assert "尚未检测到明确分组" in standardization.findChild(QLabel, "standardizationGroupStatus").text()
+    standardization.continue_to_workflow()
+    assert events[-1] == project_summary.project_root
+    assert "不能继续" not in standardization.status_message()
+
+
 def test_workflow_task_results_report_and_settings_pages(qt_app, project_summary) -> None:
     workflow = BioinformaticsWorkflowStatusWidget()
     workflow.refresh_project(project_summary)
