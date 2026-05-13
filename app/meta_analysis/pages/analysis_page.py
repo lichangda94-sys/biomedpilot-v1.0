@@ -32,6 +32,8 @@ from app.meta_analysis.services.meta_statistics_engine_service import (
     MetaStatisticsEngineService,
 )
 from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
+from app.meta_analysis.models.result_review import RESULT_REVIEW_PANEL_LABELS_ZH, result_review_label_zh
+from app.meta_analysis.services.result_review_service import StatisticalResultReviewService
 from app.meta_analysis.ui_text import (
     ANALYSIS_BLOCKED_METHOD_ZH,
     ANALYSIS_DESCRIPTION_ZH,
@@ -150,6 +152,7 @@ class AnalysisSetupPageState:
     result_state_summary: dict[str, object]
     effect_size_normalization_summary: dict[str, object]
     pairwise_executor_summary: dict[str, object]
+    result_review_summary: dict[str, object]
     advanced_method_status: dict[str, str]
     warnings: tuple[str, ...]
     errors: tuple[str, ...]
@@ -183,6 +186,7 @@ class AnalysisSetupPageState:
         "测试阶段提示",
         "需要用户审核后才能进入报告",
     )
+    result_review_labels_zh: tuple[str, ...] = RESULT_REVIEW_PANEL_LABELS_ZH
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
@@ -285,6 +289,7 @@ def analysis_setup_state_from_project(
     run_result_summary = _analysis_alias_summary(result_path, "result")
     normalization_summary = _effect_size_normalization_summary(project_dir)
     pairwise_summary = _pairwise_executor_summary(project_dir)
+    review_summary = _result_review_summary(project_dir)
     if not plan_path.exists():
         warnings.append("analysis_plan_missing")
     if not dataset_path.exists():
@@ -317,6 +322,7 @@ def analysis_setup_state_from_project(
         },
         effect_size_normalization_summary=normalization_summary,
         pairwise_executor_summary=pairwise_summary,
+        result_review_summary=review_summary,
         advanced_method_status={
             "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
             "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
@@ -538,6 +544,27 @@ def _pairwise_executor_summary(project_dir: Path) -> dict[str, object]:
         "testing_notice_zh": "测试阶段提示：M12 为 Developer Preview / testing MVP，不生成正式医学结论。",
         "review_notice_zh": "需要用户审核后才能进入报告。",
         "blocks_formal_report_claim": blocks_formal_report_claim(payload),
+}
+
+
+def _result_review_summary(project_dir: Path) -> dict[str, object]:
+    service = StatisticalResultReviewService()
+    review = service.load_review(project_dir)
+    return {
+        "title_zh": "统计结果审核",
+        "review_state": review.review_state,
+        "review_state_label_zh": result_review_label_zh(review.review_state),
+        "result_state": review.result_state or STATISTICAL_RESULT_STATE_NOT_RUN,
+        "warnings_acknowledged_label_zh": "已确认查看警告",
+        "review_warnings_acknowledged": review.review_warnings_acknowledged,
+        "report_ready_requested_label_zh": "申请报告就绪",
+        "report_ready_requested": review.report_ready_requested,
+        "report_ready_label_zh": "报告就绪",
+        "report_ready_granted": review.report_ready_granted,
+        "blockers_label_zh": "阻止进入报告的原因",
+        "report_ready_blockers": "；".join(review.report_ready_blockers) if review.report_ready_blockers else "无",
+        "review_notes_present": bool(review.review_notes.strip()),
+        "warnings_visible": list(review.warnings_visible),
     }
 
 
@@ -573,9 +600,9 @@ def _dedupe(items: list[str]) -> list[str]:
 
 
 try:
-    from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFileDialog, QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover
-    QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QPushButton = QVBoxLayout = QWidget = None
+    QFileDialog = QCheckBox = QFrame = QHBoxLayout = QLabel = QLineEdit = QPushButton = QVBoxLayout = QWidget = None
 
 
 if QWidget is not None:
@@ -599,6 +626,7 @@ if QWidget is not None:
             self._analysis_plan_service = AnalysisPlanService()
             self._statistics_engine_service = MetaStatisticsEngineService()
             self._pairwise_executor_service = PairwiseMetaExecutorService()
+            self._result_review_service = StatisticalResultReviewService(pairwise_executor=self._pairwise_executor_service)
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -680,6 +708,32 @@ if QWidget is not None:
             self._pairwise_executor_label = QLabel("统计执行状态、模型、纳入研究数、合并效应量、95% CI、异质性 I² 和测试阶段提示会显示在这里。")
             self._pairwise_executor_label.setWordWrap(True)
             root.addWidget(self._pairwise_executor_label)
+
+            review_title = QLabel("统计结果审核")
+            review_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(review_title)
+            self._review_status_label = QLabel("审核状态：尚未审核。报告就绪需要明确审核、确认查看警告，并申请报告就绪。")
+            self._review_status_label.setWordWrap(True)
+            root.addWidget(self._review_status_label)
+            self._review_warning_ack = QCheckBox("已确认查看警告")
+            root.addWidget(self._review_warning_ack)
+            self._review_notes_input = QLineEdit()
+            self._review_notes_input.setPlaceholderText("审核备注")
+            root.addWidget(self._review_notes_input)
+            review_buttons = QHBoxLayout()
+            accept_review_button = QPushButton("接受进入报告草稿")
+            accept_review_button.clicked.connect(self._accept_pairwise_for_report)
+            needs_revision_button = QPushButton("标记需要修订")
+            needs_revision_button.clicked.connect(self._mark_pairwise_needs_revision)
+            reject_review_button = QPushButton("不纳入报告")
+            reject_review_button.clicked.connect(self._reject_pairwise_for_report)
+            request_ready_button = QPushButton("申请报告就绪")
+            request_ready_button.clicked.connect(self._request_pairwise_report_ready)
+            review_buttons.addWidget(accept_review_button)
+            review_buttons.addWidget(needs_revision_button)
+            review_buttons.addWidget(reject_review_button)
+            review_buttons.addWidget(request_ready_button)
+            root.addLayout(review_buttons)
 
             dataset_title = QLabel("Analysis-ready Dataset（测试中）")
             dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
@@ -893,6 +947,7 @@ if QWidget is not None:
         def _view_pairwise_executor_result(self) -> None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
             self._refresh_pairwise_executor_summary(project_dir)
+            self._refresh_result_review_summary(project_dir)
 
         def _refresh_normalization_summary(self, project_dir: Path) -> None:
             summary = _effect_size_normalization_summary(project_dir)
@@ -917,6 +972,76 @@ if QWidget is not None:
                 f"{summary['testing_notice_zh']}\n"
                 f"{summary['review_notice_zh']}"
             )
+
+        def _refresh_result_review_summary(self, project_dir: Path) -> None:
+            summary = _result_review_summary(project_dir)
+            self._review_status_label.setText(
+                f"{summary['title_zh']}：{summary['review_state_label_zh']}\n"
+                f"{summary['warnings_acknowledged_label_zh']}：{'是' if summary['review_warnings_acknowledged'] else '否'}\n"
+                f"{summary['report_ready_requested_label_zh']}：{'是' if summary['report_ready_requested'] else '否'}\n"
+                f"{summary['report_ready_label_zh']}：{'是' if summary['report_ready_granted'] else '否'}\n"
+                f"{summary['blockers_label_zh']}：{summary['report_ready_blockers']}"
+            )
+
+        def _latest_pairwise_result_for_review(self) -> object:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            result = self._pairwise_executor_service.load_latest_result(project_dir)
+            if result is None:
+                raise ValueError("pairwise_result_missing")
+            return result
+
+        def _accept_pairwise_for_report(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                transition = self._result_review_service.accept_for_report(
+                    project_dir,
+                    self._latest_pairwise_result_for_review(),
+                    reviewer_role="reviewer",
+                    review_notes=self._review_notes_input.text(),
+                    warnings_acknowledged=self._review_warning_ack.isChecked(),
+                )
+                self._review_status_label.setText(
+                    f"统计结果审核：{transition.review.review_state}\n"
+                    f"阻止进入报告的原因：{'；'.join(transition.blockers) or '无'}"
+                )
+                self._refresh_pairwise_executor_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"统计结果审核失败：{exc}")
+
+        def _mark_pairwise_needs_revision(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                self._result_review_service.mark_needs_revision(project_dir, self._latest_pairwise_result_for_review(), reviewer_role="reviewer", review_notes=self._review_notes_input.text())
+                self._refresh_result_review_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"统计结果审核失败：{exc}")
+
+        def _reject_pairwise_for_report(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                self._result_review_service.reject_for_report(project_dir, self._latest_pairwise_result_for_review(), reviewer_role="reviewer", review_notes=self._review_notes_input.text())
+                self._refresh_result_review_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"统计结果审核失败：{exc}")
+
+        def _request_pairwise_report_ready(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                result = self._latest_pairwise_result_for_review()
+                requested = self._result_review_service.request_report_ready(project_dir, result, reviewer_role="reviewer")
+                latest = self._pairwise_executor_service.load_latest_result(project_dir)
+                granted = self._result_review_service.grant_report_ready(project_dir, latest, reviewer_role="reviewer") if requested.success else requested
+                self._review_status_label.setText(
+                    f"报告就绪状态：{'报告就绪' if granted.success else '未就绪'}\n"
+                    f"阻止进入报告的原因：{'；'.join(granted.blockers) or '无'}"
+                )
+                self._refresh_pairwise_executor_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"申请报告就绪失败：{exc}")
 
         def _build_dataset(self) -> None:
             project_dir = Path(self._project_dir_input.text()).expanduser()

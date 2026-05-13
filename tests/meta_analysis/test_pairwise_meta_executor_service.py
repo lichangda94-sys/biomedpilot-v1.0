@@ -148,8 +148,8 @@ def test_m12_result_state_requires_user_review_before_report_ready() -> None:
     assert result.result_state == STATISTICAL_RESULT_STATE_COMPUTED
     assert requires_user_review(result)
     assert not can_enter_report_ready_state(result).allowed
-    reviewed = service.mark_user_reviewed(result, actor="reviewer")
-    report_ready = service.mark_report_ready(reviewed, actor="reviewer")
+    reviewed = service.mark_user_reviewed({**result.to_dict(), "review_decision": "accepted_for_report", "review_warnings_acknowledged": True}, actor="reviewer")
+    report_ready = service.mark_report_ready({**reviewed.to_dict(), "report_ready_requested": True}, actor="reviewer")
     failed = service.execute_from_inputs(confirmed_plan={}, normalized_records=[])
 
     assert reviewed.result_state == "user_reviewed"

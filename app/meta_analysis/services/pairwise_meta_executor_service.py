@@ -21,6 +21,7 @@ from app.meta_analysis.models.pairwise_meta_executor import (
     PairwiseMetaExecutorResult,
     PairwiseStudyResult,
 )
+from app.meta_analysis.models.result_review import REVIEW_STATE_ACCEPTED_FOR_REPORT
 from app.meta_analysis.models.statistical_result_state import (
     STATISTICAL_RESULT_STATE_COMPUTED,
     STATISTICAL_RESULT_STATE_FAILED_VALIDATION,
@@ -224,6 +225,12 @@ class PairwiseMetaExecutorService:
             raise ValueError("computed_result_required_for_user_review")
         if not actor.strip():
             raise ValueError("actor_required_for_user_review")
+        if payload.get("warnings") and not bool(payload.get("review_warnings_acknowledged", False)):
+            raise ValueError("warnings_must_be_acknowledged")
+        if str(payload.get("review_decision", "")) != REVIEW_STATE_ACCEPTED_FOR_REPORT:
+            raise ValueError("accepted_for_report_review_required")
+        if _critical_warnings(payload):
+            raise ValueError("critical_warnings_block_report_ready")
         payload["result_state"] = STATISTICAL_RESULT_STATE_USER_REVIEWED
         payload["user_reviewed"] = True
         payload["report_ready"] = False
@@ -234,12 +241,21 @@ class PairwiseMetaExecutorService:
         payload = result.to_dict() if isinstance(result, PairwiseMetaExecutorResult) else dict(result)
         if not actor.strip():
             raise ValueError("actor_required_for_report_ready")
+        if str(payload.get("review_decision", "")) != REVIEW_STATE_ACCEPTED_FOR_REPORT:
+            raise ValueError("accepted_for_report_review_required")
+        if not bool(payload.get("report_ready_requested", False)):
+            raise ValueError("report_ready_request_required")
+        if payload.get("validation_errors"):
+            raise ValueError("validation_errors_must_be_resolved")
+        if _critical_warnings(payload):
+            raise ValueError("critical_warnings_block_report_ready")
         gate = can_enter_report_ready_state(payload)
         if not gate.allowed:
             raise ValueError(";".join(gate.errors))
         payload["result_state"] = STATISTICAL_RESULT_STATE_REPORT_READY
         payload["user_reviewed"] = True
         payload["report_ready"] = True
+        payload["report_ready_granted"] = True
         return PairwiseMetaExecutorResult(**_known_result_fields(payload))
 
     def save_result(self, project_dir: Path, result: PairwiseMetaExecutorResult) -> Path:
@@ -430,6 +446,18 @@ def _result_manifest(
 def _known_result_fields(payload: dict[str, Any]) -> dict[str, Any]:
     names = set(PairwiseMetaExecutorResult.__dataclass_fields__.keys())
     return {name: payload[name] for name in names if name in payload}
+
+
+def _critical_warnings(payload: dict[str, Any]) -> list[str]:
+    warnings = payload.get("warnings", [])
+    if not isinstance(warnings, list):
+        return []
+    result: list[str] = []
+    for warning in warnings:
+        text = str(warning).lower()
+        if text.startswith("critical") or "critical_warning" in text or "unresolved_critical" in text:
+            result.append(str(warning))
+    return result
 
 
 def _now() -> str:

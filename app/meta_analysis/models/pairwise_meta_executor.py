@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from app.meta_analysis.models.result_review import REVIEW_STATE_NOT_REVIEWED
 from app.meta_analysis.models.statistical_result_state import STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN
 
 
@@ -72,6 +73,16 @@ class PairwiseMetaExecutorResult:
     developer_preview_testing: bool = True
     user_reviewed: bool = False
     report_ready: bool = False
+    review_state: str = REVIEW_STATE_NOT_REVIEWED
+    reviewer_role: str = ""
+    reviewed_at: str = ""
+    review_decision: str = ""
+    review_notes: str = ""
+    review_warnings_acknowledged: bool = False
+    report_ready_requested: bool = False
+    report_ready_granted: bool = False
+    report_ready_blockers: list[str] = field(default_factory=list)
+    audit_summary: dict[str, Any] = field(default_factory=dict)
     medical_conclusion_status: str = "not_generated"
     testing_level_notice: str = "Developer Preview / testing MVP; not production, clinical, regulatory, or publication-ready."
 
