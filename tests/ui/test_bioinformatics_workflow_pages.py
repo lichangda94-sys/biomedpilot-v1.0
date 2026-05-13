@@ -1964,11 +1964,11 @@ def test_imported_deg_browser_user_page_and_report_candidate(qt_app, project_sum
     widget.refresh_project(project_summary)
 
     assert "导入结果浏览" in widget.status_message()
-    assert "用户导入 / 外部分析结果" in widget.findChild(QLabel, "importedDegBoundary").text()
+    assert "这是用户导入的外部差异分析结果，不是 BioMedPilot 重新计算得到的结果" in widget.findChild(QLabel, "importedDegBoundary").text()
     table = widget.findChild(QTableWidget, "importedDegUserTable")
     assert table is not None
     headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
-    assert headers == ["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "下一步"]
+    assert headers == ["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "查看详情"]
     table_text = "\n".join(
         table.item(row, col).text()
         for row in range(table.rowCount())
@@ -1984,7 +1984,9 @@ def test_imported_deg_browser_user_page_and_report_candidate(qt_app, project_sum
 
     detail_text = widget.findChild(QLabel, "importedDegDetailSummary").text()
     assert "阈值草稿" in detail_text
-    assert "BioMedPilot 重新计算" not in detail_text
+    assert "Top up genes" in detail_text
+    assert "报告可用性" in detail_text
+    assert "本软件计算发现" not in detail_text
     preview = widget.findChild(QTableWidget, "importedDegPreviewTable")
     assert preview is not None
     assert preview.rowCount() == 3
@@ -1993,6 +1995,8 @@ def test_imported_deg_browser_user_page_and_report_candidate(qt_app, project_sum
     entries = widget.mark_report_candidates()
     assert entries
     assert entries[0]["result_semantics"] == "imported result"
+    assert entries[0]["result_type"] == "导入结果"
+    assert (project_summary.project_root / str(entries[0]["manifest_ref"])).is_file()
     assert "不是 BioMedPilot 重新计算" in entries[0]["warning"]
     assert not (project_summary.project_root / "results" / "tables").exists()
     assert not (project_summary.project_root / "results" / "figures").exists()
@@ -2548,7 +2552,7 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     table = widget.findChild(QTableWidget, "resultsUserTable")
     assert table is not None
     headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
-    assert headers == ["结果名称", "结果类型", "来源说明", "当前状态", "可打开", "可进入报告", "下一步 / 注意事项"]
+    assert headers == ["结果名称", "结果类型", "来源", "状态", "可用于报告", "生成时间", "简短说明", "查看详情"]
     table_text = "\n".join(
         table.item(row, col).text()
         for row in range(table.rowCount())
@@ -2559,6 +2563,7 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     assert "测试级 / 开发者预览结果" in table_text
     assert "流程记录 / dry-run，未执行真实分析" in table_text
     assert "已配置，尚未运行" in table_text
+    assert "查看详情" in table_text
     assert "真实计算结果" not in table_text
     assert str(imported_path) not in table_text
     assert "differential_expression" not in table_text

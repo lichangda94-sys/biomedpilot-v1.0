@@ -4014,7 +4014,7 @@ class BioinformaticsImportedDegBrowserWidget(QWidget):
         summary_card, summary_layout = _card("当前导入 DEG 状态")
         self._summary_label = _muted("当前是否存在已导入 DEG 结果：待检查。")
         self._summary_label.setObjectName("importedDegSummary")
-        self._boundary_label = _muted("边界：用户导入 / 外部分析结果，不代表 BioMedPilot 重新计算。")
+        self._boundary_label = _muted("这是用户导入的外部差异分析结果，不是 BioMedPilot 重新计算得到的结果。")
         self._boundary_label.setObjectName("importedDegBoundary")
         self._next_step_label = _muted("下一步建议：先确认列映射和来源标签。")
         self._next_step_label.setObjectName("importedDegNextStep")
@@ -4030,7 +4030,7 @@ class BioinformaticsImportedDegBrowserWidget(QWidget):
         actions.addStretch(1)
         root.addLayout(actions)
 
-        self._results = _table(["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "下一步"])
+        self._results = _table(["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "查看详情"])
         self._results.setObjectName("importedDegUserTable")
         root.addWidget(self._results)
         _set_table_widths(self._results, [180, 190, 120, 110, 260, 180, 300])
@@ -4075,7 +4075,7 @@ class BioinformaticsImportedDegBrowserWidget(QWidget):
         missing = sum(1 for result in typed_results if getattr(result, "status", "") == "missing")
         self._status_label.setText(f"导入结果浏览：{len(typed_results)} 个 imported DEG；可浏览 {ready} 个，待确认 {needs_confirmation} 个，缺少文件 {missing} 个。")
         self._summary_label.setText(f"当前是否存在已导入 DEG 结果：是，共 {len(typed_results)} 个。")
-        self._boundary_label.setText("边界：用户导入 / 外部分析结果；不是 BioMedPilot 重新计算；不生成 fake DEG、火山图或富集结果。")
+        self._boundary_label.setText("这是用户导入的外部差异分析结果，不是 BioMedPilot 重新计算得到的结果。")
         self._next_step_label.setText("下一步建议：确认列映射和来源说明后，可标记为报告候选；报告中必须保留导入标签。")
         _fill_table(self._results, [result.to_user_row() for result in typed_results])
         self._render_preview(typed_results[0])
@@ -4098,13 +4098,19 @@ class BioinformaticsImportedDegBrowserWidget(QWidget):
         rows = [list(row) for row in getattr(result, "preview_rows", ()) or ()]
         mapping = getattr(result, "column_mapping", {}) or {}
         counts = getattr(result, "regulation_counts", {}) or {}
+        top_up = getattr(result, "top_up_genes", ()) or ()
+        top_down = getattr(result, "top_down_genes", ()) or ()
         count_text = "待确认" if counts.get("status") != "computed" else f"上调 {counts.get('up')}；下调 {counts.get('down')}；不显著 {counts.get('not_significant')}"
+        top_up_text = "、".join(str(item.get("gene") or "未命名") for item in list(top_up)[:5]) if top_up else "暂无"
+        top_down_text = "、".join(str(item.get("gene") or "未命名") for item in list(top_down)[:5]) if top_down else "暂无"
         self._detail_label.setText(
             "详情："
             f"{getattr(result, 'name', '导入差异分析结果')}；"
             "关键列映射 "
             + ("、".join(f"{key}->{value}" for key, value in mapping.items()) if mapping else "待确认")
-            + f"；阈值草稿 |log2FC| >= 1 且 p value/FDR <= 0.05；计数：{count_text}。"
+            + f"；阈值草稿 |log2FC| >= 1 且 p value/FDR <= 0.05；计数：{count_text}；"
+            + f"Top up genes：{top_up_text}；Top down genes：{top_down_text}；"
+            + "报告可用性：只能写“用户导入的外部分析结果显示”。"
         )
         self._preview.setColumnCount(max(1, len(headers)))
         self._preview.setHorizontalHeaderLabels(headers or ["预览"])
@@ -4197,10 +4203,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         actions.addWidget(_button("查看报告草稿", "primaryButton", self.continue_to_report))
         actions.addStretch(1)
         root.addLayout(actions)
-        self._results = _table(["结果名称", "结果类型", "来源说明", "当前状态", "可打开", "可进入报告", "下一步 / 注意事项"])
+        self._results = _table(["结果名称", "结果类型", "来源", "状态", "可用于报告", "生成时间", "简短说明", "查看详情"])
         self._results.setObjectName("resultsUserTable")
         root.addWidget(self._results)
-        _set_table_widths(self._results, [180, 140, 220, 160, 100, 120, 300])
+        _set_table_widths(self._results, [170, 110, 170, 120, 120, 160, 280, 100])
         self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
 
         developer_card, developer_layout = _card("开发者诊断")
@@ -4255,11 +4261,6 @@ class BioinformaticsReportViewerWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
-        payload = load_result_index(self._project_root)
-        entries = _result_entries_for_display(self._project_root, payload)
-        if not entries:
-            self._status_label.setText("不能生成报告草稿：暂无可用于报告的结果。请返回分析任务中心，完成配置或导入明确标记的结果。")
-            return None
         payload = generate_project_report(self._project_root)
         self._render(payload)
         return payload
@@ -4279,13 +4280,12 @@ class BioinformaticsReportViewerWidget(QWidget):
         root = _scroll_root(self)
         root.addWidget(_header("项目报告", "生成和查看项目报告草稿，保持导入、测试级和未运行状态的边界。", back_text="返回结果浏览", back_signal=self.back_requested))
         actions = QHBoxLayout()
-        actions.addWidget(_button("生成 / 刷新报告草稿", "primaryButton", self.generate_report))
-        actions.addWidget(_button("打开报告文件", "secondaryButton", lambda: _open_path(self._project_root / "reports/project_analysis_report.md" if self._project_root else None)))
-        actions.addWidget(_button("导出 DOCX 草稿", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：testing placeholder，未正式支持。")))
-        actions.addWidget(_button("导出 HTML 草稿", "secondaryButton", lambda: self._status_label.setText("HTML 导出：testing placeholder，未正式支持。")))
+        actions.addWidget(_button("刷新报告草稿", "primaryButton", self.generate_report))
+        actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
+        actions.addWidget(_button("复制报告摘要", "secondaryButton", self.copy_report_summary))
         actions.addStretch(1)
         root.addLayout(actions)
-        self._status_label = _status_label("没有报告草稿时请点击生成 / 刷新报告草稿。PDF 当前未正式支持。")
+        self._status_label = _status_label("没有报告草稿时请点击刷新报告草稿。本阶段只生成 Markdown 和 report_manifest.json。")
         root.addWidget(self._status_label)
 
         summary_card, summary_layout = _card("报告草稿状态")
@@ -4329,15 +4329,23 @@ class BioinformaticsReportViewerWidget(QWidget):
         entries = _result_entries_for_display(self._project_root, result_payload)
         records = load_task_records(self._project_root) if self._project_root else []
         if not markdown:
-            self._status_label.setText("尚未生成项目报告草稿。PDF 当前未正式支持。")
+            self._status_label.setText("尚未生成项目报告草稿。本阶段只生成 Markdown 和 report_manifest.json。")
         else:
-            self._status_label.setText("已读取项目级 Markdown 报告草稿。PDF/DOCX/HTML 仍是 testing placeholder。")
+            self._status_label.setText("已读取项目级 Markdown 报告草稿。本阶段不导出 Word 或 PDF。")
         self._report_status_label.setText(_report_draft_status_text(markdown, manifest))
         self._report_semantics_label.setText(_report_result_semantics_text(entries, records))
         self._report_next_step_label.setText(_report_next_step_text(markdown, entries, records))
         _fill_table(self._sections, _report_section_rows(self._project_root, entries, records, bool(markdown)))
         self._markdown.setPlainText(_report_user_preview_text(markdown, entries, records))
         self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records}))
+
+    def copy_report_summary(self) -> str:
+        summary = self._markdown.toPlainText().strip()
+        if not summary:
+            summary = "当前尚未生成报告草稿。"
+        QApplication.clipboard().setText(summary)
+        self._status_label.setText("已复制报告摘要。")
+        return summary
 
 
 class BioinformaticsSettingsAndLocalAIWidget(QWidget):
@@ -7616,12 +7624,20 @@ def _result_entries_for_display(project_root: Path | None, payload: dict[str, ob
                 continue
             entries.append(
                 {
+                    "result_id": f"recognition-imported-deg-{len(entries) + 1}",
                     "result_name": f"导入差异分析表格：{item.get('file_name') or '未命名表格'}",
+                    "result_type": "导入结果",
                     "analysis_type": "differential_expression",
                     "file_type": "table",
                     "path": path_text,
+                    "source_label": "用户导入 / 外部差异分析结果",
                     "status": "imported",
                     "result_semantics": "imported result",
+                    "report_candidate": True,
+                    "report_usage_label": "可进入报告草稿，必须标明导入来源",
+                    "generated_at": str(item.get("generated_at") or ""),
+                    "short_description": "用户导入的外部 DEG 表；需要确认列映射后用于报告草稿。",
+                    "display_action": "查看详情",
                     "warning": "导入表格中的已有差异分析结果，不是本软件重新计算。",
                     "_display_source": "recognition_imported_deg",
                 }
@@ -7638,9 +7654,10 @@ def _results_user_rows(project_root: Path | None, entries: list[dict[str, object
             _result_type_label(entry),
             _result_source_label(entry),
             _result_status_label(entry),
-            _result_openable_label(project_root, entry),
             _result_report_label(entry),
-            _result_next_step_label(entry),
+            _result_generated_at_label(entry),
+            _result_short_description_label(entry),
+            str(entry.get("display_action") or "查看详情"),
         ]
         for entry in entries
     ]
@@ -7648,11 +7665,12 @@ def _results_user_rows(project_root: Path | None, entries: list[dict[str, object
         rows.append(
             [
                 str(record.get("label") or "分析任务配置"),
-                "任务配置",
+                "配置草稿",
                 _task_record_source_label(record),
                 _task_record_status_label(record),
                 "否",
-                "否",
+                str(record.get("created_at") or ""),
+                "任务已配置但尚未执行。",
                 "已配置但尚未运行；请返回分析任务中心继续配置或满足执行条件。",
             ]
         )
@@ -7664,16 +7682,22 @@ def _result_display_name(entry: dict[str, object]) -> str:
 
 
 def _result_type_label(entry: dict[str, object]) -> str:
+    explicit = str(entry.get("result_type") or "")
+    if explicit:
+        return explicit
     analysis_type = str(entry.get("analysis_type") or "")
-    return {
-        "differential_expression": "差异表达结果",
-        "enrichment": "富集结果",
-        "gsea": "GSEA 结果",
-        "correlation": "相关性结果",
-        "survival": "生存分析结果",
-        "clinical_association": "临床变量关联结果",
-        "preview": "预览结果",
-    }.get(analysis_type, "分析结果")
+    semantics = _analysis_entry_semantics(entry)
+    if semantics == "imported result":
+        return "导入结果"
+    if semantics == "testing-level":
+        return "测试级结果"
+    if semantics == "configured-not-run":
+        return "配置草稿"
+    if semantics == "real computed result":
+        return "真实计算结果"
+    if "preflight" in analysis_type:
+        return "输入检查"
+    return "分析结果"
 
 
 def _result_source_label(entry: dict[str, object]) -> str:
@@ -7724,6 +7748,17 @@ def _result_report_label(entry: dict[str, object]) -> str:
     if semantics == "testing-level":
         return "可，需标明测试级"
     return "否"
+
+
+def _result_generated_at_label(entry: dict[str, object]) -> str:
+    return str(entry.get("generated_at") or entry.get("created_at") or "未记录")
+
+
+def _result_short_description_label(entry: dict[str, object]) -> str:
+    text = str(entry.get("short_description") or "").strip()
+    if text:
+        return text
+    return _result_next_step_label(entry)
 
 
 def _result_next_step_label(entry: dict[str, object]) -> str:
@@ -7805,7 +7840,7 @@ def _result_semantics_counts(entries: list[dict[str, object]]) -> dict[str, int]
 
 def _report_draft_status_text(markdown: str, manifest: object) -> str:
     if markdown:
-        return "报告状态：已生成 Markdown 报告草稿；PDF/DOCX/HTML 仍是 testing placeholder。"
+        return "报告状态：已生成 Markdown 报告草稿；本阶段不导出 Word 或 PDF。"
     if manifest:
         return "报告状态：找到报告 manifest，但尚未读取到 Markdown 草稿。"
     return "报告状态：尚未生成报告草稿。"
@@ -7870,7 +7905,9 @@ def _report_user_preview_text(markdown: str, entries: list[dict[str, object]], r
     if not markdown:
         lines.append("当前尚未生成 Markdown 报告草稿。")
     else:
-        lines.append("Markdown 原文已保留在开发者诊断区；主界面仅显示用户摘要，避免 raw path、manifest 或 schema 进入普通视图。")
+        lines.append("以下为中文 Markdown 报告草稿预览。")
+        lines.append("")
+        lines.append(markdown)
     if any(_analysis_entry_semantics(entry) == "imported result" for entry in entries):
         lines.append("导入结果必须写明来自外部表格，不是本软件重新计算。")
     if any(_analysis_entry_semantics(entry) == "testing-level" for entry in entries):
