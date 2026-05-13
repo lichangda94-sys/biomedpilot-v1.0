@@ -282,6 +282,68 @@ def test_meta_extraction_workspace_renders_structured_table_without_raw_internal
     assert "extract-rec-1" not in visible
 
 
+def test_meta_quality_workspace_renders_chinese_nos_controls_without_raw_internals(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("质量评价 Meta", tmp_path, research_topic="队列研究")
+    extraction_path = summary.project_root / "extraction" / "extraction_effect_rows.json"
+    extraction_path.parent.mkdir(parents=True, exist_ok=True)
+    extraction_path.write_text(
+        json.dumps(
+            {
+                "effect_rows": [
+                    {
+                        "effect_row_id": "effect-internal-1",
+                        "record_id": "quality-rec-1",
+                        "study_unit_id": "unit-internal-1",
+                        "study_unit_label": "Study One",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-quality-1",
+                            "title": "Quality cohort study",
+                            "first_author": "Zhang",
+                            "year": "2025",
+                            "study_design": "observational cohort",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("manual_extraction")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "质量评价" in visible
+    assert "偏倚风险" in visible
+    assert "评价工具" in visible
+    assert "评价维度" in visible
+    assert "评价理由" in visible
+    assert "总体判断" in visible
+    assert "已确认" in visible
+    assert "下一步：分析计划" in visible
+    assert "Quality cohort study" in visible
+    assert any(item.startswith("NOS") for item in combos["metaQualityToolSelector"])
+    assert {"未评价", "低风险/较好", "不明确", "高风险/较差"} <= set(combos["metaQualityOverallSelector"])
+    assert {"草稿", "建议", "用户接受", "用户编辑", "已确认", "已拒绝"} <= set(combos["metaQualityStateSelector"])
+    assert str(summary.project_root) not in visible
+    assert "quality_assessment_records_v1.json" not in visible
+    assert "raw JSON" not in visible
+    assert "quality-rec-1" not in visible
+    assert "effect-internal-1" not in visible
+
+
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 

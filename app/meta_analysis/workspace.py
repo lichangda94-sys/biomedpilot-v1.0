@@ -398,6 +398,12 @@ if QWidget is not None:
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
     from app.meta_analysis.services.publication_export_service import PublicationExportService
     from app.meta_analysis.services.quality_service import QualityAssessmentService
+    from app.meta_analysis.services.quality_service import (
+        NOS_DOMAIN_LABELS_ZH,
+        NOS_DOMAINS,
+        QUALITY_M6_STATE_LABELS_ZH,
+        QUALITY_RATING_LABELS_ZH,
+    )
     from app.meta_analysis.services.title_abstract_screening_v2_service import (
         DECISION_EXCLUDE,
         DECISION_INCLUDE,
@@ -2346,6 +2352,7 @@ if QWidget is not None:
         structured_layout.addWidget(QLabel("提取状态"))
         structured_layout.addWidget(evidence_state)
         layout.addWidget(structured_card)
+        layout.addWidget(_quality_assessment_page(project_dir, on_refresh=on_refresh, on_next=on_next))
         layout.addWidget(_developer_details(f"manifest={service.manifest_path(project_dir)}\nvalidation={service.validation_report_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -2537,27 +2544,107 @@ if QWidget is not None:
         service = QualityAssessmentService()
         registry = service.tool_registry_v1()
         records = service.load_quality_assessment_records_v1(project_dir)
-        suggestions = service.recommend_quality_tools()
+        study_rows = _quality_study_rows_for_workspace(project_dir)
+        summary = service.quality_m6_summary(project_dir, expected_study_ids=[row["study_id"] for row in study_rows])
         frame = QFrame()
         frame.setObjectName("metaQualityAssessmentPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("质量评价", "工具推荐和人工 domain rating；GRADE 仅 placeholder。", "人工评分"))
-        layout.addWidget(_info_card("质量评价摘要", [f"工具数：{registry.get('tool_count', 0)}", f"评分记录：{len(records)}", "不自动评分，不自动 GRADE，不运行统计。"], object_name="metaQualitySummary"))
+        layout.addWidget(_page_header("质量评价", "NOS 优先的人工偏倚风险评价；其他工具保持 staged/testing。", "人工确认"))
+        layout.addWidget(
+            _info_card(
+                "质量评价摘要",
+                [
+                    f"工具数：{registry.get('tool_count', 0)}",
+                    f"待评价研究：{summary['studies_pending_quality']}",
+                    f"草稿质量评价：{summary['studies_with_draft_quality']}",
+                    f"已确认质量评价：{summary['studies_with_confirmed_quality']}",
+                    f"低风险/较好：{summary['low_risk_or_good']}",
+                    f"不明确：{summary['unclear']}",
+                    f"高风险/较差：{summary['high_risk_or_poor']}",
+                    "不自动评分，不自动 GRADE，不运行统计。",
+                ],
+                object_name="metaQualitySummary",
+            )
+        )
+        study_list = QListWidget()
+        study_list.setObjectName("metaQualityStudyList")
+        if study_rows:
+            for row in study_rows:
+                item = QListWidgetItem(
+                    "\n".join(
+                        [
+                            str(row.get("title") or row.get("study_id") or "未命名研究"),
+                            " · ".join(part for part in (str(row.get("first_author") or ""), str(row.get("year") or ""), str(row.get("study_design") or "")) if part),
+                        ]
+                    )
+                )
+                item.setData(Qt.ItemDataRole.UserRole, dict(row))
+                study_list.addItem(item)
+        else:
+            study_list.addItem(QListWidgetItem("暂无可评价研究；请先完成数据提取确认。"))
+        layout.addWidget(study_list)
+        layout.addWidget(QLabel("评价工具"))
         tool_selector = QComboBox()
-        for suggestion in suggestions:
-            tool_selector.addItem(f"{suggestion.get('tool_name')} · suggested", str(suggestion.get("tool_name", "")))
+        tool_selector.setObjectName("metaQualityToolSelector")
+        for tool_name in service.list_quality_tools():
+            suffix = " · staged/testing" if tool_name != "NOS" else " · NOS"
+            tool_selector.addItem(f"{tool_name}{suffix}", tool_name)
+        tool_selector.setCurrentText("NOS · NOS")
+        layout.addWidget(tool_selector)
         assessment_list = QListWidget()
         assessment_list.setObjectName("metaQualityAssessmentList")
         for record in records:
-            item = QListWidgetItem(f"{record.get('tool_name')} · {record.get('status')}\n{record.get('assessment_id')}")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        f"{record.get('tool_name')} · {_quality_state_label(str(record.get('status') or 'draft'))}",
+                        f"总体判断：{_quality_rating_label(str(record.get('overall_rating') or record.get('overall_judgement') or ''))}",
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(record.get("assessment_id", "")))
             assessment_list.addItem(item)
-        layout.addWidget(tool_selector)
         layout.addWidget(assessment_list)
+        form = _card("偏倚风险")
+        form_layout = form.layout()
+        domain_selectors: dict[str, QComboBox] = {}
+        domain_notes: dict[str, QLineEdit] = {}
+        for domain in NOS_DOMAINS:
+            form_layout.addWidget(QLabel(f"评价维度：{NOS_DOMAIN_LABELS_ZH.get(domain, domain)}"))
+            selector = QComboBox()
+            selector.setObjectName(f"metaQualityDomain_{domain}")
+            for rating in ("not_assessed", "low_risk_or_good", "unclear", "high_risk_or_poor"):
+                selector.addItem(QUALITY_RATING_LABELS_ZH.get(rating, rating), rating)
+            domain_selectors[domain] = selector
+            form_layout.addWidget(selector)
+            note = QLineEdit()
+            note.setObjectName(f"metaQualityDomainNote_{domain}")
+            note.setPlaceholderText("评价理由")
+            domain_notes[domain] = note
+            form_layout.addWidget(QLabel("评价理由"))
+            form_layout.addWidget(note)
+        overall = QComboBox()
+        overall.setObjectName("metaQualityOverallSelector")
+        for rating in ("not_assessed", "low_risk_or_good", "unclear", "high_risk_or_poor"):
+            overall.addItem(QUALITY_RATING_LABELS_ZH.get(rating, rating), rating)
+        state_selector = QComboBox()
+        state_selector.setObjectName("metaQualityStateSelector")
+        for state in ("draft", "suggested", "user_accepted", "user_edited", "confirmed", "rejected"):
+            state_selector.addItem(QUALITY_M6_STATE_LABELS_ZH.get(state, state), state)
+        notes = QPlainTextEdit()
+        notes.setObjectName("metaQualityNotes")
+        notes.setPlaceholderText("评价理由 / 备注；AI 或规则建议必须由用户确认后才生效")
+        notes.setMaximumHeight(90)
+        form_layout.addWidget(QLabel("总体判断"))
+        form_layout.addWidget(overall)
+        form_layout.addWidget(QLabel("已确认"))
+        form_layout.addWidget(state_selector)
+        form_layout.addWidget(notes)
+        layout.addWidget(form)
         actions = QHBoxLayout()
         save_draft = QPushButton("保存评分草稿")
-        complete = QPushButton("完成质量评价")
+        complete = QPushButton("已确认")
         export_csv = QPushButton("导出 CSV")
         next_button = QPushButton("下一步：分析计划")
         for button in (save_draft, complete, export_csv, next_button):
@@ -2578,13 +2665,20 @@ if QWidget is not None:
             if not tool_name:
                 _show_message("暂无推荐工具")
                 return
+            selected = _selected_quality_study()
+            state = str(state_selector.currentData() or "draft")
             result = service.create_quality_assessment_draft(
                 project_dir,
-                study_id="study-ui-draft",
-                record_id="record-ui-draft",
+                study_id=str(selected.get("study_id") or "study-ui-draft"),
+                record_id=str(selected.get("record_id") or "record-ui-draft"),
                 tool_name=tool_name,
+                domains={domain: str(selector.currentData()) for domain, selector in domain_selectors.items()},
+                domain_notes={domain: note.text() for domain, note in domain_notes.items()},
+                overall_rating=str(overall.currentData()),
+                notes=notes.toPlainText(),
                 reviewer_id="reviewer",
                 actor="reviewer",
+                assessment_state=state,
             )
             _show_message(result.message)
             on_refresh()
@@ -2594,9 +2688,14 @@ if QWidget is not None:
             if not assessment_id:
                 _show_message("请选择质量评价记录")
                 return
-            result = service.complete_quality_assessment_by_user(project_dir, assessment_id=assessment_id, actor="reviewer")
+            result = service.confirm_quality_assessment_by_user(project_dir, assessment_id=assessment_id, actor="reviewer")
             _show_message(result.message)
             on_refresh()
+
+        def _selected_quality_study() -> dict[str, object]:
+            item = study_list.currentItem()
+            data = item.data(Qt.ItemDataRole.UserRole) if item is not None else {}
+            return dict(data) if isinstance(data, dict) else {}
 
         save_draft.clicked.connect(do_save_draft)
         complete.clicked.connect(do_complete)
@@ -3472,6 +3571,48 @@ if QWidget is not None:
             "missing_data": "缺失数据",
             "not_started": "未开始",
         }.get(state, state or "草稿")
+
+
+    def _quality_rating_label(rating: str) -> str:
+        return QUALITY_RATING_LABELS_ZH.get(rating, rating or "未评价")
+
+
+    def _quality_state_label(state: str) -> str:
+        return QUALITY_M6_STATE_LABELS_ZH.get(state, "已确认" if state == "completed_by_user" else state or "草稿")
+
+
+    def _quality_study_rows_for_workspace(project_dir: Path) -> list[dict[str, object]]:
+        rows: list[dict[str, object]] = []
+        payload = _load_json_object(project_dir / "extraction" / "extraction_effect_rows.json")
+        for item in _items_from_payload(payload, "effect_rows"):
+            if str(item.get("evidence_state", "")) != "confirmed" and str(item.get("extraction_status", "")) != "completed_by_user":
+                continue
+            structured = dict(item.get("m5_structured_fields", {}) if isinstance(item.get("m5_structured_fields"), dict) else {})
+            rows.append(
+                {
+                    "study_id": structured.get("study_id") or item.get("study_unit_label") or item.get("study_unit_id") or "",
+                    "record_id": item.get("record_id", ""),
+                    "title": structured.get("title") or item.get("study_unit_label") or "",
+                    "first_author": structured.get("first_author", ""),
+                    "year": structured.get("year", ""),
+                    "study_design": structured.get("study_design", ""),
+                }
+            )
+        if rows:
+            return rows
+        final = _load_json_object(project_dir / "fulltext" / "final_included_studies.json")
+        for item in _items_from_payload(final, "included_studies"):
+            rows.append(
+                {
+                    "study_id": item.get("study_id") or item.get("record_id") or "",
+                    "record_id": item.get("record_id", ""),
+                    "title": item.get("title", ""),
+                    "first_author": item.get("first_author", ""),
+                    "year": item.get("year", ""),
+                    "study_design": item.get("study_design", ""),
+                }
+            )
+        return rows
 
 
     def _first_author(record: dict[str, object]) -> str:

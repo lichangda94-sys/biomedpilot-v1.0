@@ -33,12 +33,43 @@ GRADE_PLACEHOLDER_SCHEMA_VERSION = "meta_grade_summary_placeholder.v1"
 QUALITY_ASSESSMENT_STATUSES = (
     "not_started",
     "draft",
+    "suggested",
+    "user_accepted",
+    "user_edited",
+    "confirmed",
+    "rejected",
     "completed_by_user",
     "needs_review",
     "conflict_pending",
     "excluded_from_quality_assessment",
 )
-QUALITY_RATING_OPTIONS = ("low", "some_concerns", "high", "unclear", "not_applicable")
+QUALITY_RATING_OPTIONS = ("low", "some_concerns", "high", "unclear", "not_applicable", "low_risk_or_good", "high_risk_or_poor", "not_assessed")
+QUALITY_M6_GOVERNANCE_STATES = ("draft", "suggested", "user_accepted", "user_edited", "confirmed", "rejected")
+NOS_TOOL_NAME = "NOS"
+NOS_DOMAINS = ("selection", "comparability", "outcome_or_exposure")
+NOS_DOMAIN_LABELS_ZH = {
+    "selection": "选择",
+    "comparability": "可比性",
+    "outcome_or_exposure": "结局/暴露",
+}
+QUALITY_RATING_LABELS_ZH = {
+    "low_risk_or_good": "低风险/较好",
+    "unclear": "不明确",
+    "high_risk_or_poor": "高风险/较差",
+    "not_assessed": "未评价",
+    "low": "低风险/较好",
+    "some_concerns": "不明确",
+    "high": "高风险/较差",
+    "not_applicable": "未评价",
+}
+QUALITY_M6_STATE_LABELS_ZH = {
+    "draft": "草稿",
+    "suggested": "建议",
+    "user_accepted": "用户接受",
+    "user_edited": "用户编辑",
+    "confirmed": "已确认",
+    "rejected": "已拒绝",
+}
 
 
 @dataclass(frozen=True)
@@ -152,12 +183,20 @@ class QualityAssessmentService:
         study_design: str = "",
         actor: str = "reviewer",
         project_id: str | None = None,
+        assessment_state: str = "draft",
     ) -> QualityAssessmentV1Result:
         project_dir = project_dir.expanduser().resolve()
         project_id = project_id or project_dir.name
         tool = get_quality_tool(tool_name)
         if tool is None:
             raise ValueError("unsupported_quality_tool")
+        assessment_state = _validate_quality_state(assessment_state)
+        validation = self.validate_quality_assessment_model(
+            tool_name=tool.tool_name,
+            domains=dict(domains or {}),
+            overall_rating=overall_rating,
+            state=assessment_state,
+        )
         now = now_utc()
         record = {
             "schema_version": QUALITY_ASSESSMENT_RECORD_V1_SCHEMA_VERSION,
@@ -171,9 +210,11 @@ class QualityAssessmentService:
             "domains": {str(key): _normalize_quality_rating(value) for key, value in dict(domains or {}).items()},
             "domain_notes": dict(domain_notes or {}),
             "overall_rating": _normalize_quality_rating(overall_rating) if overall_rating else "",
+            "overall_judgement": _normalize_quality_rating(overall_rating) if overall_rating else "",
             "reviewer_id": reviewer_id,
             "notes": notes,
-            "status": "draft",
+            "status": assessment_state,
+            "confirmation_state": assessment_state,
             "grade_placeholder": self.grade_summary_placeholder(project_dir, outcome_id=study_id, actor=actor),
             "created_at": now,
             "updated_at": now,
@@ -185,6 +226,7 @@ class QualityAssessmentService:
             "safety_note": "Quality assessment draft requires reviewer completion; no automated final risk-of-bias or GRADE conclusion is generated.",
         }
         diagnostics = self._quality_record_diagnostics(record)
+        diagnostics["m6_validation"] = validation
         record["diagnostics"] = diagnostics
         records = self.load_quality_assessment_records_v1(project_dir)
         records.append(record)
@@ -202,20 +244,60 @@ class QualityAssessmentService:
             summary="Quality assessment draft saved.",
             details={"status": "draft", "tool_name": tool.tool_name, "auto_scores_final_quality": False},
         )
-        governance = self._governance.record_draft_created(
-            project_dir,
-            project_id=project_id,
-            actor=actor,
-            target_type="quality_assessment_score",
-            target_id=record["assessment_id"],
-            after=record,
-            metadata={"tool_name": tool.tool_name, "status": "draft", "auto_grade": False},
-        )
+        if assessment_state == "suggested":
+            governance = self._governance.record_suggestion_created(
+                project_dir,
+                project_id=project_id,
+                actor=actor or "system",
+                target_type="quality_assessment_score",
+                target_id=record["assessment_id"],
+                after=record,
+                metadata={"tool_name": tool.tool_name, "status": assessment_state, "auto_grade": False},
+            )
+        else:
+            governance = self._governance.record_draft_created(
+                project_dir,
+                project_id=project_id,
+                actor=actor,
+                target_type="quality_assessment_score",
+                target_id=record["assessment_id"],
+                after=record,
+                metadata={"tool_name": tool.tool_name, "status": assessment_state, "auto_grade": False},
+            )
         record["audit_refs"].append(audit.event_id)
         record["governance_refs"].append(governance.event_id)
         _write_json(output_path, self._records_v1_payload(project_id, records))
         summary_path = self.write_quality_summary_v1(project_dir)
         return QualityAssessmentV1Result(True, project_id, record["assessment_id"], str(output_path), str(summary_path), "Quality assessment draft saved.", record, diagnostics)
+
+    def create_nos_assessment_draft(
+        self,
+        project_dir: Path,
+        *,
+        study_id: str,
+        record_id: str,
+        domains: dict[str, str] | None = None,
+        domain_notes: dict[str, str] | None = None,
+        overall_rating: str = "",
+        reviewer_id: str = "",
+        notes: str = "",
+        actor: str = "reviewer",
+        assessment_state: str = "draft",
+    ) -> QualityAssessmentV1Result:
+        domains = {domain: dict(domains or {}).get(domain, "not_assessed") for domain in NOS_DOMAINS}
+        return self.create_quality_assessment_draft(
+            project_dir,
+            study_id=study_id,
+            record_id=record_id,
+            tool_name=NOS_TOOL_NAME,
+            domains=domains,
+            domain_notes=domain_notes,
+            overall_rating=overall_rating or self.suggest_overall_judgement(NOS_TOOL_NAME, domains),
+            reviewer_id=reviewer_id,
+            notes=notes,
+            actor=actor,
+            assessment_state=assessment_state,
+        )
 
     def update_quality_assessment_draft(
         self,
@@ -252,6 +334,43 @@ class QualityAssessmentService:
             summary="Quality assessment completed by user.",
         )
 
+    def confirm_quality_assessment_by_user(
+        self,
+        project_dir: Path,
+        *,
+        assessment_id: str,
+        actor: str = "reviewer",
+    ) -> QualityAssessmentV1Result:
+        return self._update_quality_assessment_record(
+            project_dir,
+            assessment_id=assessment_id,
+            updates={"completed_by_user": True, "confirmation_state": "confirmed"},
+            status="confirmed",
+            governance_action="confirm",
+            actor=actor,
+            summary="Quality assessment confirmed by user.",
+        )
+
+    def change_quality_assessment_state(
+        self,
+        project_dir: Path,
+        *,
+        assessment_id: str,
+        state: str,
+        actor: str = "reviewer",
+    ) -> QualityAssessmentV1Result:
+        state = _validate_quality_state(state)
+        action = "reject" if state == "rejected" else "accept" if state == "user_accepted" else "edit"
+        return self._update_quality_assessment_record(
+            project_dir,
+            assessment_id=assessment_id,
+            updates={"confirmation_state": state},
+            status=state,
+            governance_action=action,
+            actor=actor,
+            summary=f"Quality assessment state changed to {state}.",
+        )
+
     def load_quality_assessment_records_v1(self, project_dir: Path) -> list[dict[str, Any]]:
         payload = _load_json(self._records_v1_path(project_dir.expanduser().resolve()))
         rows = payload.get("quality_assessment_records", []) if isinstance(payload, dict) else []
@@ -284,10 +403,79 @@ class QualityAssessmentService:
             "statistics_run": False,
             "prisma_advanced": False,
             "report_note": "Quality ratings are reviewer-entered or reviewer-confirmed. GRADE is placeholder only.",
+            "m6_summary": self.quality_m6_summary(project_dir),
         }
         path = project_dir / "quality" / "quality_assessment_summary_v1.json"
         _write_json(path, summary)
         return path
+
+    def quality_m6_summary(self, project_dir: Path, *, expected_study_ids: list[str] | None = None) -> dict[str, int]:
+        records = self.load_quality_assessment_records_v1(project_dir)
+        expected = set(expected_study_ids or _quality_expected_study_ids(project_dir))
+        assessed_studies = {str(record.get("study_id", "")) for record in records if str(record.get("study_id", "")).strip()}
+        draft_studies = {
+            str(record.get("study_id", ""))
+            for record in records
+            if str(record.get("status", "")) in {"draft", "suggested", "user_accepted", "user_edited", "rejected", "needs_review", "conflict_pending"}
+        }
+        confirmed_studies = {
+            str(record.get("study_id", ""))
+            for record in records
+            if str(record.get("status", "")) in {"confirmed", "completed_by_user"}
+        }
+        ratings = [_quality_summary_bucket(str(record.get("overall_rating") or record.get("overall_judgement") or "")) for record in records if str(record.get("status", "")) in {"confirmed", "completed_by_user"}]
+        return {
+            "studies_pending_quality": len(expected - assessed_studies) if expected else 0,
+            "studies_with_draft_quality": len({item for item in draft_studies if item}),
+            "studies_with_confirmed_quality": len({item for item in confirmed_studies if item}),
+            "low_risk_or_good": ratings.count("low_risk_or_good"),
+            "unclear": ratings.count("unclear"),
+            "high_risk_or_poor": ratings.count("high_risk_or_poor"),
+        }
+
+    def validate_quality_assessment_model(
+        self,
+        *,
+        tool_name: str,
+        domains: dict[str, str],
+        overall_rating: str = "",
+        state: str = "draft",
+    ) -> dict[str, Any]:
+        tool = get_quality_tool(tool_name)
+        errors: list[str] = []
+        warnings: list[str] = []
+        if tool is None:
+            errors.append("unsupported_quality_tool")
+            domains_expected: tuple[str, ...] = ()
+        else:
+            domains_expected = tuple(tool.domains)
+        state = _validate_quality_state(state)
+        normalized_domains = {str(key): _normalize_quality_rating(value) for key, value in dict(domains or {}).items()}
+        unknown_domains = sorted(set(normalized_domains) - set(domains_expected))
+        if unknown_domains:
+            errors.append(f"unsupported_quality_domain:{','.join(unknown_domains)}")
+        invalid_ratings = [key for key, value in normalized_domains.items() if value not in QUALITY_RATING_OPTIONS]
+        if invalid_ratings:
+            errors.append(f"unsupported_quality_rating:{','.join(invalid_ratings)}")
+        if tool_name == NOS_TOOL_NAME:
+            missing_nos = [domain for domain in NOS_DOMAINS if domain not in normalized_domains]
+            if missing_nos and state == "confirmed":
+                errors.append(f"missing_nos_domain:{','.join(missing_nos)}")
+            if missing_nos and state != "confirmed":
+                warnings.append(f"missing_nos_domain:{','.join(missing_nos)}")
+        normalized_overall = _normalize_quality_rating(overall_rating) if overall_rating else ""
+        if normalized_overall and normalized_overall not in QUALITY_RATING_OPTIONS:
+            errors.append("unsupported_overall_rating")
+        if state == "confirmed" and not normalized_overall:
+            errors.append("confirmed_quality_requires_overall_judgement")
+        return {
+            "validation_status": "invalid" if errors else "valid_with_warnings" if warnings else "valid",
+            "errors": errors,
+            "warnings": warnings,
+            "state": state,
+            "auto_quality_scoring": False,
+            "official_scoring_claimed": False,
+        }
 
     def quality_summary_for_report(self, project_dir: Path) -> dict[str, Any]:
         path = self.write_quality_summary_v1(project_dir)
@@ -660,7 +848,17 @@ class QualityAssessmentService:
         after = {**before, **updates, "status": status, "updated_at": now_utc(), "analysis_ready_dataset_created": False, "statistics_run": False, "prisma_advanced": False}
         if "overall_rating" in after:
             after["overall_rating"] = _normalize_quality_rating(str(after.get("overall_rating", ""))) if after.get("overall_rating") else ""
+            after["overall_judgement"] = after["overall_rating"]
+        state_candidate = str(after.get("confirmation_state") or status)
+        after["confirmation_state"] = _validate_quality_state(state_candidate) if state_candidate in QUALITY_M6_GOVERNANCE_STATES else "confirmed" if status == "completed_by_user" else "draft"
+        after["domains"] = {str(key): _normalize_quality_rating(value) for key, value in dict(after.get("domains", {})).items()}
         after["diagnostics"] = self._quality_record_diagnostics(after)
+        after["diagnostics"]["m6_validation"] = self.validate_quality_assessment_model(
+            tool_name=str(after.get("tool_name", "")),
+            domains=dict(after.get("domains", {})),
+            overall_rating=str(after.get("overall_rating", "")),
+            state=str(after.get("confirmation_state") or "draft"),
+        )
         records[index] = after
         output_path = self._records_v1_path(project_dir)
         _write_json(output_path, self._records_v1_payload(str(after.get("project_id") or project_dir.name), records))
@@ -716,16 +914,62 @@ def _normalize_quality_rating(value: str) -> str:
     normalized = value.strip().lower().replace(" ", "_").replace("-", "_")
     aliases = {
         "low_risk": "low",
+        "low_risk_or_good": "low_risk_or_good",
+        "低风险/较好": "low_risk_or_good",
         "moderate_risk": "some_concerns",
         "some_concern": "some_concerns",
         "high_risk": "high",
+        "high_risk_or_poor": "high_risk_or_poor",
+        "高风险/较差": "high_risk_or_poor",
+        "不明确": "unclear",
+        "未评价": "not_assessed",
         "not_applicable": "not_applicable",
-        "not_assessed": "not_applicable",
-        "not_assessed_": "not_applicable",
+        "not_assessed": "not_assessed",
+        "not_assessed_": "not_assessed",
         "yes": "low",
         "no": "high",
     }
     return aliases.get(normalized, normalized if normalized in QUALITY_RATING_OPTIONS else value.strip())
+
+
+def _validate_quality_state(value: str) -> str:
+    state = str(value or "").strip()
+    if state not in QUALITY_M6_GOVERNANCE_STATES:
+        raise ValueError(f"unsupported_quality_governance_state:{value}")
+    return state
+
+
+def _quality_summary_bucket(value: str) -> str:
+    normalized = _normalize_quality_rating(value)
+    if normalized in {"low", "low_risk_or_good"}:
+        return "low_risk_or_good"
+    if normalized in {"high", "high_risk_or_poor"}:
+        return "high_risk_or_poor"
+    return "unclear"
+
+
+def _quality_expected_study_ids(project_dir: Path) -> list[str]:
+    project_dir = project_dir.expanduser().resolve()
+    rows: list[str] = []
+    effect_payload = _load_json(project_dir / "extraction" / "extraction_effect_rows.json")
+    for item in effect_payload.get("effect_rows", []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("evidence_state", "")) not in {"confirmed"} and str(item.get("extraction_status", "")) != "completed_by_user":
+            continue
+        structured = item.get("m5_structured_fields", {}) if isinstance(item.get("m5_structured_fields"), dict) else {}
+        study_id = str(structured.get("study_id") or item.get("study_unit_label") or item.get("study_unit_id") or "").strip()
+        if study_id:
+            rows.append(study_id)
+    if rows:
+        return sorted(set(rows))
+    final = _load_json(project_dir / "fulltext" / "final_included_studies.json")
+    for item in final.get("included_studies", []):
+        if isinstance(item, dict):
+            study_id = str(item.get("study_id") or item.get("record_id") or "").strip()
+            if study_id:
+                rows.append(study_id)
+    return sorted(set(rows))
 
 
 def _tools_for_meta_type(meta_type: str) -> tuple[str, ...]:
