@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6B，commit 以最终交接为准
+- 当前最近完成阶段：LabTools Stage L6C，commit 以最终交接为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -32,6 +32,7 @@
 | LabTools Stage L6A | 最终交接记录 | 新增 fluorescence manual ROI 与 wound manual ROI threshold 结果的用户确认导出包：JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG；默认仍不自动写盘。 |
 | LabTools Stage L6A.1 | 最终交接记录 | 硬化 ROI export package schema、文件命名、no-overwrite、CSV header、Markdown manual-review 语义和 UI 导出取消/失败/成功反馈；不新增图像算法。 |
 | LabTools Stage L6B | 最终交接记录 | 新增用户配方草稿本地 JSON 持久化和安全范围检查；保存/载入均需用户选择路径，不自动保存、不联网、不调用 AI、不新增 recipe 算法。 |
+| LabTools Stage L6C | 最终交接记录 | 新增轻量实验模板和结构化记录草稿中心，覆盖 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录；不做完整 ELN、签名、权限或合规审计。 |
 
 ## 3. 当前已实现功能
 
@@ -160,6 +161,34 @@
 - UI 展示图片路径、ROI 输入、阈值输入、亮/暗模式、结果摘要、公式、warning、复核提示和简洁导出预览；只有用户点击“导出当前 ROI 结果”并选择目录后才写盘。
 - 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
 
+### 3.7 实验模板和记录草稿
+
+- L6C 新增 `experiment_templates` 服务层：
+  - `ExperimentTemplate`。
+  - `ExperimentRecordDraft`。
+  - `ExperimentTemplateLibrary`。
+  - `create_record_draft()`。
+  - `draft_markdown_preview()`。
+- 当前内置 5 类轻量结构化模板：
+  - qPCR 实验计划模板。
+  - Western blot 实验计划模板。
+  - 细胞实验接种计划模板。
+  - Scratch assay 记录模板。
+  - 免疫荧光图像记录模板。
+- 每个记录草稿包含：
+  - 实验目的。
+  - 样本分组。
+  - 试剂/材料。
+  - 关键参数。
+  - 输出文件/记录。
+  - 备注。
+  - 人工复核提示。
+- 草稿 schema：`labtools_experiment_template_draft.v1`。
+- 草稿状态：`draft_manual_review_required`。
+- UI 提供“实验模板”页面，可选择模板并生成本地 Markdown 预览。
+- 当前不自动保存、不写数据库、不生成正式报告、不跨模块传递。
+- 当前不做完整 ELN、权限、签名、审计合规或团队协作。
+
 ## 4. 当前未实现功能
 
 - 未实现自动 ROI 检测。
@@ -176,7 +205,7 @@
 - 未调用 AI Gateway 或本地模型进行配方摘录、图像分析或结果解释。
 - 未实现 LabTools 本地项目存储、数据库持久化或自动写盘；L6A/L6A.1 仅支持用户确认选择目录后的图像 ROI export package。
 - 未实现正式实验报告导出；L6A Markdown 仅为 manual-review 报告片段。
-- 未实现实验模板功能。
+- 未实现完整 ELN、权限、签名、审计合规或团队协作；L6C 只实现轻量实验模板和结构化记录草稿。
 - 未实现计算器历史记录、CSV/manifest 导出或项目文件写入；L6A CSV/manifest 仅限 fluorescence/wound ROI export package。
 - 未实现 recipe center 数据库、自动保存、云同步、网络来源同步或正式 SOP 管理；L6B 仅实现用户选择路径后的本地 JSON 草稿持久化。
 
@@ -202,19 +231,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6B 结果：138 passed
+  - 当前 L6C 结果：142 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6B 结果：144 passed
+  - 当前 L6C 结果：147 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6B 结果：18 passed
+  - 当前 L6C 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6B 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6C 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6B 结果：通过
+  - 当前 L6C 结果：通过
 - `git diff --check`
-  - 当前 L6B 结果：通过
+  - 当前 L6C 结果：通过
 - `git diff --cached --check`
-  - 当前 L6B 提交前运行。
+  - 当前 L6C 提交前运行。
 
 ## 7. Shell / UI 接入状态
 
@@ -223,13 +252,13 @@
   - 实验计算器：可进入；L5B 页面显示“实验计算器中心”，并明确本地辅助计算、人工核对和不替代实验 SOP。
   - 试剂与配方：可进入。
   - 图像定量：可进入；荧光强度分析和划痕实验面积分析为手动 MVP 可用，细胞计数和灰度 / 墨值分析仍为 `algorithm_not_available` 占位。
-  - 实验模板：仍为开发中。
+  - 实验模板：可进入；当前为 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录的轻量结构化草稿中心。
 - `LabToolsWorkspaceWidget.page_keys()` 当前包含：
   - `home`
   - `calculators`
   - `recipes`
   - `image_analysis`
-  - `pending`
+  - `templates`
 - 普通用户界面应继续保持中文友好，不暴露 traceback、内部 schema、内部 id 或大量调试细节。
 - UI 必须继续使用 BioMedPilot 统一 UI token，不引入 LabTools 独立主题色。
 
@@ -262,6 +291,7 @@
 
 - 计算记录：内存结构 / JSON-compatible dict。
 - L5B/L5C 实验计算器 v1 结果：结构化 dataclass 结果和 UI 文本展示；不自动保存、不写 CSV、不写 manifest、不创建项目目录。
+- L6C 实验模板记录草稿：结构化 dataclass 结果和 Markdown 预览；不自动保存、不写数据库、不生成正式 ELN。
 - 用户自定义配方：
   - 确认后进入 `UserRecipeStore` 内存结构。
   - L6B 可由用户手动保存为本地 JSON 文件，schema 为 `labtools_recipe_draft_store.v1`。
@@ -304,9 +334,9 @@
 
 ## 13. 后续推荐路线
 
-1. L6C：轻量实验模板和记录草稿；先做结构化草稿，不做完整 ELN、权限、签名或合规审计。
-2. L6B.1：如需继续 recipe 方向，可做 JSON schema 文档、更多导入冲突策略和用户草稿版本展示。
-3. L6A.2：如需继续图像导出方向，可做 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
+1. L6C.1：实验模板草稿导出 schema / 本地 JSON 保存策略，但仍不做完整 ELN。
+2. L6B.1：recipe JSON schema 文档、更多导入冲突策略和用户草稿版本展示。
+3. L6A.2：图像导出 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
 4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
 
 ## 14. Handoff 结论

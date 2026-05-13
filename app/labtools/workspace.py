@@ -15,7 +15,7 @@ def labtools_features() -> list[FeatureItem]:
             FeatureStatus.TESTING,
             "荧光 manual ROI grayscale 指标和 scratch/wound manual ROI + threshold 面积估算为 MVP 可用；细胞计数、灰度/墨值仍为占位。",
         ),
-        FeatureItem("labtools", "实验模板", FeatureStatus.PENDING, "开发中。"),
+        FeatureItem("labtools", "实验模板", FeatureStatus.TESTING, "qPCR、WB、细胞接种、scratch assay 和免疫荧光图像记录结构化草稿。"),
     ]
 
 
@@ -26,6 +26,7 @@ try:
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
     from app.labtools.ui.image_analysis_widgets import LabToolsImageAnalysisWidget
     from app.labtools.ui.recipe_widgets import LabToolsRecipeWidget
+    from app.labtools.ui.template_widgets import LabToolsTemplateWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -54,7 +55,9 @@ if QWidget is not None:
                 return "recipes"
             if current is self._image_analysis_page:
                 return "image_analysis"
-            return "pending"
+            if current is self._template_page:
+                return "templates"
+            return "unknown"
 
         def show_home(self) -> None:
             self._stack.setCurrentWidget(self._home_page)
@@ -68,8 +71,8 @@ if QWidget is not None:
         def show_image_analysis(self) -> None:
             self._stack.setCurrentWidget(self._image_analysis_page)
 
-        def show_templates_placeholder(self) -> None:
-            self._show_placeholder("实验模板", "开发中")
+        def show_templates(self) -> None:
+            self._stack.setCurrentWidget(self._template_page)
 
         def _build_ui(self) -> None:
             root = QVBoxLayout(self)
@@ -100,67 +103,25 @@ if QWidget is not None:
             self._home_page.calculators_requested.connect(self.show_calculators)
             self._home_page.reagents_requested.connect(self.show_recipes)
             self._home_page.image_quant_requested.connect(self.show_image_analysis)
-            self._home_page.templates_requested.connect(self.show_templates_placeholder)
+            self._home_page.templates_requested.connect(self.show_templates)
             self._calculator_page = LabToolsCalculatorWidget()
             self._recipe_page = LabToolsRecipeWidget()
             self._image_analysis_page = LabToolsImageAnalysisWidget()
-            self._placeholder_page = self._placeholder("开发中", "该入口仍在开发中。")
+            self._template_page = LabToolsTemplateWidget()
             for key, page in (
                 ("home", self._home_page),
                 ("calculators", self._calculator_page),
                 ("recipes", self._recipe_page),
                 ("image_analysis", self._image_analysis_page),
-                ("pending", self._placeholder_page),
+                ("templates", self._template_page),
             ):
                 self._page_keys.append(key)
                 self._stack.addWidget(page)
             self._stack.setCurrentWidget(self._home_page)
             root.addWidget(self._stack, 1)
 
-        def _show_placeholder(self, title: str, status: str) -> None:
-            self._placeholder_title.setText(title)
-            self._placeholder_status.setText(status)
-            self._stack.setCurrentWidget(self._placeholder_page)
-
-        def _placeholder(self, title: str, status: str) -> QFrame:
-            frame = QFrame()
-            frame.setObjectName("labToolsPlaceholderPage")
-            frame.setStyleSheet(
-                f"""
-                QFrame#labToolsPlaceholderPage {{
-                    background: {COLORS['background']};
-                    border: 0;
-                }}
-                QLabel#labToolsPlaceholderTitle {{
-                    color: {COLORS['bio']};
-                    font-size: {FONT_SIZE['page_title']}px;
-                    font-weight: 760;
-                }}
-                QLabel#labToolsPlaceholderStatus {{
-                    color: {COLORS['muted']};
-                    background: {COLORS['surface']};
-                    border: 1px solid {COLORS['border']};
-                    border-radius: {RADIUS['sm']}px;
-                    padding: 8px 10px;
-                }}
-                """
-            )
-            layout = QVBoxLayout(frame)
-            layout.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
-            self._placeholder_title = QLabel(title)
-            self._placeholder_title.setObjectName("labToolsPlaceholderTitle")
-            self._placeholder_status = QLabel(status)
-            self._placeholder_status.setObjectName("labToolsPlaceholderStatus")
-            detail = QLabel("当前入口仍在开发中，不会显示假功能。")
-            detail.setWordWrap(True)
-            layout.addWidget(self._placeholder_title)
-            layout.addWidget(self._placeholder_status)
-            layout.addWidget(detail)
-            layout.addStretch(1)
-            return frame
-
 else:  # pragma: no cover
 
     class LabToolsWorkspaceWidget:  # type: ignore[no-redef]
         def page_keys(self) -> tuple[str, ...]:
-            return ("home", "calculators", "recipes", "image_analysis", "pending")
+            return ("home", "calculators", "recipes", "image_analysis", "templates")

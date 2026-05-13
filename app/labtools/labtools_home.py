@@ -80,7 +80,18 @@ if QWidget is not None:
                 1,
                 0,
             )
-            grid.addWidget(self._entry_card("实验模板", "开发中", "开发中", "查看状态", self.templates_requested.emit), 1, 1)
+            grid.addWidget(
+                self._entry_card(
+                    "实验模板",
+                    "qPCR、WB、细胞接种和图像记录草稿",
+                    "可用",
+                    "进入实验模板",
+                    self.templates_requested.emit,
+                    object_name="labToolsTemplateEntry",
+                ),
+                1,
+                1,
+            )
             root.addLayout(grid)
             root.addStretch(1)
             scroll.setWidget(content)
@@ -130,7 +141,7 @@ if QWidget is not None:
                 border: 0;
                 background: {COLORS["background"]};
             }}
-            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsImageEntry, QFrame#labToolsPendingEntry {{
+            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsImageEntry, QFrame#labToolsTemplateEntry, QFrame#labToolsPendingEntry {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["lg"]}px;

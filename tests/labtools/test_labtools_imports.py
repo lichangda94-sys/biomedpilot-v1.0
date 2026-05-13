@@ -16,6 +16,7 @@ def test_labtools_module_exports_features() -> None:
     assert features[0].status.value == "测试中"
     assert features[1].status.value == "测试中"
     assert features[2].status.value == "测试中"
+    assert features[3].status.value == "测试中"
     assert all(feature.module == "labtools" for feature in features)
     assert "WB/SDS-PAGE 上样计算" in features[0].description
 
@@ -25,6 +26,10 @@ def test_labtools_module_exports_features() -> None:
     assert "细胞计数、灰度/墨值仍为占位" in image_feature.description
     assert "算法开发中" not in image_feature.description
     assert "algorithm in development" not in image_feature.description.lower()
+
+    template_feature = features[3]
+    assert "qPCR" in template_feature.description
+    assert "结构化草稿" in template_feature.description
 
 
 def test_labtools_workspace_instantiates_when_qt_available() -> None:
@@ -40,7 +45,7 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
 
     assert app is not None
     assert widget.objectName() == "labToolsWorkspace"
-    assert widget.page_keys() == ("home", "calculators", "recipes", "image_analysis", "pending")
+    assert widget.page_keys() == ("home", "calculators", "recipes", "image_analysis", "templates")
     assert widget.current_page_key() == "home"
     assert widget.findChild(QPushButton, "primaryButton") is not None
     widget.show_calculators()
@@ -78,3 +83,10 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert "未启用自动 ROI、细胞计数或灰度/墨值算法" in image_labels
     assert "JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG" in image_labels
     assert "导出当前 ROI 结果" in image_buttons
+    widget.show_templates()
+    assert widget.current_page_key() == "templates"
+    template_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    template_buttons = [button.text() for button in widget.findChildren(QPushButton)]
+    assert "实验模板" in template_labels
+    assert "不构成完整 ELN" in template_labels
+    assert "生成记录草稿" in template_buttons
