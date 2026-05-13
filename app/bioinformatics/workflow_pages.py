@@ -50,6 +50,7 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
+from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
 from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
@@ -3565,6 +3566,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
     deg_config_requested = Signal(object)
+    imported_deg_requested = Signal(object)
 
     def __init__(
         self,
@@ -3572,6 +3574,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         on_continue: Callable[[Path], None] | None = None,
         on_back: Callable[[], None] | None = None,
         on_configure_deg: Callable[[Path], None] | None = None,
+        on_view_imported_deg: Callable[[Path], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -3585,6 +3588,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self.back_requested.connect(on_back)
         if on_configure_deg is not None:
             self.deg_config_requested.connect(on_configure_deg)
+        if on_view_imported_deg is not None:
+            self.imported_deg_requested.connect(on_view_imported_deg)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -3619,6 +3624,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self.deg_config_requested.emit(self._project_root)
         self._status_label.setText("已打开差异分析配置页；当前只做配置和 preflight，不执行真实 DEG。")
         return {"next_page": "deg_config", "project_root": str(self._project_root)}
+
+    def open_imported_deg_browser(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.imported_deg_requested.emit(self._project_root)
+        self._status_label.setText("已打开导入结果浏览；该入口只查看用户导入 / 外部分析结果，不运行 DEG。")
+        return {"next_page": "imported_deg", "project_root": str(self._project_root)}
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -3727,6 +3740,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
         root.addLayout(actions)
 
@@ -3932,11 +3946,187 @@ class BioinformaticsDegConfigWidget(QWidget):
         self._developer_details.setPlainText(_json(payload))
 
 
+class BioinformaticsImportedDegBrowserWidget(QWidget):
+    back_requested = Signal()
+    report_requested = Signal(object)
+
+    def __init__(
+        self,
+        *,
+        on_back: Callable[[], None] | None = None,
+        on_report: Callable[[Path], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self.setObjectName("bioinformaticsImportedDegBrowserPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+        if on_report is not None:
+            self.report_requested.connect(on_report)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_imported_deg_results()
+
+    def refresh_imported_deg_results(self) -> list[object]:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            self._set_developer_details({})
+            return []
+        results = list_imported_deg_results(self._project_root)
+        self._render(results)
+        return results
+
+    def mark_report_candidates(self) -> list[dict[str, object]]:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return []
+        entries = mark_imported_deg_report_candidates(self._project_root)
+        self.refresh_imported_deg_results()
+        self._status_label.setText("已标记导入结果为报告候选；仍必须说明为用户导入 / 外部分析结果，不是 BioMedPilot 重新计算。")
+        return entries
+
+    def continue_to_report(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.report_requested.emit(self._project_root)
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(
+            _header(
+                "导入结果浏览",
+                "查看用户导入 / 外部分析得到的差异分析结果；这里不会运行 DEG，也不会生成火山图或富集结果。",
+                back_text="返回结果浏览",
+                back_signal=self.back_requested,
+            )
+        )
+        self._status_label = _status_label("请先导入差异分析结果表，或返回结果浏览。")
+        root.addWidget(self._status_label)
+
+        summary_card, summary_layout = _card("当前导入 DEG 状态")
+        self._summary_label = _muted("当前是否存在已导入 DEG 结果：待检查。")
+        self._summary_label.setObjectName("importedDegSummary")
+        self._boundary_label = _muted("边界：用户导入 / 外部分析结果，不代表 BioMedPilot 重新计算。")
+        self._boundary_label.setObjectName("importedDegBoundary")
+        self._next_step_label = _muted("下一步建议：先确认列映射和来源标签。")
+        self._next_step_label.setObjectName("importedDegNextStep")
+        summary_layout.addWidget(self._summary_label)
+        summary_layout.addWidget(self._boundary_label)
+        summary_layout.addWidget(self._next_step_label)
+        root.addWidget(summary_card)
+
+        actions = QHBoxLayout()
+        actions.addWidget(_button("刷新导入结果", "secondaryButton", self.refresh_imported_deg_results))
+        actions.addWidget(_button("标记为报告候选", "primaryButton", self.mark_report_candidates))
+        actions.addWidget(_button("查看报告草稿", "secondaryButton", self.continue_to_report))
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self._results = _table(["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "下一步"])
+        self._results.setObjectName("importedDegUserTable")
+        root.addWidget(self._results)
+        _set_table_widths(self._results, [180, 190, 120, 110, 260, 180, 300])
+        self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+
+        detail_card, detail_layout = _card("结果详情预览")
+        self._detail_label = _muted("请选择或刷新导入结果后查看详情。预览限制行数，避免一次性加载大文件。")
+        self._detail_label.setObjectName("importedDegDetailSummary")
+        detail_layout.addWidget(self._detail_label)
+        self._preview = _table(["列"] )
+        self._preview.setObjectName("importedDegPreviewTable")
+        detail_layout.addWidget(self._preview)
+        self._note = _text_preview(90)
+        self._note.setObjectName("importedDegUserNote")
+        self._note.setPlainText("用户备注：仅用于人工阅读，不参与内部计算字段。")
+        detail_layout.addWidget(self._note)
+        root.addWidget(detail_card)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(160)
+        self._developer_details.setObjectName("importedDegDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        root.addWidget(developer_card)
+
+    def _render(self, results: list[object]) -> None:
+        typed_results = [result for result in results if hasattr(result, "to_user_row")]
+        if not typed_results:
+            self._status_label.setText("暂无已导入差异分析结果。请先导入外部 DEG 表格，或返回分析任务中心。")
+            self._summary_label.setText("当前是否存在已导入 DEG 结果：否。")
+            self._next_step_label.setText("下一步建议：导入外部 DEG 表格，或继续 B2 preflight 配置。")
+            _fill_table(self._results, [])
+            self._render_preview(None)
+            self._set_developer_details({"imported_deg_results": [], "summary": {}})
+            return
+        ready = sum(1 for result in typed_results if getattr(result, "status", "") == "ready")
+        needs_confirmation = sum(1 for result in typed_results if getattr(result, "status", "") == "needs_confirmation")
+        missing = sum(1 for result in typed_results if getattr(result, "status", "") == "missing")
+        self._status_label.setText(f"导入结果浏览：{len(typed_results)} 个 imported DEG；可浏览 {ready} 个，待确认 {needs_confirmation} 个，缺少文件 {missing} 个。")
+        self._summary_label.setText(f"当前是否存在已导入 DEG 结果：是，共 {len(typed_results)} 个。")
+        self._boundary_label.setText("边界：用户导入 / 外部分析结果；不是 BioMedPilot 重新计算；不生成 fake DEG、火山图或富集结果。")
+        self._next_step_label.setText("下一步建议：确认列映射和来源说明后，可标记为报告候选；报告中必须保留导入标签。")
+        _fill_table(self._results, [result.to_user_row() for result in typed_results])
+        self._render_preview(typed_results[0])
+        self._set_developer_details(
+            {
+                "imported_deg_results": [result.to_dict() for result in typed_results],
+                "summary": imported_deg_summary(self._project_root) if self._project_root else {},
+                "result_index": load_result_index(self._project_root) if self._project_root else {},
+            }
+        )
+
+    def _render_preview(self, result: object | None) -> None:
+        if result is None:
+            self._detail_label.setText("结果详情：暂无导入 DEG。")
+            self._preview.setColumnCount(1)
+            self._preview.setHorizontalHeaderLabels(["预览"])
+            _fill_table(self._preview, [])
+            return
+        headers = list(getattr(result, "preview_headers", ()) or ())
+        rows = [list(row) for row in getattr(result, "preview_rows", ()) or ()]
+        mapping = getattr(result, "column_mapping", {}) or {}
+        counts = getattr(result, "regulation_counts", {}) or {}
+        count_text = "待确认" if counts.get("status") != "computed" else f"上调 {counts.get('up')}；下调 {counts.get('down')}；不显著 {counts.get('not_significant')}"
+        self._detail_label.setText(
+            "详情："
+            f"{getattr(result, 'name', '导入差异分析结果')}；"
+            "关键列映射 "
+            + ("、".join(f"{key}->{value}" for key, value in mapping.items()) if mapping else "待确认")
+            + f"；阈值草稿 |log2FC| >= 1 且 p value/FDR <= 0.05；计数：{count_text}。"
+        )
+        self._preview.setColumnCount(max(1, len(headers)))
+        self._preview.setHorizontalHeaderLabels(headers or ["预览"])
+        _fill_table(self._preview, rows)
+
+    def _set_developer_details(self, payload: dict[str, object]) -> None:
+        self._developer_details.setPlainText(_json(payload))
+
+
 class BioinformaticsResultsBrowserWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
+    imported_deg_requested = Signal(object)
 
-    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        on_continue: Callable[[Path], None] | None = None,
+        on_back: Callable[[], None] | None = None,
+        on_view_imported_deg: Callable[[Path], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsResultsBrowserPage")
@@ -3946,6 +4136,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self.continue_requested.connect(on_continue)
         if on_back is not None:
             self.back_requested.connect(on_back)
+        if on_view_imported_deg is not None:
+            self.imported_deg_requested.connect(on_view_imported_deg)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -3970,6 +4162,14 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             return
         self.continue_requested.emit(self._project_root)
 
+    def open_imported_deg_browser(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.imported_deg_requested.emit(self._project_root)
+        self._status_label.setText("已打开导入结果浏览；这里只查看 imported DEG，不运行或生成 DEG。")
+        return {"next_page": "imported_deg", "project_root": str(self._project_root)}
+
     def status_message(self) -> str:
         return self._status_label.text()
 
@@ -3993,6 +4193,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
 
         actions = QHBoxLayout()
         actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results))
+        actions.addWidget(_button("导入结果浏览", "secondaryButton", self.open_imported_deg_browser))
         actions.addWidget(_button("查看报告草稿", "primaryButton", self.continue_to_report))
         actions.addStretch(1)
         root.addLayout(actions)

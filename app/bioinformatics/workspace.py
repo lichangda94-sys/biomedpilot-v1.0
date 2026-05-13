@@ -34,6 +34,7 @@ try:
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsDegConfigWidget,
+        BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -94,13 +95,19 @@ if QWidget is not None:
                 on_continue=self.show_results_browser,
                 on_back=self.show_standardization,
                 on_configure_deg=self.show_deg_config,
+                on_view_imported_deg=self.show_imported_deg_browser,
             )
             self._deg_config_page = BioinformaticsDegConfigWidget(
                 on_back=self.show_analysis_tasks,
             )
+            self._imported_deg_page = BioinformaticsImportedDegBrowserWidget(
+                on_back=self.show_results_browser,
+                on_report=self.show_report_viewer,
+            )
             self._results_browser_page = BioinformaticsResultsBrowserWidget(
                 on_continue=self.show_report_viewer,
                 on_back=self.show_analysis_tasks,
+                on_view_imported_deg=self.show_imported_deg_browser,
             )
             self._report_viewer_page = BioinformaticsReportViewerWidget(
                 on_back=self.show_results_browser,
@@ -119,6 +126,7 @@ if QWidget is not None:
                 self._workflow_status_page,
                 self._analysis_task_page,
                 self._deg_config_page,
+                self._imported_deg_page,
                 self._results_browser_page,
                 self._report_viewer_page,
                 self._settings_page,
@@ -181,6 +189,11 @@ if QWidget is not None:
             self._set_current_project(summary)
             self._results_browser_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._results_browser_page)
+
+        def show_imported_deg_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._imported_deg_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._imported_deg_page)
 
         def show_report_viewer(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

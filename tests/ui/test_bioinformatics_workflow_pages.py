@@ -25,6 +25,7 @@ try:
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsDegConfigWidget,
+        BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -246,6 +247,7 @@ def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
         BioinformaticsWorkflowStatusWidget(),
         BioinformaticsAnalysisTaskCenterWidget(),
         BioinformaticsDegConfigWidget(),
+        BioinformaticsImportedDegBrowserWidget(),
         BioinformaticsResultsBrowserWidget(),
         BioinformaticsReportViewerWidget(),
         BioinformaticsSettingsAndLocalAIWidget(),
@@ -261,6 +263,7 @@ def test_ui_04_to_ui_13_pages_instantiate_offscreen(qt_app) -> None:
         "bioinformaticsWorkflowStatusPage",
         "bioinformaticsAnalysisTaskCenterPage",
         "bioinformaticsDegConfigPage",
+        "bioinformaticsImportedDegBrowserPage",
         "bioinformaticsResultsBrowserPage",
         "bioinformaticsReportViewerPage",
         "bioinformaticsSettingsLocalAIPage",
@@ -1881,7 +1884,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     widget.refresh_project(project_summary)
 
     buttons = {button.text() for button in widget.findChildren(QPushButton)}
-    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "继续：结果浏览"}.issubset(buttons)
+    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "查看已导入差异分析结果", "继续：结果浏览"}.issubset(buttons)
     assert widget.findChild(QLabel, "analysisTaskInputSummary") is not None
     assert "核心输入" in widget.findChild(QLabel, "analysisTaskInputSummary").text()
     assert "下一步建议" in widget.findChild(QLabel, "analysisTaskNextStep").text()
@@ -1937,6 +1940,69 @@ def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, 
     assert "已有导入结果" in table_text
     assert "导入表格中的已有差异分析结果，不是本软件重新计算" in table_text
     assert "真实 DEG" not in table_text
+
+
+def test_imported_deg_browser_user_page_and_report_candidate(qt_app, project_summary, tmp_path: Path) -> None:
+    imported_deg = tmp_path / "deg_results.csv"
+    imported_deg.write_text(
+        "gene,logFC,P.Value,adj.P.Val\n"
+        "TP53,1.2,0.01,0.02\n"
+        "EGFR,-1.5,0.02,0.03\n"
+        "ACTB,0.1,0.8,0.9\n",
+        encoding="utf-8",
+    )
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="local_import",
+        source_label="imported DEG",
+        strategy="reference",
+        selected_paths=[imported_deg],
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsImportedDegBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    assert "导入结果浏览" in widget.status_message()
+    assert "用户导入 / 外部分析结果" in widget.findChild(QLabel, "importedDegBoundary").text()
+    table = widget.findChild(QTableWidget, "importedDegUserTable")
+    assert table is not None
+    headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
+    assert headers == ["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "下一步"]
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "用户导入 / 外部分析结果" in table_text
+    assert "可浏览" in table_text
+    assert "上调 1；下调 1；不显著 1" in table_text
+    assert str(imported_deg) not in table_text
+    assert "manifest" not in table_text.lower()
+    assert "schema_version" not in table_text
+
+    detail_text = widget.findChild(QLabel, "importedDegDetailSummary").text()
+    assert "阈值草稿" in detail_text
+    assert "BioMedPilot 重新计算" not in detail_text
+    preview = widget.findChild(QTableWidget, "importedDegPreviewTable")
+    assert preview is not None
+    assert preview.rowCount() == 3
+    assert preview.columnCount() == 4
+
+    entries = widget.mark_report_candidates()
+    assert entries
+    assert entries[0]["result_semantics"] == "imported result"
+    assert "不是 BioMedPilot 重新计算" in entries[0]["warning"]
+    assert not (project_summary.project_root / "results" / "tables").exists()
+    assert not (project_summary.project_root / "results" / "figures").exists()
+
+    diagnostics = widget.findChild(QPlainTextEdit, "importedDegDeveloperDiagnostics")
+    assert diagnostics is not None
+    assert not diagnostics.isVisible()
+    diagnostics_text = diagnostics.toPlainText()
+    assert str(imported_deg) in diagnostics_text
+    assert "semantic_boundary" in diagnostics_text
 
 
 def test_deg_config_page_userized_preflight_blocks_missing_group(qt_app, project_summary, tmp_path: Path) -> None:
@@ -2476,6 +2542,7 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     widget.refresh_project(project_summary)
 
     assert "结果浏览" in widget.status_message()
+    assert "导入结果浏览" in {button.text() for button in widget.findChildren(QPushButton)}
     assert "导入结果" in widget.findChild(QLabel, "resultsSourceSummary").text()
     assert "测试级结果" in widget.findChild(QLabel, "resultsSourceSummary").text()
     table = widget.findChild(QTableWidget, "resultsUserTable")
@@ -2630,6 +2697,8 @@ def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> Non
     assert widget.current_page_object_name() == "bioinformaticsAnalysisTaskCenterPage"
     widget.show_deg_config(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsDegConfigPage"
+    widget.show_imported_deg_browser(project_summary)
+    assert widget.current_page_object_name() == "bioinformaticsImportedDegBrowserPage"
     widget.show_results_browser(project_summary)
     assert widget.current_page_object_name() == "bioinformaticsResultsBrowserPage"
     widget.show_report_viewer(project_summary)
