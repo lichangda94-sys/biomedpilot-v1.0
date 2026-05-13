@@ -3,6 +3,7 @@ from __future__ import annotations
 try:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import (
+        QFileDialog,
         QFrame,
         QHBoxLayout,
         QLabel,
@@ -22,6 +23,8 @@ try:
         ExperimentTemplateLibrary,
         create_record_draft,
         draft_markdown_preview,
+        load_experiment_draft_store,
+        save_experiment_draft_store,
     )
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -102,7 +105,16 @@ if QWidget is not None:
             self._draft_preview = QTextEdit()
             self._draft_preview.setObjectName("templateResultPanel")
             self._draft_preview.setReadOnly(True)
-            self._draft_preview.setText("选择模板后，可生成本地结构化草稿；本阶段不自动保存、不生成正式 ELN。")
+            self._draft_preview.setText("选择模板后，可生成本地结构化草稿；仅在用户选择路径后保存 JSON，不自动保存、不生成正式 ELN。")
+            actions = QHBoxLayout()
+            save_button = QPushButton("保存记录草稿 JSON")
+            save_button.setObjectName("secondaryButton")
+            save_button.clicked.connect(self._handle_save_drafts)
+            load_button = QPushButton("载入记录草稿 JSON")
+            load_button.setObjectName("secondaryButton")
+            load_button.clicked.connect(self._handle_load_drafts)
+            actions.addWidget(save_button)
+            actions.addWidget(load_button)
             layout.addWidget(heading)
             layout.addWidget(self._purpose)
             layout.addWidget(self._sample_groups)
@@ -111,6 +123,7 @@ if QWidget is not None:
             layout.addWidget(self._output_files)
             layout.addWidget(self._notes)
             layout.addWidget(button)
+            layout.addLayout(actions)
             layout.addWidget(self._draft_preview, 1)
             return frame
 
@@ -200,6 +213,85 @@ if QWidget is not None:
             self._drafts.append(draft)
             self._draft_preview.setText(draft_markdown_preview(draft))
 
+        def _handle_save_drafts(self) -> None:
+            if not self._drafts:
+                self._draft_preview.setText("尚未生成实验记录草稿，未写入任何文件。")
+                return
+            path = self._select_draft_save_path()
+            if not path:
+                self._draft_preview.setText("已取消保存；未写入任何文件。")
+                return
+            try:
+                result = self._perform_save_drafts(path)
+            except ExperimentTemplateError as exc:
+                self._draft_preview.setText(f"保存需要调整\n{exc}")
+                return
+            self._draft_preview.setText(
+                "\n".join(
+                    [
+                        "实验记录草稿 JSON 已保存",
+                        f"路径：{result.path}",
+                        f"schema：{result.schema_version}",
+                        f"草稿数：{result.draft_count}",
+                        "",
+                        "复核提示",
+                        result.review_notice,
+                    ]
+                )
+            )
+
+        def _handle_load_drafts(self) -> None:
+            path = self._select_draft_load_path()
+            if not path:
+                self._draft_preview.setText("已取消载入；当前记录草稿未改变。")
+                return
+            try:
+                result = self._perform_load_drafts(path)
+            except ExperimentTemplateError as exc:
+                self._draft_preview.setText(f"载入需要调整\n{exc}")
+                return
+            if result.drafts:
+                self._draft_preview.setText(
+                    "\n".join(
+                        [
+                            "实验记录草稿 JSON 已载入",
+                            f"路径：{result.path}",
+                            f"schema：{result.schema_version}",
+                            f"载入草稿数：{result.draft_count}",
+                            "",
+                            draft_markdown_preview(result.drafts[-1]),
+                        ]
+                    )
+                )
+            else:
+                self._draft_preview.setText("实验记录草稿 JSON 已载入，但文件中没有草稿。")
+
+        def _select_draft_save_path(self) -> str:
+            path, _selected_filter = QFileDialog.getSaveFileName(
+                self,
+                "保存实验记录草稿 JSON",
+                "labtools_experiment_record_drafts.json",
+                "JSON Files (*.json)",
+            )
+            return path
+
+        def _select_draft_load_path(self) -> str:
+            path, _selected_filter = QFileDialog.getOpenFileName(
+                self,
+                "载入实验记录草稿 JSON",
+                "",
+                "JSON Files (*.json)",
+            )
+            return path
+
+        def _perform_save_drafts(self, path: str):
+            return save_experiment_draft_store(tuple(self._drafts), path)
+
+        def _perform_load_drafts(self, path: str):
+            result = load_experiment_draft_store(path)
+            self._drafts.extend(result.drafts)
+            return result
+
         def _lines(self, field: QTextEdit) -> tuple[str, ...]:
             return tuple(line.strip() for line in field.toPlainText().splitlines() if line.strip())
 
@@ -241,6 +333,14 @@ if QWidget is not None:
                 color: #FFFFFF;
                 background: {COLORS["bio"]};
                 border: 1px solid {COLORS["bio"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }}
+            QPushButton#secondaryButton {{
+                color: {COLORS["bio"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["sm"]}px;
                 padding: 8px 12px;
                 font-weight: 700;

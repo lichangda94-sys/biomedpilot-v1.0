@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6C，commit 以最终交接为准
+- 当前最近完成阶段：LabTools Stage L6C.1，commit 以最终交接为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -33,6 +33,7 @@
 | LabTools Stage L6A.1 | 最终交接记录 | 硬化 ROI export package schema、文件命名、no-overwrite、CSV header、Markdown manual-review 语义和 UI 导出取消/失败/成功反馈；不新增图像算法。 |
 | LabTools Stage L6B | 最终交接记录 | 新增用户配方草稿本地 JSON 持久化和安全范围检查；保存/载入均需用户选择路径，不自动保存、不联网、不调用 AI、不新增 recipe 算法。 |
 | LabTools Stage L6C | 最终交接记录 | 新增轻量实验模板和结构化记录草稿中心，覆盖 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录；不做完整 ELN、签名、权限或合规审计。 |
+| LabTools Stage L6C.1 | 最终交接记录 | 新增实验记录草稿本地 JSON 持久化 schema、no-overwrite 保存、载入校验和 UI 保存/载入反馈；仍不做完整 ELN、数据库、自动保存、签名或合规审计。 |
 
 ## 3. 当前已实现功能
 
@@ -186,6 +187,14 @@
 - 草稿 schema：`labtools_experiment_template_draft.v1`。
 - 草稿状态：`draft_manual_review_required`。
 - UI 提供“实验模板”页面，可选择模板并生成本地 Markdown 预览。
+- L6C.1 新增实验记录草稿本地 JSON 持久化：
+  - schema 固定为 `labtools_experiment_record_draft_store.v1`。
+  - 仅保存用户在当前 UI 中生成的结构化记录草稿。
+  - 保存和载入均由用户选择本地 JSON 路径触发；默认不自动写盘。
+  - 保存文件采用 no-overwrite 策略，同名文件自动使用 `_001` 等 suffix。
+  - 保存/载入前校验草稿 schema、`draft_manual_review_required` 状态、核心字段和人工复核提示。
+  - 基础范围检查会阻断人体/动物实验、病毒包装、临床诊断、治疗建议或高风险合成相关草稿。
+  - UI 明确“本地结构化草稿，使用前需人工核对 SOP、伦理/安全要求、试剂说明书和实验设计”。
 - 当前不自动保存、不写数据库、不生成正式报告、不跨模块传递。
 - 当前不做完整 ELN、权限、签名、审计合规或团队协作。
 
@@ -205,7 +214,7 @@
 - 未调用 AI Gateway 或本地模型进行配方摘录、图像分析或结果解释。
 - 未实现 LabTools 本地项目存储、数据库持久化或自动写盘；L6A/L6A.1 仅支持用户确认选择目录后的图像 ROI export package。
 - 未实现正式实验报告导出；L6A Markdown 仅为 manual-review 报告片段。
-- 未实现完整 ELN、权限、签名、审计合规或团队协作；L6C 只实现轻量实验模板和结构化记录草稿。
+- 未实现完整 ELN、权限、签名、审计合规或团队协作；L6C/L6C.1 只实现轻量实验模板、结构化记录草稿和用户选择路径后的 JSON 草稿持久化。
 - 未实现计算器历史记录、CSV/manifest 导出或项目文件写入；L6A CSV/manifest 仅限 fluorescence/wound ROI export package。
 - 未实现 recipe center 数据库、自动保存、云同步、网络来源同步或正式 SOP 管理；L6B 仅实现用户选择路径后的本地 JSON 草稿持久化。
 
@@ -231,19 +240,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6C 结果：142 passed
+  - 当前 L6C.1 结果：151 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6C 结果：147 passed
+  - 当前 L6C.1 结果：152 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6C 结果：18 passed
+  - 当前 L6C.1 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6C 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6C.1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6C 结果：通过
+  - 当前 L6C.1 结果：通过
 - `git diff --check`
-  - 当前 L6C 结果：通过
+  - 当前 L6C.1 结果：通过
 - `git diff --cached --check`
-  - 当前 L6C 提交前运行。
+  - 当前 L6C.1 提交前运行。
 
 ## 7. Shell / UI 接入状态
 
@@ -291,7 +300,13 @@
 
 - 计算记录：内存结构 / JSON-compatible dict。
 - L5B/L5C 实验计算器 v1 结果：结构化 dataclass 结果和 UI 文本展示；不自动保存、不写 CSV、不写 manifest、不创建项目目录。
-- L6C 实验模板记录草稿：结构化 dataclass 结果和 Markdown 预览；不自动保存、不写数据库、不生成正式 ELN。
+- L6C 实验模板记录草稿：结构化 dataclass 结果和 Markdown 预览；不生成正式 ELN。
+- L6C.1 实验记录草稿本地 JSON：
+  - schema 为 `labtools_experiment_record_draft_store.v1`。
+  - 保存只在用户选择 JSON 路径后发生。
+  - 载入只在用户选择 JSON 文件后发生。
+  - 保存使用 no-overwrite 策略，避免 silent overwrite。
+  - 不自动保存、不写数据库、不写历史记录系统、不联网、不调用 AI、不跨模块传递。
 - 用户自定义配方：
   - 确认后进入 `UserRecipeStore` 内存结构。
   - L6B 可由用户手动保存为本地 JSON 文件，schema 为 `labtools_recipe_draft_store.v1`。
@@ -334,9 +349,9 @@
 
 ## 13. 后续推荐路线
 
-1. L6C.1：实验模板草稿导出 schema / 本地 JSON 保存策略，但仍不做完整 ELN。
-2. L6B.1：recipe JSON schema 文档、更多导入冲突策略和用户草稿版本展示。
-3. L6A.2：图像导出 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
+1. L6B.1：recipe JSON schema 文档、更多导入冲突策略和用户草稿版本展示。
+2. L6A.2：图像导出 schema 文档化、更多 UI 回归测试和用户选择目录体验微调，但仍不得新增算法。
+3. L6C.2：实验记录草稿 Markdown 片段导出体验和导入冲突提示，但仍不做完整 ELN、签名、权限或合规审计。
 4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
 
 ## 14. Handoff 结论

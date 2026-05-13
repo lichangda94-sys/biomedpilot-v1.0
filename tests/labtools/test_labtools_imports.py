@@ -31,6 +31,10 @@ def test_labtools_module_exports_features() -> None:
     assert "qPCR" in template_feature.description
     assert "结构化草稿" in template_feature.description
 
+    from app.labtools.experiment_templates import LABTOOLS_EXPERIMENT_RECORD_DRAFT_STORE_SCHEMA_VERSION
+
+    assert LABTOOLS_EXPERIMENT_RECORD_DRAFT_STORE_SCHEMA_VERSION == "labtools_experiment_record_draft_store.v1"
+
 
 def test_labtools_workspace_instantiates_when_qt_available() -> None:
     try:
