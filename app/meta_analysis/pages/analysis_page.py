@@ -7,6 +7,12 @@ from pathlib import Path
 from app.meta_analysis.extraction.schema_registry import list_extraction_schema_profiles
 from app.meta_analysis.models.analysis_dataset import AnalysisReadyDataset
 from app.meta_analysis.models.analysis_result import AnalysisResult
+from app.meta_analysis.models.statistical_result_state import (
+    STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+    STATISTICAL_RESULT_STATE_NOT_RUN,
+    blocks_formal_report_claim,
+    statistical_result_state_label_zh,
+)
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_plan_service import (
@@ -139,6 +145,7 @@ class AnalysisSetupPageState:
     applicability_warnings_path: str
     preflight_summary: dict[str, object]
     run_result_summary: dict[str, object]
+    result_state_summary: dict[str, object]
     advanced_method_status: dict[str, str]
     warnings: tuple[str, ...]
     errors: tuple[str, ...]
@@ -203,6 +210,8 @@ class MetaStatisticsEnginePageState:
     manifest_path: str
     input_validation_status: str
     result_status: str
+    result_state: str
+    result_state_label_zh: str
     warnings: tuple[str, ...]
     primary_actions: tuple[str, ...]
     safety_flags: dict[str, bool]
@@ -278,6 +287,11 @@ def analysis_setup_state_from_project(
         applicability_warnings_path=str(warnings_path),
         preflight_summary=preflight_summary,
         run_result_summary=run_result_summary,
+        result_state_summary={
+            "state": run_result_summary.get("result_state", STATISTICAL_RESULT_STATE_NOT_RUN),
+            "label_zh": run_result_summary.get("result_state_label_zh", statistical_result_state_label_zh(STATISTICAL_RESULT_STATE_NOT_RUN)),
+            "blocks_formal_report_claim": run_result_summary.get("blocks_formal_report_claim", True),
+        },
         advanced_method_status={
             "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
             "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
@@ -387,6 +401,8 @@ def meta_statistics_engine_state_from_project(
         manifest_path=str(stats_service.manifest_path(project_dir)),
         input_validation_status=str(diagnostics.get("input_validation_status", "")),
         result_status=str(result.get("result_status", "testing_result_generated" if result else "not_started")),
+        result_state=str(result.get("result_state", "testing_level" if result else STATISTICAL_RESULT_STATE_NOT_RUN)),
+        result_state_label_zh=statistical_result_state_label_zh(str(result.get("result_state", "testing_level" if result else STATISTICAL_RESULT_STATE_NOT_RUN))),
         warnings=tuple(_dedupe(warnings)),
         primary_actions=("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果"),
         safety_flags={
@@ -410,11 +426,13 @@ def _analysis_alias_summary(path: Path, payload_key: str) -> dict[str, object]:
         inner = {}
     return {
         "status": "available",
-        "path": str(path),
         "id": str(inner.get("dataset_id") or inner.get("result_id") or ""),
         "outcome_name": str(inner.get("outcome_name", "")),
         "effect_measure": str(inner.get("effect_measure", "")),
         "model": str(inner.get("model", "")),
+        "result_state": str(inner.get("result_state") or payload.get("result_state") or STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN),
+        "result_state_label_zh": statistical_result_state_label_zh(str(inner.get("result_state") or payload.get("result_state") or STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN)),
+        "blocks_formal_report_claim": blocks_formal_report_claim(inner) if payload_key == "result" else True,
         "warnings": inner.get("warnings", []),
         "errors": inner.get("validation_errors", []),
     }
@@ -699,12 +717,12 @@ if QWidget is not None:
                 self._statistics_engine_label.setText(
                     f"Run ID：{result.analysis_run_id}\n"
                     f"Result ID：{result.result_id}\n"
+                    f"结果状态：{statistical_result_state_label_zh(str(output.get('result_state', 'testing_level')))}\n"
                     f"Effect measure：{output.get('effect_measure', '')}\n"
                     f"Model：{output.get('model', '')}\n"
                     f"Pooled effect：{output.get('pooled_effect', '')}\n"
                     f"95% CI：{output.get('ci_low', '')} - {output.get('ci_high', '')}\n"
                     f"I²：{output.get('i_squared', '')}\n"
-                    f"输出：{result.result_path}\n"
                     "testing-level；未生成医学结论。"
                 )
                 self._error_label.setText("")
@@ -717,8 +735,7 @@ if QWidget is not None:
             path = project_dir / "analysis" / "analysis_plan_confirmed_v1.json"
             payload = _load_json(path)
             self._statistics_engine_label.setText(
-                f"Confirmed plan：{path}\n"
-                f"Plan ID：{payload.get('confirmed_analysis_plan_id', '')}\n"
+                f"分析计划状态：{'已确认' if payload else '缺失'}\n"
                 f"Effect measure：{payload.get('confirmed_effect_measure', '')}\n"
                 f"Model：{payload.get('confirmed_model', '')}\n"
                 f"Locked：{payload.get('locked_for_analysis_run', False)}"
@@ -730,7 +747,7 @@ if QWidget is not None:
             self._statistics_engine_label.setText(
                 f"Input validation：{state.input_validation_status or 'not_started'}\n"
                 f"Warnings：{', '.join(state.warnings) or '无'}\n"
-                f"Manifest：{state.manifest_path}"
+                f"结果状态：{state.result_state_label_zh}"
             )
 
         def _view_statistics_result(self) -> None:
@@ -738,8 +755,8 @@ if QWidget is not None:
             state = meta_statistics_engine_state_from_project(project_dir, service=self._statistics_engine_service)
             result = self._statistics_engine_service.load_standardized_result(project_dir, state.latest_run_id) if state.latest_run_id else {}
             self._statistics_engine_label.setText(
-                f"Result：{state.result_path or 'not_started'}\n"
                 f"Status：{state.result_status}\n"
+                f"结果状态：{state.result_state_label_zh}\n"
                 f"Pooled effect：{result.get('pooled_effect', '')}\n"
                 f"Testing：{result.get('testing_level_notice', '')}"
             )
@@ -780,6 +797,7 @@ if QWidget is not None:
                 self._analysis_result_label.setText(
                     f"Result ID：{result.result_id}\n"
                     f"Dataset ID：{result.dataset_id}\n"
+                    f"结果状态：{statistical_result_state_label_zh(result.result_state)}\n"
                     f"Model：{result.model}\n"
                     f"Pooled effect：{result.pooled_effect:.6g}\n"
                     f"95% CI：{result.ci_lower:.6g} - {result.ci_upper:.6g}\n"
@@ -788,7 +806,7 @@ if QWidget is not None:
                     f"I²：{result.i_squared:.6g}\n"
                     f"tau²：{result.tau_squared:.6g}\n"
                     f"Warnings：{', '.join(result.warnings) or '无'}\n"
-                    f"输出：{output_path}"
+                    "测试级结果，不可作为正式统计结论。"
                 )
                 self._error_label.setText("")
             except Exception as exc:
@@ -799,7 +817,7 @@ if QWidget is not None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
             try:
                 artifact = self._figure_service.generate_forest_plot(project_dir, self._analysis_result_id_input.text().strip())
-                self._artifact_label.setText(f"Forest plot：{artifact.file_path}")
+                self._artifact_label.setText(f"Forest plot：已生成 testing-level artifact；类型 {artifact.figure_type}")
                 self._error_label.setText("")
             except Exception as exc:
                 self._artifact_label.setText("没有生成 forest plot。")
@@ -809,7 +827,7 @@ if QWidget is not None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
             try:
                 output_path = self._figure_service.export_result_table_csv(project_dir, self._analysis_result_id_input.text().strip())
-                self._artifact_label.setText(f"Result table：{output_path}")
+                self._artifact_label.setText("Result table：已导出 testing-level 结果表，不代表正式统计结论。")
                 self._error_label.setText("")
             except Exception as exc:
                 self._artifact_label.setText("没有导出 result table。")

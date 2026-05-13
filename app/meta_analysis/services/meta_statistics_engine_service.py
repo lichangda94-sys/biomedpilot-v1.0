@@ -10,6 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.meta_analysis.models.analysis_result import StudyMetaAnalysisResult
+from app.meta_analysis.models.statistical_result_state import testing_level_result_metadata
 from app.meta_analysis.services.analysis_plan_service import AnalysisPlanService
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
@@ -153,6 +154,7 @@ class MetaStatisticsEngineService:
             "medical_conclusion_status": "not_generated",
             "production_grade": False,
             "created_at": _now(),
+            **testing_level_result_metadata(["meta_statistics_engine_v2_testing_level", "testing_level_result_blocks_formal_report_claim"]),
         }
         run_payload = {
             "schema_version": META_STATISTICS_ANALYSIS_RUN_SCHEMA_VERSION,

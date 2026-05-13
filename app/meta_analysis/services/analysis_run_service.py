@@ -12,6 +12,11 @@ from app.meta_analysis.models.analysis_result import (
     new_analysis_result_id,
     now_utc,
 )
+from app.meta_analysis.models.statistical_result_state import (
+    STATISTICAL_RESULT_STATE_TESTING_LEVEL,
+    blocks_formal_report_claim,
+    testing_level_result_metadata,
+)
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.statistical_applicability_service import StatisticalApplicabilityService, applicability_warnings_for_row
@@ -95,8 +100,9 @@ class AnalysisRunService:
                 study_results=study_results,
                 warnings=_dedupe(warnings),
                 created_at=now_utc(),
+                **testing_level_result_metadata(["legacy_analysis_run_service_testing_level", "testing_level_result_blocks_formal_report_claim"]),
             )
-            self._finish_task(task, success=True, summary=f"Meta-analysis completed for {len(study_results)} studies.")
+            self._finish_task(task, success=True, summary=f"Testing-level meta-analysis completed for {len(study_results)} studies.")
             self._audit_log.record_event(
                 project_dir,
                 event_type="analysis_run_completed",
@@ -104,8 +110,14 @@ class AnalysisRunService:
                 target_type="analysis_result",
                 target_id=result.result_id,
                 source_path=str(project_dir / "analysis" / "analysis_ready_datasets.json"),
-                summary=f"Meta-analysis completed for {len(study_results)} studies.",
-                details={"dataset_id": dataset_id, "model": model},
+                summary=f"Testing-level meta-analysis completed for {len(study_results)} studies.",
+                details={
+                    "dataset_id": dataset_id,
+                    "model": model,
+                    "result_state": result.result_state,
+                    "testing_level": result.testing_level,
+                    "blocks_formal_report_claim": blocks_formal_report_claim(result),
+                },
             )
             return result
         except Exception:
@@ -121,6 +133,9 @@ class AnalysisRunService:
         payload = {
             "project_id": result.project_id,
             "data_type": "analysis_result",
+            "result_state": STATISTICAL_RESULT_STATE_TESTING_LEVEL,
+            "testing_level": True,
+            "blocks_formal_report_claim": True,
             "updated_at": now_utc(),
             "results": [analysis_result_to_dict(item) for item in results],
         }
@@ -157,7 +172,7 @@ class AnalysisRunService:
             data_type="analysis_result",
             source_path=source_path,
             output_path=output_path,
-            status="available",
+            status="testing",
         )
 
     def _start_task(self, *, project_id: str, summary: str) -> TaskRecord:
