@@ -633,8 +633,11 @@ def _m8_report_state(project_dir: Path, prisma: PRISMAFlowSummary, artifacts: di
 
 
 def _safe_statistical_result_state_summary(project_dir: Path, *, plan_complete: bool) -> dict[str, Any]:
+    result = _load_json(project_dir / "analysis" / "pairwise_executor" / "latest_pairwise_meta_result.json")
     result_payload = _load_json(project_dir / "analysis" / "analysis_result.json")
-    result = result_payload.get("result") if isinstance(result_payload.get("result"), dict) else {}
+    pairwise_result_available = bool(result)
+    if not result:
+        result = result_payload.get("result") if isinstance(result_payload.get("result"), dict) else {}
     if not result:
         collection = _load_json(project_dir / "analysis" / "analysis_results.json")
         results = collection.get("results")
@@ -643,6 +646,10 @@ def _safe_statistical_result_state_summary(project_dir: Path, *, plan_complete: 
     warnings_payload = _load_json(project_dir / "analysis" / "applicability_warnings.json")
     errors = [str(item) for item in warnings_payload.get("errors", [])] if isinstance(warnings_payload.get("errors"), list) else []
     warnings = [str(item) for item in warnings_payload.get("warnings", [])] if isinstance(warnings_payload.get("warnings"), list) else []
+    if result and isinstance(result.get("validation_errors"), list):
+        errors.extend(str(item) for item in result.get("validation_errors", []))
+    if result and isinstance(result.get("warnings"), list):
+        warnings.extend(str(item) for item in result.get("warnings", []))
     if errors:
         state = STATISTICAL_RESULT_STATE_FAILED_VALIDATION
     elif result:
@@ -659,6 +666,19 @@ def _safe_statistical_result_state_summary(project_dir: Path, *, plan_complete: 
         "warnings": "；".join(warnings) if warnings else "无",
         "errors": "；".join(errors) if errors else "无",
         "report_ready": not blocks_formal_report_claim(payload),
+        "pairwise_result_available": pairwise_result_available,
+        "model_used": str(result.get("model_used", "")) if result else "",
+        "effect_measure_type": str(result.get("effect_measure_type", "")) if result else "",
+        "included_count": len(result.get("included_studies", [])) if isinstance(result.get("included_studies"), list) else 0,
+        "pooled_effect": result.get("pooled_effect") if result else None,
+        "pooled_ci_lower": result.get("pooled_ci_lower") if result else None,
+        "pooled_ci_upper": result.get("pooled_ci_upper") if result else None,
+        "pooled_standard_error": result.get("pooled_standard_error") if result else None,
+        "back_transformed_effect": result.get("back_transformed_effect") if result else None,
+        "back_transformed_ci_lower": result.get("back_transformed_ci_lower") if result else None,
+        "back_transformed_ci_upper": result.get("back_transformed_ci_upper") if result else None,
+        "heterogeneity_i2": result.get("heterogeneity_summary", {}).get("i_squared") if isinstance(result.get("heterogeneity_summary"), dict) else None,
+        "requires_user_review": bool(result and state == "computed" and not result.get("user_reviewed", False)),
     }
 
 
@@ -1037,6 +1057,7 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
             f"- formal claim blocked：{'是' if statistical_result.get('blocks_formal_report_claim', True) else '否'}。",
             f"- 校验错误：{statistical_result.get('errors', '无')}",
             f"- 校验提示：{statistical_result.get('warnings', '无')}",
+            *_statistical_result_detail_lines(statistical_result),
             "- 当前报告为 Developer Preview / testing 阶段草稿。",
             "- not_run / configured_not_run：尚未运行正式统计分析。",
             "- failed_validation：只展示校验失败摘要，不生成正式统计结论。",
@@ -1089,3 +1110,44 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
             "",
         ]
     )
+
+
+def _statistical_result_detail_lines(statistical_result: dict[str, Any]) -> list[str]:
+    if not statistical_result.get("pairwise_result_available"):
+        return []
+    state = str(statistical_result.get("state", ""))
+    if state == STATISTICAL_RESULT_STATE_FAILED_VALIDATION:
+        return ["- M12 pairwise executor：输入校验失败，仅展示错误摘要，不展示合并效应量。"]
+    if state not in {"computed", "user_reviewed", "report_ready"}:
+        return []
+    lines = [
+        "- M12 pairwise executor：Developer Preview / testing MVP。",
+        f"- 模型：{statistical_result.get('model_used', 'fixed_effect')}",
+        f"- 纳入研究数：{statistical_result.get('included_count', 0)}",
+        f"- 效应量类型：{statistical_result.get('effect_measure_type', '缺失')}",
+        f"- 合并效应量（执行器尺度）：{_format_optional_float(statistical_result.get('pooled_effect'))}",
+        f"- 95% CI（执行器尺度）：{_format_optional_float(statistical_result.get('pooled_ci_lower'))} 到 {_format_optional_float(statistical_result.get('pooled_ci_upper'))}",
+        f"- pooled SE：{_format_optional_float(statistical_result.get('pooled_standard_error'))}",
+        f"- 异质性 I²（测试级诊断）：{_format_optional_float(statistical_result.get('heterogeneity_i2'))}%",
+    ]
+    if statistical_result.get("back_transformed_effect") is not None:
+        lines.extend(
+            [
+                f"- 比值类效应量反变换值（辅助显示）：{_format_optional_float(statistical_result.get('back_transformed_effect'))}",
+                f"- 反变换 95% CI（辅助显示）：{_format_optional_float(statistical_result.get('back_transformed_ci_lower'))} 到 {_format_optional_float(statistical_result.get('back_transformed_ci_upper'))}",
+            ]
+        )
+    if statistical_result.get("requires_user_review"):
+        lines.append("- 统计结果已计算但尚未完成用户审核，不能作为正式报告结论。")
+    if state != "report_ready":
+        lines.append("- 当前统计结果未达到 report_ready，报告中只作为测试阶段摘要。")
+    return lines
+
+
+def _format_optional_float(value: Any) -> str:
+    if value is None:
+        return "缺失"
+    try:
+        return f"{float(value):.6g}"
+    except (TypeError, ValueError):
+        return "缺失"

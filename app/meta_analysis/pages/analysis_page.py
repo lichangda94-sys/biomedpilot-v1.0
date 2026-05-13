@@ -31,6 +31,7 @@ from app.meta_analysis.services.meta_statistics_engine_service import (
     META_STATISTICS_STANDARDIZED_RESULT_SCHEMA_VERSION,
     MetaStatisticsEngineService,
 )
+from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
 from app.meta_analysis.ui_text import (
     ANALYSIS_BLOCKED_METHOD_ZH,
     ANALYSIS_DESCRIPTION_ZH,
@@ -148,6 +149,7 @@ class AnalysisSetupPageState:
     run_result_summary: dict[str, object]
     result_state_summary: dict[str, object]
     effect_size_normalization_summary: dict[str, object]
+    pairwise_executor_summary: dict[str, object]
     advanced_method_status: dict[str, str]
     warnings: tuple[str, ...]
     errors: tuple[str, ...]
@@ -170,6 +172,16 @@ class AnalysisSetupPageState:
         "需要用户检查",
         "字段不完整",
         "不支持的效应量类型",
+    )
+    pairwise_executor_labels_zh: tuple[str, ...] = (
+        "统计执行状态",
+        "模型",
+        "纳入研究数",
+        "合并效应量",
+        "95% CI",
+        "异质性 I²",
+        "测试阶段提示",
+        "需要用户审核后才能进入报告",
     )
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
@@ -272,6 +284,7 @@ def analysis_setup_state_from_project(
     preflight_summary = _analysis_alias_summary(dataset_path, "dataset")
     run_result_summary = _analysis_alias_summary(result_path, "result")
     normalization_summary = _effect_size_normalization_summary(project_dir)
+    pairwise_summary = _pairwise_executor_summary(project_dir)
     if not plan_path.exists():
         warnings.append("analysis_plan_missing")
     if not dataset_path.exists():
@@ -303,6 +316,7 @@ def analysis_setup_state_from_project(
             "blocks_formal_report_claim": run_result_summary.get("blocks_formal_report_claim", True),
         },
         effect_size_normalization_summary=normalization_summary,
+        pairwise_executor_summary=pairwise_summary,
         advanced_method_status={
             "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
             "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
@@ -480,6 +494,62 @@ def _effect_size_normalization_summary(project_dir: Path) -> dict[str, object]:
     }
 
 
+def _pairwise_executor_summary(project_dir: Path) -> dict[str, object]:
+    result = PairwiseMetaExecutorService().load_latest_result(project_dir)
+    if result is None:
+        return {
+            "title_zh": "统计执行状态",
+            "state_label_zh": statistical_result_state_label_zh(STATISTICAL_RESULT_STATE_NOT_RUN),
+            "result_state": STATISTICAL_RESULT_STATE_NOT_RUN,
+            "model_label_zh": "模型",
+            "model_used": "未运行",
+            "included_label_zh": "纳入研究数",
+            "included_count": 0,
+            "pooled_label_zh": "合并效应量",
+            "pooled_effect": "缺失",
+            "ci_label_zh": "95% CI",
+            "confidence_interval": "缺失",
+            "i2_label_zh": "异质性 I²",
+            "i_squared": "缺失",
+            "testing_notice_zh": "测试阶段提示：尚未运行 M12 pairwise executor。",
+            "review_notice_zh": "需要用户审核后才能进入报告。",
+            "blocks_formal_report_claim": True,
+        }
+    payload = result.to_dict()
+    ci = "缺失"
+    if payload.get("pooled_ci_lower") is not None and payload.get("pooled_ci_upper") is not None:
+        ci = f"{_format_optional_float(payload.get('pooled_ci_lower'))} - {_format_optional_float(payload.get('pooled_ci_upper'))}"
+    heterogeneity = payload.get("heterogeneity_summary", {})
+    i2 = heterogeneity.get("i_squared") if isinstance(heterogeneity, dict) else None
+    return {
+        "title_zh": "统计执行状态",
+        "state_label_zh": statistical_result_state_label_zh(str(payload.get("result_state", STATISTICAL_RESULT_STATE_NOT_RUN))),
+        "result_state": str(payload.get("result_state", STATISTICAL_RESULT_STATE_NOT_RUN)),
+        "model_label_zh": "模型",
+        "model_used": str(payload.get("model_used", "")) or "未运行",
+        "included_label_zh": "纳入研究数",
+        "included_count": len(payload.get("included_studies", [])) if isinstance(payload.get("included_studies"), list) else 0,
+        "pooled_label_zh": "合并效应量",
+        "pooled_effect": _format_optional_float(payload.get("pooled_effect")),
+        "ci_label_zh": "95% CI",
+        "confidence_interval": ci,
+        "i2_label_zh": "异质性 I²",
+        "i_squared": _format_optional_float(i2),
+        "testing_notice_zh": "测试阶段提示：M12 为 Developer Preview / testing MVP，不生成正式医学结论。",
+        "review_notice_zh": "需要用户审核后才能进入报告。",
+        "blocks_formal_report_claim": blocks_formal_report_claim(payload),
+    }
+
+
+def _format_optional_float(value: object) -> str:
+    if value is None:
+        return "缺失"
+    try:
+        return f"{float(value):.6g}"
+    except (TypeError, ValueError):
+        return "缺失"
+
+
 def _available_subgroup_options(available_outcomes: tuple[dict[str, object], ...]) -> tuple[str, ...]:
     if not available_outcomes:
         return ("subgroup", "country", "study_design")
@@ -528,6 +598,7 @@ if QWidget is not None:
             self._figure_service = figure_service or FigureResultService(analysis_run_service=self._run_service)
             self._analysis_plan_service = AnalysisPlanService()
             self._statistics_engine_service = MetaStatisticsEngineService()
+            self._pairwise_executor_service = PairwiseMetaExecutorService()
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -588,10 +659,13 @@ if QWidget is not None:
             view_validation_button.clicked.connect(self._view_statistics_validation)
             view_result_button = QPushButton("查看统计结果")
             view_result_button.clicked.connect(self._view_statistics_result)
+            view_pairwise_button = QPushButton("查看 M12 执行状态")
+            view_pairwise_button.clicked.connect(self._view_pairwise_executor_result)
             stats_buttons.addWidget(run_stats_button)
             stats_buttons.addWidget(view_plan_button)
             stats_buttons.addWidget(view_validation_button)
             stats_buttons.addWidget(view_result_button)
+            stats_buttons.addWidget(view_pairwise_button)
             root.addLayout(stats_buttons)
             self._statistics_engine_label = QLabel("请先确认分析计划。")
             self._statistics_engine_label.setWordWrap(True)
@@ -603,6 +677,9 @@ if QWidget is not None:
             self._normalization_summary_label = QLabel("可用于后续统计的研究数、需要用户检查、字段不完整和不支持的效应量类型会显示在这里。")
             self._normalization_summary_label.setWordWrap(True)
             root.addWidget(self._normalization_summary_label)
+            self._pairwise_executor_label = QLabel("统计执行状态、模型、纳入研究数、合并效应量、95% CI、异质性 I² 和测试阶段提示会显示在这里。")
+            self._pairwise_executor_label.setWordWrap(True)
+            root.addWidget(self._pairwise_executor_label)
 
             dataset_title = QLabel("Analysis-ready Dataset（测试中）")
             dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
@@ -811,6 +888,11 @@ if QWidget is not None:
                 f"Testing：{result.get('testing_level_notice', '')}"
             )
             self._refresh_normalization_summary(project_dir)
+            self._refresh_pairwise_executor_summary(project_dir)
+
+        def _view_pairwise_executor_result(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            self._refresh_pairwise_executor_summary(project_dir)
 
         def _refresh_normalization_summary(self, project_dir: Path) -> None:
             summary = _effect_size_normalization_summary(project_dir)
@@ -821,6 +903,19 @@ if QWidget is not None:
                 f"{summary['incomplete_label_zh']}：{summary['incomplete']}\n"
                 f"{summary['unsupported_label_zh']}：{summary['unsupported_effect_type']}\n"
                 "标准化输入仅用于后续执行器预检查，不生成 computed 或 report_ready 结果。"
+            )
+
+        def _refresh_pairwise_executor_summary(self, project_dir: Path) -> None:
+            summary = _pairwise_executor_summary(project_dir)
+            self._pairwise_executor_label.setText(
+                f"{summary['title_zh']}：{summary['state_label_zh']}\n"
+                f"{summary['model_label_zh']}：{summary['model_used']}\n"
+                f"{summary['included_label_zh']}：{summary['included_count']}\n"
+                f"{summary['pooled_label_zh']}：{summary['pooled_effect']}\n"
+                f"{summary['ci_label_zh']}：{summary['confidence_interval']}\n"
+                f"{summary['i2_label_zh']}：{summary['i_squared']}\n"
+                f"{summary['testing_notice_zh']}\n"
+                f"{summary['review_notice_zh']}"
             )
 
         def _build_dataset(self) -> None:
