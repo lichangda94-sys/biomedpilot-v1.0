@@ -337,7 +337,7 @@ class GeoDownloadListPanel(QFrame):
         self._title_label = QLabel(title)
         self._title_label.setObjectName("bioProjectCardTitle")
         layout.addWidget(self._title_label)
-        self._empty = _muted("尚未选择数据。")
+        self._empty = _muted("尚未添加数据来源。请先从上方三类入口导入或检索。")
         layout.addWidget(self._empty)
         self._table = _table(["选择", "来源", "数据集 / 文件名", "数据状态", "可用内容", "需要补充", "备注", "操作"])
         self._table.setObjectName("geoDownloadListTable")
@@ -701,7 +701,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         root.addWidget(self._gse_card())
         root.addWidget(self._research_card())
 
-        self._dataset_list_panel = GeoDownloadListPanel(title="待处理数据集")
+        self._selection_status_card = self._data_selection_status_card()
+        root.addWidget(self._selection_status_card)
+
+        self._dataset_list_panel = GeoDownloadListPanel(title="下载列表 / 待处理数据来源")
         self._dataset_list_panel.view_requested.connect(self._show_dataset_detail)
         self._dataset_list_panel.download_selected_requested.connect(self._download_selected_dataset_entries)
         self._dataset_list_panel.delete_selected_requested.connect(self._delete_selected_dataset_entries)
@@ -730,7 +733,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions_frame.setObjectName("dataSourceBottomActionBar")
         actions = QHBoxLayout(actions_frame)
         actions.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
-        self._registered_count_label = _status_label("已选择的数据：0 个")
+        self._registered_count_label = _status_label("已保存数据来源：0 个；待处理：0 个；可识别：0 个")
         self._next_button = _button("下一步：数据识别", "primaryButton", self.continue_to_recognition)
         self._next_button.setEnabled(False)
         actions.addWidget(self._registered_count_label)
@@ -741,18 +744,15 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _local_import_card(self) -> QFrame:
         card, layout = _card("本地数据导入")
         card.setObjectName("localImportEntryCard")
-        layout.addWidget(_muted("导入本地表达矩阵、GEO Series Matrix、样本信息、临床表或注释文件。"))
+        layout.addWidget(_muted("用于导入表达矩阵、样本信息、临床表或已下载数据。"))
         self._local_strategy_combo = QComboBox()
         self._local_strategy_combo.setObjectName("localImportStrategyCombo")
         self._local_strategy_combo.addItems(["复制到项目（推荐）", "保留原位置，仅记录路径"])
         layout.addWidget(self._local_strategy_combo)
-        select_button = _button("选择本地数据", "primaryButton", self._choose_local_files)
+        select_button = _button("选择本地文件或文件夹", "primaryButton", self._choose_local_data)
         select_button.setMinimumHeight(44)
-        folder_button = _button("选择本地文件夹", "secondaryButton", self._choose_local_folder)
-        folder_button.setMinimumHeight(44)
         actions = QHBoxLayout()
         actions.addWidget(select_button)
-        actions.addWidget(folder_button)
         actions.addStretch(1)
         layout.addLayout(actions)
         layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地数据。", detail_button_text="查看导入详情"))
@@ -761,13 +761,13 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _gse_card(self) -> QFrame:
         card, layout = _card("GSE 编号检索")
         card.setObjectName("gseSearchEntryCard")
-        layout.addWidget(_muted("已知 GEO 数据集编号时使用，例如 GSE33630。"))
+        layout.addWidget(_muted("已知 GEO 数据集编号时使用，可查看详情并加入项目数据来源。"))
         self._gse_input = QLineEdit()
-        self._gse_input.setPlaceholderText("请输入 GSE 编号，例如 GSE33630")
+        self._gse_input.setPlaceholderText("请输入 GSE 编号，例如 GSE60235")
         self._gse_input.setMinimumHeight(44)
         layout.addWidget(self._gse_input)
         gse_actions = QHBoxLayout()
-        search_button = _button("检索数据集", "primaryButton", self.search_gse_dataset)
+        search_button = _button("检索", "primaryButton", self.search_gse_dataset)
         search_button.setMinimumHeight(44)
         self._register_gse_button = _button("添加到项目", "secondaryButton", self.register_gse_dataset)
         self._register_gse_button.setEnabled(False)
@@ -804,7 +804,7 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _research_card(self) -> QFrame:
         card, layout = _card("中文研究主题检索")
         card.setObjectName("chineseResearchSearchEntryCard")
-        layout.addWidget(_muted("输入中文研究方向，生成英文检索词并推荐 GEO、TCGA、GTEx 候选数据集。"))
+        layout.addWidget(_muted("面向 GEO / TCGA / GTEx 的生信数据检索辅助，用于寻找表达数据来源。"))
         self._chinese_query_input = QLineEdit()
         self._chinese_query_input.setObjectName("chineseResearchTopicEntry")
         self._chinese_query_input.setPlaceholderText("请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据")
@@ -815,6 +815,28 @@ class BioinformaticsDataSourceWidget(QWidget):
         button = _button("进入中文主题检索", "primaryButton", self.open_chinese_search)
         button.setMinimumHeight(44)
         layout.addWidget(button, alignment=Qt.AlignLeft)
+        return card
+
+    def _data_selection_status_card(self) -> QFrame:
+        card, layout = _card("当前数据选择状态")
+        card.setObjectName("dataSelectionStatusSummaryCard")
+        self._selection_saved_count_label = _status_label("已保存数据来源：0 个")
+        self._selection_saved_count_label.setObjectName("dataSelectionSavedCount")
+        self._selection_download_count_label = _status_label("下载列表 / 待处理：0 个")
+        self._selection_download_count_label.setObjectName("dataSelectionDownloadCount")
+        self._selection_ready_count_label = _status_label("可进入数据识别：0 个")
+        self._selection_ready_count_label.setObjectName("dataSelectionReadyCount")
+        self._selection_next_step_label = _muted("下一步：先导入本地数据，或检索 GSE / 中文研究主题。")
+        self._selection_next_step_label.setObjectName("dataSelectionNextStep")
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(SPACING["md"])
+        grid.setVerticalSpacing(SPACING["xs"])
+        grid.addWidget(self._selection_saved_count_label, 0, 0)
+        grid.addWidget(self._selection_download_count_label, 0, 1)
+        grid.addWidget(self._selection_ready_count_label, 0, 2)
+        layout.addLayout(grid)
+        layout.addWidget(self._selection_next_step_label)
         return card
 
     def _choose_local_data(self) -> None:
@@ -998,7 +1020,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
         if _is_geo_saved_to_download_list(self._project_root, candidate.accession_or_project):
-            self._set_status(f"已在待处理数据集中：{candidate.accession_or_project}")
+            self._set_status(f"已在下载列表 / 待处理数据来源中：{candidate.accession_or_project}")
             self._show_gse_geo_detail(candidate)
             self._refresh_geo_download_list()
             return None
@@ -1015,7 +1037,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._latest_summary = summary
         self._refresh_geo_download_list()
         self._show_gse_geo_detail(candidate)
-        self._set_status(f"{candidate.accession_or_project} 已添加到待处理数据集。")
+        self._set_status(f"{candidate.accession_or_project} 已添加到下载列表 / 待处理数据来源。")
         return summary
 
     def _ignore_gse_geo_candidate(self, candidate: UnifiedDatasetCandidate) -> None:
@@ -1032,9 +1054,9 @@ class BioinformaticsDataSourceWidget(QWidget):
             candidate = self._geo_candidates.get(accession)
             if candidate is not None:
                 self._show_gse_geo_detail(candidate)
-            self._set_status(f"已从待处理数据集中移除：{accession}")
+            self._set_status(f"已从下载列表 / 待处理数据来源中移除：{accession}")
         else:
-            self._set_status(f"待处理数据集中未找到：{accession}", error=True)
+            self._set_status(f"下载列表 / 待处理数据来源中未找到：{accession}", error=True)
 
     def _generate_gse_geo_summary(self, candidate: UnifiedDatasetCandidate) -> dict[str, object] | None:
         cached = self._geo_brief_cache.get(candidate.accession_or_project)
@@ -1136,11 +1158,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         rows = _registered_source_rows(self._project_root)
         self._refresh_geo_download_list()
         self._refresh_history_cache()
-        count = len(_current_project_dataset_entries(self._project_root))
+        entries = _current_project_dataset_entries(self._project_root)
+        count = len(entries)
         ready_count = _ready_registered_source_count(self._project_root)
-        self._registered_count_label.setText(f"已选择的数据：{count} 个；可进入识别：{ready_count} 个")
+        pending_count = _pending_dataset_entry_count(entries)
+        self._registered_count_label.setText(f"已保存数据来源：{count} 个；待处理：{pending_count} 个；可识别：{ready_count} 个")
         self._next_button.setEnabled(ready_count > 0 and self._project_root is not None)
         self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
+        self._refresh_data_selection_status(entries, ready_count, pending_count)
 
     def _refresh_geo_download_list(self) -> None:
         entries = _current_project_dataset_entries(self._project_root)
@@ -1272,13 +1297,25 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _registered_source_count(self) -> int:
         return _ready_registered_source_count(self._project_root)
 
+    def _refresh_data_selection_status(self, entries: list[DatasetListEntry], ready_count: int, pending_count: int) -> None:
+        count = len(entries)
+        self._selection_saved_count_label.setText(f"已保存数据来源：{count} 个")
+        self._selection_download_count_label.setText(f"下载列表 / 待处理：{pending_count} 个")
+        self._selection_ready_count_label.setText(f"可进入数据识别：{ready_count} 个")
+        message = _data_selection_next_step_text(self._project_root, count=count, ready_count=ready_count, pending_count=pending_count)
+        self._selection_next_step_label.setText(message)
+        if self._project_root is not None and self._status_label.property("status") != "error":
+            self._status_label.setText(message)
+            self._status_label.setProperty("status", "ok")
+            _refresh_style(self._status_label)
+
     def _toggle_source_detail(self, key: str) -> None:
         detail = self._source_detail_edits.get(key)
         if detail is not None:
             _toggle_details(detail)
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
-        self._status_label.setText(text if error else "先添加数据，下一步进入数据识别。")
+        self._status_label.setText(text)
         self._status_label.setProperty("status", "error" if error else "ok")
         _refresh_style(self._status_label)
 
@@ -4113,6 +4150,30 @@ def _current_project_dataset_entries(project_root: Path | None, *, geo_only: boo
         else:
             grouped[entry.key] = DatasetListEntry(**{**previous.__dict__, "acquisition_ids": acquisition_ids})
     return sorted(grouped.values(), key=lambda entry: (_dataset_source_order(entry.source_type_key), entry.name))
+
+
+def _pending_dataset_entry_count(entries: Iterable[DatasetListEntry]) -> int:
+    return sum(
+        1
+        for entry in entries
+        if entry.downloadable
+        or entry.status in {"未下载", "元数据已下载", "需要补充信息"}
+        or entry.missing_content not in {"无", "待识别确认"}
+    )
+
+
+def _data_selection_next_step_text(project_root: Path | None, *, count: int, ready_count: int, pending_count: int) -> str:
+    if project_root is None:
+        return "下一步：请先创建或打开项目。"
+    if count == 0:
+        return "下一步：先导入本地数据，或检索 GSE / 中文研究主题。"
+    if ready_count > 0 and pending_count > 0:
+        return "下一步：可先进入数据识别；仍有待下载或待确认的数据来源可稍后补充。"
+    if ready_count > 0:
+        return "下一步：可以进入数据识别。"
+    if pending_count > 0:
+        return "下一步：先完成下载或确认数据来源，再进入数据识别。"
+    return "下一步：请检查数据来源状态。"
 
 
 def _dataset_entry_from_record(

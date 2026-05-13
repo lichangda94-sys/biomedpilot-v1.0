@@ -288,10 +288,15 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     card_titles = [
         label.text()
         for label in widget.findChildren(QLabel, "bioProjectCardTitle")
-        if label.text() not in {"GEO 数据集详情", "待处理数据集", "历史缓存数据", "数据详情"}
+        if label.text() not in {"GEO 数据集详情", "下载列表 / 待处理数据来源", "当前数据选择状态", "历史缓存数据", "数据详情"}
     ]
     button_texts = [button.text() for button in widget.findChildren(QPushButton)]
     inputs = widget.findChildren(workflow_pages.QLineEdit)
+    visible_text = " ".join(
+        [label.text() for label in widget.findChildren(QLabel)]
+        + [button.text() for button in widget.findChildren(QPushButton)]
+        + [input_box.placeholderText() for input_box in inputs]
+    )
 
     assert "本地数据导入" in card_titles
     assert "GSE 编号检索" in card_titles
@@ -302,13 +307,22 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     assert "TCGA + GTEx 联合数据" not in card_titles
     assert "本地 AI 检索助手" not in card_titles
     assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究主题检索"]
-    assert "选择本地数据" in button_texts
-    assert "选择本地文件夹" in button_texts
+    assert "选择本地文件或文件夹" in button_texts
+    assert "选择本地数据" not in button_texts
+    assert "选择本地文件夹" not in button_texts
+    assert "检索" in button_texts
+    assert "检索数据集" not in button_texts
     assert "进入中文主题检索" in button_texts
+    assert any(input_box.placeholderText() == "请输入 GSE 编号，例如 GSE60235" for input_box in inputs)
     assert any(input_box.placeholderText() == "请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据" for input_box in inputs)
     assert "选择文件" not in button_texts
     assert "选择文件夹" not in button_texts
     assert "登记为数据源" not in button_texts
+    assert "PubMed" not in visible_text
+    assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：0 个"
+    assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
+    assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据识别：0 个"
+    assert "下一步" in widget.findChild(QLabel, "dataSelectionNextStep").text()
 
 
 def test_data_source_registers_local_reference_strategy(qt_app, project_summary, tmp_path: Path) -> None:
@@ -454,7 +468,7 @@ def test_data_source_gse_search_normalizes_accession_and_hides_developer_terms(q
     assert "下一步交接清单：已生成" in widget.source_summary_tooltip("geo_gse")
     assert str(summary.plan_path) in widget._technical_details.toPlainText()
     assert widget._technical_details.isHidden()
-    assert widget.status_message() == "先添加数据，下一步进入数据识别。"
+    assert widget.status_message() == "已在下载列表 / 待处理数据来源中：GSE60024"
     assert "plan_only" not in text
     assert "acquisition" not in text.lower()
     assert not widget._next_button.isEnabled()
@@ -555,6 +569,9 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert not widget._dataset_list_panel._delete_selected_button.isEnabled()
     assert not widget._dataset_list_panel._continue_selected_button.isEnabled()
+    assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：0 个"
+    assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
+    assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据识别：0 个"
 
     widget.register_local_paths([source], strategy="reference", selected_kind="file", summary_key="local_import")
 
@@ -580,6 +597,11 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert widget._dataset_list_panel._delete_selected_button.isEnabled()
     assert widget._dataset_list_panel._continue_selected_button.isEnabled()
     assert widget._next_button.isEnabled()
+    assert widget._registered_count_label.text() == "已保存数据来源：1 个；待处理：0 个；可识别：1 个"
+    assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：1 个"
+    assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
+    assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据识别：1 个"
+    assert widget.findChild(QLabel, "dataSelectionNextStep").text() == "下一步：可以进入数据识别。"
 
 
 def test_data_source_dataset_detail_prefers_summary_and_saves_user_note(qt_app, project_summary, tmp_path: Path) -> None:
