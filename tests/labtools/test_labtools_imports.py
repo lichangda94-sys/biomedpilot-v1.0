@@ -62,6 +62,12 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     recipe_tabs = widget.findChild(QTabWidget, "recipeWorkspaceTabs")
     assert recipe_tabs is not None
     assert [recipe_tabs.tabText(index) for index in range(recipe_tabs.count())] == ["本地配方库", "用户配方", "外部来源草稿"]
+    recipe_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    recipe_buttons = [button.text() for button in widget.findChildren(QPushButton)]
+    assert "本地配方草稿持久化" in recipe_labels
+    assert "不自动保存、不联网、不调用 AI" in recipe_labels
+    assert "保存用户配方 JSON" in recipe_buttons
+    assert "载入用户配方 JSON" in recipe_buttons
     widget.show_image_analysis()
     assert widget.current_page_key() == "image_analysis"
     image_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))

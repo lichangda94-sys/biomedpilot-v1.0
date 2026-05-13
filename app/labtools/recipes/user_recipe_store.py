@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from app.labtools.recipes.recipe_models import Recipe, RecipeDraft
+from app.labtools.recipes.recipe_persistence import clone_imported_user_recipe, evaluate_recipe_safety
 from app.labtools.recipes.recipe_validation import validate_recipe_draft
 
 
@@ -32,8 +33,28 @@ class UserRecipeStore:
             user_confirmed=True,
             edited_by_user=draft.edited_by_user,
         )
+        review = evaluate_recipe_safety(recipe)
+        if not review.allowed:
+            from app.labtools.recipes.recipe_models import RecipeError
+
+            raise RecipeError(review.errors[0])
         self._confirmed[recipe.recipe_id] = recipe
         return recipe
+
+    def import_recipes(self, recipes: tuple[Recipe, ...]) -> tuple[Recipe, ...]:
+        imported: list[Recipe] = []
+        for recipe in recipes:
+            review = evaluate_recipe_safety(recipe)
+            if not review.allowed:
+                from app.labtools.recipes.recipe_models import RecipeError
+
+                raise RecipeError(review.errors[0])
+            candidate = recipe
+            if candidate.recipe_id in self._confirmed:
+                candidate = clone_imported_user_recipe(candidate)
+            self._confirmed[candidate.recipe_id] = candidate
+            imported.append(candidate)
+        return tuple(imported)
 
     def list_recipes(self) -> tuple[Recipe, ...]:
         return tuple(self._confirmed.values())
