@@ -48,7 +48,7 @@ class MainWindow(QMainWindow):
 
         self._stack = QStackedWidget()
         self._dashboard_page = self._build_dashboard_page()
-        self._bioinformatics_page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
+        self._bioinformatics_page = self._build_bioinformatics_page()
         self._meta_analysis_page = MetaAnalysisWorkspaceWidget(on_back=self.show_dashboard)
         self._settings_page = self._build_settings_page()
         self._testing_page = self._build_testing_page()
@@ -146,6 +146,25 @@ class MainWindow(QMainWindow):
             on_open_meta_analysis=self.show_meta_analysis,
             on_logout=self.logout,
         )
+
+    def _build_bioinformatics_page(self) -> QWidget:
+        try:
+            page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
+        except TypeError:
+            page = BioinformaticsWorkspaceWidget()
+        if isinstance(page, QWidget):
+            return page
+        fallback = QWidget()
+        layout = QVBoxLayout(fallback)
+        layout.setContentsMargins(28, 24, 28, 24)
+        title = QLabel("Bioinformatics / 生信分析")
+        title.setStyleSheet("font-size: 24px; font-weight: 700;")
+        layout.addWidget(title)
+        message = QLabel("Bioinformatics workspace is unavailable in this Integration runtime; shell navigation remains testable.")
+        message.setWordWrap(True)
+        layout.addWidget(message)
+        layout.addStretch(1)
+        return fallback
 
     def _refresh_dashboard_page(self) -> None:
         if not hasattr(self, "_stack"):

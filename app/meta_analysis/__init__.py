@@ -1,1 +1,1 @@
-"""Meta Analysis mainline shell contract."""
+"""Meta Analysis module boundary."""

@@ -2,6 +2,10 @@ from __future__ import annotations
 
 
 COLORS = {
+    "deep_navy": "#12324A",
+    "teal": "#1BAE9F",
+    "light_gray": "#F5F7F9",
+    "white": "#FFFFFF",
     "background": "#F5F7F9",
     "surface": "#FFFFFF",
     "surface_muted": "#F8FAFC",
@@ -11,8 +15,9 @@ COLORS = {
     "bio": "#12324A",
     "bio_soft": "#EAF2F8",
     "bio_accent": "#1BAE9F",
-    "meta": "#6B4FD8",
-    "meta_soft": "#F0EDFF",
+    "meta": "#12324A",
+    "meta_soft": "#F5F7F9",
+    "meta_accent": "#1BAE9F",
     "warning_soft": "#FFF7E6",
     "warning": "#D99A00",
     "success": "#22A66B",
@@ -49,6 +54,74 @@ FONT_SIZE = {
     "caption": 11,
     "hero": 24,
 }
+
+
+def meta_card_stylesheet(*, muted: bool = False) -> str:
+    background = COLORS["light_gray"] if muted else COLORS["white"]
+    return f"QFrame {{ border: 1px solid {COLORS['border']}; border-radius: {RADIUS['sm']}px; background: {background}; }}"
+
+
+def meta_error_text_style() -> str:
+    return f"color: {COLORS['danger']};"
+
+
+def meta_text_style(*, size: int = 12) -> str:
+    return f"color: {COLORS['text']}; font-size: {size}px;"
+
+
+def meta_title_style(*, size: int = 20) -> str:
+    return f"color: {COLORS['deep_navy']}; font-size: {size}px; font-weight: 700;"
+
+
+def meta_workspace_stylesheet() -> str:
+    return f"""
+        QWidget#metaWorkspace {{ background: {COLORS["light_gray"]}; color: {COLORS["text"]}; }}
+        QFrame#metaGlobalNav, QFrame#metaWorkflowNav {{ background: {COLORS["white"]}; border-right: 1px solid {COLORS["border"]}; }}
+        QFrame#metaCurrentStepWorkspace {{ background: {COLORS["light_gray"]}; }}
+        QFrame#metaPageHeader, QFrame#metaCard, QFrame#metaInfoCard, QFrame#metaProjectOverviewCard,
+        QFrame#metaProgressCard, QFrame#metaWarningsCard, QFrame#metaLibrarySummary,
+        QFrame#metaLibraryDiagnostics, QFrame#metaImportBatchSummary, QFrame#metaQueryDraftCard,
+        QFrame#metaConfirmedProtocolCard, QFrame#metaConfirmedSearchCard {{
+            background: {COLORS["white"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+        }}
+        QFrame#metaDeveloperDetails {{ background: transparent; border: none; }}
+        QLabel#metaSideTitle {{ color: {COLORS["deep_navy"]}; font-size: 22px; font-weight: 700; }}
+        QLabel#metaPanelTitle {{ color: {COLORS["deep_navy"]}; font-size: 16px; font-weight: 700; }}
+        QLabel#metaPageTitle {{ color: {COLORS["deep_navy"]}; font-size: 22px; font-weight: 700; }}
+        QLabel#metaCardTitle {{ color: {COLORS["deep_navy"]}; font-size: 15px; font-weight: 700; }}
+        QLabel#metaMutedText, QLabel#metaCardBody {{ color: {COLORS["muted"]}; }}
+        QLabel#metaWarningText {{ color: {COLORS["warning"]}; font-weight: 600; }}
+        QLabel#metaStatusBadge {{
+            color: {COLORS["deep_navy"]};
+            background: {COLORS["light_gray"]};
+            border: 1px solid {COLORS["teal"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 4px 8px;
+            font-weight: 700;
+        }}
+        QListWidget#metaWorkflowStepList {{
+            background: {COLORS["white"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+        }}
+        QPushButton#metaPrimaryButton {{
+            background: {COLORS["teal"]};
+            color: {COLORS["white"]};
+            border: 1px solid {COLORS["teal"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 8px 12px;
+            font-weight: 700;
+        }}
+        QPushButton#metaSecondaryButton {{
+            background: {COLORS["white"]};
+            color: {COLORS["deep_navy"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 8px 12px;
+        }}
+        """
 
 
 def login_stylesheet() -> str:
