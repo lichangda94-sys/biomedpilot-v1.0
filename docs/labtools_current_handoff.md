@@ -6,8 +6,8 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools L4B-0 + Stage L4B，commit `7e64dfc3ed3d83dbb8e5a20ae1a3101544b65cd0`
-- 当前进行阶段：LabTools Stage L4B.1，荧光 ROI 分析复核与导出增强。
+- 当前最近完成阶段：LabTools Stage L4B.1，commit `01e94fb09fb9e3c0c2925eb20a92f8dc07fd271e`
+- 当前进行阶段：LabTools Stage L4C，划痕实验面积分析 MVP。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
 
@@ -24,7 +24,8 @@
 | LabTools Stage L3A | `3ce03b9fdd51ffd807cbccb007b247f8195a295e` | 建立外部来源草稿框架：来源请求模型、来源卡片、手动来源录入、摘录草稿、转用户配方草稿；`network_enabled` 默认关闭；不访问外部网络，不调用 AI。 |
 | LabTools Stage L4A | `be8e5e8ef96c7c5ca39e646dc66ca7b5d04f0741` | 建立图像分析基础框架：图片记录、分析任务、ROI、占位结果、审计记录和图像定量 UI 入口；四类任务草稿已存在。 |
 | LabTools Stage L4B | `7e64dfc3ed3d83dbb8e5a20ae1a3101544b65cd0` | 接入 Pillow 最小依赖，实现单张本地图片、手动 signal/background ROI、grayscale 荧光强度基础统计、背景扣除 CTF、负 CTF warning、审计记录和 UI MVP。 |
-| LabTools Stage L4B.1 | 提交后以最终交接为准 | 增强荧光 ROI 分析复核、质量提示、JSON-compatible dict、CSV-compatible rows/text、Markdown 报告片段和 UI 导出预览；不新增图像算法。 |
+| LabTools Stage L4B.1 | `01e94fb09fb9e3c0c2925eb20a92f8dc07fd271e` | 增强荧光 ROI 分析复核、质量提示、JSON-compatible dict、CSV-compatible rows/text、Markdown 报告片段和 UI 导出预览；不新增图像算法。 |
+| LabTools Stage L4C | 提交后以最终交接为准 | 新增单张本地图片、手动 ROI、用户阈值、亮/暗模式的划痕实验面积估算 MVP；结果为基于阈值的 measurement assistance，不自动判断迁移效果。 |
 
 ## 3. 当前已实现功能
 
@@ -65,11 +66,11 @@
 - `ImageAnalysisResult` 结果占位模型。
 - `ImageAnalysisAuditRecord` 审计记录模型。
 - 四类任务草稿：
-  - `wound_healing`：划痕实验面积分析，占位，算法开发中。
+  - `wound_healing`：划痕实验面积分析，手动 ROI + 阈值 MVP 可用。
   - `cell_counting`：细胞计数，占位，算法开发中。
   - `fluorescence_intensity`：荧光强度分析，当前唯一真实图像算法。
   - `densitometry`：灰度 / 墨值分析，占位，算法开发中。
-- 非荧光任务仍为 `algorithm_not_available` 占位状态，不生成 fake 定量结果。
+- 细胞计数和灰度 / 墨值任务仍为 `algorithm_not_available` 占位状态，不生成 fake 定量结果。
 
 ### 3.5 荧光强度 ROI 分析
 
@@ -91,12 +92,34 @@
 - UI 展示指标表、参数摘要、warning、复核提示和简洁导出预览。
 - 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
 
+### 3.6 划痕实验面积分析
+
+- 使用 Pillow 读取单张本地图片，并转换为 grayscale。
+- 用户手动输入 analysis ROI。
+- 用户手动输入阈值，范围 0-255。
+- 支持 bright / dark 两种划痕候选模式：
+  - bright：`pixel >= threshold` 视为 scratch candidate。
+  - dark：`pixel <= threshold` 视为 scratch candidate。
+- 计算：
+  - ROI area pixels
+  - scratch area pixels
+  - scratch area fraction
+  - non-scratch area pixels
+  - non-scratch area fraction
+  - threshold
+  - scratch_mode
+- `non_scratch_area_fraction` 可作为 covered / migrated fraction 的计算型指标，但必须标注为“基于阈值的估算”。
+- 记录图像文件名、图像尺寸、ROI、threshold、scratch_mode、公式、warnings、review_notice。
+- 提供 JSON-compatible dict、CSV-compatible rows/text、Markdown 报告片段字符串。
+- UI 展示图片路径、ROI 输入、阈值输入、亮/暗模式、结果摘要、公式、warning、复核提示和简洁导出预览。
+- 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
+
 ## 4. 当前未实现功能
 
 - 未实现自动 ROI 检测。
 - 未实现自动细胞识别。
 - 未实现批量分析。
-- 未实现划痕面积分析。
+- 未实现自动划痕边界识别或全自动迁移效果判断。
 - 未实现细胞计数。
 - 未实现 WB / 凝胶灰度分析。
 - 未实现 ImageJ/Fiji 接入。
@@ -129,21 +152,21 @@
 本 handoff 的测试基线应以最近阶段报告和最终交接为准。L4B.1 代码/UI/测试变更后至少运行：
 
 - `python3 - <<'PY' ... from PIL import Image ... PY`
-  - 当前 L4B.1 结果：通过，输出 `Pillow import OK ...`
+  - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L4B.1 结果：86 passed
+  - 当前 L4C 结果：104 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L4B.1 结果：135 passed
+  - 当前 L4C 结果：135 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L4B.1 结果：18 passed
+  - 当前 L4C 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L4B.1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L4C 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L4B.1 结果：通过
+  - 当前 L4C 结果：通过
 - `git diff --check`
-  - 当前 L4B.1 结果：通过
+  - 当前 L4C 结果：通过
 - `git diff --cached --check`
-  - 当前 L4B.1 结果：通过
+  - 当前 L4C 结果：通过
 
 ## 7. Shell / UI 接入状态
 
@@ -151,7 +174,7 @@
 - LabTools 首页当前四个入口：
   - 实验计算器：可进入。
   - 试剂与配方：可进入。
-  - 图像定量：可进入；荧光强度分析为手动 ROI MVP 可用，其它图像任务仍为算法开发中。
+  - 图像定量：可进入；荧光强度分析和划痕实验面积分析为手动 MVP 可用，细胞计数和灰度 / 墨值分析仍为算法开发中。
   - 实验模板：仍为开发中。
 - `LabToolsWorkspaceWidget.page_keys()` 当前包含：
   - `home`
@@ -176,11 +199,16 @@
 
 ## 9. 图像分析真实算法状态
 
-- 当前唯一真实图像算法：`fluorescence_intensity` 手动 ROI 荧光强度分析。
-- 算法名：`manual_roi_grayscale_fluorescence_v1`。
+- 当前真实图像算法：
+  - `fluorescence_intensity`：手动 ROI 荧光强度分析。
+  - `wound_healing`：手动 ROI + 用户阈值划痕面积估算。
+- 算法名：
+  - `manual_roi_grayscale_fluorescence_v1`
+  - `manual_roi_threshold_wound_healing_v1`
 - 算法状态：Developer Preview / testing-level measurement assistance。
-- 其它图像任务必须保持 `algorithm_not_available` 或 draft 占位，不得生成面积、细胞数、划痕或 WB/凝胶灰度 fake 数值。
+- 细胞计数和灰度 / 墨值任务必须保持 `algorithm_not_available` 或 draft 占位，不得生成细胞数或 WB/凝胶灰度 fake 数值。
 - 荧光分析结果必须显示人工复核提示，不得作为无需复核的实验结论。
+- 划痕面积结果必须显示“基于用户 ROI 和阈值的估算”，不得自动判断迁移效果或作为正式实验结论。
 
 ## 10. 数据持久化状态
 
@@ -189,6 +217,7 @@
 - 来源草稿：手动来源和摘录草稿在 UI / 模型层流转，确认后才进入用户配方 store。
 - 图片记录：引用本地路径并生成 `LabImageRecord`，不复制、不上传、不自动写盘。
 - 荧光结果导出：默认只返回 dict、rows/text 或 Markdown 字符串，不自动写盘。
+- 划痕结果导出：默认只返回 dict、rows/text 或 Markdown 字符串，不自动写盘。
 - 当前没有 LabTools 数据库、项目目录自动写入或后台持久化机制。
 
 后续如需保存用户实验数据，必须先设计本地项目存储策略、用户选择位置、隐私边界、审计字段和迁移/清理规则。
@@ -205,6 +234,7 @@
 
 - 图像分析是高风险增长点：必须避免把占位结果、草稿状态或算法未启用状态表述成实验结果。
 - 荧光 ROI MVP 只适合手动 ROI、单张本地图片、grayscale 统计和背景扣除。
+- 划痕实验面积 MVP 只适合手动 ROI、单张本地图片、用户阈值和亮/暗模式下的候选区域估算。
 - 任何真实图像算法都必须记录算法名、版本、参数、ROI、输入 provenance、人工复核提示。
 - 图像定量 UI 不得默认显示其它算法的数值结果，除非算法已经实现并通过测试。
 - 外部配方来源不得声明为“标准方案”；来源内容必须要求人工核对 SOP、试剂说明书和安全规范。
@@ -214,13 +244,12 @@
 
 ## 13. 后续推荐路线
 
-1. L4B.2：荧光结果复核 UI 细化或手动 ROI 可视化设计预研，但不得自动检测 ROI。
-2. L4C：划痕实验面积分析 MVP，需要手动 ROI / 阈值确认，避免全自动误判。
-3. L4D：细胞计数 MVP，需要参数化阈值、面积过滤、圆度过滤和 overlay 复核。
-4. L4E：灰度 / 墨值分析 MVP，适合 WB / 凝胶条带，但必须保留背景扣除和人工复核。
-5. L3B：受控外部配方检索，必须单独授权网络访问。
-6. L5：LabTools 本地项目存储和报告导出。
+1. L4C.1：划痕阈值预览或手动 ROI 可视化设计预研，但不得自动判断迁移效果。
+2. L4D：细胞计数 MVP，需要参数化阈值、面积过滤、圆度过滤和 overlay 复核。
+3. L4E：灰度 / 墨值分析 MVP，适合 WB / 凝胶条带，但必须保留背景扣除和人工复核。
+4. L3B：受控外部配方检索，必须单独授权网络访问。
+5. L5：LabTools 本地项目存储和报告导出。
 
 ## 14. Handoff 结论
 
-LabTools 当前已经具备实验计算器、本地配方库、来源草稿框架、图像分析框架入口，以及第一个边界清晰的真实图像算法：手动 ROI 荧光强度分析。当前最重要的边界是：除荧光手动 ROI MVP 外，其它图像算法仍未实现；外部来源尚未访问网络；AI Gateway 未调用；用户数据和结果导出默认不自动写盘。后续开发应继续小步阶段化，并在每个真实算法、真实网络能力、AI 能力或持久化能力启用前单独确认授权、测试计划和安全提示。
+LabTools 当前已经具备实验计算器、本地配方库、来源草稿框架、图像分析框架入口，以及两个边界清晰的真实图像 MVP：手动 ROI 荧光强度分析、手动 ROI + 阈值划痕面积估算。当前最重要的边界是：细胞计数和 WB/凝胶灰度仍未实现；划痕结果不得自动解释迁移效果；外部来源尚未访问网络；AI Gateway 未调用；用户数据和结果导出默认不自动写盘。后续开发应继续小步阶段化，并在每个真实算法、真实网络能力、AI 能力或持久化能力启用前单独确认授权、测试计划和安全提示。

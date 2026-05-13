@@ -2,6 +2,7 @@ from __future__ import annotations
 
 try:
     from PySide6.QtWidgets import (
+        QComboBox,
         QFileDialog,
         QFrame,
         QGridLayout,
@@ -27,6 +28,18 @@ try:
         fluorescence_metrics_table_text,
         fluorescence_parameter_summary,
         fluorescence_result_summary,
+    )
+    from app.labtools.image_analysis.wound_healing import (
+        WoundHealingParameters,
+        WoundHealingROI,
+        analyze_wound_healing_area,
+        create_wound_healing_audit_records,
+        wound_csv_text,
+        wound_json_preview,
+        wound_markdown_report_fragment,
+        wound_metrics_table_text,
+        wound_parameter_summary,
+        wound_result_summary,
     )
     from app.labtools.image_analysis.image_io import create_image_record
     from app.labtools.image_analysis.image_models import LabImageRecord
@@ -74,6 +87,7 @@ if QWidget is not None:
             root.addWidget(notice)
             root.addWidget(self._build_import_card())
             root.addWidget(self._build_task_card_grid())
+            root.addWidget(self._build_wound_healing_card())
             root.addWidget(self._build_fluorescence_card())
 
             self._task_summary = QTextEdit()
@@ -135,7 +149,12 @@ if QWidget is not None:
             layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
             title = QLabel(label)
             title.setObjectName("imageTaskTitle")
-            status_text = "MVP 可用：手动 ROI" if task_type == "fluorescence_intensity" else "框架已建立，算法开发中"
+            if task_type == "fluorescence_intensity":
+                status_text = "MVP 可用：手动 ROI"
+            elif task_type == "wound_healing":
+                status_text = "MVP 可用：手动 ROI + 阈值"
+            else:
+                status_text = "框架已建立，算法开发中"
             status = QLabel(status_text)
             status.setObjectName("imageTaskStatus")
             status.setWordWrap(True)
@@ -182,6 +201,45 @@ if QWidget is not None:
             layout.addWidget(heading)
             layout.addLayout(grid)
             support = QLabel("仅支持单张本地图片和手动矩形 ROI；不会自动识别细胞、划痕或条带。")
+            support.setObjectName("imageTaskStatus")
+            support.setWordWrap(True)
+            layout.addWidget(support)
+            return frame
+
+        def _build_wound_healing_card(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("划痕实验面积分析 MVP")
+            heading.setObjectName("imageCardTitle")
+            grid = QGridLayout()
+            grid.setSpacing(SPACING["sm"])
+            self._wound_x = self._roi_field("x", "0")
+            self._wound_y = self._roi_field("y", "0")
+            self._wound_w = self._roi_field("width", "10")
+            self._wound_h = self._roi_field("height", "10")
+            self._wound_threshold = self._roi_field("threshold 0-255", "128")
+            self._wound_mode = QComboBox()
+            self._wound_mode.addItem("亮划痕：pixel >= threshold", "bright")
+            self._wound_mode.addItem("暗划痕：pixel <= threshold", "dark")
+            self._wound_mode.setMinimumHeight(CONTROL_HEIGHT["field"])
+            run = QPushButton("运行划痕面积分析")
+            run.setObjectName("primaryButton")
+            run.clicked.connect(self._handle_run_wound_healing)
+            grid.addWidget(QLabel("analysis ROI"), 0, 0)
+            grid.addWidget(self._wound_x, 0, 1)
+            grid.addWidget(self._wound_y, 0, 2)
+            grid.addWidget(self._wound_w, 0, 3)
+            grid.addWidget(self._wound_h, 0, 4)
+            grid.addWidget(QLabel("阈值"), 1, 0)
+            grid.addWidget(self._wound_threshold, 1, 1)
+            grid.addWidget(QLabel("模式"), 1, 2)
+            grid.addWidget(self._wound_mode, 1, 3, 1, 2)
+            grid.addWidget(run, 2, 0, 1, 5)
+            layout.addWidget(heading)
+            layout.addLayout(grid)
+            support = QLabel("仅支持单张本地图片、手动矩形 ROI 和用户阈值；结果为基于阈值的划痕区域估算。")
             support.setObjectName("imageTaskStatus")
             support.setWordWrap(True)
             layout.addWidget(support)
@@ -279,6 +337,42 @@ if QWidget is not None:
             audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
             self._task_summary.setText(f"{self._render_fluorescence_result(result)}\n\n{audit_line}")
 
+        def _handle_run_wound_healing(self) -> None:
+            try:
+                roi = WoundHealingROI(
+                    label="analysis ROI",
+                    x=self._parse_roi_int(self._wound_x.text(), "analysis x"),
+                    y=self._parse_roi_int(self._wound_y.text(), "analysis y"),
+                    width=self._parse_roi_int(self._wound_w.text(), "analysis width"),
+                    height=self._parse_roi_int(self._wound_h.text(), "analysis height"),
+                )
+                threshold = self._parse_threshold_int(self._wound_threshold.text())
+                scratch_mode = str(self._wound_mode.currentData() or "bright")
+                image_path = self._path_field.text().strip()
+                if self._image_records and self._image_records[-1].source_path == image_path:
+                    image_record = self._image_records[-1]
+                else:
+                    image_record = create_image_record(image_path, image_role="wound_healing_source")
+                    self._image_records.append(image_record)
+                task = create_analysis_task("wound_healing", (image_record,))
+                parameters = WoundHealingParameters(
+                    image_path=image_path,
+                    roi=roi,
+                    threshold=threshold,
+                    scratch_mode=scratch_mode,
+                )
+                result = analyze_wound_healing_area(parameters, task_id=task.task_id)
+                audit_records = create_wound_healing_audit_records(result, source_path=parameters.image_path)
+            except ValueError as exc:
+                self._task_summary.setText(f"划痕面积分析需要调整\n{exc}")
+                return
+            except ImageAnalysisError as exc:
+                self._task_summary.setText(f"划痕面积分析需要调整\n{exc}")
+                return
+            self._tasks.append(task)
+            audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
+            self._task_summary.setText(f"{self._render_wound_result(result)}\n\n{audit_line}")
+
         def _parse_roi_int(self, value: str, field_name: str) -> int:
             if value is None or str(value).strip() == "":
                 raise ValueError(f"请填写 {field_name}。")
@@ -286,6 +380,30 @@ if QWidget is not None:
                 return int(str(value).strip())
             except ValueError as exc:
                 raise ValueError(f"{field_name} 必须是整数。") from exc
+
+        def _parse_threshold_int(self, value: str) -> int:
+            threshold = self._parse_roi_int(value, "threshold")
+            if threshold < 0 or threshold > 255:
+                raise ValueError("threshold 必须在 0-255 之间。")
+            return threshold
+
+        def _render_wound_result(self, result) -> str:
+            warnings = "\n".join(f"- {warning}" for warning in result.warnings) or "- 无"
+            csv_preview = "\n".join(wound_csv_text(result).splitlines()[:8])
+            markdown_preview = "\n".join(wound_markdown_report_fragment(result).splitlines()[:30])
+            return "\n\n".join(
+                [
+                    wound_result_summary(result),
+                    wound_metrics_table_text(result),
+                    wound_parameter_summary(result),
+                    "\n".join(["warning", warnings]),
+                    "\n".join(["复核提示", result.review_notice]),
+                    wound_json_preview(result),
+                    "\n".join(["CSV 导出预览", csv_preview]),
+                    "\n".join(["Markdown 报告片段预览", markdown_preview]),
+                    "导出说明：以上内容仅为内存中的字符串或数据结构预览，本阶段不会自动写盘。",
+                ]
+            )
 
         def _render_fluorescence_result(self, result) -> str:
             warnings = "\n".join(f"- {warning}" for warning in result.warnings) or "- 无"
@@ -369,7 +487,7 @@ if QWidget is not None:
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["sm"]}px;
             }}
-            QTextEdit#imageResultPanel, QLineEdit#imagePathField {{
+            QTextEdit#imageResultPanel, QLineEdit#imagePathField, QComboBox {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["sm"]}px;
