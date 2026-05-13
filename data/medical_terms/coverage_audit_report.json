@@ -1,6 +1,6 @@
 {
   "schema_version": "medical_vocabulary_coverage_audit.v1",
-  "generated_at": "2026-05-11T14:21:25.325231+00:00",
+  "generated_at": "2026-05-13T02:30:37.980392+00:00",
   "inputs": {
     "mini_index": "data/medical_terms/mini_medical_terms_index.json",
     "zh_overrides": "data/medical_terms/zh_term_overrides.json",
@@ -9,7 +9,7 @@
   "release_summary": {
     "release_name": "shared_medical_vocabulary_core_v1",
     "version": "core_v1.0.0",
-    "latest_audit_date": "2026-05-11T14:21:25.325231+00:00",
+    "latest_audit_date": "2026-05-13T02:30:37.980392+00:00",
     "included_core_packages": [
       {
         "checklist_id": "oncology_core",
