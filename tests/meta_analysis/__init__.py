@@ -1,1 +1,1 @@
-"""Mainline Meta Analysis shell tests."""
+"""Meta Analysis tests."""

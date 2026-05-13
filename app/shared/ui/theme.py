@@ -39,9 +39,6 @@ class BioMedPilotColors:
     STATUS_RUNNING = ACCENT_TEAL
     STATUS_COMPLETED = "#22A66B"
 
-    META_LEGACY = "#6B4FD8"
-    META_LEGACY_SOFT = "#F0EDFF"
-
 
 class BioMedPilotTypography:
     """Desktop typography scale in px."""
@@ -412,6 +409,10 @@ def shell_sidebar_qss() -> str:
 
 def as_legacy_color_dict() -> dict[str, str]:
     return {
+        "deep_navy": BioMedPilotColors.PRIMARY_NAVY,
+        "teal": BioMedPilotColors.ACCENT_TEAL,
+        "light_gray": BioMedPilotColors.BACKGROUND_LIGHT,
+        "white": BioMedPilotColors.SURFACE_WHITE,
         "background": BioMedPilotColors.BACKGROUND_LIGHT,
         "surface": BioMedPilotColors.SURFACE_WHITE,
         "surface_muted": BioMedPilotColors.SURFACE_MUTED,
@@ -421,8 +422,9 @@ def as_legacy_color_dict() -> dict[str, str]:
         "bio": BioMedPilotColors.PRIMARY_NAVY,
         "bio_soft": BioMedPilotColors.BIO_SOFT,
         "bio_accent": BioMedPilotColors.ACCENT_TEAL,
-        "meta": BioMedPilotColors.META_LEGACY,
-        "meta_soft": BioMedPilotColors.META_LEGACY_SOFT,
+        "meta": BioMedPilotColors.PRIMARY_NAVY,
+        "meta_soft": BioMedPilotColors.BACKGROUND_LIGHT,
+        "meta_accent": BioMedPilotColors.ACCENT_TEAL,
         "warning_soft": BioMedPilotColors.WARNING_SOFT,
         "warning": BioMedPilotColors.STATUS_WARNING,
         "success": BioMedPilotColors.STATUS_COMPLETED,
