@@ -65,7 +65,10 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     widget.show_image_analysis()
     assert widget.current_page_key() == "image_analysis"
     image_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    image_buttons = [button.text() for button in widget.findChildren(QPushButton)]
     assert "MVP 可用：manual ROI grayscale 指标；需人工复核" in image_labels
     assert "MVP 可用：manual ROI + user threshold 面积估算；semi-quantitative" in image_labels
     assert image_labels.count("占位：algorithm_not_available，未生成定量结果") == 2
     assert "未启用自动 ROI、细胞计数或灰度/墨值算法" in image_labels
+    assert "JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG" in image_labels
+    assert "导出当前 ROI 结果" in image_buttons

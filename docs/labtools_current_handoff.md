@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L5C，commit 以最终交接为准
+- 当前最近完成阶段：LabTools Stage L6A，commit 以最终交接为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -29,6 +29,7 @@
 | LabTools Stage L5A | `32cb27c` | 校准 LabTools UI、feature status、handoff 和测试中的用户可见能力边界；不新增算法、不新增持久化、不启用网络/AI/外部图像依赖。 |
 | LabTools Stage L5B | 最终交接记录 | 新增实验计算器中心 v1 结构化服务层和 UI 对齐，覆盖稀释、摩尔浓度/称量质量、细胞接种密度三类本地辅助计算；不做历史记录、导出或持久化。 |
 | LabTools Stage L5C | 最终交接记录 | 新增 qPCR 配液 v1 和 WB/SDS-PAGE 上样计算 v1 结构化结果与 UI tab；不做 WB/凝胶灰度、条带分析、历史记录或导出。 |
+| LabTools Stage L6A | 最终交接记录 | 新增 fluorescence manual ROI 与 wound manual ROI threshold 结果的用户确认导出包：JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG；默认仍不自动写盘。 |
 
 ## 3. 当前已实现功能
 
@@ -102,7 +103,12 @@
 - 负 CTF 保留数值并生成中文 warning。
 - 记录图像文件名、图像尺寸、ROI 坐标、公式、warnings、review_notice。
 - 提供 JSON-compatible dict、CSV-compatible rows/text、Markdown 报告片段字符串。
-- UI 展示指标表、参数摘要、warning、复核提示和简洁导出预览。
+- L6A 提供用户确认后的本地导出包：
+  - JSON manifest：记录 schema、算法名/版本、manual-review 语义、原图摘要、ROI、指标、warnings、review_notice 和 derived files。
+  - CSV summary：写出当前 metrics rows。
+  - Markdown 报告片段：写出当前 review fragment。
+  - ROI overlay PNG：在原图副本上标出 signal ROI 和 background ROI，不覆盖原图。
+- UI 展示指标表、参数摘要、warning、复核提示和简洁导出预览；只有用户点击“导出当前 ROI 结果”并选择目录后才写盘。
 - 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
 
 ### 3.6 划痕实验面积分析
@@ -124,7 +130,12 @@
 - `non_scratch_area_fraction` 可作为 covered / migrated fraction 的计算型指标，但必须标注为“基于阈值的估算”。
 - 记录图像文件名、图像尺寸、ROI、threshold、scratch_mode、公式、warnings、review_notice。
 - 提供 JSON-compatible dict、CSV-compatible rows/text、Markdown 报告片段字符串。
-- UI 展示图片路径、ROI 输入、阈值输入、亮/暗模式、结果摘要、公式、warning、复核提示和简洁导出预览。
+- L6A 提供用户确认后的本地导出包：
+  - JSON manifest：记录 schema、算法名/版本、manual-review / semi-quantitative 语义、原图摘要、ROI、threshold、scratch_mode、指标、warnings、review_notice 和 derived files。
+  - CSV summary：写出当前 metrics rows。
+  - Markdown 报告片段：写出当前 review fragment。
+  - ROI overlay PNG：在原图副本上标出 analysis ROI，不覆盖原图。
+- UI 展示图片路径、ROI 输入、阈值输入、亮/暗模式、结果摘要、公式、warning、复核提示和简洁导出预览；只有用户点击“导出当前 ROI 结果”并选择目录后才写盘。
 - 默认不自动写盘，不上传图片，不访问网络，不调用 AI Gateway。
 
 ## 4. 当前未实现功能
@@ -137,14 +148,14 @@
 - 未实现 WB / 凝胶灰度分析；L5C 只提供 WB/SDS-PAGE 上样体积计算。
 - 未实现 ImageJ/Fiji 接入。
 - 未实现 OpenCV / scikit-image / imageio / napari / cellpose / stardist 等依赖接入。
-- 未实现 ROI 绘制器、overlay 复核、图像预览器。
+- 未实现交互式 ROI 绘制器、在线 overlay 复核或图像预览器；L6A 仅生成用户确认导出的静态 ROI overlay PNG。
 - 未启用外部配方网络检索。
 - 未实现网页抓取、网页下载、远程来源同步。
 - 未调用 AI Gateway 或本地模型进行配方摘录、图像分析或结果解释。
-- 未实现 LabTools 本地项目存储、数据库持久化或自动写盘。
-- 未实现正式实验报告导出。
+- 未实现 LabTools 本地项目存储、数据库持久化或自动写盘；L6A 仅支持用户确认选择目录后的图像 ROI export package。
+- 未实现正式实验报告导出；L6A Markdown 仅为 manual-review 报告片段。
 - 未实现实验模板功能。
-- 未实现计算器历史记录、CSV/manifest 导出或项目文件写入。
+- 未实现计算器历史记录、CSV/manifest 导出或项目文件写入；L6A CSV/manifest 仅限 fluorescence/wound ROI export package。
 - 未实现 recipe center 持久化或本阶段以外的新 recipe 功能。
 
 ## 5. 明确禁止事项
@@ -169,19 +180,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L5C 结果：119 passed
+  - 当前 L6A 结果：121 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L5C 结果：135 passed
+  - 当前 L6A 结果：135 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L5C 结果：18 passed
+  - 当前 L6A 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L5C 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6A 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L5C 结果：通过
+  - 当前 L6A 结果：通过
 - `git diff --check`
-  - 当前 L5C 结果：通过
+  - 当前 L6A 结果：通过
 - `git diff --cached --check`
-  - 当前 L5C 提交前运行。
+  - 当前 L6A 提交前运行。
 
 ## 7. Shell / UI 接入状态
 
@@ -232,8 +243,12 @@
 - 用户自定义配方：确认后进入 `UserRecipeStore` 内存结构。
 - 来源草稿：手动来源和摘录草稿在 UI / 模型层流转，确认后才进入用户配方 store。
 - 图片记录：引用本地路径并生成 `LabImageRecord`，不复制、不上传、不自动写盘。
-- 荧光结果导出：默认只返回 dict、rows/text 或 Markdown 字符串，不自动写盘。
-- 划痕结果导出：默认只返回 dict、rows/text 或 Markdown 字符串，不自动写盘。
+- 荧光结果导出：
+  - 默认只返回 dict、rows/text 或 Markdown 字符串，不自动写盘。
+  - L6A 新增 `export_fluorescence_analysis_package()`，仅在调用方传入用户确认的目录后写入 JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG。
+- 划痕结果导出：
+  - 默认只返回 dict、rows/text 或 Markdown 字符串，不自动写盘。
+  - L6A 新增 `export_wound_healing_analysis_package()`，仅在调用方传入用户确认的目录后写入 JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG。
 - 当前没有 LabTools 数据库、项目目录自动写入或后台持久化机制。
 
 后续如需保存用户实验数据，必须先设计本地项目存储策略、用户选择位置、隐私边界、审计字段和迁移/清理规则。

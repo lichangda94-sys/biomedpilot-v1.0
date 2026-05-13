@@ -15,7 +15,13 @@ try:
         QWidget,
     )
 
-    from app.labtools.image_analysis import IMAGE_REVIEW_NOTICE, TASK_TYPES, ImageAnalysisError
+    from app.labtools.image_analysis import (
+        IMAGE_REVIEW_NOTICE,
+        TASK_TYPES,
+        ImageAnalysisError,
+        export_fluorescence_analysis_package,
+        export_wound_healing_analysis_package,
+    )
     from app.labtools.image_analysis.analysis_task import ImageAnalysisTask, create_analysis_task
     from app.labtools.image_analysis.fluorescence import (
         FluorescenceAnalysisParameters,
@@ -65,6 +71,8 @@ if QWidget is not None:
             self.setStyleSheet(self._stylesheet())
             self._image_records: list[LabImageRecord] = []
             self._tasks: list[ImageAnalysisTask] = []
+            self._latest_export_kind = ""
+            self._latest_export_result = None
             self._build_ui()
 
         def image_records(self) -> tuple[LabImageRecord, ...]:
@@ -94,6 +102,17 @@ if QWidget is not None:
             self._task_summary.setObjectName("imageResultPanel")
             self._task_summary.setReadOnly(True)
             self._task_summary.setText(self._empty_summary())
+            export_row = QHBoxLayout()
+            self._export_button = QPushButton("导出当前 ROI 结果")
+            self._export_button.setObjectName("secondaryButton")
+            self._export_button.setEnabled(False)
+            self._export_button.clicked.connect(self._handle_export_current_result)
+            export_note = QLabel("仅在用户选择目录后写入 JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG。")
+            export_note.setObjectName("imageTaskStatus")
+            export_note.setWordWrap(True)
+            export_row.addWidget(export_note, 1)
+            export_row.addWidget(self._export_button)
+            root.addLayout(export_row)
             root.addWidget(self._task_summary, 1)
 
         def _build_import_card(self) -> QFrame:
@@ -334,6 +353,9 @@ if QWidget is not None:
                 self._task_summary.setText(f"荧光分析需要调整\n{exc}")
                 return
             self._tasks.append(task)
+            self._latest_export_kind = "fluorescence_intensity"
+            self._latest_export_result = result
+            self._export_button.setEnabled(True)
             audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
             self._task_summary.setText(f"{self._render_fluorescence_result(result)}\n\n{audit_line}")
 
@@ -370,8 +392,30 @@ if QWidget is not None:
                 self._task_summary.setText(f"划痕面积分析需要调整\n{exc}")
                 return
             self._tasks.append(task)
+            self._latest_export_kind = "wound_healing"
+            self._latest_export_result = result
+            self._export_button.setEnabled(True)
             audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
             self._task_summary.setText(f"{self._render_wound_result(result)}\n\n{audit_line}")
+
+        def _handle_export_current_result(self) -> None:
+            if self._latest_export_result is None:
+                self._task_summary.setText("请先运行荧光 ROI 或划痕 ROI 分析，再导出结果。")
+                return
+            directory = QFileDialog.getExistingDirectory(self, "选择 ROI 结果导出目录")
+            if not directory:
+                return
+            try:
+                if self._latest_export_kind == "fluorescence_intensity":
+                    package = export_fluorescence_analysis_package(self._latest_export_result, directory)
+                elif self._latest_export_kind == "wound_healing":
+                    package = export_wound_healing_analysis_package(self._latest_export_result, directory)
+                else:
+                    raise ImageAnalysisError("当前结果类型暂不支持导出。")
+            except ImageAnalysisError as exc:
+                self._task_summary.setText(f"导出需要调整\n{exc}")
+                return
+            self._task_summary.setText(self._render_export_package_summary(package))
 
         def _parse_roi_int(self, value: str, field_name: str) -> int:
             if value is None or str(value).strip() == "":
@@ -401,7 +445,7 @@ if QWidget is not None:
                     wound_json_preview(result),
                     "\n".join(["CSV 导出预览", csv_preview]),
                     "\n".join(["Markdown 报告片段预览", markdown_preview]),
-                    "导出说明：以上内容仅为内存中的字符串或数据结构预览，本阶段不会自动写盘。",
+                    "导出说明：以上内容默认为内存预览；只有点击“导出当前 ROI 结果”并选择目录后才会写入本地文件。",
                 ]
             )
 
@@ -419,7 +463,31 @@ if QWidget is not None:
                     fluorescence_json_preview(result),
                     "\n".join(["CSV 导出预览", csv_preview]),
                     "\n".join(["Markdown 报告片段预览", markdown_preview]),
-                    "导出说明：以上内容仅为内存中的字符串或数据结构预览，本阶段不会自动写盘。",
+                    "导出说明：以上内容默认为内存预览；只有点击“导出当前 ROI 结果”并选择目录后才会写入本地文件。",
+                ]
+            )
+
+        def _render_export_package_summary(self, package) -> str:
+            warnings = "\n".join(f"- {warning}" for warning in package.warnings) or "- 无"
+            return "\n".join(
+                [
+                    "ROI 结果导出完成",
+                    f"分析类型：{package.analysis_type}",
+                    f"导出目录：{package.output_dir}",
+                    "",
+                    "写入文件",
+                    f"- JSON manifest：{package.manifest_path}",
+                    f"- CSV summary：{package.csv_path}",
+                    f"- Markdown 片段：{package.markdown_path}",
+                    f"- ROI overlay PNG：{package.overlay_path}",
+                    "",
+                    "复核提示",
+                    package.review_notice,
+                    "",
+                    "warning",
+                    warnings,
+                    "",
+                    "语义边界：导出文件为 manual-review / semi-quantitative 辅助结果，不构成自动算法结论、临床建议或实验 SOP。",
                 ]
             )
 

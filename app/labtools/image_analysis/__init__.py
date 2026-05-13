@@ -7,6 +7,11 @@ Other task types remain reviewable drafts.
 
 from app.labtools.image_analysis.analysis_task import TASK_TYPES, ImageAnalysisTask, create_analysis_task
 from app.labtools.image_analysis.audit_models import ImageAnalysisAuditRecord
+from app.labtools.image_analysis.export_package import (
+    ImageAnalysisExportPackage,
+    export_fluorescence_analysis_package,
+    export_wound_healing_analysis_package,
+)
 from app.labtools.image_analysis.fluorescence import (
     FluorescenceAnalysisMetrics,
     FluorescenceAnalysisParameters,
@@ -34,6 +39,7 @@ __all__ = [
     "IMAGE_REVIEW_NOTICE",
     "TASK_TYPES",
     "ImageAnalysisAuditRecord",
+    "ImageAnalysisExportPackage",
     "ImageAnalysisError",
     "ImageAnalysisResult",
     "ImageAnalysisTask",
@@ -51,6 +57,8 @@ __all__ = [
     "analyze_wound_healing_area",
     "create_analysis_task",
     "create_image_record",
+    "export_fluorescence_analysis_package",
+    "export_wound_healing_analysis_package",
     "fluorescence_markdown_report_fragment",
     "fluorescence_result_to_json_dict",
     "placeholder_result",

@@ -6,6 +6,7 @@ from io import StringIO
 
 from PIL import Image
 
+from app.labtools.image_analysis import export_wound_healing_analysis_package
 from app.labtools.image_analysis.wound_healing import (
     WoundHealingParameters,
     WoundHealingROI,
@@ -75,3 +76,37 @@ def test_wound_exports_do_not_write_result_files(tmp_path) -> None:
     wound_csv_text(result)
 
     assert {path.name for path in tmp_path.iterdir()} == before
+
+
+def test_wound_export_package_writes_manifest_csv_markdown_and_overlay(tmp_path) -> None:
+    result = _result(tmp_path)
+    export_dir = tmp_path / "confirmed-export"
+
+    package = export_wound_healing_analysis_package(result, export_dir)
+
+    manifest = json.loads((export_dir / f"{result.result_id}_manifest.json").read_text(encoding="utf-8"))
+    assert package.analysis_type == "wound_healing"
+    assert set(package.files) == {
+        package.manifest_path,
+        package.csv_path,
+        package.markdown_path,
+        package.overlay_path,
+    }
+    assert manifest["schema_version"] == "labtools_image_analysis_export_package_v1"
+    assert manifest["manual_review_required"] is True
+    assert manifest["semi_quantitative"] is True
+    assert manifest["algorithm"]["name"] == "manual_roi_threshold_wound_healing_v1"
+    assert "semi-quantitative area estimation" in manifest["result_semantics"]
+    assert manifest["result"]["threshold"] == 200
+    assert manifest["result"]["scratch_mode"] == "bright"
+    assert "基于用户 ROI 和阈值" in manifest["result"]["review_notice"]
+    assert "不自动保存、不上传、不联网" in manifest["persistence_note"]
+    assert (export_dir / f"{result.result_id}_summary.csv").read_text(encoding="utf-8").startswith(
+        "metric,value,unit,note\n"
+    )
+    assert "## 划痕实验面积分析片段" in (
+        export_dir / f"{result.result_id}_report.md"
+    ).read_text(encoding="utf-8")
+    with Image.open(export_dir / f"{result.result_id}_roi_overlay.png") as overlay:
+        assert overlay.size == (10, 10)
+        assert overlay.convert("RGB").getpixel((0, 0)) == (251, 140, 0)

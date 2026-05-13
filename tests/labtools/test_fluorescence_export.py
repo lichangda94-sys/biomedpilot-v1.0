@@ -14,6 +14,7 @@ from app.labtools.image_analysis.fluorescence import (
     fluorescence_csv_text,
     fluorescence_result_to_json_dict,
 )
+from app.labtools.image_analysis import export_fluorescence_analysis_package
 
 
 def _write_image(path) -> None:
@@ -80,3 +81,37 @@ def test_fluorescence_exports_do_not_write_result_files(tmp_path) -> None:
     fluorescence_csv_text(result)
 
     assert {path.name for path in tmp_path.iterdir()} == before
+
+
+def test_fluorescence_export_package_writes_manifest_csv_markdown_and_overlay(tmp_path) -> None:
+    result = _result(tmp_path)
+    export_dir = tmp_path / "confirmed-export"
+
+    package = export_fluorescence_analysis_package(result, export_dir)
+
+    manifest = json.loads((export_dir / f"{result.result_id}_manifest.json").read_text(encoding="utf-8"))
+    assert package.analysis_type == "fluorescence_intensity"
+    assert set(package.files) == {
+        package.manifest_path,
+        package.csv_path,
+        package.markdown_path,
+        package.overlay_path,
+    }
+    assert manifest["schema_version"] == "labtools_image_analysis_export_package_v1"
+    assert manifest["manual_review_required"] is True
+    assert manifest["semi_quantitative"] is False
+    assert manifest["algorithm"]["name"] == "manual_roi_grayscale_fluorescence_v1"
+    assert "manual ROI grayscale" in manifest["result_semantics"]
+    assert "人工复核" in manifest["result"]["review_notice"]
+    assert manifest["result"]["signal_roi"]["roi_type"] == "signal"
+    assert manifest["result"]["background_roi"]["roi_type"] == "background"
+    assert "不自动保存、不上传、不联网" in manifest["persistence_note"]
+    assert (export_dir / f"{result.result_id}_summary.csv").read_text(encoding="utf-8").startswith(
+        "metric,value,unit,note\n"
+    )
+    assert "## 荧光强度 ROI 分析片段" in (
+        export_dir / f"{result.result_id}_report.md"
+    ).read_text(encoding="utf-8")
+    with Image.open(export_dir / f"{result.result_id}_roi_overlay.png") as overlay:
+        assert overlay.size == (6, 3)
+        assert overlay.convert("RGB").getpixel((0, 0)) == (229, 57, 53)
