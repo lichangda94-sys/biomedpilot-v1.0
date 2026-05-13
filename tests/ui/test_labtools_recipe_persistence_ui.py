@@ -55,6 +55,30 @@ def test_recipe_persistence_ui_save_requires_confirmed_recipe(recipe_widget, tmp
     assert not (tmp_path / "drafts.json").exists()
 
 
+def test_recipe_persistence_ui_shows_safety_category_and_manual_review_boundaries(recipe_widget) -> None:
+    from PySide6.QtWidgets import QLabel, QTextEdit
+
+    text = "\n".join(
+        [label.text() for label in recipe_widget.findChildren(QLabel)]
+        + [panel.toPlainText() for panel in recipe_widget.findChildren(QTextEdit)]
+    )
+
+    assert "routine_buffer_draft" in text
+    assert "user_verified_only" in text
+    assert "requires_lab_sop_review" in text
+    assert "本地草稿" in text
+    assert "人工核对" in text
+    assert "浓度" in text
+    assert "pH" in text
+    assert "储存条件" in text
+    assert "有效期" in text
+    assert "危险性" in text
+    assert "不构成安全操作规范" in text
+    assert "不自动适配所有实验" in text
+    for forbidden in ("production-grade", "临床诊断", "正式 SOP 已生成"):
+        assert forbidden not in text
+
+
 def test_recipe_persistence_ui_cancel_save_does_not_write(recipe_widget, tmp_path, monkeypatch) -> None:
     recipe_widget.user_recipe_store().confirm_draft(_draft())
     monkeypatch.setattr(recipe_widget, "_select_user_recipe_save_path", lambda: "")
@@ -80,6 +104,9 @@ def test_recipe_persistence_ui_save_and_load_success(recipe_widget, tmp_path, mo
     save_text = recipe_widget._user_recipe_summary.toPlainText()
     assert "用户配方 JSON 已保存" in save_text
     assert "schema" in save_text
+    assert "routine_buffer_draft" in save_text
+    assert "人工核对" in save_text
+    assert "危险性" in save_text
 
     from app.labtools.ui.recipe_widgets import LabToolsRecipeWidget
 
@@ -93,6 +120,8 @@ def test_recipe_persistence_ui_save_and_load_success(recipe_widget, tmp_path, mo
     assert "实际写入当前内存配方数：1" in load_text
     assert "recipe_id 冲突数：0" in load_text
     assert "载入版本：user-confirmed-draft" in load_text
+    assert "requires_lab_sop_review" in load_text
+    assert "pH" in load_text
     assert second_widget.user_recipe_store().list_recipes()[0].name == "UI 用户配方"
 
 
@@ -109,6 +138,7 @@ def test_recipe_persistence_ui_save_failure_is_user_visible(recipe_widget, tmp_p
 
 
 def test_recipe_persistence_ui_load_failure_is_user_visible(recipe_widget, tmp_path, monkeypatch) -> None:
+    recipe_widget.user_recipe_store().confirm_draft(_draft())
     bad_path = tmp_path / "bad.json"
     bad_path.write_text("{bad", encoding="utf-8")
     monkeypatch.setattr(recipe_widget, "_select_user_recipe_load_path", lambda: str(bad_path))
@@ -118,7 +148,7 @@ def test_recipe_persistence_ui_load_failure_is_user_visible(recipe_widget, tmp_p
     text = recipe_widget._user_recipe_summary.toPlainText()
     assert "载入需要调整" in text
     assert "有效 JSON" in text
-    assert recipe_widget.user_recipe_store().list_recipes() == ()
+    assert recipe_widget.user_recipe_store().list_recipes()[0].name == "UI 用户配方"
 
 
 def test_recipe_persistence_ui_cancel_load_keeps_existing_recipes(recipe_widget, monkeypatch) -> None:
@@ -145,4 +175,6 @@ def test_recipe_persistence_ui_reports_import_conflict_without_overwrite(recipe_
     text = recipe_widget._user_recipe_summary.toPlainText()
     assert "recipe_id 冲突数：1" in text
     assert "未覆盖现有用户配方" in text
+    assert "imported copy" in text
+    assert "requires_lab_sop_review" in text
     assert len(recipe_widget.user_recipe_store().list_recipes()) == 2

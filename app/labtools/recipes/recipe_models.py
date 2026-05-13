@@ -4,7 +4,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-RECIPE_REVIEW_NOTICE = "配方仅供科研实验参考，请结合实验室 SOP、试剂说明书和安全规范人工复核。"
+RECIPE_REVIEW_NOTICE = (
+    "配方仅供科研实验参考，本地草稿使用前请结合实验室 SOP、试剂说明书和安全规范人工复核；"
+    "请确认浓度、pH、储存条件、有效期和危险性，不构成安全操作规范，也不自动适配所有实验。"
+)
 
 
 class RecipeError(ValueError):

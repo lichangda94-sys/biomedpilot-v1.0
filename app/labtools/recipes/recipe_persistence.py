@@ -16,13 +16,19 @@ LABTOOLS_RECIPE_DRAFT_STORE_SCHEMA_VERSION = "labtools_recipe_draft_store.v1"
 RECIPE_DRAFT_EXPORT_TYPE = "labtools_user_recipe_draft_store"
 SOFTWARE_CHANNEL = "Developer Preview / testing"
 RECIPE_DRAFT_REVIEW_STATUS = "manual_review_required"
+RECIPE_DRAFT_SAFETY_CATEGORY = {
+    "scope": "routine_buffer_draft",
+    "user_status": "user_verified_only",
+    "required_review": "requires_lab_sop_review",
+}
 RECIPE_DRAFT_PERSISTENCE_NOTE = (
     "本地 JSON 仅保存用户确认的 recipe draft；仅在用户明确选择路径后写盘，"
     "不自动保存、不联网、不调用 AI、不替代实验 SOP。"
 )
 RECIPE_DRAFT_SAFETY_NOTE = (
     "本地配方草稿仅用于常规科研实验记录和复用。使用前需人工核对实验室 SOP、"
-    "试剂说明书、SDS 和安全规范；不构成临床、诊断或安全操作建议。"
+    "试剂说明书、SDS 和安全规范；需确认浓度、pH、储存条件、有效期和危险性；"
+    "不构成安全操作规范，不自动适配所有实验，也不构成临床、诊断或安全操作建议。"
 )
 BLOCKED_SCOPE_TERMS = (
     "氰化",
@@ -131,7 +137,9 @@ def evaluate_recipe_safety(recipe: Recipe) -> RecipeSafetyReview:
         )
     return RecipeSafetyReview(
         status=RECIPE_DRAFT_REVIEW_STATUS,
-        warnings=("本地草稿保存前已完成基础范围检查；仍需人工核对 SOP、SDS 和试剂说明书。",),
+        warnings=(
+            "本地草稿保存前已完成基础范围检查；仍需人工核对 SOP、SDS、试剂说明书、浓度、pH、储存条件、有效期和危险性。",
+        ),
     )
 
 
@@ -143,6 +151,7 @@ def build_user_recipe_store_payload(recipes: tuple[Recipe, ...]) -> dict[str, An
         "created_at": _utc_now(),
         "software_channel": SOFTWARE_CHANNEL,
         "review_status": RECIPE_DRAFT_REVIEW_STATUS,
+        "safety_category": dict(RECIPE_DRAFT_SAFETY_CATEGORY),
         "recipe_count": len(recipes),
         "recipes": [recipe.to_dict() for recipe in recipes],
         "safety_reviews": reviews,
@@ -193,7 +202,7 @@ def load_user_recipe_store(input_path: str | Path | None) -> RecipeStoreLoadResu
         path=str(path),
         schema_version=LABTOOLS_RECIPE_DRAFT_STORE_SCHEMA_VERSION,
         recipes=recipes,
-        warnings=("载入结果仍为本地草稿；使用前需人工核对 SOP、SDS 和试剂说明书。",),
+        warnings=("载入结果仍为本地草稿；使用前需人工核对 SOP、SDS、试剂说明书、浓度、pH、储存条件、有效期和危险性。",),
     )
 
 

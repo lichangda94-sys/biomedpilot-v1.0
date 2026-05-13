@@ -4,6 +4,7 @@ from app.labtools.recipes.recipe_library import RecipeLibrary, default_recipe_li
 from app.labtools.recipes.recipe_models import Recipe, RecipeComponent, RecipeDraft, RecipeScalingResult
 from app.labtools.recipes.recipe_persistence import (
     LABTOOLS_RECIPE_DRAFT_STORE_SCHEMA_VERSION,
+    RECIPE_DRAFT_SAFETY_CATEGORY,
     RecipeSafetyReview,
     RecipeStoreLoadResult,
     RecipeStorePersistenceResult,
@@ -33,6 +34,7 @@ __all__ = [
     "UserRecipeStore",
     "UserRecipeImportResult",
     "LABTOOLS_RECIPE_DRAFT_STORE_SCHEMA_VERSION",
+    "RECIPE_DRAFT_SAFETY_CATEGORY",
     "build_user_recipe_store_payload",
     "calculate_stock_dilution",
     "default_recipe_library",

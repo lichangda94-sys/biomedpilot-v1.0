@@ -8,6 +8,7 @@ import pytest
 from app.labtools.recipes.recipe_models import RecipeComponent, RecipeDraft, RecipeError
 from app.labtools.recipes.recipe_persistence import (
     LABTOOLS_RECIPE_DRAFT_STORE_SCHEMA_VERSION,
+    RECIPE_DRAFT_SAFETY_CATEGORY,
     build_user_recipe_store_payload,
     evaluate_recipe_safety,
     load_user_recipe_store,
@@ -41,10 +42,17 @@ def test_user_recipe_store_payload_has_schema_and_manual_review_semantics() -> N
     assert payload["export_type"] == "labtools_user_recipe_draft_store"
     assert payload["software_channel"] == "Developer Preview / testing"
     assert payload["review_status"] == "manual_review_required"
+    assert payload["safety_category"] == RECIPE_DRAFT_SAFETY_CATEGORY
     assert payload["recipe_count"] == 1
     assert payload["recipes"][0]["recipe_id"] == recipe.recipe_id
     assert "不自动保存、不联网、不调用 AI" in payload["persistence_note"]
     assert "人工核对" in payload["safety_note"]
+    assert "pH" in payload["safety_note"]
+    assert "储存条件" in payload["safety_note"]
+    assert "有效期" in payload["safety_note"]
+    assert "危险性" in payload["safety_note"]
+    assert "不构成安全操作规范" in payload["safety_note"]
+    assert "不自动适配所有实验" in payload["safety_note"]
     assert payload["safety_reviews"][0]["status"] == "manual_review_required"
 
 
@@ -65,6 +73,21 @@ def test_save_and_load_user_recipe_store_round_trip(tmp_path) -> None:
     assert load_result.recipe_count == 1
     assert load_result.recipes[0].name == recipe.name
     assert "人工核对" in load_result.review_notice
+
+
+def test_load_user_recipe_store_accepts_v1_payload_without_safety_category(tmp_path) -> None:
+    store = UserRecipeStore()
+    recipe = store.confirm_draft(_draft())
+    payload = build_user_recipe_store_payload((recipe,))
+    payload.pop("safety_category")
+    path = tmp_path / "legacy-compatible.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    load_result = load_user_recipe_store(path)
+
+    assert load_result.success is True
+    assert load_result.recipe_count == 1
+    assert load_result.recipes[0].recipe_id == recipe.recipe_id
 
 
 def test_save_user_recipe_store_does_not_overwrite_existing_file(tmp_path) -> None:
@@ -131,7 +154,9 @@ def test_user_recipe_import_summary_reports_id_conflicts_without_overwrite() -> 
     assert result.imported_count == 1
     assert result.conflict_count == 1
     assert "未覆盖现有用户配方" in result.warnings[0]
+    assert "imported copy" in result.warnings[0]
     assert len(recipes) == 2
     assert recipes[0].recipe_id == recipe.recipe_id
     assert result.imported_recipes[0].recipe_id != recipe.recipe_id
+    assert result.imported_recipes[0].recipe_id.startswith("user_recipe_imported_")
     assert result.imported_recipes[0].version == recipe.version

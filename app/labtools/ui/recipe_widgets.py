@@ -31,7 +31,7 @@ try:
         RecipeExtractionDraft,
         RecipeSourceCard,
     )
-    from app.labtools.recipes.recipe_persistence import load_user_recipe_store, save_user_recipe_store
+    from app.labtools.recipes.recipe_persistence import RECIPE_DRAFT_SAFETY_CATEGORY, load_user_recipe_store, save_user_recipe_store
     from app.labtools.recipes.user_recipe_store import UserRecipeStore
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -39,6 +39,7 @@ except Exception:  # pragma: no cover
 
 
 if QWidget is not None:
+    SAFETY_CATEGORY_TEXT = " / ".join(RECIPE_DRAFT_SAFETY_CATEGORY.values())
 
     def _line_edit(placeholder: str, text: str = "") -> QLineEdit:
         field = QLineEdit()
@@ -132,7 +133,10 @@ if QWidget is not None:
             self._user_recipe_summary = QTextEdit()
             self._user_recipe_summary.setObjectName("recipeResultPanel")
             self._user_recipe_summary.setReadOnly(True)
-            self._user_recipe_summary.setText("用户确认的配方仅保存在当前内存结构；只有点击保存并选择 JSON 路径后才写盘。")
+            self._user_recipe_summary.setText(
+                "用户确认的配方仅保存在当前内存结构；只有点击保存并选择 JSON 路径后才写盘。"
+                f"安全类别：{SAFETY_CATEGORY_TEXT}。"
+            )
             layout.addWidget(self._user_recipe_summary, 1)
             return tab
 
@@ -231,7 +235,10 @@ if QWidget is not None:
             grid.addWidget(self._draft_component_amount, 5, 1)
             grid.addWidget(self._draft_component_unit, 5, 2)
             grid.addWidget(confirm, 6, 0, 1, 3)
-            self._draft_status = QLabel("草稿确认后仅保存在当前内存结构，可导出为 JSON-compatible dict；不会自动写盘。")
+            self._draft_status = QLabel(
+                "草稿确认后仅保存在当前内存结构，可导出为 JSON-compatible dict；不会自动写盘。"
+                "使用前需按实验室 SOP、SDS 和试剂说明书人工核对浓度、pH、储存条件、有效期和危险性。"
+            )
             self._draft_status.setObjectName("recipeSupportLine")
             self._draft_status.setWordWrap(True)
             layout.addWidget(heading)
@@ -246,7 +253,12 @@ if QWidget is not None:
             layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
             heading = QLabel("本地配方草稿持久化")
             heading.setObjectName("recipeCardTitle")
-            support = QLabel("仅保存用户确认配方到本地 JSON；不自动保存、不联网、不调用 AI。载入后仍需人工核对 SOP、SDS 和试剂说明书。")
+            support = QLabel(
+                "仅保存用户确认配方到本地 JSON；不自动保存、不联网、不调用 AI。"
+                f"安全类别：{SAFETY_CATEGORY_TEXT}；"
+                "载入后仍需人工核对 SOP、SDS、试剂说明书、浓度、pH、储存条件、有效期和危险性；"
+                "不构成安全操作规范，不自动适配所有实验。"
+            )
             support.setObjectName("recipeSupportLine")
             support.setWordWrap(True)
             row = QHBoxLayout()
@@ -400,13 +412,27 @@ if QWidget is not None:
                 return
             recipes = self._user_store.list_recipes()
             if not recipes:
-                self._user_recipe_summary.setText("尚未确认用户配方。用户草稿和来源摘录草稿均不会自动写盘。")
+                self._user_recipe_summary.setText(
+                    "尚未确认用户配方。用户草稿和来源摘录草稿均不会自动写盘。"
+                    f"\n安全类别：{SAFETY_CATEGORY_TEXT}。"
+                    "\n使用前需按实验室 SOP、SDS 和试剂说明书人工核对浓度、pH、储存条件、有效期和危险性。"
+                )
                 return
             lines = ["已确认用户配方"]
             for recipe in recipes:
                 source = recipe.source_title or recipe.source_label
                 lines.append(f"- {recipe.name}；版本：{recipe.version}；来源：{source}")
-            lines.extend(["", "本地持久化", "点击“保存用户配方 JSON”并选择路径后才写盘；保存时会进行基础安全范围检查并避免覆盖同名文件。"])
+            lines.extend(
+                [
+                    "",
+                    "本地持久化",
+                    "点击“保存用户配方 JSON”并选择路径后才写盘；保存时会进行基础安全范围检查并避免覆盖同名文件。",
+                    "",
+                    "安全类别",
+                    SAFETY_CATEGORY_TEXT,
+                    "使用前需确认浓度、pH、储存条件、有效期和危险性；不构成安全操作规范，不自动适配所有实验。",
+                ]
+            )
             lines.extend(["", "复核提示", RECIPE_REVIEW_NOTICE])
             self._user_recipe_summary.setText("\n".join(lines))
 
@@ -439,6 +465,14 @@ if QWidget is not None:
                 lines.append(f"- {component.name}{optional}：{format_number(component.amount)} {component.unit}；{component.role}")
             lines.extend(["", "注意事项", *[f"- {note}" for note in recipe.preparation_notes]])
             lines.extend(["", "安全提示", *[f"- {note}" for note in recipe.safety_notes]])
+            lines.extend(
+                [
+                    "",
+                    "安全类别",
+                    SAFETY_CATEGORY_TEXT,
+                    "使用前需确认浓度、pH、储存条件、有效期和危险性；不构成安全操作规范，不自动适配所有实验。",
+                ]
+            )
             lines.extend(["", "复核提示", recipe.review_notice])
             self._detail.setText("\n".join(lines))
             self._target_volume.setText(format_number(recipe.default_volume))
@@ -616,6 +650,7 @@ if QWidget is not None:
                         f"路径：{result.path}",
                         f"schema：{result.schema_version}",
                         f"配方数：{result.recipe_count}",
+                        f"安全类别：{SAFETY_CATEGORY_TEXT}",
                         "",
                         "复核提示",
                         result.review_notice,
@@ -654,6 +689,7 @@ if QWidget is not None:
                         f"路径：{result.path}",
                         f"schema：{result.schema_version}",
                         f"载入配方数：{result.recipe_count}",
+                        f"安全类别：{SAFETY_CATEGORY_TEXT}",
                         *import_lines,
                         "",
                         "复核提示",

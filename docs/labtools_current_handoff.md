@@ -6,8 +6,8 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L7A，commit 以当前 git log 为准
-- 当前进行阶段：LabTools Stage L7B 待执行。
+- 当前最近完成阶段：LabTools Stage L7B，commit 以当前 git log 为准
+- 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
 
@@ -39,6 +39,7 @@
 | LabTools Stage L6A.2 | 当前 git log | 优化 ROI export 用户反馈和目录选择回归测试：成功提示显示导出目录与四类输出，取消/失败均保留当前分析结果，同目录连续导出不覆盖；不新增图像算法。 |
 | LabTools Stage L6E | 当前 git log | 审计并校准 LabTools 用户可见状态语义：已实现功能显示为本地辅助/草稿/manual-review MVP，placeholder 功能继续显示占位或未开放；不新增功能。 |
 | LabTools Stage L7A | 当前 git log | 优化实验计算器结果复制体验：三个 v1 计算器提供 copyable formatter，UI 每个结果区新增“复制结果”按钮；不新增公式、导出、自动保存或历史记录。 |
+| LabTools Stage L7B | 当前 git log | 优化 recipe draft/template 安全边界和导入冲突提示：新增用户可见 safety category，强化 SOP/SDS/pH/储存/有效期/危险性核对提示，确认冲突导入不覆盖。 |
 
 ## 3. 当前已实现功能
 
@@ -89,6 +90,12 @@
   - 载入 JSON 时如果 `recipe_id` 已存在，会 clone 为 `user_recipe_imported_<token>`，保留原有配方不覆盖。
   - UI 显示实际写入数量、`recipe_id` 冲突数和“未覆盖现有用户配方”提示。
 - L6E 首页和 feature status 文案校准为“本地草稿 / 用户配方草稿”，继续强调 SOP/SDS 人工核对和非正式 SOP 边界。
+- L7B 安全边界 polish：
+  - recipe draft store payload 增加 `safety_category`：`routine_buffer_draft` / `user_verified_only` / `requires_lab_sop_review`。
+  - UI 明确本地草稿使用前需按实验室 SOP、SDS、试剂说明书人工核对浓度、pH、储存条件、有效期和危险性。
+  - UI 明确不构成安全操作规范、不自动适配所有实验。
+  - 导入冲突继续显示冲突数量，冲突项作为 imported copy 导入，不覆盖现有用户配方。
+  - failed import 不清空现有用户配方。
 
 ### 3.3 来源草稿框架
 
@@ -272,17 +279,17 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L7A 结果：158 passed
+  - 当前 L7B 结果：159 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L7A 结果：168 passed
+  - 当前 L7B 结果：169 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L7A 结果：18 passed
+  - 当前 L7B 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L7A 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L7B 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L7A 结果：通过
+  - 当前 L7B 结果：通过
 - `git diff --check`
-  - 当前 L7A 结果：通过
+  - 当前 L7B 结果：通过
   - 当前 L6D 结果：通过
 - `git diff --cached --check`
   - 当前 L6D 提交前运行。
