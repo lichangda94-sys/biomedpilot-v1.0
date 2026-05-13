@@ -13,7 +13,7 @@ from app.meta_analysis.project_workspace import META_PROJECT_DIRECTORIES, create
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QComboBox, QFrame, QLabel, QLineEdit, QPlainTextEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QComboBox, QFrame, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -35,6 +35,10 @@ def _visible_text(widget) -> str:
             value = child.text()
             if value:
                 texts.append(value)
+    for child in widget.findChildren(QListWidget):
+        if child.isVisibleTo(widget):
+            for index in range(child.count()):
+                texts.append(child.item(index).text())
     return "\n".join(texts)
 
 
@@ -153,6 +157,75 @@ def test_meta_screening_workspace_renders_chinese_user_controls_without_raw_path
     assert "title_abstract_queue_v2.json" not in visible
     assert "manifest" not in visible
     assert "raw JSON" not in visible
+
+
+def test_meta_fulltext_management_workspace_renders_chinese_user_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("全文管理 Meta", tmp_path, research_topic="降压治疗")
+    screening_path = summary.project_root / "screening" / "screening_decisions.json"
+    screening_path.parent.mkdir(parents=True, exist_ok=True)
+    screening_path.write_text(
+        json.dumps(
+            {
+                "screening_records": [
+                    {
+                        "record_id": "ft-rec-1",
+                        "decision": "need_full_text",
+                        "title": "Full text needed trial",
+                        "authors": ["Zhang Wei"],
+                        "journal": "Journal A",
+                        "year": "2025",
+                        "database_source": "PubMed",
+                    },
+                    {
+                        "record_id": "ft-rec-2",
+                        "decision": "include",
+                        "title": "Included trial",
+                        "authors": ["Li Ming"],
+                        "journal": "Journal B",
+                        "year": "2024",
+                        "database_source": "Embase",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    pdf = summary.project_root / "uploaded.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%test\n")
+    service = FullTextManagementService()
+    service.build_registry_from_screening(summary.project_root, project_id="fulltext-workspace")
+    service.attach_pdf(summary.project_root, record_id="ft-rec-1", source_file_path=str(pdf), actor="reviewer")
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("screening_review")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "全文管理" in visible
+    assert "全文筛选" in visible
+    assert "全文状态" in visible
+    assert "上传全文" in visible
+    assert "标记无法获取" in visible
+    assert "全文确认" in visible
+    assert "下一步：数据提取" in visible
+    assert "已登记全文文件" in visible
+    assert {"暂不需要全文", "需要全文", "已上传全文", "全文待检查", "全文已确认", "全文不可获取", "全文已排除"} <= set(combos["metaFulltextStatusSelector"])
+    assert {"全文不可获取", "研究对象不符合", "干预/暴露不符合", "对照不符合", "结局不符合", "研究类型不符合", "全文阶段发现重复", "数据不足", "其他"} <= set(combos["metaFulltextReasonSelector"])
+    assert str(summary.project_root) not in visible
+    assert "fulltext_management_registry_v1.json" not in visible
+    assert "manifest" not in visible
+    assert "raw JSON" not in visible
+    assert "ft-rec-1" not in visible
 
 
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:

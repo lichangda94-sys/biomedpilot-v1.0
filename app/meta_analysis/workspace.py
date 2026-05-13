@@ -377,7 +377,12 @@ if QWidget is not None:
     from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
     from app.meta_analysis.services.fulltext_eligibility_service import FullTextEligibilityService
     from app.meta_analysis.services.fulltext_management_service import (
+        FULLTEXT_EXCLUSION_REASON_LABELS_ZH,
+        FULLTEXT_EXCLUSION_REASONS_M4C,
         FULLTEXT_MANAGEMENT_STATUSES,
+        FULLTEXT_STATUS_FULL_TEXT_CONFIRMED,
+        FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE,
+        FULLTEXT_STATUS_LABELS_ZH,
         FullTextManagementService,
     )
     from app.meta_analysis.services.fulltext_parsing_service import FullTextParsingService
@@ -1692,6 +1697,7 @@ if QWidget is not None:
         screening_layout.addLayout(screening_content)
         screening_layout.addWidget(QLabel("下一步：全文管理"))
         layout.addWidget(screening_card)
+        layout.addWidget(_fulltext_management_page(project_dir, on_refresh=on_refresh, on_next=on_next))
         layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -1994,24 +2000,44 @@ if QWidget is not None:
     def _fulltext_management_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         management = FullTextManagementService()
         eligibility = FullTextEligibilityService()
-        parser = FullTextParsingService()
         records = list(management.list_records(project_dir))
         candidates = list(eligibility.build_candidates_from_screening(project_dir))
         decisions = list(eligibility.load_eligibility_decisions(project_dir))
+        candidates_by_id = {candidate.record_id: candidate for candidate in candidates}
+        summary = management.summary_counts(project_dir)
         frame = QFrame()
         frame.setObjectName("metaFulltextManagementPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("全文管理与全文筛选", "PDF/链接/解析状态和人工全文资格决定。", "人工决定"))
-        layout.addWidget(_info_card("全文摘要", [f"管理记录：{len(records)}", f"全文候选：{len(candidates)}", f"资格决定：{len(decisions)}", "不自动提取数据，不推进定量分析。"], object_name="metaFulltextSummary"))
+        layout.addWidget(_page_header("全文管理", "全文筛选、全文状态、上传全文和用户确认。", "Developer Preview / testing"))
+        layout.addWidget(
+            _info_card(
+                "全文状态",
+                [
+                    f"当前全文候选：{len(candidates)}",
+                    f"全文管理记录：{len(records)}",
+                    f"全文筛选决定：{len(decisions)}",
+                    f"需要全文：{summary['full_text_needed']}",
+                    f"已上传全文：{summary['full_text_uploaded']}",
+                    f"全文待检查：{summary['full_text_pending_review']}",
+                    f"全文已确认：{summary['full_text_confirmed']}",
+                    f"全文不可获取：{summary['full_text_unavailable']}",
+                    f"全文已排除：{summary['full_text_excluded']}",
+                    f"可进入提取：{summary['ready_for_extraction']}",
+                    "全文解析或模型提示只作为 suggested，不会自动成为确认提取证据。",
+                ],
+                object_name="metaFulltextSummary",
+            )
+        )
         buttons = QHBoxLayout()
         build_registry = QPushButton("建立全文队列")
-        attach_pdf = QPushButton("绑定 PDF")
-        parse_pdf = QPushButton("解析全文")
+        attach_pdf = QPushButton("上传全文")
+        mark_unavailable = QPushButton("标记无法获取")
+        confirm_fulltext = QPushButton("全文确认")
         save_status = QPushButton("保存全文状态")
         save_eligibility = QPushButton("保存全文筛选")
         next_button = QPushButton("下一步：数据提取")
-        for button in (build_registry, attach_pdf, parse_pdf, save_status, save_eligibility, next_button):
+        for button in (build_registry, attach_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_registry.setObjectName("metaPrimaryButton")
@@ -2023,26 +2049,53 @@ if QWidget is not None:
         for record in source_records:
             record_id = getattr(record, "record_id", "")
             title = getattr(record, "title", "")
+            candidate = candidates_by_id.get(record_id)
+            author_year = _author_year_text(getattr(record, "authors", "") or getattr(candidate, "authors", ""), getattr(record, "year", "") or getattr(candidate, "year", ""))
+            journal = getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录"
+            screening_decision = getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"
             status = getattr(record, "fulltext_status", getattr(record, "eligibility_status", ""))
-            item = QListWidgetItem(f"{title or record_id}\n{record_id} · {status}")
+            status_label = FULLTEXT_STATUS_LABELS_ZH.get(status, status or "未记录")
+            file_label = management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件"
+            exclusion_reason = getattr(record, "fulltext_exclusion_reason", "") or getattr(record, "unavailable_reason", "") or getattr(candidate, "exclusion_reason", "")
+            reason_label = FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(exclusion_reason, "无全文排除原因")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        title or "未命名文献",
+                        f"{author_year} · {journal}",
+                        f"标题摘要决定：{_screening_decision_label(screening_decision)} · 全文状态：{status_label}",
+                        f"{file_label} · 排除原因：{reason_label}",
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, record_id)
             record_list.addItem(item)
         layout.addWidget(record_list)
-        form = _card("人工状态")
+        form = _card("人工全文状态")
         form_layout = form.layout()
         fulltext_status = QComboBox()
+        fulltext_status.setObjectName("metaFulltextStatusSelector")
         for status in FULLTEXT_MANAGEMENT_STATUSES:
-            fulltext_status.addItem(status, status)
+            fulltext_status.addItem(FULLTEXT_STATUS_LABELS_ZH.get(status, status), status)
         eligibility_status = QComboBox()
+        eligibility_status.setObjectName("metaFulltextEligibilitySelector")
         for status in ("available_online", "local_pdf_linked", "local_pdf_copied", "missing_full_text", "manual_review_required", "excluded_after_full_text_review", "included_for_extraction"):
             eligibility_status.addItem(status, status)
-        fulltext_reason = QLineEdit()
-        fulltext_reason.setPlaceholderText("全文不可得或排除理由")
+        fulltext_reason = QComboBox()
+        fulltext_reason.setObjectName("metaFulltextReasonSelector")
+        for reason in FULLTEXT_EXCLUSION_REASONS_M4C:
+            fulltext_reason.addItem(FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(reason, reason), reason)
+        notes = QLineEdit()
+        notes.setPlaceholderText("备注（可选，不作为确认提取证据）")
+        form_layout.addWidget(QLabel("全文状态"))
         form_layout.addWidget(fulltext_status)
+        form_layout.addWidget(QLabel("全文筛选"))
         form_layout.addWidget(eligibility_status)
+        form_layout.addWidget(QLabel("排除原因"))
         form_layout.addWidget(fulltext_reason)
+        form_layout.addWidget(notes)
         layout.addWidget(form)
-        layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nparsed_dir={parser.parsed_dir(project_dir)}"))
+        layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nrecords={len(records)}\ncandidates={len(candidates)}"))
         layout.addStretch(1)
 
         def selected_record_id() -> str:
@@ -2061,20 +2114,26 @@ if QWidget is not None:
                 return
             filename, _ = QFileDialog.getOpenFileName(frame, "选择 PDF", str(project_dir), "PDF (*.pdf);;All files (*)")
             if filename:
-                result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer")
+                result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer", notes=notes.text())
                 _show_message(result.message)
                 on_refresh()
 
-        def do_parse_pdf() -> None:
+        def do_mark_unavailable() -> None:
             record_id = selected_record_id()
             if not record_id:
                 _show_message("请选择文献")
                 return
-            try:
-                result = parser.parse_record(project_dir, record_id=record_id)
-                _show_message(result.message)
-            except Exception as exc:
-                _show_message(str(exc))
+            result = management.mark_unavailable(project_dir, record_id=record_id, reason=str(fulltext_reason.currentData()), actor="reviewer", notes=notes.text())
+            _show_message(result.message)
+            on_refresh()
+
+        def do_confirm_fulltext() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            result = management.update_status(project_dir, record_id=record_id, status=FULLTEXT_STATUS_FULL_TEXT_CONFIRMED, actor="reviewer", notes=notes.text())
+            _show_message(result.message)
             on_refresh()
 
         def do_save_status() -> None:
@@ -2082,7 +2141,11 @@ if QWidget is not None:
             if not record_id:
                 _show_message("请选择文献")
                 return
-            result = management.update_status(project_dir, record_id=record_id, status=str(fulltext_status.currentData()), actor="reviewer", notes=fulltext_reason.text())
+            status = str(fulltext_status.currentData())
+            if status == FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE:
+                result = management.mark_unavailable(project_dir, record_id=record_id, reason=str(fulltext_reason.currentData()), actor="reviewer", notes=notes.text())
+            else:
+                result = management.update_status(project_dir, record_id=record_id, status=status, actor="reviewer", notes=notes.text())
             _show_message(result.message)
             on_refresh()
 
@@ -2096,14 +2159,15 @@ if QWidget is not None:
                 record_id=record_id,
                 eligibility_status=str(eligibility_status.currentData()),
                 reviewer_id="reviewer",
-                exclusion_reason=fulltext_reason.text(),
+                exclusion_reason=str(fulltext_reason.currentData()),
             )
             _show_message(result.message)
             on_refresh()
 
         build_registry.clicked.connect(do_build_registry)
         attach_pdf.clicked.connect(do_attach_pdf)
-        parse_pdf.clicked.connect(do_parse_pdf)
+        mark_unavailable.clicked.connect(do_mark_unavailable)
+        confirm_fulltext.clicked.connect(do_confirm_fulltext)
         save_status.clicked.connect(do_save_status)
         save_eligibility.clicked.connect(do_save_eligibility)
         next_button.clicked.connect(on_next)
@@ -3203,6 +3267,18 @@ if QWidget is not None:
             "need_full_text": "需要全文",
             "needs_review": "需要复核",
         }.get(decision, decision or "未筛选")
+
+
+    def _author_year_text(authors: object, year: object) -> str:
+        author_text = ""
+        if isinstance(authors, (list, tuple)):
+            author_text = "、".join(str(item).strip() for item in authors if str(item).strip())
+        else:
+            author_text = str(authors or "").strip()
+        year_text = str(year or "").strip()
+        if author_text and year_text:
+            return f"{author_text} · {year_text}"
+        return author_text or year_text or "作者/年份未记录"
 
 
     def _first_author(record: dict[str, object]) -> str:
