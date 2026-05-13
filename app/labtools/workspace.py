@@ -7,15 +7,15 @@ from app.shared.feature_status import FeatureItem, FeatureStatus
 
 def labtools_features() -> list[FeatureItem]:
     return [
-        FeatureItem("labtools", "实验计算器", FeatureStatus.TESTING, "浓度、稀释、溶液配制、细胞接种、qPCR 配液与 WB/SDS-PAGE 上样计算。"),
-        FeatureItem("labtools", "试剂与配方", FeatureStatus.TESTING, "本地常用配方库、体积缩放和 stock-to-working 稀释。"),
+        FeatureItem("labtools", "实验计算器", FeatureStatus.TESTING, "本地辅助计算草稿：浓度、稀释、溶液配制、细胞接种、qPCR 配液与 WB/SDS-PAGE 上样计算；使用前需人工核对。"),
+        FeatureItem("labtools", "试剂与配方", FeatureStatus.TESTING, "本地常用配方库、体积缩放、stock-to-working 稀释和用户配方草稿；不替代 SOP/SDS 人工核对。"),
         FeatureItem(
             "labtools",
             "图像定量",
             FeatureStatus.TESTING,
-            "荧光 manual ROI grayscale 指标和 scratch/wound manual ROI + threshold 面积估算为 MVP 可用；细胞计数、灰度/墨值仍为占位。",
+            "荧光 manual ROI grayscale 指标和 scratch/wound manual ROI + threshold 面积估算为 manual-review MVP；细胞计数、灰度/墨值仍为占位。",
         ),
-        FeatureItem("labtools", "实验模板", FeatureStatus.TESTING, "qPCR、WB、细胞接种、scratch assay 和免疫荧光图像记录结构化草稿。"),
+        FeatureItem("labtools", "实验模板", FeatureStatus.TESTING, "qPCR、WB、细胞接种、scratch assay 和免疫荧光图像记录结构化草稿；不是完整 ELN。"),
     ]
 
 

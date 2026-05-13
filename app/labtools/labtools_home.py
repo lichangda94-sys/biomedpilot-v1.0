@@ -37,7 +37,7 @@ if QWidget is not None:
 
             title = QLabel("LabTools / 实验工具")
             title.setObjectName("labToolsTitle")
-            subtitle = QLabel("基础实验计算与记录入口。")
+            subtitle = QLabel("基础实验辅助计算、本地草稿和 manual-review 结果入口。")
             subtitle.setObjectName("labToolsSubtitle")
             root.addWidget(title)
             root.addWidget(subtitle)
@@ -47,8 +47,8 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "实验计算器",
-                    "稀释、摩尔浓度、细胞接种、qPCR、WB 上样",
-                    "可用",
+                    "本地辅助：稀释、摩尔浓度、细胞接种、qPCR、WB 上样；结果需人工核对",
+                    "本地辅助",
                     "进入实验计算器",
                     self.calculators_requested.emit,
                     object_name="labToolsCalculatorEntry",
@@ -59,8 +59,8 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "试剂与配方",
-                    "本地常用配方与体积缩放",
-                    "可用",
+                    "本地配方草稿、体积缩放和 JSON 草稿持久化；需 SOP/SDS 人工核对",
+                    "本地草稿",
                     "进入试剂与配方",
                     self.reagents_requested.emit,
                     object_name="labToolsRecipeEntry",
@@ -71,8 +71,8 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "图像定量",
-                    "荧光 ROI 与划痕阈值分析 MVP",
-                    "可用",
+                    "荧光 manual ROI 与划痕 threshold MVP；细胞计数和灰度/墨值仍占位",
+                    "manual-review MVP",
                     "进入图像定量",
                     self.image_quant_requested.emit,
                     object_name="labToolsImageEntry",
@@ -83,8 +83,8 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "实验模板",
-                    "qPCR、WB、细胞接种和图像记录草稿",
-                    "可用",
+                    "qPCR、WB、细胞接种和图像记录草稿；不是完整 ELN",
+                    "草稿中心",
                     "进入实验模板",
                     self.templates_requested.emit,
                     object_name="labToolsTemplateEntry",
@@ -121,7 +121,8 @@ if QWidget is not None:
             description_label.setObjectName("labToolsDescription")
             description_label.setWordWrap(True)
             button = QPushButton(button_text)
-            button.setObjectName("primaryButton" if status == "可用" else "secondaryButton")
+            active_statuses = {"可用", "本地辅助", "本地草稿", "manual-review MVP", "草稿中心"}
+            button.setObjectName("primaryButton" if status in active_statuses else "secondaryButton")
             button.clicked.connect(callback)
             layout.addWidget(status_label, alignment=Qt.AlignLeft)
             layout.addWidget(title_label)

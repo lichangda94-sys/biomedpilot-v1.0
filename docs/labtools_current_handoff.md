@@ -6,8 +6,8 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L6A.2，commit 以当前 git log 为准
-- 当前进行阶段：LabTools Stage L6E / L7A / L7B 依次待执行。
+- 当前最近完成阶段：LabTools Stage L6E，commit 以当前 git log 为准
+- 当前进行阶段：LabTools Stage L7A / L7B 依次待执行。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
 
@@ -37,6 +37,7 @@
 | LabTools Stage L6C.1 | 最终交接记录 | 新增实验记录草稿本地 JSON 持久化 schema、no-overwrite 保存、载入校验和 UI 保存/载入反馈；仍不做完整 ELN、数据库、自动保存、签名或合规审计。 |
 | LabTools Stage L6D | 最终交接记录 | 新增 LabTools schema index，扩展 ROI export / recipe draft / experiment record draft persistence UI 回归测试，并完成写盘安全审计；不新增 persistence 功能或算法。 |
 | LabTools Stage L6A.2 | 当前 git log | 优化 ROI export 用户反馈和目录选择回归测试：成功提示显示导出目录与四类输出，取消/失败均保留当前分析结果，同目录连续导出不覆盖；不新增图像算法。 |
+| LabTools Stage L6E | 当前 git log | 审计并校准 LabTools 用户可见状态语义：已实现功能显示为本地辅助/草稿/manual-review MVP，placeholder 功能继续显示占位或未开放；不新增功能。 |
 
 ## 3. 当前已实现功能
 
@@ -50,6 +51,7 @@
 - WB / SDS-PAGE 上样计算器。
 - `CalculationRecord` 计算记录结构，支持 JSON-compatible dict。
 - 中文友好错误提示和人工复核提示。
+- L6E 首页和 feature status 文案校准为“本地辅助计算草稿”，避免把计算器描述成正式 SOP、临床建议或生产级结论。
 - L5B 新增 `experiment_calculator_center` 结构化 v1 服务层：
   - `DilutionInput` / `DilutionResult` / `calculate_dilution_v1()`：支持同维度浓度单位换算，输出 stock 体积、溶剂体积和 dilution factor。
   - `MassMolarityInput` / `MassMolarityResult` / `calculate_mass_molarity_v1()`：根据分子量、目标摩尔浓度和终体积估算称量质量。
@@ -80,6 +82,7 @@
   - 用户配方列表和 summary 显示草稿 `version`。
   - 载入 JSON 时如果 `recipe_id` 已存在，会 clone 为 `user_recipe_imported_<token>`，保留原有配方不覆盖。
   - UI 显示实际写入数量、`recipe_id` 冲突数和“未覆盖现有用户配方”提示。
+- L6E 首页和 feature status 文案校准为“本地草稿 / 用户配方草稿”，继续强调 SOP/SDS 人工核对和非正式 SOP 边界。
 
 ### 3.3 来源草稿框架
 
@@ -105,6 +108,10 @@
   - `fluorescence_intensity`：荧光强度分析，手动 ROI grayscale 指标 MVP 可用。
   - `densitometry`：灰度 / 墨值分析，占位，`algorithm_not_available`。
 - 细胞计数和灰度 / 墨值任务仍为 `algorithm_not_available` 占位状态，不生成 fake 定量结果。
+- L6E 回归测试固定图像分析 UI 语义：
+  - fluorescence 和 wound 仅显示 manual ROI / threshold MVP 与人工复核。
+  - cell counting、grayscale / ink-value 继续显示 `algorithm_not_available` 占位。
+  - 不把 automatic ROI、automatic cell counting、WB / gel grayscale 或 batch image processing 描述为已完成。
 
 ### 3.5 荧光强度 ROI 分析
 
@@ -215,6 +222,7 @@
   - UI 明确“本地结构化草稿，使用前需人工核对 SOP、伦理/安全要求、试剂说明书和实验设计”。
 - 当前不自动保存、不写数据库、不生成正式报告、不跨模块传递。
 - 当前不做完整 ELN、权限、签名、审计合规或团队协作。
+- L6E 首页和 feature status 文案校准为“草稿中心 / 不是完整 ELN”，并用 UI 回归测试固定 non-ELN 语义。
 
 ## 4. 当前未实现功能
 
@@ -258,17 +266,17 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L6A.2 结果：154 passed
+  - 当前 L6E 结果：154 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L6A.2 结果：157 passed
+  - 当前 L6E 结果：163 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L6A.2 结果：18 passed
+  - 当前 L6E 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L6A.2 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L6E 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L6A.2 结果：通过
+  - 当前 L6E 结果：通过
 - `git diff --check`
-  - 当前 L6A.2 结果：通过
+  - 当前 L6E 结果：通过
   - 当前 L6D 结果：通过
 - `git diff --cached --check`
   - 当前 L6D 提交前运行。

@@ -6,6 +6,8 @@
 
 每个条目都说明用途、主要字段、用户语义、是否可公开分享、是否包含本地路径或路径片段风险，以及它属于草稿、辅助结果还是用户确认的本地持久化文件。
 
+L6E status audit note：普通 LabTools UI 只暴露用户需要理解的本地辅助、草稿、manual-review MVP 和 placeholder 状态；本 schema index 是开发/交接文档，不应被 UI 文案替代为正式报告、完整 ELN、临床建议、production-grade 输出或 SOP。
+
 ## 1. 总览
 
 | Schema / structure | 用途 | 写盘状态 | 用户语义 | 可公开分享 | 本地路径风险 |
