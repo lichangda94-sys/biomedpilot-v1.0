@@ -342,6 +342,25 @@ def test_recognition_detects_integrated_rnaseq_result_table_blocks(project_root:
     assert {f"{sample}_fpkm" for sample in sample_ids} <= sample_columns
 
 
+def test_integrated_rnaseq_current_run_is_standardization_ready_but_not_deg_ready(project_root: Path) -> None:
+    raw_file = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    raw_file.parent.mkdir(parents=True, exist_ok=True)
+    _write_integrated_rnaseq_xlsx(raw_file)
+
+    recognition = run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert recognition["files"][0]["semantic_type"] == "rna_seq_integrated_result_table"  # type: ignore[index]
+    assert report["has_core_input"] is True
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "count_matrix", "raw_count_matrix", "normalized_expression_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert "comparison_config" in diff_row["missing_inputs"]
+    assert diff_row["can_run"] is False
+
+
 def test_recognition_detail_report_exports_user_summary_without_matrix_rows(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
     raw_file.parent.mkdir(parents=True, exist_ok=True)

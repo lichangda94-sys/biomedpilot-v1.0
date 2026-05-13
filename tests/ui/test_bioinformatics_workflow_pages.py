@@ -2789,6 +2789,79 @@ def test_recognition_readiness_and_standardization_continue_gates(qt_app, projec
     assert "不能继续" in standardization.status_message()
 
 
+def test_current_integrated_rnaseq_run_allows_standardization_without_deg_ready(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("placeholder", encoding="utf-8")
+    run_dir = project_summary.project_root / "recognized_data" / "runs" / "recognition_ui_gate"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    report = {
+        "schema_version": "biomedpilot.recognition_report.v1",
+        "generated_at": "2026-05-13T11:46:13+00:00",
+        "project_root": str(project_summary.project_root),
+        "files": [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "tabular_text_file",
+                "recognized_type_zh": "表格文本文件",
+                "semantic_type": "rna_seq_integrated_result_table",
+                "semantic_type_zh": "RNA-seq 综合表达结果表",
+                "recognized_roles": [],
+                "detected_assets": [],
+                "content_blocks": [
+                    {"block_type": "gene_identifier", "gene_id_type": "ensembl_mouse_gene_id", "species": "Mus musculus"},
+                    {"block_type": "count_expression_matrix", "sample_count": 21, "sample_columns": ["A1_count", "A2_count", "A3_count"]},
+                    {"block_type": "fpkm_expression_matrix", "sample_count": 21, "sample_columns": ["A1_fpkm", "A2_fpkm", "A3_fpkm"]},
+                    {"block_type": "deg_comparisons", "comparison_count": 11, "complete_comparison_count": 11},
+                    {"block_type": "gene_annotation", "annotation_fields": ["gene_name", "gene_biotype"]},
+                ],
+                "content_profile": {
+                    "content_blocks": [
+                        {"block_type": "count_expression_matrix", "sample_count": 21},
+                        {"block_type": "fpkm_expression_matrix", "sample_count": 21},
+                    ]
+                },
+                "route_path": str(source),
+            }
+        ],
+        "type_counts": {"tabular_text_file": 1},
+        "warnings": [],
+    }
+    (run_dir / "recognition_report.json").write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+    (run_dir / "recognized_files.json").write_text(json.dumps({"files": report["files"]}, ensure_ascii=False), encoding="utf-8")
+    current_path = project_summary.project_root / "recognized_data" / "current.json"
+    current_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.current_recognition_run.v1",
+                "run_id": "recognition_ui_gate",
+                "run_dir": str(run_dir),
+                "recognition_report_path": str(run_dir / "recognition_report.json"),
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    events: list[Path] = []
+    recognition = BioinformaticsRecognitionWidget(on_continue=events.append)
+    recognition.refresh_project(project_summary)
+    recognition.continue_to_readiness()
+    assert events == [project_summary.project_root]
+    assert "不能继续" not in recognition.status_message()
+
+    readiness = BioinformaticsReadinessDashboardWidget(on_continue=events.append)
+    readiness.refresh_project(project_summary)
+    artifacts = readiness.run_readiness_check()
+    report = artifacts["readiness_report"]  # type: ignore[index]
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    readiness.continue_to_standardization()
+    assert events[-1] == project_summary.project_root
+    assert "不能继续" not in readiness.status_message()
+
+
 def test_workflow_task_results_report_and_settings_pages(qt_app, project_summary) -> None:
     workflow = BioinformaticsWorkflowStatusWidget()
     workflow.refresh_project(project_summary)

@@ -59,7 +59,12 @@ from app.bioinformatics.comparison_config import (
     confirmed_group_assignments,
     load_confirmed_comparison_config,
 )
-from app.bioinformatics.project_readiness import load_readiness_artifacts, readiness_status_zh, run_project_readiness
+from app.bioinformatics.project_readiness import (
+    has_standardizable_expression_input,
+    load_readiness_artifacts,
+    readiness_status_zh,
+    run_project_readiness,
+)
 from app.bioinformatics.project_recognition import (
     TYPE_LABELS,
     classify_file,
@@ -8782,12 +8787,7 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
     files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
     if not files:
         return False, "识别报告中没有任何文件。"
-    has_core = any(
-        str(item.get("recognized_type")) in {"expression_matrix", "raw_count_matrix"}
-        or any(str(role) in {"expression_matrix", "raw_count_matrix"} for role in item.get("recognized_roles", []) or [])
-        for item in files
-    )
-    if not has_core:
+    if not has_standardizable_expression_input(files):
         return False, "未识别到表达矩阵或原始计数矩阵。"
     return True, ""
 
