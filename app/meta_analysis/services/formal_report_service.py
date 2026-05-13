@@ -634,6 +634,7 @@ def _m8_report_state(project_dir: Path, prisma: PRISMAFlowSummary, artifacts: di
 
 def _safe_statistical_result_state_summary(project_dir: Path, *, plan_complete: bool) -> dict[str, Any]:
     result = _load_json(project_dir / "analysis" / "pairwise_executor" / "latest_pairwise_meta_result.json")
+    review = _load_json(project_dir / "analysis" / "pairwise_executor" / "latest_pairwise_meta_result_review.json")
     result_payload = _load_json(project_dir / "analysis" / "analysis_result.json")
     pairwise_result_available = bool(result)
     if not result:
@@ -666,6 +667,12 @@ def _safe_statistical_result_state_summary(project_dir: Path, *, plan_complete: 
         "warnings": "；".join(warnings) if warnings else "无",
         "errors": "；".join(errors) if errors else "无",
         "report_ready": not blocks_formal_report_claim(payload),
+        "review_state": str(review.get("review_state") or result.get("review_state") or "not_reviewed") if result else "not_reviewed",
+        "review_decision": str(review.get("review_decision") or result.get("review_decision") or "") if result else "",
+        "review_warnings_acknowledged": bool(review.get("review_warnings_acknowledged", result.get("review_warnings_acknowledged", False))) if result else False,
+        "report_ready_requested": bool(review.get("report_ready_requested", result.get("report_ready_requested", False))) if result else False,
+        "report_ready_granted": bool(review.get("report_ready_granted", result.get("report_ready_granted", False))) if result else False,
+        "report_ready_blockers": "；".join(str(item) for item in list(review.get("report_ready_blockers", result.get("report_ready_blockers", [])) or [])) or "无" if result else "无",
         "pairwise_result_available": pairwise_result_available,
         "model_used": str(result.get("model_used", "")) if result else "",
         "effect_measure_type": str(result.get("effect_measure_type", "")) if result else "",
@@ -1113,15 +1120,22 @@ def _formal_report_markdown(project_dir: Path, prisma: PRISMAFlowSummary, artifa
 
 
 def _statistical_result_detail_lines(statistical_result: dict[str, Any]) -> list[str]:
+    state = str(statistical_result.get("state", ""))
+    if state == STATISTICAL_RESULT_STATE_NOT_RUN:
+        return ["- 尚未运行正式统计分析。"]
+    if state == STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN:
+        return ["- 已配置分析计划，但尚未运行统计执行器。"]
     if not statistical_result.get("pairwise_result_available"):
         return []
-    state = str(statistical_result.get("state", ""))
     if state == STATISTICAL_RESULT_STATE_FAILED_VALIDATION:
         return ["- M12 pairwise executor：输入校验失败，仅展示错误摘要，不展示合并效应量。"]
+    if state == "testing_level":
+        return ["- 当前为 Developer Preview / testing 测试级结果，不能作为正式结论。"]
     if state not in {"computed", "user_reviewed", "report_ready"}:
         return []
     lines = [
         "- M12 pairwise executor：Developer Preview / testing MVP。",
+        f"- 审核状态：{statistical_result.get('review_state', 'not_reviewed')}",
         f"- 模型：{statistical_result.get('model_used', 'fixed_effect')}",
         f"- 纳入研究数：{statistical_result.get('included_count', 0)}",
         f"- 效应量类型：{statistical_result.get('effect_measure_type', '缺失')}",
@@ -1139,8 +1153,14 @@ def _statistical_result_detail_lines(statistical_result: dict[str, Any]) -> list
         )
     if statistical_result.get("requires_user_review"):
         lines.append("- 统计结果已计算但尚未完成用户审核，不能作为正式报告结论。")
+    if state == "user_reviewed" and not statistical_result.get("report_ready"):
+        lines.append("- 统计结果已完成用户审核，但尚未标记为报告就绪。")
+    if state == "report_ready":
+        lines.append("- 报告就绪统计结果（Developer Preview / testing）：可进入当前草稿报告工作流，但不代表生产、临床、监管、投稿或正式发表结论。")
     if state != "report_ready":
         lines.append("- 当前统计结果未达到 report_ready，报告中只作为测试阶段摘要。")
+    if statistical_result.get("report_ready_blockers") not in {"", "无", None}:
+        lines.append(f"- 阻止进入报告的原因：{statistical_result.get('report_ready_blockers')}")
     return lines
 
 
