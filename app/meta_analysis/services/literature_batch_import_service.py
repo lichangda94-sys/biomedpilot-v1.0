@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
-from app.meta_analysis.adapters.literature_import_adapter import _legacy_path
+from app.meta_analysis.literature_import_core import (
+    append_import_batch,
+    build_import_diagnostics,
+    normalize_record_payload,
+    parse_literature_file,
+    write_import_diagnostics,
+)
 from app.shared.storage import default_storage_root
 
 
@@ -82,59 +89,70 @@ class LiteratureBatchImportService:
             )
 
         try:
-            with _legacy_path():
-                from literature.batch_service import ImportBatchService
-                from literature.models import ImportFormatHint, ImportSourceKind, LiteratureProject
-                from literature.store import LiteratureStore
-
-                root_dir = self._project_dir(request.project_id)
-                store = LiteratureStore(root_dir)
-                if store.get_project(request.project_id) is None:
-                    store.save_project(
-                        LiteratureProject(
-                            project_id=request.project_id,
-                            name=request.project_id,
-                            description="BioMedPilot Meta Analysis Developer Preview literature import project.",
-                            metadata={"created_by": "BioMedPilot Meta Literature Import Panel"},
-                        )
-                    )
-                batch_service = ImportBatchService(store)
-                batch = batch_service.create_batch(
-                    request.project_id,
-                    str(source_path),
-                    source_type=ImportSourceKind.FILE,
-                    format_hint=ImportFormatHint(import_format),
-                    metadata={
+            root_dir = self._project_dir(request.project_id)
+            adapter_result = parse_literature_file(source_path, request.project_id, import_format)
+            records = [
+                normalize_record_payload(
+                    asdict(record),
+                    batch_id=adapter_result.batch_id,
+                    project_id=request.project_id,
+                    source_type=import_format,
+                )
+                for record in adapter_result.records
+            ]
+            diagnostics = build_import_diagnostics(adapter_result.batch_id, records)
+            diagnostics_path, warnings_path = write_import_diagnostics(root_dir, adapter_result.batch_id, diagnostics)
+            now = datetime.now(timezone.utc).isoformat()
+            append_import_batch(
+                root_dir,
+                {
+                    "batch_id": adapter_result.batch_id,
+                    "project_id": request.project_id,
+                    "source_path": str(source_path),
+                    "import_format": import_format,
+                    "source_type": "file",
+                    "metadata": {
                         "source_database": request.source_database,
                         "search_date": request.search_date,
                         "search_strategy": request.search_strategy,
                         "dedup_mode": request.dedup_mode,
                         "ui_entry": "meta_literature_import_panel",
-                        "software_status": "developer_preview_testing",
+                        "software_status": "active_runtime",
                     },
-                )
-                executed = batch_service.execute_batch(batch.batch_id)
-            diagnostics_path = self._diagnostics_path(request.project_id, executed.batch_id)
-            warnings_path = self._warnings_path(request.project_id, executed.batch_id)
+                    "status": "completed",
+                    "created_at": now,
+                    "completed_at": now,
+                    "raw_record_count": diagnostics.raw_record_count,
+                    "parsed_record_count": diagnostics.parsed_record_count,
+                    "normalized_record_count": diagnostics.normalized_record_count,
+                    "failed_records": diagnostics.failed_record_count,
+                    "warning_count": diagnostics.warning_count,
+                    "duplicate_candidate_count": diagnostics.duplicate_candidate_count,
+                    "records_after_dedup_count": diagnostics.records_after_dedup_count,
+                    "diagnostics_path": str(diagnostics_path),
+                    "warnings_path": str(warnings_path),
+                    "records": records,
+                },
+            )
             return LiteratureBatchImportSummary(
                 success=True,
-                message=f"Import batch completed: {executed.imported_records} records imported.",
+                message=f"Import batch completed: {diagnostics.normalized_record_count} records imported.",
                 project_id=request.project_id,
-                batch_id=executed.batch_id,
+                batch_id=adapter_result.batch_id,
                 source_path=str(source_path),
                 import_format=import_format,
                 source_database=request.source_database,
                 search_date=request.search_date,
                 search_strategy=request.search_strategy,
                 dedup_mode=request.dedup_mode,
-                status=executed.status.value,
-                raw_record_count=executed.raw_record_count,
-                parsed_record_count=executed.parsed_record_count,
-                normalized_record_count=executed.normalized_record_count,
-                failed_record_count=executed.failed_records,
-                warning_count=executed.warning_count,
-                duplicate_candidate_count=executed.duplicate_candidate_count,
-                records_after_dedup_count=executed.records_after_dedup_count,
+                status="completed",
+                raw_record_count=diagnostics.raw_record_count,
+                parsed_record_count=diagnostics.parsed_record_count,
+                normalized_record_count=diagnostics.normalized_record_count,
+                failed_record_count=diagnostics.failed_record_count,
+                warning_count=diagnostics.warning_count,
+                duplicate_candidate_count=diagnostics.duplicate_candidate_count,
+                records_after_dedup_count=diagnostics.records_after_dedup_count,
                 diagnostics_path=str(diagnostics_path),
                 warnings_path=str(warnings_path),
             )

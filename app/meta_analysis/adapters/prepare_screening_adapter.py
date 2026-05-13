@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
-import sys
-
-
-LEGACY_ROOT = Path(__file__).resolve().parents[1] / "legacy"
+from app.meta_analysis.literature_import_core import normalize_record_payload
 
 
 @dataclass(frozen=True)
@@ -36,65 +31,25 @@ class PrepareScreeningAdapter:
         source_type: str,
         records: list[dict[str, object]],
     ) -> list[ScreeningReadyRecord]:
-        with _legacy_path():
-            from literature.models import ParsedLiteratureRecord
-            from literature.normalize import RecordNormalizationService
-
-            parsed_records = [
-                ParsedLiteratureRecord(
-                    record_id=str(record.get("record_id", "")),
-                    batch_id=batch_id,
-                    project_id=project_id,
-                    source=source_type,
-                    source_record_id=str(record.get("source_record_id", "")),
-                    title=str(record.get("title", "")),
-                    abstract=str(record.get("abstract", "")),
-                    authors=list(record.get("authors", [])),
-                    journal=str(record.get("journal", "")),
-                    year=record.get("year") if isinstance(record.get("year"), int) else None,
-                    doi=str(record.get("doi", "")),
-                    pmid=str(record.get("pmid", "")),
-                    keywords=list(record.get("keywords", [])),
-                    language=str(record.get("language", "")),
-                    raw_payload={},
-                )
-                for record in records
-            ]
-            normalized_records = RecordNormalizationService().normalize_records(parsed_records)
-
         return [
             ScreeningReadyRecord(
-                record_id=record.record_id,
-                title=record.title,
-                abstract=record.abstract,
-                authors=list(record.authors),
-                journal=record.journal,
-                year=record.year,
-                doi=record.doi,
-                pmid=record.pmid,
-                title_normalized=record.title_normalized,
-                doi_normalized=record.doi_normalized,
-                pmid_normalized=record.pmid_normalized,
-                authors_normalized=list(record.authors_normalized),
-                journal_normalized=record.journal_normalized,
-                year_normalized=record.year_normalized,
+                record_id=str(payload.get("record_id", "")),
+                title=str(payload.get("title", "")),
+                abstract=str(payload.get("abstract", "")),
+                authors=list(payload.get("authors", [])),
+                journal=str(payload.get("journal", "")),
+                year=payload.get("year") if isinstance(payload.get("year"), int) else None,
+                doi=str(payload.get("doi", "")),
+                pmid=str(payload.get("pmid", "")),
+                title_normalized=str(payload.get("title_normalized", "")),
+                doi_normalized=str(payload.get("doi_normalized", "")),
+                pmid_normalized=str(payload.get("pmid_normalized", "")),
+                authors_normalized=list(payload.get("authors_normalized", [])),
+                journal_normalized=str(payload.get("journal_normalized", "")),
+                year_normalized=payload.get("year_normalized") if isinstance(payload.get("year_normalized"), int) else None,
             )
-            for record in normalized_records
+            for payload in (
+                normalize_record_payload(record, batch_id=batch_id, project_id=project_id, source_type=source_type)
+                for record in records
+            )
         ]
-
-
-@contextmanager
-def _legacy_path():
-    legacy_text = str(LEGACY_ROOT)
-    inserted = False
-    if legacy_text not in sys.path:
-        sys.path.insert(0, legacy_text)
-        inserted = True
-    try:
-        yield
-    finally:
-        if inserted:
-            try:
-                sys.path.remove(legacy_text)
-            except ValueError:
-                pass

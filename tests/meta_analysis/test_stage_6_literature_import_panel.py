@@ -13,7 +13,7 @@ from app.meta_analysis.services.literature_batch_import_service import (
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "literature"
 
 
-def test_literature_batch_import_executes_legacy_batch_service_and_returns_summary(tmp_path: Path) -> None:
+def test_literature_batch_import_executes_active_batch_service_and_returns_summary(tmp_path: Path) -> None:
     service = LiteratureBatchImportService(storage_root=tmp_path)
 
     summary = service.execute_import(
@@ -69,7 +69,7 @@ def test_literature_batch_import_failure_returns_readable_error_without_crashing
     assert summary.status == ""
 
 
-def test_literature_batch_import_rejects_unknown_format_before_legacy_execution(tmp_path: Path) -> None:
+def test_literature_batch_import_rejects_unknown_format_before_active_execution(tmp_path: Path) -> None:
     source = tmp_path / "records.txt"
     source.write_text("not a supported literature file", encoding="utf-8")
     service = LiteratureBatchImportService(storage_root=tmp_path)

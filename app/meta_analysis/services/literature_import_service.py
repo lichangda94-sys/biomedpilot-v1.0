@@ -6,7 +6,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from app.meta_analysis.adapters.literature_import_adapter import LiteratureImportAdapter, _legacy_path
+from app.meta_analysis.adapters.literature_import_adapter import LiteratureImportAdapter
+from app.meta_analysis.literature_import_core import (
+    build_import_diagnostics,
+    normalize_record_payload,
+    sanitize_import_payload,
+    write_import_diagnostics,
+)
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
 from app.shared.data_center.service import DataCenter
@@ -92,12 +98,11 @@ class LiteratureImportService:
                 source_file=str(path),
                 import_batch_id=adapter_result.batch_id,
                 diagnostics={
-                    "legacy_import_output_path": str(output_path),
+                    "import_output_path": str(output_path),
                     "diagnostics_path": str(diagnostics_paths[0]),
                     "warnings_path": str(diagnostics_paths[1]),
                     "warning_count": warning_count,
                     "duplicate_candidate_count": duplicate_candidate_count,
-                    "technical_debt": "transitional_bridge_uses_existing_legacy_adapter_output_without_expanding_legacy_import_dependency",
                 },
             )
             result = ImportResult(
@@ -217,53 +222,54 @@ class LiteratureImportService:
         project_dir = self._project_dir(project_id)
         serialized = []
         removed_fields: list[str] = []
-        with _legacy_path():
-            from literature.field_sanitizer import LiteratureFieldSanitizer
-            from literature.import_diagnostics import build_import_diagnostics, write_import_diagnostics
-
-            sanitizer = LiteratureFieldSanitizer()
-            for record in records:
-                payload = asdict(record)
-                sanitized = sanitizer.sanitize_import_payload(payload)
-                removed_fields.extend(sanitized.removed_fields)
-                record_payload = dict(sanitized.sanitized)
-                record_payload["record_id"] = payload.get("record_id", "")
-                record_payload["project_id"] = project_id
-                record_payload["batch_id"] = batch_id
-                record_payload["source"] = source_type
-                record_payload["first_author"] = payload.get("first_author", "")
-                serialized.append(record_payload)
+        for record in records:
+            payload = asdict(record)
+            sanitized = sanitize_import_payload(payload)
+            removed_fields.extend(sanitized.removed_fields)
+            record_payload = dict(sanitized.sanitized)
+            record_payload["record_id"] = payload.get("record_id", "")
+            record_payload["project_id"] = project_id
+            record_payload["batch_id"] = batch_id
+            record_payload["source"] = source_type
+            record_payload["first_author"] = payload.get("first_author", "")
+            normalized_payload = normalize_record_payload(
+                record_payload,
+                batch_id=batch_id,
+                project_id=project_id,
+                source_type=source_type,
+            )
+            serialized.append(normalized_payload)
+            self._audit_log.record_event(
+                project_dir,
+                event_type="record_parsed",
+                project_id=project_id,
+                target_type="literature_record",
+                target_id=str(payload.get("record_id", "")),
+                source_path=str(source_path),
+                summary="Literature record parsed.",
+            )
+            if sanitized.removed_fields:
                 self._audit_log.record_event(
                     project_dir,
-                    event_type="record_parsed",
+                    event_type="field_sanitized",
                     project_id=project_id,
                     target_type="literature_record",
                     target_id=str(payload.get("record_id", "")),
                     source_path=str(source_path),
-                    summary="Literature record parsed.",
+                    summary="Import fields sanitized.",
+                    details={"removed_fields": sanitized.removed_fields},
                 )
-                if sanitized.removed_fields:
-                    self._audit_log.record_event(
-                        project_dir,
-                        event_type="field_sanitized",
-                        project_id=project_id,
-                        target_type="literature_record",
-                        target_id=str(payload.get("record_id", "")),
-                        source_path=str(source_path),
-                        summary="Import fields sanitized.",
-                        details={"removed_fields": sanitized.removed_fields},
-                    )
-                self._audit_log.record_event(
-                    project_dir,
-                    event_type="record_normalized",
-                    project_id=project_id,
-                    target_type="literature_record",
-                    target_id=str(payload.get("record_id", "")),
-                    source_path=str(source_path),
-                    summary="Literature record normalized.",
-                )
-            diagnostics = build_import_diagnostics(batch_id, serialized)
-            diagnostics_paths = write_import_diagnostics(project_dir, diagnostics)
+            self._audit_log.record_event(
+                project_dir,
+                event_type="record_normalized",
+                project_id=project_id,
+                target_type="literature_record",
+                target_id=str(payload.get("record_id", "")),
+                source_path=str(source_path),
+                summary="Literature record normalized.",
+            )
+        diagnostics = build_import_diagnostics(batch_id, serialized)
+        diagnostics_paths = write_import_diagnostics(project_dir, batch_id, diagnostics)
         payload = {
             "project_id": project_id,
             "batch_id": batch_id,

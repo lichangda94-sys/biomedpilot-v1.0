@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
-import sys
-
-
-LEGACY_ROOT = Path(__file__).resolve().parents[1] / "legacy"
 
 
 @dataclass(frozen=True)
@@ -71,10 +65,15 @@ class AnalysisAdapter:
         )
 
     def supported_outcome_types(self) -> set[str]:
-        with _legacy_path():
-            from extraction.models import OutcomeType
-
-            return {item.value for item in OutcomeType}
+        return {
+            "binary",
+            "continuous",
+            "time_to_event",
+            "prevalence",
+            "incidence",
+            "correlation",
+            "diagnostic_2x2",
+        }
 
     def _missing_required_fields(self, outcome_record: dict[str, object], outcome_type: str) -> list[str]:
         required_by_type = {
@@ -100,20 +99,3 @@ class AnalysisAdapter:
         if "at_least_two_valid_outcomes_required" in blocking_errors:
             return "add_more_valid_outcomes"
         return "resolve_analysis_preflight_errors"
-
-
-@contextmanager
-def _legacy_path():
-    legacy_text = str(LEGACY_ROOT)
-    inserted = False
-    if legacy_text not in sys.path:
-        sys.path.insert(0, legacy_text)
-        inserted = True
-    try:
-        yield
-    finally:
-        if inserted:
-            try:
-                sys.path.remove(legacy_text)
-            except ValueError:
-                pass

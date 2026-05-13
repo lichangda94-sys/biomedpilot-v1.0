@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
-import sys
 from uuid import uuid4
-
-
-LEGACY_ROOT = Path(__file__).resolve().parents[1] / "legacy"
 
 
 @dataclass(frozen=True)
@@ -35,38 +29,22 @@ class ScreeningAdapter:
         duplicate_groups: list[dict[str, object]] | None = None,
     ) -> list[ScreeningQueueRecord]:
         eligible_records = self._eligible_title_abstract_records(records, duplicate_groups or [])
-        with _legacy_path():
-            from literature.models import ScreeningDecision, ScreeningRecord, ScreeningStage
-
-            legacy_records = [
-                ScreeningRecord(
-                    screening_record_id=f"screen-{uuid4().hex[:12]}",
-                    project_id=project_id,
-                    source_record_id=str(record.get("source_record_id") or record.get("record_id", "")),
-                    normalized_record_id=str(record.get("record_id", "")),
-                    stage=ScreeningStage.TITLE_ABSTRACT_SCREENING,
-                    decision=ScreeningDecision.PENDING,
-                )
-                for record in eligible_records
-            ]
-
-        records_by_id = {str(record.get("record_id", "")): record for record in eligible_records}
         return [
             ScreeningQueueRecord(
-                screening_record_id=legacy_record.screening_record_id,
-                project_id=legacy_record.project_id,
-                source_record_id=legacy_record.source_record_id,
-                normalized_record_id=legacy_record.normalized_record_id,
-                title=str(records_by_id.get(legacy_record.normalized_record_id, {}).get("title", "")),
-                abstract=str(records_by_id.get(legacy_record.normalized_record_id, {}).get("abstract", "")),
-                stage=legacy_record.stage.value,
-                decision=legacy_record.decision.value,
-                exclusion_reason_code=legacy_record.exclusion_reason_code,
-                exclusion_reason_text=legacy_record.exclusion_reason_text,
-                reviewer_id=legacy_record.reviewer_id,
-                notes=legacy_record.notes,
+                screening_record_id=f"screen-{uuid4().hex[:12]}",
+                project_id=project_id,
+                source_record_id=str(record.get("source_record_id") or record.get("record_id", "")),
+                normalized_record_id=str(record.get("record_id", "")),
+                title=str(record.get("title", "")),
+                abstract=str(record.get("abstract", "")),
+                stage="title_abstract_screening",
+                decision="pending",
+                exclusion_reason_code="",
+                exclusion_reason_text="",
+                reviewer_id=None,
+                notes="",
             )
-            for legacy_record in legacy_records
+            for record in eligible_records
         ]
 
     def _eligible_title_abstract_records(
@@ -93,20 +71,3 @@ class ScreeningAdapter:
             if str(record.get("record_id", "")) not in candidate_ids
             or str(record.get("record_id", "")) in allowed_primary_ids
         ]
-
-
-@contextmanager
-def _legacy_path():
-    legacy_text = str(LEGACY_ROOT)
-    inserted = False
-    if legacy_text not in sys.path:
-        sys.path.insert(0, legacy_text)
-        inserted = True
-    try:
-        yield
-    finally:
-        if inserted:
-            try:
-                sys.path.remove(legacy_text)
-            except ValueError:
-                pass

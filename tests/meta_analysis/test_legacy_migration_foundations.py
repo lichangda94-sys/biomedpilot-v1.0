@@ -135,7 +135,7 @@ def test_literature_edge_case_audit_lists_test_driven_replacement_candidates(tmp
     assert any(item.capability == "CSV header aliases" for item in items)
     assert all("legacy" not in " ".join(item.active_files) for item in items)
     assert all(item.proposed_test for item in items)
-    assert "test_gap_first_no_legacy_directory_copy" in path.read_text(encoding="utf-8")
+    assert "active_runtime_no_legacy_bridge" in path.read_text(encoding="utf-8")
 
 
 def _task(task_id: str, status: TaskStatus) -> TaskRecord:

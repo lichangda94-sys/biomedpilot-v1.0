@@ -411,11 +411,11 @@ def literature_import_state_from_batch_summary(
     visual_summary = import_diagnostics_visual_summary(summary.diagnostics_path, warnings_path=summary.warnings_path)
     return LiteratureImportPageState(
         title=base.title,
-        description="Developer Preview / testing 文献导入入口：选择文件、设置来源信息并执行 legacy batch import。",
+        description="Developer Preview / testing 文献导入入口：选择文件、设置来源信息并执行 active batch import。",
         supported_formats=base.supported_formats,
         status_label=base.status_label,
         input_summary="输入：本地 RIS / NBIB / CSV 文件、source_database、search_date、search_strategy 和 dedup_mode。",
-        output_summary="输出：legacy ImportBatch、parsed records、import diagnostics 和下一步 Duplicate Review 提示。",
+        output_summary="输出：active ImportBatch、parsed records、import diagnostics 和下一步 Duplicate Review 提示。",
         next_step="下一步：Review duplicates。",
         empty_state=base.empty_state,
         warning_summary="导入失败会显示用户可读错误；diagnostics 展示缺字段和 warning，不自动修复。",

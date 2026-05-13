@@ -1,2 +1,1 @@
-"""Adapters from BioMedPilot Meta Analysis services to preserved legacy logic."""
-
+"""Adapters for BioMedPilot Meta Analysis active services."""

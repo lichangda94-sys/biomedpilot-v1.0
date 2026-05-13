@@ -151,7 +151,7 @@ def recent_import_batch_quality_summaries(root_dir: Path | None = None, *, limit
             payload = _load_json_object(path)
             if payload:
                 summaries.append(_summary_from_unified_import(path, payload))
-    summaries.extend(_legacy_import_batch_summaries(root))
+    summaries.extend(_batch_manifest_summaries(root))
     deduped = {f"{item.project_id}:{item.batch_id}:{item.created_at}": item for item in summaries}
     return sorted(deduped.values(), key=lambda item: item.created_at, reverse=True)[:limit]
 
@@ -192,7 +192,7 @@ def _summary_from_unified_import(path: Path, payload: dict[str, object]) -> Impo
     )
 
 
-def _legacy_import_batch_summaries(root: Path) -> list[ImportBatchQualitySummary]:
+def _batch_manifest_summaries(root: Path) -> list[ImportBatchQualitySummary]:
     batches_path = root / "literature" / "import_batches.json"
     if not batches_path.exists():
         return []
@@ -715,7 +715,7 @@ if QWidget is not None:
         title.setObjectName("metaCardTitle")
         detail = QLabel(feature.description)
         detail.setWordWrap(True)
-        source = QLabel(f"legacy 来源：{feature.legacy_source or '统一壳子占位'}")
+        source = QLabel(f"来源：{feature.legacy_source or '统一壳子占位'}")
         source.setWordWrap(True)
         next_step = QLabel(f"下一步：{feature.next_step}")
         next_step.setWordWrap(True)

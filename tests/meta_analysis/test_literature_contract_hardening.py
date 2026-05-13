@@ -3,7 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.meta_analysis.adapters.literature_import_adapter import _legacy_path
+from app.meta_analysis.literature_import_core import (
+    CREATOR_TYPES,
+    IMPORTABLE_FIELDS,
+    PUBLICATION_TYPES,
+    SYSTEM_CONTROLLED_FIELDS,
+    normalize_record_payload,
+    sanitize_import_payload,
+)
 from app.meta_analysis.services.attachment_service import AttachmentService
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.dedup_decision_service import DedupDecisionService
@@ -18,50 +25,44 @@ from app.shared.task_center.service import TaskCenter, TaskType
 
 
 def test_literature_schema_sanitizer_and_normalizer_contract() -> None:
-    with _legacy_path():
-        from literature.field_sanitizer import LiteratureFieldSanitizer
-        from literature.models import ParsedLiteratureRecord
-        from literature.normalize import RecordNormalizationService
-        from literature.schema import CREATOR_TYPES, IMPORTABLE_FIELDS, PUBLICATION_TYPES, SYSTEM_CONTROLLED_FIELDS
+    assert "author" in CREATOR_TYPES
+    assert "journal_article" in PUBLICATION_TYPES
+    assert "title" in IMPORTABLE_FIELDS
+    assert "record_id" in SYSTEM_CONTROLLED_FIELDS
 
-        assert "author" in CREATOR_TYPES
-        assert "journal_article" in PUBLICATION_TYPES
-        assert "title" in IMPORTABLE_FIELDS
-        assert "record_id" in SYSTEM_CONTROLLED_FIELDS
+    sanitized = sanitize_import_payload(
+        {
+            "title": " Trial title ",
+            "doi": "https://doi.org/10.1000/ABC",
+            "record_id": "external-id",
+            "project_id": "external-project",
+            "screening_status": "included",
+            "attachment_id": "att-external",
+        }
+    )
+    assert sanitized.sanitized["title"] == " Trial title "
+    assert {"record_id", "project_id", "screening_status", "attachment_id"} <= set(sanitized.removed_fields)
 
-        sanitized = LiteratureFieldSanitizer().sanitize_import_payload(
-            {
-                "title": " Trial title ",
-                "doi": "https://doi.org/10.1000/ABC",
-                "record_id": "external-id",
-                "project_id": "external-project",
-                "screening_status": "included",
-                "attachment_id": "att-external",
-            }
-        )
-        assert sanitized.sanitized["title"] == " Trial title "
-        assert {"record_id", "project_id", "screening_status", "attachment_id"} <= set(sanitized.removed_fields)
-
-        normalized = RecordNormalizationService().normalize_record(
-            ParsedLiteratureRecord(
-                batch_id="batch-1",
-                project_id="proj-1",
-                source="csv",
-                title="A Trial of Treatment.\n",
-                authors=["Smith, John", "Wang Mei"],
-                date="2024 Jan",
-                doi="doi: 10.1000/ABC. ",
-                pmid="PMID: 123456",
-                journal="Journal of Tests",
-                publication_type="Randomized Controlled Trial",
-            )
-        )
-        assert normalized.doi_normalized == "10.1000/abc"
-        assert normalized.pmid_normalized == "123456"
-        assert normalized.year == 2024
-        assert normalized.first_author == "John Smith"
-        assert normalized.authors_text == "John Smith; Wang Mei"
-        assert normalized.publication_type == "randomized_trial"
+    normalized = normalize_record_payload(
+        {
+            "title": "A Trial of Treatment.\n",
+            "authors": ["Smith, John", "Wang Mei"],
+            "date": "2024 Jan",
+            "doi": "doi: 10.1000/ABC. ",
+            "pmid": "PMID: 123456",
+            "journal": "Journal of Tests",
+            "publication_type": "Randomized Controlled Trial",
+        },
+        batch_id="batch-1",
+        project_id="proj-1",
+        source_type="csv",
+    )
+    assert normalized["doi_normalized"] == "10.1000/abc"
+    assert normalized["pmid_normalized"] == "123456"
+    assert normalized["year"] == 2024
+    assert normalized["first_author"] == "John Smith"
+    assert normalized["authors_text"] == "Smith, John; Wang Mei"
+    assert normalized["publication_type"] == "randomized_trial"
 
 
 def test_import_service_generates_diagnostics_audit_and_recent_batch_summary(tmp_path: Path) -> None:
@@ -211,4 +212,3 @@ def test_prisma_sources_and_report_audit_events(tmp_path: Path) -> None:
     assert report.success
     report_project_dir = tmp_path / "projects" / "meta-project" / "meta_analysis"
     assert any(event.event_type == "report_exported" for event in audit.list_events(report_project_dir))
-
