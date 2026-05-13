@@ -130,7 +130,7 @@ class ModuleSelectionWidget(QWidget):
             self._module_card(
                 title="实验工具模块",
                 english_title="LabTools Module",
-                description="提供基础实验计算入口；本阶段开放浓度换算与稀释计算，试剂配方、图像定量和实验模板显示开发中。",
+                description="提供基础实验计算入口；本阶段开放浓度换算与稀释计算、本地试剂配方库，图像定量和实验模板显示开发中。",
                 button_text="进入实验工具模块",
                 object_name="labToolsModuleButton",
                 icon_key="labtools",

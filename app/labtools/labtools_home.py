@@ -47,7 +47,7 @@ if QWidget is not None:
             grid.addWidget(
                 self._entry_card(
                     "实验计算器",
-                    "浓度换算、稀释计算",
+                    "浓度、稀释、配制计算",
                     "可用",
                     "进入实验计算器",
                     self.calculators_requested.emit,
@@ -56,7 +56,18 @@ if QWidget is not None:
                 0,
                 0,
             )
-            grid.addWidget(self._entry_card("试剂与配方", "开发中", "开发中", "查看状态", self.reagents_requested.emit), 0, 1)
+            grid.addWidget(
+                self._entry_card(
+                    "试剂与配方",
+                    "本地常用配方与体积缩放",
+                    "可用",
+                    "进入试剂与配方",
+                    self.reagents_requested.emit,
+                    object_name="labToolsRecipeEntry",
+                ),
+                0,
+                1,
+            )
             grid.addWidget(self._entry_card("图像定量", "开发中", "开发中", "查看状态", self.image_quant_requested.emit), 1, 0)
             grid.addWidget(self._entry_card("实验模板", "开发中", "开发中", "查看状态", self.templates_requested.emit), 1, 1)
             root.addLayout(grid)
@@ -108,7 +119,7 @@ if QWidget is not None:
                 border: 0;
                 background: {COLORS["background"]};
             }}
-            QFrame#labToolsCalculatorEntry, QFrame#labToolsPendingEntry {{
+            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsPendingEntry {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["lg"]}px;

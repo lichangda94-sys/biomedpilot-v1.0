@@ -8,7 +8,7 @@ from app.shared.feature_status import FeatureItem, FeatureStatus
 def labtools_features() -> list[FeatureItem]:
     return [
         FeatureItem("labtools", "实验计算器", FeatureStatus.TESTING, "浓度、稀释、溶液配制、细胞接种与 qPCR 配液计算。"),
-        FeatureItem("labtools", "试剂与配方", FeatureStatus.PENDING, "开发中。"),
+        FeatureItem("labtools", "试剂与配方", FeatureStatus.TESTING, "本地常用配方库、体积缩放和 stock-to-working 稀释。"),
         FeatureItem("labtools", "图像定量", FeatureStatus.PENDING, "开发中；本阶段不接入 ImageJ/Fiji，不生成图像分析结果。"),
         FeatureItem("labtools", "实验模板", FeatureStatus.PENDING, "开发中。"),
     ]
@@ -19,6 +19,7 @@ try:
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    from app.labtools.ui.recipe_widgets import LabToolsRecipeWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -43,6 +44,8 @@ if QWidget is not None:
                 return "home"
             if current is self._calculator_page:
                 return "calculators"
+            if current is self._recipe_page:
+                return "recipes"
             return "pending"
 
         def show_home(self) -> None:
@@ -51,8 +54,8 @@ if QWidget is not None:
         def show_calculators(self) -> None:
             self._stack.setCurrentWidget(self._calculator_page)
 
-        def show_reagents_placeholder(self) -> None:
-            self._show_placeholder("试剂与配方", "开发中")
+        def show_recipes(self) -> None:
+            self._stack.setCurrentWidget(self._recipe_page)
 
         def show_image_quant_placeholder(self) -> None:
             self._show_placeholder("图像定量", "开发中")
@@ -87,14 +90,16 @@ if QWidget is not None:
             self._stack = QStackedWidget()
             self._home_page = LabToolsHomeWidget()
             self._home_page.calculators_requested.connect(self.show_calculators)
-            self._home_page.reagents_requested.connect(self.show_reagents_placeholder)
+            self._home_page.reagents_requested.connect(self.show_recipes)
             self._home_page.image_quant_requested.connect(self.show_image_quant_placeholder)
             self._home_page.templates_requested.connect(self.show_templates_placeholder)
             self._calculator_page = LabToolsCalculatorWidget()
+            self._recipe_page = LabToolsRecipeWidget()
             self._placeholder_page = self._placeholder("开发中", "该入口仍在开发中。")
             for key, page in (
                 ("home", self._home_page),
                 ("calculators", self._calculator_page),
+                ("recipes", self._recipe_page),
                 ("pending", self._placeholder_page),
             ):
                 self._page_keys.append(key)
@@ -148,4 +153,4 @@ else:  # pragma: no cover
 
     class LabToolsWorkspaceWidget:  # type: ignore[no-redef]
         def page_keys(self) -> tuple[str, ...]:
-            return ("home", "calculators", "pending")
+            return ("home", "calculators", "recipes", "pending")
