@@ -7,7 +7,7 @@ from app.shared.feature_status import FeatureItem, FeatureStatus
 
 def labtools_features() -> list[FeatureItem]:
     return [
-        FeatureItem("labtools", "实验计算器", FeatureStatus.TESTING, "浓度换算与稀释计算 MVP。"),
+        FeatureItem("labtools", "实验计算器", FeatureStatus.TESTING, "浓度、稀释、溶液配制、细胞接种与 qPCR 配液计算。"),
         FeatureItem("labtools", "试剂与配方", FeatureStatus.PENDING, "开发中。"),
         FeatureItem("labtools", "图像定量", FeatureStatus.PENDING, "开发中；本阶段不接入 ImageJ/Fiji，不生成图像分析结果。"),
         FeatureItem("labtools", "实验模板", FeatureStatus.PENDING, "开发中。"),

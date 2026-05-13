@@ -31,6 +31,10 @@ MASS_CONCENTRATION_UNITS: dict[str, float] = {
     "ng/µL": 1e-3,
 }
 
+CELL_DENSITY_UNITS: dict[str, float] = {
+    "cells/mL": 1.0,
+}
+
 UNIT_ALIASES = {
     "ug": "µg",
     "μg": "µg",
@@ -44,6 +48,8 @@ UNIT_ALIASES = {
     "μg/mL": "µg/mL",
     "ng/uL": "ng/µL",
     "ng/μL": "ng/µL",
+    "cell/mL": "cells/mL",
+    "cells/ml": "cells/mL",
 }
 
 
@@ -52,7 +58,13 @@ def canonical_unit(unit: str) -> str:
     if not text:
         raise CalculationError("请选择单位。")
     canonical = UNIT_ALIASES.get(text, text)
-    if canonical in MASS_UNITS or canonical in VOLUME_UNITS or canonical in MOLARITY_UNITS or canonical in MASS_CONCENTRATION_UNITS:
+    if (
+        canonical in MASS_UNITS
+        or canonical in VOLUME_UNITS
+        or canonical in MOLARITY_UNITS
+        or canonical in MASS_CONCENTRATION_UNITS
+        or canonical in CELL_DENSITY_UNITS
+    ):
         return canonical
     raise CalculationError(f"暂不支持单位：{text}。")
 
@@ -93,6 +105,8 @@ def unit_kind(unit: str) -> str:
         return "molarity"
     if canonical in MASS_CONCENTRATION_UNITS:
         return "mass_concentration"
+    if canonical in CELL_DENSITY_UNITS:
+        return "cell_density"
     raise CalculationError(f"暂不支持单位：{unit}。")
 
 
@@ -166,3 +180,7 @@ def supported_mass_units() -> tuple[str, ...]:
 
 def supported_volume_units() -> tuple[str, ...]:
     return tuple(VOLUME_UNITS)
+
+
+def supported_cell_density_units() -> tuple[str, ...]:
+    return tuple(CELL_DENSITY_UNITS)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 try:
     from PySide6.QtWidgets import (
         QComboBox,
@@ -15,14 +17,19 @@ try:
         QWidget,
     )
 
+    from app.labtools.calculators.calculation_record import CalculationRecord
     from app.labtools.calculators.calculator_models import CalculationError, CalculationResult
+    from app.labtools.calculators.cell_seeding_calculator import calculate_cell_seeding
     from app.labtools.calculators.concentration_calculator import (
         calculate_mass_for_molar_solution,
         calculate_molar_concentration,
         convert_concentration,
     )
     from app.labtools.calculators.dilution_calculator import calculate_dilution
+    from app.labtools.calculators.qpcr_mix_calculator import calculate_qpcr_mix
+    from app.labtools.calculators.solution_preparation_calculator import calculate_solution_preparation
     from app.labtools.calculators.unit_conversion import (
+        supported_cell_density_units,
         supported_concentration_units,
         supported_mass_units,
         supported_volume_units,
@@ -66,9 +73,10 @@ if QWidget is not None:
 
 
     class ConcentrationCalculatorWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsConcentrationCalculator")
+            self._on_record = on_record
             self._build_ui()
 
         def _build_ui(self) -> None:
@@ -159,6 +167,8 @@ if QWidget is not None:
 
         def _show(self, result: CalculationResult) -> None:
             self._result.show_result(result)
+            if self._on_record is not None:
+                self._on_record(result.to_record(result.title))
 
         def _show_error(self, exc: CalculationError) -> None:
             self._result.show_error(str(exc))
@@ -208,9 +218,10 @@ if QWidget is not None:
 
 
     class DilutionCalculatorWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsDilutionCalculator")
+            self._on_record = on_record
             self._build_ui()
 
         def _build_ui(self) -> None:
@@ -272,6 +283,205 @@ if QWidget is not None:
                 self._result.show_error(str(exc))
                 return
             self._result.show_result(result)
+            if self._on_record is not None:
+                self._on_record(result.to_record(result.title))
+
+
+    class SolutionPreparationCalculatorWidget(QWidget):
+        def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsSolutionPreparationCalculator")
+            self._on_record = on_record
+            self._build_ui()
+
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            root.setSpacing(SPACING["md"])
+            title = QLabel("溶液配制计算")
+            title.setObjectName("labToolsSectionTitle")
+            root.addWidget(title)
+
+            card = QFrame()
+            card.setObjectName("labToolsCard")
+            grid = QGridLayout(card)
+            grid.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._concentration_value = _line_edit("例如 1")
+            self._concentration_unit = _combo(supported_concentration_units(), "mg/mL")
+            self._volume_value = _line_edit("例如 10")
+            self._volume_unit = _combo(supported_volume_units(), "mL")
+            self._molecular_weight = _line_edit("摩尔浓度配制时必填")
+            self._mass_unit = _combo(supported_mass_units(), "mg")
+            button = QPushButton("计算配制用量")
+            button.setObjectName("primaryButton")
+            button.clicked.connect(self._handle_calculate)
+            grid.addWidget(QLabel("目标浓度"), 0, 0)
+            grid.addWidget(self._concentration_value, 0, 1)
+            grid.addWidget(self._concentration_unit, 0, 2)
+            grid.addWidget(QLabel("目标体积"), 1, 0)
+            grid.addWidget(self._volume_value, 1, 1)
+            grid.addWidget(self._volume_unit, 1, 2)
+            grid.addWidget(QLabel("分子量 g/mol"), 2, 0)
+            grid.addWidget(self._molecular_weight, 2, 1)
+            grid.addWidget(QLabel("质量单位"), 3, 0)
+            grid.addWidget(self._mass_unit, 3, 1)
+            grid.addWidget(button, 4, 0, 1, 3)
+            root.addWidget(card)
+
+            self._result = ResultPanel()
+            root.addWidget(self._result)
+            root.addStretch(1)
+
+        def _handle_calculate(self) -> None:
+            try:
+                result = calculate_solution_preparation(
+                    self._concentration_value.text(),
+                    self._concentration_unit.currentText(),
+                    self._volume_value.text(),
+                    self._volume_unit.currentText(),
+                    molecular_weight=self._molecular_weight.text(),
+                    output_mass_unit=self._mass_unit.currentText(),
+                )
+            except CalculationError as exc:
+                self._result.show_error(str(exc))
+                return
+            self._result.show_result(result)
+            if self._on_record is not None:
+                self._on_record(result.to_record(result.title))
+
+
+    class CellSeedingCalculatorWidget(QWidget):
+        def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsCellSeedingCalculator")
+            self._on_record = on_record
+            self._build_ui()
+
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            root.setSpacing(SPACING["md"])
+            title = QLabel("细胞接种计算")
+            title.setObjectName("labToolsSectionTitle")
+            root.addWidget(title)
+
+            card = QFrame()
+            card.setObjectName("labToolsCard")
+            grid = QGridLayout(card)
+            grid.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._cell_density = _line_edit("例如 1000000")
+            self._density_unit = _combo(supported_cell_density_units(), "cells/mL")
+            self._target_cells = _line_edit("例如 10000")
+            self._wells = _line_edit("例如 24")
+            self._loss_percent = _line_edit("默认 10")
+            self._loss_percent.setText("10")
+            button = QPushButton("计算接种体积")
+            button.setObjectName("primaryButton")
+            button.clicked.connect(self._handle_calculate)
+            grid.addWidget(QLabel("当前细胞悬液浓度"), 0, 0)
+            grid.addWidget(self._cell_density, 0, 1)
+            grid.addWidget(self._density_unit, 0, 2)
+            grid.addWidget(QLabel("目标每孔细胞数"), 1, 0)
+            grid.addWidget(self._target_cells, 1, 1, 1, 2)
+            grid.addWidget(QLabel("孔数"), 2, 0)
+            grid.addWidget(self._wells, 2, 1, 1, 2)
+            grid.addWidget(QLabel("额外损耗比例 %"), 3, 0)
+            grid.addWidget(self._loss_percent, 3, 1, 1, 2)
+            grid.addWidget(button, 4, 0, 1, 3)
+            root.addWidget(card)
+
+            self._result = ResultPanel()
+            root.addWidget(self._result)
+            root.addStretch(1)
+
+        def _handle_calculate(self) -> None:
+            try:
+                result = calculate_cell_seeding(
+                    self._cell_density.text(),
+                    self._density_unit.currentText(),
+                    self._target_cells.text(),
+                    self._wells.text(),
+                    loss_percent=self._loss_percent.text(),
+                )
+            except CalculationError as exc:
+                self._result.show_error(str(exc))
+                return
+            self._result.show_result(result)
+            if self._on_record is not None:
+                self._on_record(result.to_record(result.title))
+
+
+    class QpcrMixCalculatorWidget(QWidget):
+        def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsQpcrMixCalculator")
+            self._on_record = on_record
+            self._build_ui()
+
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            root.setSpacing(SPACING["md"])
+            title = QLabel("qPCR 配液计算")
+            title.setObjectName("labToolsSectionTitle")
+            root.addWidget(title)
+
+            card = QFrame()
+            card.setObjectName("labToolsCard")
+            grid = QGridLayout(card)
+            grid.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._reactions = _line_edit("例如 24")
+            self._reaction_volume = _line_edit("例如 20")
+            self._master_mix_value = _line_edit("例如 10 或 50")
+            self._master_mix_mode = _combo(("体积（µL）", "比例（%）"), "体积（µL）")
+            self._forward = _line_edit("例如 0.4")
+            self._reverse = _line_edit("例如 0.4")
+            self._template = _line_edit("例如 2")
+            self._loss_percent = _line_edit("默认 10")
+            self._loss_percent.setText("10")
+            button = QPushButton("计算配液用量")
+            button.setObjectName("primaryButton")
+            button.clicked.connect(self._handle_calculate)
+            grid.addWidget(QLabel("反应数"), 0, 0)
+            grid.addWidget(self._reactions, 0, 1, 1, 2)
+            grid.addWidget(QLabel("单反应总体积 µL"), 1, 0)
+            grid.addWidget(self._reaction_volume, 1, 1, 1, 2)
+            grid.addWidget(QLabel("master mix"), 2, 0)
+            grid.addWidget(self._master_mix_value, 2, 1)
+            grid.addWidget(self._master_mix_mode, 2, 2)
+            grid.addWidget(QLabel("forward primer µL"), 3, 0)
+            grid.addWidget(self._forward, 3, 1, 1, 2)
+            grid.addWidget(QLabel("reverse primer µL"), 4, 0)
+            grid.addWidget(self._reverse, 4, 1, 1, 2)
+            grid.addWidget(QLabel("template µL"), 5, 0)
+            grid.addWidget(self._template, 5, 1, 1, 2)
+            grid.addWidget(QLabel("损耗比例 %"), 6, 0)
+            grid.addWidget(self._loss_percent, 6, 1, 1, 2)
+            grid.addWidget(button, 7, 0, 1, 3)
+            root.addWidget(card)
+
+            self._result = ResultPanel()
+            root.addWidget(self._result)
+            root.addStretch(1)
+
+        def _handle_calculate(self) -> None:
+            try:
+                result = calculate_qpcr_mix(
+                    self._reactions.text(),
+                    self._reaction_volume.text(),
+                    self._master_mix_value.text(),
+                    self._forward.text(),
+                    self._reverse.text(),
+                    self._template.text(),
+                    master_mix_mode="ratio" if self._master_mix_mode.currentText() == "比例（%）" else "volume",
+                    loss_percent=self._loss_percent.text(),
+                )
+            except CalculationError as exc:
+                self._result.show_error(str(exc))
+                return
+            self._result.show_result(result)
+            if self._on_record is not None:
+                self._on_record(result.to_record(result.title))
 
 
     class LabToolsCalculatorWidget(QWidget):
@@ -279,13 +489,29 @@ if QWidget is not None:
             super().__init__()
             self.setObjectName("labToolsCalculatorWorkspace")
             self.setStyleSheet(self._stylesheet())
+            self._latest_record: CalculationRecord | None = None
             root = QVBoxLayout(self)
-            root.setContentsMargins(0, 0, 0, 0)
+            root.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["lg"])
+            root.setSpacing(SPACING["md"])
+            self._record_summary = QLabel("最近一次计算：暂无")
+            self._record_summary.setObjectName("labToolsRecordSummary")
+            self._record_summary.setWordWrap(True)
+            root.addWidget(self._record_summary)
             tabs = QTabWidget()
             tabs.setObjectName("labToolsCalculatorTabs")
-            tabs.addTab(ConcentrationCalculatorWidget(), "浓度换算")
-            tabs.addTab(DilutionCalculatorWidget(), "稀释计算")
+            tabs.addTab(ConcentrationCalculatorWidget(on_record=self._set_latest_record), "浓度换算")
+            tabs.addTab(DilutionCalculatorWidget(on_record=self._set_latest_record), "稀释计算")
+            tabs.addTab(SolutionPreparationCalculatorWidget(on_record=self._set_latest_record), "溶液配制")
+            tabs.addTab(CellSeedingCalculatorWidget(on_record=self._set_latest_record), "细胞接种")
+            tabs.addTab(QpcrMixCalculatorWidget(on_record=self._set_latest_record), "qPCR 配液")
             root.addWidget(tabs)
+
+        def latest_record(self) -> CalculationRecord | None:
+            return self._latest_record
+
+        def _set_latest_record(self, record: CalculationRecord) -> None:
+            self._latest_record = record
+            self._record_summary.setText("\n".join(record.summary_lines()))
 
         def _stylesheet(self) -> str:
             return f"""
@@ -307,6 +533,13 @@ if QWidget is not None:
             QLabel#labToolsCardTitle {{
                 color: {COLORS["bio"]};
                 font-weight: 700;
+            }}
+            QLabel#labToolsRecordSummary {{
+                color: {COLORS["muted"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
             }}
             QPushButton#primaryButton {{
                 color: #FFFFFF;

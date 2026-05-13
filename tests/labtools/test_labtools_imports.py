@@ -19,7 +19,7 @@ def test_labtools_module_exports_features() -> None:
 
 def test_labtools_workspace_instantiates_when_qt_available() -> None:
     try:
-        from PySide6.QtWidgets import QApplication, QPushButton
+        from PySide6.QtWidgets import QApplication, QPushButton, QTabWidget
 
         from app.labtools.workspace import LabToolsWorkspaceWidget
     except Exception as exc:  # pragma: no cover
@@ -33,3 +33,7 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert widget.page_keys() == ("home", "calculators", "pending")
     assert widget.current_page_key() == "home"
     assert widget.findChild(QPushButton, "primaryButton") is not None
+    widget.show_calculators()
+    tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert tabs is not None
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制", "细胞接种", "qPCR 配液"]
