@@ -1,6 +1,6 @@
 # BioMedPilot v1.0 Current Handoff Summary
 
-生成时间：2026-05-13 13:32:34 CST
+生成时间：2026-05-13 16:15:11 CST
 
 用途：给后续 Codex、ChatGPT 或人工继续 BioMedPilot v1.0 开发前快速恢复当前总控上下文。本文件是摘要入口，不替代 `Global_Development_Manual.md`。
 
@@ -61,24 +61,54 @@ cmp_exit=0
 - Stage 0.4 cache/build cleanup：清理 ignored / untracked cache，加固 `.gitignore`，tracked logs 保留为人工确认项。
 - Stage 0.5 baseline confirmation：确认 MainLine baseline、测试基线和总手册同步状态。
 - Stage 0.6 architecture and integration rules：记录 v1.0 总体架构、多 worktree 关系、Integration / ReleaseBuild 规则和进入 MainLine 条件。
-- UI governance 后续推进：MainLine 已有跨模块 UI governance audit、shared UI tokens foundation 和 QSS migration 相关提交。
+- UI Stage 0.1-0.8 governance and convergence：完成跨模块 UI governance、shared UI tokens/helper、Shell / Bioinformatics / Meta 视觉收敛，以及 LabTools 未来接入规范和工具型页面模板。
 - Global development governance 补强：补齐文件权威性、开发前检查、禁止事项、停止事项、AI/网络/隐私、真实执行器、医学科研安全、LabTools 边界、报告写作、打包和 release wording。
 - Dirty worktree state audit：确认当前未提交改动层面所有 worktree clean。
+
+### UI Stage 0.1-0.8 状态
+
+当前 UI 开发脉络：
+
+| Stage | Commit | 状态 |
+| --- | --- | --- |
+| UI Stage 0.1 | `bf33f07 docs(ui): audit cross-module ui governance` | 已确立 UI Governance / UI Design Principles，并写入 Global Development Manual。 |
+| UI Stage 0.2 | `d981a9e feat(ui): add shared ui tokens foundation` | 已建立 shared UI tokens/helper 基础层。 |
+| UI Stage 0.3 | `b8409ec refactor(ui): pilot shared token qss migration` | 已完成 Shell 和 Bioinformatics 入口页 shared token QSS 试点。 |
+| UI Stage 0.4 | `6e2cfbb feat(ui): add shared status and button style helpers` | 已新增 shared status badge、button role QSS helpers、section card 和 diagnostic card helper。 |
+| UI Stage 0.5 | `1dceec0 refactor(ui): converge bioinformatics flow page styles` | 已收敛 4 个 Bioinformatics 轻量流程页 UI。 |
+| UI Stage 0.6 | `4e5c4ac refactor(ui): converge bioinformatics task result report pages` | 已收敛 Bioinformatics 分析任务中心、结果页、报告页按钮层级和技术字段暴露。 |
+| UI Stage 0.7 | `327c63c refactor(ui): audit and converge meta ui styles` | 已收敛 MainLine Meta 最小入口；主状态不再直接暴露完整项目路径、manifest、内部状态和开发分支名。 |
+| UI Stage 0.8 | `8045864 feat(ui): add tool page shared style helpers` | 已定义 LabTools UI 接入规范和工具型页面模板，新增通用工具页 card QSS helper，未创建 LabTools 业务代码。 |
+
+UI 总规范恢复入口：
+
+- `docs/ui/BioMedPilot_UI_Governance_Audit_20260513.md`
+- `docs/ui/BioMedPilot_UI_Design_Principles_20260513.md`
+- `docs/ui/BioMedPilot_UI_Tokens_And_Components_Audit_20260513.md`
+- `docs/ui/BioMedPilot_UI_Stage_0_8_LabTools_UI_Integration_Template_20260513.md`
+
+当前边界：LabTools 未来必须作为 MainLine Shell 内模块接入，使用 shared UI tokens、status badge、button role 和工具型页面模板；不得自建独立主色、独立导航、独立窗口框架或独立按钮体系；不得污染 Bioinformatics 或 Meta project manifest。
 
 ## 4. 当前关键 commit 摘要
 
 MainLine 当前分支：`stable/mainline`
 
-MainLine 当前 HEAD：
+MainLine 当前 HEAD（本 handoff 同步前）：
 
 ```text
-4bd6732 docs(project): audit dirty worktree state
+11d6454 docs(mainline): audit meta merge preparation
 ```
 
 关键提交：
 
 | Commit | 摘要 |
 | --- | --- |
+| `11d6454` | `docs(mainline): audit meta merge preparation`；新增 Meta mainline merge preparation 审计报告。 |
+| `8045864` | `feat(ui): add tool page shared style helpers`；UI Stage 0.8 LabTools UI 接入规范和工具型页面 helper。 |
+| `327c63c` | `refactor(ui): audit and converge meta ui styles`；UI Stage 0.7 Meta 最小入口视觉收敛。 |
+| `4e5c4ac` | `refactor(ui): converge bioinformatics task result report pages`；UI Stage 0.6 Bioinformatics 任务、结果、报告 UI 收敛。 |
+| `1dceec0` | `refactor(ui): converge bioinformatics flow page styles`；UI Stage 0.5 Bioinformatics 轻量流程页 UI 收敛。 |
+| `6e2cfbb` | `feat(ui): add shared status and button style helpers`；UI Stage 0.4 shared status/button/page structure helper。 |
 | `4bd6732` | `docs(project): audit dirty worktree state`；新增 worktree dirty state 审计报告。 |
 | `f68d2b5` | `docs(project): strengthen global development governance`；补强全局开发治理并新增 global control audit。 |
 | `b8409ec` | `refactor(ui): pilot shared token qss migration`；MainLine UI token / QSS 迁移推进。 |
@@ -184,7 +214,7 @@ clean
 
 ### UIShell
 
-继续 UI token / QSS 迁移和跨模块视觉统一。遵守 Apple-like macOS premium biomedical research desktop software 方向，使用统一 Shell、统一色板、shared UI tokens，不创建模块私有主题体系。
+继续 UI token / QSS 迁移和跨模块视觉统一。遵守 Apple-like macOS premium biomedical research desktop software 方向，使用统一 Shell、统一色板、shared UI tokens，不创建模块私有主题体系。后续清理上下文时，应从本文件的 UI Stage 0.1-0.8 状态和 `docs/ui/` 阶段报告恢复 UI 开发脉络。
 
 ### AI Gateway
 
@@ -192,7 +222,7 @@ clean
 
 ### LabTools
 
-先补齐 handoff / manual 文件，再进入 L0 + L1A。LabTools 独立承载浓度计算、单位换算、配方检索、ImageJ / Fiji / OpenCV 图像分析、划痕实验、细胞计数、荧光强度和灰度值分析等能力，不得混入 Bioinformatics 或 Meta。
+先按 UI Stage 0.8 的工具型页面模板设计 LabTools 页面，再进入 L0 + L1A。LabTools 独立承载浓度计算、单位换算、配方检索、ImageJ / Fiji / OpenCV 图像分析、划痕实验、细胞计数、荧光强度和灰度值分析等能力，不得混入 Bioinformatics 或 Meta。MainLine 当前仍没有 `app/labtools/`，也没有 LabTools Shell 入口；未来接入前应先在 LabTools 独立 worktree 完成模块开发与测试，再经 Integration 或等效验证进入 MainLine。
 
 ### Integration
 
@@ -206,7 +236,7 @@ clean
 
 - GitHub push 仍需本地凭据或 SSH 权限；当前不得自动 push。
 - tracked logs 是否保留、归档、删除或停止跟踪仍需人工确认。
-- LabTools 开发前置 handoff / manual 文件是否需要补齐仍需确认和安排。
+- LabTools 业务模块开发仍需在独立 worktree 中启动；MainLine 目前只完成 UI Stage 0.8 接入规范和通用工具页 helper。
 - Vocabulary sqlite / `data/medical_terms` 包内策略仍需明确。
 - 真实分析执行器接入门槛仍未进入实现阶段。
 - 真实 Meta 统计执行器升级或替换仍需方法、验证数据和人工确认。
@@ -223,6 +253,7 @@ clean
 3. `MainLine/docs/handoff/Global_Development_Manual.md`
 4. 当前任务相关 worktree 的 `CODEX.md`
 5. 当前任务相关的最新 handoff / audit / baseline / architecture 文档
+6. UI 相关任务还应读取 `MainLine/docs/ui/BioMedPilot_UI_Stage_0_8_LabTools_UI_Integration_Template_20260513.md` 以及前序 UI Stage 报告。
 
 如果上下文过长或新会话失去历史，应以上述文件恢复项目状态，而不是依赖聊天记忆。
 
@@ -239,26 +270,27 @@ done
 
 ## 11. 本次验证
 
-本次任务只新增 MainLine handoff Markdown 文档，未修改业务代码、测试、运行配置、打包脚本或模块 worktree，因此未运行完整业务测试。
+本次同步只修改 MainLine handoff Markdown 文档，未修改业务代码、测试、运行配置、打包脚本或模块 worktree。因本轮承接 UI Stage 0.8，总控 handoff 更新后仍按 UI Stage 0.8 要求执行 MainLine smoke 和 UI 测试。
 
 已执行：
 
 ```bash
 pwd
-cmp "01_ProjectControl/Global_Development_Manual.md" "MainLine/docs/handoff/Global_Development_Manual.md"
-git --git-dir _repo.git worktree list --porcelain
-for d in MainLine Bioinformatics Meta Vocabulary UIShell LabTools AI Integration ReleaseBuild; do
-  printf '\n[%s]\n' "$d"
-  git -C "$d" status --short
-done
-git -C MainLine log --oneline --decorate -12
-git -C MainLine diff --check
+git status --short
+git diff --check
+git diff --cached --check
+python3 -m app.main --smoke-test
+python3 -m pytest tests/ui/test_shared_ui_theme.py -q
+QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q
 ```
 
 结果摘要：
 
-- 当前路径：`/Users/changdali/Developer/biomedpilot v1.0`
-- 总手册同步：`cmp_exit=0`
-- 所有 worktree 在创建本 summary 前均为 clean。
+- 当前路径：`/Users/changdali/Developer/biomedpilot v1.0/MainLine`
+- MainLine diff：仅本 handoff 文件修改。
 - `git diff --check`：通过。
+- `git diff --cached --check`：通过。
+- `python3 -m app.main --smoke-test`：通过；`git_head=11d6454`，`workspace_entries=2`，`bioinformatics_features=5`，`meta_analysis_features=9`，`pyside6_available=True`。
+- `python3 -m pytest tests/ui/test_shared_ui_theme.py -q`：7 passed。
+- `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`：144 passed。
 - 未 push。
