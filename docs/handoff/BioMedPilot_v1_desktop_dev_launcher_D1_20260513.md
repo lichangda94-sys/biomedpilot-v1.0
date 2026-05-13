@@ -209,6 +209,40 @@ WARNING: MainLine has uncommitted changes.
 
 5. 检查首页是否为当前 MainLine 版本，并确认不是旧 Desktop `.app` 包。
 
+## 人工验证记录
+
+补记日期：2026-05-13
+
+补记时 MainLine HEAD：
+
+```text
+3fc073888b7730b4f72420dcba876612bf4a6aa7
+```
+
+用户已人工确认：
+
+```text
+/Users/changdali/Desktop/BioMedPilot v1.0 Dev.command
+```
+
+可以打开 BioMedPilot。
+
+当前推荐的日常开发测试入口为：
+
+```text
+/Users/changdali/Desktop/BioMedPilot v1.0 Dev.command
+```
+
+该入口是源码开发入口，指向当前 v1.0 MainLine 源码，不是 ReleaseBuild 打包 App。旧桌面 App 入口已由用户清理到隔离目录，不再作为当前 v1.0 测试入口：
+
+```text
+/Users/changdali/Desktop/BioMedPilot_old_desktop_entries_20260513
+```
+
+正式 `.app` 仍应在后续单独授权的 ReleaseBuild 阶段，从 validated MainLine 或 validated release source 生成，并执行 package smoke 与 packaged app smoke。
+
+在后续 ReleaseBuild 阶段获得单独授权前，不得覆盖旧 App，不得创建新的 `.app` 包，也不得把旧桌面 App 入口重新作为当前 v1.0 测试入口。
+
 ## 未修改内容
 
 本任务未修改：
@@ -232,6 +266,8 @@ WARNING: MainLine has uncommitted changes.
 - push。
 - merge。
 - D2。
+
+本次人工验证补记仅更新本 Markdown handoff；未修改 Desktop `.command`，未创建 `.app`，未修改业务代码、UI、测试或打包脚本。
 
 ## 验证命令与结果
 
@@ -351,9 +387,33 @@ git diff --check
 
 结果：通过，无输出。
 
+### 人工验证补记检查
+
+命令：
+
+```bash
+git rev-parse HEAD
+ls -l "$HOME/Desktop/BioMedPilot v1.0 Dev.command"
+ls -la "$HOME/Desktop" | grep -i "BioMedPilot" || true
+```
+
+结果摘要：
+
+```text
+3fc073888b7730b4f72420dcba876612bf4a6aa7
+/Users/changdali/Desktop/BioMedPilot v1.0 Dev.command exists and is executable
+Desktop contains BioMedPilot v1.0 Dev.command and BioMedPilot_old_desktop_entries_20260513
+```
+
+人工结论：
+
+```text
+User confirmed /Users/changdali/Desktop/BioMedPilot v1.0 Dev.command opens BioMedPilot.
+```
+
 ## 业务测试说明
 
-本任务只创建 Desktop `.command` 源码开发入口，并只新增 Markdown handoff 报告。未修改业务代码、UI、runtime config、测试文件或打包脚本，因此未运行完整业务测试、UI 测试、source smoke、packaged smoke 或打包命令。
+本 D1 原任务只创建 Desktop `.command` 源码开发入口，并只新增 Markdown handoff 报告。本次补记只更新 Markdown 记录用户人工确认结果。未修改业务代码、UI、runtime config、测试文件或打包脚本，因此未运行完整业务测试、UI 测试、source smoke、packaged smoke 或打包命令。
 
 ## 结论
 
@@ -370,3 +430,5 @@ D1 已创建明确命名的源码开发入口：
 ```
 
 它会打印 source root、branch、commit、status summary 和 Developer Preview / internal testing 提示，然后从 MainLine 源码执行 `python3 -m app.main`。本任务没有覆盖旧 `BioMedPilot.app`，没有创建 `.app` 包，没有修改业务代码、UI、测试或打包脚本。
+
+用户已人工确认该 Dev.command 可以打开 BioMedPilot。当前日常测试入口应使用该 Dev.command；正式 `.app` 仍留待后续 ReleaseBuild 阶段单独授权后生成。
