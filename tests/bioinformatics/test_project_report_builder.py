@@ -8,6 +8,7 @@ from app.bioinformatics.imported_deg_results import mark_imported_deg_report_can
 from app.bioinformatics.project_recognition import run_project_recognition
 from app.bioinformatics.project_workspace import create_bioinformatics_project
 from app.bioinformatics.reports.project_report_builder import generate_project_report
+from app.bioinformatics.results.project_results import write_result_index
 
 
 def test_project_report_builder_enforces_imported_deg_semantics(tmp_path: Path) -> None:
@@ -40,3 +41,58 @@ def test_project_report_builder_enforces_imported_deg_semantics(tmp_path: Path) 
     assert (project_root / "reports" / "project_report_manifest.json").is_file()
     saved_manifest = json.loads((project_root / "reports" / "project_report_manifest.json").read_text(encoding="utf-8"))
     assert saved_manifest["schema_version"] == "biomedpilot.project_report_manifest.v1"
+
+
+def test_project_report_builder_handles_missing_empty_and_old_result_index(tmp_path: Path) -> None:
+    for label, index_payload in (
+        ("missing-index", None),
+        ("empty-index", []),
+        (
+            "old-index",
+            [
+                {
+                    "name": "Old Imported DEG",
+                    "analysis_type": "differential_expression",
+                    "file_path": str(tmp_path / "old_missing.csv"),
+                    "status": "imported",
+                    "result_semantics": "imported result",
+                }
+            ],
+        ),
+    ):
+        project_root = create_bioinformatics_project(f"Report {label}", tmp_path).project_root
+        if index_payload is not None:
+            write_result_index(project_root, index_payload)
+
+        payload = generate_project_report(project_root)
+        markdown = Path(str(payload["markdown_path"])).read_text(encoding="utf-8")
+        manifest = payload["manifest"]
+
+        assert "BioMedPilot 生信项目报告草稿" in markdown
+        assert "本软件计算发现" not in markdown
+        assert "BioMedPilot 计算得到" not in markdown
+        assert str(tmp_path) not in markdown
+        assert manifest["semantic_policy"]["real computed result"] == "当前未开放；本阶段不生成真实计算结论"  # type: ignore[index]
+
+
+def test_project_report_builder_sanitizes_missing_result_paths(tmp_path: Path) -> None:
+    project_root = create_bioinformatics_project("Report Missing Result Path", tmp_path).project_root
+    missing_path = project_root / "results" / "tables" / "missing.csv"
+    write_result_index(
+        project_root,
+        [
+            {
+                "result_name": "Missing imported result",
+                "analysis_type": "differential_expression",
+                "path": str(missing_path),
+                "status": "imported",
+                "result_semantics": "imported result",
+            }
+        ],
+    )
+
+    payload = generate_project_report(project_root)
+    markdown = Path(str(payload["markdown_path"])).read_text(encoding="utf-8")
+
+    assert str(missing_path) not in markdown
+    assert "结果文件缺失，请在开发者诊断中查看路径" in markdown

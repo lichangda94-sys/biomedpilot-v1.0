@@ -251,9 +251,9 @@ def _build_result(root: Path, entry: dict[str, object], *, fallback_index: int) 
     auto_mapping = _map_columns(headers)
     mapping = _merge_mapping(auto_mapping, manual_mapping, headers)
     column_status = _column_status(mapping)
-    status = "ready" if {"gene", "logfc"} <= set(mapping) and ("fdr" in mapping or "pvalue" in mapping) else "needs_confirmation"
-    report_status = "是" if status == "ready" else "需确认"
     regulation_counts, top_up, top_down = _summarize_rows(headers, summary_rows, mapping)
+    status = _result_status(mapping, regulation_counts)
+    report_status = "是" if status == "ready" else "需确认"
     warning = "；".join(read_warnings)
     mapping_status = "user_confirmed" if user_confirmed and status == "ready" else ("auto_mapped" if status == "ready" else "needs_confirmation")
     return ImportedDegResult(
@@ -287,7 +287,7 @@ def _read_table(path: Path) -> tuple[list[str], list[list[str]], list[list[str]]
         first = handle.readline()
         if not first:
             return [], [], [], ["文件为空，无法读取表头。"]
-        delimiter = "," if first.count(",") > first.count("\t") else "\t"
+        delimiter = _detect_delimiter(first)
         header = next(csv.reader([first], delimiter=delimiter))
         preview_rows: list[list[str]] = []
         summary_rows: list[list[str]] = []
@@ -300,6 +300,8 @@ def _read_table(path: Path) -> tuple[list[str], list[list[str]], list[list[str]]
                 summary_rows.append(row)
             elif index == MAX_SUMMARY_ROWS:
                 warnings.append(f"表格超过 {MAX_SUMMARY_ROWS} 行，摘要仅基于前 {MAX_SUMMARY_ROWS} 行。")
+        if not summary_rows:
+            warnings.append("表格没有数据行，需重新导入或确认文件内容。")
         return header, preview_rows, summary_rows, warnings
 
 
@@ -318,6 +320,8 @@ def _read_xlsx_table(path: Path) -> tuple[list[str], list[list[str]], list[list[
     warnings = []
     if len(rows) > MAX_SUMMARY_ROWS + 1:
         warnings.append(f"表格超过 {MAX_SUMMARY_ROWS} 行，摘要仅基于前 {MAX_SUMMARY_ROWS} 行。")
+    if not summary_rows:
+        warnings.append("表格没有数据行，需重新导入或确认文件内容。")
     return header, summary_rows[:PREVIEW_ROW_LIMIT], summary_rows[:MAX_SUMMARY_ROWS], warnings
 
 
@@ -325,13 +329,14 @@ def _map_columns(headers: list[str]) -> dict[str, str]:
     mapping: dict[str, str] = {}
     for header in headers:
         key = _normalize_header(header)
-        if "gene" not in mapping and key in {"gene", "genes", "geneid", "genesymbol", "symbol", "id", "ensembl", "entrezid", "idref"}:
+        compact = _compact_header(header)
+        if "gene" not in mapping and (key in {"gene", "genes", "geneid", "genesymbol", "symbol", "id", "ensembl", "entrezid", "idref"} or compact in {"基因", "基因名", "基因符号", "基因symbol"}):
             mapping["gene"] = header
-        elif "logfc" not in mapping and key in {"logfc", "log2fc", "log2foldchange", "logfoldchange", "avglog2fc"}:
+        elif "logfc" not in mapping and (key in {"logfc", "log2fc", "log2foldchange", "logfoldchange", "avglog2fc"} or compact in {"log2倍数变化", "倍数变化", "对数倍数变化"}):
             mapping["logfc"] = header
-        elif "pvalue" not in mapping and key in {"pvalue", "pval", "p", "pvalue", "pvalnominal", "pvalueunadjusted"}:
+        elif "pvalue" not in mapping and (key in {"pvalue", "pval", "p", "pvalue", "pvalnominal", "pvalueunadjusted"} or compact in {"p值", "pvalue", "p"}):
             mapping["pvalue"] = header
-        elif "fdr" not in mapping and key in {"padj", "adjpval", "adjpvalue", "adjustedpvalue", "fdr", "qvalue"}:
+        elif "fdr" not in mapping and (key in {"padj", "adjpval", "adjpvalue", "adjustedpvalue", "fdr", "qvalue"} or compact in {"校正p值", "调整p值", "fdr", "q值"}):
             mapping["fdr"] = header
         elif "statistic" not in mapping and key in {"stat", "statistic", "t", "b", "waldstat", "waldstatistic", "zscore"}:
             mapping["statistic"] = header
@@ -355,26 +360,33 @@ def _column_status(mapping: dict[str, str]) -> str:
 
 
 def _summarize_rows(headers: list[str], rows: list[list[str]], mapping: dict[str, str]) -> tuple[dict[str, object], list[dict[str, object]], list[dict[str, object]]]:
-    if "logfc" not in mapping or ("fdr" not in mapping and "pvalue" not in mapping):
-        return {"status": "unavailable", "message": "缺少 logFC 或显著性列，待确认"}, [], []
+    missing = _missing_required_columns(mapping)
+    if missing:
+        return {"status": "unavailable", "message": f"缺少 {', '.join(missing)}，待确认", "warnings": [f"missing_{item}" for item in missing]}, [], []
     header_index = {header: index for index, header in enumerate(headers)}
     logfc_index = header_index.get(mapping["logfc"])
     sig_column = mapping.get("fdr") or mapping.get("pvalue")
     sig_index = header_index.get(sig_column or "")
     gene_index = header_index.get(mapping.get("gene", ""))
-    if logfc_index is None or sig_index is None:
-        return {"status": "unavailable", "message": "列映射无法定位，待确认"}, [], []
-    up = down = not_significant = parsed = 0
+    if logfc_index is None or sig_index is None or gene_index is None:
+        return {"status": "unavailable", "message": "列映射无法定位，待确认", "warnings": ["mapped_column_not_found"]}, [], []
+    up = down = not_significant = parsed = skipped_non_numeric = duplicate_gene_count = 0
+    seen_genes: set[str] = set()
     top_candidates: list[dict[str, object]] = []
     for row in rows:
         if max(logfc_index, sig_index) >= len(row):
             continue
+        gene = row[gene_index].strip() if gene_index < len(row) else ""
+        if gene:
+            if gene in seen_genes:
+                duplicate_gene_count += 1
+            seen_genes.add(gene)
         logfc = _to_float(row[logfc_index])
         sig = _to_float(row[sig_index])
         if logfc is None or sig is None:
+            skipped_non_numeric += 1
             continue
         parsed += 1
-        gene = row[gene_index].strip() if gene_index is not None and gene_index < len(row) else ""
         if sig <= 0.05 and logfc >= 1.0:
             up += 1
             top_candidates.append({"gene": gene, "logFC": logfc, "significance": sig, "direction": "up"})
@@ -384,7 +396,15 @@ def _summarize_rows(headers: list[str], rows: list[list[str]], mapping: dict[str
         else:
             not_significant += 1
     if not parsed:
-        return {"status": "unavailable", "message": "没有可计算行，待确认"}, [], []
+        warnings = ["no_parseable_rows"]
+        if skipped_non_numeric:
+            warnings.append("non_numeric_logfc_or_significance")
+        return {"status": "unavailable", "message": "没有可计算行，待确认", "warnings": warnings}, [], []
+    warnings: list[str] = []
+    if skipped_non_numeric:
+        warnings.append("non_numeric_logfc_or_significance")
+    if duplicate_gene_count:
+        warnings.append("duplicate_gene_symbol")
     top_up = sorted((item for item in top_candidates if item["direction"] == "up"), key=lambda item: (-abs(float(item["logFC"])), float(item["significance"])))[:10]
     top_down = sorted((item for item in top_candidates if item["direction"] == "down"), key=lambda item: (-abs(float(item["logFC"])), float(item["significance"])))[:10]
     return (
@@ -394,6 +414,9 @@ def _summarize_rows(headers: list[str], rows: list[list[str]], mapping: dict[str
             "down": down,
             "not_significant": not_significant,
             "parsed_rows": parsed,
+            "skipped_non_numeric_rows": skipped_non_numeric,
+            "duplicate_gene_count": duplicate_gene_count,
+            "warnings": warnings,
             "threshold_note": "计数使用 |log2FC| >= 1 且 p value/FDR <= 0.05；仅用于导入结果浏览和报告草稿。",
         },
         top_up,
@@ -424,6 +447,27 @@ def _merge_mapping(auto_mapping: dict[str, str], manual_mapping: dict[str, str],
         if value in valid_headers:
             merged[key] = value
     return merged
+
+
+def _result_status(mapping: dict[str, str], regulation_counts: dict[str, object]) -> str:
+    if _missing_required_columns(mapping):
+        return "needs_confirmation"
+    if regulation_counts.get("status") != "computed":
+        return "needs_confirmation"
+    if regulation_counts.get("warnings"):
+        return "needs_confirmation"
+    return "ready"
+
+
+def _missing_required_columns(mapping: dict[str, str]) -> list[str]:
+    missing: list[str] = []
+    if "gene" not in mapping:
+        missing.append("gene column")
+    if "logfc" not in mapping:
+        missing.append("logFC / log2FC column")
+    if "fdr" not in mapping and "pvalue" not in mapping:
+        missing.append("p value / adjusted p value column")
+    return missing
 
 
 def _load_manual_mapping(root: Path, result_id: str) -> tuple[dict[str, str], str, bool]:
@@ -489,6 +533,15 @@ def _now() -> str:
 
 def _normalize_header(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", value.strip().lower())
+
+
+def _compact_header(value: str) -> str:
+    return re.sub(r"[\s_：:（）()\\/.-]+", "", str(value).strip().lower())
+
+
+def _detect_delimiter(first_line: str) -> str:
+    candidates = ["\t", ",", ";", "|"]
+    return max(candidates, key=lambda delimiter: first_line.count(delimiter))
 
 
 def _slug_text(value: str) -> str:

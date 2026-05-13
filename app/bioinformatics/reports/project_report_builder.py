@@ -35,7 +35,7 @@ def generate_project_report(project_root: str | Path) -> dict[str, object]:
     warnings.extend(str(item) for item in recognition.get("warnings", []) or [] if isinstance(recognition, dict))
     warnings.extend(str(item) for item in readiness.get("warnings", []) or [] if isinstance(readiness, dict))
     warnings.extend(str(item) for item in standardization.get("warnings", []) or [] if isinstance(standardization, dict))
-    warnings.extend(str(item) for item in result_index.get("warnings", []) or [])
+    warnings.extend(_safe_user_text(str(item), root) for item in result_index.get("warnings", []) or [])
     markdown_path = root / PROJECT_REPORT_MD
     markdown = _render_draft_markdown(
         root=root,
@@ -121,8 +121,8 @@ def _render_draft_markdown(
         "",
         "## 数据来源",
         "",
-        f"- 数据来源：{getattr(acquisition, 'source_label', '尚未记录') if acquisition else '尚未记录'}",
-        f"- 来源类型：{getattr(acquisition, 'source_type', '尚未记录') if acquisition else '尚未记录'}",
+        f"- 数据来源：{_safe_user_text(getattr(acquisition, 'source_label', '尚未记录'), root) if acquisition else '尚未记录'}",
+        f"- 来源类型：{_safe_user_text(getattr(acquisition, 'source_type', '尚未记录'), root) if acquisition else '尚未记录'}",
         "",
         "## 识别状态",
         "",
@@ -164,7 +164,7 @@ def _render_draft_markdown(
     lines.extend(_next_step_lines(entries, task_records, preflight, imported_deg_results))
     if warnings:
         lines.extend(["", "## 注意事项", ""])
-        lines.extend(f"- {warning}" for warning in warnings)
+        lines.extend(f"- {_safe_user_text(warning, root)}" for warning in warnings)
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -215,7 +215,7 @@ def _semantic_policy() -> dict[str, str]:
         "imported result": "用户导入的外部分析结果显示",
         "testing-level result": "测试级分析输出，不应用于正式科研结论",
         "dry-run / configured-not-run": "任务已配置但尚未执行",
-        "real computed result": "BioMedPilot 计算得到；本阶段保留但不开放",
+        "real computed result": "当前未开放；本阶段不生成真实计算结论",
     }
 
 
@@ -249,3 +249,18 @@ def _read_json(path: Path) -> dict[str, object]:
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _safe_user_text(value: object, root: Path) -> str:
+    text = str(value)
+    if not text:
+        return ""
+    root_text = str(root)
+    if root_text in text:
+        text = text.replace(root_text, "[项目目录]")
+    if "结果文件缺失：" in text:
+        return "结果文件缺失，请在开发者诊断中查看路径。"
+    path = Path(text).expanduser()
+    if path.is_absolute():
+        return path.name
+    return text

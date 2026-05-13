@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import gzip
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -35,6 +36,21 @@ def _write_xlsx_rows(path: Path, rows: list[list[object]]) -> Path:
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
     return path
+
+
+def _register_imported_deg(project_root: Path, source: Path, *, name: str = "Imported DEG") -> None:
+    write_result_index(
+        project_root,
+        [
+            {
+                "result_name": name,
+                "analysis_type": "differential_expression",
+                "path": str(source),
+                "status": "imported",
+                "result_semantics": "imported result",
+            }
+        ],
+    )
 
 
 def test_imported_deg_result_browser_profiles_columns_and_counts(tmp_path: Path) -> None:
@@ -111,18 +127,7 @@ def test_imported_deg_supports_xlsx_and_manual_mapping(tmp_path: Path) -> None:
             ["GAPDH", "0.1", "0.8", "0.9", "0.2", "200"],
         ],
     )
-    write_result_index(
-        project_root,
-        [
-            {
-                "result_name": "Collaborator DEG workbook",
-                "analysis_type": "differential_expression",
-                "path": str(source),
-                "status": "imported",
-                "result_semantics": "imported result",
-            }
-        ],
-    )
+    _register_imported_deg(project_root, source, name="Collaborator DEG workbook")
 
     first = list_imported_deg_results(project_root)[0]
     assert first.status == "needs_confirmation"
@@ -155,18 +160,7 @@ def test_imported_deg_missing_columns_are_not_registered_without_confirmation(tm
     source = project_root / "raw_data" / "local_import" / "deg_results.csv"
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text("gene,effect\nTP53,1.2\n", encoding="utf-8")
-    write_result_index(
-        project_root,
-        [
-            {
-                "result_name": "Incomplete imported DEG",
-                "analysis_type": "differential_expression",
-                "path": str(source),
-                "status": "imported",
-                "result_semantics": "imported result",
-            }
-        ],
-    )
+    _register_imported_deg(project_root, source, name="Incomplete imported DEG")
 
     results = list_imported_deg_results(project_root)
     assert results[0].status == "needs_confirmation"
@@ -174,3 +168,104 @@ def test_imported_deg_missing_columns_are_not_registered_without_confirmation(tm
     entries = mark_imported_deg_report_candidates(project_root)
     assert not any(item.get("report_candidate") for item in entries)
     assert not (project_root / "analysis" / "deg" / "imported" / results[0].result_id / "imported_deg_result_manifest.json").exists()
+
+
+def test_imported_deg_accepts_p_value_without_adjusted_p_value(tmp_path: Path) -> None:
+    project_root = create_bioinformatics_project("Imported DEG p only", tmp_path).project_root
+    source = project_root / "raw_data" / "local_import" / "deg_p_only.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,log2FC,P.Value\nTP53,1.2,0.01\nEGFR,-1.2,0.03\n", encoding="utf-8")
+    _register_imported_deg(project_root, source)
+
+    result = list_imported_deg_results(project_root)[0]
+    assert result.status == "ready"
+    assert result.column_mapping["pvalue"] == "P.Value"
+    assert "fdr" not in result.column_mapping
+    assert result.regulation_counts["up"] == 1
+    assert mark_imported_deg_report_candidates(project_root)[0]["report_candidate"] is True
+
+
+def test_imported_deg_chinese_columns_are_detected(tmp_path: Path) -> None:
+    project_root = create_bioinformatics_project("Imported DEG Chinese Columns", tmp_path).project_root
+    source = project_root / "raw_data" / "local_import" / "deg_chinese.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("基因,log2倍数变化,P值,校正P值\nTP53,1.2,0.01,0.02\nEGFR,-1.3,0.02,0.03\n", encoding="utf-8")
+    _register_imported_deg(project_root, source)
+
+    result = list_imported_deg_results(project_root)[0]
+    assert result.status == "ready"
+    assert result.column_mapping["gene"] == "基因"
+    assert result.column_mapping["logfc"] == "log2倍数变化"
+    assert result.column_mapping["pvalue"] == "P值"
+    assert result.column_mapping["fdr"] == "校正P值"
+
+
+def test_imported_deg_csv_tsv_txt_gz_delimiters(tmp_path: Path) -> None:
+    project_root = create_bioinformatics_project("Imported DEG Delimiters", tmp_path).project_root
+    sources = []
+    csv_path = project_root / "raw_data" / "local_import" / "deg.csv"
+    tsv_path = project_root / "raw_data" / "local_import" / "deg.tsv"
+    txt_path = project_root / "raw_data" / "local_import" / "deg.txt"
+    gz_path = project_root / "raw_data" / "local_import" / "deg.tsv.gz"
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.write_text("gene,logFC,P.Value\nTP53,1.2,0.01\n", encoding="utf-8")
+    tsv_path.write_text("gene\tlogFC\tP.Value\nTP53\t1.2\t0.01\n", encoding="utf-8")
+    txt_path.write_text("gene\tlogFC\tP.Value\nTP53\t1.2\t0.01\n", encoding="utf-8")
+    with gzip.open(gz_path, "wt", encoding="utf-8") as handle:
+        handle.write("gene\tlogFC\tP.Value\nTP53\t1.2\t0.01\n")
+    sources.extend([csv_path, tsv_path, txt_path, gz_path])
+    write_result_index(
+        project_root,
+        [
+            {
+                "result_name": path.name,
+                "analysis_type": "differential_expression",
+                "path": str(path),
+                "status": "imported",
+                "result_semantics": "imported result",
+            }
+            for path in sources
+        ],
+    )
+
+    results = list_imported_deg_results(project_root)
+    assert len(results) == 4
+    assert {result.status for result in results} == {"ready"}
+    assert all(result.regulation_counts["up"] == 1 for result in results)
+
+
+def test_imported_deg_xlsx_is_supported_without_new_dependency(tmp_path: Path) -> None:
+    project_root = create_bioinformatics_project("Imported DEG XLSX Valid", tmp_path).project_root
+    source = project_root / "raw_data" / "local_import" / "deg_valid.xlsx"
+    _write_xlsx_rows(source, [["gene", "logFC", "P.Value"], ["TP53", "1.2", "0.01"]])
+    _register_imported_deg(project_root, source)
+
+    result = list_imported_deg_results(project_root)[0]
+    assert result.status == "ready"
+    assert result.preview_headers == ("gene", "logFC", "P.Value")
+
+
+def test_imported_deg_anomalies_require_mapping_or_reimport(tmp_path: Path) -> None:
+    cases = {
+        "empty.csv": "",
+        "header_only.csv": "gene,logFC,P.Value\n",
+        "missing_gene.csv": "logFC,P.Value\n1.2,0.01\n",
+        "missing_logfc.csv": "gene,P.Value\nTP53,0.01\n",
+        "missing_significance.csv": "gene,logFC\nTP53,1.2\n",
+        "duplicate_gene.csv": "gene,logFC,P.Value\nTP53,1.2,0.01\nTP53,-1.4,0.02\n",
+        "non_numeric_logfc.csv": "gene,logFC,P.Value\nTP53,high,0.01\n",
+        "non_numeric_p.csv": "gene,logFC,P.Value\nTP53,1.2,small\n",
+    }
+    for filename, text in cases.items():
+        project_root = create_bioinformatics_project(f"Imported DEG {filename}", tmp_path).project_root
+        source = project_root / "raw_data" / "local_import" / filename
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(text, encoding="utf-8")
+        _register_imported_deg(project_root, source, name=filename)
+
+        result = list_imported_deg_results(project_root)[0]
+        assert result.status == "needs_confirmation"
+        assert result.report_status == "需确认"
+        entries = mark_imported_deg_report_candidates(project_root)
+        assert not any(item.get("report_candidate") for item in entries)
+        assert not (project_root / "analysis" / "deg" / "imported" / result.result_id / "imported_deg_result_manifest.json").exists()
