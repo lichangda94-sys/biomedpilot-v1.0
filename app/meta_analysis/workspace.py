@@ -329,6 +329,7 @@ def _nav_stage_label(title: str) -> str:
 try:
     from PySide6.QtWidgets import (
         QApplication,
+        QCheckBox,
         QComboBox,
         QFileDialog,
         QFrame,
@@ -350,7 +351,7 @@ try:
     )
     from PySide6.QtCore import Qt
 except Exception:  # pragma: no cover
-    QApplication = QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
+    QApplication = QCheckBox = QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
     Qt = None
 
 
@@ -368,6 +369,12 @@ if QWidget is not None:
     )
     from app.meta_analysis.services.ai_assisted_extraction_queue_service import AIAssistedExtractionQueueService
     from app.meta_analysis.services.analysis_plan_service import AnalysisPlanService
+    from app.meta_analysis.models.result_review import result_review_label_zh
+    from app.meta_analysis.models.statistical_result_state import (
+        STATISTICAL_RESULT_STATE_NOT_RUN,
+        statistical_result_state_label_zh,
+    )
+    from app.meta_analysis.services.effect_size_normalization_service import EffectSizeNormalizationService
     from app.meta_analysis.services.exclusion_criteria_library_service import (
         FULL_TEXT_STAGE,
         TITLE_ABSTRACT_STAGE,
@@ -385,9 +392,11 @@ if QWidget is not None:
     from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
     from app.meta_analysis.services.meta_statistics_engine_service import MetaStatisticsEngineService
     from app.meta_analysis.services.multisource_literature_import_service import MultiSourceLiteratureImportService
+    from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
     from app.meta_analysis.services.publication_export_service import PublicationExportService
     from app.meta_analysis.services.quality_service import QualityAssessmentService
+    from app.meta_analysis.services.result_review_service import StatisticalResultReviewService
     from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
 
     class MetaAnalysisWorkspaceWidget(QWidget):
@@ -2285,46 +2294,211 @@ if QWidget is not None:
         return frame
 
 
+    def _pairwise_workspace_result_lines(result) -> list[str]:
+        if result is None:
+            return [
+                "当前统计状态：尚未运行正式统计分析",
+                "模型：未运行",
+                "纳入研究数：0",
+                "合并效应量：缺失",
+                "95% CI：缺失",
+                "异质性 I²：缺失",
+                "测试阶段提示：尚未运行 M12 pairwise executor。",
+                "需要用户审核后才能进入报告。",
+            ]
+        payload = result.to_dict()
+        heterogeneity = payload.get("heterogeneity_summary", {})
+        i2 = heterogeneity.get("i_squared") if isinstance(heterogeneity, dict) else None
+        ci = "缺失"
+        if payload.get("pooled_ci_lower") is not None and payload.get("pooled_ci_upper") is not None:
+            ci = f"{_format_number(payload.get('pooled_ci_lower'))} - {_format_number(payload.get('pooled_ci_upper'))}"
+        errors = "；".join(str(item) for item in payload.get("validation_errors", []) if str(item)) if isinstance(payload.get("validation_errors"), list) else ""
+        warnings = "；".join(str(item) for item in payload.get("warnings", []) if str(item)) if isinstance(payload.get("warnings"), list) else ""
+        return [
+            f"当前统计状态：{statistical_result_state_label_zh(str(payload.get('result_state', 'not_run')))}",
+            f"模型：{payload.get('model_used') or '未运行'}",
+            f"纳入研究数：{len(payload.get('included_studies', [])) if isinstance(payload.get('included_studies'), list) else 0}",
+            f"合并效应量：{_format_number(payload.get('pooled_effect'))}",
+            f"95% CI：{ci}",
+            f"异质性 I²：{_format_number(i2)}",
+            f"校验错误：{errors or '无'}",
+            f"警告：{warnings or '无'}",
+            "测试阶段提示：M12 为 Developer Preview / testing MVP，不生成正式医学结论。",
+            "需要用户审核后才能进入报告。",
+        ]
+
+
+    def _format_number(value: object) -> str:
+        if value is None:
+            return "缺失"
+        try:
+            return f"{float(value):.6g}"
+        except (TypeError, ValueError):
+            return "缺失"
+
+
     def _statistics_analysis_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         plan_service = AnalysisPlanService()
-        stats = MetaStatisticsEngineService(analysis_plan_service=plan_service)
+        normalization_service = EffectSizeNormalizationService()
+        pairwise_service = PairwiseMetaExecutorService(analysis_plan_service=plan_service, normalization_service=normalization_service)
+        review_service = StatisticalResultReviewService(pairwise_executor=pairwise_service)
         confirmed = plan_service.load_confirmed(project_dir)
-        manifest = _load_json_object(stats.manifest_path(project_dir))
-        result_files = sorted(stats.results_dir(project_dir).glob("*_result.json")) if stats.results_dir(project_dir).exists() else []
-        latest_result = _load_json_object(result_files[-1]) if result_files else {}
+        normalized_effects = normalization_service.normalize_extraction_rows(project_dir)
+        normalization_summary = normalization_service.summarize_normalization(normalized_effects)
+        latest_result = pairwise_service.load_latest_result(project_dir)
+        review = review_service.load_review(project_dir)
         frame = QFrame()
         frame.setObjectName("metaStatisticsAnalysisPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("统计分析", "只能从 confirmed analysis plan 运行；结果 testing-level。", "M17 / testing"))
-        layout.addWidget(_info_card("输入校验", ["请先确认分析计划" if not confirmed else "已有 confirmed analysis plan", f"run_count={manifest.get('run_count', len(result_files))}", "不生成医学 conclusion，不推进 PRISMA。"], object_name="metaStatisticsSummary"))
-        result_view = QTextEdit()
-        result_view.setObjectName("metaStatisticsResultPreview")
-        result_view.setReadOnly(True)
-        result_view.setPlainText(json.dumps(latest_result or {"message": "暂无统计结果"}, ensure_ascii=False, indent=2)[:12000])
-        layout.addWidget(result_view)
+        layout.addWidget(_page_header("统计分析", "M10-M13 用户路径：预检查、pairwise executor、统计结果审核与报告就绪申请。", "Developer Preview / testing"))
+        layout.addWidget(
+            _info_card(
+                "效应量标准化预检查",
+                [
+                    f"总提取行：{normalization_summary.total_rows}",
+                    f"confirmed 行：{normalization_summary.confirmed_rows}",
+                    f"可用于后续统计的研究数：{normalization_summary.normalized_ready}",
+                    f"需要用户检查：{normalization_summary.needs_user_review}",
+                    f"字段不完整：{normalization_summary.incomplete}",
+                    f"无效或不支持：{normalization_summary.invalid + normalization_summary.unsupported_effect_type}",
+                    "标准化输入只用于 executor 预检查，不生成 computed 或 report_ready 结果。",
+                ],
+                object_name="metaEffectSizeNormalizationPreview",
+            )
+        )
+        layout.addWidget(
+            _info_card(
+                "Pairwise executor",
+                _pairwise_workspace_result_lines(latest_result),
+                object_name="metaPairwiseExecutorPreview",
+            )
+        )
+        layout.addWidget(
+            _info_card(
+                "统计结果审核",
+                [
+                    f"审核状态：{result_review_label_zh(review.review_state)}",
+                    f"当前统计状态：{statistical_result_state_label_zh(review.result_state or (latest_result.result_state if latest_result else STATISTICAL_RESULT_STATE_NOT_RUN))}",
+                    f"已确认查看警告：{'是' if review.review_warnings_acknowledged else '否'}",
+                    f"申请报告就绪：{'是' if review.report_ready_requested else '否'}",
+                    f"报告就绪：{'是' if review.report_ready_granted else '否'}",
+                    f"阻止进入报告的原因：{'；'.join(review.report_ready_blockers) if review.report_ready_blockers else '无'}",
+                    "report_ready 只代表可进入当前草稿报告流程，不代表正式发表、临床、监管或 production 结论。",
+                ],
+                object_name="metaResultReviewPreview",
+            )
+        )
+        feedback = QLabel("")
+        feedback.setObjectName("metaStatisticsFeedback")
+        feedback.setWordWrap(True)
+        layout.addWidget(feedback)
+        review_notes = QLineEdit()
+        review_notes.setObjectName("metaResultReviewNotesInput")
+        review_notes.setPlaceholderText("审核备注（可选）")
+        warning_ack = QCheckBox("已确认查看警告")
+        warning_ack.setObjectName("metaResultWarningAcknowledgement")
+        warning_ack.setChecked(bool(review.review_warnings_acknowledged))
+        layout.addWidget(review_notes)
+        layout.addWidget(warning_ack)
         buttons = QHBoxLayout()
-        run = QPushButton("运行统计分析")
+        refresh_normalization = QPushButton("刷新效应量标准化预检查")
+        refresh_normalization.setObjectName("metaSecondaryButton")
+        run = QPushButton("运行 pairwise executor")
         run.setObjectName("metaPrimaryButton")
-        run.setEnabled(bool(confirmed))
+        accept = QPushButton("接受进入报告草稿")
+        accept.setObjectName("metaSecondaryButton")
+        needs_revision = QPushButton("标记需要修订")
+        needs_revision.setObjectName("metaSecondaryButton")
+        reject = QPushButton("不纳入报告")
+        reject.setObjectName("metaSecondaryButton")
+        report_ready = QPushButton("申请报告就绪")
+        report_ready.setObjectName("metaSecondaryButton")
         next_button = QPushButton("下一步：报告导出")
         next_button.setObjectName("metaSecondaryButton")
+        buttons.addWidget(refresh_normalization)
         buttons.addWidget(run)
+        buttons.addWidget(accept)
+        buttons.addWidget(needs_revision)
+        buttons.addWidget(reject)
+        buttons.addWidget(report_ready)
         buttons.addWidget(next_button)
         buttons.addStretch(1)
         layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"manifest={stats.manifest_path(project_dir)}\nresults={stats.results_dir(project_dir)}"))
+        layout.addWidget(_developer_details(f"confirmed_plan={plan_service.confirmed_path(project_dir)}\npairwise_result={pairwise_service.latest_result_path(project_dir)}\nreview={review_service.review_path(project_dir)}"))
         layout.addStretch(1)
+
+        def latest_for_review():
+            result = pairwise_service.load_latest_result(project_dir)
+            if result is None:
+                raise ValueError("请先运行 pairwise executor。")
+            return result
+
+        def set_transition_feedback(prefix: str, transition) -> None:
+            blockers = "；".join(transition.blockers) if transition.blockers else "无"
+            feedback.setText(f"{prefix}：{'已完成' if transition.success else '未完成'}；阻止进入报告的原因：{blockers}")
+
+        def do_refresh_normalization() -> None:
+            _show_message("已刷新效应量标准化预检查。")
+            on_refresh()
 
         def do_run() -> None:
             try:
-                result = stats.run_statistics(project_dir, actor="reviewer")
-                _show_message(result.message)
+                result = pairwise_service.execute(project_dir, actor="reviewer")
+                if result.validation_errors:
+                    feedback.setText("输入校验失败：" + "；".join(result.validation_errors))
+                else:
+                    feedback.setText("pairwise executor 已完成计算；结果仍为 Developer Preview / testing，需用户审核。")
             except Exception as exc:
-                _show_message(str(exc))
+                feedback.setText(f"pairwise executor 运行失败：{exc}")
             on_refresh()
 
+        def do_accept() -> None:
+            try:
+                transition = review_service.accept_for_report(
+                    project_dir,
+                    latest_for_review(),
+                    reviewer_role="reviewer",
+                    review_notes=review_notes.text(),
+                    warnings_acknowledged=warning_ack.isChecked(),
+                )
+                set_transition_feedback("接受进入报告草稿", transition)
+            except Exception as exc:
+                feedback.setText(f"统计结果审核失败：{exc}")
+            on_refresh()
+
+        def do_needs_revision() -> None:
+            try:
+                transition = review_service.mark_needs_revision(project_dir, latest_for_review(), reviewer_role="reviewer", review_notes=review_notes.text())
+                set_transition_feedback("标记需要修订", transition)
+            except Exception as exc:
+                feedback.setText(f"统计结果审核失败：{exc}")
+            on_refresh()
+
+        def do_reject() -> None:
+            try:
+                transition = review_service.reject_for_report(project_dir, latest_for_review(), reviewer_role="reviewer", review_notes=review_notes.text())
+                set_transition_feedback("不纳入报告", transition)
+            except Exception as exc:
+                feedback.setText(f"统计结果审核失败：{exc}")
+            on_refresh()
+
+        def do_report_ready() -> None:
+            try:
+                requested = review_service.request_report_ready(project_dir, latest_for_review(), reviewer_role="reviewer")
+                latest = pairwise_service.load_latest_result(project_dir)
+                granted = review_service.grant_report_ready(project_dir, latest, reviewer_role="reviewer") if requested.success else requested
+                set_transition_feedback("申请报告就绪", granted)
+            except Exception as exc:
+                feedback.setText(f"申请报告就绪失败：{exc}")
+            on_refresh()
+
+        refresh_normalization.clicked.connect(do_refresh_normalization)
         run.clicked.connect(do_run)
+        accept.clicked.connect(do_accept)
+        needs_revision.clicked.connect(do_needs_revision)
+        reject.clicked.connect(do_reject)
+        report_ready.clicked.connect(do_report_ready)
         next_button.clicked.connect(on_next)
         return frame
 

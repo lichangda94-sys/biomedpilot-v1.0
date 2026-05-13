@@ -169,6 +169,7 @@ def test_confirmed_analysis_plan_requires_explicit_call_and_does_not_run_statist
     audit_events = audit.list_events(tmp_path)
 
     assert confirmed.payload["schema_version"] == CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION
+    assert confirmed.payload["plan_state"] == "confirmed"
     assert confirmed.payload["source_draft_id"] == draft.plan_id
     assert confirmed.payload["locked_for_analysis_run"] is True
     assert confirmed.payload["analysis_run_status"] == "not_started"

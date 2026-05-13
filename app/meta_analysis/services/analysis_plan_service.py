@@ -251,6 +251,7 @@ class AnalysisPlanService:
         confirmed = {
             "schema_version": CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
             "confirmed_analysis_plan_id": f"aplan-confirmed-{uuid4().hex[:12]}",
+            "plan_state": "confirmed",
             "source_draft_id": str(draft.get("analysis_plan_id", "")),
             "confirmed_effect_measure": confirmed_effect_measure or str(draft.get("effect_measure", "")),
             "confirmed_model": (confirmed_model or str(draft.get("model_default", "random_effects"))).strip(),

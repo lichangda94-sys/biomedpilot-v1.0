@@ -105,7 +105,8 @@ class PairwiseMetaExecutorService:
         now = _now()
         warnings: list[str] = ["developer_preview_testing_only", "fixed_effect_inverse_variance_mvp"]
         validation_errors: list[str] = []
-        if not confirmed_plan or str(confirmed_plan.get("plan_state", "")) != "confirmed":
+        confirmed_plan_ready = _confirmed_plan_ready(confirmed_plan)
+        if not confirmed_plan_ready:
             validation_errors.append("confirmed_analysis_plan_required")
         model = _normalize_model(config.model or str((confirmed_plan or {}).get("confirmed_model") or (confirmed_plan or {}).get("model_preference") or PAIRWISE_MODEL_FIXED_EFFECT))
         if model not in PAIRWISE_SUPPORTED_MODELS:
@@ -136,7 +137,7 @@ class PairwiseMetaExecutorService:
         )
         gate = can_enter_computed_state(
             {
-                "confirmed_analysis_plan": bool(confirmed_plan and str(confirmed_plan.get("plan_state", "")) == "confirmed"),
+                "confirmed_analysis_plan": confirmed_plan_ready,
                 "confirmed_extraction_rows": bool(ready_records),
                 "effect_measure_consistent": bool(effect_types and len(effect_types) == 1 and (not plan_effect or effect_types[0] == plan_effect)),
                 "numeric_fields_valid": not numeric_errors,
@@ -368,6 +369,14 @@ def _normalize_model(model: str) -> str:
         "random_effect": "random_effect",
     }
     return aliases.get(value, value)
+
+
+def _confirmed_plan_ready(confirmed_plan: dict[str, Any] | None) -> bool:
+    if not confirmed_plan:
+        return False
+    if str(confirmed_plan.get("plan_state", "")).strip() == "confirmed":
+        return True
+    return bool(confirmed_plan.get("confirmed_analysis_plan_id")) and bool(confirmed_plan.get("locked_for_analysis_run"))
 
 
 def _normalize_effect_type(value: str) -> str:
