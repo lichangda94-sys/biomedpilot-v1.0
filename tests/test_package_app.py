@@ -34,6 +34,14 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
     assert not (result.resource_root / ".git").exists()
+    medical_terms = result.resource_root / "data" / "medical_terms"
+    assert (medical_terms / "mini_medical_terms_index.json").exists()
+    assert (medical_terms / "zh_term_overrides.json").exists()
+    assert (medical_terms / "source_metadata.json").exists()
+    assert (medical_terms / "license_attribution.md").exists()
+    assert (medical_terms / "reference_checklists").is_dir()
+    assert not (medical_terms / "medical_terms_index.sqlite").exists()
+    assert not (medical_terms / "raw").exists()
 
     build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
     assert build_info["version"] == "0.1.0-internal-beta"

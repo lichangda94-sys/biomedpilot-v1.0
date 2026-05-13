@@ -1,0 +1,277 @@
+{
+  "schema_version": "medical_vocabulary_reference_checklist.v1",
+  "checklist_id": "gtex_tissues",
+  "title": "GTEx Tissues Checklist",
+  "source": "GTEx Portal tissue groups",
+  "source_version": "GTEx tissue group checklist, curated access 2026-05",
+  "coverage_type": "gtex_tissues",
+  "items": [
+    {
+      "id": "Brain",
+      "label": "Brain",
+      "expected_gtex_tissues": [
+        "Brain"
+      ],
+      "expected_terms": [
+        "brain"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Thyroid",
+      "label": "Thyroid",
+      "expected_gtex_tissues": [
+        "Thyroid"
+      ],
+      "expected_terms": [
+        "thyroid"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Esophagus",
+      "label": "Esophagus",
+      "expected_gtex_tissues": [
+        "Esophagus"
+      ],
+      "expected_terms": [
+        "esophagus"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Lung",
+      "label": "Lung",
+      "expected_gtex_tissues": [
+        "Lung"
+      ],
+      "expected_terms": [
+        "lung"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Stomach",
+      "label": "Stomach",
+      "expected_gtex_tissues": [
+        "Stomach"
+      ],
+      "expected_terms": [
+        "stomach",
+        "gastric"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Colon",
+      "label": "Colon",
+      "expected_gtex_tissues": [
+        "Colon"
+      ],
+      "expected_terms": [
+        "colon",
+        "colorectal"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Liver",
+      "label": "Liver",
+      "expected_gtex_tissues": [
+        "Liver"
+      ],
+      "expected_terms": [
+        "liver"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Pancreas",
+      "label": "Pancreas",
+      "expected_gtex_tissues": [
+        "Pancreas"
+      ],
+      "expected_terms": [
+        "pancreas",
+        "pancreatic"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Breast",
+      "label": "Breast",
+      "expected_gtex_tissues": [
+        "Breast"
+      ],
+      "expected_terms": [
+        "breast"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Prostate",
+      "label": "Prostate",
+      "expected_gtex_tissues": [
+        "Prostate"
+      ],
+      "expected_terms": [
+        "prostate"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Ovary",
+      "label": "Ovary",
+      "expected_gtex_tissues": [
+        "Ovary"
+      ],
+      "expected_terms": [
+        "ovary",
+        "ovarian"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Uterus",
+      "label": "Uterus",
+      "expected_gtex_tissues": [
+        "Uterus"
+      ],
+      "expected_terms": [
+        "uterus",
+        "endometrial"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Kidney",
+      "label": "Kidney",
+      "expected_gtex_tissues": [
+        "Kidney"
+      ],
+      "expected_terms": [
+        "kidney",
+        "renal tissue",
+        "kidney cortex",
+        "kidney medulla"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Bladder",
+      "label": "Bladder",
+      "expected_gtex_tissues": [
+        "Bladder"
+      ],
+      "expected_terms": [
+        "bladder",
+        "urinary bladder",
+        "bladder tissue"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "Skin",
+      "label": "Skin",
+      "expected_gtex_tissues": [
+        "Skin"
+      ],
+      "expected_terms": [
+        "skin"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "Whole Blood",
+      "label": "Whole Blood",
+      "expected_gtex_tissues": [
+        "Whole Blood"
+      ],
+      "expected_terms": [
+        "whole blood",
+        "blood"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Adipose Tissue",
+      "label": "Adipose Tissue",
+      "expected_gtex_tissues": [
+        "Adipose Tissue"
+      ],
+      "expected_terms": [
+        "adipose tissue",
+        "adipose"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Muscle",
+      "label": "Muscle",
+      "expected_gtex_tissues": [
+        "Muscle"
+      ],
+      "expected_terms": [
+        "muscle"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Heart",
+      "label": "Heart",
+      "expected_gtex_tissues": [
+        "Heart"
+      ],
+      "expected_terms": [
+        "heart"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Spleen",
+      "label": "Spleen",
+      "expected_gtex_tissues": [
+        "Spleen"
+      ],
+      "expected_terms": [
+        "spleen"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Pituitary",
+      "label": "Pituitary",
+      "expected_gtex_tissues": [
+        "Pituitary"
+      ],
+      "expected_terms": [
+        "pituitary"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Adrenal",
+      "label": "Adrenal",
+      "expected_gtex_tissues": [
+        "Adrenal Gland"
+      ],
+      "expected_terms": [
+        "adrenal gland",
+        "adrenal"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "Testis",
+      "label": "Testis",
+      "expected_gtex_tissues": [
+        "Testis"
+      ],
+      "expected_terms": [
+        "testis",
+        "testicular"
+      ],
+      "priority": "P1"
+    }
+  ]
+}

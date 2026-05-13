@@ -21,6 +21,13 @@ from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO
 DEFAULT_APP_NAME = "BioMedPilot"
 COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
+PACKAGE_RESOURCE_FILES = (
+    "data/medical_terms/mini_medical_terms_index.json",
+    "data/medical_terms/zh_term_overrides.json",
+    "data/medical_terms/source_metadata.json",
+    "data/medical_terms/license_attribution.md",
+)
+PACKAGE_RESOURCE_DIRS = ("data/medical_terms/reference_checklists",)
 STORAGE_DIRS = ("projects", "data", "tasks", "reports", "test_feedback")
 IGNORE_NAMES = {
     "__pycache__",
@@ -77,6 +84,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         if source.exists():
             shutil.copy2(source, resource_root / filename)
 
+    _copy_package_resources(repo_root, resource_root)
     _create_project_storage(resource_root / "project_storage")
     git_head = _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
@@ -149,6 +157,20 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
         elif path.is_dir() and name in {"dist", "build", ".git", ".venv", ".venv-meta"}:
             ignored.add(name)
     return ignored
+
+
+def _copy_package_resources(repo_root: Path, resource_root: Path) -> None:
+    for relative_name in PACKAGE_RESOURCE_FILES:
+        source = repo_root / relative_name
+        if source.exists():
+            target = resource_root / relative_name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+
+    for relative_name in PACKAGE_RESOURCE_DIRS:
+        source = repo_root / relative_name
+        if source.exists():
+            shutil.copytree(source, resource_root / relative_name, ignore=_copy_ignore, dirs_exist_ok=True)
 
 
 def _create_project_storage(storage_root: Path) -> None:
