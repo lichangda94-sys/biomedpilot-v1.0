@@ -13,6 +13,7 @@ from app.meta_analysis.models.statistical_result_state import (
     blocks_formal_report_claim,
     statistical_result_state_label_zh,
 )
+from app.meta_analysis.services.effect_size_normalization_service import EffectSizeNormalizationService
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_plan_service import (
@@ -146,6 +147,7 @@ class AnalysisSetupPageState:
     preflight_summary: dict[str, object]
     run_result_summary: dict[str, object]
     result_state_summary: dict[str, object]
+    effect_size_normalization_summary: dict[str, object]
     advanced_method_status: dict[str, str]
     warnings: tuple[str, ...]
     errors: tuple[str, ...]
@@ -162,6 +164,13 @@ class AnalysisSetupPageState:
     section_labels_zh: dict[str, str] | None = None
     model_option_labels_zh: tuple[str, ...] = ()
     advanced_method_status_zh: dict[str, str] | None = None
+    effect_size_normalization_labels_zh: tuple[str, ...] = (
+        "效应量标准化预检查",
+        "可用于后续统计的研究数",
+        "需要用户检查",
+        "字段不完整",
+        "不支持的效应量类型",
+    )
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
@@ -262,6 +271,7 @@ def analysis_setup_state_from_project(
     warnings_path = project_dir / "analysis" / "applicability_warnings.json"
     preflight_summary = _analysis_alias_summary(dataset_path, "dataset")
     run_result_summary = _analysis_alias_summary(result_path, "result")
+    normalization_summary = _effect_size_normalization_summary(project_dir)
     if not plan_path.exists():
         warnings.append("analysis_plan_missing")
     if not dataset_path.exists():
@@ -292,6 +302,7 @@ def analysis_setup_state_from_project(
             "label_zh": run_result_summary.get("result_state_label_zh", statistical_result_state_label_zh(STATISTICAL_RESULT_STATE_NOT_RUN)),
             "blocks_formal_report_claim": run_result_summary.get("blocks_formal_report_claim", True),
         },
+        effect_size_normalization_summary=normalization_summary,
         advanced_method_status={
             "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
             "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
@@ -438,6 +449,37 @@ def _analysis_alias_summary(path: Path, payload_key: str) -> dict[str, object]:
     }
 
 
+def _effect_size_normalization_summary(project_dir: Path) -> dict[str, object]:
+    try:
+        effects = EffectSizeNormalizationService().normalize_extraction_rows(project_dir)
+        summary = EffectSizeNormalizationService().summarize_normalization(effects).to_dict()
+    except Exception:
+        summary = {
+            "total_rows": 0,
+            "confirmed_rows": 0,
+            "normalized_ready": 0,
+            "incomplete": 0,
+            "invalid": 0,
+            "needs_user_review": 0,
+            "unsupported_effect_type": 0,
+            "warnings": [],
+            "result_state": STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+        }
+    return {
+        "title_zh": "效应量标准化预检查",
+        "ready_label_zh": "可用于后续统计的研究数",
+        "needs_review_label_zh": "需要用户检查",
+        "incomplete_label_zh": "字段不完整",
+        "unsupported_label_zh": "不支持的效应量类型",
+        "normalized_ready": int(summary.get("normalized_ready", 0) or 0),
+        "needs_user_review": int(summary.get("needs_user_review", 0) or 0),
+        "incomplete": int(summary.get("incomplete", 0) or 0),
+        "unsupported_effect_type": int(summary.get("unsupported_effect_type", 0) or 0),
+        "creates_computed_result": False,
+        "result_state": STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+    }
+
+
 def _available_subgroup_options(available_outcomes: tuple[dict[str, object], ...]) -> tuple[str, ...]:
     if not available_outcomes:
         return ("subgroup", "country", "study_design")
@@ -554,6 +596,13 @@ if QWidget is not None:
             self._statistics_engine_label = QLabel("请先确认分析计划。")
             self._statistics_engine_label.setWordWrap(True)
             root.addWidget(self._statistics_engine_label)
+
+            normalization_title = QLabel("效应量标准化预检查")
+            normalization_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(normalization_title)
+            self._normalization_summary_label = QLabel("可用于后续统计的研究数、需要用户检查、字段不完整和不支持的效应量类型会显示在这里。")
+            self._normalization_summary_label.setWordWrap(True)
+            root.addWidget(self._normalization_summary_label)
 
             dataset_title = QLabel("Analysis-ready Dataset（测试中）")
             dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
@@ -725,6 +774,7 @@ if QWidget is not None:
                     f"I²：{output.get('i_squared', '')}\n"
                     "testing-level；未生成医学结论。"
                 )
+                self._refresh_normalization_summary(project_dir)
                 self._error_label.setText("")
             except Exception as exc:
                 self._statistics_engine_label.setText("请先确认分析计划。")
@@ -759,6 +809,18 @@ if QWidget is not None:
                 f"结果状态：{state.result_state_label_zh}\n"
                 f"Pooled effect：{result.get('pooled_effect', '')}\n"
                 f"Testing：{result.get('testing_level_notice', '')}"
+            )
+            self._refresh_normalization_summary(project_dir)
+
+        def _refresh_normalization_summary(self, project_dir: Path) -> None:
+            summary = _effect_size_normalization_summary(project_dir)
+            self._normalization_summary_label.setText(
+                f"{summary['title_zh']}\n"
+                f"{summary['ready_label_zh']}：{summary['normalized_ready']}\n"
+                f"{summary['needs_review_label_zh']}：{summary['needs_user_review']}\n"
+                f"{summary['incomplete_label_zh']}：{summary['incomplete']}\n"
+                f"{summary['unsupported_label_zh']}：{summary['unsupported_effect_type']}\n"
+                "标准化输入仅用于后续执行器预检查，不生成 computed 或 report_ready 结果。"
             )
 
         def _build_dataset(self) -> None:
