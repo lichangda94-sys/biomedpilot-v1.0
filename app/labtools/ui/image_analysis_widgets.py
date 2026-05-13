@@ -16,6 +16,13 @@ try:
 
     from app.labtools.image_analysis import IMAGE_REVIEW_NOTICE, TASK_TYPES, ImageAnalysisError
     from app.labtools.image_analysis.analysis_task import ImageAnalysisTask, create_analysis_task
+    from app.labtools.image_analysis.fluorescence import (
+        FluorescenceAnalysisParameters,
+        FluorescenceROI,
+        analyze_fluorescence_roi,
+        create_fluorescence_audit_records,
+        fluorescence_result_summary,
+    )
     from app.labtools.image_analysis.image_io import create_image_record
     from app.labtools.image_analysis.image_models import LabImageRecord
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
@@ -62,6 +69,7 @@ if QWidget is not None:
             root.addWidget(notice)
             root.addWidget(self._build_import_card())
             root.addWidget(self._build_task_card_grid())
+            root.addWidget(self._build_fluorescence_card())
 
             self._task_summary = QTextEdit()
             self._task_summary.setObjectName("imageResultPanel")
@@ -122,7 +130,8 @@ if QWidget is not None:
             layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
             title = QLabel(label)
             title.setObjectName("imageTaskTitle")
-            status = QLabel("框架已建立，算法开发中")
+            status_text = "MVP 可用：手动 ROI" if task_type == "fluorescence_intensity" else "框架已建立，算法开发中"
+            status = QLabel(status_text)
             status.setObjectName("imageTaskStatus")
             status.setWordWrap(True)
             button = QPushButton("创建任务草稿")
@@ -133,6 +142,52 @@ if QWidget is not None:
             layout.addStretch(1)
             layout.addWidget(button)
             return frame
+
+        def _build_fluorescence_card(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("荧光强度 ROI 分析 MVP")
+            heading.setObjectName("imageCardTitle")
+            grid = QGridLayout()
+            grid.setSpacing(SPACING["sm"])
+            self._signal_x = self._roi_field("x", "0")
+            self._signal_y = self._roi_field("y", "0")
+            self._signal_w = self._roi_field("width", "2")
+            self._signal_h = self._roi_field("height", "2")
+            self._background_x = self._roi_field("x", "0")
+            self._background_y = self._roi_field("y", "0")
+            self._background_w = self._roi_field("width", "2")
+            self._background_h = self._roi_field("height", "2")
+            run = QPushButton("运行荧光分析")
+            run.setObjectName("primaryButton")
+            run.clicked.connect(self._handle_run_fluorescence)
+            grid.addWidget(QLabel("signal ROI"), 0, 0)
+            grid.addWidget(self._signal_x, 0, 1)
+            grid.addWidget(self._signal_y, 0, 2)
+            grid.addWidget(self._signal_w, 0, 3)
+            grid.addWidget(self._signal_h, 0, 4)
+            grid.addWidget(QLabel("background ROI"), 1, 0)
+            grid.addWidget(self._background_x, 1, 1)
+            grid.addWidget(self._background_y, 1, 2)
+            grid.addWidget(self._background_w, 1, 3)
+            grid.addWidget(self._background_h, 1, 4)
+            grid.addWidget(run, 2, 0, 1, 5)
+            layout.addWidget(heading)
+            layout.addLayout(grid)
+            support = QLabel("仅支持单张本地图片和手动矩形 ROI；不会自动识别细胞、划痕或条带。")
+            support.setObjectName("imageTaskStatus")
+            support.setWordWrap(True)
+            layout.addWidget(support)
+            return frame
+
+        def _roi_field(self, placeholder: str, text: str) -> QLineEdit:
+            field = QLineEdit()
+            field.setPlaceholderText(placeholder)
+            field.setText(text)
+            field.setMinimumHeight(CONTROL_HEIGHT["field"])
+            return field
 
         def _handle_browse(self) -> None:
             path, _selected_filter = QFileDialog.getOpenFileName(
@@ -176,6 +231,56 @@ if QWidget is not None:
                 return
             self._tasks.append(task)
             self._render_task_summary(task)
+
+        def _handle_run_fluorescence(self) -> None:
+            try:
+                signal_roi = FluorescenceROI(
+                    label="signal ROI",
+                    x=self._parse_roi_int(self._signal_x.text(), "signal x"),
+                    y=self._parse_roi_int(self._signal_y.text(), "signal y"),
+                    width=self._parse_roi_int(self._signal_w.text(), "signal width"),
+                    height=self._parse_roi_int(self._signal_h.text(), "signal height"),
+                    roi_type="signal",
+                )
+                background_roi = FluorescenceROI(
+                    label="background ROI",
+                    x=self._parse_roi_int(self._background_x.text(), "background x"),
+                    y=self._parse_roi_int(self._background_y.text(), "background y"),
+                    width=self._parse_roi_int(self._background_w.text(), "background width"),
+                    height=self._parse_roi_int(self._background_h.text(), "background height"),
+                    roi_type="background",
+                )
+                image_path = self._path_field.text().strip()
+                if self._image_records and self._image_records[-1].source_path == image_path:
+                    image_record = self._image_records[-1]
+                else:
+                    image_record = create_image_record(image_path, image_role="fluorescence_source")
+                    self._image_records.append(image_record)
+                task = create_analysis_task("fluorescence_intensity", (image_record,))
+                parameters = FluorescenceAnalysisParameters(
+                    image_path=image_path,
+                    signal_roi=signal_roi,
+                    background_roi=background_roi,
+                )
+                result = analyze_fluorescence_roi(parameters, task_id=task.task_id)
+                audit_records = create_fluorescence_audit_records(result, source_path=parameters.image_path)
+            except ValueError as exc:
+                self._task_summary.setText(f"荧光分析需要调整\n{exc}")
+                return
+            except ImageAnalysisError as exc:
+                self._task_summary.setText(f"荧光分析需要调整\n{exc}")
+                return
+            self._tasks.append(task)
+            audit_line = f"审计记录：{len(audit_records)} 条；算法参数已随结果结构记录。"
+            self._task_summary.setText(f"{fluorescence_result_summary(result)}\n\n{audit_line}")
+
+        def _parse_roi_int(self, value: str, field_name: str) -> int:
+            if value is None or str(value).strip() == "":
+                raise ValueError(f"请填写 {field_name}。")
+            try:
+                return int(str(value).strip())
+            except ValueError as exc:
+                raise ValueError(f"{field_name} 必须是整数。") from exc
 
         def _render_task_summary(self, task: ImageAnalysisTask) -> None:
             image_line = "无图片记录" if not task.image_records else f"{len(task.image_records)} 个图片记录"

@@ -6,6 +6,13 @@ not run image quantification algorithms.
 
 from app.labtools.image_analysis.analysis_task import TASK_TYPES, ImageAnalysisTask, create_analysis_task
 from app.labtools.image_analysis.audit_models import ImageAnalysisAuditRecord
+from app.labtools.image_analysis.fluorescence import (
+    FluorescenceAnalysisMetrics,
+    FluorescenceAnalysisParameters,
+    FluorescenceAnalysisResult,
+    FluorescenceROI,
+    analyze_fluorescence_roi,
+)
 from app.labtools.image_analysis.image_io import create_image_record, validate_image_path
 from app.labtools.image_analysis.image_models import IMAGE_REVIEW_NOTICE, ImageAnalysisError, LabImageRecord
 from app.labtools.image_analysis.result_models import ImageAnalysisResult, placeholder_result
@@ -20,6 +27,11 @@ __all__ = [
     "ImageAnalysisTask",
     "LabImageRecord",
     "ROIRecord",
+    "FluorescenceAnalysisMetrics",
+    "FluorescenceAnalysisParameters",
+    "FluorescenceAnalysisResult",
+    "FluorescenceROI",
+    "analyze_fluorescence_roi",
     "create_analysis_task",
     "create_image_record",
     "placeholder_result",
