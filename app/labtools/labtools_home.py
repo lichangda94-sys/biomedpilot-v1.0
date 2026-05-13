@@ -68,7 +68,18 @@ if QWidget is not None:
                 0,
                 1,
             )
-            grid.addWidget(self._entry_card("图像定量", "开发中", "开发中", "查看状态", self.image_quant_requested.emit), 1, 0)
+            grid.addWidget(
+                self._entry_card(
+                    "图像定量",
+                    "图片记录与任务草稿框架",
+                    "可用",
+                    "进入图像定量",
+                    self.image_quant_requested.emit,
+                    object_name="labToolsImageEntry",
+                ),
+                1,
+                0,
+            )
             grid.addWidget(self._entry_card("实验模板", "开发中", "开发中", "查看状态", self.templates_requested.emit), 1, 1)
             root.addLayout(grid)
             root.addStretch(1)
@@ -119,7 +130,7 @@ if QWidget is not None:
                 border: 0;
                 background: {COLORS["background"]};
             }}
-            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsPendingEntry {{
+            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsImageEntry, QFrame#labToolsPendingEntry {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["lg"]}px;
