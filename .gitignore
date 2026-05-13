@@ -1,13 +1,45 @@
+# Python caches and test artifacts
 __pycache__/
 *.py[cod]
+*.pyo
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Local virtual environments
 .venv/
 .venv-meta/
+
+# Build and packaging outputs
 dist/
 build/
+*.egg-info/
+*.app/
+*.dmg
+*.pkg
+
+# macOS and editor temporary files
 .DS_Store
+._*
+*~
+*.tmp
+*.bak
+*.orig
+
+# Local test inputs and runtime logs
 test_inputs/
+test_outputs/
+tmp/
+.tmp/
+logs/**/*.log
 logs/ai_gateway/*.jsonl
+
+# Local project storage generated during tests or manual runs
 project_storage/**/*.json
 project_storage/projects/*
 project_storage/tasks/*
