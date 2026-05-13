@@ -367,7 +367,12 @@ if QWidget is not None:
         DedupReviewV2Service,
     )
     from app.meta_analysis.services.ai_assisted_extraction_queue_service import AIAssistedExtractionQueueService
-    from app.meta_analysis.services.analysis_plan_service import AnalysisPlanService
+    from app.meta_analysis.services.analysis_plan_service import (
+        ANALYSIS_PLAN_EFFECT_MEASURE_TYPES,
+        ANALYSIS_PLAN_MODEL_PREFERENCES,
+        ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH,
+        AnalysisPlanService,
+    )
     from app.meta_analysis.services.exclusion_criteria_library_service import (
         FULL_TEXT_STAGE,
         TITLE_ABSTRACT_STAGE,
@@ -664,7 +669,7 @@ if QWidget is not None:
             if step.route_key == "manual_extraction":
                 return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
             if step.route_key == "statistics_analysis":
-                return _statistics_analysis_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
+                return _analysis_plan_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
             if step.route_key == "report_export":
                 return _report_export_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("workflow_home"))
             return _placeholder_step_page(step)
@@ -2708,29 +2713,141 @@ if QWidget is not None:
         service = AnalysisPlanService()
         draft = service.load_draft(project_dir)
         confirmed = service.load_confirmed(project_dir)
+        active_plan = confirmed or draft
+        readiness = service.analysis_plan_readiness(project_dir)
+        warning_labels = dict(active_plan.get("m7_warning_labels_zh", {})) if isinstance(active_plan.get("m7_warning_labels_zh"), dict) else dict(readiness.get("warning_labels_zh", {}))
         frame = QFrame()
         frame.setObjectName("metaAnalysisPlanPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("分析计划", "从 confirmed protocol、提取行、质量评价生成草稿。", "需要人工确认"))
-        layout.addWidget(_info_card("当前状态", [f"draft：{bool(draft)}", f"confirmed：{bool(confirmed)}", f"warnings：{len(draft.get('warnings', [])) if draft else 0}", "确认前不得运行统计。"], object_name="metaAnalysisPlanSummary"))
-        preview = QTextEdit()
-        preview.setObjectName("metaAnalysisPlanPreview")
-        preview.setReadOnly(True)
-        preview.setPlainText(json.dumps({"draft": draft, "confirmed": confirmed}, ensure_ascii=False, indent=2)[:12000])
-        layout.addWidget(preview)
+        layout.addWidget(_page_header("分析计划", "确认研究类型、效应量、模型、异质性、亚组/敏感性/发表偏倚计划。", "Developer Preview / testing"))
+        layout.addWidget(
+            _info_card(
+                "当前状态",
+                [
+                    f"计划状态：{_analysis_plan_state_label(str(active_plan.get('plan_state') or active_plan.get('status') or '未生成'))}",
+                    f"纳入研究数量：{int(active_plan.get('included_study_count', readiness.get('included_study_count', 0)) or 0)}",
+                    "确认分析计划不会运行正式统计分析。",
+                    "该计划仅用于测试阶段，不代表正式统计结论。",
+                ],
+                object_name="metaAnalysisPlanSummary",
+            )
+        )
+        form = _card("分析计划")
+        form_layout = form.layout()
+        form_layout.addWidget(_kv_label("研究类型", str(active_plan.get("meta_profile") or active_plan.get("meta_type") or "待生成")))
+        form_layout.addWidget(_kv_label("纳入研究数量", str(active_plan.get("included_study_count", readiness.get("included_study_count", 0)))))
+        research_question = QLineEdit()
+        research_question.setObjectName("metaAnalysisPlanResearchQuestionInput")
+        research_question.setPlaceholderText("研究问题")
+        research_question.setText(str(active_plan.get("research_question", "")))
+        form_layout.addWidget(research_question)
+        population = QLineEdit()
+        population.setObjectName("metaAnalysisPlanPopulationInput")
+        population.setPlaceholderText("Population / 研究对象")
+        population.setText(str(active_plan.get("population", "")))
+        form_layout.addWidget(population)
+        intervention = QLineEdit()
+        intervention.setObjectName("metaAnalysisPlanInterventionInput")
+        intervention.setPlaceholderText("Intervention / Exposure / 干预或暴露")
+        intervention.setText(str(active_plan.get("intervention_or_exposure", "")))
+        form_layout.addWidget(intervention)
+        comparator = QLineEdit()
+        comparator.setObjectName("metaAnalysisPlanComparatorInput")
+        comparator.setPlaceholderText("Comparator / 对照")
+        comparator.setText(str(active_plan.get("comparator", "")))
+        form_layout.addWidget(comparator)
+        outcome = QLineEdit()
+        outcome.setObjectName("metaAnalysisPlanOutcomeInput")
+        outcome.setPlaceholderText("Outcome / 结局")
+        outcome.setText(str(active_plan.get("outcome", "")))
+        form_layout.addWidget(outcome)
+        effect_type = QComboBox()
+        effect_type.setObjectName("metaAnalysisPlanEffectMeasureSelector")
+        for item in ANALYSIS_PLAN_EFFECT_MEASURE_TYPES:
+            effect_type.addItem(item, item)
+        selected_effect = str(active_plan.get("effect_measure_type") or active_plan.get("effect_measure") or "OR")
+        effect_index = effect_type.findData(selected_effect)
+        if effect_index >= 0:
+            effect_type.setCurrentIndex(effect_index)
+        form_layout.addWidget(_kv_label("效应量类型", "OR / RR / HR / MD / SMD / proportion / correlation / diagnostic_accuracy / other"))
+        form_layout.addWidget(effect_type)
+        model_preference = QComboBox()
+        model_preference.setObjectName("metaAnalysisPlanModelPreferenceSelector")
+        model_labels = {
+            "fixed_effect": "固定效应",
+            "random_effect": "随机效应",
+            "both": "固定效应 + 随机效应",
+            "undecided": "暂不决定",
+        }
+        for item in ANALYSIS_PLAN_MODEL_PREFERENCES:
+            model_preference.addItem(model_labels[item], item)
+        selected_model = str(active_plan.get("model_preference") or "random_effect")
+        model_index = model_preference.findData(selected_model)
+        if model_index >= 0:
+            model_preference.setCurrentIndex(model_index)
+        form_layout.addWidget(_kv_label("固定效应", "可在模型偏好中选择"))
+        form_layout.addWidget(_kv_label("随机效应", "可在模型偏好中选择"))
+        form_layout.addWidget(model_preference)
+        form_layout.addWidget(_kv_label("异质性", "I2 / tau2 / Q"))
+        subgroup_plan = QPlainTextEdit()
+        subgroup_plan.setObjectName("metaAnalysisPlanSubgroupInput")
+        subgroup_plan.setPlaceholderText("亚组分析")
+        subgroup_plan.setPlainText(_plan_text(active_plan.get("subgroup_plan", "")))
+        form_layout.addWidget(_kv_label("亚组分析", "按研究问题人工填写或确认"))
+        form_layout.addWidget(subgroup_plan)
+        sensitivity_plan = QPlainTextEdit()
+        sensitivity_plan.setObjectName("metaAnalysisPlanSensitivityInput")
+        sensitivity_plan.setPlaceholderText("敏感性分析")
+        sensitivity_plan.setPlainText(_plan_text(active_plan.get("sensitivity_plan", "")))
+        form_layout.addWidget(_kv_label("敏感性分析", "按研究问题人工填写或确认"))
+        form_layout.addWidget(sensitivity_plan)
+        publication_bias_plan = QPlainTextEdit()
+        publication_bias_plan.setObjectName("metaAnalysisPlanPublicationBiasInput")
+        publication_bias_plan.setPlaceholderText("发表偏倚")
+        publication_bias_plan.setPlainText(_plan_text(active_plan.get("publication_bias_plan", "")))
+        form_layout.addWidget(_kv_label("发表偏倚", "研究数量充足时再考虑；当前只记录计划"))
+        form_layout.addWidget(publication_bias_plan)
+        layout.addWidget(form)
+        layout.addWidget(
+            _info_card(
+                "准备度提示",
+                list(warning_labels.values())
+                or [ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH["developer_preview_testing_only"]],
+                object_name="metaAnalysisPlanWarnings",
+            )
+        )
         buttons = QHBoxLayout()
         generate = QPushButton("生成分析计划草稿")
+        save_draft = QPushButton("保存计划编辑")
         confirm = QPushButton("确认分析计划")
-        next_button = QPushButton("下一步：统计分析")
-        for button in (generate, confirm, next_button):
+        next_button = QPushButton("下一步：结果与报告")
+        for button in (generate, save_draft, confirm, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         generate.setObjectName("metaPrimaryButton")
         buttons.addStretch(1)
         layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"draft={service.draft_path(project_dir)}\nconfirmed={service.confirmed_path(project_dir)}"))
+        layout.addWidget(_developer_details(f"draft={service.draft_path(project_dir)}\nconfirmed={service.confirmed_path(project_dir)}\nmanifest={service.manifest_path(project_dir)}"))
         layout.addStretch(1)
+
+        def _ui_updates(plan_state: str = "user_edited") -> dict[str, object]:
+            return {
+                "research_question": research_question.text().strip(),
+                "population": population.text().strip(),
+                "intervention_or_exposure": intervention.text().strip(),
+                "comparator": comparator.text().strip(),
+                "outcome": outcome.text().strip(),
+                "effect_measure": str(effect_type.currentData()),
+                "effect_measure_type": str(effect_type.currentData()),
+                "model_default": str(model_preference.currentData()),
+                "model_preference": str(model_preference.currentData()),
+                "heterogeneity_metrics": ["I2", "tau2", "Q"],
+                "subgroup_plan": {"user_plan": subgroup_plan.toPlainText().strip(), "status": "user_edited"},
+                "sensitivity_plan": {"user_plan": sensitivity_plan.toPlainText().strip(), "status": "user_edited"},
+                "publication_bias_plan": {"user_plan": publication_bias_plan.toPlainText().strip(), "status": "user_edited"},
+                "plan_state": plan_state,
+            }
 
         def do_generate() -> None:
             try:
@@ -2740,8 +2857,21 @@ if QWidget is not None:
                 _show_message(str(exc))
             on_refresh()
 
+        def do_save_draft() -> None:
+            try:
+                if not service.load_draft(project_dir):
+                    service.generate_draft(project_dir, actor="reviewer")
+                result = service.edit_draft(project_dir, actor="reviewer", updates=_ui_updates())
+                _show_message(result.message)
+            except Exception as exc:
+                _show_message(str(exc))
+            on_refresh()
+
         def do_confirm() -> None:
             try:
+                if not service.load_draft(project_dir):
+                    service.generate_draft(project_dir, actor="reviewer")
+                service.edit_draft(project_dir, actor="reviewer", updates=_ui_updates())
                 result = service.confirm_plan(project_dir, actor="reviewer")
                 _show_message(result.message)
             except Exception as exc:
@@ -2749,6 +2879,7 @@ if QWidget is not None:
             on_refresh()
 
         generate.clicked.connect(do_generate)
+        save_draft.clicked.connect(do_save_draft)
         confirm.clicked.connect(do_confirm)
         next_button.clicked.connect(on_next)
         return frame
@@ -3132,6 +3263,30 @@ if QWidget is not None:
         widget.setObjectName("metaWarningText")
         widget.setWordWrap(True)
         return widget
+
+
+    def _analysis_plan_state_label(value: str) -> str:
+        labels = {
+            "draft": "草稿",
+            "suggested": "建议",
+            "user_edited": "用户编辑",
+            "confirmed": "已确认",
+            "needs_revision": "需要修订",
+            "missing": "未生成",
+            "未生成": "未生成",
+        }
+        return labels.get(value, value or "未生成")
+
+
+    def _plan_text(value: object) -> str:
+        if isinstance(value, dict):
+            for key in ("user_plan", "description", "status"):
+                if str(value.get(key, "")).strip():
+                    return str(value.get(key))
+            return "；".join(f"{key}: {item}" for key, item in value.items() if str(item).strip())
+        if isinstance(value, (list, tuple)):
+            return "；".join(str(item) for item in value if str(item).strip())
+        return str(value or "")
 
 
     def _default_meta_type(candidates: tuple[dict[str, object], ...]) -> str:

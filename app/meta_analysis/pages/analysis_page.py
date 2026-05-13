@@ -11,6 +11,7 @@ from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_plan_service import (
     ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION,
+    ANALYSIS_PLAN_M7_SCHEMA_VERSION,
     CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
     AnalysisPlanService,
 )
@@ -172,17 +173,23 @@ class AnalysisPlanBuilderPageState:
     confirmed_protocol_status: str
     draft_status: str
     confirmed_status: str
+    m7_schema_version: str
+    plan_state: str
     meta_type: str
     effect_measure: str
+    effect_measure_type: str
     model_default: str
+    model_preference: str
+    included_study_count: int
     included_candidate_count: int
     excluded_candidate_count: int
     warnings: tuple[str, ...]
+    readiness_warnings_zh: tuple[str, ...]
     primary_actions: tuple[str, ...]
     safety_flags: dict[str, bool]
     title_zh: str = "分析计划"
     status_label_zh: str = "内部测试"
-    description_zh: str = "从 confirmed protocol、提取行和质量评价摘要生成分析计划草稿；确认后仍不运行统计。"
+    description_zh: str = "确认研究类型、效应量、模型、异质性、亚组/敏感性/发表偏倚计划；确认后仍不运行统计。"
 
 
 @dataclass(frozen=True)
@@ -334,12 +341,22 @@ def analysis_plan_builder_state_from_project(
         confirmed_protocol_status="confirmed" if confirmed_protocol_path.exists() else "missing",
         draft_status=str(draft.get("status", "missing")) if draft else "missing",
         confirmed_status="confirmed" if confirmed else "not_confirmed",
+        m7_schema_version=ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+        plan_state=str((confirmed or draft).get("plan_state", "missing")) if (confirmed or draft) else "missing",
         meta_type=str(draft.get("meta_type", "")) if draft else "",
         effect_measure=str(draft.get("effect_measure", "")) if draft else "",
+        effect_measure_type=str((confirmed or draft).get("effect_measure_type", "")) if (confirmed or draft) else "",
         model_default=str(draft.get("model_default", "")) if draft else "",
+        model_preference=str((confirmed or draft).get("model_preference", "")) if (confirmed or draft) else "",
+        included_study_count=int((confirmed or draft).get("included_study_count", 0) or 0) if (confirmed or draft) else 0,
         included_candidate_count=len(draft.get("included_effect_row_candidates", [])) if isinstance(draft.get("included_effect_row_candidates"), list) else 0,
         excluded_candidate_count=len(draft.get("excluded_effect_row_candidates", [])) if isinstance(draft.get("excluded_effect_row_candidates"), list) else 0,
         warnings=tuple(_dedupe([*warnings, *(str(item) for item in draft.get("warnings", []) if item)])) if draft else tuple(warnings),
+        readiness_warnings_zh=tuple(
+            dict((confirmed or draft).get("m7_warning_labels_zh", {})).values()
+        )
+        if isinstance((confirmed or draft).get("m7_warning_labels_zh", {}) if (confirmed or draft) else {}, dict)
+        else (),
         primary_actions=("生成分析计划草稿", "查看候选效应量", "确认分析计划", "暂不运行统计"),
         safety_flags={
             "auto_confirms_analysis_plan": False,
@@ -348,6 +365,7 @@ def analysis_plan_builder_state_from_project(
             "creates_final_analysis_result": False,
             "advances_prisma": False,
             "generates_medical_interpretation": False,
+            "future_statistical_execution_requires_confirmed_plan": True,
         },
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
     )

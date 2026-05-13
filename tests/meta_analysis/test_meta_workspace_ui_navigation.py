@@ -103,7 +103,7 @@ def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path:
         "metaLiteratureAcquisitionPage",
         "metaTitleAbstractScreeningPage",
         "metaManualExtractionPage",
-        "metaStatisticsAnalysisPage",
+        "metaAnalysisPlanPage",
         "metaReportExportPage",
     } <= mounted_pages
 
@@ -342,6 +342,90 @@ def test_meta_quality_workspace_renders_chinese_nos_controls_without_raw_interna
     assert "raw JSON" not in visible
     assert "quality-rec-1" not in visible
     assert "effect-internal-1" not in visible
+
+
+def test_meta_analysis_plan_workspace_renders_chinese_confirmation_controls_without_raw_internals(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("分析计划 Meta", tmp_path, research_topic="治疗研究")
+    pico = PICOWorkspaceService()
+    pico.generate_draft(summary.project_root, "糖皮质激素治疗成人肺炎是否降低死亡率", pico_mode="pico")
+    pico.confirm_protocol(
+        summary.project_root,
+        actor="reviewer",
+        confirmed_meta_type="treatment_comparative_meta",
+        overrides={
+            "confirmed_population": "成人肺炎患者",
+            "confirmed_intervention_or_exposure": "糖皮质激素",
+            "confirmed_comparator": "常规治疗",
+            "confirmed_outcomes": ("死亡率",),
+            "confirmed_study_design": "randomized trial",
+        },
+    )
+    extraction_path = summary.project_root / "extraction" / "extraction_effect_rows.json"
+    extraction_path.parent.mkdir(parents=True, exist_ok=True)
+    extraction_path.write_text(
+        json.dumps(
+            {
+                "effect_rows": [
+                    {
+                        "effect_row_id": "effect-internal-plan-1",
+                        "record_id": "plan-rec-1",
+                        "study_unit_id": "unit-internal-plan-1",
+                        "study_unit_label": "Plan Study",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-plan-1",
+                            "title": "Plan trial",
+                            "first_author": "Wang",
+                            "year": "2026",
+                            "outcome": "死亡率",
+                            "effect_measure_type": "OR",
+                            "effect_estimate": "1.2",
+                            "ci_lower": "1.0",
+                            "ci_upper": "1.5",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("statistics_analysis")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "分析计划" in visible
+    assert "研究类型" in visible
+    assert "效应量类型" in visible
+    assert "固定效应" in visible
+    assert "随机效应" in visible
+    assert "异质性" in visible
+    assert "亚组分析" in visible
+    assert "敏感性分析" in visible
+    assert "发表偏倚" in visible
+    assert "纳入研究数量" in visible
+    assert "确认分析计划" in visible
+    assert "下一步：结果与报告" in visible
+    assert {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"} <= set(combos["metaAnalysisPlanEffectMeasureSelector"])
+    assert {"固定效应", "随机效应", "固定效应 + 随机效应", "暂不决定"} <= set(combos["metaAnalysisPlanModelPreferenceSelector"])
+    assert str(summary.project_root) not in visible
+    assert "analysis_plan_manifest_v1.json" not in visible
+    assert "raw JSON" not in visible
+    assert "plan-rec-1" not in visible
+    assert "effect-internal-plan-1" not in visible
+    assert "unit-internal-plan-1" not in visible
 
 
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:
