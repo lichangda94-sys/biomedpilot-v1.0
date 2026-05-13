@@ -388,6 +388,11 @@ if QWidget is not None:
     from app.meta_analysis.services.fulltext_parsing_service import FullTextParsingService
     from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
     from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
+    from app.meta_analysis.services.manual_extraction_effect_row_service import (
+        STRUCTURED_EXTRACTION_EFFECT_MEASURES,
+        STRUCTURED_EXTRACTION_EVIDENCE_STATES,
+        STRUCTURED_EXTRACTION_FIELD_LABELS_ZH,
+    )
     from app.meta_analysis.services.meta_statistics_engine_service import MetaStatisticsEngineService
     from app.meta_analysis.services.multisource_literature_import_service import MultiSourceLiteratureImportService
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
@@ -2176,27 +2181,42 @@ if QWidget is not None:
 
     def _manual_extraction_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         service = ManualExtractionEffectRowService()
-        library = LiteratureLibraryService()
-        records = library.list_records(project_dir)
+        records = service.literature_records_for_extraction(project_dir)
         units = service.load_study_units(project_dir)
         rows = service.load_effect_rows(project_dir)
+        structured_rows = service.load_structured_extraction_table(project_dir)
         validation = _load_json_object(service.validation_report_path(project_dir))
         frame = QFrame()
         frame.setObjectName("metaManualExtractionPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("数据提取与质量评价", "逐篇文献提取数据，并由用户完成质量评价。", "草稿"))
-        layout.addWidget(_info_card("提取概览", [f"文献：{len(records)}", f"study unit：{len(units)}", f"effect row：{len(rows)}", f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}", "completed_by_user 不等于 analysis-ready。"], object_name="metaExtractionSummary"))
+        layout.addWidget(_page_header("数据提取", "结构化录入研究基本信息、PICO/PECO、效应量数据和统计字段。", "人工确认"))
+        layout.addWidget(
+            _info_card(
+                "提取状态",
+                [
+                    f"可提取文献：{len(records)}",
+                    f"study unit：{len(units)}",
+                    f"effect row：{len(rows)}",
+                    f"结构化提取行：{len(structured_rows)}",
+                    f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}",
+                    "用户确认不会运行正式统计分析。",
+                ],
+                object_name="metaExtractionSummary",
+            )
+        )
         action_row = QHBoxLayout()
         create_unit = QPushButton("新建 study unit")
         create_row = QPushButton("新建提取行")
+        save_structured = QPushButton("保存结构化草稿")
         complete_row = QPushButton("完成本行提取")
+        confirm_structured = QPushButton("用户确认")
         mark_missing = QPushButton("标记缺失数据")
         export_template = QPushButton("导出空模板 CSV")
         export_current = QPushButton("导出当前 CSV")
         import_csv = QPushButton("导入 CSV 草稿")
-        next_button = QPushButton("下一步：统计分析")
-        for button in (create_unit, create_row, complete_row, mark_missing, export_template, export_current, import_csv, next_button):
+        next_button = QPushButton("下一步：质量评价")
+        for button in (create_unit, create_row, save_structured, complete_row, confirm_structured, mark_missing, export_template, export_current, import_csv, next_button):
             button.setObjectName("metaSecondaryButton")
             action_row.addWidget(button)
         create_unit.setObjectName("metaPrimaryButton")
@@ -2206,25 +2226,126 @@ if QWidget is not None:
         record_list = QListWidget()
         record_list.setObjectName("metaExtractionRecordList")
         for record in records:
-            item = QListWidgetItem(f"{record.get('first_author') or record.get('title') or record.get('record_id')} · {record.get('year', '')}")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(record.get("title") or "未命名文献"),
+                        " · ".join(part for part in (str(record.get("first_author") or ""), str(record.get("year") or ""), _extraction_source_label(str(record.get("extraction_source") or ""))) if part),
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
             record_list.addItem(item)
         unit_list = QListWidget()
         unit_list.setObjectName("metaStudyUnitList")
         for unit in units:
-            item = QListWidgetItem(f"{unit.get('study_unit_label') or unit.get('study_unit_id')}\n{unit.get('record_id', '')}")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(unit.get("study_unit_label") or "未命名 study unit"),
+                        " · ".join(part for part in (str(unit.get("study_design") or ""), str(unit.get("country_or_region") or "")) if part),
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(unit.get("study_unit_id", "")))
             unit_list.addItem(item)
         row_list = QListWidget()
         row_list.setObjectName("metaEffectRowList")
         for row in rows:
-            item = QListWidgetItem(f"{row.get('outcome_name') or row.get('effect_row_id')}\n{row.get('data_input_mode', '')} · {row.get('validation_status', '')}")
+            structured = dict(row.get("m5_structured_fields", {}) if isinstance(row.get("m5_structured_fields"), dict) else {})
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(structured.get("outcome") or row.get("outcome_name") or "待填写结局"),
+                        f"{structured.get('effect_measure_type') or row.get('data_input_mode', '')} · {_evidence_state_label(str(row.get('evidence_state') or row.get('extraction_status') or 'draft'))}",
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(row.get("effect_row_id", "")))
             row_list.addItem(item)
         lists.addWidget(record_list)
         lists.addWidget(unit_list)
         lists.addWidget(row_list)
         layout.addLayout(lists)
+
+        structured_card = _card("结构化提取表")
+        structured_layout = structured_card.layout()
+        structured_layout.addWidget(QLabel("研究基本信息"))
+        study_id_input = QLineEdit()
+        title_input = QLineEdit()
+        first_author_input = QLineEdit()
+        year_input = QLineEdit()
+        country_input = QLineEdit()
+        design_input = QLineEdit()
+        population_input = QLineEdit()
+        sample_total_input = QLineEdit()
+        for field_name, widget in (
+            ("study_id", study_id_input),
+            ("title", title_input),
+            ("first_author", first_author_input),
+            ("year", year_input),
+            ("country_or_region", country_input),
+            ("study_design", design_input),
+            ("population", population_input),
+            ("sample_size_total", sample_total_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        structured_layout.addWidget(QLabel("PICO/PECO"))
+        intervention_input = QLineEdit()
+        comparator_input = QLineEdit()
+        outcome_input = QLineEdit()
+        follow_up_input = QLineEdit()
+        for field_name, widget in (
+            ("intervention_or_exposure", intervention_input),
+            ("comparator", comparator_input),
+            ("outcome", outcome_input),
+            ("follow_up_duration", follow_up_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        structured_layout.addWidget(QLabel("效应量数据"))
+        effect_type = QComboBox()
+        effect_type.setObjectName("metaExtractionEffectMeasureSelector")
+        for measure in STRUCTURED_EXTRACTION_EFFECT_MEASURES:
+            effect_type.addItem(measure, measure)
+        structured_layout.addWidget(effect_type)
+        effect_estimate_input = QLineEdit()
+        ci_lower_input = QLineEdit()
+        ci_upper_input = QLineEdit()
+        for field_name, widget in (
+            ("effect_estimate", effect_estimate_input),
+            ("ci_lower", ci_lower_input),
+            ("ci_upper", ci_upper_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        structured_layout.addWidget(QLabel("统计字段"))
+        events_case_input = QLineEdit()
+        total_case_input = QLineEdit()
+        events_control_input = QLineEdit()
+        total_control_input = QLineEdit()
+        notes_input = QLineEdit()
+        for field_name, widget in (
+            ("events_case", events_case_input),
+            ("total_case", total_case_input),
+            ("events_control", events_control_input),
+            ("total_control", total_control_input),
+            ("notes", notes_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        evidence_state = QComboBox()
+        evidence_state.setObjectName("metaExtractionEvidenceStateSelector")
+        for state in STRUCTURED_EXTRACTION_EVIDENCE_STATES:
+            evidence_state.addItem(_evidence_state_label(state), state)
+        structured_layout.addWidget(QLabel("提取状态"))
+        structured_layout.addWidget(evidence_state)
+        layout.addWidget(structured_card)
         layout.addWidget(_developer_details(f"manifest={service.manifest_path(project_dir)}\nvalidation={service.validation_report_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -2265,12 +2386,58 @@ if QWidget is not None:
             _show_message(result.message)
             on_refresh()
 
+        def structured_fields() -> dict[str, object]:
+            return {
+                "study_id": study_id_input.text(),
+                "title": title_input.text(),
+                "first_author": first_author_input.text(),
+                "year": year_input.text(),
+                "country_or_region": country_input.text(),
+                "study_design": design_input.text(),
+                "population": population_input.text(),
+                "sample_size_total": sample_total_input.text(),
+                "intervention_or_exposure": intervention_input.text(),
+                "comparator": comparator_input.text(),
+                "outcome": outcome_input.text(),
+                "follow_up_duration": follow_up_input.text(),
+                "effect_measure_type": str(effect_type.currentData()),
+                "effect_estimate": effect_estimate_input.text(),
+                "ci_lower": ci_lower_input.text(),
+                "ci_upper": ci_upper_input.text(),
+                "events_case": events_case_input.text(),
+                "total_case": total_case_input.text(),
+                "events_control": events_control_input.text(),
+                "total_control": total_control_input.text(),
+                "notes": notes_input.text(),
+            }
+
+        def do_save_structured() -> None:
+            record_id = selected_record_id()
+            result = service.create_structured_extraction_row(
+                project_dir,
+                fields=structured_fields(),
+                actor="reviewer",
+                evidence_state=str(evidence_state.currentData()),
+                record_id=record_id,
+            )
+            _show_message(result.message)
+            on_refresh()
+
         def do_complete_row() -> None:
             row_id = selected_row_id()
             if not row_id:
                 _show_message("请选择 effect row")
                 return
             result = service.complete_effect_row(project_dir, effect_row_id=row_id, actor="reviewer")
+            _show_message(result.message)
+            on_refresh()
+
+        def do_confirm_structured() -> None:
+            row_id = selected_row_id()
+            if not row_id:
+                _show_message("请选择提取行")
+                return
+            result = service.confirm_structured_extraction_row(project_dir, effect_row_id=row_id, actor="reviewer")
             _show_message(result.message)
             on_refresh()
 
@@ -2292,7 +2459,9 @@ if QWidget is not None:
 
         create_unit.clicked.connect(do_create_unit)
         create_row.clicked.connect(do_create_row)
+        save_structured.clicked.connect(do_save_structured)
         complete_row.clicked.connect(do_complete_row)
+        confirm_structured.clicked.connect(do_confirm_structured)
         mark_missing.clicked.connect(do_mark_missing)
         export_template.clicked.connect(lambda: _show_message(service.export_empty_template_csv(project_dir, actor="reviewer").message))
         export_current.clicked.connect(lambda: _show_message(service.export_current_csv(project_dir, actor="reviewer").message))
@@ -3279,6 +3448,30 @@ if QWidget is not None:
         if author_text and year_text:
             return f"{author_text} · {year_text}"
         return author_text or year_text or "作者/年份未记录"
+
+
+    def _extraction_source_label(source: str) -> str:
+        return {
+            "full_text_confirmed": "全文已确认",
+            "final_included_studies": "全文筛选纳入",
+            "manual_full_text_unavailable": "全文不可获取：人工提取",
+            "manual_library_fallback": "文献库人工提取",
+        }.get(source, source or "来源未标记")
+
+
+    def _evidence_state_label(state: str) -> str:
+        return {
+            "empty": "空",
+            "draft": "草稿",
+            "suggested": "建议",
+            "user_accepted": "用户接受",
+            "user_edited": "用户编辑",
+            "confirmed": "已确认",
+            "rejected": "已拒绝",
+            "completed_by_user": "用户已完成",
+            "missing_data": "缺失数据",
+            "not_started": "未开始",
+        }.get(state, state or "草稿")
 
 
     def _first_author(record: dict[str, object]) -> str:

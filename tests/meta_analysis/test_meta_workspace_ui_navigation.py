@@ -228,6 +228,60 @@ def test_meta_fulltext_management_workspace_renders_chinese_user_controls_withou
     assert "ft-rec-1" not in visible
 
 
+def test_meta_extraction_workspace_renders_structured_table_without_raw_internals(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("数据提取 Meta", tmp_path, research_topic="降压治疗")
+    registry_path = summary.project_root / "fulltext" / "fulltext_management_registry_v1.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "meta_fulltext_management_registry.v1",
+                "records": [
+                    {
+                        "record_id": "extract-rec-1",
+                        "title": "Confirmed extraction trial",
+                        "authors": "Zhang Wei",
+                        "year": "2025",
+                        "journal": "Journal A",
+                        "fulltext_status": "full_text_confirmed",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("manual_extraction")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "数据提取" in visible
+    assert "研究基本信息" in visible
+    assert "PICO/PECO" in visible
+    assert "效应量数据" in visible
+    assert "统计字段" in visible
+    assert "提取状态" in visible
+    assert "用户确认" in visible
+    assert "下一步：质量评价" in visible
+    assert "Confirmed extraction trial" in visible
+    assert {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"} <= set(combos["metaExtractionEffectMeasureSelector"])
+    assert {"空", "草稿", "建议", "用户接受", "用户编辑", "已确认", "已拒绝"} <= set(combos["metaExtractionEvidenceStateSelector"])
+    assert str(summary.project_root) not in visible
+    assert "extraction_manifest.json" not in visible
+    assert "raw JSON" not in visible
+    assert "extract-rec-1" not in visible
+
+
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 
