@@ -2303,13 +2303,185 @@ def test_workflow_task_results_report_and_settings_pages(qt_app, project_summary
     )
     generated = report.generate_report()
     assert generated is not None
-    assert "PDF 当前" in report.status_message()
+    assert "报告草稿" in report.status_message()
 
     settings = BioinformaticsSettingsAndLocalAIWidget()
     settings._question_input.setText("甲状腺癌淋巴结转移")
     terms = settings.generate_placeholder_terms()
     assert "GEO query draft" in terms
     assert "本地 AI" in settings.status_message()
+
+
+def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, project_summary) -> None:
+    imported_path = project_summary.project_root / "results" / "tables" / "imported_deg.csv"
+    testing_path = project_summary.project_root / "results" / "tables" / "testing_deg.csv"
+    imported_path.parent.mkdir(parents=True, exist_ok=True)
+    imported_path.write_text("gene,logFC,P.Value\nTP53,1.2,0.01\n", encoding="utf-8")
+    testing_path.write_text("gene,logFC,P.Value\nEGFR,-1.1,0.02\n", encoding="utf-8")
+    record_dir = project_summary.project_root / "analysis" / "task_records"
+    record_dir.mkdir(parents=True, exist_ok=True)
+    (record_dir / "task-demo.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis_task_record.v1",
+                "task_id": "task-demo",
+                "task_type": "differential_expression",
+                "label": "差异表达分析",
+                "status": "created",
+                "execution": "not_run",
+                "note": "当前只创建任务记录，不运行正式统计分析。",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    write_result_index(
+        project_summary.project_root,
+        [
+            {
+                "result_name": "Imported DEG table",
+                "analysis_type": "differential_expression",
+                "file_type": "csv",
+                "path": str(imported_path),
+                "status": "imported",
+                "result_semantics": "imported result",
+            },
+            {
+                "result_name": "Testing DEG preview",
+                "analysis_type": "differential_expression",
+                "file_type": "csv",
+                "path": str(testing_path),
+                "status": "testing-level",
+                "result_semantics": "testing-level",
+            },
+            {
+                "result_name": "Dry run record",
+                "analysis_type": "differential_expression",
+                "file_type": "json",
+                "status": "dry-run",
+                "result_semantics": "dry-run",
+            },
+        ],
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    assert "结果浏览" in widget.status_message()
+    assert "导入结果" in widget.findChild(QLabel, "resultsSourceSummary").text()
+    assert "测试级结果" in widget.findChild(QLabel, "resultsSourceSummary").text()
+    table = widget.findChild(QTableWidget, "resultsUserTable")
+    assert table is not None
+    headers = [table.horizontalHeaderItem(index).text() for index in range(table.columnCount())]
+    assert headers == ["结果名称", "结果类型", "来源说明", "当前状态", "可打开", "可进入报告", "下一步 / 注意事项"]
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "导入表格中的已有差异分析结果，不是本软件重新计算" in table_text
+    assert "测试级 / 开发者预览结果" in table_text
+    assert "流程记录 / dry-run，未执行真实分析" in table_text
+    assert "已配置，尚未运行" in table_text
+    assert "真实计算结果" not in table_text
+    assert str(imported_path) not in table_text
+    assert "differential_expression" not in table_text
+    assert "schema_version" not in table_text
+    assert "task-demo" not in table_text
+
+    diagnostics = widget.findChild(QPlainTextEdit, "resultsDeveloperDiagnostics")
+    assert diagnostics is not None
+    assert not diagnostics.isVisible()
+    diagnostics_text = diagnostics.toPlainText()
+    assert "result_index" in diagnostics_text
+    assert "schema_version" in diagnostics_text
+    assert str(imported_path) in diagnostics_text
+
+
+def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_summary) -> None:
+    imported_path = project_summary.project_root / "results" / "tables" / "imported_deg.csv"
+    testing_path = project_summary.project_root / "results" / "tables" / "testing_deg.csv"
+    imported_path.parent.mkdir(parents=True, exist_ok=True)
+    imported_path.write_text("gene,logFC,P.Value\nTP53,1.2,0.01\n", encoding="utf-8")
+    testing_path.write_text("gene,logFC,P.Value\nEGFR,-1.1,0.02\n", encoding="utf-8")
+    record_dir = project_summary.project_root / "analysis" / "task_records"
+    record_dir.mkdir(parents=True, exist_ok=True)
+    (record_dir / "task-draft.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.analysis_task_record.v1",
+                "task_id": "task-draft",
+                "task_type": "differential_expression",
+                "label": "差异表达分析",
+                "status": "created",
+                "execution": "not_run",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    write_result_index(
+        project_summary.project_root,
+        [
+            {
+                "result_name": "Imported DEG table",
+                "analysis_type": "differential_expression",
+                "file_type": "csv",
+                "path": str(imported_path),
+                "status": "imported",
+                "result_semantics": "imported result",
+            },
+            {
+                "result_name": "Testing DEG preview",
+                "analysis_type": "differential_expression",
+                "file_type": "csv",
+                "path": str(testing_path),
+                "status": "testing-level",
+                "result_semantics": "testing-level",
+            },
+        ],
+    )
+
+    widget = BioinformaticsReportViewerWidget()
+    widget.refresh_project(project_summary)
+    generated = widget.generate_report()
+
+    assert generated is not None
+    assert "报告草稿" in widget.status_message()
+    assert "导入结果" in widget.findChild(QLabel, "reportResultSemantics").text()
+    assert "测试级结果" in widget.findChild(QLabel, "reportResultSemantics").text()
+    table = widget.findChild(QTableWidget, "reportDraftSectionsTable")
+    assert table is not None
+    table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "报告草稿" in table_text
+    assert "导入和测试级结果必须在报告中保留标签" in table_text
+    assert "配置草稿或 dry-run 不等于真实结果" in table_text
+    assert str(imported_path) not in table_text
+    assert "manifest" not in table_text.lower()
+    assert "schema_version" not in table_text
+    assert "task-draft" not in table_text
+
+    preview = widget.findChild(QPlainTextEdit, "reportDraftUserPreview")
+    assert preview is not None
+    preview_text = preview.toPlainText()
+    assert "导入结果必须写明来自外部表格" in preview_text
+    assert "测试级结果只能作为 Developer Preview" in preview_text
+    assert "配置草稿或 dry-run 记录不应写成真实分析结论" in preview_text
+    assert str(imported_path) not in preview_text
+
+    diagnostics = widget.findChild(QPlainTextEdit, "reportDeveloperDiagnostics")
+    assert diagnostics is not None
+    assert not diagnostics.isVisible()
+    diagnostics_text = diagnostics.toPlainText()
+    assert "report_manifest" in diagnostics_text
+    assert "schema_version" in diagnostics_text
+    assert str(imported_path) in diagnostics_text
 
 
 def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) -> None:
