@@ -12,14 +12,18 @@ from app.shared.ui.theme import (
     button_qss,
     danger_button_qss,
     diagnostic_card_qss,
+    empty_result_card_qss,
     error_text_qss,
     page_title_qss,
+    parameter_group_card_qss,
     primary_button_qss,
+    result_summary_card_qss,
     shell_sidebar_qss,
     status_badge_qss,
     status_style,
     status_styles,
     surface_card_qss,
+    tool_input_card_qss,
     warning_text_qss,
 )
 from app.ui_style_tokens import COLORS, SPACING
@@ -89,3 +93,22 @@ def test_status_badge_and_button_helpers_generate_role_styles() -> None:
     assert button_qss("primary_action") == primary_button
     assert button_qss("destructive_action") == danger_button
     assert BioMedPilotColors.WARNING_SOFT in diagnostic_card_qss()
+
+
+def test_tool_page_card_helpers_generate_token_backed_styles() -> None:
+    input_card = tool_input_card_qss("QFrame#toolInput")
+    parameter_card = parameter_group_card_qss("QFrame#parameterGroup")
+    result_card = result_summary_card_qss("QFrame#resultSummary")
+    empty_card = empty_result_card_qss("QFrame#emptyResult")
+
+    assert "QFrame#toolInput" in input_card
+    assert BioMedPilotColors.SURFACE_WHITE in input_card
+    assert BioMedPilotColors.BORDER_MEDIUM in input_card
+    assert "QFrame#parameterGroup" in parameter_card
+    assert BioMedPilotColors.BORDER_SUBTLE in parameter_card
+    assert "QFrame#resultSummary" in result_card
+    assert BioMedPilotColors.TEAL_SOFT in result_card
+    assert BioMedPilotColors.TEAL_BORDER in result_card
+    assert "QFrame#emptyResult" in empty_card
+    assert "dashed" in empty_card
+    assert BioMedPilotColors.SURFACE_MUTED in empty_card

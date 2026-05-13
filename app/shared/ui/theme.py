@@ -347,6 +347,41 @@ def section_card_qss(selector: str = "QFrame") -> str:
     return surface_card_qss(selector)
 
 
+def tool_input_card_qss(selector: str = "QFrame") -> str:
+    return surface_card_qss(selector)
+
+
+def parameter_group_card_qss(selector: str = "QFrame") -> str:
+    return (
+        f"{selector} {{ "
+        f"border: 1px solid {BioMedPilotColors.BORDER_SUBTLE}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"background: {BioMedPilotColors.SURFACE_WHITE}; "
+        f"padding: {BioMedPilotSpacing.SM}px; "
+        "}"
+    )
+
+
+def result_summary_card_qss(selector: str = "QFrame") -> str:
+    return (
+        f"{selector} {{ "
+        f"border: 1px solid {BioMedPilotColors.TEAL_BORDER}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"background: {BioMedPilotColors.TEAL_SOFT}; "
+        "}"
+    )
+
+
+def empty_result_card_qss(selector: str = "QFrame") -> str:
+    return (
+        f"{selector} {{ "
+        f"border: 1px dashed {BioMedPilotColors.BORDER_MEDIUM}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"background: {BioMedPilotColors.SURFACE_MUTED}; "
+        "}"
+    )
+
+
 def diagnostic_card_qss(selector: str = "QFrame") -> str:
     return (
         f"{selector} {{ "
