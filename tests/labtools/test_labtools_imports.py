@@ -46,6 +46,14 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
     assert tabs is not None
     assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制", "细胞接种", "qPCR 配液"]
+    calculator_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    assert "实验计算器中心" in calculator_labels
+    assert "本地辅助计算：稀释、摩尔浓度换算、细胞接种" in calculator_labels
+    assert "不替代实验 SOP" in calculator_labels
+    assert "溶液稀释" in calculator_labels or "C1V1 = C2V2 稀释计算" in calculator_labels
+    assert "摩尔浓度" in calculator_labels
+    assert "细胞接种" in calculator_labels
+    assert "人工复核" in calculator_labels or "结果仅供实验前核对" in calculator_labels
     widget.show_recipes()
     assert widget.current_page_key() == "recipes"
     recipe_tabs = widget.findChild(QTabWidget, "recipeWorkspaceTabs")

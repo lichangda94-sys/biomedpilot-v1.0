@@ -6,8 +6,8 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Stage L4C，commit `ab262cb3166140055bb328c6e07eb2a59c0673a5`
-- 当前进行阶段：LabTools Stage L5A，状态文案与用户可见能力边界校准。
+- 当前最近完成阶段：LabTools Stage L5B，commit 以最终交接为准
+- 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
 
@@ -26,7 +26,8 @@
 | LabTools Stage L4B | `7e64dfc3ed3d83dbb8e5a20ae1a3101544b65cd0` | 接入 Pillow 最小依赖，实现单张本地图片、手动 signal/background ROI、grayscale 荧光强度基础统计、背景扣除 CTF、负 CTF warning、审计记录和 UI MVP。 |
 | LabTools Stage L4B.1 | `01e94fb09fb9e3c0c2925eb20a92f8dc07fd271e` | 增强荧光 ROI 分析复核、质量提示、JSON-compatible dict、CSV-compatible rows/text、Markdown 报告片段和 UI 导出预览；不新增图像算法。 |
 | LabTools Stage L4C | `ab262cb3166140055bb328c6e07eb2a59c0673a5` | 新增单张本地图片、手动 ROI、用户阈值、亮/暗模式的划痕实验面积估算 MVP；结果为基于阈值的 measurement assistance，不自动判断迁移效果。 |
-| LabTools Stage L5A | 提交后以最终交接为准 | 校准 LabTools UI、feature status、handoff 和测试中的用户可见能力边界；不新增算法、不新增持久化、不启用网络/AI/外部图像依赖。 |
+| LabTools Stage L5A | `32cb27c` | 校准 LabTools UI、feature status、handoff 和测试中的用户可见能力边界；不新增算法、不新增持久化、不启用网络/AI/外部图像依赖。 |
+| LabTools Stage L5B | 最终交接记录 | 新增实验计算器中心 v1 结构化服务层和 UI 对齐，覆盖稀释、摩尔浓度/称量质量、细胞接种密度三类本地辅助计算；不做历史记录、导出或持久化。 |
 
 ## 3. 当前已实现功能
 
@@ -39,6 +40,11 @@
 - qPCR 配液计算器。
 - `CalculationRecord` 计算记录结构，支持 JSON-compatible dict。
 - 中文友好错误提示和人工复核提示。
+- L5B 新增 `experiment_calculator_center` 结构化 v1 服务层：
+  - `DilutionInput` / `DilutionResult` / `calculate_dilution_v1()`：支持同维度浓度单位换算，输出 stock 体积、溶剂体积和 dilution factor。
+  - `MassMolarityInput` / `MassMolarityResult` / `calculate_mass_molarity_v1()`：根据分子量、目标摩尔浓度和终体积估算称量质量。
+  - `CellSeedingInput` / `CellSeedingResult` / `calculate_cell_seeding_v1()`：根据细胞悬液浓度、目标每孔细胞数、孔数、每孔体积和 overage 估算细胞悬液体积、培养基体积和总需求量。
+- L5B v1 结果均为结构化辅助计算草稿，使用前需人工核对，不替代实验 SOP、临床建议或安全操作规范。
 
 ### 3.2 本地试剂与配方库
 
@@ -132,6 +138,8 @@
 - 未实现 LabTools 本地项目存储、数据库持久化或自动写盘。
 - 未实现正式实验报告导出。
 - 未实现实验模板功能。
+- 未实现计算器历史记录、CSV/manifest 导出或项目文件写入。
+- 未实现 recipe center 持久化或本阶段以外的新 recipe 功能。
 
 ## 5. 明确禁止事项
 
@@ -150,30 +158,30 @@
 
 ## 6. 当前测试基线
 
-本 handoff 的测试基线应以最近阶段报告和最终交接为准。L5A 状态校准后至少运行：
+本 handoff 的测试基线应以最近阶段报告和最终交接为准。L5B 实验计算器中心 v1 后至少运行：
 
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 L5A 结果：104 passed
+  - 当前 L5B 结果：113 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 L5A 结果：135 passed
+  - 当前 L5B 结果：135 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 L5A 结果：18 passed
+  - 当前 L5B 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 L5A 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 L5B 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 L5A 结果：通过
+  - 当前 L5B 结果：通过
 - `git diff --check`
-  - 当前 L5A 结果：通过
+  - 当前 L5B 结果：通过
 - `git diff --cached --check`
-  - 当前 L5A 提交前运行。
+  - 当前 L5B 结果：通过。
 
 ## 7. Shell / UI 接入状态
 
 - LabTools 已接入统一 BioMedPilot Shell。
 - LabTools 首页当前四个入口：
-  - 实验计算器：可进入。
+  - 实验计算器：可进入；L5B 页面显示“实验计算器中心”，并明确本地辅助计算、人工核对和不替代实验 SOP。
   - 试剂与配方：可进入。
   - 图像定量：可进入；荧光强度分析和划痕实验面积分析为手动 MVP 可用，细胞计数和灰度 / 墨值分析仍为 `algorithm_not_available` 占位。
   - 实验模板：仍为开发中。
@@ -214,6 +222,7 @@
 ## 10. 数据持久化状态
 
 - 计算记录：内存结构 / JSON-compatible dict。
+- L5B 实验计算器 v1 结果：结构化 dataclass 结果和 UI 文本展示；不自动保存、不写 CSV、不写 manifest、不创建项目目录。
 - 用户自定义配方：确认后进入 `UserRecipeStore` 内存结构。
 - 来源草稿：手动来源和摘录草稿在 UI / 模型层流转，确认后才进入用户配方 store。
 - 图片记录：引用本地路径并生成 `LabImageRecord`，不复制、不上传、不自动写盘。
@@ -245,7 +254,7 @@
 
 ## 13. 后续推荐路线
 
-1. L5B：实验计算器硬化与缺口补齐；现有 dilution、浓度/质量、溶液配制、细胞接种、qPCR 先补 UI/测试一致性，WB/SDS-PAGE loading calculator 可作为小扩展。
+1. L5C：在保持本地计算和人工核对边界的前提下，评估 qPCR / WB-SDS-PAGE loading calculator 的结构化 v1 化。
 2. L6A：图像 ROI 结果持久化设计与 CSV/manifest/overlay preview 导出；继续保持 manual-review / semi-quantitative 表述。
 3. L6B：常用 reagent recipe draft center 的本地持久化和安全边界硬化；现有本地配方库、用户草稿和手动来源草稿作为基础。
 4. L6C：轻量实验模板和记录草稿；先做结构化草稿，不做完整 ELN、权限、签名或合规审计。

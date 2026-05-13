@@ -19,13 +19,19 @@ try:
 
     from app.labtools.calculators.calculation_record import CalculationRecord
     from app.labtools.calculators.calculator_models import CalculationError, CalculationResult
-    from app.labtools.calculators.cell_seeding_calculator import calculate_cell_seeding
     from app.labtools.calculators.concentration_calculator import (
-        calculate_mass_for_molar_solution,
         calculate_molar_concentration,
         convert_concentration,
     )
-    from app.labtools.calculators.dilution_calculator import calculate_dilution
+    from app.labtools.calculators.experiment_calculator_center import (
+        CALCULATION_REVIEW_NOTICE,
+        CellSeedingInput,
+        DilutionInput,
+        MassMolarityInput,
+        calculate_cell_seeding_v1,
+        calculate_dilution_v1,
+        calculate_mass_molarity_v1,
+    )
     from app.labtools.calculators.qpcr_mix_calculator import calculate_qpcr_mix
     from app.labtools.calculators.solution_preparation_calculator import calculate_solution_preparation
     from app.labtools.calculators.unit_conversion import (
@@ -67,6 +73,9 @@ if QWidget is not None:
 
         def show_result(self, result: CalculationResult) -> None:
             self.setText(result.as_text())
+
+        def show_text_result(self, text: str) -> None:
+            self.setText(text)
 
         def show_error(self, message: str) -> None:
             self.setText(f"输入需要调整\n{message}")
@@ -203,18 +212,20 @@ if QWidget is not None:
 
         def _handle_mass(self) -> None:
             try:
-                result = calculate_mass_for_molar_solution(
-                    self._target_molarity.text(),
-                    self._target_molarity_unit.currentText(),
-                    self._target_volume.text(),
-                    self._target_volume_unit.currentText(),
-                    self._target_mw.text(),
-                    output_unit=self._mass_output_unit.currentText(),
+                result = calculate_mass_molarity_v1(
+                    MassMolarityInput(
+                        molecular_weight=self._target_mw.text(),
+                        target_concentration=self._target_molarity.text(),
+                        concentration_unit=self._target_molarity_unit.currentText(),
+                        final_volume=self._target_volume.text(),
+                        volume_unit=self._target_volume_unit.currentText(),
+                        output_mass_unit=self._mass_output_unit.currentText(),
+                    )
                 )
-            except CalculationError as exc:
-                self._show_error(exc)
+            except Exception as exc:  # pragma: no cover - defensive UI guard
+                self._result.show_error(str(exc))
                 return
-            self._show(result)
+            self._result.show_text_result(result.as_text())
 
 
     class DilutionCalculatorWidget(QWidget):
@@ -242,8 +253,6 @@ if QWidget is not None:
             self._target_unit = _combo(supported_concentration_units(), "µM")
             self._volume_value = _line_edit("例如 1")
             self._volume_unit = _combo(supported_volume_units(), "mL")
-            self._output_volume_unit = _combo(supported_volume_units(), "µL")
-            self._molecular_weight = _line_edit("单位类型不同时填写")
             button = QPushButton("计算稀释体积")
             button.setObjectName("primaryButton")
             button.clicked.connect(self._handle_calculate)
@@ -256,11 +265,7 @@ if QWidget is not None:
             grid.addWidget(QLabel("目标体积"), 2, 0)
             grid.addWidget(self._volume_value, 2, 1)
             grid.addWidget(self._volume_unit, 2, 2)
-            grid.addWidget(QLabel("结果体积单位"), 3, 0)
-            grid.addWidget(self._output_volume_unit, 3, 1)
-            grid.addWidget(QLabel("分子量 g/mol"), 4, 0)
-            grid.addWidget(self._molecular_weight, 4, 1, 1, 2)
-            grid.addWidget(button, 5, 0, 1, 3)
+            grid.addWidget(button, 3, 0, 1, 3)
             root.addWidget(card)
 
             self._result = ResultPanel()
@@ -269,22 +274,20 @@ if QWidget is not None:
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_dilution(
-                    self._stock_value.text(),
-                    self._stock_unit.currentText(),
-                    self._target_value.text(),
-                    self._target_unit.currentText(),
-                    self._volume_value.text(),
-                    self._volume_unit.currentText(),
-                    molecular_weight=self._molecular_weight.text(),
-                    output_volume_unit=self._output_volume_unit.currentText(),
+                result = calculate_dilution_v1(
+                    DilutionInput(
+                        stock_concentration=self._stock_value.text(),
+                        stock_unit=self._stock_unit.currentText(),
+                        target_concentration=self._target_value.text(),
+                        target_unit=self._target_unit.currentText(),
+                        final_volume=self._volume_value.text(),
+                        final_volume_unit=self._volume_unit.currentText(),
+                    )
                 )
-            except CalculationError as exc:
+            except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_result(result)
-            if self._on_record is not None:
-                self._on_record(result.to_record(result.title))
+            self._result.show_text_result(result.as_text())
 
 
     class SolutionPreparationCalculatorWidget(QWidget):
@@ -373,8 +376,11 @@ if QWidget is not None:
             self._density_unit = _combo(supported_cell_density_units(), "cells/mL")
             self._target_cells = _line_edit("例如 10000")
             self._wells = _line_edit("例如 24")
-            self._loss_percent = _line_edit("默认 10")
-            self._loss_percent.setText("10")
+            self._volume_per_well = _line_edit("例如 500")
+            self._volume_per_well.setText("500")
+            self._volume_unit = _combo(supported_volume_units(), "µL")
+            self._overage_percent = _line_edit("默认 10")
+            self._overage_percent.setText("10")
             button = QPushButton("计算接种体积")
             button.setObjectName("primaryButton")
             button.clicked.connect(self._handle_calculate)
@@ -385,9 +391,12 @@ if QWidget is not None:
             grid.addWidget(self._target_cells, 1, 1, 1, 2)
             grid.addWidget(QLabel("孔数"), 2, 0)
             grid.addWidget(self._wells, 2, 1, 1, 2)
-            grid.addWidget(QLabel("额外损耗比例 %"), 3, 0)
-            grid.addWidget(self._loss_percent, 3, 1, 1, 2)
-            grid.addWidget(button, 4, 0, 1, 3)
+            grid.addWidget(QLabel("每孔体积"), 3, 0)
+            grid.addWidget(self._volume_per_well, 3, 1)
+            grid.addWidget(self._volume_unit, 3, 2)
+            grid.addWidget(QLabel("overage 比例 %"), 4, 0)
+            grid.addWidget(self._overage_percent, 4, 1, 1, 2)
+            grid.addWidget(button, 5, 0, 1, 3)
             root.addWidget(card)
 
             self._result = ResultPanel()
@@ -396,19 +405,21 @@ if QWidget is not None:
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_cell_seeding(
-                    self._cell_density.text(),
-                    self._density_unit.currentText(),
-                    self._target_cells.text(),
-                    self._wells.text(),
-                    loss_percent=self._loss_percent.text(),
+                result = calculate_cell_seeding_v1(
+                    CellSeedingInput(
+                        current_cell_concentration=self._cell_density.text(),
+                        concentration_unit=self._density_unit.currentText(),
+                        target_cells_per_well=self._target_cells.text(),
+                        well_count=self._wells.text(),
+                        volume_per_well=self._volume_per_well.text(),
+                        volume_unit=self._volume_unit.currentText(),
+                        overage_percentage=self._overage_percent.text(),
+                    )
                 )
-            except CalculationError as exc:
+            except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_result(result)
-            if self._on_record is not None:
-                self._on_record(result.to_record(result.title))
+            self._result.show_text_result(result.as_text())
 
 
     class QpcrMixCalculatorWidget(QWidget):
@@ -496,6 +507,17 @@ if QWidget is not None:
             self._record_summary = QLabel("最近一次计算：暂无")
             self._record_summary.setObjectName("labToolsRecordSummary")
             self._record_summary.setWordWrap(True)
+            title = QLabel("实验计算器中心")
+            title.setObjectName("labToolsCalculatorTitle")
+            subtitle = QLabel("本地辅助计算：稀释、摩尔浓度换算、细胞接种。结果仅供实验前核对，不替代实验 SOP。")
+            subtitle.setObjectName("labToolsCalculatorNotice")
+            subtitle.setWordWrap(True)
+            risk = QLabel(CALCULATION_REVIEW_NOTICE)
+            risk.setObjectName("labToolsCalculatorNotice")
+            risk.setWordWrap(True)
+            root.addWidget(title)
+            root.addWidget(subtitle)
+            root.addWidget(risk)
             root.addWidget(self._record_summary)
             tabs = QTabWidget()
             tabs.setObjectName("labToolsCalculatorTabs")
@@ -529,6 +551,18 @@ if QWidget is not None:
                 color: {COLORS["bio"]};
                 font-size: {FONT_SIZE["page_title"]}px;
                 font-weight: 760;
+            }}
+            QLabel#labToolsCalculatorTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["page_title"]}px;
+                font-weight: 760;
+            }}
+            QLabel#labToolsCalculatorNotice {{
+                color: {COLORS["muted"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
             }}
             QLabel#labToolsCardTitle {{
                 color: {COLORS["bio"]};
