@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
+from app.ui_style_tokens import meta_card_stylesheet, meta_title_style
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,7 @@ if QWidget is not None:
 
             root = QVBoxLayout(self)
             title = QLabel(self._state.title)
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(meta_title_style())
             root.addWidget(title)
             description = QLabel(self._state.description)
             description.setWordWrap(True)
@@ -132,7 +133,7 @@ if QWidget is not None:
             root.addWidget(export_csv)
 
             card = QFrame()
-            card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            card.setStyleSheet(meta_card_stylesheet())
             layout = QVBoxLayout(card)
             self._summary_label = QLabel("audit log 摘要会显示在这里。")
             self._summary_label.setWordWrap(True)

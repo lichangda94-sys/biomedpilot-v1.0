@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.meta_analysis.services.prepare_screening_service import PrepareScreeningResult, PrepareScreeningService
 from app.shared.feature_availability import get_feature
+from app.ui_style_tokens import meta_card_stylesheet, meta_error_text_style, meta_title_style
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,7 @@ if QWidget is not None:
 
             root = QVBoxLayout(self)
             title = QLabel(self._state.title)
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(meta_title_style())
             root.addWidget(title)
             description = QLabel(self._state.description)
             description.setWordWrap(True)
@@ -74,7 +75,7 @@ if QWidget is not None:
             self._status_label.setWordWrap(True)
             root.addWidget(self._status_label)
             summary_card = QFrame()
-            summary_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            summary_card.setStyleSheet(meta_card_stylesheet())
             summary_layout = QVBoxLayout(summary_card)
             self._summary_label = QLabel("准备结果摘要会显示在这里。")
             self._summary_label.setWordWrap(True)
@@ -82,7 +83,7 @@ if QWidget is not None:
             root.addWidget(summary_card)
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
-            self._error_label.setStyleSheet("color: #B42318;")
+            self._error_label.setStyleSheet(meta_error_text_style())
             root.addWidget(self._error_label)
             next_button = QPushButton("下一步：Duplicate Review")
             next_button.setEnabled(False)

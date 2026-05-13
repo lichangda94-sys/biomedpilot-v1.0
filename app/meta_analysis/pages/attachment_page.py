@@ -18,6 +18,7 @@ from app.meta_analysis.ui_text import (
     DEVELOPER_INFO_TITLE_ZH,
     INTERNAL_BETA_STATUS_ZH,
 )
+from app.ui_style_tokens import meta_card_stylesheet, meta_title_style
 from app.version import APP_VERSION
 
 
@@ -345,7 +346,7 @@ if QWidget is not None:
 
             root = QVBoxLayout(self)
             title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(meta_title_style())
             root.addWidget(title)
             description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
@@ -393,7 +394,7 @@ if QWidget is not None:
             root.addWidget(export_missing)
 
             card = QFrame()
-            card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            card.setStyleSheet(meta_card_stylesheet())
             layout = QVBoxLayout(card)
             self._summary_label = QLabel("附件摘要会显示在这里。")
             self._summary_label.setWordWrap(True)

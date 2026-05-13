@@ -9,6 +9,7 @@ from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.storage import default_storage_root
 from app.version import APP_VERSION
+from app.ui_style_tokens import meta_workspace_stylesheet
 
 from app.meta_analysis.project_workspace import (
     MetaProjectSummary,
@@ -393,7 +394,7 @@ if QWidget is not None:
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
             super().__init__()
             self.setObjectName("metaWorkspace")
-            self.setStyleSheet(_meta_workspace_stylesheet())
+            self.setStyleSheet(meta_workspace_stylesheet())
             self._layout_state = meta_workspace_layout_state()
             self._on_back = on_back
             self._current_project_record = None
@@ -3177,56 +3178,6 @@ if QWidget is not None:
         if QMessageBox is not None:
             QMessageBox.information(None, "Meta 分析", text)
 
-
-    def _meta_workspace_stylesheet() -> str:
-        return """
-        QWidget#metaWorkspace { background: #F5F7F9; color: #111827; }
-        QFrame#metaGlobalNav, QFrame#metaWorkflowNav { background: #FFFFFF; border-right: 1px solid #D8DEE9; }
-        QFrame#metaCurrentStepWorkspace { background: #F5F7F9; }
-        QFrame#metaPageHeader, QFrame#metaCard, QFrame#metaInfoCard, QFrame#metaProjectOverviewCard,
-        QFrame#metaProgressCard, QFrame#metaWarningsCard, QFrame#metaLibrarySummary,
-        QFrame#metaLibraryDiagnostics, QFrame#metaImportBatchSummary, QFrame#metaQueryDraftCard,
-        QFrame#metaConfirmedProtocolCard, QFrame#metaConfirmedSearchCard {
-            background: #FFFFFF;
-            border: 1px solid #D8DEE9;
-            border-radius: 8px;
-        }
-        QFrame#metaDeveloperDetails { background: transparent; border: none; }
-        QLabel#metaSideTitle { font-size: 22px; font-weight: 700; }
-        QLabel#metaPanelTitle { font-size: 16px; font-weight: 700; }
-        QLabel#metaPageTitle { font-size: 22px; font-weight: 700; }
-        QLabel#metaCardTitle { font-size: 15px; font-weight: 700; }
-        QLabel#metaMutedText, QLabel#metaCardBody { color: #4B5563; }
-        QLabel#metaWarningText { color: #92400E; font-weight: 600; }
-        QLabel#metaStatusBadge {
-            color: #0F766E;
-            background: #E6FFFB;
-            border: 1px solid #99F6E4;
-            border-radius: 8px;
-            padding: 4px 8px;
-            font-weight: 700;
-        }
-        QListWidget#metaWorkflowStepList {
-            background: #F8FAFC;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-        }
-        QPushButton#metaPrimaryButton {
-            background: #0F766E;
-            color: #FFFFFF;
-            border: 1px solid #0F766E;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-weight: 700;
-        }
-        QPushButton#metaSecondaryButton {
-            background: #FFFFFF;
-            color: #111827;
-            border: 1px solid #CBD5E1;
-            border-radius: 8px;
-            padding: 8px 12px;
-        }
-        """
 
 else:
 

@@ -33,6 +33,7 @@ from app.meta_analysis.ui_text import (
 )
 from app.shared.feature_availability import get_feature
 from app.shared.storage import default_storage_root
+from app.ui_style_tokens import meta_card_stylesheet, meta_error_text_style, meta_title_style
 from app.version import APP_VERSION
 
 
@@ -708,7 +709,7 @@ if QWidget is not None:
 
             root = QVBoxLayout(self)
             title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(meta_title_style())
             root.addWidget(title)
             description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
@@ -732,7 +733,7 @@ if QWidget is not None:
             self._status_label.setWordWrap(True)
             root.addWidget(self._status_label)
             summary_card = QFrame()
-            summary_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            summary_card.setStyleSheet(meta_card_stylesheet())
             summary_layout = QVBoxLayout(summary_card)
             self._summary_label = QLabel("提取池摘要会显示在这里。")
             self._summary_label.setWordWrap(True)
@@ -740,7 +741,7 @@ if QWidget is not None:
             root.addWidget(summary_card)
 
             form_card = QFrame()
-            form_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            form_card.setStyleSheet(meta_card_stylesheet())
             form_layout = QVBoxLayout(form_card)
             form_title = QLabel("结构化 ExtractionRecord 表单（测试中）")
             form_title.setStyleSheet("font-weight: 700;")
@@ -792,7 +793,7 @@ if QWidget is not None:
             root.addWidget(form_card)
 
             m13_card = QFrame()
-            m13_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            m13_card.setStyleSheet(meta_card_stylesheet())
             m13_layout = QVBoxLayout(m13_card)
             m13_title = QLabel("人工提取行工作区（M13 草稿）")
             m13_title.setStyleSheet("font-weight: 700;")
@@ -808,7 +809,7 @@ if QWidget is not None:
 
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
-            self._error_label.setStyleSheet("color: #B42318;")
+            self._error_label.setStyleSheet(meta_error_text_style())
             root.addWidget(self._error_label)
             next_button = QPushButton("下一步：Analysis")
             next_button.setEnabled(False)

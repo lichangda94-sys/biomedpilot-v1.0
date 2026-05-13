@@ -14,6 +14,7 @@ from app.meta_analysis.pages.literature_import_page import (
     initial_literature_import_state,
     literature_import_ui_panel_state,
 )
+from app.ui_style_tokens import COLORS
 
 
 def test_literature_import_ui_panel_state_exposes_desktop_sections() -> None:
@@ -94,6 +95,6 @@ def test_literature_import_recent_batches_text_handles_empty_and_populated() -> 
 
 
 def test_literature_import_result_cards_use_readable_contrast_styles() -> None:
-    assert "background: #F8FAFC" in _RESULT_CARD_STYLE
-    assert "color: #111827" in _RESULT_TEXT_STYLE
-    assert "color: #111827" in _RESULT_TITLE_STYLE
+    assert f"background: {COLORS['light_gray']}" in _RESULT_CARD_STYLE
+    assert f"color: {COLORS['text']}" in _RESULT_TEXT_STYLE
+    assert f"color: {COLORS['deep_navy']}" in _RESULT_TITLE_STYLE

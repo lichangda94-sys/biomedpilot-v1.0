@@ -28,14 +28,13 @@ from app.meta_analysis.ui_text import (
     INTERNAL_BETA_STATUS_ZH,
 )
 from app.shared.feature_availability import get_feature
+from app.ui_style_tokens import meta_card_stylesheet, meta_error_text_style, meta_text_style, meta_title_style
 from app.version import APP_VERSION
 
 
-_RESULT_CARD_STYLE = (
-    "QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #F8FAFC; }"
-)
-_RESULT_TEXT_STYLE = "color: #111827; font-size: 12px;"
-_RESULT_TITLE_STYLE = "color: #111827; font-weight: 700;"
+_RESULT_CARD_STYLE = meta_card_stylesheet(muted=True)
+_RESULT_TEXT_STYLE = meta_text_style(size=12)
+_RESULT_TITLE_STYLE = meta_title_style(size=12)
 
 WIZARD_STEPS = (
     "source_selection",
@@ -726,7 +725,7 @@ if QWidget is not None:
 
             root = QVBoxLayout(self)
             title = QLabel(f"{self._state.title_zh} · {self._state.status_label_zh}")
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(meta_title_style())
             root.addWidget(title)
             description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
@@ -816,7 +815,7 @@ if QWidget is not None:
 
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
-            self._error_label.setStyleSheet("color: #B42318;")
+            self._error_label.setStyleSheet(meta_error_text_style())
             root.addWidget(self._error_label)
             next_button = QPushButton("下一步：进入文献去重")
             next_button.setEnabled(False)

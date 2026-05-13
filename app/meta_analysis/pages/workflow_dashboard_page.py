@@ -19,6 +19,7 @@ from app.meta_analysis.ui_text import (
 )
 from app.shared.data_center.service import DataCenter
 from app.shared.task_center.service import TaskCenter, TaskStatus
+from app.ui_style_tokens import meta_card_stylesheet, meta_title_style
 
 
 WORKFLOW_STATUS_NOT_STARTED = "Not started"
@@ -668,7 +669,7 @@ if QWidget is not None:
             self._state = initial_workflow_dashboard_state()
             root = QVBoxLayout(self)
             title = QLabel(self._state.display_title_zh)
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(meta_title_style())
             root.addWidget(title)
             description = QLabel(self._state.description_zh)
             description.setWordWrap(True)
@@ -681,7 +682,7 @@ if QWidget is not None:
             refresh.clicked.connect(self._refresh)
             root.addWidget(refresh)
             card = QFrame()
-            card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            card.setStyleSheet(meta_card_stylesheet())
             layout = QVBoxLayout(card)
             self._summary_label = QLabel(self._state.empty_state)
             self._summary_label.setWordWrap(True)
