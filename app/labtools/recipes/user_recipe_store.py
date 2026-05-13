@@ -23,9 +23,14 @@ class UserRecipeStore:
             components=draft.components,
             preparation_notes=draft.preparation_notes,
             safety_notes=draft.safety_notes,
-            source_label="用户自定义草稿确认",
-            version="user-confirmed-draft",
+            source_label=draft.source_label.strip() or "用户自定义草稿确认",
+            version=draft.version.strip() or "user-confirmed-draft",
             is_user_defined=True,
+            source_url=draft.source_url.strip(),
+            source_title=draft.source_title.strip(),
+            accessed_at=draft.accessed_at.strip(),
+            user_confirmed=True,
+            edited_by_user=draft.edited_by_user,
         )
         self._confirmed[recipe.recipe_id] = recipe
         return recipe

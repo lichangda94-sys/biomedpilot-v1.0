@@ -12,6 +12,7 @@ try:
         QListWidget,
         QListWidgetItem,
         QPushButton,
+        QTabWidget,
         QTextEdit,
         QVBoxLayout,
         QWidget,
@@ -22,6 +23,13 @@ try:
     from app.labtools.recipes import default_recipe_library
     from app.labtools.recipes.recipe_models import RECIPE_REVIEW_NOTICE, Recipe, RecipeComponent, RecipeDraft, RecipeError
     from app.labtools.recipes.recipe_scaling import calculate_stock_dilution, scale_recipe
+    from app.labtools.recipes.recipe_source_importer import RecipeSourceImporter
+    from app.labtools.recipes.recipe_source_models import (
+        NETWORK_DISABLED_MESSAGE,
+        SOURCE_REVIEW_NOTICE,
+        RecipeExtractionDraft,
+        RecipeSourceCard,
+    )
     from app.labtools.recipes.user_recipe_store import UserRecipeStore
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -54,8 +62,12 @@ if QWidget is not None:
             self.setStyleSheet(self._stylesheet())
             self._base_library = default_recipe_library()
             self._user_store = UserRecipeStore()
+            self._source_importer = RecipeSourceImporter()
             self._recipes: tuple[Recipe, ...] = ()
             self._current_recipe: Recipe | None = None
+            self._current_source_card: RecipeSourceCard | None = None
+            self._current_extraction_draft: RecipeExtractionDraft | None = None
+            self._source_recipe_draft: RecipeDraft | None = None
             self._build_ui()
             self._refresh_recipes()
 
@@ -78,7 +90,17 @@ if QWidget is not None:
             root.addWidget(title)
             root.addWidget(notice)
 
-            body = QHBoxLayout()
+            self._tabs = QTabWidget()
+            self._tabs.setObjectName("recipeWorkspaceTabs")
+            self._tabs.addTab(self._build_library_tab(), "本地配方库")
+            self._tabs.addTab(self._build_user_recipe_tab(), "用户配方")
+            self._tabs.addTab(self._build_source_tab(), "外部来源草稿")
+            root.addWidget(self._tabs, 1)
+
+        def _build_library_tab(self) -> QWidget:
+            tab = QWidget()
+            body = QHBoxLayout(tab)
+            body.setContentsMargins(0, SPACING["sm"], 0, 0)
             body.setSpacing(SPACING["md"])
             self._recipe_list = QListWidget()
             self._recipe_list.setObjectName("recipeList")
@@ -95,9 +117,21 @@ if QWidget is not None:
             right.addWidget(self._detail)
             right.addWidget(self._build_scale_card())
             right.addWidget(self._build_dilution_card())
-            right.addWidget(self._build_user_recipe_card())
             body.addLayout(right, 2)
-            root.addLayout(body, 1)
+            return tab
+
+        def _build_user_recipe_tab(self) -> QWidget:
+            tab = QWidget()
+            layout = QVBoxLayout(tab)
+            layout.setContentsMargins(0, SPACING["sm"], 0, 0)
+            layout.setSpacing(SPACING["md"])
+            layout.addWidget(self._build_user_recipe_card())
+            self._user_recipe_summary = QTextEdit()
+            self._user_recipe_summary.setObjectName("recipeResultPanel")
+            self._user_recipe_summary.setReadOnly(True)
+            self._user_recipe_summary.setText("用户确认的配方仅保存在当前内存结构，不会自动写盘。")
+            layout.addWidget(self._user_recipe_summary, 1)
+            return tab
 
         def _build_scale_card(self) -> QFrame:
             frame = QFrame()
@@ -202,6 +236,123 @@ if QWidget is not None:
             layout.addWidget(self._draft_status)
             return frame
 
+        def _build_source_tab(self) -> QWidget:
+            tab = QWidget()
+            layout = QVBoxLayout(tab)
+            layout.setContentsMargins(0, SPACING["sm"], 0, 0)
+            layout.setSpacing(SPACING["md"])
+            intro = QLabel(SOURCE_REVIEW_NOTICE)
+            intro.setObjectName("recipeSupportLine")
+            intro.setWordWrap(True)
+            layout.addWidget(intro)
+            layout.addWidget(self._build_source_request_card())
+            layout.addWidget(self._build_manual_source_card())
+            layout.addWidget(self._build_source_extract_card())
+            self._source_status = QTextEdit()
+            self._source_status.setObjectName("recipeResultPanel")
+            self._source_status.setReadOnly(True)
+            self._source_status.setText("网络检索当前未启用。可手动录入来源，并在人工核对后转为用户配方草稿。")
+            layout.addWidget(self._source_status, 1)
+            return tab
+
+        def _build_source_request_card(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("检索需求")
+            heading.setObjectName("recipeCardTitle")
+            grid = QGridLayout()
+            self._source_query = _line_edit("例如 PBS 配方来源")
+            self._source_goal = _line_edit("用途说明，可选")
+            search = QPushButton("网络检索")
+            search.setObjectName("secondaryButton")
+            search.clicked.connect(self._handle_disabled_network_search)
+            grid.addWidget(QLabel("需求"), 0, 0)
+            grid.addWidget(self._source_query, 0, 1)
+            grid.addWidget(QLabel("目标"), 1, 0)
+            grid.addWidget(self._source_goal, 1, 1)
+            grid.addWidget(search, 2, 0, 1, 2)
+            layout.addWidget(heading)
+            layout.addLayout(grid)
+            return frame
+
+        def _build_manual_source_card(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("手动添加来源")
+            heading.setObjectName("recipeCardTitle")
+            grid = QGridLayout()
+            self._manual_source_url = _line_edit("https://example.org/protocol")
+            self._manual_source_title = _line_edit("来源标题")
+            self._manual_source_label = _line_edit("来源标签", "用户手动录入来源")
+            self._manual_source_snippet = QTextEdit()
+            self._manual_source_snippet.setObjectName("recipeResultPanel")
+            self._manual_source_snippet.setPlaceholderText("填写摘要或摘录内容。")
+            self._manual_source_snippet.setMinimumHeight(88)
+            add_source = QPushButton("生成来源卡片")
+            add_source.setObjectName("secondaryButton")
+            add_source.clicked.connect(self._handle_manual_source)
+            grid.addWidget(QLabel("URL"), 0, 0)
+            grid.addWidget(self._manual_source_url, 0, 1)
+            grid.addWidget(QLabel("标题"), 1, 0)
+            grid.addWidget(self._manual_source_title, 1, 1)
+            grid.addWidget(QLabel("标签"), 2, 0)
+            grid.addWidget(self._manual_source_label, 2, 1)
+            grid.addWidget(QLabel("摘要"), 3, 0)
+            grid.addWidget(self._manual_source_snippet, 3, 1)
+            grid.addWidget(add_source, 4, 0, 1, 2)
+            layout.addWidget(heading)
+            layout.addLayout(grid)
+            return frame
+
+        def _build_source_extract_card(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("摘录草稿")
+            heading.setObjectName("recipeCardTitle")
+            grid = QGridLayout()
+            self._extract_recipe_name = _line_edit("配方名称")
+            self._extract_default_volume = _line_edit("默认体积", "100")
+            self._extract_default_volume_unit = _combo(supported_volume_units(), "mL")
+            self._extract_stock = _line_edit("浓度，例如 1×", "1×")
+            self._extract_component_name = _line_edit("组分名称")
+            self._extract_component_amount = _line_edit("组分用量")
+            self._extract_component_unit = _combo(supported_mass_units() + supported_volume_units(), "g")
+            self._extract_notes = QTextEdit()
+            self._extract_notes.setObjectName("recipeResultPanel")
+            self._extract_notes.setPlaceholderText("人工摘录说明、适用范围或注意事项。")
+            self._extract_notes.setMinimumHeight(72)
+            to_draft = QPushButton("转为用户配方草稿")
+            to_draft.setObjectName("secondaryButton")
+            to_draft.clicked.connect(self._handle_source_to_draft)
+            confirm = QPushButton("确认保存")
+            confirm.setObjectName("primaryButton")
+            confirm.clicked.connect(self._handle_confirm_source_draft)
+            grid.addWidget(QLabel("配方"), 0, 0)
+            grid.addWidget(self._extract_recipe_name, 0, 1, 1, 2)
+            grid.addWidget(QLabel("默认体积"), 1, 0)
+            grid.addWidget(self._extract_default_volume, 1, 1)
+            grid.addWidget(self._extract_default_volume_unit, 1, 2)
+            grid.addWidget(QLabel("浓度"), 2, 0)
+            grid.addWidget(self._extract_stock, 2, 1, 1, 2)
+            grid.addWidget(QLabel("组分"), 3, 0)
+            grid.addWidget(self._extract_component_name, 3, 1, 1, 2)
+            grid.addWidget(QLabel("用量"), 4, 0)
+            grid.addWidget(self._extract_component_amount, 4, 1)
+            grid.addWidget(self._extract_component_unit, 4, 2)
+            grid.addWidget(QLabel("摘录"), 5, 0)
+            grid.addWidget(self._extract_notes, 5, 1, 1, 2)
+            grid.addWidget(to_draft, 6, 0, 1, 3)
+            grid.addWidget(confirm, 7, 0, 1, 3)
+            layout.addWidget(heading)
+            layout.addLayout(grid)
+            return frame
+
         def _refresh_recipes(self) -> None:
             current_id = self._current_recipe.recipe_id if self._current_recipe else ""
             self._recipes = self._base_library.with_user_recipes(self._user_store.list_recipes()).list_recipes()
@@ -215,6 +366,21 @@ if QWidget is not None:
                     selected_row = index
             if self._recipes:
                 self._recipe_list.setCurrentRow(selected_row)
+            self._render_user_recipe_summary()
+
+        def _render_user_recipe_summary(self) -> None:
+            if not hasattr(self, "_user_recipe_summary"):
+                return
+            recipes = self._user_store.list_recipes()
+            if not recipes:
+                self._user_recipe_summary.setText("尚未确认用户配方。用户草稿和来源摘录草稿均不会自动写盘。")
+                return
+            lines = ["已确认用户配方"]
+            for recipe in recipes:
+                source = recipe.source_title or recipe.source_label
+                lines.append(f"- {recipe.name}；来源：{source}")
+            lines.extend(["", "复核提示", RECIPE_REVIEW_NOTICE])
+            self._user_recipe_summary.setText("\n".join(lines))
 
         def _handle_recipe_selected(self, current: QListWidgetItem | None) -> None:
             if current is None:
@@ -304,6 +470,100 @@ if QWidget is not None:
                 self._draft_status.setText(f"输入需要调整\n{exc}")
                 return
             self._draft_status.setText(f"已确认用户配方：{recipe.name}。本阶段仅保存在内存结构，不自动写盘。")
+            self._current_recipe = recipe
+            self._refresh_recipes()
+
+        def _handle_disabled_network_search(self) -> None:
+            query = self._source_query.text().strip()
+            suffix = f"\n已记录需求：{query}" if query else ""
+            self._source_status.setText(f"{NETWORK_DISABLED_MESSAGE} 本阶段不会访问网页、下载内容或调用 AI。{suffix}")
+
+        def _handle_manual_source(self) -> None:
+            try:
+                card = self._source_importer.create_manual_source_card(
+                    source_url=self._manual_source_url.text(),
+                    source_title=self._manual_source_title.text(),
+                    source_label=self._manual_source_label.text(),
+                    snippet=self._manual_source_snippet.toPlainText(),
+                )
+            except RecipeError as exc:
+                self._source_status.setText(f"来源需要调整\n{exc}")
+                return
+            self._current_source_card = card
+            self._current_extraction_draft = None
+            self._source_recipe_draft = None
+            lines = [
+                "已生成来源卡片（未访问网络）",
+                f"标题：{card.title}",
+                f"来源：{card.source_label}",
+                f"URL：{card.source_url or '未填写'}",
+                f"访问记录：{card.accessed_at}",
+                "",
+                "摘要",
+                card.snippet,
+                "",
+                "复核提示",
+                card.trust_note,
+            ]
+            self._source_status.setText("\n".join(lines))
+
+        def _handle_source_to_draft(self) -> None:
+            if self._current_source_card is None:
+                self._source_status.setText("请先手动添加来源并生成来源卡片。")
+                return
+            try:
+                component = RecipeComponent(
+                    name=self._extract_component_name.text().strip(),
+                    amount=float(self._extract_component_amount.text().strip()),
+                    unit=self._extract_component_unit.currentText(),
+                    role="来源摘录组分",
+                )
+                extraction_draft = self._source_importer.create_extraction_draft(
+                    source_card=self._current_source_card,
+                    recipe_name=self._extract_recipe_name.text(),
+                    extracted_components=(component,),
+                    extracted_notes=(self._extract_notes.toPlainText().strip(),),
+                    safety_notes=(SOURCE_REVIEW_NOTICE,),
+                    preparation_notes=("用户手动摘录，未自动采集网页内容。",),
+                    warnings=("来源内容需要人工核对。",),
+                    edited_by_user=True,
+                )
+                recipe_draft = self._source_importer.to_user_recipe_draft(
+                    extraction_draft,
+                    default_volume=float(self._extract_default_volume.text().strip()),
+                    default_volume_unit=self._extract_default_volume_unit.currentText(),
+                    stock_concentration=self._extract_stock.text(),
+                )
+            except ValueError:
+                self._source_status.setText("摘录需要调整\n用量和默认体积必须是有效数字。")
+                return
+            except RecipeError as exc:
+                self._source_status.setText(f"摘录需要调整\n{exc}")
+                return
+            self._current_extraction_draft = extraction_draft
+            self._source_recipe_draft = recipe_draft
+            lines = [
+                "已转为用户配方草稿，尚未确认保存。",
+                f"配方：{recipe_draft.name}",
+                f"来源标题：{recipe_draft.source_title}",
+                f"默认体积：{format_number(recipe_draft.default_volume)} {recipe_draft.default_volume_unit}",
+                f"组分数：{len(recipe_draft.components)}",
+                "",
+                "下一步",
+                "请人工核对来源、组分和单位后点击“确认保存”。",
+            ]
+            self._source_status.setText("\n".join(lines))
+
+        def _handle_confirm_source_draft(self) -> None:
+            if self._source_recipe_draft is None:
+                self._source_status.setText("请先将来源摘录转为用户配方草稿。")
+                return
+            try:
+                recipe = self._user_store.confirm_draft(self._source_recipe_draft)
+            except RecipeError as exc:
+                self._source_status.setText(f"保存需要调整\n{exc}")
+                return
+            self._source_status.setText(f"已确认保存用户配方：{recipe.name}。仅保存在当前内存结构，不自动写盘。")
             self._current_recipe = recipe
             self._refresh_recipes()
 

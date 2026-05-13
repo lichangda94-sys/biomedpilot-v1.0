@@ -18,6 +18,9 @@ def test_user_recipe_store_confirms_draft_in_memory_only() -> None:
         components=(RecipeComponent("NaCl", 0.8, "g", "主要盐"),),
         preparation_notes=("按 SOP 复核。",),
         safety_notes=("按安全规范复核。",),
+        source_url="https://example.org/user-note",
+        source_title="用户来源标题",
+        edited_by_user=True,
     )
 
     recipe = store.confirm_draft(draft)
@@ -25,8 +28,11 @@ def test_user_recipe_store_confirms_draft_in_memory_only() -> None:
 
     assert recipe.is_user_defined is True
     assert recipe.recipe_id.startswith("user_recipe_")
+    assert recipe.user_confirmed is True
+    assert recipe.source_title == "用户来源标题"
     assert store.list_recipes() == (recipe,)
     assert payload["user_recipes"][0]["name"] == "用户 PBS 变体"
+    assert payload["user_recipes"][0]["source_url"] == "https://example.org/user-note"
 
 
 def test_user_recipe_store_requires_confirmed_valid_draft() -> None:

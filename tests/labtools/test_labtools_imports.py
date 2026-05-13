@@ -40,3 +40,6 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制", "细胞接种", "qPCR 配液"]
     widget.show_recipes()
     assert widget.current_page_key() == "recipes"
+    recipe_tabs = widget.findChild(QTabWidget, "recipeWorkspaceTabs")
+    assert recipe_tabs is not None
+    assert [recipe_tabs.tabText(index) for index in range(recipe_tabs.count())] == ["本地配方库", "用户配方", "外部来源草稿"]

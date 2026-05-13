@@ -47,6 +47,11 @@ class Recipe:
     version: str
     is_user_defined: bool = False
     review_notice: str = RECIPE_REVIEW_NOTICE
+    source_url: str = ""
+    source_title: str = ""
+    accessed_at: str = ""
+    user_confirmed: bool = False
+    edited_by_user: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -64,6 +69,11 @@ class Recipe:
             "version": self.version,
             "is_user_defined": self.is_user_defined,
             "review_notice": self.review_notice,
+            "source_url": self.source_url,
+            "source_title": self.source_title,
+            "accessed_at": self.accessed_at,
+            "user_confirmed": self.user_confirmed,
+            "edited_by_user": self.edited_by_user,
         }
 
 
@@ -78,6 +88,33 @@ class RecipeDraft:
     components: tuple[RecipeComponent, ...]
     preparation_notes: tuple[str, ...] = ()
     safety_notes: tuple[str, ...] = ()
+    source_label: str = "用户自定义草稿确认"
+    version: str = "user-confirmed-draft"
+    source_url: str = ""
+    source_title: str = ""
+    accessed_at: str = ""
+    user_confirmed: bool = False
+    edited_by_user: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "category": self.category,
+            "description": self.description,
+            "stock_concentration": self.stock_concentration,
+            "default_volume": self.default_volume,
+            "default_volume_unit": self.default_volume_unit,
+            "components": [component.to_dict() for component in self.components],
+            "preparation_notes": list(self.preparation_notes),
+            "safety_notes": list(self.safety_notes),
+            "source_label": self.source_label,
+            "version": self.version,
+            "source_url": self.source_url,
+            "source_title": self.source_title,
+            "accessed_at": self.accessed_at,
+            "user_confirmed": self.user_confirmed,
+            "edited_by_user": self.edited_by_user,
+        }
 
 
 @dataclass(frozen=True)
