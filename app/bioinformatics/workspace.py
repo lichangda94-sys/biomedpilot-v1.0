@@ -22,10 +22,11 @@ def bioinformatics_step_features() -> list[FeatureAvailability]:
 
 
 try:
-    from pathlib import Path
-
     from PySide6.QtWidgets import QFrame, QLabel, QStackedWidget, QVBoxLayout, QWidget
-
+except ImportError:  # pragma: no cover - non-GUI environments import feature registry only.
+    QFrame = QLabel = QStackedWidget = QVBoxLayout = QWidget = None
+else:
+    from pathlib import Path
     from app.bioinformatics.project_home import BioinformaticsProjectHomeWidget
     from app.bioinformatics.project_workspace import BioinformaticsProjectSummary
     from app.bioinformatics.workflow_pages import (
@@ -42,8 +43,6 @@ try:
         BioinformaticsStandardizedAssetsWidget,
         BioinformaticsWorkflowStatusWidget,
     )
-except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
-    QFrame = QLabel = QStackedWidget = QVBoxLayout = QWidget = None
 
 
 if QWidget is not None:
@@ -237,4 +236,5 @@ if QWidget is not None:
 else:
 
     class BioinformaticsWorkspaceWidget:  # type: ignore[no-redef]
-        pass
+        def __init__(self, on_back: Callable[[], None] | None = None) -> None:
+            self._on_back = on_back

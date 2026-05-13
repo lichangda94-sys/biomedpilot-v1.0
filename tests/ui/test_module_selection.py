@@ -207,6 +207,16 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
         _dispose_window(window)
 
 
+def test_bioinformatics_workspace_accepts_shell_back_callback(qt_app) -> None:
+    from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
+
+    widget = BioinformaticsWorkspaceWidget(on_back=lambda: None)
+    try:
+        assert widget.current_page_object_name() == "bioinformaticsProjectHomePage"
+    finally:
+        _dispose_window(widget)
+
+
 def test_main_window_open_meta_project_binds_workspace_project_dir(qt_app, tmp_path) -> None:
     from app.shared.project_center.service import ProjectRecord
     from app.shell.main_window import MainWindow
