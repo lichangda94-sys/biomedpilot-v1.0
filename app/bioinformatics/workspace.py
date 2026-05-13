@@ -22,31 +22,37 @@ def bioinformatics_step_features() -> list[FeatureAvailability]:
 
 
 try:
-    from pathlib import Path
-
     from PySide6.QtWidgets import QFrame, QLabel, QStackedWidget, QVBoxLayout, QWidget
-
-    from app.bioinformatics.project_home import BioinformaticsProjectHomeWidget
-    from app.bioinformatics.project_workspace import BioinformaticsProjectSummary
-    from app.bioinformatics.workflow_pages import (
-        BioinformaticsAcquisitionStatusWidget,
-        BioinformaticsAnalysisTaskCenterWidget,
-        BioinformaticsChineseDatasetSearchWidget,
-        BioinformaticsDataSourceWidget,
-        BioinformaticsGroupComparisonDesignWidget,
-        BioinformaticsRecognitionWidget,
-        BioinformaticsReadinessDashboardWidget,
-        BioinformaticsReportViewerWidget,
-        BioinformaticsResultsBrowserWidget,
-        BioinformaticsSettingsAndLocalAIWidget,
-        BioinformaticsStandardizedAssetsWidget,
-        BioinformaticsWorkflowStatusWidget,
-    )
 except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
     QFrame = QLabel = QStackedWidget = QVBoxLayout = QWidget = None
+    _WORKSPACE_IMPORT_ERROR: Exception | None = None
+else:
+    try:
+        from pathlib import Path
+
+        from app.bioinformatics.project_home import BioinformaticsProjectHomeWidget
+        from app.bioinformatics.project_workspace import BioinformaticsProjectSummary
+        from app.bioinformatics.workflow_pages import (
+            BioinformaticsAcquisitionStatusWidget,
+            BioinformaticsAnalysisTaskCenterWidget,
+            BioinformaticsChineseDatasetSearchWidget,
+            BioinformaticsDataSourceWidget,
+            BioinformaticsGroupComparisonDesignWidget,
+            BioinformaticsRecognitionWidget,
+            BioinformaticsReadinessDashboardWidget,
+            BioinformaticsReportViewerWidget,
+            BioinformaticsResultsBrowserWidget,
+            BioinformaticsSettingsAndLocalAIWidget,
+            BioinformaticsStandardizedAssetsWidget,
+            BioinformaticsWorkflowStatusWidget,
+        )
+    except Exception as exc:  # pragma: no cover - exercised when business pages are unavailable.
+        _WORKSPACE_IMPORT_ERROR = exc
+    else:
+        _WORKSPACE_IMPORT_ERROR = None
 
 
-if QWidget is not None:
+if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -233,6 +239,37 @@ if QWidget is not None:
         layout.addWidget(source)
         layout.addWidget(next_step)
         return frame
+
+elif QWidget is not None:
+
+    class BioinformaticsWorkspaceWidget(QWidget):  # type: ignore[no-redef]
+        def __init__(self, on_back: Callable[[], None] | None = None) -> None:
+            super().__init__()
+            self._on_back = on_back
+            self.setObjectName("bioinformaticsWorkspaceUnavailable")
+            root = QVBoxLayout(self)
+            root.setContentsMargins(28, 24, 28, 24)
+            title = QLabel("生信分析工作台暂不可用")
+            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            root.addWidget(title)
+            detail = QLabel(
+                "当前 UIShell 分支缺少生信工作台依赖，壳子可继续实例化用于登录、导航和设置页测试。"
+            )
+            detail.setWordWrap(True)
+            root.addWidget(detail)
+            root.addStretch(1)
+
+        def show_project_home(self) -> None:
+            return None
+
+        def show_settings(self) -> None:
+            return None
+
+        def current_project(self) -> None:
+            return None
+
+        def current_page_object_name(self) -> str:
+            return self.objectName()
 
 else:
 
