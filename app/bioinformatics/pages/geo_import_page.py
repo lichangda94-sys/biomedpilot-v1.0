@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.bioinformatics.services.geo_import_service import GeoImportPlanResult, GeoImportService
 from app.shared.feature_availability import get_feature
+from app.shared.ui import error_text_qss, page_title_qss, surface_card_qss
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,7 @@ if QWidget is not None:
 
             root = QVBoxLayout(self)
             title = QLabel(self._state.title)
-            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setStyleSheet(page_title_qss())
             root.addWidget(title)
             description = QLabel(self._state.description)
             description.setWordWrap(True)
@@ -69,7 +70,7 @@ if QWidget is not None:
             self._status_label.setWordWrap(True)
             root.addWidget(self._status_label)
             summary_card = QFrame()
-            summary_card.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            summary_card.setStyleSheet(surface_card_qss())
             summary_layout = QVBoxLayout(summary_card)
             self._summary_label = QLabel("GEO 查询计划摘要会显示在这里。")
             self._summary_label.setWordWrap(True)
@@ -92,7 +93,7 @@ if QWidget is not None:
             root.addWidget(self._source_candidate_table)
             self._error_label = QLabel("")
             self._error_label.setWordWrap(True)
-            self._error_label.setStyleSheet("color: #B42318;")
+            self._error_label.setStyleSheet(error_text_qss())
             root.addWidget(self._error_label)
             self._register_first_button = QPushButton("登记首条结果为数据来源")
             self._register_first_button.setEnabled(False)

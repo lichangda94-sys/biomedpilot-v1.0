@@ -14,8 +14,15 @@ from app.shared.ui.theme import (
     as_legacy_font_size_dict,
     as_legacy_radius_dict,
     as_legacy_spacing_dict,
+    card_title_qss,
+    error_text_qss,
+    helper_text_qss,
+    page_title_qss,
+    shell_sidebar_qss,
     status_style,
     status_styles,
+    surface_card_qss,
+    warning_text_qss,
 )
 
 __all__ = [
@@ -32,6 +39,13 @@ __all__ = [
     "as_legacy_font_size_dict",
     "as_legacy_radius_dict",
     "as_legacy_spacing_dict",
+    "card_title_qss",
+    "error_text_qss",
+    "helper_text_qss",
+    "page_title_qss",
+    "shell_sidebar_qss",
     "status_style",
     "status_styles",
+    "surface_card_qss",
+    "warning_text_qss",
 ]

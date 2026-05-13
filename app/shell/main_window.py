@@ -27,6 +27,7 @@ from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
+from app.shared.ui import card_title_qss, page_title_qss, surface_card_qss
 
 
 class MainWindow(QMainWindow):
@@ -162,11 +163,11 @@ class MainWindow(QMainWindow):
     def _entry_card(self, title: str, features: tuple[str, ...], callback) -> QFrame:
         frame = QFrame()
         frame.setObjectName("entryCard")
-        frame.setStyleSheet("QFrame#entryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setStyleSheet(surface_card_qss("QFrame#entryCard"))
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(20, 18, 20, 18)
         label = QLabel(title)
-        label.setStyleSheet("font-size: 20px; font-weight: 700;")
+        label.setStyleSheet(page_title_qss())
         layout.addWidget(label)
         list_widget = QListWidget()
         list_widget.setFocusPolicy(Qt.NoFocus)
@@ -180,10 +181,10 @@ class MainWindow(QMainWindow):
 
     def _list_card(self, title: str, rows: list[str]) -> QFrame:
         frame = QFrame()
-        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setStyleSheet(surface_card_qss())
         layout = QVBoxLayout(frame)
         header = QLabel(title)
-        header.setStyleSheet("font-weight: 700;")
+        header.setStyleSheet(card_title_qss())
         layout.addWidget(header)
         for row in rows:
             label = QLabel(row)
@@ -194,10 +195,10 @@ class MainWindow(QMainWindow):
 
     def _recent_projects_card(self) -> QFrame:
         frame = QFrame()
-        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setStyleSheet(surface_card_qss())
         layout = QVBoxLayout(frame)
         header = QLabel("最近项目")
-        header.setStyleSheet("font-weight: 700;")
+        header.setStyleSheet(card_title_qss())
         layout.addWidget(header)
         recent_projects = self._project_center.recent_projects(limit=5)
         if not recent_projects:

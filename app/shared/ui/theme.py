@@ -194,6 +194,54 @@ def status_styles() -> dict[str, BioMedPilotStatusStyle]:
     return dict(_STATUS_STYLES)
 
 
+def surface_card_qss(selector: str = "QFrame") -> str:
+    return (
+        f"{selector} {{ "
+        f"border: 1px solid {BioMedPilotColors.BORDER_MEDIUM}; "
+        f"border-radius: {BioMedPilotRadii.CARD}px; "
+        f"background: {BioMedPilotColors.SURFACE_WHITE}; "
+        "}"
+    )
+
+
+def page_title_qss() -> str:
+    return f"font-size: {BioMedPilotTypography.SECTION_TITLE + 2}px; font-weight: 700;"
+
+
+def card_title_qss() -> str:
+    return "font-weight: 700;"
+
+
+def helper_text_qss() -> str:
+    return f"color: {BioMedPilotColors.TEXT_SECONDARY};"
+
+
+def error_text_qss() -> str:
+    return f"color: {BioMedPilotColors.STATUS_ERROR};"
+
+
+def warning_text_qss() -> str:
+    return f"color: {BioMedPilotColors.STATUS_WARNING};"
+
+
+def shell_sidebar_qss() -> str:
+    return (
+        "QFrame { "
+        f"background: {BioMedPilotColors.SURFACE_MUTED}; "
+        f"border-right: 1px solid {BioMedPilotColors.BORDER_MEDIUM}; "
+        "}"
+        "QPushButton { "
+        "text-align: left; "
+        f"padding: {BioMedPilotSpacing.SM}px 10px; "
+        "border: 0; "
+        "border-radius: 6px; "
+        "}"
+        "QPushButton:hover { "
+        f"background: {BioMedPilotColors.BIO_SOFT}; "
+        "}"
+    )
+
+
 def as_legacy_color_dict() -> dict[str, str]:
     return {
         "background": BioMedPilotColors.BACKGROUND_LIGHT,

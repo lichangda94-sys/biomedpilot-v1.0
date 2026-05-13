@@ -8,6 +8,8 @@ try:
 except Exception:  # pragma: no cover
     QFrame = QLabel = QPushButton = QVBoxLayout = None
 
+from app.shared.ui import helper_text_qss, page_title_qss, shell_sidebar_qss
+
 
 @dataclass(frozen=True)
 class SidebarItem:
@@ -44,16 +46,12 @@ if QFrame is not None:
         ) -> None:
             super().__init__()
             self.setFixedWidth(190)
-            self.setStyleSheet(
-                "QFrame { background: #F8FAFC; border-right: 1px solid #D8DEE9; }"
-                "QPushButton { text-align: left; padding: 8px 10px; border: 0; border-radius: 6px; }"
-                "QPushButton:hover { background: #EAF0F7; }"
-            )
+            self.setStyleSheet(shell_sidebar_qss())
             layout = QVBoxLayout(self)
             layout.setContentsMargins(12, 14, 12, 14)
             layout.setSpacing(8)
             title = QLabel("BioMedPilot")
-            title.setStyleSheet("font-size: 18px; font-weight: 700;")
+            title.setStyleSheet(page_title_qss())
             layout.addWidget(title)
             for label, callback in (
                 ("Dashboard", on_dashboard),
@@ -67,7 +65,7 @@ if QFrame is not None:
                 layout.addWidget(button)
             layout.addStretch(1)
             footer = QLabel("测试模式")
-            footer.setStyleSheet("color: #64748B;")
+            footer.setStyleSheet(helper_text_qss())
             layout.addWidget(footer)
 
 else:
