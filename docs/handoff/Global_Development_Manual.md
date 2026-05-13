@@ -142,6 +142,12 @@ Codex must stop and request human confirmation when:
 - Do not produce clinical conclusions.
 - Do not claim production-ready status.
 
+## 7.1 UI Governance Authority
+
+UI Governance / UI Design Principles is the authoritative basis for BioMedPilot cross-module interface development. If Bioinformatics, Meta Analysis, LabTools, or any later module UI development conflicts with the global UI principles, follow the global UI principles first; modules may adapt to their business workflows, but must not introduce conflicting colors, fonts, button systems, page structures, or visual styles.
+
+明确规则：UI Governance / UI Design Principles 是 BioMedPilot 跨模块界面开发的权威依据。Bioinformatics、Meta Analysis、LabTools 或任何后续模块的 UI 开发，如果与总 UI 规范冲突，应优先遵循总 UI 规范；模块可以做业务适配，但不得自行引入冲突的颜色、字体、按钮体系、页面结构或视觉风格。
+
 ## 8. Testing Principles
 
 Run tests for the active worktree and the changed surface.
