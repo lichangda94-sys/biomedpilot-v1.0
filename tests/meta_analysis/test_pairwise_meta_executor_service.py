@@ -17,8 +17,12 @@ from app.meta_analysis.models.statistical_result_state import (
     requires_user_review,
 )
 from app.meta_analysis.pages.analysis_page import analysis_setup_state_from_project
+from app.meta_analysis.services.analysis_plan_service import AnalysisPlanService
+from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder
+from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
 from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
+from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
 
 
 def test_m12_missing_confirmed_plan_fails_validation() -> None:
@@ -28,6 +32,49 @@ def test_m12_missing_confirmed_plan_fails_validation() -> None:
     assert result.pooled_effect is None
     assert "confirmed_analysis_plan_required" in result.validation_errors
     assert blocks_formal_report_claim(result)
+
+
+def test_m12_execute_failed_validation_persists_and_audits_without_exception(tmp_path: Path) -> None:
+    service = PairwiseMetaExecutorService()
+
+    result = service.execute(tmp_path, actor="reviewer")
+    latest = service.load_latest_result(tmp_path)
+    events = MetaAuditLogService().list_events(tmp_path)
+
+    assert result.result_state == STATISTICAL_RESULT_STATE_FAILED_VALIDATION
+    assert latest is not None
+    assert latest.result_state == STATISTICAL_RESULT_STATE_FAILED_VALIDATION
+    assert "confirmed_analysis_plan_required" in result.validation_errors
+    assert any(event.event_type == "analysis_run_failed_validation" and event.target_type == "pairwise_meta_executor_result" for event in events)
+
+
+def test_m12_execute_accepts_real_confirmed_plan_from_analysis_plan_service(tmp_path: Path) -> None:
+    pico = PICOWorkspaceService()
+    pico.generate_draft(tmp_path, "成人患者干预组与对照组死亡率比较", pico_mode="pico")
+    pico.confirm_protocol(tmp_path, actor="reviewer", confirmed_meta_type="treatment_comparative_meta")
+    manual = ManualExtractionEffectRowService()
+    first = manual.create_structured_extraction_row(
+        tmp_path,
+        fields={"study_id": "study-1", "first_author": "Zhang", "year": "2025", "outcome": "Mortality", "effect_measure_type": "OR", "effect_estimate": "1.8", "ci_lower": "1.1", "ci_upper": "2.9"},
+        actor="reviewer",
+    )
+    second = manual.create_structured_extraction_row(
+        tmp_path,
+        fields={"study_id": "study-2", "first_author": "Li", "year": "2026", "outcome": "Mortality", "effect_measure_type": "OR", "effect_estimate": "1.4", "ci_lower": "1.05", "ci_upper": "1.9"},
+        actor="reviewer",
+    )
+    manual.confirm_structured_extraction_row(tmp_path, effect_row_id=str(first.payload["effect_row_id"]), actor="reviewer")
+    manual.confirm_structured_extraction_row(tmp_path, effect_row_id=str(second.payload["effect_row_id"]), actor="reviewer")
+    plan_service = AnalysisPlanService()
+    plan_service.generate_draft(tmp_path, actor="system", overrides={"model_default": "fixed_effect"})
+    confirmed = plan_service.confirm_plan(tmp_path, actor="reviewer", confirmed_model="fixed_effect")
+
+    result = PairwiseMetaExecutorService(analysis_plan_service=plan_service).execute(tmp_path, actor="reviewer")
+
+    assert confirmed.payload["plan_state"] == "confirmed"
+    assert result.result_state == STATISTICAL_RESULT_STATE_COMPUTED
+    assert result.report_ready is False
+    assert result.developer_preview_testing is True
 
 
 def test_m12_fewer_than_two_ready_studies_fails_validation() -> None:

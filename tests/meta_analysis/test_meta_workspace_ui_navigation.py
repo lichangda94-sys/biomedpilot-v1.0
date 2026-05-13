@@ -13,7 +13,7 @@ from app.meta_analysis.project_workspace import META_PROJECT_DIRECTORIES, create
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QComboBox, QFrame, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QFrame, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -418,6 +418,16 @@ def test_meta_analysis_plan_workspace_renders_chinese_confirmation_controls_with
     assert "纳入研究数量" in visible
     assert "确认分析计划" in visible
     assert "下一步：结果与报告" in visible
+    assert "效应量标准化预检查" in visible
+    assert "Pairwise executor" in visible
+    assert "统计结果审核" in visible
+    assert "刷新效应量标准化预检查" in visible
+    assert "运行 pairwise executor" in visible
+    assert "接受进入报告草稿" in visible
+    assert "标记需要修订" in visible
+    assert "不纳入报告" in visible
+    assert "申请报告就绪" in visible
+    assert current.findChild(QCheckBox, "metaResultWarningAcknowledgement") is not None
     assert {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"} <= set(combos["metaAnalysisPlanEffectMeasureSelector"])
     assert {"固定效应", "随机效应", "固定效应 + 随机效应", "暂不决定"} <= set(combos["metaAnalysisPlanModelPreferenceSelector"])
     assert str(summary.project_root) not in visible
