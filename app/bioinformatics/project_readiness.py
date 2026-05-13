@@ -27,8 +27,8 @@ ANALYSIS_ROWS = (
     ("reporting", "报告生成", {"analysis_result"}),
 )
 
-CORE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
-EXPRESSION_COMPATIBLE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
+CORE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix"}
+EXPRESSION_COMPATIBLE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix"}
 
 
 def run_project_readiness(project_root: str | Path) -> dict[str, object]:
@@ -50,6 +50,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     if "clinical_metadata" not in available:
         warnings.append("临床信息缺失。")
     rows = []
+    deg_ready = False
     for key, label, required in ANALYSIS_ROWS:
         missing = sorted(_missing_inputs_for_row(key, required, available, confirmed_comparison))
         can_run = bool(has_core_input) and not missing and (key not in {"tcga_gtex_joint", "reporting"})
@@ -77,6 +78,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         next_step = _next_step_for_row(key, can_run, missing, row_warnings)
         if key == "reporting":
             next_step = "请先创建并执行分析任务，生成结果后再进入报告。"
+        if key == "differential_expression":
+            deg_ready = can_run
         rows.append(
             {
                 "analysis_type": key,
@@ -104,6 +107,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         "overall_status": overall,
         "available_inputs": sorted(available),
         "has_core_input": has_core_input,
+        "standardization_ready": has_core_input,
+        "deg_ready": deg_ready,
         "warnings": warnings,
         "comparison_config_summary": confirmed_comparison.to_dict() if confirmed_comparison is not None else {},
         "comparison_group_summary_zh": comparison_summary_text(confirmed_comparison),
@@ -126,6 +131,10 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
 
 
 def _available_inputs(files: list[object]) -> set[str]:
+    return available_inputs_from_recognition_files(files)
+
+
+def available_inputs_from_recognition_files(files: list[object]) -> set[str]:
     available: set[str] = set()
     for item in files:
         if not isinstance(item, dict):
@@ -137,14 +146,40 @@ def _available_inputs(files: list[object]) -> set[str]:
                     continue
                 role = str(asset.get("role") or asset.get("asset_type") or "")
                 _add_available_input(available, role)
-            continue
         primary = str(item.get("recognized_type") or "")
         _add_available_input(available, primary)
         for role in item.get("recognized_roles", []) or []:
             _add_available_input(available, str(role))
         for role in item.get("secondary_roles", []) or []:
             _add_available_input(available, str(role))
+        for role in _content_block_inputs(item):
+            _add_available_input(available, role)
+        if str(item.get("semantic_type") or "") == "rna_seq_integrated_result_table":
+            _add_available_input(available, "expression_matrix")
     return available
+
+
+def has_standardizable_expression_input(files: list[object]) -> bool:
+    return bool(available_inputs_from_recognition_files(files) & CORE_INPUTS)
+
+
+def _content_block_inputs(item: dict[str, object]) -> list[str]:
+    blocks = item.get("content_blocks")
+    if not isinstance(blocks, list):
+        profile = item.get("content_profile")
+        blocks = profile.get("content_blocks") if isinstance(profile, dict) else []
+    roles: list[str] = []
+    for block in blocks or []:
+        if not isinstance(block, dict):
+            continue
+        block_type = str(block.get("block_type") or "")
+        if block_type == "count_expression_matrix":
+            roles.extend(["count_matrix", "raw_count_matrix"])
+        elif block_type in {"fpkm_expression_matrix", "tpm_expression_matrix"}:
+            roles.append("normalized_expression_matrix")
+        elif block_type == "gene_annotation":
+            roles.append("gene_annotation")
+    return roles
 
 
 def _missing_inputs_for_row(

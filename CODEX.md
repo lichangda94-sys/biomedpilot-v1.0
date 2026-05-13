@@ -2,8 +2,8 @@
 
 ## 当前工作区
 
-路径：/Users/changdali/Developer/biomedpilot v1.0/Integration  
-分支：dev/integration  
+路径：/Users/changdali/Developer/biomedpilot v1.0/Integration
+分支：dev/integration
 
 ## 职责
 

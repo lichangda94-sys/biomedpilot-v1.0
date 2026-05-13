@@ -9,10 +9,10 @@ def test_dashboard_model_loads() -> None:
     assert "Bioinformatics Analysis" in dashboard.product_subtitle
     assert dashboard.bioinformatics_features
     assert dashboard.meta_analysis_features
+    assert dashboard.labtools_features
 
 
 def test_unified_entry_console_smoke() -> None:
     from app.main import main
 
     assert callable(main)
-

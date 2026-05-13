@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from app.app_identity import APP_NAME, icon_asset_statuses, icon_asset_summary, load_app_icon
 from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
+from app.labtools.workspace import LabToolsWorkspaceWidget
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
 from app.shell.login import BioMedPilotLoginWidget, LocalSession
@@ -27,6 +28,7 @@ from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
+from app.shared.ui import card_title_qss, page_title_qss, surface_card_qss
 
 
 class MainWindow(QMainWindow):
@@ -48,13 +50,15 @@ class MainWindow(QMainWindow):
 
         self._stack = QStackedWidget()
         self._dashboard_page = self._build_dashboard_page()
-        self._bioinformatics_page = self._build_bioinformatics_page()
+        self._bioinformatics_page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
         self._meta_analysis_page = MetaAnalysisWorkspaceWidget(on_back=self.show_dashboard)
+        self._labtools_page = LabToolsWorkspaceWidget(on_back=self.show_dashboard)
         self._settings_page = self._build_settings_page()
         self._testing_page = self._build_testing_page()
         self._stack.addWidget(self._dashboard_page)
         self._stack.addWidget(self._bioinformatics_page)
         self._stack.addWidget(self._meta_analysis_page)
+        self._stack.addWidget(self._labtools_page)
         self._stack.addWidget(self._settings_page)
         self._stack.addWidget(self._testing_page)
 
@@ -67,6 +71,7 @@ class MainWindow(QMainWindow):
                 on_dashboard=self.show_dashboard,
                 on_bioinformatics=self.show_bioinformatics,
                 on_meta_analysis=self.show_meta_analysis,
+                on_labtools=self.show_labtools,
                 on_settings=self.show_settings,
                 on_testing=self.show_testing_mode,
             )
@@ -103,6 +108,10 @@ class MainWindow(QMainWindow):
         self._stack.setCurrentWidget(self._meta_analysis_page)
         self.setWindowTitle("BioMedPilot / Meta 分析")
 
+    def show_labtools(self) -> None:
+        self._stack.setCurrentWidget(self._labtools_page)
+        self.setWindowTitle("BioMedPilot / 实验工具")
+
     def show_settings(self) -> None:
         self._stack.setCurrentWidget(self._settings_page)
         self.setWindowTitle("BioMedPilot / 设置中心")
@@ -132,6 +141,8 @@ class MainWindow(QMainWindow):
             return "bioinformatics"
         if current is self._meta_analysis_page:
             return "meta_analysis"
+        if current is self._labtools_page:
+            return "labtools"
         if current is self._settings_page:
             return "settings"
         if current is self._testing_page:
@@ -144,27 +155,9 @@ class MainWindow(QMainWindow):
             session=self._session,
             on_open_bioinformatics=self.show_bioinformatics,
             on_open_meta_analysis=self.show_meta_analysis,
+            on_open_labtools=self.show_labtools,
             on_logout=self.logout,
         )
-
-    def _build_bioinformatics_page(self) -> QWidget:
-        try:
-            page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
-        except TypeError:
-            page = BioinformaticsWorkspaceWidget()
-        if isinstance(page, QWidget):
-            return page
-        fallback = QWidget()
-        layout = QVBoxLayout(fallback)
-        layout.setContentsMargins(28, 24, 28, 24)
-        title = QLabel("Bioinformatics / 生信分析")
-        title.setStyleSheet("font-size: 24px; font-weight: 700;")
-        layout.addWidget(title)
-        message = QLabel("Bioinformatics workspace is unavailable in this Integration runtime; shell navigation remains testable.")
-        message.setWordWrap(True)
-        layout.addWidget(message)
-        layout.addStretch(1)
-        return fallback
 
     def _refresh_dashboard_page(self) -> None:
         if not hasattr(self, "_stack"):
@@ -181,11 +174,11 @@ class MainWindow(QMainWindow):
     def _entry_card(self, title: str, features: tuple[str, ...], callback) -> QFrame:
         frame = QFrame()
         frame.setObjectName("entryCard")
-        frame.setStyleSheet("QFrame#entryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setStyleSheet(surface_card_qss("QFrame#entryCard"))
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(20, 18, 20, 18)
         label = QLabel(title)
-        label.setStyleSheet("font-size: 20px; font-weight: 700;")
+        label.setStyleSheet(page_title_qss())
         layout.addWidget(label)
         list_widget = QListWidget()
         list_widget.setFocusPolicy(Qt.NoFocus)
@@ -199,10 +192,10 @@ class MainWindow(QMainWindow):
 
     def _list_card(self, title: str, rows: list[str]) -> QFrame:
         frame = QFrame()
-        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setStyleSheet(surface_card_qss())
         layout = QVBoxLayout(frame)
         header = QLabel(title)
-        header.setStyleSheet("font-weight: 700;")
+        header.setStyleSheet(card_title_qss())
         layout.addWidget(header)
         for row in rows:
             label = QLabel(row)
@@ -213,10 +206,10 @@ class MainWindow(QMainWindow):
 
     def _recent_projects_card(self) -> QFrame:
         frame = QFrame()
-        frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        frame.setStyleSheet(surface_card_qss())
         layout = QVBoxLayout(frame)
         header = QLabel("最近项目")
-        header.setStyleSheet("font-weight: 700;")
+        header.setStyleSheet(card_title_qss())
         layout.addWidget(header)
         recent_projects = self._project_center.recent_projects(limit=5)
         if not recent_projects:
