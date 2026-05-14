@@ -13,7 +13,7 @@ from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
 from app.bioinformatics.geo_series_matrix_parser import parse_geo_series_matrix
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
-from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
+from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, recognition_report_stale_status, run_project_recognition
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
 from app.bioinformatics.standardization_confirmation import (
     collect_standardization_candidates,
@@ -270,11 +270,13 @@ def test_plan_only_project_is_not_ready(project_root: Path) -> None:
 def test_recognition_readiness_standardization_chain(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
-    raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    raw_file.write_text("gene\ts1\ts2\nTP53\t1.2\t2.4\n", encoding="utf-8")
 
     recognition = run_project_recognition(project_root)
     assert load_recognition_report(project_root) is not None
-    assert recognition["files"][0]["recognized_type"] == "expression_matrix"  # type: ignore[index]
+    assert recognition["files"][0]["recognized_type"] == "normalized_expression_matrix"  # type: ignore[index]
+    assert recognition["schema_version"] == "biomedpilot.recognition_report.v2"
+    assert recognition["files"][0]["standardization_status"] == "eligible"  # type: ignore[index]
     assert TYPE_LABELS["unknown"] == "未知文件"
 
     readiness = run_project_readiness(project_root)
@@ -1050,6 +1052,100 @@ def test_differential_result_table_not_counted_as_expression_input(project_root:
     assert standardization["registry"]["assets"] == []  # type: ignore[index]
 
 
+def test_recognition_v2_marks_stale_when_source_file_changes(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\tS1\tS2\nTP53\t1\t2\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    assert recognition["schema_version"] == "biomedpilot.recognition_report.v2"
+    assert recognition_report_stale_status(project_root)["is_stale"] is False
+
+    source.write_text("gene\tS1\tS2\nTP53\t1\t2\nEGFR\t3\t4\n", encoding="utf-8")
+    loaded = load_recognition_report(project_root)
+
+    assert loaded is not None
+    assert loaded["report_status"] == "stale"
+    assert loaded["stale_status"]["reason"] == "source_files_changed"  # type: ignore[index]
+
+
+def test_raw_heavy_file_is_blocked_before_filename_fallback(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "sample_counts.fastq.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("@SEQ\nACGT\n+\n!!!!\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "raw_heavy_file"
+    assert record["standardization_status"] == "blocked"
+    assert record["risk_profile"]["raw_heavy"] is True  # type: ignore[index]
+
+
+def test_tcga_expression_recognition_uses_barcode_sample_type(project_root: Path) -> None:
+    source = project_root / "raw_data" / "tcga" / "TCGA-THCA" / "tcga_expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "gene_id\tTCGA-AB-1234-01A\tTCGA-ZZ-9999-11A\n"
+        "ENSG00000141510\t12\t5\n"
+        "ENSG00000146648\t40\t18\n",
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "tcga_expression_matrix"
+    assert record["standardization_status"] == "eligible"
+    assert record["metadata_profile"]["tcga_sample_type_summary"]["tumor_sample_count"] == 1  # type: ignore[index]
+    assert record["metadata_profile"]["tcga_sample_type_summary"]["normal_sample_count"] == 1  # type: ignore[index]
+
+
+def test_tcga_clinical_and_gdc_manifest_are_not_expression_inputs(project_root: Path) -> None:
+    clinical = project_root / "raw_data" / "tcga" / "TCGA-THCA" / "clinical.tsv"
+    manifest = project_root / "raw_data" / "tcga" / "TCGA-THCA" / "gdc_manifest.tsv"
+    clinical.parent.mkdir(parents=True, exist_ok=True)
+    clinical.write_text(
+        "case_submitter_id\tage_at_diagnosis\tgender\tajcc_pathologic_stage\tvital_status\tdays_to_death\n"
+        "TCGA-AB-1234\t21915\tfemale\tStage II\tDead\t120\n",
+        encoding="utf-8",
+    )
+    manifest.write_text("id\tfilename\tmd5\tsize\tstate\nuuid-1\tfile.tsv\tabc\t123\treleased\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    by_name = {record["file_name"]: record for record in recognition["files"]}  # type: ignore[index]
+
+    assert by_name["clinical.tsv"]["recognized_type"] == "tcga_clinical_metadata"
+    assert by_name["clinical.tsv"]["standardization_status"] == "eligible"
+    assert by_name["gdc_manifest.tsv"]["recognized_type"] == "gdc_manifest"
+    assert by_name["gdc_manifest.tsv"]["standardization_status"] == "reference_only"
+
+
+def test_gtex_expression_and_sample_metadata_recognition(project_root: Path) -> None:
+    expression = project_root / "raw_data" / "gtex" / "Thyroid" / "gtex_tpm.tsv"
+    metadata = project_root / "raw_data" / "gtex" / "Thyroid" / "gtex_sample_attributes.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text(
+        "Name\tGTEX-1117F-0226-SM-5GZZ7\tGTEX-2222B-0226-SM-5GZZ8\n"
+        "ENSG00000141510\t2.4\t2.8\n"
+        "ENSG00000146648\t5.1\t5.4\n",
+        encoding="utf-8",
+    )
+    metadata.write_text(
+        "SAMPID\tSMTS\tSMTSD\tSEX\tAGE\n"
+        "GTEX-1117F-0226-SM-5GZZ7\tThyroid\tThyroid\t1\t50-59\n",
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    by_name = {record["file_name"]: record for record in recognition["files"]}  # type: ignore[index]
+
+    assert by_name["gtex_tpm.tsv"]["recognized_type"] == "gtex_expression_matrix"
+    assert by_name["gtex_tpm.tsv"]["matrix_profile"]["value_type_candidate"] == "TPM"
+    assert by_name["gtex_sample_attributes.tsv"]["recognized_type"] == "gtex_sample_metadata"
+    assert by_name["gtex_sample_attributes.tsv"]["standardization_status"] == "eligible"
+
+
 def test_gzip_text_expression_matrix_is_recognized(project_root: Path) -> None:
     source = project_root / "raw_data" / "local_import" / "expression.tsv.gz"
     source.parent.mkdir(parents=True, exist_ok=True)
@@ -1085,7 +1181,7 @@ def test_gzip_csv_expression_matrix_with_entrez_rowname_and_symbol_annotation(pr
 def test_workflow_and_task_center_do_not_run_analysis(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
-    raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    raw_file.write_text("gene\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
     run_project_recognition(project_root)
     run_project_readiness(project_root)
 

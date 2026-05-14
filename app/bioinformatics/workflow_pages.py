@@ -2950,7 +2950,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         filter_row.addWidget(self._duplicate_filter)
         filter_row.addStretch(1)
         root.addLayout(filter_row)
-        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "识别理由", "warning"])
+        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "标准化状态 / 识别理由", "warning"])
         self._table.setObjectName("recognitionResultTable")
         confidence_header = self._table.horizontalHeaderItem(3)
         if confidence_header is not None:
@@ -3053,7 +3053,7 @@ class BioinformaticsRecognitionWidget(QWidget):
                     _recognition_type_text(item),
                     _format_confidence(item.get("confidence")),
                     _format_file_size(item.get("file_size")),
-                    str(item.get("reason", "")),
+                    _recognition_status_reason(item),
                     warning,
                 ]
             )
@@ -3069,6 +3069,8 @@ class BioinformaticsRecognitionWidget(QWidget):
                     table_item.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
                 elif col_index == 4:
                     table_item.setToolTip(f"原始 bytes：{source.get('file_size', '未记录')}")
+                elif col_index == 5:
+                    table_item.setToolTip(str(source.get("next_action") or source.get("reason") or ""))
                 self._table.setItem(row_index, col_index, table_item)
         self._table.resizeColumnsToContents()
 
@@ -8942,6 +8944,21 @@ def _format_confidence(value: object) -> str:
     return f"{numeric * 100:.0f}%"
 
 
+def _recognition_status_reason(item: dict[str, object]) -> str:
+    status = str(item.get("standardization_status_zh") or "")
+    reason = str(item.get("reason") or "")
+    if not status:
+        roles = {str(role) for role in item.get("recognized_roles", []) or []}
+        primary = str(item.get("recognized_type") or "")
+        if primary in {"unknown", "raw_heavy_file"}:
+            status = "不能用于分析"
+        elif roles & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "clinical_metadata", "tcga_expression_matrix", "gtex_expression_matrix"}:
+            status = "可进入标准化"
+        elif roles & {"platform_annotation", "gene_annotation", "platform_reference_hint", "gmt_gene_set"}:
+            status = "仅作参考/注释"
+    return f"{status}：{reason}" if status and reason else (status or reason)
+
+
 def _recognition_type_text(item: dict[str, object]) -> str:
     primary = str(item.get("recognized_type") or "unknown")
     primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
@@ -8970,6 +8987,10 @@ def _recognition_roles_tooltip(item: dict[str, object]) -> str:
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role)]
     assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
     lines = [f"主类型：{item.get('recognized_type_zh') or TYPE_LABELS.get(str(item.get('recognized_type') or 'unknown'), '未知文件')}"]
+    if item.get("standardization_status_zh"):
+        lines.append(f"标准化状态：{item.get('standardization_status_zh')}")
+    if item.get("next_action"):
+        lines.append(f"建议动作：{item.get('next_action')}")
     if str(item.get("recognized_type") or "") == "geo_soft_container":
         depth = _geo_soft_parser_depth_from_item(item)
         lines.append(f"SOFT 解析深度：{_geo_soft_parser_depth_label(depth)}")
@@ -9120,6 +9141,11 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
     counts = report.get("type_counts", {}) if isinstance(report.get("type_counts"), dict) else {}
     duplicate_count = sum(1 for item in files if item.get("_duplicate"))
     effective_count = sum(1 for item in files if item.get("_effective_source"))
+    status_counts = {
+        "可进入标准化": sum(1 for item in files if str(item.get("standardization_status") or "") == "eligible"),
+        "仅作参考/注释": sum(1 for item in files if str(item.get("standardization_status") or "") == "reference_only"),
+        "不能用于分析": sum(1 for item in files if str(item.get("standardization_status") or "") == "blocked"),
+    }
     type_lines = []
     for key, label in TYPE_LABELS.items():
         count = int(counts.get(key, 0) or 0)
@@ -9134,12 +9160,18 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         next_step = "可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     else:
         next_step = "未识别到表达矩阵或原始计数矩阵，请返回数据来源补充文件。"
+    stale = report.get("stale_status") if isinstance(report.get("stale_status"), dict) else {}
+    stale_line = "识别报告状态：当前。"
+    if stale.get("is_stale"):
+        stale_line = f"识别报告状态：已过期，{stale.get('message') or '请重新识别。'}"
     return "\n".join(
         [
             f"识别文件总数：{len(files)}",
             f"warning 数量：{len(warnings)}",
             f"类型统计：{'；'.join(type_lines) if type_lines else '暂无可识别类型'}",
+            "标准化状态：" + "；".join(f"{label}：{count}" for label, count in status_counts.items()),
             f"疑似重复文件：{duplicate_count} 个",
+            stale_line,
             source_note,
             f"下一步建议：{next_step}",
         ]
@@ -9162,6 +9194,9 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
     report = load_recognition_report(project_root)
     if not isinstance(report, dict):
         return False, "尚未生成数据识别报告。"
+    stale = report.get("stale_status") if isinstance(report.get("stale_status"), dict) else {}
+    if stale.get("is_stale"):
+        return False, str(stale.get("message") or "识别报告已过期，请重新识别。")
     files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
     if not files:
         return False, "识别报告中没有任何文件。"

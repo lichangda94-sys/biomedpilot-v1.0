@@ -18,6 +18,7 @@ try:
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.project_results import write_result_index
+    import app.bioinformatics.project_recognition as project_recognition
     import app.bioinformatics.workflow_pages as workflow_pages
     from app.bioinformatics.workflow_pages import (
         BioinformaticsAcquisitionStatusWidget,
@@ -2480,8 +2481,14 @@ def test_analysis_task_center_uses_confirmed_geo_assignments(qt_app, project_sum
 def _write_mock_recognition_report(project_root: Path, files: list[dict[str, object]]) -> Path:
     path = project_root / "logs" / "recognition" / "recognition_report.json"
     path.parent.mkdir(parents=True, exist_ok=True)
+    input_paths = [Path(str(item.get("original_path"))) for item in files if item.get("original_path")]
+    input_fingerprint = project_recognition._build_input_fingerprint(input_paths)
     payload = {
-        "schema_version": "biomedpilot.recognition_report.v1",
+        "schema_version": project_recognition.RECOGNITION_REPORT_SCHEMA_VERSION,
+        "recognition_engine_version": project_recognition.RECOGNITION_ENGINE_VERSION,
+        "recognition_run_id": "test-recognition-run",
+        "input_fingerprint": input_fingerprint,
+        "report_status": "current",
         "files": files,
         "type_counts": {"expression_matrix": sum(1 for item in files if item.get("recognized_type") == "expression_matrix")},
         "warnings": [],

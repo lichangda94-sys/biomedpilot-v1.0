@@ -44,7 +44,21 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
                     "validation_status": "warning" if item.get("warning") else "registered",
                     "warning": item.get("warning") or "",
                     "analysis_ready": asset_type
-                    in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "gmt_gene_set"},
+                    in {
+                        "expression_matrix",
+                        "normalized_expression_matrix",
+                        "raw_count_matrix",
+                        "tcga_expression_matrix",
+                        "gtex_expression_matrix",
+                        "sample_metadata",
+                        "phenotype_metadata",
+                        "clinical_metadata",
+                        "survival_metadata",
+                        "tcga_clinical_metadata",
+                        "tcga_sample_metadata",
+                        "gtex_sample_metadata",
+                        "gmt_gene_set",
+                    },
                 }
             )
     assets = _dedupe_standardized_assets(assets)
@@ -121,7 +135,7 @@ def _processing_tasks_from_assets(assets: list[dict[str, object]]) -> list[dict[
     for asset in assets:
         asset_type = str(asset.get("asset_type") or "")
         file_path = str(asset.get("file_path") or "")
-        if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+        if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
             tasks.append(_processing_task("expression_matrix_cleaning", "表达矩阵清洗", file_path, asset_type, "pending_confirmation"))
             tasks.append(_processing_task("gene_annotation_mapping", "基因注释映射", file_path, asset_type, "pending_annotation_source"))
         elif asset_type in {"platform_annotation", "gene_annotation", "platform_reference_hint"}:

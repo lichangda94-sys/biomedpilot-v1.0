@@ -28,8 +28,8 @@ ANALYSIS_ROWS = (
     ("reporting", "报告生成", {"analysis_result"}),
 )
 
-CORE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
-EXPRESSION_COMPATIBLE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
+CORE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
+EXPRESSION_COMPATIBLE_INPUTS = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
 
 
 def run_project_readiness(project_root: str | Path) -> dict[str, object]:
@@ -243,7 +243,7 @@ def _next_step_for_row(key: str, can_run: bool, missing: list[str], warnings: li
 
 
 def _add_available_input(available: set[str], role: str) -> None:
-    if not role or role in {"unknown", "differential_result_table", "unsupported", "archive"}:
+    if not role or role in {"unknown", "differential_result_table", "unsupported", "archive", "raw_heavy_file", "gdc_manifest"}:
         return
     available.add(role)
     if role in EXPRESSION_COMPATIBLE_INPUTS:
