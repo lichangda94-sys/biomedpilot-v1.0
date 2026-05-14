@@ -1366,6 +1366,11 @@ def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes
     assert widget._geo_registered_table.item(0, 0).text() == "GSE33630"
     assert "表达矩阵" in widget._geo_registered_table.item(0, 2).text()
     assert widget._geo_registered_table.item(0, 4).text() == "进入数据识别"
+    pending_entries = workflow_pages._current_project_dataset_entries(project_summary.project_root, expand_geo_files=True)
+    geo_file_entries = [entry for entry in pending_entries if entry.source_type_key == "geo_accession"]
+    assert [entry.name for entry in geo_file_entries] == ["GSE33630-GPL570_series_matrix.txt.gz", "GSE33630_counts.tsv.gz"]
+    assert all(len(entry.source_files) == 2 for entry in geo_file_entries)
+    assert "GEO 下载批次摘要" in workflow_pages._dataset_batch_summary_text(pending_entries)
     widget._show_candidate_detail(candidate)
     assert "补充文件" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
     assert widget._geo_dataset_detail_panel._download_assets_button.isHidden()

@@ -13,6 +13,11 @@ from urllib.parse import unquote, urljoin
 from urllib.request import urlopen
 from uuid import uuid4
 
+from app.bioinformatics.gse_file_download_candidates import (
+    gse_file_download_candidate_selection_path,
+    load_gse_file_download_candidate_selection,
+    selected_gse_file_download_candidates,
+)
 from app.bioinformatics.project_workspace_binding import AcquisitionSummary, register_acquisition
 from app.bioinformatics.search_center.models import BioinformaticsSearchCenterResult, UnifiedDatasetCandidate
 
@@ -525,6 +530,12 @@ class DatasetDownloadService:
             raise FileNotFoundError(f"未找到 {accession} 的 GEO asset manifest，请先下载 family SOFT 元数据。")
         manifest = _read_json(manifest_path)
         target_dir = manifest_path.parent
+        selection_path = gse_file_download_candidate_selection_path(project_root=root, accession=accession)
+        selection_manifest = load_gse_file_download_candidate_selection(project_root=root, accession=accession)
+        selected_candidates = selected_gse_file_download_candidates(selection_manifest)
+        selected_file_names = {str(row.get("file_name") or "") for row in selected_candidates if str(row.get("file_name") or "")}
+        selected_candidate_ids = [str(row.get("candidate_id") or "") for row in selected_candidates if str(row.get("candidate_id") or "")]
+        selection_applied = bool(selection_manifest)
         request = DatasetDownloadRequest(
             download_id=f"dl-{uuid4().hex[:10]}",
             project_root=str(root),
@@ -547,6 +558,10 @@ class DatasetDownloadService:
                 "accession_or_project": accession,
                 "generated_query_or_mapping": accession,
                 "asset_manifest_path": str(manifest_path),
+                "download_candidate_selection_path": str(selection_path) if selection_manifest else "",
+                "download_candidate_selection_applied": selection_applied,
+                "selected_candidate_ids": selected_candidate_ids,
+                "selected_file_names": sorted(selected_file_names),
             },
             created_at=_now(),
         )
@@ -560,6 +575,9 @@ class DatasetDownloadService:
         errors: list[str] = []
         for asset in assets:
             if asset.get("asset_type") not in selected_types or asset.get("status") == "downloaded":
+                continue
+            file_name = str(asset.get("file_name") or Path(str(asset.get("remote_url") or "")).name)
+            if selection_applied and file_name not in selected_file_names:
                 continue
             remote_url = str(asset.get("remote_url") or "")
             if not remote_url:
@@ -589,6 +607,8 @@ class DatasetDownloadService:
                     "download_id": request.download_id,
                     "created_at": _now(),
                     "asset_types": list(asset_types),
+                    "selection_manifest_path": str(selection_path) if selection_manifest else "",
+                    "selected_file_names": sorted(selected_file_names),
                     "downloaded_asset_count": downloaded_asset_count,
                     "downloaded_files": downloaded_files,
                     "errors": errors,
@@ -614,7 +634,13 @@ class DatasetDownloadService:
             "asset_manifest_path": str(manifest_path),
             "asset_manifest": manifest,
             "request_path": str(request_path),
-            "download_result": {"downloaded_asset_count": downloaded_asset_count, "errors": errors},
+            "download_result": {
+                "downloaded_asset_count": downloaded_asset_count,
+                "errors": errors,
+                "selection_manifest_path": str(selection_path) if selection_manifest else "",
+                "selected_file_names": sorted(selected_file_names),
+                "selection_applied": selection_applied,
+            },
             "metadata": request.metadata,
         }
         _write_json(receipt_path, receipt)

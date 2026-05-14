@@ -88,7 +88,9 @@ from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_en
 from app.bioinformatics.download import DatasetDownloadService, GeoDatasetProfile, GeoDatasetProfileService, GeoStudyTextInput, GeoTextSummaryService
 from app.bioinformatics.gse_file_download_candidates import (
     build_gse_file_download_candidates,
+    load_gse_file_download_candidate_selection,
     save_gse_file_download_candidate_selection,
+    selected_gse_file_download_candidates,
 )
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import load_result_index, write_result_index
@@ -489,7 +491,7 @@ class GeoDownloadListPanel(QFrame):
         layout.addLayout(batch_row)
 
     def refresh(self, project_root: Path | None) -> None:
-        entries = _current_project_dataset_entries(project_root, geo_only=self._geo_only)
+        entries = _current_project_dataset_entries(project_root, geo_only=self._geo_only, expand_geo_files=not self._geo_only)
         self._entries = entries
         self._checks = {}
         self._empty.setVisible(not entries)
@@ -5028,7 +5030,7 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
     return sorted(rows_by_key.values(), key=lambda row: row.created_at)
 
 
-def _current_project_dataset_entries(project_root: Path | None, *, geo_only: bool = False) -> list[DatasetListEntry]:
+def _current_project_dataset_entries(project_root: Path | None, *, geo_only: bool = False, expand_geo_files: bool = True) -> list[DatasetListEntry]:
     if project_root is None:
         return []
     notes = _load_user_dataset_notes(project_root)
@@ -5062,7 +5064,8 @@ def _current_project_dataset_entries(project_root: Path | None, *, geo_only: boo
             location_tooltip=_registered_source_full_location(payload, metadata),
             source_files=tuple(_recognition_source_files_from_payload(payload)),
         )
-        entries = _expand_local_dataset_entries(_dataset_entry_from_record(project_root, row, payload, metadata, notes), notes)
+        entry = _dataset_entry_from_record(project_root, row, payload, metadata, notes)
+        entries = _expand_dataset_entries(entry, notes, expand_geo_files=expand_geo_files)
         for entry in entries:
             rank = _dataset_entry_rank(entry, row.created_at)
             previous = grouped.get(entry.key)
@@ -5076,7 +5079,24 @@ def _current_project_dataset_entries(project_root: Path | None, *, geo_only: boo
                 ranks[entry.key] = rank
             else:
                 grouped[entry.key] = DatasetListEntry(**{**previous.__dict__, "acquisition_ids": acquisition_ids})
+    if expand_geo_files:
+        expanded_geo_bases = {
+            entry.key.split(":file:", 1)[0]
+            for entry in grouped.values()
+            if entry.source_type_key in GEO_SOURCE_TYPES and entry.focused_source_file and ":file:" in entry.key
+        }
+        for base_key in expanded_geo_bases:
+            grouped.pop(base_key, None)
     return sorted(grouped.values(), key=lambda entry: (_dataset_source_order(entry.source_type_key), entry.name))
+
+
+def _expand_dataset_entries(entry: DatasetListEntry, notes: dict[str, str], *, expand_geo_files: bool) -> list[DatasetListEntry]:
+    local_entries = _expand_local_dataset_entries(entry, notes)
+    if len(local_entries) != 1 or local_entries[0] is not entry:
+        return local_entries
+    if expand_geo_files:
+        return _expand_geo_dataset_entries(entry, notes)
+    return [entry]
 
 
 def _pending_dataset_entry_count(entries: Iterable[DatasetListEntry]) -> int:
@@ -5169,6 +5189,58 @@ def _expand_local_dataset_entries(entry: DatasetListEntry, notes: dict[str, str]
             )
         )
     return expanded
+
+
+def _expand_geo_dataset_entries(entry: DatasetListEntry, notes: dict[str, str]) -> list[DatasetListEntry]:
+    if entry.source_type_key not in GEO_SOURCE_TYPES or len(entry.source_files) <= 1:
+        return [entry]
+    batch_summary = _geo_download_batch_summary(entry.source_files, entry.accession or entry.name, entry.status)
+    expanded: list[DatasetListEntry] = []
+    for index, raw_path in enumerate(entry.source_files, start=1):
+        file_key = f"{entry.key}:file:{index}"
+        file_name = Path(raw_path).name
+        expanded.append(
+            DatasetListEntry(
+                **{
+                    **entry.__dict__,
+                    "key": file_key,
+                    "name": file_name,
+                    "available_content": "待识别：1 个文件",
+                    "missing_content": "待识别确认",
+                    "note": notes.get(file_key, ""),
+                    "title": file_name,
+                    "abstract": f"{entry.accession or entry.name} 下载候选中的第 {index} 个文件。",
+                    "keywords": _local_file_type_hint(file_name),
+                    "technical_info": _geo_file_dataset_technical_info(entry, raw_path, index),
+                    "focused_source_file": raw_path,
+                    "batch_summary": batch_summary,
+                }
+            )
+        )
+    return expanded
+
+
+def _geo_download_batch_summary(source_files: tuple[str, ...], accession: str, status: str) -> str:
+    names = [Path(path).name for path in source_files]
+    preview = "、".join(names[:3])
+    remaining = len(names) - 3
+    if remaining > 0:
+        preview = f"{preview}；另有 {remaining} 个文件"
+    return f"{accession} 下载文件总数：{len(source_files)} 个；状态：{status}；包含 {preview}"
+
+
+def _geo_file_dataset_technical_info(entry: DatasetListEntry, focused_source_file: str, index: int) -> str:
+    return _json(
+        {
+            "数据来源": entry.source,
+            "GSE 编号": entry.accession or entry.name,
+            "当前文件": focused_source_file,
+            "文件序号": index,
+            "下载文件总数": len(entry.source_files),
+            "source_files": list(entry.source_files),
+            "acquisition_ids": list(entry.acquisition_ids),
+        }
+    )
 
 
 def _local_import_batch_summary(source_files: tuple[str, ...], storage_policy: str, status: str) -> str:
@@ -5391,13 +5463,16 @@ def _dataset_batch_summary_text(entries: Iterable[DatasetListEntry]) -> str:
     summaries: list[str] = []
     seen: set[tuple[str, ...]] = set()
     for entry in entries:
-        if entry.source_type_key != "local_import" or len(entry.source_files) <= 1:
+        if entry.source_type_key not in {"local_import", *GEO_SOURCE_TYPES} or len(entry.source_files) <= 1:
             continue
         acquisition_key = entry.acquisition_ids or (entry.key,)
         if acquisition_key in seen:
             continue
         seen.add(acquisition_key)
-        summaries.append(f"本地导入批次摘要：{entry.batch_summary or _local_import_batch_summary(entry.source_files, entry.storage_policy, entry.status)}")
+        if entry.source_type_key == "local_import":
+            summaries.append(f"本地导入批次摘要：{entry.batch_summary or _local_import_batch_summary(entry.source_files, entry.storage_policy, entry.status)}")
+        else:
+            summaries.append(f"GEO 下载批次摘要：{entry.batch_summary or _geo_download_batch_summary(entry.source_files, entry.accession or entry.name, entry.status)}")
     return "\n".join(summaries)
 
 
@@ -5433,6 +5508,18 @@ def _dataset_detail_summary(entry: DatasetListEntry) -> str:
         )
         for index, raw_path in enumerate(files, start=1):
             lines.append(f"{index}. {Path(raw_path).name}｜{storage}｜{raw_path}")
+    elif entry.source_type_key in GEO_SOURCE_TYPES and entry.focused_source_file:
+        lines.extend(
+            [
+                f"当前查看文件：{Path(entry.focused_source_file).name}",
+                f"文件来源状态：{entry.status}",
+                f"批次摘要：{entry.batch_summary}",
+                "下载批次完整文件列表：",
+                f"文件总数：{len(entry.source_files)} 个",
+            ]
+        )
+        for index, raw_path in enumerate(entry.source_files, start=1):
+            lines.append(f"{index}. {Path(raw_path).name}｜GEO 下载文件｜{raw_path}")
     return "\n".join(lines)
 
 
@@ -6049,10 +6136,21 @@ def _candidate_has_pending_geo_assets(project_root: Path | None, accession_or_pr
     manifest = _candidate_geo_asset_manifest(project_root, accession_or_project)
     if not manifest:
         return False
+    selected_file_names: set[str] | None = None
+    if project_root is not None:
+        selection = load_gse_file_download_candidate_selection(project_root=project_root, accession=accession_or_project)
+        if selection:
+            selected_file_names = {
+                str(row.get("file_name") or "")
+                for row in selected_gse_file_download_candidates(selection)
+                if str(row.get("file_name") or "")
+            }
     for asset in manifest.get("assets", []) or []:
         if not isinstance(asset, dict):
             continue
         if asset.get("asset_type") not in {"series_matrix", "supplementary_file"}:
+            continue
+        if selected_file_names is not None and str(asset.get("file_name") or "") not in selected_file_names:
             continue
         if asset.get("status") != "downloaded" and asset.get("remote_url"):
             return True

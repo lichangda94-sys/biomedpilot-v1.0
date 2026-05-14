@@ -5,6 +5,10 @@ from pathlib import Path
 
 from app.bioinformatics.download import dataset_download_service
 from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
+from app.bioinformatics.gse_file_download_candidates import (
+    build_gse_file_download_candidates,
+    save_gse_file_download_candidate_selection,
+)
 from app.bioinformatics.search_center.models import UnifiedDatasetCandidate
 from app.shared.ai_gateway.models import AIGatewayResponse
 
@@ -261,6 +265,50 @@ def test_geo_manifest_assets_download_updates_manifest_and_registers_files(tmp_p
     assert record["strategy"] == "reference"
     assert record["metadata"]["download_status"] == "geo_assets_downloaded"
     assert record["metadata"]["asset_manifest_summary"]["expression_matrix_status"] == "downloaded"
+
+
+def test_geo_manifest_assets_download_respects_candidate_selection_manifest(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    service = DatasetDownloadService(
+        geo_downloader=_FakeGeoDownloader(),
+        geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+        geo_asset_downloader=_FakeGeoRemoteAssetDownloader(),
+    )
+    metadata = service.create_candidate_download_task(
+        project_root=root,
+        candidate=_candidate(),
+        original_chinese_topic="脑胶质瘤",
+        execute_download=True,
+    )
+    draft = build_gse_file_download_candidates(project_root=root, accession="GSE33630")
+    series_id = next(row["candidate_id"] for row in draft["candidates"] if row["file_name"].endswith("_series_matrix.txt.gz"))
+    selection_path = save_gse_file_download_candidate_selection(
+        project_root=root,
+        accession="GSE33630",
+        selected_candidate_ids=(series_id,),
+    )
+
+    result = service.download_geo_manifest_assets(project_root=root, accession_or_project="GSE33630")
+
+    assert metadata.status == "geo_metadata_downloaded"
+    assert result.success
+    assert len(result.downloaded_files) == 1
+    assert Path(result.downloaded_files[0]).name.endswith("_series_matrix.txt.gz")
+    receipt = json.loads(Path(result.receipt_path).read_text(encoding="utf-8"))
+    assert receipt["download_result"]["selection_applied"] is True
+    assert receipt["download_result"]["selection_manifest_path"] == str(selection_path)
+    assert receipt["download_result"]["selected_file_names"] == ["GSE33630-GPL570_series_matrix.txt.gz"]
+    request = json.loads(Path(result.request_path).read_text(encoding="utf-8"))
+    assert request["metadata"]["download_candidate_selection_applied"] is True
+    assert request["metadata"]["selected_file_names"] == ["GSE33630-GPL570_series_matrix.txt.gz"]
+    manifest = json.loads(Path(str(result.details["asset_manifest_path"])).read_text(encoding="utf-8"))
+    statuses = {asset["file_name"]: asset["status"] for asset in manifest["assets"]}
+    assert statuses["GSE33630-GPL570_series_matrix.txt.gz"] == "downloaded"
+    assert statuses["GSE33630_counts.tsv.gz"] == "remote_discovered"
+    assert result.acquisition_summary is not None
+    record = json.loads(result.acquisition_summary.record_path.read_text(encoding="utf-8"))
+    assert record["source_files"] == list(result.downloaded_files)
+    assert record["metadata"]["download_candidate_selection_path"] == str(selection_path)
 
 
 def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:

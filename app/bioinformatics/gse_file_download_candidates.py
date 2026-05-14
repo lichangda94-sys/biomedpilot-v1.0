@@ -118,6 +118,20 @@ def load_gse_file_download_candidate_selection(
     return None
 
 
+def gse_file_download_candidate_selection_path(*, project_root: str | Path, accession: str) -> Path:
+    root = Path(project_root).expanduser().resolve()
+    return root / "acquisition" / SELECTION_DIRNAME / f"{_normalize_gse_accession(accession)}_download_candidates.json"
+
+
+def selected_gse_file_download_candidates(selection: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(selection, dict):
+        return []
+    rows = selection.get("candidates")
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict) and bool(row.get("selected"))]
+
+
 def _candidate_id(accession: str, item: GeoSupplementaryFile, seen: set[str]) -> str:
     base = f"{accession}:{item.asset_type or 'asset'}:{item.file_name}"
     safe = re.sub(r"[^A-Za-z0-9_.:-]+", "_", base).strip("_") or f"{accession}:asset"
