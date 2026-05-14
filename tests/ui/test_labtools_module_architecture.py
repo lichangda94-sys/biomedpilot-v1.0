@@ -150,6 +150,7 @@ def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:
             "western_blot",
             "pcr_qpcr",
             "elisa_absorbance",
+            "imagej_fiji_bridge",
         )
     finally:
         window.close()

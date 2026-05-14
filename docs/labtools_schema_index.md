@@ -16,12 +16,15 @@ SDS-PAGE Gel Template Tool 1 note：新增 `labtools_sds_page_gel_template_store
 
 Western Blot Protein Loading + BCA Assay v1 note：本阶段未新增 persistence schema、未新增导出格式。Protein loading 和 BCA 只新增 non-write-to-disk JSON-compatible result structures；复制结果只写 clipboard，不写盘、不保存 plate layout、不导出 XLSX。
 
+ImageJ/Fiji Bridge v1 note：新增 `labtools_imagej_bridge_config.v1`，用于保存用户触发配置的本地 Fiji/ImageJ bridge 路径和最近一次 smoke test 状态。它是本地配置 schema，不是图像分析结果 schema。
+
 ## 1. 总览
 
 | Schema / structure | 用途 | 写盘状态 | 用户语义 | 可公开分享 | 本地路径风险 |
 | --- | --- | --- | --- | --- | --- |
 | `labtools_roi_export_manifest.v1` | fluorescence / wound manual ROI 导出包 manifest | 用户选择导出目录后写盘 | manual-review / semi-quantitative 辅助结果 | 不建议直接公开；需先检查本地审计字段 | manifest 记录 source image name/reference；Markdown fragment 不应包含 raw absolute path |
 | `labtools_recipe_draft_store.v1` | 用户确认 recipe draft 本地 JSON store | 用户选择 JSON 路径后写盘 | 用户确认的本地草稿持久化 | 不建议公开；可能包含用户配方、来源标题或备注 | 通常不包含保存路径；可能包含来源 URL/title/accessed_at |
+| `labtools_imagej_bridge_config.v1` | ImageJ/Fiji bridge 本地配置 | 用户配置或验证时写入本机配置文件 | 外部后端可用性配置，不是分析结果 | 不建议公开；包含本机可执行文件路径 | 保存 configured_path 和最近一次 command/status/error 摘要 |
 | `labtools_sds_page_gel_template_store.v1` | 用户录入 SDS-PAGE 配胶模板 JSON | 用户选择 JSON 路径后写盘 | 模板备份/迁移/共享，不是通用配方 | 不建议直接公开；需检查来源、备注和实验室内部信息 | 不保存 JSON 文件自身路径；可能包含用户填写的 kit / SOP source 文本 |
 | SDS-PAGE calculation `.xlsx` | 本次 SDS-PAGE 批量换算结果 | 用户选择 XLSX 路径后写盘 | 实验辅助计算草稿 | 不建议作为正式记录公开 | 不保存系统路径；可能包含模板来源和用户备注 |
 | `labtools_experiment_template_draft.v1` | 单个实验记录结构化草稿 | 默认内存结构；可嵌入 record draft store | 本地结构化草稿，不是 ELN | 不建议公开；需人工去标识和复核 | 不应自动包含 raw path；用户填写的 output files 可能含本地文件名或路径片段 |
@@ -54,6 +57,17 @@ Western Blot Protein Loading + BCA Assay v1 note：本阶段未新增 persistenc
 - Local path handling：store payload 不保存 JSON 文件自身路径；source URL/title/accessed_at 可来自用户手动录入来源。
 - Compatibility note：v1 当前没有破坏性要求每个 recipe 必含 `created_at` / `updated_at`；顶层 `created_at` 记录 store 生成时间，来源/导入状态由 `source_*` 字段、`user_confirmed`、`edited_by_user` 和冲突 clone 后的 `user_recipe_imported_<token>` id 表示。
 - Boundary：不是正式 SOP，不构成安全操作规范，不自动适配所有实验；不提供危险化学品、高风险合成、动物/人体实验或病毒实验操作方案。使用前需人工确认浓度、pH、储存条件、有效期和危险性。
+
+## 3A. `labtools_imagej_bridge_config.v1`
+
+- Producer：`ImageJBridgeConfigStore.save()`，由用户配置路径、自动检测、运行验证测试或清除配置触发。
+- Consumer：`LabToolsImageJBridgeWidget`、`run_imagej_smoke_test()`。
+- Main fields：`schema_version`、`backend_type`、`recommended_backend`、`configured_path`、`detected_version`、`java_version`、`status`、`last_smoke_test_at`、`last_smoke_test_result`、`last_error`、`updated_at`。
+- Status values：`not_configured`、`configured_unverified`、`available`、`failed`。
+- User semantics：只表示本机外部 Fiji/ImageJ bridge 配置和 smoke test 状态；不表示任何图像分析 workflow 已经可用。
+- Version policy：推荐 `Fiji Stable / Java 8`；其它版本可尝试使用，smoke test 通过时可调用；版本无法稳定读取时记录 `unknown_version`。
+- Local path handling：保存 `configured_path`，可能包含本机用户名或应用路径；不应公开分享。
+- Boundary：不自动下载、不静默安装、不打包 Fiji/ImageJ；不做 WB/gel grayscale、fluorescence 自动分析、wound 自动分析、cell counting、自动 ROI 或批处理。
 
 ## 4. `labtools_experiment_template_draft.v1`
 
@@ -141,6 +155,7 @@ Western Blot Protein Loading + BCA Assay v1 note：本阶段未新增 persistenc
 - Experiment record draft store：用户点击“保存记录草稿 JSON”并选择路径。
 - SDS-PAGE gel template JSON：用户点击“导出模板 JSON”并选择路径。
 - SDS-PAGE calculation XLSX：用户点击“导出本次计算 XLSX”并选择路径。
+- ImageJ/Fiji bridge config：用户配置路径、自动检测、运行验证测试或清除配置。
 
 Protein loading 和 BCA v1 当前没有写盘路径；复制结果只写 clipboard。
 

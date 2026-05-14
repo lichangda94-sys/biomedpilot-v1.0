@@ -17,9 +17,10 @@ Current image-related behavior remains internally consistent, but the future bac
 - Existing fluorescence manual ROI and wound / scratch manual ROI + threshold remain legacy/testing Python/Pillow MVP tools.
 - These existing MVP tools may remain available as manual-review assistance, but they should not be expanded into a broader in-house image algorithm stack.
 - Future image analysis backend work should use a local Fiji/ImageJ macro bridge.
+- LabTools now has ImageJ/Fiji Bridge v1 infrastructure for user path configuration, common-path probing, version detection, macro smoke test, status display, and local config clearing.
 - LabTools should own UI parameters, macro template selection, input/output path validation, dry-run/preview text, process execution feedback, result parsing, provenance, review notices, and no-overwrite export behavior.
 - Fiji/ImageJ macros should own image quantification logic when future image tools are implemented.
-- ImageJ/Fiji Bridge v1 is not implemented yet. The next stage should build bridge infrastructure only, not new cell counting, WB grayscale, automatic ROI, batch image processing, or formal report-ready interpretation.
+- ImageJ/Fiji Bridge v1 is infrastructure only. It does not implement cell counting, WB grayscale, automatic ROI, batch image processing, fluorescence automated analysis, wound automated analysis, or report-ready interpretation.
 - OpenCV / scikit-image are not the preferred next backend route unless a later stage explicitly overrides this decision.
 
 ## Module Architecture Alignment 1 Update
@@ -108,6 +109,7 @@ Protein loading and BCA are implemented with confirmed narrow scopes:
 | `image.fluorescence_manual_roi_v1` | Fluorescence manual ROI | image_assistance | implemented | yes | no | medium |
 | `image.wound_manual_roi_threshold_v1` | Wound / scratch manual ROI + threshold | image_assistance | implemented | yes | no | medium |
 | `image.roi_export_package_v1` | ROI export package | image_export | implemented | yes | yes | medium |
+| `imagej_fiji.bridge_v1` | ImageJ/Fiji bridge infrastructure | image_backend_config | implemented | no | yes | medium |
 | `recipe.draft_store_v1` | Recipe draft store | recipe_draft | implemented | yes | yes | medium |
 | `recipe.import_export_v1` | Recipe import / export | recipe_draft | implemented | yes | yes | medium |
 | `recipe.safety_category_v1` | Recipe safety category | recipe_draft | implemented | yes | yes | medium |
@@ -136,6 +138,7 @@ Protein loading and BCA are implemented with confirmed narrow scopes:
 | `image.fluorescence_manual_roi_v1` | partial | yes | no | Keep as legacy/testing MVP; future image expansion should move to Fiji/ImageJ macro bridge. |
 | `image.wound_manual_roi_threshold_v1` | partial | yes | no | Keep as legacy/testing MVP; future wound workflow should move to Fiji/ImageJ macro bridge. |
 | `image.roi_export_package_v1` | partial | yes | no | Confirm manifest summary fields and shareability boundaries. |
+| `imagej_fiji.bridge_v1` | yes | no | no | Keep as local external-backend configuration and smoke-test infrastructure; discuss every concrete macro workflow separately. |
 | `recipe.draft_store_v1` | partial | yes | no | Confirm recipe fields and safety wording before richer templates. |
 | `recipe.import_export_v1` | partial | yes | no | Keep non-overwrite behavior; confirm import review workflow if expanded. |
 | `recipe.safety_category_v1` | partial | yes | no | Confirm category names and user-visible meaning. |
@@ -161,6 +164,7 @@ Each row is a compact audit record. Detailed Tool Logic Cards below expand the s
 | `image.fluorescence_manual_roi_v1` | Fluorescence manual ROI | image_assistance | implemented | `fluorescence_analyzer.py`; `fluorescence_models.py`; `image_analysis_widgets.py` | `test_fluorescence_analyzer.py`; `test_fluorescence_export.py`; `test_fluorescence_report.py` | yes | no | image path; signal ROI; background ROI | select image; enter manual ROI; run | grayscale metrics; warnings; previews | manual ROI measurement assistance | manual review | unreadable image; ROI out of bounds; negative CTF warning | partial | medium | yes | no | confirm metrics and background correction |
 | `image.wound_manual_roi_threshold_v1` | Wound / scratch manual ROI + threshold | image_assistance | implemented | `wound_analyzer.py`; `wound_models.py`; `image_analysis_widgets.py` | `test_wound_analyzer.py`; `test_wound_export.py`; `test_wound_report.py` | yes | no | image path; ROI; threshold; mode | select image; enter manual ROI and threshold; run | area pixels and fractions | threshold-based area estimation | manual review | unreadable image; ROI out of bounds; invalid threshold | partial | medium | yes | no | confirm metric meanings |
 | `image.roi_export_package_v1` | ROI export package | image_export | implemented | `export_package.py`; `image_analysis_widgets.py` | `test_roi_export_package_schema.py`; `test_labtools_image_export_ui.py` | yes | yes | current ROI result; output directory | run analysis; choose export directory | JSON; CSV; Markdown; overlay PNG | local manual-review package | manual review | no result; cancel; write failure; source unreadable | partial | medium | yes | no | confirm result summary and path policy |
+| `imagej_fiji.bridge_v1` | ImageJ/Fiji bridge infrastructure | image_backend_config | implemented | `imagej_bridge.py`; `imagej_bridge_widgets.py`; `workspace.py`; `labtools_schema_index.md` | `test_imagej_bridge.py`; `test_labtools_imagej_bridge_ui.py` | no | yes | user-selected executable/app path; auto-detected candidate path | configure path; run smoke test; view status; clear config | local config JSON; status; version fields; smoke-test summary | backend availability check only | manual setup review | missing executable; invalid path; timeout; output missing; version unknown | yes | medium | no | no | keep infrastructure only; require Tool Logic Card for every macro workflow |
 | `recipe.draft_store_v1` | Recipe draft store | recipe_draft | implemented | `recipe_persistence.py`; `user_recipe_store.py`; `recipe_widgets.py` | `test_recipe_persistence.py`; `test_user_recipe_store.py` | yes | yes | confirmed user recipes; save path | confirm draft; save JSON | recipe draft JSON | local recipe draft persistence | SOP/SDS review | no recipes; invalid path; unsafe terms | partial | medium | yes | no | confirm fields and safety wording |
 | `recipe.import_export_v1` | Recipe import / export | recipe_draft | implemented | `recipe_persistence.py`; `user_recipe_store.py`; `recipe_widgets.py` | `test_recipe_persistence.py`; `test_labtools_recipe_persistence_ui.py` | yes | yes | recipe JSON; current store | save or load JSON | saved file; imported recipes; summary | local draft import/export | manual review | malformed JSON; schema mismatch; unsafe terms | partial | medium | yes | no | confirm import review workflow |
 | `recipe.safety_category_v1` | Recipe safety category | recipe_draft | implemented | `recipe_persistence.py`; `recipe_widgets.py`; `labtools_schema_index.md` | `test_recipe_persistence.py`; `test_labtools_recipe_persistence_ui.py` | yes | yes | recipe draft payload | save/load recipe draft | safety category fields and UI text | draft review category reminder | manual review | category naming may be misunderstood | partial | medium | yes | no | confirm category names |
@@ -244,7 +248,7 @@ Priority 1: current implemented result-semantics tools
 - Fluorescence manual ROI.
 - Wound manual ROI + threshold.
 - ROI export summary.
-- ImageJ/Fiji macro bridge v1 infrastructure before any future image backend expansion.
+- ImageJ/Fiji macro workflow Tool Logic Card before any future image backend expansion.
 
 Priority 2: current draft / persistence semantics
 
@@ -272,7 +276,7 @@ Before development resumes, create user-reviewed Tool Logic Cards for:
 - `image.fluorescence_manual_roi_v1`: legacy MVP status, ROI metrics, background correction, negative CTF handling, and migration path to Fiji/ImageJ macro bridge.
 - `image.wound_manual_roi_threshold_v1`: legacy MVP status, threshold mode, scratch vs covered area language, and migration path to Fiji/ImageJ macro bridge.
 - `image.roi_export_package_v1`: manifest summary fields, local path policy, shareability.
-- `imagej_fiji_bridge_v1`: local Fiji/ImageJ executable discovery, macro template path policy, parameter serialization, subprocess execution, timeout/error handling, result file parsing, provenance, and manual-review output semantics.
+- Concrete ImageJ/Fiji macro workflow cards: input files, macro parameter schema, expected result files, provenance, warnings, export policy, and manual-review output semantics.
 - `recipe.draft_store_v1`: required recipe fields and safety category meaning.
 - `experiment.record_draft_store_v1`: required record fields and non-ELN wording.
 - Future WB/BCA expansion: reducer component automation, BCA 4PL, Bradford, NanoDrop, ELISA standard curves, plate layout persistence, export formats.

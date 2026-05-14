@@ -236,6 +236,7 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
             "western_blot",
             "pcr_qpcr",
             "elisa_absorbance",
+            "imagej_fiji_bridge",
         )
     finally:
         _dispose_window(window)
