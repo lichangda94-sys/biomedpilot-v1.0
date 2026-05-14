@@ -286,6 +286,40 @@ def test_mixed_detected_expression_assets_allow_standardization_but_not_deg(proj
     assert {"raw_count_matrix", "normalized_expression_matrix", "gene_annotation"} <= asset_types
 
 
+def test_count_matrix_without_group_is_standardization_ready_not_deg_ready(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "counts.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,A1_count,A2_count,B1_count\nTP53,12,15,18\nEGFR,40,41,43\n", encoding="utf-8")
+
+    run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "raw_count_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert "comparison_config" in diff_row["missing_inputs"]
+    assert diff_row["can_run"] is False
+
+
+def test_fpkm_expression_matrix_without_group_is_standardization_ready_not_deg_ready(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "fpkm_matrix.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,A1_FPKM,A2_FPKM,B1_FPKM\nTP53,1.2,1.5,1.8\nEGFR,4.0,4.1,4.3\n", encoding="utf-8")
+
+    run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "normalized_expression_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert "comparison_config" in diff_row["missing_inputs"]
+    assert diff_row["can_run"] is False
+
+
 def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "geo" / "GSE315375" / "supplementary" / "GSE315375_exp_tyroid_controlX5.xlsx"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
@@ -554,6 +588,8 @@ def test_differential_result_table_not_counted_as_expression_input(project_root:
     assert assets["differential_result_table"]["input_eligible"] is False
     readiness = run_project_readiness(project_root)["readiness_report"]  # type: ignore[index]
     assert readiness["has_core_input"] is False
+    assert readiness["standardization_ready"] is False
+    assert readiness["deg_ready"] is False
     assert "expression_matrix" not in readiness["available_inputs"]
     standardization = generate_standardized_assets(project_root)
     assert standardization["registry"]["assets"] == []  # type: ignore[index]

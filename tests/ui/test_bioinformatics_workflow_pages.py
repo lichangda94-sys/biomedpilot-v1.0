@@ -2521,6 +2521,42 @@ def test_recognition_readiness_and_standardization_continue_gates(qt_app, projec
     assert "不能继续" in standardization.status_message()
 
 
+def test_no_expression_matrix_keeps_standardization_gate_blocked(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "samples.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("sample_id\tgroup\nS1\tcase\nS2\tcontrol\n", encoding="utf-8")
+    _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "sample_metadata",
+                "recognized_type_zh": "样本注释",
+                "recognized_roles": ["sample_metadata"],
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    events: list[Path] = []
+    recognition = BioinformaticsRecognitionWidget(on_continue=events.append)
+    recognition.refresh_project(project_summary)
+    recognition.continue_to_readiness()
+
+    assert events == []
+    assert "不能继续：未识别到表达矩阵或原始计数矩阵" in recognition.status_message()
+    assert "未识别到表达矩阵或原始计数矩阵" in recognition._counts.toPlainText()
+
+    readiness = BioinformaticsReadinessDashboardWidget(on_continue=events.append)
+    readiness.refresh_project(project_summary)
+    artifacts = readiness.run_readiness_check()
+    assert artifacts is not None
+    assert artifacts["readiness_report"]["standardization_ready"] is False  # type: ignore[index]
+    assert artifacts["readiness_report"]["deg_ready"] is False  # type: ignore[index]
+    assert "补充表达矩阵" in readiness.findChild(QLabel, "readinessNextStep").text()
+
+
 def test_mixed_expression_detection_separates_standardization_and_deg_readiness(qt_app, project_summary) -> None:
     source = project_summary.project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
     source.parent.mkdir(parents=True, exist_ok=True)
@@ -2552,8 +2588,11 @@ def test_mixed_expression_detection_separates_standardization_and_deg_readiness(
 
     assert events == [project_summary.project_root]
     assert "不能继续" not in recognition.status_message()
-    assert "可以继续数据准备检查" in recognition._counts.toPlainText()
-    assert "确认分组后再做 DEG 分析" in recognition._counts.toPlainText()
+    assert "可以继续进入数据准备与标准化" in recognition.status_message()
+    assert "可以继续进入数据准备与标准化" in recognition._counts.toPlainText()
+    assert "确认分组后才能进行 DEG 分析" in recognition._counts.toPlainText()
+    assert "未识别到表达矩阵" not in recognition.status_message()
+    assert "未识别到表达矩阵" not in recognition._counts.toPlainText()
 
     readiness = BioinformaticsReadinessDashboardWidget(on_continue=events.append)
     readiness.refresh_project(project_summary)
@@ -2562,8 +2601,11 @@ def test_mixed_expression_detection_separates_standardization_and_deg_readiness(
     report = artifacts["readiness_report"]  # type: ignore[index]
     assert report["standardization_ready"] is True
     assert report["deg_ready"] is False
+    assert "可以继续进入数据准备与标准化" in readiness.findChild(QLabel, "readinessStatusBadge").text()
     assert "已识别到的数据：表达矩阵" in readiness.findChild(QLabel, "readinessRecognizedInputs").text()
     assert "仍需补充的数据" in readiness.findChild(QLabel, "readinessMissingInputs").text()
+    assert "可以继续进入数据准备与标准化" in readiness.findChild(QLabel, "readinessNextStep").text()
+    assert "未识别到表达矩阵" not in readiness.findChild(QLabel, "readinessNextStep").text()
     readiness.continue_to_standardization()
     assert events[-1] == project_summary.project_root
     assert "不能继续" not in readiness.status_message()

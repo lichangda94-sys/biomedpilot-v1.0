@@ -2801,6 +2801,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         if not ok:
             self._set_status(f"不能继续：{reason} 请返回数据来源补充文件。")
             return
+        self._set_status("可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。")
         self.continue_requested.emit(self._project_root)
 
     def _build_ui(self) -> None:
@@ -7262,16 +7263,18 @@ def _supplement_hint_text(readiness: dict[str, object], matrix: dict[str, object
 
 
 def _readiness_overall_summary(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
-    has_core_input = bool(readiness.get("has_core_input"))
+    standardization_ready = bool(readiness.get("standardization_ready") or readiness.get("has_core_input"))
     rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
     runnable = [row for row in rows if row.get("can_run") and row.get("analysis_type") != "reporting"]
-    if not has_core_input:
+    if not standardization_ready:
         return "暂不能继续：还没有可用的表达矩阵。"
+    if not readiness.get("deg_ready"):
+        return "可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     if runnable and not missing:
         return "可以继续：关键输入已基本满足。"
     if runnable:
         return "基本可继续，但有信息需要补充。"
-    return "暂不能继续：关键输入还不完整。"
+    return "可以继续进入数据准备与标准化。"
 
 
 def _readiness_recognized_inputs_text(readiness: dict[str, object]) -> str:
@@ -7303,7 +7306,7 @@ def _readiness_next_step_text(
     missing: set[str],
     group_preview: dict[str, object] | None = None,
 ) -> str:
-    has_core_input = bool(readiness.get("has_core_input"))
+    standardization_ready = bool(readiness.get("standardization_ready") or readiness.get("has_core_input"))
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
     comparison_status = str(readiness.get("comparison_group_status") or "")
     if comparison_status == "confirmed_missing_expression":
@@ -7314,8 +7317,10 @@ def _readiness_next_step_text(
     if comparison_status == "confirmed_ready":
         summary = str(readiness.get("comparison_group_summary_zh") or "比较组已确认。")
         return f"下一步建议：{summary}可以进入标准化，并在分析中心运行差异表达分析。"
-    if "expression_matrix" in missing or not has_core_input:
+    if "expression_matrix" in missing or not standardization_ready:
         return "下一步建议：请返回数据导入页面补充表达矩阵文件。"
+    if not readiness.get("deg_ready") and "comparison_config" in missing:
+        return "下一步建议：可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     if "comparison_config" in missing and _group_preview_has_candidate(group_preview):
         return "下一步建议：已检测到候选分组，请确认比较组；也可以先进入标准化，之后再确认。"
     if "comparison_config" in missing and "sample_metadata" not in missing:
@@ -8489,7 +8494,7 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         source_note = f"当前有效数据来源文件：{effective_count} 个。"
     has_core = has_standardizable_expression_input(files)
     if has_core:
-        next_step = "已识别到表达矩阵或原始计数矩阵，可以继续数据准备检查；若分组信息未识别，请在标准化阶段确认分组后再做 DEG 分析。"
+        next_step = "可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     else:
         next_step = "未识别到表达矩阵或原始计数矩阵，请返回数据来源补充文件。"
     return "\n".join(
@@ -8525,6 +8530,9 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
         return False, "识别报告中没有任何文件。"
     if not has_standardizable_expression_input(files):
         return False, "未识别到表达矩阵或原始计数矩阵。"
+    readiness = run_project_readiness(project_root).get("readiness_report")
+    if isinstance(readiness, dict) and not readiness.get("standardization_ready"):
+        return False, "未识别到表达矩阵或原始计数矩阵。"
     return True, ""
 
 
@@ -8534,7 +8542,7 @@ def _can_continue_from_readiness(project_root: Path) -> tuple[bool, str]:
     if not isinstance(readiness, dict):
         return False, "尚未运行数据准备检查。"
     status = str(readiness.get("overall_status") or "unavailable")
-    if status in {"not_ready", "unavailable"} or not readiness.get("has_core_input"):
+    if status in {"not_ready", "unavailable"} or not readiness.get("standardization_ready", readiness.get("has_core_input")):
         return False, f"当前数据准备状态为“{readiness_status_zh(status)}”。"
     return True, ""
 
