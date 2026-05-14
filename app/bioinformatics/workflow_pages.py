@@ -59,6 +59,7 @@ from app.bioinformatics.comparison_config import (
     confirmed_group_assignments,
     load_confirmed_comparison_config,
 )
+from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
 from app.bioinformatics.project_readiness import (
     has_standardizable_expression_input,
     load_readiness_artifacts,
@@ -90,6 +91,12 @@ from app.bioinformatics.standardized_asset_selection import (
     build_asset_selection_context,
     save_standardized_asset_selection,
     selection_status_label,
+)
+from app.bioinformatics.standardization_confirmation import (
+    collect_standardization_candidates,
+    confirm_group_design_from_preview,
+    load_standardization_confirmation_artifacts,
+    save_standardization_confirmation,
 )
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
@@ -154,6 +161,9 @@ class SelectedSourceSummary:
     acquisition_record_path: str
     handoff_path: str
     created_at: str
+    source_files: tuple[str, ...] = ()
+    copied_files: tuple[str, ...] = ()
+    referenced_paths: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
 
 
@@ -168,6 +178,7 @@ class RegisteredSourceRow:
     created_at: str
     strategy: str
     location_tooltip: str = ""
+    source_files: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -189,6 +200,8 @@ class DatasetListEntry:
     source_type_key: str
     accession: str = ""
     acquisition_ids: tuple[str, ...] = ()
+    source_files: tuple[str, ...] = ()
+    storage_policy: str = ""
 
 
 @dataclass(frozen=True)
@@ -928,6 +941,9 @@ class BioinformaticsDataSourceWidget(QWidget):
             acquisition_record_path=str(summary.record_path),
             handoff_path=str(summary.handoff_path),
             created_at=summary.created_at,
+            source_files=summary.source_files,
+            copied_files=summary.copied_files,
+            referenced_paths=summary.referenced_paths,
             warnings=tuple(summary.warnings),
         )
         self._source_summaries[key] = selected_summary
@@ -2720,6 +2736,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         if not ok:
             self._set_status(f"不能继续：{reason} 请返回数据来源补充文件。")
             return
+        self._set_status("可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。")
         self.continue_requested.emit(self._project_root)
 
     def _build_ui(self) -> None:
@@ -3482,6 +3499,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
+        self._last_candidates: dict[str, object] = {}
+        self._last_confirmation: dict[str, object] = {}
         self.setObjectName("bioinformaticsStandardizedAssetsPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -3498,6 +3517,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
+        self.refresh_confirmation_candidates()
         artifacts = generate_standardized_assets(self._project_root)
         self._render(artifacts)
         return artifacts
@@ -3530,6 +3550,97 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
     def status_message(self) -> str:
         return self._status_label.text()
 
+    def refresh_confirmation_candidates(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        artifacts = load_standardization_confirmation_artifacts(self._project_root)
+        self._last_candidates = artifacts.get("candidates") if isinstance(artifacts.get("candidates"), dict) else {}
+        self._last_confirmation = artifacts.get("confirmation") if isinstance(artifacts.get("confirmation"), dict) else {}
+        self._render_confirmation_state()
+        return artifacts
+
+    def confirm_expression_candidate(
+        self,
+        candidate_id: str | None = None,
+        *,
+        value_type: str | None = None,
+        value_type_confirmed: bool = True,
+    ) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        candidates = collect_standardization_candidates(self._project_root)
+        expression = _standardization_candidate_list(candidates, "expression_matrix_candidates")
+        selected_id = candidate_id or (str(expression[0].get("candidate_id") or "") if expression else "")
+        if not selected_id:
+            self._status_label.setText("没有可确认的表达矩阵候选。")
+            return None
+        selected = _standardization_find_candidate(candidates, selected_id) or {}
+        selected_value_type = value_type or str(selected.get("expression_value_type_candidate") or "unknown")
+        manifest = save_standardization_confirmation(
+            self._project_root,
+            selected_expression_candidate_id=selected_id,
+            expression_value_type=selected_value_type,
+            expression_value_type_confirmed=value_type_confirmed,
+        )
+        self._last_confirmation = manifest
+        self._last_candidates = candidates
+        self._render_confirmation_state()
+        self._status_label.setText("已保存表达矩阵候选确认。当前不会运行真实差异分析。")
+        return manifest
+
+    def confirm_species_candidate(self, species: str | None = None, *, manual: bool = False) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        candidates = collect_standardization_candidates(self._project_root)
+        species_candidates = _standardization_candidate_list(candidates, "species_candidates")
+        selected_species = species or (str(species_candidates[0].get("species") or "") if species_candidates else "")
+        if not selected_species:
+            self._status_label.setText("没有物种证据，请手动输入后再确认。")
+            return None
+        manifest = save_standardization_confirmation(
+            self._project_root,
+            species=selected_species,
+            species_confirmed=True,
+            species_manual_confirmed=manual,
+        )
+        self._last_confirmation = manifest
+        self._last_candidates = candidates
+        self._render_confirmation_state()
+        self._status_label.setText("已保存物种确认。")
+        return manifest
+
+    def confirm_gene_id_type(self, gene_id_type: str | None = None) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        candidates = collect_standardization_candidates(self._project_root)
+        gene_candidates = _standardization_candidate_list(candidates, "gene_id_candidates")
+        selected_type = gene_id_type or (str(gene_candidates[0].get("gene_id_type") or "") if gene_candidates else "unknown")
+        manifest = save_standardization_confirmation(
+            self._project_root,
+            gene_id_type=selected_type,
+            gene_id_type_confirmed=True,
+        )
+        self._last_confirmation = manifest
+        self._last_candidates = candidates
+        self._render_confirmation_state()
+        self._status_label.setText("已保存 gene ID 类型确认；Probe ID 仍需平台注释或映射确认。")
+        return manifest
+
+    def confirm_group_candidate(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        manifest = confirm_group_design_from_preview(self._project_root)
+        self._last_confirmation = manifest
+        self._last_candidates = collect_standardization_candidates(self._project_root)
+        self._render_confirmation_state()
+        self._status_label.setText("已保存候选分组确认，可用于 DEG preflight；当前不会运行真实差异分析。")
+        return manifest
+
     def _build_ui(self) -> None:
         root = _scroll_root(self)
         root.addWidget(_header("数据准备与标准化", "确认表达矩阵和样本分组，生成后续分析可用的标准化资产。", back_text="返回 Ready 检查", back_signal=self.back_requested))
@@ -3561,6 +3672,25 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._group_status.setObjectName("standardizationGroupStatus")
         group_layout.addWidget(self._group_status)
         root.addWidget(group_card)
+
+        confirmation_card, confirmation_layout = _card("标准化确认候选")
+        self._confirmation_summary_label = _muted("识别阶段已发现候选表达矩阵，请在标准化阶段确认后再用于分析。")
+        self._confirmation_summary_label.setObjectName("standardizationConfirmationSummary")
+        confirmation_layout.addWidget(self._confirmation_summary_label)
+        confirmation_actions = QHBoxLayout()
+        confirmation_actions.addWidget(_button("刷新候选", "secondaryButton", self.refresh_confirmation_candidates, role="secondary"))
+        confirmation_actions.addWidget(_button("确认表达矩阵候选", "secondaryButton", lambda: self.confirm_expression_candidate(), role="secondary"))
+        confirmation_actions.addWidget(_button("确认物种候选", "secondaryButton", lambda: self.confirm_species_candidate(), role="secondary"))
+        confirmation_actions.addWidget(_button("确认 gene ID 类型", "secondaryButton", lambda: self.confirm_gene_id_type(), role="secondary"))
+        confirmation_actions.addWidget(_button("确认候选分组", "secondaryButton", lambda: self.confirm_group_candidate(), role="secondary"))
+        confirmation_actions.addStretch(1)
+        confirmation_layout.addLayout(confirmation_actions)
+        self._confirmation_candidates = _table(["候选类型", "来源文件", "来源 parser", "确认状态", "说明"])
+        self._confirmation_candidates.setObjectName("standardizationConfirmationCandidateTable")
+        confirmation_layout.addWidget(self._confirmation_candidates)
+        _set_table_widths(self._confirmation_candidates, [150, 190, 150, 150, 380])
+        self._confirmation_candidates.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        root.addWidget(confirmation_card)
 
         status_card, status_layout = _card("标准化状态")
         status_grid = QGridLayout()
@@ -3714,7 +3844,17 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         if self._project_root is not None:
             summary_text = f"{summary_text}\n{_asset_selection_summary_text(selection_context)}\n{design_status_summary(self._project_root)}"
         self._summary.setPlainText(summary_text)
-        self._manifest.setPlainText(_json({"analysis-ready manifest": manifest, "asset_selection": selection_context, "warning": warnings}))
+        self._manifest.setPlainText(
+            _json(
+                {
+                    "analysis-ready manifest": manifest,
+                    "asset_selection": selection_context,
+                    "standardization_confirmation": self._last_confirmation,
+                    "standardization_candidates": self._last_candidates,
+                    "warning": warnings,
+                }
+            )
+        )
         self._render_user_overview(artifacts)
 
     def _render_user_overview(self, artifacts: dict[str, object]) -> None:
@@ -3724,6 +3864,9 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)] if registry else []
         report = load_recognition_report(self._project_root) or {}
         files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+        confirmation_artifacts = load_standardization_confirmation_artifacts(self._project_root)
+        self._last_candidates = confirmation_artifacts.get("candidates") if isinstance(confirmation_artifacts.get("candidates"), dict) else {}
+        self._last_confirmation = confirmation_artifacts.get("confirmation") if isinstance(confirmation_artifacts.get("confirmation"), dict) else {}
         assets_generated = bool(registry)
         group_confirmed = has_confirmed_group_comparison_design(self._project_root)
         self._status_label.setText(_standardization_status_message(assets, assets_generated))
@@ -3736,7 +3879,25 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             title, value = self._standardization_status_blocks[key]
             title.setText(title_text)
             value.setText(value_text)
+        self._render_confirmation_state()
         self._update_main_actions(assets_generated=assets_generated, group_confirmed=group_confirmed, has_expression=_standardization_has_expression_asset(files, assets))
+
+    def _render_confirmation_state(self) -> None:
+        candidates = self._last_candidates if isinstance(self._last_candidates, dict) else {}
+        confirmation = self._last_confirmation if isinstance(self._last_confirmation, dict) else {}
+        rows = _standardization_confirmation_rows(candidates, confirmation)
+        _fill_table(self._confirmation_candidates, rows)
+        _set_table_widths(self._confirmation_candidates, [150, 190, 150, 150, 380])
+        readiness = confirmation.get("readiness") if isinstance(confirmation.get("readiness"), dict) else {}
+        expression_count = len(_standardization_candidate_list(candidates, "expression_matrix_candidates"))
+        sample_count = len(_standardization_candidate_list(candidates, "sample_metadata_candidates"))
+        group_count = len(_standardization_candidate_list(candidates, "group_candidates"))
+        imported_count = len(_standardization_candidate_list(candidates, "imported_deg_candidates"))
+        self._confirmation_summary_label.setText(
+            "识别阶段已发现候选表达矩阵，请在标准化阶段确认后再用于分析。"
+            f" 表达矩阵候选 {expression_count} 个，样本注释候选 {sample_count} 个，分组候选 {group_count} 个，导入 DEG 结果候选 {imported_count} 个。"
+            f" DEG preflight ready：{'是' if readiness.get('deg_preflight_ready') else '否'}。当前不会运行真实差异分析。"
+        )
 
     def _update_main_actions(self, *, assets_generated: bool, group_confirmed: bool, has_expression: bool) -> None:
         if group_confirmed:
@@ -5003,6 +5164,7 @@ def _summary_to_dict(summary: AcquisitionSummary | None) -> dict[str, object] | 
         "strategy": summary.strategy,
         "created_at": summary.created_at,
         "status": summary.status,
+        "source_files": list(summary.source_files),
         "registered_files": list(summary.registered_files),
         "copied_files": list(summary.copied_files),
         "referenced_paths": list(summary.referenced_paths),
@@ -5045,8 +5207,9 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
             created_at=str(payload.get("created_at") or ""),
             strategy=str(payload.get("strategy") or ""),
             location_tooltip=_registered_source_full_location(payload, metadata),  # type: ignore[arg-type]
+            source_files=tuple(_recognition_source_files_from_payload(payload)),
         )
-        key = (row.source_type_key, row.source_label)
+        key = (row.source_type_key, row.acquisition_id) if row.source_type_key == "local_import" else (row.source_type_key, row.source_label)
         previous = rows_by_key.get(key)
         if previous is None or _registered_row_rank(row) >= _registered_row_rank(previous):
             rows_by_key[key] = row
@@ -5085,6 +5248,7 @@ def _current_project_dataset_entries(project_root: Path | None, *, geo_only: boo
             created_at=str(payload.get("created_at") or ""),
             strategy=str(payload.get("strategy") or ""),
             location_tooltip=_registered_source_full_location(payload, metadata),
+            source_files=tuple(_recognition_source_files_from_payload(payload)),
         )
         entry = _dataset_entry_from_record(project_root, row, payload, metadata, notes)
         rank = _dataset_entry_rank(entry, row.created_at)
@@ -5116,6 +5280,10 @@ def _dataset_entry_from_record(
     available = _dataset_available_content(row, status, metadata)
     missing = _dataset_missing_content(row, status, metadata)
     accession = _geo_accession_from_record(payload, metadata) if _is_geo_record(payload, metadata) else ""
+    source_files = tuple(_recognition_source_files_from_payload(payload))
+    note = notes.get(key, "")
+    if not note and row.source_type_key == "local_import":
+        note = _local_import_default_note(payload)
     return DatasetListEntry(
         key=key,
         source=_dataset_source_label(row, metadata),
@@ -5123,7 +5291,7 @@ def _dataset_entry_from_record(
         status=status,
         available_content=available,
         missing_content=missing,
-        note=notes.get(key, ""),
+        note=note,
         title=title,
         abstract=abstract,
         keywords=_dataset_keywords(metadata),
@@ -5134,6 +5302,8 @@ def _dataset_entry_from_record(
         source_type_key=row.source_type_key,
         accession=accession,
         acquisition_ids=(row.acquisition_id,),
+        source_files=source_files,
+        storage_policy=str(payload.get("strategy") or ""),
     )
 
 
@@ -5190,7 +5360,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
 
 def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: dict[str, object]) -> str:
     if row.source_type_key == "local_import":
-        return "待识别"
+        count = len(row.source_files)
+        return f"待识别：{count} 个文件" if count > 1 else "待识别"
     assets: list[str] = []
     raw_status = row.status
     if "表达矩阵已下载" in raw_status:
@@ -5249,6 +5420,7 @@ def _dataset_keywords(metadata: dict[str, object]) -> str:
 
 
 def _dataset_technical_info(project_root: Path, row: RegisteredSourceRow, payload: dict[str, object], metadata: dict[str, object]) -> str:
+    source_files = _recognition_source_files_from_payload(payload)
     return _json(
         {
             "数据来源": row.source_type,
@@ -5257,6 +5429,7 @@ def _dataset_technical_info(project_root: Path, row: RegisteredSourceRow, payloa
             "下载状态": metadata.get("download_status", "未记录"),
             "已发现内容": _dataset_available_content(row, row.status, metadata),
             "缺失内容": _dataset_missing_content(row, row.status, metadata),
+            "source_files": source_files,
             "最近更新时间": payload.get("created_at", "未记录"),
             "日志或错误摘要": payload.get("warnings", []),
             "project_root": str(project_root),
@@ -5298,18 +5471,38 @@ def _dataset_entry_tooltip(entry: DatasetListEntry, column: int) -> str:
         return entry.title
     if column == 6:
         return entry.note
+    if entry.source_type_key == "local_import":
+        return ""
     return entry.technical_info if column in {3, 4, 5} else ""
 
 
 def _dataset_detail_summary(entry: DatasetListEntry) -> str:
-    return "\n".join(
-        [
-            f"数据集编号或文件名：{entry.name}",
-            f"标题：{entry.title or '暂无标题'}",
-            f"摘要：{entry.abstract or '暂无摘要'}",
-            f"关键词 / 疾病 / 组织 / 平台：{entry.keywords or '暂无关键词'}",
-        ]
-    )
+    lines = [
+        f"数据集编号或文件名：{entry.name}",
+        f"标题：{entry.title or '暂无标题'}",
+        f"摘要：{entry.abstract or '暂无摘要'}",
+        f"关键词 / 疾病 / 组织 / 平台：{entry.keywords or '暂无关键词'}",
+    ]
+    if entry.source_type_key == "local_import":
+        files = list(entry.source_files)
+        storage = _storage_policy_text(entry.storage_policy)
+        lines.extend(
+            [
+                f"文件总数：{len(files)} 个",
+                f"文件来源状态：{entry.status}",
+                f"保存方式：{storage}",
+            ]
+        )
+        for index, raw_path in enumerate(files, start=1):
+            lines.append(f"{index}. {Path(raw_path).name}｜{storage}｜{raw_path}")
+    return "\n".join(lines)
+
+
+def _local_import_default_note(payload: dict[str, object]) -> str:
+    files = _local_import_declared_files(payload)
+    if len(files) <= 1:
+        return ""
+    return f"包含 {Path(files[0]).name} 等 {len(files)} 个文件"
 
 
 def _compact_note(note: str) -> str:
@@ -5464,6 +5657,16 @@ def _save_pending_recognition_selection(project_root: Path, entries: list[Datase
         "updated_at": _utc_now_iso(),
         "selected_keys": [entry.key for entry in entries],
         "selected_acquisition_ids": sorted({acquisition_id for entry in entries for acquisition_id in entry.acquisition_ids}),
+        "selected_sources": [
+            {
+                "key": entry.key,
+                "display_name": entry.name,
+                "source_type": entry.source_type_key,
+                "source_files": list(entry.source_files),
+                "source_file_count": len(entry.source_files),
+            }
+            for entry in entries
+        ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -5505,10 +5708,7 @@ def _recognition_paths_for_rows(project_root: Path, rows: list[RegisteredSourceR
         payload = _acquisition_payload_by_id(project_root, row.acquisition_id)
         if not payload:
             continue
-        for key in ("copied_files", "referenced_paths", "registered_files"):
-            values = payload.get(key)
-            if isinstance(values, list):
-                paths.extend(str(value) for value in values if str(value).strip())
+        paths.extend(_recognition_source_files_from_payload(payload))
     return list(dict.fromkeys(paths))
 
 
@@ -5981,8 +6181,10 @@ def _candidate_geo_asset_manifest(project_root: Path | None, accession_or_projec
 def _registered_source_display_name(payload: dict[str, object], metadata: dict[str, object]) -> str:
     source_type = str(payload.get("source_type") or "")
     if source_type == "local_import":
-        values = payload.get("registered_files") or payload.get("referenced_paths") or payload.get("copied_files")
-        if isinstance(values, list) and values:
+        values = _local_import_declared_files(payload)
+        if len(values) > 1:
+            return f"本地导入批次：{len(values)} 个文件"
+        if values:
             return Path(str(values[0])).name
     if source_type in GEO_SOURCE_TYPES:
         return str(metadata.get("gse_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 GSE")
@@ -5994,6 +6196,10 @@ def _registered_source_display_name(payload: dict[str, object], metadata: dict[s
 
 
 def _registered_source_location(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    if str(payload.get("source_type") or "") == "local_import":
+        values = _recognition_source_files_from_payload(payload)
+        if len(values) > 1:
+            return f"{len(values)} 个文件"
     for key in ("registered_files", "referenced_paths", "copied_files"):
         values = payload.get(key)
         if isinstance(values, list) and values:
@@ -6009,11 +6215,40 @@ def _registered_source_location(payload: dict[str, object], metadata: dict[str, 
 
 
 def _registered_source_full_location(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    if str(payload.get("source_type") or "") == "local_import":
+        values = _recognition_source_files_from_payload(payload)
+        if len(values) > 1:
+            return "\n".join(values)
     for key in ("registered_files", "referenced_paths", "copied_files"):
         values = payload.get(key)
         if isinstance(values, list) and values:
             return str(values[0])
     return _registered_source_location(payload, metadata)
+
+
+def _payload_string_list(payload: dict[str, object], key: str) -> list[str]:
+    values = payload.get(key)
+    if not isinstance(values, list):
+        return []
+    return [str(value) for value in values if str(value).strip()]
+
+
+def _local_import_declared_files(payload: dict[str, object]) -> list[str]:
+    return (
+        _payload_string_list(payload, "source_files")
+        or _payload_string_list(payload, "registered_files")
+        or _payload_string_list(payload, "referenced_paths")
+        or _payload_string_list(payload, "copied_files")
+    )
+
+
+def _recognition_source_files_from_payload(payload: dict[str, object]) -> list[str]:
+    strategy = str(payload.get("strategy") or "")
+    if strategy == "copy":
+        return _payload_string_list(payload, "copied_files") or _local_import_declared_files(payload)
+    if strategy == "reference":
+        return _payload_string_list(payload, "referenced_paths") or _local_import_declared_files(payload)
+    return _payload_string_list(payload, "copied_files") or _payload_string_list(payload, "referenced_paths") or _local_import_declared_files(payload)
 
 
 def _registered_status_text(payload: dict[str, object]) -> str:
@@ -6103,7 +6338,7 @@ def _display_name_for_paths(paths: list[Path], fallback: str) -> str:
         return fallback
     if len(paths) == 1:
         return paths[0].name or str(paths[0])
-    return f"{len(paths)} 个文件：{paths[0].name}"
+    return f"本地导入批次：{len(paths)} 个文件"
 
 
 def _storage_policy_text(policy: str) -> str:
@@ -6204,6 +6439,19 @@ def _selected_source_summary_text(summary: SelectedSourceSummary, *, compact: bo
         f"最近更新时间：{summary.created_at or '未记录'}",
         f"下一步建议：{next_step}",
     ]
+    if summary.source_type == "local_import" and len(summary.source_files) > 1:
+        lines.append(f"文件总数：{len(summary.source_files)} 个")
+        if summary.storage_policy == "copy":
+            lines.append("文件来源状态：已复制到项目目录；识别阶段使用复制后的项目内文件。")
+        elif summary.storage_policy == "reference":
+            lines.append("文件来源状态：使用原文件位置；识别阶段引用原始文件，不复制。")
+        else:
+            lines.append(f"文件来源状态：{_storage_policy_text(summary.storage_policy)}")
+        preview_names = "、".join(Path(path).name for path in summary.source_files[:3])
+        remaining = len(summary.source_files) - 3
+        lines.append(f"主界面摘要：{preview_names}" + (f"，另有 {remaining} 个文件" if remaining > 0 else ""))
+        for index, raw_path in enumerate(summary.source_files, start=1):
+            lines.append(f"{index}. {Path(raw_path).name}｜{raw_path}")
     if summary.source_type in {"tcga_gtex_tcga_folder", "tcga_gtex_gtex_folder"}:
         lines.append("警告：当前未进行正式 batch correction，后续分析需谨慎解释。")
     if summary.warnings:
@@ -7547,6 +7795,9 @@ def _selected_source_technical_details(summary: SelectedSourceSummary) -> str:
             "source_label": summary.source_label,
             "selected_kind": summary.selected_kind,
             "source_path": summary.absolute_path or "未记录来源位置",
+            "source_files": list(summary.source_files),
+            "copied_files": list(summary.copied_files),
+            "referenced_paths": list(summary.referenced_paths),
             "storage_policy": summary.storage_policy,
             "acquisition_plan_path": summary.acquisition_plan_path,
             "acquisition_record_path": summary.acquisition_record_path,
@@ -7564,7 +7815,7 @@ def _acquisition_user_summary(summary: AcquisitionSummary | None, artifacts: dic
     plan = artifacts.get("plan")
     record = artifacts.get("record")
     handoff = artifacts.get("handoff")
-    file_count = len(summary.registered_files) + len(summary.copied_files) + len(summary.referenced_paths)
+    file_count = len(summary.source_files or summary.registered_files or summary.copied_files or summary.referenced_paths)
     next_step = "可以继续进入数据识别。" if summary.strategy != "plan_only" and file_count else "当前只是获取计划或缺少实际文件，请补充本地文件后再继续。"
     warnings = "；".join(summary.warnings) if summary.warnings else "无"
     return "\n".join(
@@ -7614,16 +7865,18 @@ def _supplement_hint_text(readiness: dict[str, object], matrix: dict[str, object
 
 
 def _readiness_overall_summary(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
-    has_core_input = bool(readiness.get("has_core_input"))
+    standardization_ready = bool(readiness.get("standardization_ready") or readiness.get("has_core_input"))
     rows = [row for row in matrix.get("rows", []) or [] if isinstance(row, dict)]
     runnable = [row for row in rows if row.get("can_run") and row.get("analysis_type") != "reporting"]
-    if not has_core_input:
+    if not standardization_ready:
         return "暂不能继续：还没有可用的表达矩阵。"
+    if not readiness.get("deg_ready"):
+        return "可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     if runnable and not missing:
         return "可以继续：关键输入已基本满足。"
     if runnable:
         return "基本可继续，但有信息需要补充。"
-    return "暂不能继续：关键输入还不完整。"
+    return "可以继续进入数据准备与标准化。"
 
 
 def _readiness_recognized_inputs_text(readiness: dict[str, object]) -> str:
@@ -7655,7 +7908,7 @@ def _readiness_next_step_text(
     missing: set[str],
     group_preview: dict[str, object] | None = None,
 ) -> str:
-    has_core_input = bool(readiness.get("has_core_input"))
+    standardization_ready = bool(readiness.get("standardization_ready") or readiness.get("has_core_input"))
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
     comparison_status = str(readiness.get("comparison_group_status") or "")
     if comparison_status == "confirmed_missing_expression":
@@ -7666,8 +7919,10 @@ def _readiness_next_step_text(
     if comparison_status == "confirmed_ready":
         summary = str(readiness.get("comparison_group_summary_zh") or "比较组已确认。")
         return f"下一步建议：{summary}可以进入标准化，并在分析中心运行差异表达分析。"
-    if "expression_matrix" in missing or not has_core_input:
+    if "expression_matrix" in missing or not standardization_ready:
         return "下一步建议：请返回数据导入页面补充表达矩阵文件。"
+    if not readiness.get("deg_ready") and "comparison_config" in missing:
+        return "下一步建议：可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     if "comparison_config" in missing and _group_preview_has_candidate(group_preview):
         return "下一步建议：已检测到候选分组，请确认比较组；也可以先进入标准化，之后再确认。"
     if "comparison_config" in missing and "sample_metadata" not in missing:
@@ -7961,9 +8216,9 @@ def _standardization_status_message(assets: list[dict[str, object]], assets_gene
 
 def _standardization_current_input_user_summary(project_root: Path, report: dict[str, object]) -> str:
     files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
-    if not files:
-        return "尚未选择当前识别结果。\n请先完成数据识别。"
     current_run = next((run for run in list_recognition_runs(project_root) if run.get("is_current")), {})
+    if not files or not current_run:
+        return "尚未选择当前识别结果。\n请先完成数据识别。"
     generated_at = _format_history_time(str(current_run.get("generated_at") or report.get("generated_at") or ""))
     names = [str(item.get("file_name") or Path(str(item.get("original_path") or "")).name or "未命名文件") for item in files]
     shown = "、".join(names[:3])
@@ -8100,6 +8355,8 @@ def _standardization_group_user_summary(project_root: Path, report: dict[str, ob
         f"分组置信度：{confidence}",
         f"是否人工确认：{'是' if confirmed else '否'}",
     ]
+    if not confirmed and group_count < 2:
+        lines.append("尚未检测到明确分组。")
     if not confirmed:
         lines.append("分组信息未确认，可以进入分析任务中心查看任务，但不能直接启动 DEG 分析。请先确认分组与比较设计。")
     return "\n".join(lines)
@@ -8244,6 +8501,86 @@ def _format_confidence(value: object) -> str:
     return f"{numeric * 100:.0f}%"
 
 
+def _standardization_candidate_list(candidates: dict[str, object], key: str) -> list[dict[str, object]]:
+    values = candidates.get(key)
+    return [item for item in values if isinstance(item, dict)] if isinstance(values, list) else []
+
+
+def _standardization_find_candidate(candidates: dict[str, object], candidate_id: str) -> dict[str, object] | None:
+    for key in (
+        "expression_matrix_candidates",
+        "sample_metadata_candidates",
+        "group_candidates",
+        "species_candidates",
+        "gene_id_candidates",
+        "platform_annotation_candidates",
+        "imported_deg_candidates",
+    ):
+        for item in _standardization_candidate_list(candidates, key):
+            if str(item.get("candidate_id") or "") == candidate_id:
+                return item
+    return None
+
+
+def _standardization_confirmation_rows(candidates: dict[str, object], confirmation: dict[str, object]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    selected_expression = confirmation.get("selected_expression_candidate") if isinstance(confirmation.get("selected_expression_candidate"), dict) else {}
+    selected_expression_id = str(selected_expression.get("candidate_id") or "")
+    selected_sample = confirmation.get("selected_sample_metadata_candidate") if isinstance(confirmation.get("selected_sample_metadata_candidate"), dict) else {}
+    selected_sample_id = str(selected_sample.get("candidate_id") or "")
+    selected_species = confirmation.get("species_confirmed") if isinstance(confirmation.get("species_confirmed"), dict) else {}
+    selected_gene = confirmation.get("gene_id_type_confirmed") if isinstance(confirmation.get("gene_id_type_confirmed"), dict) else {}
+    selected_platform = confirmation.get("platform_annotation_confirmed") if isinstance(confirmation.get("platform_annotation_confirmed"), dict) else {}
+    group_design = confirmation.get("confirmed_group_design") if isinstance(confirmation.get("confirmed_group_design"), dict) else {}
+    for item in _standardization_candidate_list(candidates, "expression_matrix_candidates"):
+        rows.append(_standardization_candidate_row("表达矩阵候选", item, "已选择" if str(item.get("candidate_id") or "") == selected_expression_id else "待确认"))
+    for item in _standardization_candidate_list(candidates, "sample_metadata_candidates"):
+        rows.append(_standardization_candidate_row("样本注释候选", item, "已选择" if str(item.get("candidate_id") or "") == selected_sample_id else "待确认"))
+    for item in _standardization_candidate_list(candidates, "group_candidates"):
+        rows.append(_standardization_candidate_row("分组候选", item, "已确认" if group_design.get("group_confirmed") else "候选，待确认"))
+    for item in _standardization_candidate_list(candidates, "species_candidates"):
+        status = "已确认" if selected_species.get("confirmed") and str(item.get("species") or "") == str(selected_species.get("species") or "") else "待确认"
+        rows.append(_standardization_candidate_row("物种候选", item, status))
+    for item in _standardization_candidate_list(candidates, "gene_id_candidates"):
+        status = "已确认" if selected_gene.get("confirmed") and str(item.get("gene_id_type") or "") == str(selected_gene.get("gene_id_type") or "") else "待确认"
+        rows.append(_standardization_candidate_row("gene ID 候选", item, status))
+    for item in _standardization_candidate_list(candidates, "platform_annotation_candidates"):
+        status = "已确认" if selected_platform.get("confirmed") and str(item.get("candidate_id") or "") == str(selected_platform.get("candidate_id") or "") else "待确认"
+        rows.append(_standardization_candidate_row("平台注释候选", item, status))
+    for item in _standardization_candidate_list(candidates, "imported_deg_candidates"):
+        rows.append(_standardization_candidate_row("已有 DEG 结果候选", item, "可浏览；不是重新计算结果"))
+    return rows
+
+
+def _standardization_candidate_row(label: str, item: dict[str, object], status: str) -> list[object]:
+    warnings = [str(value) for value in item.get("warnings", []) or [] if str(value)]
+    fields: list[str] = []
+    if item.get("expression_value_type_candidate"):
+        fields.append(f"表达值类型候选：{item.get('expression_value_type_candidate')}")
+    if item.get("gene_id_type_candidate") or item.get("gene_id_type"):
+        fields.append(f"ID 类型候选：{item.get('gene_id_type_candidate') or item.get('gene_id_type')}")
+    if item.get("species"):
+        fields.append(f"物种：{item.get('species')}（{item.get('source_field') or '未记录'}）")
+    if item.get("group_field"):
+        fields.append(f"候选字段：{item.get('group_field')}")
+    if item.get("requires_user_confirmation"):
+        fields.append("需要用户确认")
+    if item.get("can_enter_next_step") is False:
+        fields.append("暂不可进入下一步")
+    if warnings:
+        fields.append("warning：" + "；".join(warnings[:2]))
+    reason = str(item.get("reason") or "")
+    if reason:
+        fields.append(reason)
+    return [
+        label,
+        str(item.get("source_file") or "未记录"),
+        str(item.get("source_parser") or "unknown"),
+        status,
+        "；".join(fields) if fields else "待用户确认。",
+    ]
+
+
 def _recognition_type_text(item: dict[str, object]) -> str:
     primary = str(item.get("recognized_type") or "unknown")
     primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
@@ -8251,9 +8588,23 @@ def _recognition_type_text(item: dict[str, object]) -> str:
     if semantic_label:
         return semantic_label
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != primary]
+    role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
+    if primary == "geo_soft_container":
+        depth = _geo_soft_parser_depth_from_item(item)
+        depth_label = _geo_soft_parser_depth_label(depth)
+        if role_labels:
+            return f"{primary_label}（{depth_label}；含：{'、'.join(role_labels)}）"
+        return f"{primary_label}（{depth_label}）"
+    if primary == "geo_series_matrix_container":
+        depth = _geo_series_parser_depth_from_item(item)
+        depth_label = _geo_series_parser_depth_label(depth)
+        sample_count = int(item.get("sample_count") or 0)
+        expression_status = "表达矩阵区域已检测" if item.get("expression_matrix_presence") else "尚未确认表达矩阵区域"
+        if role_labels:
+            return f"{primary_label}（{depth_label}；样本 {sample_count}；{expression_status}；含：{'、'.join(role_labels)}）"
+        return f"{primary_label}（{depth_label}；样本 {sample_count}；{expression_status}）"
     if not roles:
         return primary_label
-    role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
     return f"{primary_label}（含：{'、'.join(role_labels)}）" if role_labels else primary_label
 
 
@@ -8508,6 +8859,47 @@ def _recognition_roles_tooltip(item: dict[str, object]) -> str:
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role)]
     assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
     lines = [f"主类型：{item.get('recognized_type_zh') or TYPE_LABELS.get(str(item.get('recognized_type') or 'unknown'), '未知文件')}"]
+    if str(item.get("recognized_type") or "") == "geo_soft_container":
+        depth = _geo_soft_parser_depth_from_item(item)
+        lines.append(f"SOFT 解析深度：{_geo_soft_parser_depth_label(depth)}")
+        lines.append(f"样本数：{int(item.get('sample_count') or 0)}；平台数：{int(item.get('platform_count') or 0)}")
+        if item.get("expression_table_presence"):
+            lines.append("表达表格：检测为候选输入，进入标准化前需要用户确认。")
+        else:
+            lines.append("表达表格：尚未确认表达矩阵。")
+        warnings = [str(warning) for warning in item.get("warnings", []) or [] if str(warning)]
+        if warnings:
+            lines.append("解析提示：" + "；".join(warnings[:3]))
+    if str(item.get("recognized_type") or "") == "geo_series_matrix_container":
+        depth = _geo_series_parser_depth_from_item(item)
+        lines.append(f"Series Matrix 解析深度：{_geo_series_parser_depth_label(depth)}")
+        lines.append(f"样本数量：{int(item.get('sample_count') or 0)}")
+        platforms = [str(value) for value in item.get("platform_accessions", []) or [] if str(value)]
+        if platforms:
+            lines.append("平台 accession：" + "、".join(platforms[:5]))
+        dimensions = item.get("expression_matrix_dimensions")
+        if isinstance(dimensions, dict):
+            lines.append(
+                "表达矩阵维度："
+                f"{int(dimensions.get('rows') or 0)} 行，"
+                f"{int(dimensions.get('sample_columns') or 0)} 个样本列"
+            )
+        if item.get("expression_matrix_presence"):
+            lines.append("已检测到 GEO Series Matrix 表达矩阵区域，可进入标准化阶段进一步确认。")
+        else:
+            lines.append("表达矩阵区域：尚未确认。")
+        lines.append(f"表达值类型候选：{item.get('expression_value_type_candidate') or 'unknown'}")
+        lines.append(f"ID 类型候选：{item.get('gene_id_type_candidate') or 'unknown'}")
+        fields = [str(value) for value in item.get("sample_metadata_fields", []) or [] if str(value)]
+        phenotype_fields = [str(value) for value in item.get("phenotype_candidate_fields", []) or [] if str(value)]
+        lines.append(f"样本注释字段数量：{len(fields)}")
+        if phenotype_fields:
+            lines.append("表型/分组候选字段：" + "、".join(phenotype_fields[:8]) + "；需用户确认后才能进行 DEG 分析。")
+        if str(item.get("gene_id_type_candidate") or "") in {"probe_id", "unknown"}:
+            lines.append("ID_REF 可能为平台探针 ID，需结合平台注释确认 gene ID 映射。")
+        warnings = [str(warning) for warning in item.get("warnings", []) or [] if str(warning)]
+        if warnings:
+            lines.append("解析提示：" + "；".join(warnings[:3]))
     if roles:
         lines.append("可用角色：" + "、".join(TYPE_LABELS.get(role, role) for role in roles))
     for asset in assets:
@@ -8516,6 +8908,42 @@ def _recognition_roles_tooltip(item: dict[str, object]) -> str:
         if label or reason:
             lines.append(f"{label}：{reason}".strip("："))
     return "\n".join(lines)
+
+
+def _geo_soft_parser_depth_from_item(item: dict[str, object]) -> str:
+    profile = item.get("content_profile")
+    if item.get("parser_depth"):
+        return str(item.get("parser_depth") or "")
+    if isinstance(profile, dict):
+        return str(profile.get("parser_depth") or "")
+    return ""
+
+
+def _geo_soft_parser_depth_label(depth: str) -> str:
+    return {
+        "container_only": "已识别 GEO SOFT 容器",
+        "metadata_parsed": "已解析样本/平台元数据",
+        "table_detected": "检测到平台或表达表格",
+        "table_parsed": "已解析表格结构",
+    }.get(depth, "已识别 GEO SOFT 容器")
+
+
+def _geo_series_parser_depth_from_item(item: dict[str, object]) -> str:
+    profile = item.get("content_profile")
+    if item.get("parser_depth"):
+        return str(item.get("parser_depth") or "")
+    if isinstance(profile, dict):
+        return str(profile.get("parser_depth") or "")
+    return ""
+
+
+def _geo_series_parser_depth_label(depth: str) -> str:
+    return {
+        "container_only": "已识别 GEO Series Matrix 容器",
+        "metadata_parsed": "已解析 Series/Sample metadata",
+        "matrix_detected": "检测到表达矩阵区域",
+        "matrix_previewed": "已解析表达矩阵结构预览",
+    }.get(depth, "已识别 GEO Series Matrix 容器")
 
 
 def _format_file_size(value: object) -> str:
@@ -8588,12 +9016,16 @@ def _recognition_file_display_path(item: dict[str, object]) -> tuple[str, str]:
 def _recognition_status_bar_summary(report: dict[str, object], files: list[dict[str, object]]) -> str:
     file_count = len(files)
     type_text = _recognition_type_brief(files)
-    expression_text = "表达矩阵已识别" if _recognition_has_expression_asset(files) else "表达矩阵未识别"
+    expression_text = (
+        "表达矩阵已识别，可以继续进入数据准备与标准化"
+        if _recognition_has_expression_asset(files)
+        else "表达矩阵未识别，未识别到表达矩阵或原始计数矩阵"
+    )
     preview = report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}
     if _group_preview_has_candidate(preview) or str(preview.get("status") or "") == "confirmed_comparison_exists":
         group_text = "分组信息已生成候选，需在标准化阶段确认。"
     else:
-        group_text = "分组信息未识别，需在标准化阶段确认后才能做 DEG 分析。"
+        group_text = "分组信息未识别，确认分组后才能进行 DEG 分析。"
     return f"已识别 {file_count} 个文件：{type_text}；{expression_text}；{group_text}"
 
 
@@ -8649,7 +9081,11 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         source_note = "本次识别结果仅来自本次选择的数据源。"
     else:
         source_note = f"当前有效数据来源文件：{effective_count} 个。"
-    next_step = "如果已识别到表达矩阵或原始计数矩阵，可以继续数据准备检查；否则请返回数据来源补充文件。"
+    has_core = has_standardizable_expression_input(files)
+    if has_core:
+        next_step = "可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
+    else:
+        next_step = "未识别到表达矩阵或原始计数矩阵，请返回数据来源补充文件。"
     return "\n".join(
         [
             f"识别文件总数：{len(files)}",
@@ -8789,6 +9225,9 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
         return False, "识别报告中没有任何文件。"
     if not has_standardizable_expression_input(files):
         return False, "未识别到表达矩阵或原始计数矩阵。"
+    readiness = run_project_readiness(project_root).get("readiness_report")
+    if isinstance(readiness, dict) and not readiness.get("standardization_ready"):
+        return False, "未识别到表达矩阵或原始计数矩阵。"
     return True, ""
 
 
@@ -8798,7 +9237,7 @@ def _can_continue_from_readiness(project_root: Path) -> tuple[bool, str]:
     if not isinstance(readiness, dict):
         return False, "尚未运行数据准备检查。"
     status = str(readiness.get("overall_status") or "unavailable")
-    if status in {"not_ready", "unavailable"} or not readiness.get("has_core_input"):
+    if status in {"not_ready", "unavailable"} or not readiness.get("standardization_ready", readiness.get("has_core_input")):
         return False, f"当前数据准备状态为“{readiness_status_zh(status)}”。"
     return True, ""
 

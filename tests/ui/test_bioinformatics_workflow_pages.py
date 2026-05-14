@@ -415,6 +415,77 @@ def test_data_source_shows_local_file_source_summary_and_copy_open(qt_app, proje
     assert opened == [str(source.resolve().parent)]
 
 
+def test_data_source_multifile_local_batch_display_detail_and_recognition_handoff(qt_app, project_summary, tmp_path: Path) -> None:
+    files = {
+        "GSE6004_family.soft": "^SERIES = GSE6004\n!Series_title = demo\n",
+        "expression_matrix.tsv": "gene\tcase_1\tcontrol_1\nTP53\t2\t1\n",
+        "sample_metadata.tsv": "sample\tgroup\ncase_1\tcase\ncontrol_1\tcontrol\n",
+        "clinical.tsv": "sample\tstage\ncase_1\tII\ncontrol_1\tNA\n",
+    }
+    sources = []
+    for name, content in files.items():
+        path = tmp_path / name
+        path.write_text(content, encoding="utf-8")
+        sources.append(path)
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.register_local_paths(sources, strategy="reference", selected_kind="file", summary_key="local_import")
+
+    expected_paths = [str(path.resolve()) for path in sources]
+    assert summary is not None
+    assert list(summary.source_files) == expected_paths
+    assert list(summary.referenced_paths) == expected_paths
+    assert widget.source_summary_text("local_import") == "已选择本地数据：本地导入批次：4 个文件"
+    assert str(sources[0].resolve()) not in widget.source_summary_text("local_import")
+    assert "另有 1 个文件" in widget.source_summary_tooltip("local_import")
+    raw_import_root = project_summary.project_root / "raw_data" / "local_import"
+    assert not any(path.is_file() for path in raw_import_root.rglob("*"))
+
+    table = widget._dataset_list_panel._table
+    assert table.rowCount() == 1
+    assert table.item(0, 2).text() == "本地导入批次：4 个文件"
+    assert table.item(0, 2).text() != "GSE6004_family.soft"
+    assert table.item(0, 4).text() == "待识别：4 个文件"
+    assert table.item(0, 6).text() == "包含 GSE6004_family.soft 等 4 个文件"
+    visible_table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert str(sources[0].resolve()) not in visible_table_text
+
+    key = next(iter(widget._dataset_entries))
+    widget._show_dataset_detail(key)
+    detail_text = widget._dataset_detail_panel._summary.toPlainText()
+    assert "文件总数：4 个" in detail_text
+    assert "保存方式：引用原始位置" in detail_text
+    for source in sources:
+        assert source.name in detail_text
+
+    checkbox = table.cellWidget(0, 0)
+    assert isinstance(checkbox, QCheckBox)
+    checkbox.setChecked(True)
+    widget.continue_to_recognition()
+    pending = json.loads((project_summary.project_root / "manifests" / "pending_recognition_selection.json").read_text(encoding="utf-8"))
+    assert pending["selected_sources"][0]["display_name"] == "本地导入批次：4 个文件"
+    assert pending["selected_sources"][0]["source_files"] == expected_paths
+    assert pending["selected_sources"][0]["source_file_count"] == 4
+
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    pre_table = recognition.findChild(QTableWidget, "preRecognitionInputList")
+    assert pre_table.rowCount() == 1
+    assert pre_table.item(0, 2).text() == "本地导入批次：4 个文件"
+    assert pre_table.item(0, 3).text() == "4 个文件"
+    report = recognition.run_recognition()
+
+    assert report is not None
+    assert report["selected_input_count"] == 4
+    assert set(report["selected_inputs"]) == set(expected_paths)
+
+
 def test_data_source_copy_strategy_displays_chinese_policy(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "copy_expression.csv"
     source.write_text("gene,s1\nTP53,1\n", encoding="utf-8")
@@ -1643,7 +1714,7 @@ def test_recognition_main_buttons_are_simplified_and_summary_read_only(qt_app, p
 def test_recognition_opening_old_project_keeps_legacy_report_in_history(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "legacy_expression.tsv"
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
-    _write_mock_recognition_report(
+    report_path = _write_mock_recognition_report(
         project_summary.project_root,
         [
             {
@@ -2484,7 +2555,7 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     long_path = tmp_path / ("long_path_" * 8) / "GSE54350_series_matrix.txt"
     long_path.parent.mkdir(parents=True)
     long_path.write_text("x", encoding="utf-8")
-    _write_mock_recognition_report(
+    report_path = _write_mock_recognition_report(
         project_summary.project_root,
         [
             {
@@ -2493,6 +2564,11 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
                 "recognized_type": "geo_soft_container",
                 "recognized_type_zh": "GEO SOFT 容器",
                 "recognized_roles": ["expression_matrix", "sample_metadata"],
+                "parser_depth": "table_parsed",
+                "sample_count": 2,
+                "platform_count": 1,
+                "expression_table_presence": True,
+                "warnings": [],
                 "detected_assets": [
                     {"asset_type": "expression_matrix", "label_zh": "表达矩阵", "reason": "SOFT sample table 包含表达值。"},
                     {"asset_type": "sample_metadata", "label_zh": "样本注释", "reason": "SOFT 包含 SAMPLE 块。"},
@@ -2519,7 +2595,9 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     assert table.horizontalHeaderItem(1).text() == "文件位置"
     assert table.item(0, 1).toolTip() == str(long_path)
     assert "recognized_data" not in table.item(0, 1).text()
-    assert table.item(0, 2).text() == "GEO SOFT 容器（含：表达矩阵、样本注释）"
+    assert table.item(0, 2).text() == "GEO SOFT 容器（已解析表格结构；含：表达矩阵、样本注释）"
+    assert "SOFT 解析深度：已解析表格结构" in table.item(0, 2).toolTip()
+    assert "表达表格：检测为候选输入" in table.item(0, 2).toolTip()
     assert "可用角色：表达矩阵、样本注释" in table.item(0, 2).toolTip()
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
 
@@ -2672,6 +2750,218 @@ def test_recognition_summary_shows_integrated_rnaseq_content_blocks(qt_app, proj
     assert "RNA-seq 综合表达结果表" in export_path.read_text(encoding="utf-8")
 
 
+def test_geo_soft_metadata_ui_does_not_claim_full_expression_parse(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "GSE6005_family.soft"
+    source.write_text("^SERIES = GSE6005\n^SAMPLE = GSM1\n!Sample_title = untreated\n", encoding="utf-8")
+    report_path = _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "geo_soft_container",
+                "recognized_type_zh": "GEO SOFT 容器",
+                "recognized_roles": ["sample_metadata", "platform_annotation"],
+                "parser_depth": "metadata_parsed",
+                "sample_count": 1,
+                "platform_count": 1,
+                "expression_table_presence": False,
+                "warnings": ["Parsed sample/platform metadata, but no clear ID_REF/VALUE expression table was confirmed."],
+                "detected_assets": [
+                    {"asset_type": "sample_metadata", "label_zh": "样本注释", "input_eligible": True, "reason": "已解析 SOFT SAMPLE 块。"},
+                    {"asset_type": "platform_annotation", "label_zh": "平台注释", "input_eligible": True, "reason": "已解析 SOFT PLATFORM 块。"},
+                ],
+                "confidence": 0.86,
+                "file_size": 128,
+                "reason": "GEO family SOFT 容器，已解析样本/平台元数据；尚未确认表达矩阵。",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    widget._render_report(json.loads(report_path.read_text(encoding="utf-8")))
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    text = table.item(0, 2).text()
+    tooltip = table.item(0, 2).toolTip()
+
+    assert "已解析样本/平台元数据" in text
+    assert "表达表格：尚未确认表达矩阵" in tooltip
+    assert "完整解析" not in text
+    assert "完整表达矩阵" not in tooltip
+
+
+def test_geo_series_matrix_ui_shows_candidate_confirmation_not_confirmed_group(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "GSE99999_series_matrix.txt.gz"
+    source.write_text("placeholder", encoding="utf-8")
+    report_path = _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "geo_series_matrix_container",
+                "recognized_type_zh": "GEO Series Matrix 容器",
+                "recognized_roles": ["expression_matrix", "sample_metadata", "phenotype_metadata", "platform_reference_hint"],
+                "parser_depth": "matrix_previewed",
+                "sample_count": 2,
+                "platform_accessions": ["GPL96"],
+                "expression_matrix_presence": True,
+                "expression_matrix_dimensions": {"rows": 2, "columns": 3, "sample_columns": 2},
+                "expression_value_type_candidate": "unknown",
+                "gene_id_type_candidate": "probe_id",
+                "sample_metadata_fields": ["geo_accession", "title", "characteristics_ch1", "disease"],
+                "phenotype_candidate_fields": ["disease"],
+                "warnings": ["Expression value type is unknown and must be confirmed during standardization."],
+                "detected_assets": [
+                    {"asset_type": "expression_matrix", "label_zh": "表达矩阵", "input_eligible": True, "reason": "已检测到 GEO Series Matrix 表达矩阵区域，可进入标准化阶段进一步确认。"},
+                    {"asset_type": "sample_metadata", "label_zh": "样本注释", "input_eligible": True, "reason": "已解析样本 metadata。"},
+                    {"asset_type": "phenotype_metadata", "label_zh": "表型信息", "input_eligible": True, "reason": "样本分组为候选推断，需用户确认后才能进行 DEG 分析。"},
+                    {"asset_type": "platform_reference_hint", "label_zh": "平台参考提示", "input_eligible": False, "reason": "GEO Series Matrix 提供 GPL 平台编号。"},
+                ],
+                "confidence": 0.9,
+                "file_size": 1024,
+                "reason": "GEO Series Matrix 已解析；表达值类型、ID_REF 映射和候选分组需用户确认。",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    widget._render_report(json.loads(report_path.read_text(encoding="utf-8")))
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    text = table.item(0, 2).text()
+    tooltip = table.item(0, 2).toolTip()
+
+    assert "已解析表达矩阵结构预览" in text
+    assert "表达值类型候选：unknown" in tooltip
+    assert "ID 类型候选：probe_id" in tooltip
+    assert "需用户确认后才能进行 DEG 分析" in tooltip
+    assert "已确认分组" not in tooltip
+    assert "已完成差异分析" not in tooltip
+    assert "表达矩阵已标准化" not in tooltip
+
+
+def test_standardization_confirmation_page_shows_series_matrix_candidates_without_raw_paths(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99999",
+                "!Series_platform_id\tGPL96",
+                "!Sample_title\tcase sample\tcontrol sample",
+                "!Sample_geo_accession\tGSM900001\tGSM900002",
+                "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+                "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM900001\tGSM900002",
+                "1007_s_at\t10\t12",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "standardizationConfirmationCandidateTable")
+    table_text = " ".join(table.item(row, col).text() for row in range(table.rowCount()) for col in range(table.columnCount()) if table.item(row, col))
+
+    assert "表达矩阵候选" in table_text
+    assert "GSE99999_series_matrix.txt" in table_text
+    assert "geo_series_matrix" in table_text
+    assert "Sample_organism_ch1" in table_text
+    assert str(project_summary.project_root) not in table_text
+    assert "已确认分组" not in table_text
+    assert "已完成差异分析" not in table_text
+    assert "可直接做 DEG" not in table_text
+    assert "表达矩阵已标准化" not in table_text
+    assert "当前不会运行真实差异分析" in widget.findChild(QLabel, "standardizationConfirmationSummary").text()
+
+
+def test_standardization_confirmation_page_writes_manifest_and_preflight_readiness(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99999",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM900001\tGSM900002",
+                "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+                "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM900001\tGSM900002",
+                "1007_s_at\t10\t12",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    manifest = widget.confirm_expression_candidate(value_type_confirmed=False)
+
+    assert manifest is not None
+    assert manifest["readiness"]["deg_preflight_ready"] is False
+    manifest = widget.confirm_expression_candidate(value_type="count_like_candidate", value_type_confirmed=True)
+    assert manifest is not None
+    assert manifest["readiness"]["deg_preflight_ready"] is False
+    widget.confirm_species_candidate()
+    widget.confirm_gene_id_type("probe_id")
+    manifest = widget.confirm_group_candidate()
+
+    assert manifest is not None
+    assert manifest["confirmed_group_design"]["group_confirmed"] is True
+    assert manifest["readiness"]["deg_preflight_ready"] is True
+    assert (project_summary.project_root / "manifests" / "standardization_confirmation.json").exists()
+
+
+def test_standardization_confirmation_page_filters_soft_metadata_and_lists_xlsx(qt_app, project_summary) -> None:
+    soft = project_summary.project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    xlsx = project_summary.project_root / "raw_data" / "local_import" / "counts.xlsx"
+    soft.parent.mkdir(parents=True, exist_ok=True)
+    soft.write_text(
+        "\n".join(
+            [
+                "^DATABASE = GeoMiame",
+                "^SERIES = GSE6005",
+                "!Series_sample_id = GSM1",
+                "^PLATFORM = GPL570",
+                "!Platform_title = demo",
+                "^SAMPLE = GSM1",
+                "!Sample_title = metadata only",
+                "!Sample_characteristics_ch1 = treatment: untreated",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_xlsx_count_matrix(xlsx)
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "standardizationConfirmationCandidateTable")
+    expression_rows = [
+        [table.item(row, col).text() for col in range(table.columnCount()) if table.item(row, col)]
+        for row in range(table.rowCount())
+        if table.item(row, 0) and table.item(row, 0).text() == "表达矩阵候选"
+    ]
+    expression_text = " ".join(" ".join(row) for row in expression_rows)
+
+    assert "counts.xlsx" in expression_text
+    assert "xlsx" in expression_text
+    assert "GSE6005_family.soft" not in expression_text
+
+
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
     source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
     source.parent.mkdir(parents=True, exist_ok=True)
@@ -2789,10 +3079,47 @@ def test_recognition_readiness_and_standardization_continue_gates(qt_app, projec
     assert "不能继续" in standardization.status_message()
 
 
+def test_no_expression_matrix_keeps_standardization_gate_blocked(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "samples.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("sample_id\tgroup\nS1\tcase\nS2\tcontrol\n", encoding="utf-8")
+    report_path = _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "sample_metadata",
+                "recognized_type_zh": "样本注释",
+                "recognized_roles": ["sample_metadata"],
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    events: list[Path] = []
+    recognition = BioinformaticsRecognitionWidget(on_continue=events.append)
+    recognition.refresh_project(project_summary)
+    recognition._render_report(json.loads(report_path.read_text(encoding="utf-8")))
+    recognition.continue_to_readiness()
+
+    assert events == []
+    assert "不能继续：未识别到表达矩阵或原始计数矩阵" in recognition.status_message()
+    assert "未识别到表达矩阵或原始计数矩阵" in recognition._counts.toPlainText()
+
+    readiness = BioinformaticsReadinessDashboardWidget(on_continue=events.append)
+    readiness.refresh_project(project_summary)
+    artifacts = readiness.run_readiness_check()
+    assert artifacts is not None
+    assert artifacts["readiness_report"]["standardization_ready"] is False  # type: ignore[index]
+    assert artifacts["readiness_report"]["deg_ready"] is False  # type: ignore[index]
+    assert "补充表达矩阵" in readiness.findChild(QLabel, "readinessNextStep").text()
+
+
 def test_current_integrated_rnaseq_run_allows_standardization_without_deg_ready(qt_app, project_summary) -> None:
     source = project_summary.project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
     source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_text("placeholder", encoding="utf-8")
+    _write_xlsx_count_matrix(source)
     run_dir = project_summary.project_root / "recognized_data" / "runs" / "recognition_ui_gate"
     run_dir.mkdir(parents=True, exist_ok=True)
     report = {
@@ -2808,7 +3135,12 @@ def test_current_integrated_rnaseq_run_allows_standardization_without_deg_ready(
                 "semantic_type": "rna_seq_integrated_result_table",
                 "semantic_type_zh": "RNA-seq 综合表达结果表",
                 "recognized_roles": [],
-                "detected_assets": [],
+                "detected_assets": [
+                    {"asset_type": "raw_count_matrix", "label_zh": "count 矩阵", "input_eligible": True},
+                    {"asset_type": "normalized_expression_matrix", "label_zh": "FPKM 矩阵", "input_eligible": True},
+                    {"asset_type": "differential_result_table", "label_zh": "差异分析结果", "input_eligible": False},
+                    {"asset_type": "gene_annotation", "label_zh": "基因注释", "input_eligible": True},
+                ],
                 "content_blocks": [
                     {"block_type": "gene_identifier", "gene_id_type": "ensembl_mouse_gene_id", "species": "Mus musculus"},
                     {"block_type": "count_expression_matrix", "sample_count": 21, "sample_columns": ["A1_count", "A2_count", "A3_count"]},
@@ -2847,19 +3179,41 @@ def test_current_integrated_rnaseq_run_allows_standardization_without_deg_ready(
     events: list[Path] = []
     recognition = BioinformaticsRecognitionWidget(on_continue=events.append)
     recognition.refresh_project(project_summary)
+    recognition._render_report(report)
     recognition.continue_to_readiness()
     assert events == [project_summary.project_root]
     assert "不能继续" not in recognition.status_message()
+    assert "可以继续进入数据准备与标准化" in recognition.status_message()
+    assert "可以继续进入数据准备与标准化" in recognition._counts.toPlainText()
+    assert "确认分组后才能进行 DEG 分析" in recognition._counts.toPlainText()
+    assert "未识别到表达矩阵" not in recognition.status_message()
+    assert "未识别到表达矩阵" not in recognition._counts.toPlainText()
 
     readiness = BioinformaticsReadinessDashboardWidget(on_continue=events.append)
     readiness.refresh_project(project_summary)
     artifacts = readiness.run_readiness_check()
+    assert artifacts is not None
     report = artifacts["readiness_report"]  # type: ignore[index]
     assert report["standardization_ready"] is True
     assert report["deg_ready"] is False
+    assert "可以继续进入数据准备与标准化" in readiness.findChild(QLabel, "readinessStatusBadge").text()
+    assert "已识别到的数据：表达矩阵" in readiness.findChild(QLabel, "readinessRecognizedInputs").text()
+    assert "仍需补充的数据" in readiness.findChild(QLabel, "readinessMissingInputs").text()
+    assert "可以继续进入数据准备与标准化" in readiness.findChild(QLabel, "readinessNextStep").text()
+    assert "未识别到表达矩阵" not in readiness.findChild(QLabel, "readinessNextStep").text()
     readiness.continue_to_standardization()
     assert events[-1] == project_summary.project_root
     assert "不能继续" not in readiness.status_message()
+
+    standardization = BioinformaticsStandardizedAssetsWidget(on_continue=events.append)
+    standardization.refresh_project(project_summary)
+    generated = standardization.generate_assets()
+    assert generated is not None
+    assert "表达矩阵：可用" in standardization.findChild(QTextEdit, "standardizationExpressionStatus").toPlainText()
+    assert "尚未检测到明确分组" in standardization.findChild(QTextEdit, "standardizationGroupStatus").toPlainText()
+    standardization.continue_to_workflow()
+    assert events[-1] == project_summary.project_root
+    assert "不能继续" not in standardization.status_message()
 
 
 def test_workflow_task_results_report_and_settings_pages(qt_app, project_summary) -> None:
