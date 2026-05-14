@@ -10,6 +10,18 @@ Current LabTools behavior is internally consistent at the feature-boundary level
 
 The main follow-up is not code remediation. It is user logic confirmation for existing result-generating tools before expanding them further.
 
+## ImageJ/Fiji Backend Direction Update
+
+Current image-related behavior remains internally consistent, but the future backend direction is now explicit:
+
+- Existing fluorescence manual ROI and wound / scratch manual ROI + threshold remain legacy/testing Python/Pillow MVP tools.
+- These existing MVP tools may remain available as manual-review assistance, but they should not be expanded into a broader in-house image algorithm stack.
+- Future image analysis backend work should use a local Fiji/ImageJ macro bridge.
+- LabTools should own UI parameters, macro template selection, input/output path validation, dry-run/preview text, process execution feedback, result parsing, provenance, review notices, and no-overwrite export behavior.
+- Fiji/ImageJ macros should own image quantification logic when future image tools are implemented.
+- ImageJ/Fiji Bridge v1 is not implemented yet. The next stage should build bridge infrastructure only, not new cell counting, WB grayscale, automatic ROI, batch image processing, or formal report-ready interpretation.
+- OpenCV / scikit-image are not the preferred next backend route unless a later stage explicitly overrides this decision.
+
 ## Module Architecture Alignment 1 Update
 
 LabTools top-level navigation now uses six module entries instead of four tool-collection entries:
@@ -32,6 +44,7 @@ Architecture conclusion:
 - WB loading now uses the Western Blot module protein loading tool as the user-facing entry; the older general-calculator WB loading UI entry has been removed.
 - recipe draft and experiment record draft belong under 试剂与实验记录.
 - fluorescence manual ROI remains a temporary image-assistance capability until ownership is confirmed.
+- fluorescence manual ROI and wound manual ROI are now legacy/testing MVPs; future image work should route through Fiji/ImageJ macro bridge.
 - absorbance / OD, Bradford, NanoDrop, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
 
 ## Western Blot Module Scaffold 1 Update
@@ -120,8 +133,8 @@ Protein loading and BCA are implemented with confirmed narrow scopes:
 | `western_blot.sds_page_gel_template_v1` | yes | no | no | Keep as user-entered template batch calculator; discuss before adding recommendations or built-in recipes. |
 | `western_blot.protein_loading_v1` | yes | no | no | Keep as WB loading assistance; discuss before adding reducer component automation or SOP workflow. |
 | `western_blot.bca_assay_v1` | yes | no | no | Keep as BCA linear-fit assistance; discuss before adding 4PL, ELISA, Bradford, NanoDrop, export, or plate template persistence. |
-| `image.fluorescence_manual_roi_v1` | partial | yes | no | Confirm metrics, background correction meaning, and result summary. |
-| `image.wound_manual_roi_threshold_v1` | partial | yes | no | Confirm wound metric semantics before full wound-healing workflow. |
+| `image.fluorescence_manual_roi_v1` | partial | yes | no | Keep as legacy/testing MVP; future image expansion should move to Fiji/ImageJ macro bridge. |
+| `image.wound_manual_roi_threshold_v1` | partial | yes | no | Keep as legacy/testing MVP; future wound workflow should move to Fiji/ImageJ macro bridge. |
 | `image.roi_export_package_v1` | partial | yes | no | Confirm manifest summary fields and shareability boundaries. |
 | `recipe.draft_store_v1` | partial | yes | no | Confirm recipe fields and safety wording before richer templates. |
 | `recipe.import_export_v1` | partial | yes | no | Keep non-overwrite behavior; confirm import review workflow if expanded. |
@@ -154,12 +167,12 @@ Each row is a compact audit record. Detailed Tool Logic Cards below expand the s
 | `recipe.conflict_import_v1` | Recipe conflict import behavior | recipe_draft | implemented | `user_recipe_store.py`; `recipe_widgets.py` | `test_recipe_persistence.py`; `test_labtools_recipe_persistence_ui.py` | yes | no | imported recipe IDs; current store | load JSON with duplicate ID | imported copy; conflict count | non-destructive conflict handling | manual review | unsafe imported recipe blocks import | yes | low | no | no | keep as-is |
 | `experiment.template_draft_v1` | Experiment template draft | experiment_record_draft | implemented | `template_library.py`; `template_models.py`; `template_widgets.py` | `test_experiment_templates.py`; `test_labtools_template_ui.py` | yes | no | template; purpose; groups; reagents; parameters; outputs | choose template; edit fields; generate preview | draft object; Markdown preview | local structured draft | manual review | missing required fields | partial | medium | yes | no | confirm field set |
 | `experiment.record_draft_store_v1` | Experiment record draft JSON persistence | experiment_record_draft | implemented | `template_persistence.py`; `template_widgets.py` | `test_experiment_template_persistence.py`; `test_labtools_template_ui.py` | yes | yes | record drafts; JSON path | save or load draft JSON | draft store JSON; loaded drafts | local draft persistence; not full ELN | manual review | no drafts; malformed JSON; schema mismatch; blocked terms | partial | medium | yes | no | confirm record fields |
-| `planned.automatic_cell_counting` | Automatic cell counting | planned_image_tool | placeholder | `analysis_task.py`; `result_models.py`; `image_analysis_widgets.py` | `test_image_analysis_task.py`; `test_labtools_status_semantics.py` | no | no | none for result | create placeholder task only | `algorithm_not_available` | planned only | not available | any count output would be out of scope | no | high | yes | unknown | create Tool Logic Card before development |
-| `planned.grayscale_ink_value` | Grayscale / ink-value | planned_image_tool | placeholder | `analysis_task.py`; `result_models.py`; `image_analysis_widgets.py` | `test_image_analysis_task.py`; `test_labtools_status_semantics.py` | no | no | none for result | create placeholder task only | `algorithm_not_available` | planned only | not available | any grayscale result would be out of scope | no | high | yes | unknown | create Tool Logic Card before development |
-| `planned.wb_gel_grayscale` | WB / gel grayscale | planned_image_tool | placeholder | `calculator_widgets.py`; `image_analysis_widgets.py` | `test_labtools_imports.py`; `test_labtools_status_semantics.py` | no | no | none for result | WB loading only; no image workflow | none | planned only | not available | any band quantification would be out of scope | no | high | yes | unknown | create Tool Logic Card before development |
-| `planned.automatic_roi` | Automatic ROI | planned_image_tool | placeholder | `roi_models.py`; `image_analysis_widgets.py` | `test_image_analysis_task.py`; `test_labtools_status_semantics.py` | no | no | none for result | manual ROI only | none | planned only | not available | any auto ROI claim would be out of scope | no | high | yes | unknown | create Tool Logic Card before development |
+| `planned.automatic_cell_counting` | Automatic cell counting | planned_image_tool | placeholder | `analysis_task.py`; `result_models.py`; `image_analysis_widgets.py` | `test_image_analysis_task.py`; `test_labtools_status_semantics.py` | no | no | none for result | create placeholder task only | `algorithm_not_available` | planned only | not available | any count output would be out of scope | no | high | yes | unknown | create Tool Logic Card and Fiji/ImageJ macro bridge design before development |
+| `planned.grayscale_ink_value` | Grayscale / ink-value | planned_image_tool | placeholder | `analysis_task.py`; `result_models.py`; `image_analysis_widgets.py` | `test_image_analysis_task.py`; `test_labtools_status_semantics.py` | no | no | none for result | create placeholder task only | `algorithm_not_available` | planned only | not available | any grayscale result would be out of scope | no | high | yes | unknown | create Tool Logic Card and Fiji/ImageJ macro bridge design before development |
+| `planned.wb_gel_grayscale` | WB / gel grayscale | planned_image_tool | placeholder | `calculator_widgets.py`; `image_analysis_widgets.py` | `test_labtools_imports.py`; `test_labtools_status_semantics.py` | no | no | none for result | WB loading only; no image workflow | none | planned only | not available | any band quantification would be out of scope | no | high | yes | unknown | create Tool Logic Card and Fiji/ImageJ macro bridge design before development |
+| `planned.automatic_roi` | Automatic ROI | planned_image_tool | placeholder | `roi_models.py`; `image_analysis_widgets.py` | `test_image_analysis_task.py`; `test_labtools_status_semantics.py` | no | no | none for result | manual ROI only | none | planned only | not available | any auto ROI claim would be out of scope | no | high | yes | unknown | create Tool Logic Card and Fiji/ImageJ macro bridge design before development |
 | `planned.full_eln` | Full ELN | planned_record_system | placeholder | `template_models.py`; `template_widgets.py` | `test_labtools_template_ui.py`; `test_labtools_status_semantics.py` | no | no | none for full ELN | draft records only | none for full ELN | planned only | not available | any signature or compliance workflow claim would be out of scope | no | high | yes | unknown | create Tool Logic Card before development |
-| `planned.batch_image_processing` | Batch image processing | planned_image_tool | placeholder | `image_analysis_widgets.py` | `test_labtools_status_semantics.py` | no | no | none for batch | single-image tools only | none | planned only | not available | any batch table/export claim would be out of scope | no | high | yes | unknown | create Tool Logic Card before development |
+| `planned.batch_image_processing` | Batch image processing | planned_image_tool | placeholder | `image_analysis_widgets.py` | `test_labtools_status_semantics.py` | no | no | none for batch | single-image tools only | none | planned only | not available | any batch table/export claim would be out of scope | no | high | yes | unknown | create Tool Logic Card and Fiji/ImageJ macro bridge design before development |
 
 ## Tools Safe to Keep As-Is
 
@@ -198,6 +211,7 @@ The following must not be developed directly from the current placeholder state.
 - Transwell assay.
 - WB / gel grayscale.
 - Cell counting.
+- Fiji/ImageJ macro bridge for any future image backend.
 - qPCR Delta Delta Ct.
 - ELISA standard curve.
 - Automatic ROI.
@@ -216,6 +230,7 @@ Non-blocking observations:
 - Western Blot protein loading and BCA v1 now have user-confirmed narrow Tool Logic Cards; future expansion still requires a new discussion.
 - Wound / scratch manual ROI exposes `non_scratch_area_fraction` as a computed metric; documentation correctly says this is threshold-based estimation, not automatic migration interpretation.
 - ROI export writes local paths in UI success feedback. The schema index correctly treats this as local UI feedback, not public report content.
+- Image analysis backend direction is now Fiji/ImageJ macro bridge. Current Python/Pillow ROI tools are legacy/testing MVPs, not a signal to continue building broad self-developed image algorithms in LabTools.
 - Recipe safety category exists in payload and UI, but category naming should be user-confirmed before richer recipe templates are added.
 - Experiment record draft persistence exists, but documentation correctly says it is not a complete ELN.
 
@@ -229,6 +244,7 @@ Priority 1: current implemented result-semantics tools
 - Fluorescence manual ROI.
 - Wound manual ROI + threshold.
 - ROI export summary.
+- ImageJ/Fiji macro bridge v1 infrastructure before any future image backend expansion.
 
 Priority 2: current draft / persistence semantics
 
@@ -253,9 +269,10 @@ Before development resumes, create user-reviewed Tool Logic Cards for:
 - `calculator.dilution_v1`: unit conversions, dilution factor, invalid states, copy fields.
 - `calculator.mass_molarity_v1`: MW assumptions, unit conversions, salt/hydrate/purity warning text.
 - `calculator.cell_seeding_v1`: overage, concentration units, viability caveat, output fields.
-- `image.fluorescence_manual_roi_v1`: ROI metrics, background correction, negative CTF handling.
-- `image.wound_manual_roi_threshold_v1`: threshold mode, scratch vs covered area language.
+- `image.fluorescence_manual_roi_v1`: legacy MVP status, ROI metrics, background correction, negative CTF handling, and migration path to Fiji/ImageJ macro bridge.
+- `image.wound_manual_roi_threshold_v1`: legacy MVP status, threshold mode, scratch vs covered area language, and migration path to Fiji/ImageJ macro bridge.
 - `image.roi_export_package_v1`: manifest summary fields, local path policy, shareability.
+- `imagej_fiji_bridge_v1`: local Fiji/ImageJ executable discovery, macro template path policy, parameter serialization, subprocess execution, timeout/error handling, result file parsing, provenance, and manual-review output semantics.
 - `recipe.draft_store_v1`: required recipe fields and safety category meaning.
 - `experiment.record_draft_store_v1`: required record fields and non-ELN wording.
 - Future WB/BCA expansion: reducer component automation, BCA 4PL, Bradford, NanoDrop, ELISA standard curves, plate layout persistence, export formats.
@@ -889,6 +906,7 @@ Result meaning:
 
 - Manual ROI grayscale measurement assistance.
 - It does not identify cells, choose ROI automatically, or interpret biology.
+- Current Python/Pillow implementation is a legacy/testing MVP and not the preferred path for future image backend expansion.
 
 Review level:
 
@@ -917,7 +935,9 @@ Risk:
 
 Recommended next step:
 
-- Confirm metric names, background correction language, and negative CTF meaning.
+- Keep current tool as manual-review legacy MVP.
+- Route future fluorescence image backend work through Fiji/ImageJ macro bridge.
+- Confirm metric names, background correction language, and negative CTF meaning before migrating or expanding.
 
 ## Tool Logic Card: Wound / scratch manual ROI + threshold
 
@@ -957,6 +977,7 @@ Result meaning:
 
 - Threshold-based manual ROI area estimation.
 - It must not be treated as automatic migration-effect interpretation.
+- Current Python/Pillow implementation is a legacy/testing MVP and not the preferred path for future wound workflow expansion.
 
 Review level:
 
@@ -984,6 +1005,8 @@ Risk:
 
 Recommended next step:
 
+- Keep current tool as manual-review legacy MVP.
+- Route future wound workflow work through Fiji/ImageJ macro bridge.
 - Confirm scratch-area and non-scratch-area field meanings before full wound healing workflow.
 
 ## Tool Logic Card: ROI export package
@@ -1021,6 +1044,7 @@ Result meaning:
 
 - Local package for manual review and traceability.
 - Not a final report or automated proof.
+- Future image backend outputs should preserve this export package discipline: provenance, macro/version metadata, no-overwrite behavior, and manual-review semantics.
 
 Review level:
 
@@ -1051,6 +1075,7 @@ Risk:
 Recommended next step:
 
 - Confirm result summary fields and local-path exposure policy.
+- Extend manifest/result provenance for Fiji/ImageJ macro bridge outputs before adding future image tools.
 
 ## Tool Logic Card: Recipe draft store
 
