@@ -115,7 +115,7 @@ def test_module_icons_are_visible(qt_app, local_session: LocalSession) -> None:
     visible_icons = [icon for icon in icons if not icon.isHidden() and icon.pixmap() is not None and not icon.pixmap().isNull()]
 
     assert len(icons) == 3
-    assert len(visible_icons) >= 2
+    assert len(visible_icons) == 3
 
 
 def test_ui02_page_icons_are_visible(qt_app, local_session: LocalSession) -> None:
