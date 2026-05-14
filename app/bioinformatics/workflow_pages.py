@@ -8407,6 +8407,14 @@ def _recognition_type_text(item: dict[str, object]) -> str:
         if role_labels:
             return f"{primary_label}（{depth_label}；含：{'、'.join(role_labels)}）"
         return f"{primary_label}（{depth_label}）"
+    if primary == "geo_series_matrix_container":
+        depth = _geo_series_parser_depth_from_item(item)
+        depth_label = _geo_series_parser_depth_label(depth)
+        sample_count = int(item.get("sample_count") or 0)
+        expression_status = "表达矩阵区域已检测" if item.get("expression_matrix_presence") else "尚未确认表达矩阵区域"
+        if role_labels:
+            return f"{primary_label}（{depth_label}；样本 {sample_count}；{expression_status}；含：{'、'.join(role_labels)}）"
+        return f"{primary_label}（{depth_label}；样本 {sample_count}；{expression_status}）"
     if not roles:
         return primary_label
     return f"{primary_label}（含：{'、'.join(role_labels)}）" if role_labels else primary_label
@@ -8424,6 +8432,36 @@ def _recognition_roles_tooltip(item: dict[str, object]) -> str:
             lines.append("表达表格：检测为候选输入，进入标准化前需要用户确认。")
         else:
             lines.append("表达表格：尚未确认表达矩阵。")
+        warnings = [str(warning) for warning in item.get("warnings", []) or [] if str(warning)]
+        if warnings:
+            lines.append("解析提示：" + "；".join(warnings[:3]))
+    if str(item.get("recognized_type") or "") == "geo_series_matrix_container":
+        depth = _geo_series_parser_depth_from_item(item)
+        lines.append(f"Series Matrix 解析深度：{_geo_series_parser_depth_label(depth)}")
+        lines.append(f"样本数量：{int(item.get('sample_count') or 0)}")
+        platforms = [str(value) for value in item.get("platform_accessions", []) or [] if str(value)]
+        if platforms:
+            lines.append("平台 accession：" + "、".join(platforms[:5]))
+        dimensions = item.get("expression_matrix_dimensions")
+        if isinstance(dimensions, dict):
+            lines.append(
+                "表达矩阵维度："
+                f"{int(dimensions.get('rows') or 0)} 行，"
+                f"{int(dimensions.get('sample_columns') or 0)} 个样本列"
+            )
+        if item.get("expression_matrix_presence"):
+            lines.append("已检测到 GEO Series Matrix 表达矩阵区域，可进入标准化阶段进一步确认。")
+        else:
+            lines.append("表达矩阵区域：尚未确认。")
+        lines.append(f"表达值类型候选：{item.get('expression_value_type_candidate') or 'unknown'}")
+        lines.append(f"ID 类型候选：{item.get('gene_id_type_candidate') or 'unknown'}")
+        fields = [str(value) for value in item.get("sample_metadata_fields", []) or [] if str(value)]
+        phenotype_fields = [str(value) for value in item.get("phenotype_candidate_fields", []) or [] if str(value)]
+        lines.append(f"样本注释字段数量：{len(fields)}")
+        if phenotype_fields:
+            lines.append("表型/分组候选字段：" + "、".join(phenotype_fields[:8]) + "；需用户确认后才能进行 DEG 分析。")
+        if str(item.get("gene_id_type_candidate") or "") in {"probe_id", "unknown"}:
+            lines.append("ID_REF 可能为平台探针 ID，需结合平台注释确认 gene ID 映射。")
         warnings = [str(warning) for warning in item.get("warnings", []) or [] if str(warning)]
         if warnings:
             lines.append("解析提示：" + "；".join(warnings[:3]))
@@ -8453,6 +8491,24 @@ def _geo_soft_parser_depth_label(depth: str) -> str:
         "table_detected": "检测到平台或表达表格",
         "table_parsed": "已解析表格结构",
     }.get(depth, "已识别 GEO SOFT 容器")
+
+
+def _geo_series_parser_depth_from_item(item: dict[str, object]) -> str:
+    profile = item.get("content_profile")
+    if item.get("parser_depth"):
+        return str(item.get("parser_depth") or "")
+    if isinstance(profile, dict):
+        return str(profile.get("parser_depth") or "")
+    return ""
+
+
+def _geo_series_parser_depth_label(depth: str) -> str:
+    return {
+        "container_only": "已识别 GEO Series Matrix 容器",
+        "metadata_parsed": "已解析 Series/Sample metadata",
+        "matrix_detected": "检测到表达矩阵区域",
+        "matrix_previewed": "已解析表达矩阵结构预览",
+    }.get(depth, "已识别 GEO Series Matrix 容器")
 
 
 def _format_file_size(value: object) -> str:

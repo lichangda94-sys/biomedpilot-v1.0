@@ -2456,6 +2456,58 @@ def test_geo_soft_metadata_ui_does_not_claim_full_expression_parse(qt_app, proje
     assert "完整表达矩阵" not in tooltip
 
 
+def test_geo_series_matrix_ui_shows_candidate_confirmation_not_confirmed_group(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "GSE99999_series_matrix.txt.gz"
+    source.write_text("placeholder", encoding="utf-8")
+    _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "geo_series_matrix_container",
+                "recognized_type_zh": "GEO Series Matrix 容器",
+                "recognized_roles": ["expression_matrix", "sample_metadata", "phenotype_metadata", "platform_reference_hint"],
+                "parser_depth": "matrix_previewed",
+                "sample_count": 2,
+                "platform_accessions": ["GPL96"],
+                "expression_matrix_presence": True,
+                "expression_matrix_dimensions": {"rows": 2, "columns": 3, "sample_columns": 2},
+                "expression_value_type_candidate": "unknown",
+                "gene_id_type_candidate": "probe_id",
+                "sample_metadata_fields": ["geo_accession", "title", "characteristics_ch1", "disease"],
+                "phenotype_candidate_fields": ["disease"],
+                "warnings": ["Expression value type is unknown and must be confirmed during standardization."],
+                "detected_assets": [
+                    {"asset_type": "expression_matrix", "label_zh": "表达矩阵", "input_eligible": True, "reason": "已检测到 GEO Series Matrix 表达矩阵区域，可进入标准化阶段进一步确认。"},
+                    {"asset_type": "sample_metadata", "label_zh": "样本注释", "input_eligible": True, "reason": "已解析样本 metadata。"},
+                    {"asset_type": "phenotype_metadata", "label_zh": "表型信息", "input_eligible": True, "reason": "样本分组为候选推断，需用户确认后才能进行 DEG 分析。"},
+                    {"asset_type": "platform_reference_hint", "label_zh": "平台参考提示", "input_eligible": False, "reason": "GEO Series Matrix 提供 GPL 平台编号。"},
+                ],
+                "confidence": 0.9,
+                "file_size": 1024,
+                "reason": "GEO Series Matrix 已解析；表达值类型、ID_REF 映射和候选分组需用户确认。",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    text = table.item(0, 2).text()
+    tooltip = table.item(0, 2).toolTip()
+
+    assert "已解析表达矩阵结构预览" in text
+    assert "表达值类型候选：unknown" in tooltip
+    assert "ID 类型候选：probe_id" in tooltip
+    assert "需用户确认后才能进行 DEG 分析" in tooltip
+    assert "已确认分组" not in tooltip
+    assert "已完成差异分析" not in tooltip
+    assert "表达矩阵已标准化" not in tooltip
+
+
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
     source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
     source.parent.mkdir(parents=True, exist_ok=True)

@@ -10,6 +10,7 @@ import pytest
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center
 from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
+from app.bioinformatics.geo_series_matrix_parser import parse_geo_series_matrix
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
@@ -164,6 +165,8 @@ def _write_geo_series_matrix(path: Path) -> Path:
                 "!Sample_title = Normal sample 1",
                 "!Sample_geo_accession = GSM100001",
                 "!Sample_geo_accession = GSM100002",
+                "!Sample_organism_ch1 = Homo sapiens",
+                "!Sample_organism_ch1 = Homo sapiens",
                 "!Sample_characteristics_ch1 = tissue: tumor",
                 "!Sample_characteristics_ch1 = tissue: normal",
                 "!Sample_source_name_ch1 = thyroid cancer tissue",
@@ -587,24 +590,60 @@ def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
     source.parent.mkdir(parents=True, exist_ok=True)
     _write_geo_series_matrix(source)
 
+    parsed = parse_geo_series_matrix(source)
+    assert parsed["series_accession"] == "GSE12345"
+    assert parsed["platform_accessions"] == ["GPL570"]
+    assert parsed["sample_accessions"] == ["GSM100001", "GSM100002"]
+    assert parsed["sample_titles"]["GSM100001"] == "Tumor sample 1"  # type: ignore[index]
+    assert parsed["sample_count"] == 2
+    assert parsed["expression_matrix_presence"] is True
+    assert parsed["expression_matrix_dimensions"] == {"rows": 2, "columns": 3, "sample_columns": 2}
+    assert parsed["id_column"] == "ID_REF"
+    assert parsed["sample_columns"] == ["GSM100001", "GSM100002"]
+    assert parsed["gene_id_type_candidate"] == "probe_id"
+    assert parsed["expression_value_type_candidate"] == "normalized_or_log_expression"
+    assert any(item["species"] == "Homo sapiens" and item["source_field"] == "Sample_organism_ch1" for item in parsed["species_evidence"])  # type: ignore[index]
+
     recognition = run_project_recognition(project_root)
     record = recognition["files"][0]  # type: ignore[index]
     assets = _asset_by_role(record)  # type: ignore[arg-type]
 
     assert record["recognized_type"] == "geo_series_matrix_container"
+    assert record["file_format"] == "TXT"
+    assert record["container_type"] == "geo_series_matrix"
+    assert record["parser_depth"] == "matrix_previewed"
+    assert record["series_accession"] == "GSE12345"
+    assert record["platform_accessions"] == ["GPL570"]
+    assert record["sample_count"] == 2
+    assert record["sample_accessions"] == ["GSM100001", "GSM100002"]
+    assert record["expression_matrix_presence"] is True
+    assert record["expression_matrix_dimensions"] == {"rows": 2, "columns": 3, "sample_columns": 2}
+    assert record["id_column"] == "ID_REF"
+    assert record["sample_columns"] == ["GSM100001", "GSM100002"]
+    assert record["expression_value_type_candidate"] == "normalized_or_log_expression"
+    assert record["gene_id_type_candidate"] == "probe_id"
+    assert record["requires_user_confirmation"] is True
+    assert record["can_enter_standardization"] is True
     assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "platform_reference_hint"}  # type: ignore[arg-type]
     assert {"phenotype_metadata", "clinical_metadata"} & set(record["recognized_roles"])  # type: ignore[arg-type]
     assert assets["expression_matrix"]["input_eligible"] is True
-    assert assets["expression_matrix"]["location"]["start_line"] == 11  # type: ignore[index]
-    assert assets["expression_matrix"]["location"]["header_line"] == 12  # type: ignore[index]
-    assert assets["expression_matrix"]["location"]["end_line"] == 15  # type: ignore[index]
+    assert assets["expression_matrix"]["requires_user_confirmation"] is True
+    assert assets["expression_matrix"]["location"]["start_line"] == 13  # type: ignore[index]
+    assert assets["expression_matrix"]["location"]["header_line"] == 14  # type: ignore[index]
+    assert assets["expression_matrix"]["location"]["end_line"] == 17  # type: ignore[index]
     assert "ID_REF header" in assets["expression_matrix"]["evidence"]
     assert assets["sample_metadata"]["input_eligible"] is True
     assert assets["platform_reference_hint"]["input_eligible"] is False
     assert assets["platform_reference_hint"]["platform_id"] == "GPL570"
+    assert (project_root / "logs" / "recognition" / "recognized_files.json").exists()
     assert recognition["group_preview"]["status"] == "preview_only"  # type: ignore[index]
     assert recognition["group_preview"]["selected_preview_field"] == "tissue"  # type: ignore[index]
     assert (project_root / GROUP_PREVIEW_REPORT).exists()
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
 
 
 def test_geo_series_matrix_header_without_rows_is_metadata_not_expression(project_root: Path) -> None:
@@ -631,7 +670,115 @@ def test_geo_series_matrix_header_without_rows_is_metadata_not_expression(projec
     assert record["recognized_type"] == "geo_series_matrix_container"
     assert "sample_metadata" in record["recognized_roles"]  # type: ignore[operator]
     assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+    assert record["expression_matrix_presence"] is False
+    assert record["can_enter_standardization"] is False
     assert record["content_profile"]["table_data_row_count"] == 0  # type: ignore[index]
+
+    readiness = run_project_readiness(project_root)
+    assert readiness["readiness_report"]["standardization_ready"] is False  # type: ignore[index]
+
+
+def test_geo_series_matrix_gzip_parser_extracts_metadata_and_matrix(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n".join(
+        [
+            "!Series_title\tDemo gzipped series",
+            "!Series_geo_accession\tGSE99999",
+            "!Series_summary\tDemo summary",
+            "!Series_overall_design\tcase control design",
+            "!Series_platform_id\tGPL96",
+            "!Sample_title\tcase sample\tcontrol sample",
+            "!Sample_geo_accession\tGSM900001\tGSM900002",
+            "!Sample_source_name_ch1\tblood case\tblood control",
+            "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+            "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+            "!Sample_treatment_protocol_ch1\ttreated\tuntreated",
+            "!series_matrix_table_begin",
+            "ID_REF\tGSM900001\tGSM900002",
+            "1007_s_at\t10\t12",
+            "1053_at\t15\t18",
+            "!series_matrix_table_end",
+            "",
+        ]
+    )
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write(content)
+
+    parsed = parse_geo_series_matrix(source)
+
+    assert parsed["file_format"] == "TXT.GZ"
+    assert parsed["series_accession"] == "GSE99999"
+    assert parsed["series_summary"] == "Demo summary"
+    assert parsed["overall_design"] == "case control design"
+    assert parsed["platform_accessions"] == ["GPL96"]
+    assert parsed["sample_accessions"] == ["GSM900001", "GSM900002"]
+    assert parsed["sample_titles"]["GSM900001"] == "case sample"  # type: ignore[index]
+    assert parsed["sample_source_name_ch1"]["GSM900001"] == "blood case"  # type: ignore[index]
+    assert "characteristics_ch1" in parsed["sample_metadata_fields"]  # type: ignore[operator]
+    assert {"source_name_ch1", "disease", "treatment_protocol_ch1"} <= set(parsed["phenotype_candidate_fields"])  # type: ignore[arg-type]
+    assert parsed["phenotype_candidate_values_preview"]["disease"] == ["asthma", "control"]  # type: ignore[index]
+    assert parsed["expression_matrix_presence"] is True
+    assert parsed["expression_matrix_dimensions"] == {"rows": 2, "columns": 3, "sample_columns": 2}
+    assert parsed["expression_value_type_candidate"] == "count_like_candidate"
+    assert parsed["gene_id_type_candidate"] == "probe_id"
+
+
+def test_geo_series_matrix_species_conflict_warns(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99998_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99998",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_organism_ch1\tHomo sapiens\tMus musculus",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "1007_s_at\t1.2\t2.3",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = parse_geo_series_matrix(source)
+
+    assert {item["species"] for item in parsed["species_evidence"]} >= {"Homo sapiens", "Mus musculus"}  # type: ignore[index]
+    assert any("Conflicting Sample_organism_ch1" in warning for warning in parsed["warnings"])  # type: ignore[operator]
+
+
+def test_geo_series_matrix_unknown_expression_values_still_standardization_ready(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99997_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99997",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_characteristics_ch1\tcondition: case\tcondition: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "1007_s_at\tpresent\tabsent",
+                "1053_at\tabsent\tpresent",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    readiness = run_project_readiness(project_root)["readiness_report"]  # type: ignore[index]
+
+    assert record["expression_matrix_presence"] is True
+    assert record["expression_value_type_candidate"] == "unknown"
+    assert record["requires_user_confirmation"] is True
+    assert any("Expression value type is unknown" in warning for warning in record["warnings"])  # type: ignore[operator]
+    assert readiness["standardization_ready"] is True
+    assert readiness["deg_ready"] is False
 
 
 def test_csv_expression_matrix_content_profile(project_root: Path) -> None:
