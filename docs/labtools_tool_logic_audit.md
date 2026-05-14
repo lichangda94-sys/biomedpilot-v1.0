@@ -18,9 +18,13 @@ Current image-related behavior remains internally consistent, but the future bac
 - These existing MVP tools may remain available as manual-review assistance, but they should not be expanded into a broader in-house image algorithm stack.
 - Future image analysis backend work should use a local Fiji/ImageJ macro bridge.
 - LabTools now has ImageJ/Fiji Bridge v1 infrastructure for user path configuration, common-path probing, version detection, macro smoke test, status display, and local config clearing.
+- Product UX must remain feature-triggered: do not add a main-screen external-engine center, and do not force users to configure ImageJ/Fiji before they enter an image workflow that needs it.
+- Missing ImageJ/Fiji should produce a contextual prompt that explains the needed tool, why the workflow needs it, whether fallback/manual review can continue, and where to auto-detect, choose a path, or read an install guide.
+- A future global `设置 > 本地工具与模型` page may exist for advanced diagnostics and troubleshooting, but it is not a first-use gate.
 - LabTools should own UI parameters, macro template selection, input/output path validation, dry-run/preview text, process execution feedback, result parsing, provenance, review notices, and no-overwrite export behavior.
 - Fiji/ImageJ macros should own image quantification logic when future image tools are implemented.
 - ImageJ/Fiji Bridge v1 is infrastructure only. It does not implement cell counting, WB grayscale, automatic ROI, batch image processing, fluorescence automated analysis, wound automated analysis, or report-ready interpretation.
+- ImageJ/Fiji is a local backend, not cloud AI and not a paid-credit capability.
 - OpenCV / scikit-image are not the preferred next backend route unless a later stage explicitly overrides this decision.
 
 ## Module Architecture Alignment 1 Update
@@ -235,6 +239,7 @@ Non-blocking observations:
 - Wound / scratch manual ROI exposes `non_scratch_area_fraction` as a computed metric; documentation correctly says this is threshold-based estimation, not automatic migration interpretation.
 - ROI export writes local paths in UI success feedback. The schema index correctly treats this as local UI feedback, not public report content.
 - Image analysis backend direction is now Fiji/ImageJ macro bridge. Current Python/Pillow ROI tools are legacy/testing MVPs, not a signal to continue building broad self-developed image algorithms in LabTools.
+- Local tools/models UX direction is unified-backend and feature-triggered; LabTools should not create a separate local engine center or duplicate Bioinformatics/Meta local model/tool configuration logic.
 - Recipe safety category exists in payload and UI, but category naming should be user-confirmed before richer recipe templates are added.
 - Experiment record draft persistence exists, but documentation correctly says it is not a complete ELN.
 
