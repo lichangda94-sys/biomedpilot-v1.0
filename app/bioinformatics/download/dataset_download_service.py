@@ -13,6 +13,12 @@ from urllib.parse import unquote, urljoin
 from urllib.request import urlopen
 from uuid import uuid4
 
+from app.bioinformatics.acquisition_file_records import (
+    build_blocked_file_record,
+    build_file_record,
+    sha256_file,
+    summarize_file_records,
+)
 from app.bioinformatics.gse_file_download_candidates import (
     gse_file_download_candidate_selection_path,
     load_gse_file_download_candidate_selection,
@@ -70,6 +76,11 @@ class GeoAssetManifestDiscoverer(Protocol):
 
 class GeoRemoteAssetDownloader(Protocol):
     def download_asset(self, asset: dict[str, Any], target_dir: Path) -> dict[str, Any]:
+        ...
+
+
+class StandardRemoteFileDownloader(Protocol):
+    def download_file(self, entry: dict[str, Any], target_dir: Path) -> dict[str, Any]:
         ...
 
 
@@ -202,11 +213,15 @@ class HttpsGeoRemoteAssetDownloader:
         if target_path.exists() and target_path.stat().st_size > 0:
             return {
                 "status": "success",
+                "cache_hit": True,
                 "remote_url": remote_url,
                 "local_path": str(target_path.resolve()),
                 "bytes_downloaded": target_path.stat().st_size,
+                "sha256": sha256_file(target_path),
                 "note": "Loaded existing asset from project cache.",
             }
+        if target_path.exists() and target_path.stat().st_size <= 0:
+            raise RuntimeError("Existing cached GEO asset is empty; remove it and retry.")
         partial_path = target_path.with_suffix(target_path.suffix + ".part")
         bytes_downloaded = 0
         try:
@@ -229,9 +244,117 @@ class HttpsGeoRemoteAssetDownloader:
             raise
         return {
             "status": "success",
+            "cache_hit": False,
             "remote_url": remote_url,
             "local_path": str(target_path.resolve()),
             "bytes_downloaded": bytes_downloaded,
+            "sha256": sha256_file(target_path),
+        }
+
+
+class GdcDataFileDownloader:
+    """Download an open GDC file by UUID through the public data endpoint."""
+
+    def download_file(self, entry: dict[str, Any], target_dir: Path) -> dict[str, Any]:
+        file_id = str(entry.get("file_id") or entry.get("id") or "").strip()
+        if not file_id:
+            raise ValueError("GDC file_id is required.")
+        file_name = Path(str(entry.get("file_name") or entry.get("filename") or file_id)).name
+        if not file_name:
+            raise ValueError("GDC file_name is empty.")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / file_name
+        if target_path.exists() and target_path.stat().st_size > 0:
+            return {
+                "status": "success",
+                "cache_hit": True,
+                "local_path": str(target_path.resolve()),
+                "bytes_downloaded": target_path.stat().st_size,
+                "sha256": sha256_file(target_path),
+                "source_url": f"https://api.gdc.cancer.gov/data/{file_id}",
+            }
+        if target_path.exists() and target_path.stat().st_size <= 0:
+            raise RuntimeError("Existing cached GDC file is empty; remove it and retry.")
+        partial_path = target_path.with_suffix(target_path.suffix + ".part")
+        bytes_downloaded = 0
+        try:
+            with urlopen(f"https://api.gdc.cancer.gov/data/{file_id}", timeout=120, context=_ssl_context()) as response:  # nosec B310 - fixed GDC API endpoint and file UUID.
+                with partial_path.open("wb") as output:
+                    while True:
+                        chunk = response.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                        bytes_downloaded += len(chunk)
+            if bytes_downloaded <= 0:
+                raise RuntimeError("GDC returned an empty file.")
+            partial_path.replace(target_path)
+        except Exception:
+            try:
+                partial_path.unlink()
+            except OSError:
+                pass
+            raise
+        return {
+            "status": "success",
+            "cache_hit": False,
+            "local_path": str(target_path.resolve()),
+            "bytes_downloaded": bytes_downloaded,
+            "sha256": sha256_file(target_path),
+            "source_url": f"https://api.gdc.cancer.gov/data/{file_id}",
+        }
+
+
+class HttpsUrlFileDownloader:
+    """Download a public URL into the project cache."""
+
+    def download_file(self, entry: dict[str, Any], target_dir: Path) -> dict[str, Any]:
+        url = str(entry.get("url") or entry.get("download_url") or entry.get("source_url") or "").strip()
+        if not url.startswith("https://"):
+            raise ValueError("Only public HTTPS URLs are supported.")
+        file_name = Path(str(entry.get("file_name") or entry.get("filename") or url.rstrip("/").rsplit("/", 1)[-1])).name
+        if not file_name:
+            raise ValueError("Download file name is empty.")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / file_name
+        if target_path.exists() and target_path.stat().st_size > 0:
+            return {
+                "status": "success",
+                "cache_hit": True,
+                "local_path": str(target_path.resolve()),
+                "bytes_downloaded": target_path.stat().st_size,
+                "sha256": sha256_file(target_path),
+                "source_url": url,
+            }
+        if target_path.exists() and target_path.stat().st_size <= 0:
+            raise RuntimeError("Existing cached public file is empty; remove it and retry.")
+        partial_path = target_path.with_suffix(target_path.suffix + ".part")
+        bytes_downloaded = 0
+        try:
+            with urlopen(url, timeout=120, context=_ssl_context()) as response:  # nosec B310 - user-visible public HTTPS file URL.
+                with partial_path.open("wb") as output:
+                    while True:
+                        chunk = response.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                        bytes_downloaded += len(chunk)
+            if bytes_downloaded <= 0:
+                raise RuntimeError("Remote server returned an empty file.")
+            partial_path.replace(target_path)
+        except Exception:
+            try:
+                partial_path.unlink()
+            except OSError:
+                pass
+            raise
+        return {
+            "status": "success",
+            "cache_hit": False,
+            "local_path": str(target_path.resolve()),
+            "bytes_downloaded": bytes_downloaded,
+            "sha256": sha256_file(target_path),
+            "source_url": url,
         }
 
 
@@ -256,10 +379,14 @@ class DatasetDownloadService:
         geo_downloader: GeoFamilySoftDownloader | None = None,
         geo_asset_discoverer: GeoAssetManifestDiscoverer | None = None,
         geo_asset_downloader: GeoRemoteAssetDownloader | None = None,
+        gdc_file_downloader: StandardRemoteFileDownloader | None = None,
+        gtex_file_downloader: StandardRemoteFileDownloader | None = None,
     ) -> None:
         self._geo_downloader = geo_downloader or HttpsGeoFamilySoftDownloader()
         self._geo_asset_discoverer = geo_asset_discoverer or HttpsGeoAssetManifestDiscoverer()
         self._geo_asset_downloader = geo_asset_downloader or HttpsGeoRemoteAssetDownloader()
+        self._gdc_file_downloader = gdc_file_downloader or GdcDataFileDownloader()
+        self._gtex_file_downloader = gtex_file_downloader or HttpsUrlFileDownloader()
 
     def create_request_from_candidate(
         self,
@@ -381,7 +508,8 @@ class DatasetDownloadService:
         elif request.execute_download and request.source != "geo":
             download_executed = True
             try:
-                download_manifest_path, download_result = _write_standard_source_download_manifest(request, target_dir)
+                download_manifest_path, download_result = self._execute_standard_source_download(request, target_dir)
+                downloaded_files = [str(path) for path in download_result.get("downloaded_files", []) or [] if str(path)]
                 status = str(download_result.get("status") or _planned_status(request.source))
                 message = str(download_result.get("message") or _planned_message(request.source, request.accession_or_project))
                 success = True
@@ -390,6 +518,18 @@ class DatasetDownloadService:
                 status = "download_manifest_failed"
                 message = f"下载清单创建失败：{exc}"
                 download_result = {"error": str(exc)}
+
+        if downloaded_files and not download_result.get("file_records"):
+            download_result["file_records"] = [
+                build_file_record(
+                    path,
+                    source=request.source,
+                    role=_downloaded_file_role(request.source, path),
+                    status="downloaded",
+                    message="Downloaded file registered for recognition.",
+                )
+                for path in downloaded_files
+            ]
 
         receipt = {
             "schema_version": "biomedpilot.dataset_download_receipt.v1",
@@ -409,6 +549,7 @@ class DatasetDownloadService:
             "asset_manifest": asset_manifest or {},
             "request_path": str(request_path),
             "download_result": download_result,
+            "file_records": download_result.get("file_records", []) if isinstance(download_result, dict) else [],
             "metadata": request.metadata,
         }
         _write_json(receipt_path, receipt)
@@ -422,6 +563,7 @@ class DatasetDownloadService:
             asset_manifest_path=asset_manifest_path,
             asset_manifest=asset_manifest,
             download_manifest_path=download_manifest_path,
+            file_records=download_result.get("file_records", []) if isinstance(download_result, dict) else None,
         )
         return CandidateDownloadResult(
             success=success,
@@ -451,9 +593,13 @@ class DatasetDownloadService:
         asset_manifest_path: Path | None = None,
         asset_manifest: dict[str, Any] | None = None,
         download_manifest_path: Path | None = None,
+        file_records: list[dict[str, Any]] | None = None,
     ) -> AcquisitionSummary:
         metadata = dict(request.metadata)
         asset_summary = asset_manifest.get("summary", {}) if isinstance(asset_manifest, dict) else {}
+        real_file_records = [record for record in file_records or [] if str(record.get("local_path") or "") and str(record.get("status") or "") in {"downloaded", "cache_hit", "available"}]
+        if real_file_records:
+            metadata["file_records_summary"] = summarize_file_records(file_records or [])
         metadata.update(
             {
                 "download_id": request.download_id,
@@ -464,11 +610,14 @@ class DatasetDownloadService:
                 "asset_manifest_path": str(asset_manifest_path) if asset_manifest_path is not None else "",
                 "download_manifest_path": str(download_manifest_path) if download_manifest_path is not None else "",
                 "asset_manifest_summary": asset_summary if isinstance(asset_summary, dict) else {},
-                "registration_status": "registered_with_download_task" if not downloaded_files else "registered_metadata_source",
+                "registration_status": "registered_with_download_task" if not downloaded_files else "registered_downloaded_files",
                 "ready_for_recognition": "ready" if downloaded_files else "pending_source_download",
-                "recognition_scope": "geo_metadata_and_manifest" if downloaded_files else "pending_source_download",
+                "recognition_scope": "downloaded_source_files" if downloaded_files else "pending_source_download",
             }
         )
+        registration_status = "registered_with_download_task"
+        if downloaded_files:
+            registration_status = "registered_metadata_source" if status == "geo_metadata_downloaded" else "registered_downloaded_files"
         selected_paths = [Path(path) for path in downloaded_files]
         return register_acquisition(
             Path(request.project_root),
@@ -476,8 +625,163 @@ class DatasetDownloadService:
             source_label=request.accession_or_project,
             strategy="reference" if selected_paths else "plan_only",
             selected_paths=selected_paths,
-            metadata=metadata,
+            metadata={**metadata, "registration_status": registration_status},
+            file_records=file_records,
         )
+
+    def _execute_standard_source_download(self, request: DatasetDownloadRequest, target_dir: Path) -> tuple[Path, dict[str, Any]]:
+        if request.source == "tcga_gdc":
+            return self._download_tcga_gdc_files(request, target_dir)
+        if request.source == "gtex":
+            return self._download_gtex_files(request, target_dir)
+        return _write_standard_source_download_manifest(request, target_dir)
+
+    def _download_tcga_gdc_files(self, request: DatasetDownloadRequest, target_dir: Path) -> tuple[Path, dict[str, Any]]:
+        manifest_path, manifest_result = _write_tcga_gdc_download_manifest(request, target_dir)
+        manifest = _read_json(manifest_path)
+        entries = [entry for entry in manifest.get("file_manifest_entries", []) or [] if isinstance(entry, dict)]
+        download_dir = target_dir / request.download_id
+        file_records: list[dict[str, Any]] = []
+        events: list[dict[str, Any]] = []
+        downloaded_files: list[str] = []
+        for entry in entries:
+            allowed, reason = _is_allowed_gdc_file(entry)
+            if not allowed:
+                record = build_blocked_file_record(
+                    source="tcga_gdc",
+                    role=_gdc_file_role(entry),
+                    source_url=f"https://api.gdc.cancer.gov/data/{entry.get('file_id') or ''}",
+                    source_path=str(entry.get("file_name") or ""),
+                    risk_level="high" if _is_raw_or_large_entry(entry) else "medium",
+                    message=reason,
+                    extra={"file_id": entry.get("file_id") or "", "file_name": entry.get("file_name") or ""},
+                )
+                file_records.append(record)
+                events.append({"file_name": entry.get("file_name") or "", "status": "blocked", "message": reason})
+                continue
+            try:
+                result = self._gdc_file_downloader.download_file(entry, download_dir)
+                local_path = str(result.get("local_path") or "")
+                if not local_path:
+                    raise RuntimeError("GDC downloader did not return local_path.")
+                status = "cache_hit" if result.get("cache_hit") else "downloaded"
+                downloaded_files.append(local_path)
+                file_records.append(
+                    build_file_record(
+                        local_path,
+                        source="tcga_gdc",
+                        role=_gdc_file_role(entry),
+                        status=status,
+                        source_url=str(result.get("source_url") or f"https://api.gdc.cancer.gov/data/{entry.get('file_id') or ''}"),
+                        remote_checksum=str(entry.get("md5sum") or ""),
+                        message="GDC file downloaded." if status == "downloaded" else "Loaded existing GDC file from project cache.",
+                        extra={"file_id": entry.get("file_id") or "", "file_name": entry.get("file_name") or ""},
+                    )
+                )
+                events.append({"file_name": entry.get("file_name") or "", "status": status, "local_path": local_path})
+            except Exception as exc:
+                file_records.append(
+                    build_blocked_file_record(
+                        source="tcga_gdc",
+                        role=_gdc_file_role(entry),
+                        source_url=f"https://api.gdc.cancer.gov/data/{entry.get('file_id') or ''}",
+                        source_path=str(entry.get("file_name") or ""),
+                        risk_level="medium",
+                        message=f"download_failed:{exc}",
+                        extra={"file_id": entry.get("file_id") or "", "file_name": entry.get("file_name") or "", "status": "failed"},
+                    )
+                )
+                events.append({"file_name": entry.get("file_name") or "", "status": "failed", "message": str(exc)})
+        manifest["status"] = "downloaded" if downloaded_files else "pending_data_file_download"
+        manifest["download_id"] = request.download_id
+        manifest["downloaded_files"] = downloaded_files
+        manifest["file_records"] = file_records
+        manifest["download_events"] = events
+        manifest["source_manifest_required"] = True
+        _write_json(manifest_path, manifest)
+        blocked_count = sum(1 for record in file_records if record.get("status") == "blocked")
+        failed_count = sum(1 for event in events if event.get("status") == "failed")
+        status = "tcga_gdc_files_downloaded" if downloaded_files and not failed_count else ("tcga_gdc_files_downloaded_with_warnings" if downloaded_files else str(manifest_result.get("status") or "tcga_gdc_download_manifest_pending_file_selection"))
+        message = (
+            f"{request.accession_or_project}：已下载 {len(downloaded_files)} 个 GDC 文件；阻断 {blocked_count} 个；失败 {failed_count} 个。"
+            if downloaded_files or blocked_count or failed_count
+            else str(manifest_result.get("message") or f"{request.accession_or_project}：已创建 GDC 下载任务清单，待在线选择表达/临床数据文件。")
+        )
+        return manifest_path, {
+            **manifest_result,
+            "status": status,
+            "message": message,
+            "download_manifest_path": str(manifest_path),
+            "downloaded_files": downloaded_files,
+            "file_records": file_records,
+            "download_events": events,
+            "data_files_downloaded": bool(downloaded_files),
+        }
+
+    def _download_gtex_files(self, request: DatasetDownloadRequest, target_dir: Path) -> tuple[Path, dict[str, Any]]:
+        manifest_path, manifest_result = _write_gtex_download_manifest(request, target_dir)
+        manifest = _read_json(manifest_path)
+        entries = _gtex_download_entries(request, manifest)
+        download_dir = target_dir / request.download_id
+        file_records: list[dict[str, Any]] = []
+        events: list[dict[str, Any]] = []
+        downloaded_files: list[str] = []
+        for entry in entries:
+            try:
+                result = self._gtex_file_downloader.download_file(entry, download_dir)
+                local_path = str(result.get("local_path") or "")
+                if not local_path:
+                    raise RuntimeError("GTEx downloader did not return local_path.")
+                status = "cache_hit" if result.get("cache_hit") else "downloaded"
+                downloaded_files.append(local_path)
+                file_records.append(
+                    build_file_record(
+                        local_path,
+                        source="gtex",
+                        role=str(entry.get("role") or entry.get("asset_type") or "gtex_reference_file"),
+                        status=status,
+                        source_url=str(result.get("source_url") or entry.get("url") or entry.get("download_url") or ""),
+                        message="GTEx reference file downloaded." if status == "downloaded" else "Loaded existing GTEx file from project cache.",
+                        extra={"file_name": Path(local_path).name, "tissue_name": manifest.get("tissue_name") or ""},
+                    )
+                )
+                events.append({"file_name": Path(local_path).name, "status": status, "local_path": local_path})
+            except Exception as exc:
+                file_records.append(
+                    build_blocked_file_record(
+                        source="gtex",
+                        role=str(entry.get("role") or entry.get("asset_type") or "gtex_reference_file"),
+                        source_url=str(entry.get("url") or entry.get("download_url") or ""),
+                        source_path=str(entry.get("file_name") or ""),
+                        risk_level="medium",
+                        message=f"download_failed:{exc}",
+                        extra={"status": "failed"},
+                    )
+                )
+                events.append({"file_name": entry.get("file_name") or "", "status": "failed", "message": str(exc)})
+        manifest["status"] = "downloaded" if downloaded_files else "pending_data_file_download"
+        manifest["download_id"] = request.download_id
+        manifest["downloaded_files"] = downloaded_files
+        manifest["file_records"] = file_records
+        manifest["download_events"] = events
+        _write_json(manifest_path, manifest)
+        failed_count = sum(1 for event in events if event.get("status") == "failed")
+        status = "gtex_files_downloaded" if downloaded_files and not failed_count else ("gtex_files_downloaded_with_warnings" if downloaded_files else str(manifest_result.get("status") or "gtex_download_manifest_created"))
+        message = (
+            f"{manifest.get('tissue_name') or request.accession_or_project}：已下载 {len(downloaded_files)} 个 GTEx 参考文件；失败 {failed_count} 个。"
+            if downloaded_files or failed_count
+            else str(manifest_result.get("message") or f"{manifest.get('tissue_name') or request.accession_or_project}：已创建 GTEx 组织下载清单，尚未下载表达矩阵文件。")
+        )
+        return manifest_path, {
+            **manifest_result,
+            "status": status,
+            "message": message,
+            "download_manifest_path": str(manifest_path),
+            "downloaded_files": downloaded_files,
+            "file_records": file_records,
+            "download_events": events,
+            "data_files_downloaded": bool(downloaded_files),
+        }
 
     def _discover_geo_asset_manifest(
         self,
@@ -573,30 +877,87 @@ class DatasetDownloadService:
         downloaded_files: list[str] = []
         downloaded_asset_count = 0
         errors: list[str] = []
+        file_records: list[dict[str, Any]] = []
+        download_events: list[dict[str, Any]] = []
+        candidate_by_file = {str(row.get("file_name") or ""): row for row in selected_candidates}
         for asset in assets:
-            if asset.get("asset_type") not in selected_types or asset.get("status") == "downloaded":
-                continue
             file_name = str(asset.get("file_name") or Path(str(asset.get("remote_url") or "")).name)
+            if asset.get("asset_type") not in selected_types:
+                download_events.append({"file_name": file_name, "status": "skipped", "message": "asset_type_not_selected"})
+                continue
+            if asset.get("status") == "downloaded":
+                local_path = str(asset.get("local_path") or "")
+                if local_path and Path(local_path).is_file():
+                    downloaded_files.append(str(Path(local_path).resolve()))
+                    file_records.append(
+                        build_file_record(
+                            local_path,
+                            source="geo",
+                            role=str(asset.get("role") or asset.get("asset_type") or ""),
+                            status="cache_hit",
+                            source_url=str(asset.get("remote_url") or ""),
+                            message="Loaded existing GEO asset from project cache.",
+                        )
+                    )
+                    download_events.append({"file_name": file_name, "status": "cache_hit", "local_path": local_path})
+                else:
+                    download_events.append({"file_name": file_name, "status": "skipped", "message": "already_marked_downloaded_without_local_file"})
+                continue
             if selection_applied and file_name not in selected_file_names:
+                asset["download_status"] = "skipped_not_selected"
+                download_events.append({"file_name": file_name, "status": "skipped", "message": "not_selected"})
+                continue
+            selection_row = candidate_by_file.get(file_name, {})
+            if _is_raw_heavy_geo_asset(asset, selection_row):
+                asset["status"] = "blocked_raw_heavy"
+                asset["input_eligible"] = False
+                asset["needs_download"] = False
+                message_text = "RAW/heavy GEO file is blocked by the acquisition policy."
+                file_records.append(
+                    build_blocked_file_record(
+                        source="geo",
+                        role=str(asset.get("role") or asset.get("asset_type") or ""),
+                        source_url=str(asset.get("remote_url") or ""),
+                        source_path=file_name,
+                        risk_level="high",
+                        message=message_text,
+                    )
+                )
+                download_events.append({"file_name": file_name, "status": "blocked_raw_heavy", "message": message_text})
                 continue
             remote_url = str(asset.get("remote_url") or "")
             if not remote_url:
+                download_events.append({"file_name": file_name, "status": "skipped", "message": "missing_remote_url"})
                 continue
             asset_target_dir = _geo_asset_download_dir(target_dir, str(asset.get("asset_type") or "supplementary_file"))
             try:
                 result = self._geo_asset_downloader.download_asset(asset, asset_target_dir)
             except Exception as exc:
                 errors.append(f"{asset.get('file_name') or remote_url}: {exc}")
+                download_events.append({"file_name": file_name, "status": "failed", "message": str(exc)})
                 continue
             local_path = str(result.get("local_path") or "")
             if local_path and Path(local_path).is_file():
                 downloaded_asset_count += 1
                 downloaded_files.append(str(Path(local_path).resolve()))
+                event_status = "cache_hit" if result.get("cache_hit") else "downloaded"
                 asset["status"] = "downloaded"
                 asset["local_path"] = str(Path(local_path).resolve())
                 asset["input_eligible"] = True
                 asset["needs_download"] = False
                 asset["size_bytes"] = Path(local_path).stat().st_size
+                asset["sha256"] = str(result.get("sha256") or sha256_file(local_path))
+                file_records.append(
+                    build_file_record(
+                        local_path,
+                        source="geo",
+                        role=str(asset.get("role") or asset.get("asset_type") or ""),
+                        status=event_status,
+                        source_url=remote_url,
+                        message="GEO asset downloaded." if event_status == "downloaded" else "Loaded existing GEO asset from project cache.",
+                    )
+                )
+                download_events.append({"file_name": file_name, "status": event_status, "local_path": local_path})
         manifest["assets"] = assets
         manifest["summary"] = _geo_asset_manifest_summary(assets)
         manifest["ui_status_parts"] = _geo_asset_ui_status_parts(manifest)
@@ -611,6 +972,7 @@ class DatasetDownloadService:
                     "selected_file_names": sorted(selected_file_names),
                     "downloaded_asset_count": downloaded_asset_count,
                     "downloaded_files": downloaded_files,
+                    "file_records": file_records,
                     "errors": errors,
                 }
             )
@@ -640,7 +1002,10 @@ class DatasetDownloadService:
                 "selection_manifest_path": str(selection_path) if selection_manifest else "",
                 "selected_file_names": sorted(selected_file_names),
                 "selection_applied": selection_applied,
+                "download_events": download_events,
+                "file_records": file_records,
             },
+            "file_records": file_records,
             "metadata": request.metadata,
         }
         _write_json(receipt_path, receipt)
@@ -653,6 +1018,7 @@ class DatasetDownloadService:
             download_executed=True,
             asset_manifest_path=manifest_path,
             asset_manifest=manifest,
+            file_records=file_records,
         )
         return CandidateDownloadResult(
             success=success,
@@ -761,9 +1127,9 @@ def _write_gtex_download_manifest(request: DatasetDownloadRequest, target_dir: P
         "recommended_assets": [
             {
                 "asset_type": "normal_tissue_expression_reference",
-                "status": "pending_download_or_user_supplied_file",
-                "input_eligible": False,
-                "notes": "GTEx 表达矩阵通常为公共 bulk 文件；当前先创建组织级下载清单，不伪造本地表达矩阵。",
+                "status": "pending_download",
+                "input_eligible": True,
+                "notes": "GTEx 表达矩阵通常为公共 bulk 文件；如候选 metadata 提供公开下载 URL 会直接下载，否则保存可追踪的 GTEx Portal API tissue metadata snapshot。",
             }
         ],
         "gtex_api": {
@@ -827,6 +1193,128 @@ def _write_gdc_transfer_manifest(path: Path, entries: list[dict[str, Any]]) -> N
             )
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _is_allowed_gdc_file(entry: dict[str, Any]) -> tuple[bool, str]:
+    access = str(entry.get("access") or "").lower()
+    if access and access != "open":
+        return False, "controlled_access_blocked"
+    state = str(entry.get("state") or "").lower()
+    if state and state not in {"released", "live", "submitted"}:
+        return False, f"file_state_not_released:{state}"
+    if _is_raw_or_large_entry(entry):
+        return False, "raw_or_large_file_blocked"
+    category = str(entry.get("data_category") or "").lower()
+    data_type = str(entry.get("data_type") or "").lower()
+    workflow = str(entry.get("workflow_type") or "").lower()
+    name = str(entry.get("file_name") or "").lower()
+    expression = "transcriptome profiling" in category and "gene expression quantification" in data_type
+    clinical = "clinical" in category or "clinical" in data_type or "clinical" in name
+    biospecimen = "biospecimen" in category or "biospecimen" in data_type or "sample sheet" in name
+    if expression and any(token in workflow or token in name for token in ("star", "htseq", "counts", "fpkm", "tpm")):
+        return True, "open_expression_quantification"
+    if clinical or biospecimen:
+        return True, "open_metadata_file"
+    return False, "unsupported_gdc_file_type"
+
+
+def _is_raw_or_large_entry(entry: dict[str, Any]) -> bool:
+    name = str(entry.get("file_name") or "").lower()
+    data_type = str(entry.get("data_type") or "").lower()
+    category = str(entry.get("data_category") or "").lower()
+    size = _safe_int(entry.get("file_size") or entry.get("size") or 0)
+    raw_tokens = ("bam", "fastq", "cram", "sra", "raw sequencing", "aligned reads", "submitted aligned reads")
+    if any(token in name or token in data_type or token in category for token in raw_tokens):
+        return True
+    return size > 2 * 1024 * 1024 * 1024
+
+
+def _gdc_file_role(entry: dict[str, Any]) -> str:
+    category = str(entry.get("data_category") or "").lower()
+    data_type = str(entry.get("data_type") or "").lower()
+    name = str(entry.get("file_name") or "").lower()
+    if "gene expression quantification" in data_type or any(token in name for token in ("star", "htseq", "counts", "fpkm", "tpm")):
+        return "tcga_expression_file"
+    if "clinical" in category or "clinical" in data_type or "clinical" in name:
+        return "tcga_clinical_file"
+    if "biospecimen" in category or "sample" in name:
+        return "tcga_sample_metadata_file"
+    return "tcga_reference_file"
+
+
+def _gtex_download_entries(request: DatasetDownloadRequest, manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    metadata = request.metadata.get("source_specific_metadata")
+    source_metadata = metadata if isinstance(metadata, dict) else {}
+    raw_entries = (
+        source_metadata.get("download_assets")
+        or source_metadata.get("public_downloads")
+        or source_metadata.get("file_manifest_entries")
+        or []
+    )
+    entries: list[dict[str, Any]] = []
+    if isinstance(raw_entries, list):
+        for item in raw_entries:
+            if not isinstance(item, dict):
+                continue
+            url = str(item.get("url") or item.get("download_url") or item.get("source_url") or "").strip()
+            if not url:
+                continue
+            entries.append(
+                {
+                    "url": url,
+                    "file_name": str(item.get("file_name") or item.get("filename") or url.rstrip("/").rsplit("/", 1)[-1]),
+                    "role": str(item.get("role") or item.get("asset_type") or "gtex_reference_file"),
+                    "asset_type": str(item.get("asset_type") or "gtex_reference_file"),
+                }
+            )
+    return entries
+
+
+def _downloaded_file_role(source: str, path: str) -> str:
+    name = Path(path).name.lower()
+    if source == "geo":
+        if "family.soft" in name:
+            return "geo_family_soft"
+        if "series_matrix" in name:
+            return "geo_series_matrix"
+        return "geo_downloaded_asset"
+    if source == "tcga_gdc":
+        if "clinical" in name:
+            return "tcga_clinical_file"
+        return "tcga_expression_file"
+    if source == "gtex":
+        return "gtex_reference_file"
+    return "downloaded_file"
+
+
+def _is_raw_heavy_geo_asset(asset: dict[str, Any], selection_row: dict[str, Any] | None = None) -> bool:
+    row = selection_row if isinstance(selection_row, dict) else {}
+    file_name = str(asset.get("file_name") or row.get("file_name") or "").lower()
+    role = str(asset.get("role") or row.get("predicted_type") or row.get("recognition_use") or "").lower()
+    risk = str(row.get("risk_level") or "").lower()
+    if risk in {"中", "高", "medium", "high"}:
+        return True
+    raw_tokens = (
+        ".fastq",
+        ".fq",
+        ".sra",
+        ".bam",
+        ".cram",
+        ".cel",
+        "_raw",
+        ".raw",
+        ".tar",
+        ".tgz",
+        ".zip",
+    )
+    return "raw" in role or any(token in file_name for token in raw_tokens)
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _ensure_download_dirs(root: Path) -> None:

@@ -211,6 +211,11 @@ def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, t
     assert summary.referenced_paths == (str(source.resolve()),)
     artifacts = read_acquisition_artifacts(project_root)
     assert artifacts["record"]["strategy"] == "reference"  # type: ignore[index]
+    manifest_path = Path(str(artifacts["record"]["metadata"]["source_manifest_path"]))  # type: ignore[index]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["summary"]["real_file_count"] == 1
+    assert manifest["file_records"][0]["sha256"]
+    assert manifest["file_records"][0]["status"] == "referenced"
 
 
 def test_acquisition_binding_preserves_multifile_source_files(project_root: Path, tmp_path: Path) -> None:
@@ -234,6 +239,10 @@ def test_acquisition_binding_preserves_multifile_source_files(project_root: Path
     artifacts = read_acquisition_artifacts(project_root)
     assert artifacts["record"]["source_files"] == list(expected)  # type: ignore[index]
     assert artifacts["handoff"]["source_files"] == list(expected)  # type: ignore[index]
+    manifest_path = Path(str(artifacts["record"]["metadata"]["source_manifest_path"]))  # type: ignore[index]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["summary"]["real_file_count"] == 4
+    assert manifest["summary"]["sha256_recorded_count"] == 4
 
 
 def test_gse_acquisition_plan_is_plan_only(project_root: Path) -> None:
