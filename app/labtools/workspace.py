@@ -37,7 +37,7 @@ def labtools_features() -> list[FeatureItem]:
 
 
 try:
-    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
@@ -93,6 +93,151 @@ if QWidget is not None:
             note.setWordWrap(True)
             root.addWidget(note)
             root.addStretch(1)
+
+    class LabToolsWesternBlotScaffoldPage(QWidget):
+        SECTION_STATUS = "待确认使用逻辑 / 规划中 / 暂未开放"
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.setObjectName("labToolsWesternBlotScaffoldPage")
+            root = QVBoxLayout(self)
+            root.setContentsMargins(0, 0, 0, 0)
+
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setObjectName("labToolsWesternBlotScroll")
+            content = QWidget()
+            content.setObjectName("labToolsWesternBlotContent")
+            content.setStyleSheet(self._stylesheet())
+            layout = QVBoxLayout(content)
+            layout.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
+            layout.setSpacing(SPACING["lg"])
+
+            title = QLabel("Western Blot")
+            title.setObjectName("labToolsWesternBlotTitle")
+            description = QLabel("用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析。")
+            description.setObjectName("labToolsWesternBlotDescription")
+            description.setWordWrap(True)
+            boundary = QLabel("本阶段只建立 Western Blot 模块入口和占位分区；不新增算法、公式、图像处理、schema 或导出格式。")
+            boundary.setObjectName("labToolsWesternBlotBoundary")
+            boundary.setWordWrap(True)
+            layout.addWidget(title)
+            layout.addWidget(description)
+            layout.addWidget(boundary)
+
+            grid = QGridLayout()
+            grid.setSpacing(SPACING["md"])
+            sections = (
+                (
+                    "蛋白样品准备",
+                    "用于记录蛋白提取、裂解液/抑制剂草稿、样本分组和实验室自定义流程。当前为流程模板入口，不自动生成唯一实验方案。",
+                    (),
+                ),
+                (
+                    "蛋白浓度测定",
+                    "提供 BCA、Bradford、NanoDrop 等蛋白浓度测定入口；底层逻辑后续与吸光度/标准曲线能力复用。",
+                    (),
+                ),
+                (
+                    "上样与胶",
+                    "用于蛋白上样体系计算、loading buffer、还原剂、SDS-PAGE 配胶模板和批量配制计算。",
+                    ("蛋白上样体系计算", "SDS-PAGE 配胶模板与批量配制"),
+                ),
+                (
+                    "电泳 / 转膜 / 抗体孵育流程",
+                    "用于记录电泳参数、电转参数、封闭、一抗、二抗和洗膜步骤模板。用户可录入试剂盒说明书或实验室成熟流程。",
+                    (),
+                ),
+                (
+                    "结果与灰度分析",
+                    "用于后续 WB/gel grayscale、条带 ROI、背景扣除、target/loading control ratio 和结果导出。开发前需单独确认图像分析逻辑。",
+                    (),
+                ),
+            )
+            for index, (section_title, section_description, planned_entries) in enumerate(sections):
+                grid.addWidget(
+                    self._section_card(section_title, section_description, planned_entries),
+                    index // 2,
+                    index % 2,
+                )
+            layout.addLayout(grid)
+            layout.addStretch(1)
+            scroll.setWidget(content)
+            root.addWidget(scroll)
+
+        def _section_card(self, title: str, description: str, planned_entries: tuple[str, ...]) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsWesternBlotSectionCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+
+            status = QLabel(self.SECTION_STATUS)
+            status.setObjectName("labToolsWesternBlotSectionStatus")
+            section_title = QLabel(title)
+            section_title.setObjectName("labToolsWesternBlotSectionTitle")
+            section_description = QLabel(description)
+            section_description.setObjectName("labToolsWesternBlotSectionDescription")
+            section_description.setWordWrap(True)
+            layout.addWidget(status)
+            layout.addWidget(section_title)
+            layout.addWidget(section_description)
+            if planned_entries:
+                planned_label = QLabel("planned 子入口\n" + "\n".join(f"- {entry}: {self.SECTION_STATUS}" for entry in planned_entries))
+                planned_label.setObjectName("labToolsWesternBlotPlannedEntries")
+                planned_label.setWordWrap(True)
+                layout.addWidget(planned_label)
+            layout.addStretch(1)
+            return frame
+
+        def _stylesheet(self) -> str:
+            return f"""
+            QWidget#labToolsWesternBlotContent {{
+                background: {COLORS["background"]};
+                color: {COLORS["text"]};
+            }}
+            QScrollArea#labToolsWesternBlotScroll {{
+                border: 0;
+                background: {COLORS["background"]};
+            }}
+            QLabel#labToolsWesternBlotTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["page_title"]}px;
+                font-weight: 780;
+            }}
+            QLabel#labToolsWesternBlotDescription {{
+                color: {COLORS["muted"]};
+            }}
+            QLabel#labToolsWesternBlotBoundary {{
+                color: {COLORS["text"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
+            }}
+            QFrame#labToolsWesternBlotSectionCard {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["md"]}px;
+                min-height: 190px;
+            }}
+            QLabel#labToolsWesternBlotSectionStatus {{
+                color: #0E6F66;
+                background: #E7F7F5;
+                border: 1px solid #BCE7E2;
+                border-radius: {RADIUS["sm"]}px;
+                padding: 4px 8px;
+                font-weight: 700;
+            }}
+            QLabel#labToolsWesternBlotSectionTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["card_title"]}px;
+                font-weight: 760;
+            }}
+            QLabel#labToolsWesternBlotSectionDescription, QLabel#labToolsWesternBlotPlannedEntries {{
+                color: {COLORS["muted"]};
+            }}
+            """
 
     class LabToolsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -212,15 +357,7 @@ if QWidget is not None:
                     "活率、Transwell、增殖率、台盼蓝、Alamar Blue 均待确认使用逻辑。",
                 ),
             )
-            self._western_blot_page = LabToolsModulePlaceholderPage(
-                "Western Blot",
-                "用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析。",
-                (
-                    "WB loading / SDS-PAGE 上样计算现有能力未来归入本模块。",
-                    "蛋白浓度测定、SDS-PAGE 配胶、电泳/转膜参数和抗体孵育流程待确认使用逻辑。",
-                    "WB / gel grayscale 属高风险 planned tool，暂未开放。",
-                ),
-            )
+            self._western_blot_page = LabToolsWesternBlotScaffoldPage()
             self._pcr_qpcr_page = LabToolsModulePlaceholderPage(
                 "PCR / qPCR",
                 "用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析。",

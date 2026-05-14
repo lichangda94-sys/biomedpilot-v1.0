@@ -34,6 +34,28 @@ Architecture conclusion:
 - fluorescence manual ROI remains a temporary image-assistance capability until ownership is confirmed.
 - absorbance / OD, protein concentration, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
 
+## Western Blot Module Scaffold 1 Update
+
+Western Blot now has a dedicated scaffold page with five placeholder sections:
+
+- 蛋白样品准备。
+- 蛋白浓度测定。
+- 上样与胶。
+- 电泳 / 转膜 / 抗体孵育流程。
+- 结果与灰度分析。
+
+All sections remain `待确认使用逻辑 / 规划中 / 暂未开放`.
+
+Scope conclusion:
+
+- The scaffold adds no WB grayscale analysis.
+- The scaffold adds no SDS-PAGE gel calculation logic.
+- The scaffold adds no automatic recipe recommendation.
+- The scaffold adds no gel concentration inference.
+- The scaffold adds no SOP workflow, database, autosave, persistence schema, export format, or result interpretation.
+- The 上样与胶 section may show two planned child entries only: 蛋白上样体系计算 and SDS-PAGE 配胶模板与批量配制.
+- The 结果与灰度分析 section remains blocked until WB/gel grayscale, band ROI, background subtraction, target/loading control ratio, and result export logic are reviewed in a Tool Logic Card.
+
 ## Current Tool Inventory
 
 中文范围标签：实验计算器、图像辅助分析、recipe draft、experiment record draft、placeholder / planned tools。
