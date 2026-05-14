@@ -83,6 +83,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
+    _ad_hoc_sign_app(app_path)
 
     return PackagingResult(
         app_path=app_path,
@@ -198,6 +199,7 @@ APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
+export PYTHONDONTWRITEBYTECODE="1"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
@@ -213,6 +215,17 @@ exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _ad_hoc_sign_app(app_path: Path) -> None:
+    if sys.platform != "darwin" or shutil.which("codesign") is None:
+        return
+    subprocess.run(
+        ["codesign", "--force", "--sign", "-", "--timestamp=none", str(app_path)],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
 
 
 def _git_head(repo_root: Path) -> str:
