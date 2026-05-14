@@ -197,7 +197,7 @@ def _write_build_info(path: Path, *, repo_root: Path, app_name: str, git_head: s
 def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
     payload = {
         "CFBundleName": app_name,
-        "CFBundleDisplayName": "BioMedPilot / 医研智析",
+        "CFBundleDisplayName": app_name,
         "CFBundleIdentifier": "local.biomedpilot.desktop",
         "CFBundleVersion": APP_BUNDLE_VERSION,
         "CFBundleShortVersionString": APP_BUNDLE_VERSION,

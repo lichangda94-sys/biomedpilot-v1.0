@@ -52,6 +52,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
         info = plistlib.load(handle)
     assert info["CFBundleExecutable"] == "BioMedPilotTest"
     assert info["CFBundleName"] == "BioMedPilotTest"
+    assert info["CFBundleDisplayName"] == "BioMedPilotTest"
     assert info["BioMedPilotVersion"] == "0.1.0-internal-beta"
 
 

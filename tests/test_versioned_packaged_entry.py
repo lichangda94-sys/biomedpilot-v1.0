@@ -36,6 +36,7 @@ def test_versioned_packaged_entry_smoke_reports_metadata(tmp_path: Path) -> None
     assert info["BioMedPilotVersion"] == APP_VERSION
     assert info["BioMedPilotChannel"] == APP_CHANNEL
     assert info["BioMedPilotGitHead"] == build_info["git_head"]
+    assert info["CFBundleDisplayName"] == "BioMedPilotAcceptance"
 
     env = os.environ.copy()
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
