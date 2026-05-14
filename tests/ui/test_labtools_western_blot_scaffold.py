@@ -39,8 +39,9 @@ def test_western_blot_module_entry_exists(qapp) -> None:
     text = _visible_text(widget)
 
     assert widget.findChild(QFrame, "labToolsWesternBlotEntry") is not None
-    assert "Western Blot" in text
-    assert "查看 Western Blot 规划" in text
+    assert "Western Blot 工具" in text
+    assert "WB 上样计算、条带定量 workflow 占位。" in text
+    assert "规划中" in text
 
 
 def test_western_blot_page_contains_five_placeholder_sections(qapp) -> None:

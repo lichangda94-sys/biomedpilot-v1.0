@@ -13,6 +13,21 @@ from app.shared.local_engines import (
 )
 
 
+def is_meaningful_imagej_fiji_path(value: str | None) -> bool:
+    if value is None:
+        return False
+    normalized = value.strip()
+    if not normalized:
+        return False
+    return normalized not in {"0", "1", "true", "false", "None", "null", "-"}
+
+
+def imagej_fiji_display_path(value: str | None) -> str:
+    if is_meaningful_imagej_fiji_path(value):
+        return value.strip()
+    return "未配置 / 路径无效"
+
+
 def read_shared_imagej_fiji_status(bridge: ImageJFijiBridge | None = None) -> EngineStatus:
     """Read ImageJ/Fiji state from the shared local-engine config layer."""
 
@@ -23,7 +38,7 @@ def read_shared_imagej_fiji_status(bridge: ImageJFijiBridge | None = None) -> En
         return default_imagej_fiji_status(ENGINE_STATUS_FAILED, last_error=str(exc))
     if config.last_status is not None:
         return config.last_status
-    if config.configured_path_or_endpoint:
+    if is_meaningful_imagej_fiji_path(config.configured_path_or_endpoint):
         return default_imagej_fiji_status(
             ENGINE_STATUS_CONFIGURED_UNVERIFIED,
             configured_path=config.configured_path_or_endpoint,
@@ -59,7 +74,9 @@ __all__ = [
     "IMAGEJ_FIJI_ENGINE_ID",
     "EngineStatus",
     "ImageJFijiBridge",
+    "imagej_fiji_display_path",
     "imagej_fiji_context_prompt",
     "imagej_fiji_status_label",
+    "is_meaningful_imagej_fiji_path",
     "read_shared_imagej_fiji_status",
 ]

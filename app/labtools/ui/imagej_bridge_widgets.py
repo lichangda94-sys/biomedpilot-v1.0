@@ -12,6 +12,7 @@ try:
         ENGINE_STATUS_FAILED,
         ImageJFijiBridge,
         imagej_fiji_context_prompt,
+        imagej_fiji_display_path,
         imagej_fiji_status_label,
         read_shared_imagej_fiji_status,
     )
@@ -44,7 +45,7 @@ if QWidget is not None:
         def refresh_status(self) -> None:
             status = read_shared_imagej_fiji_status(self._bridge)
             self._status_label.setText(imagej_fiji_status_label(status.status))
-            self._path_label.setText(status.configured_path_or_endpoint or "未配置")
+            self._path_label.setText(imagej_fiji_display_path(status.configured_path_or_endpoint))
             self._version_label.setText(status.detected_version)
             self._last_check_label.setText(status.last_check_at or "尚未验证")
             self._error_label.setText(status.last_error or "无")
@@ -131,7 +132,7 @@ if QWidget is not None:
                 return "\n".join(
                     (
                         f"{self._workflow_name} 的 ImageJ/Fiji 验证失败。",
-                        status.last_error or "请检查本机路径和 Fiji/ImageJ 安装。",
+                        status.last_error or "请检查本机路径和 ImageJ/Fiji 安装。",
                         "可重新选择路径、查看安装指南，或继续使用已开放的 manual/testing MVP。",
                     )
                 )
@@ -149,7 +150,7 @@ if QWidget is not None:
             detected = detect_common_imagej_fiji_paths()
             if not detected:
                 self._prompt_panel.setText(
-                    "未在常见路径发现 Fiji/ImageJ。\n"
+                    "未在常见路径发现 ImageJ/Fiji。\n"
                     "BioMedPilot 不会静默下载或安装。请手动选择本机路径、查看安装指南，或继续 manual/testing MVP。"
                 )
                 self.refresh_status()
@@ -158,9 +159,9 @@ if QWidget is not None:
             self.refresh_status()
 
         def _handle_choose_path(self) -> None:
-            path, _ = QFileDialog.getOpenFileName(self, "选择 Fiji/ImageJ 可执行文件", "", "All files (*)")
+            path, _ = QFileDialog.getOpenFileName(self, "选择 ImageJ/Fiji 可执行文件", "", "All files (*)")
             if not path:
-                path = QFileDialog.getExistingDirectory(self, "选择 Fiji.app / ImageJ.app")
+                path = QFileDialog.getExistingDirectory(self, "选择 ImageJ.app / Fiji.app")
             if path:
                 self._bridge.configure_path(path)
                 self.refresh_status()

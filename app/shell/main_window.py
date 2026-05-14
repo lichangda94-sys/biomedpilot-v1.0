@@ -108,6 +108,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("BioMedPilot / Meta 分析")
 
     def show_labtools(self) -> None:
+        self._labtools_page.show_home()
         self._stack.setCurrentWidget(self._labtools_page)
         self.setWindowTitle("BioMedPilot / 实验工具")
 

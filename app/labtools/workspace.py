@@ -7,7 +7,8 @@ from app.shared.feature_status import FeatureItem, FeatureStatus
 
 def labtools_features() -> list[FeatureItem]:
     return [
-        FeatureItem("labtools", "通用计算器", FeatureStatus.TESTING, "用于浓度、分子量、质量、体积、稀释、称量等通用试剂计算；不长期承载全部实验特异性计算。"),
+        FeatureItem("labtools", "通用试剂计算器", FeatureStatus.TESTING, "用于浓度、质量、体积、摩尔量、稀释等基础实验计算；不长期承载全部实验特异性计算。"),
+        FeatureItem("labtools", "ImageJ/Fiji 本地引擎", FeatureStatus.TESTING, "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置；不启用真实图像分析算法。"),
         FeatureItem("labtools", "试剂与实验记录", FeatureStatus.TESTING, "用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN。"),
         FeatureItem(
             "labtools",
@@ -18,8 +19,8 @@ def labtools_features() -> list[FeatureItem]:
         FeatureItem(
             "labtools",
             "Western Blot",
-            FeatureStatus.TESTING,
-            "用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析；部分辅助计算已开放，后续灰度分析等仍待确认使用逻辑。",
+            FeatureStatus.UNAVAILABLE,
+            "用于 WB 上样计算、条带定量 workflow 占位；planned / 规划中 / 未启用，不启用 WB/gel 真实分析。",
         ),
         FeatureItem(
             "labtools",
@@ -41,6 +42,7 @@ try:
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
     from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -94,6 +96,59 @@ if QWidget is not None:
             note.setWordWrap(True)
             root.addWidget(note)
             root.addStretch(1)
+
+    class LabToolsImageJConfigPage(QWidget):
+        def __init__(self) -> None:
+            super().__init__()
+            self.setObjectName("labToolsImageJConfigPage")
+            self.setStyleSheet(self._stylesheet())
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
+            root.setSpacing(SPACING["lg"])
+
+            title = QLabel("ImageJ/Fiji 本地引擎配置")
+            title.setObjectName("labToolsImageJConfigTitle")
+            description = QLabel("用于图像 workflow 的本地 ImageJ/Fiji 检测、路径配置和验证状态查看。BioMedPilot 不会自动下载、联网安装或上传图片。")
+            description.setObjectName("labToolsImageJConfigDescription")
+            description.setWordWrap(True)
+            boundary = QLabel("检测失败时可继续 manual-review workflow 准备；当前不启用 WB/gel 真实分析、自动 ROI、细胞计数、条带识别或生产级图像算法。")
+            boundary.setObjectName("labToolsImageJConfigBoundary")
+            boundary.setWordWrap(True)
+
+            root.addWidget(title)
+            root.addWidget(description)
+            root.addWidget(boundary)
+            root.addWidget(
+                LabToolsImageJFijiStatusPanel(
+                    workflow_name="LabTools 图像 workflow 配置中心",
+                    can_continue_without_engine=True,
+                )
+            )
+            root.addStretch(1)
+
+        def _stylesheet(self) -> str:
+            return f"""
+            QWidget#labToolsImageJConfigPage {{
+                background: {COLORS["background"]};
+                color: {COLORS["text"]};
+                font-size: {FONT_SIZE["body"]}px;
+            }}
+            QLabel#labToolsImageJConfigTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["page_title"]}px;
+                font-weight: 760;
+            }}
+            QLabel#labToolsImageJConfigDescription {{
+                color: {COLORS["muted"]};
+            }}
+            QLabel#labToolsImageJConfigBoundary {{
+                color: {COLORS["text"]};
+                background: #FFF4F2;
+                border: 1px solid #F3B4AA;
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
+            }}
+            """
 
     class LabToolsWesternBlotScaffoldPage(QWidget):
         SECTION_STATUS = "待确认使用逻辑 / 规划中 / 暂未开放"
@@ -257,6 +312,8 @@ if QWidget is not None:
                 return "home"
             if current is self._general_calculator_page:
                 return "general_calculators"
+            if current is self._imagej_fiji_page:
+                return "imagej_fiji"
             if current is self._reagent_records_page:
                 return "reagent_records"
             if current is self._cell_experiments_page:
@@ -274,6 +331,9 @@ if QWidget is not None:
 
         def show_general_calculators(self) -> None:
             self._stack.setCurrentWidget(self._general_calculator_page)
+
+        def show_imagej_fiji(self) -> None:
+            self._stack.setCurrentWidget(self._imagej_fiji_page)
 
         def show_reagent_records(self) -> None:
             self._stack.setCurrentWidget(self._reagent_records_page)
@@ -298,7 +358,7 @@ if QWidget is not None:
             self.show_reagent_records()
 
         def show_image_analysis(self) -> None:
-            self.show_cell_experiments()
+            self.show_imagej_fiji()
 
         def show_templates(self) -> None:
             self.show_reagent_records()
@@ -331,11 +391,13 @@ if QWidget is not None:
             self._home_page = LabToolsHomeWidget()
             self._home_page.general_calculators_requested.connect(self.show_general_calculators)
             self._home_page.reagent_records_requested.connect(self.show_reagent_records)
+            self._home_page.imagej_fiji_requested.connect(self.show_imagej_fiji)
             self._home_page.cell_experiments_requested.connect(self.show_cell_experiments)
             self._home_page.western_blot_requested.connect(self.show_western_blot)
             self._home_page.pcr_qpcr_requested.connect(self.show_pcr_qpcr)
             self._home_page.elisa_absorbance_requested.connect(self.show_elisa_absorbance)
             self._general_calculator_page = LabToolsCalculatorWidget()
+            self._imagej_fiji_page = LabToolsImageJConfigPage()
             self._reagent_records_page = LabToolsModulePlaceholderPage(
                 "试剂与实验记录",
                 "用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN。",
@@ -379,6 +441,7 @@ if QWidget is not None:
             for key, page in (
                 ("home", self._home_page),
                 ("general_calculators", self._general_calculator_page),
+                ("imagej_fiji", self._imagej_fiji_page),
                 ("reagent_records", self._reagent_records_page),
                 ("cell_experiments", self._cell_experiments_page),
                 ("western_blot", self._western_blot_page),
@@ -394,4 +457,4 @@ else:  # pragma: no cover
 
     class LabToolsWorkspaceWidget:  # type: ignore[no-redef]
         def page_keys(self) -> tuple[str, ...]:
-            return ("home", "general_calculators", "reagent_records", "cell_experiments", "western_blot", "pcr_qpcr", "elisa_absorbance")
+            return ("home", "general_calculators", "imagej_fiji", "reagent_records", "cell_experiments", "western_blot", "pcr_qpcr", "elisa_absorbance")

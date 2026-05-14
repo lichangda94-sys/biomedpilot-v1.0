@@ -139,6 +139,7 @@ def test_non_image_labtools_workspace_is_not_blocked_by_missing_imagej(qapp) -> 
     assert widget.page_keys() == (
         "home",
         "general_calculators",
+        "imagej_fiji",
         "reagent_records",
         "cell_experiments",
         "western_blot",
@@ -151,3 +152,65 @@ def test_non_image_labtools_workspace_is_not_blocked_by_missing_imagej(qapp) -> 
     assert tabs is not None
     assert tabs.tabText(0) == "浓度换算"
     assert "ImageJ/Fiji 本地后端状态" not in _visible_text(widget._stack.currentWidget())
+
+
+def test_labtools_home_is_workbench_not_imagej_only_page(qapp) -> None:
+    from app.labtools.workspace import LabToolsWorkspaceWidget
+
+    widget = LabToolsWorkspaceWidget()
+    text = _visible_text(widget._stack.currentWidget())
+
+    for entry in (
+        "通用试剂计算器",
+        "ImageJ/Fiji 本地引擎",
+        "Western Blot 工具",
+        "PCR/qPCR 工具",
+        "ELISA/吸光度工具",
+        "细胞实验工具",
+    ):
+        assert entry in text
+    assert "图像能力边界" in text
+    assert "本地引擎状态摘要" in text
+    assert "ImageJ/Fiji 本地后端状态" not in text
+
+
+def test_labtools_home_opens_calculator_and_imagej_config_pages(qapp) -> None:
+    from PySide6.QtWidgets import QFrame, QPushButton, QTabWidget
+
+    from app.labtools.workspace import LabToolsWorkspaceWidget
+
+    widget = LabToolsWorkspaceWidget()
+
+    calculator_entry = widget.findChild(QFrame, "labToolsGeneralCalculatorEntry")
+    assert calculator_entry is not None
+    calculator_entry.findChild(QPushButton).click()
+    assert widget.current_page_key() == "general_calculators"
+    tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert tabs is not None
+    assert tabs.tabText(0) == "浓度换算"
+
+    widget.show_home()
+    imagej_entry = widget.findChild(QFrame, "labToolsImageJFijiEntry")
+    assert imagej_entry is not None
+    imagej_entry.findChild(QPushButton).click()
+    assert widget.current_page_key() == "imagej_fiji"
+    text = _visible_text(widget._stack.currentWidget())
+    assert "ImageJ/Fiji 本地引擎配置" in text
+    assert "ImageJ/Fiji 本地后端状态" in text
+    assert widget.findChild(QPushButton, "imageJFijiAutoDetectButton") is not None
+
+
+def test_labtools_copy_uses_imagej_fiji_spelling_and_no_enabled_algorithm_claims(qapp) -> None:
+    from app.labtools.workspace import LabToolsWorkspaceWidget
+
+    widget = LabToolsWorkspaceWidget()
+    text = _visible_text(widget)
+
+    for forbidden in (
+        "ImageG",
+        "Fuji",
+        "已启用 WB/gel 真实分析",
+        "自动 ROI 已启用",
+        "细胞计数已启用",
+    ):
+        assert forbidden not in text

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from app.labtools.imagej_bridge import imagej_fiji_context_prompt, imagej_fiji_status_label, read_shared_imagej_fiji_status
+from app.labtools.imagej_bridge import (
+    imagej_fiji_context_prompt,
+    imagej_fiji_display_path,
+    imagej_fiji_status_label,
+    read_shared_imagej_fiji_status,
+)
 from app.shared.local_engines import (
     ENGINE_STATUS_AVAILABLE,
     ENGINE_STATUS_CONFIGURED_UNVERIFIED,
@@ -82,6 +87,22 @@ def test_labtools_reports_configured_unverified_when_shared_config_has_path_with
 
     assert status.status == ENGINE_STATUS_CONFIGURED_UNVERIFIED
     assert status.configured_path_or_endpoint == "/Applications/Fiji.app"
+
+
+def test_labtools_ignores_placeholder_path_values_from_shared_config(tmp_path) -> None:
+    bridge = _bridge(tmp_path)
+    bridge._store.save(  # noqa: SLF001
+        LocalEngineConfig(
+            engine_id=IMAGEJ_FIJI_ENGINE_ID,
+            configured_path_or_endpoint="1",
+            last_status=None,
+        )
+    )
+
+    status = read_shared_imagej_fiji_status(bridge)
+
+    assert status.status == ENGINE_STATUS_NOT_CONFIGURED
+    assert imagej_fiji_display_path("1") == "未配置 / 路径无效"
 
 
 def test_labtools_status_labels_and_prompt_are_contextual() -> None:

@@ -37,26 +37,25 @@ def test_labtools_feature_descriptions_keep_testing_and_draft_boundaries() -> No
     features = {feature.name: feature for feature in labtools_features()}
 
     assert set(features) == {
-        "通用计算器",
+        "通用试剂计算器",
+        "ImageJ/Fiji 本地引擎",
         "试剂与实验记录",
         "细胞实验",
         "Western Blot",
         "PCR / qPCR",
         "ELISA / 吸光度与标准曲线",
     }
-    assert features["通用计算器"].status is FeatureStatus.TESTING
+    assert features["通用试剂计算器"].status is FeatureStatus.TESTING
+    assert features["ImageJ/Fiji 本地引擎"].status is FeatureStatus.TESTING
     assert features["试剂与实验记录"].status is FeatureStatus.TESTING
-    assert features["Western Blot"].status is FeatureStatus.TESTING
-    assert all(features[name].status is FeatureStatus.UNAVAILABLE for name in ("细胞实验", "PCR / qPCR", "ELISA / 吸光度与标准曲线"))
-    assert "浓度、分子量、质量、体积、稀释、称量" in features["通用计算器"].description
-    assert "不长期承载全部实验特异性计算" in features["通用计算器"].description
+    assert all(features[name].status is FeatureStatus.UNAVAILABLE for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"))
+    assert "浓度、质量、体积、摩尔量、稀释" in features["通用试剂计算器"].description
+    assert "不长期承载全部实验特异性计算" in features["通用试剂计算器"].description
+    assert "ImageJ/Fiji 检测与路径配置" in features["ImageJ/Fiji 本地引擎"].description
     assert "本地 recipe 草稿" in features["试剂与实验记录"].description
     assert "不等同于完整 ELN" in features["试剂与实验记录"].description
-    for name in ("细胞实验", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+    for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
         assert "规划中" in features[name].description
-        assert "待确认使用逻辑" in features[name].description
-    assert "部分辅助计算已开放" in features["Western Blot"].description
-    assert "待确认使用逻辑" in features["Western Blot"].description
 
 
 def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qapp) -> None:
@@ -65,13 +64,14 @@ def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qap
     widget = LabToolsHomeWidget()
     text = _visible_text(widget)
 
-    for title in ("通用计算器", "试剂与实验记录", "细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+    for title in ("通用试剂计算器", "ImageJ/Fiji 本地引擎", "Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
         assert title in text
-    assert "已开放 / 待确认使用逻辑" in text
-    assert text.count("规划中 / 待确认使用逻辑 / 暂未开放") == 4
-    assert "用于浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算。" in text
-    assert "不等同于完整 ELN" in text
-    assert "用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等。" in text
+    assert "available / 已接入" in text
+    assert text.count("planned / 未启用") == 4
+    assert "浓度、质量、体积、摩尔量、稀释等基础实验计算。" in text
+    assert "图像能力边界" in text
+    assert "本地引擎状态摘要" in text
+    assert "未启用 WB/gel 真实分析" in text
     for forbidden in ("production-grade", "正式报告", "临床诊断", "无需人工复核", "算法已完成"):
         assert forbidden not in text
 

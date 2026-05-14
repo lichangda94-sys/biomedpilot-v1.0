@@ -8,21 +8,21 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 MODULE_DESCRIPTIONS = {
-    "通用计算器": "用于浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算。",
-    "试剂与实验记录": "用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN。",
-    "细胞实验": "用于细胞接种、活率、Transwell、wound healing、增殖率、台盼蓝、Alamar Blue 等细胞实验工具。",
-    "Western Blot": "用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析。",
-    "PCR / qPCR": "用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析。",
-    "ELISA / 吸光度与标准曲线": "用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等。",
+    "通用试剂计算器": "浓度、质量、体积、摩尔量、稀释等基础实验计算。",
+    "ImageJ/Fiji 本地引擎": "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置。",
+    "Western Blot 工具": "WB 上样计算、条带定量 workflow 占位。",
+    "PCR/qPCR 工具": "PCR mix、qPCR 结果整理 workflow 占位。",
+    "ELISA/吸光度工具": "标准曲线、OD 数据整理 workflow 占位。",
+    "细胞实验工具": "细胞接种、处理分组、实验记录 workflow 占位。",
 }
 
 ENTRY_OBJECTS = {
-    "通用计算器": "labToolsGeneralCalculatorEntry",
-    "试剂与实验记录": "labToolsReagentRecordsEntry",
-    "细胞实验": "labToolsCellExperimentEntry",
-    "Western Blot": "labToolsWesternBlotEntry",
-    "PCR / qPCR": "labToolsPcrQpcrEntry",
-    "ELISA / 吸光度与标准曲线": "labToolsElisaAbsorbanceEntry",
+    "通用试剂计算器": "labToolsGeneralCalculatorEntry",
+    "ImageJ/Fiji 本地引擎": "labToolsImageJFijiEntry",
+    "Western Blot 工具": "labToolsWesternBlotEntry",
+    "PCR/qPCR 工具": "labToolsPcrQpcrEntry",
+    "ELISA/吸光度工具": "labToolsElisaAbsorbanceEntry",
+    "细胞实验工具": "labToolsCellExperimentEntry",
 }
 
 
@@ -79,11 +79,11 @@ def test_specialized_module_entries_are_planned_not_completed_algorithms(qapp) -
 
     widget = LabToolsHomeWidget()
     forbidden = ("已完成算法", "算法已完成", "自动分析已开放", "正式报告", "临床诊断", "无需人工复核")
-    for title in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+    for title in ("Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
         frame = widget.findChild(QFrame, ENTRY_OBJECTS[title])
         assert frame is not None
         text = _visible_text(frame)
-        assert "规划中 / 待确认使用逻辑 / 暂未开放" in text
+        assert "planned / 未启用" in text
         assert "已开放" not in text
         for term in forbidden:
             assert term not in text
@@ -99,7 +99,7 @@ def test_general_calculator_is_not_described_as_all_experiment_calculation(qapp)
     assert frame is not None
     text = _visible_text(frame)
 
-    assert "通用试剂计算" in text
+    assert "通用试剂计算器" in text
     assert "全部实验计算" not in text
     assert "承载全部实验" not in text
 
@@ -145,6 +145,7 @@ def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:
         assert window._labtools_page.page_keys() == (
             "home",
             "general_calculators",
+            "imagej_fiji",
             "reagent_records",
             "cell_experiments",
             "western_blot",

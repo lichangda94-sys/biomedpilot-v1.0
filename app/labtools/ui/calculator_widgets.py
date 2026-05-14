@@ -552,9 +552,9 @@ if QWidget is not None:
             self._record_summary = QLabel("最近一次计算：暂无")
             self._record_summary.setObjectName("labToolsRecordSummary")
             self._record_summary.setWordWrap(True)
-            title = QLabel("实验计算器中心")
+            title = QLabel("通用试剂计算器")
             title.setObjectName("labToolsCalculatorTitle")
-            subtitle = QLabel("本地辅助计算：稀释、摩尔浓度换算、细胞接种。结果仅供实验前核对，不替代实验 SOP。")
+            subtitle = QLabel("本地基础实验计算：浓度换算、摩尔量/质量/体积换算、C1V1 稀释和溶液配制。结果仅供实验前核对，不替代实验 SOP。")
             subtitle.setObjectName("labToolsCalculatorNotice")
             subtitle.setWordWrap(True)
             risk = QLabel(CALCULATION_REVIEW_NOTICE)
@@ -569,8 +569,6 @@ if QWidget is not None:
             tabs.addTab(ConcentrationCalculatorWidget(on_record=self._set_latest_record), "浓度换算")
             tabs.addTab(DilutionCalculatorWidget(on_record=self._set_latest_record), "稀释计算")
             tabs.addTab(SolutionPreparationCalculatorWidget(on_record=self._set_latest_record), "溶液配制")
-            tabs.addTab(CellSeedingCalculatorWidget(on_record=self._set_latest_record), "细胞接种")
-            tabs.addTab(QpcrMixCalculatorWidget(on_record=self._set_latest_record), "qPCR 配液")
             root.addWidget(tabs)
 
         def latest_record(self) -> CalculationRecord | None:
