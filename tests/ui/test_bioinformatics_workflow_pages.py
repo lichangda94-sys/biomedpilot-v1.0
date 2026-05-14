@@ -409,11 +409,18 @@ def test_data_source_multifile_local_batch_display_detail_and_recognition_handof
     assert not any(path.is_file() for path in raw_import_root.rglob("*"))
 
     table = widget._dataset_list_panel._table
-    assert table.rowCount() == 1
-    assert table.item(0, 2).text() == "本地导入批次：4 个文件"
-    assert table.item(0, 2).text() != "GSE6004_family.soft"
-    assert table.item(0, 4).text() == "待识别：4 个文件"
-    assert table.item(0, 6).text() == "包含 GSE6004_family.soft 等 4 个文件"
+    assert table.rowCount() == 4
+    table_names = {table.item(row, 2).text() for row in range(table.rowCount())}
+    assert table_names == set(files)
+    for row in range(table.rowCount()):
+        assert table.item(row, 3).text() == "已导入"
+        assert table.item(row, 4).text() == "待识别：1 个文件"
+        assert table.item(row, 6).text() == ""
+    batch_summary = widget._dataset_list_panel._batch_summary.text()
+    assert "本地导入批次摘要" in batch_summary
+    assert "文件总数：4 个" in batch_summary
+    assert "保存方式：引用原始位置" in batch_summary
+    assert "包含 GSE6004_family.soft 等 4 个文件" in batch_summary
     visible_table_text = "\n".join(
         table.item(row, col).text()
         for row in range(table.rowCount())
@@ -421,16 +428,28 @@ def test_data_source_multifile_local_batch_display_detail_and_recognition_handof
         if table.item(row, col) is not None
     )
     assert str(sources[0].resolve()) not in visible_table_text
+    assert "包含 GSE6004_family.soft 等 4 个文件" not in visible_table_text
 
-    key = next(iter(widget._dataset_entries))
+    key = next(entry.key for entry in widget._dataset_entries.values() if entry.name == "GSE6004_family.soft")
     widget._show_dataset_detail(key)
     detail_text = widget._dataset_detail_panel._summary.toPlainText()
+    assert "当前查看文件：GSE6004_family.soft" in detail_text
     assert "文件总数：4 个" in detail_text
     assert "保存方式：引用原始位置" in detail_text
     for source in sources:
         assert source.name in detail_text
+    assert widget._dataset_detail_panel._note_edit.toPlainText() == ""
+    assert widget._dataset_detail_panel._note_edit.placeholderText() == "可记录筛选理由、疑问或后续处理计划，备注只作为笔记保存"
+    widget._dataset_detail_panel._note_edit.setPlainText("优先检查 SOFT 元数据")
+    widget._dataset_detail_panel._save_note()
+    notes_path = project_summary.project_root / "manifests" / "user_dataset_notes.json"
+    notes_payload = json.loads(notes_path.read_text(encoding="utf-8"))
+    assert notes_payload["notes"][key]["note"] == "优先检查 SOFT 元数据"
 
-    checkbox = table.cellWidget(0, 0)
+    row_by_name = {table.item(row, 2).text(): row for row in range(table.rowCount())}
+    assert table.item(row_by_name["GSE6004_family.soft"], 6).text() == "优先检查 SOFT 元数据"
+    assert table.item(row_by_name["expression_matrix.tsv"], 6).text() == ""
+    checkbox = table.cellWidget(row_by_name["GSE6004_family.soft"], 0)
     assert isinstance(checkbox, QCheckBox)
     checkbox.setChecked(True)
     widget.continue_to_recognition()

@@ -167,6 +167,8 @@ class DatasetListEntry:
     acquisition_ids: tuple[str, ...] = ()
     source_files: tuple[str, ...] = ()
     storage_policy: str = ""
+    focused_source_file: str = ""
+    batch_summary: str = ""
 
 
 @dataclass(frozen=True)
@@ -369,6 +371,11 @@ class GeoDownloadListPanel(QFrame):
         layout.addWidget(self._title_label)
         self._empty = _muted("尚未添加数据来源。请先从上方三类入口导入或检索。")
         layout.addWidget(self._empty)
+        self._batch_summary = _muted("")
+        self._batch_summary.setObjectName("datasetBatchSummaryText")
+        self._batch_summary.setWordWrap(True)
+        self._batch_summary.setVisible(False)
+        layout.addWidget(self._batch_summary)
         self._table = _table(["选择", "来源", "数据集 / 文件名", "数据状态", "可用内容", "需要补充", "备注", "操作"])
         self._table.setObjectName("geoDownloadListTable")
         self._table.setMinimumHeight(180)
@@ -392,6 +399,9 @@ class GeoDownloadListPanel(QFrame):
         self._entries = entries
         self._checks = {}
         self._empty.setVisible(not entries)
+        summary_text = _dataset_batch_summary_text(entries)
+        self._batch_summary.setText(summary_text)
+        self._batch_summary.setVisible(bool(summary_text))
         self._table.setVisible(bool(entries))
         _fill_table(
             self._table,
@@ -483,16 +493,16 @@ class DatasetDetailPanel(QFrame):
         self._title.setObjectName("bioProjectCardTitle")
         self._title.setWordWrap(True)
         layout.addWidget(self._title)
-        self._summary = _text_preview(120)
+        self._summary = _text_preview(190)
         self._summary.setObjectName("datasetDefaultSummary")
         layout.addWidget(self._summary)
 
         layout.addWidget(_muted("用户备注"))
         self._note_edit = QPlainTextEdit()
         self._note_edit.setObjectName("datasetUserNoteEdit")
-        self._note_edit.setPlaceholderText("可记录筛选理由、疑问或后续处理计划。备注只作为笔记保存。")
-        self._note_edit.setMinimumHeight(72)
-        self._note_edit.setMaximumHeight(120)
+        self._note_edit.setPlaceholderText("可记录筛选理由、疑问或后续处理计划，备注只作为笔记保存")
+        self._note_edit.setMinimumHeight(48)
+        self._note_edit.setMaximumHeight(76)
         layout.addWidget(self._note_edit)
         note_actions = QHBoxLayout()
         note_actions.addWidget(_button("保存备注", "secondaryButton", self._save_note))
@@ -4958,19 +4968,20 @@ def _current_project_dataset_entries(project_root: Path | None, *, geo_only: boo
             location_tooltip=_registered_source_full_location(payload, metadata),
             source_files=tuple(_recognition_source_files_from_payload(payload)),
         )
-        entry = _dataset_entry_from_record(project_root, row, payload, metadata, notes)
-        rank = _dataset_entry_rank(entry, row.created_at)
-        previous = grouped.get(entry.key)
-        if previous is None:
-            grouped[entry.key] = entry
-            ranks[entry.key] = rank
-            continue
-        acquisition_ids = tuple(dict.fromkeys([*previous.acquisition_ids, *entry.acquisition_ids]))
-        if rank >= ranks[entry.key]:
-            grouped[entry.key] = DatasetListEntry(**{**entry.__dict__, "acquisition_ids": acquisition_ids})
-            ranks[entry.key] = rank
-        else:
-            grouped[entry.key] = DatasetListEntry(**{**previous.__dict__, "acquisition_ids": acquisition_ids})
+        entries = _expand_local_dataset_entries(_dataset_entry_from_record(project_root, row, payload, metadata, notes), notes)
+        for entry in entries:
+            rank = _dataset_entry_rank(entry, row.created_at)
+            previous = grouped.get(entry.key)
+            if previous is None:
+                grouped[entry.key] = entry
+                ranks[entry.key] = rank
+                continue
+            acquisition_ids = tuple(dict.fromkeys([*previous.acquisition_ids, *entry.acquisition_ids]))
+            if rank >= ranks[entry.key]:
+                grouped[entry.key] = DatasetListEntry(**{**entry.__dict__, "acquisition_ids": acquisition_ids})
+                ranks[entry.key] = rank
+            else:
+                grouped[entry.key] = DatasetListEntry(**{**previous.__dict__, "acquisition_ids": acquisition_ids})
     return sorted(grouped.values(), key=lambda entry: (_dataset_source_order(entry.source_type_key), entry.name))
 
 
@@ -5014,8 +5025,6 @@ def _dataset_entry_from_record(
     accession = _geo_accession_from_record(payload, metadata) if _is_geo_record(payload, metadata) else ""
     source_files = tuple(_recognition_source_files_from_payload(payload))
     note = notes.get(key, "")
-    if not note and row.source_type_key == "local_import":
-        note = _local_import_default_note(payload)
     return DatasetListEntry(
         key=key,
         source=_dataset_source_label(row, metadata),
@@ -5036,6 +5045,82 @@ def _dataset_entry_from_record(
         acquisition_ids=(row.acquisition_id,),
         source_files=source_files,
         storage_policy=str(payload.get("strategy") or ""),
+    )
+
+
+def _expand_local_dataset_entries(entry: DatasetListEntry, notes: dict[str, str]) -> list[DatasetListEntry]:
+    if entry.source_type_key != "local_import" or len(entry.source_files) <= 1:
+        return [entry]
+    storage = _storage_policy_text(entry.storage_policy)
+    batch_summary = _local_import_batch_summary(entry.source_files, entry.storage_policy, entry.status)
+    expanded: list[DatasetListEntry] = []
+    for index, raw_path in enumerate(entry.source_files, start=1):
+        file_key = f"{entry.key}:file:{index}"
+        file_name = Path(raw_path).name
+        expanded.append(
+            DatasetListEntry(
+                **{
+                    **entry.__dict__,
+                    "key": file_key,
+                    "name": file_name,
+                    "available_content": "待识别：1 个文件",
+                    "note": notes.get(file_key, ""),
+                    "title": file_name,
+                    "abstract": f"本地导入批次中的第 {index} 个文件。",
+                    "keywords": _local_file_type_hint(file_name),
+                    "technical_info": _local_file_dataset_technical_info(entry, raw_path, index, storage),
+                    "focused_source_file": raw_path,
+                    "batch_summary": batch_summary,
+                }
+            )
+        )
+    return expanded
+
+
+def _local_import_batch_summary(source_files: tuple[str, ...], storage_policy: str, status: str) -> str:
+    if not source_files:
+        return ""
+    names = [Path(path).name for path in source_files]
+    preview = "、".join(names[:3])
+    remaining = len(names) - 3
+    if remaining > 0:
+        preview = f"{preview}，另有 {remaining} 个文件"
+    contains = f"包含 {names[0]} 等 {len(names)} 个文件" if len(names) > 1 else f"包含 {names[0]}"
+    return "；".join(
+        [
+            f"文件总数：{len(names)} 个",
+            f"保存方式：{_storage_policy_text(storage_policy)}",
+            f"来源状态：{status}",
+            contains,
+            f"文件预览：{preview}",
+        ]
+    )
+
+
+def _local_file_type_hint(file_name: str) -> str:
+    lowered = file_name.lower()
+    if lowered.endswith(".soft") or "family.soft" in lowered:
+        return "GEO SOFT"
+    if "series_matrix" in lowered:
+        return "GEO Series Matrix"
+    if lowered.endswith((".xlsx", ".xls")):
+        return "Excel 表格"
+    if lowered.endswith((".csv", ".tsv", ".txt", ".txt.gz", ".tsv.gz", ".csv.gz")):
+        return "文本表格"
+    return "本地文件"
+
+
+def _local_file_dataset_technical_info(entry: DatasetListEntry, focused_source_file: str, index: int, storage: str) -> str:
+    return _json(
+        {
+            "数据来源": entry.source,
+            "当前文件": focused_source_file,
+            "文件序号": index,
+            "批次文件总数": len(entry.source_files),
+            "保存方式": storage,
+            "source_files": list(entry.source_files),
+            "acquisition_ids": list(entry.acquisition_ids),
+        }
     )
 
 
@@ -5208,6 +5293,20 @@ def _dataset_entry_tooltip(entry: DatasetListEntry, column: int) -> str:
     return entry.technical_info if column in {3, 4, 5} else ""
 
 
+def _dataset_batch_summary_text(entries: Iterable[DatasetListEntry]) -> str:
+    summaries: list[str] = []
+    seen: set[tuple[str, ...]] = set()
+    for entry in entries:
+        if entry.source_type_key != "local_import" or len(entry.source_files) <= 1:
+            continue
+        acquisition_key = entry.acquisition_ids or (entry.key,)
+        if acquisition_key in seen:
+            continue
+        seen.add(acquisition_key)
+        summaries.append(f"本地导入批次摘要：{entry.batch_summary or _local_import_batch_summary(entry.source_files, entry.storage_policy, entry.status)}")
+    return "\n".join(summaries)
+
+
 def _dataset_detail_summary(entry: DatasetListEntry) -> str:
     lines = [
         f"数据集编号或文件名：{entry.name}",
@@ -5218,6 +5317,19 @@ def _dataset_detail_summary(entry: DatasetListEntry) -> str:
     if entry.source_type_key == "local_import":
         files = list(entry.source_files)
         storage = _storage_policy_text(entry.storage_policy)
+        if entry.focused_source_file:
+            focused_name = Path(entry.focused_source_file).name
+            lines.extend(
+                [
+                    f"当前查看文件：{focused_name}",
+                    f"文件来源状态：{entry.status}",
+                    f"保存方式：{storage}",
+                    f"批次摘要：{entry.batch_summary}",
+                    "批次完整文件列表：",
+                ]
+            )
+        else:
+            lines.append("批次完整文件列表：")
         lines.extend(
             [
                 f"文件总数：{len(files)} 个",
@@ -5228,13 +5340,6 @@ def _dataset_detail_summary(entry: DatasetListEntry) -> str:
         for index, raw_path in enumerate(files, start=1):
             lines.append(f"{index}. {Path(raw_path).name}｜{storage}｜{raw_path}")
     return "\n".join(lines)
-
-
-def _local_import_default_note(payload: dict[str, object]) -> str:
-    files = _local_import_declared_files(payload)
-    if len(files) <= 1:
-        return ""
-    return f"包含 {Path(files[0]).name} 等 {len(files)} 个文件"
 
 
 def _compact_note(note: str) -> str:
@@ -5384,21 +5489,31 @@ def _pending_recognition_selection_path(project_root: Path) -> Path:
 
 def _save_pending_recognition_selection(project_root: Path, entries: list[DatasetListEntry]) -> None:
     path = _pending_recognition_selection_path(project_root)
+    selected_sources: list[dict[str, object]] = []
+    seen_sources: set[tuple[str, ...] | str] = set()
+    for entry in entries:
+        source_key: tuple[str, ...] | str = entry.acquisition_ids or entry.key
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        display_name = entry.name
+        if entry.source_type_key == "local_import" and len(entry.source_files) > 1:
+            display_name = f"本地导入批次：{len(entry.source_files)} 个文件"
+        selected_sources.append(
+            {
+                "key": entry.key,
+                "display_name": display_name,
+                "source_type": entry.source_type_key,
+                "source_files": list(entry.source_files),
+                "source_file_count": len(entry.source_files),
+            }
+        )
     payload = {
         "schema_version": "biomedpilot.pending_recognition_selection.v1",
         "updated_at": _utc_now_iso(),
         "selected_keys": [entry.key for entry in entries],
         "selected_acquisition_ids": sorted({acquisition_id for entry in entries for acquisition_id in entry.acquisition_ids}),
-        "selected_sources": [
-            {
-                "key": entry.key,
-                "display_name": entry.name,
-                "source_type": entry.source_type_key,
-                "source_files": list(entry.source_files),
-                "source_file_count": len(entry.source_files),
-            }
-            for entry in entries
-        ],
+        "selected_sources": selected_sources,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
