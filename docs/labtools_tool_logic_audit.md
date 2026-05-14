@@ -29,7 +29,7 @@ Architecture conclusion:
 - Experiment-specific calculations should not remain permanently grouped under 通用计算器.
 - cell seeding and wound manual ROI are future 细胞实验 module candidates.
 - qPCR mix is a future PCR / qPCR module candidate.
-- WB loading has both an older general-calculator implementation and a newer Western Blot module protein loading tool; SDS-PAGE gel template batch calculation is implemented as a user-entered template tool.
+- WB loading now uses the Western Blot module protein loading tool as the user-facing entry; the older general-calculator WB loading UI entry has been removed.
 - recipe draft and experiment record draft belong under 试剂与实验记录.
 - fluorescence manual ROI remains a temporary image-assistance capability until ownership is confirmed.
 - absorbance / OD, Bradford, NanoDrop, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
@@ -76,6 +76,7 @@ Protein loading and BCA are implemented with confirmed narrow scopes:
 - `western_blot.bca_assay_v1` parses 8×12 OD matrices, supports Blank / Standard / Sample / Unused annotations, optional blank subtraction, linear standard curve fitting, CV% / R² / range warnings, sample concentration calculation, and copyable summary text.
 - BCA v1 does not save plate layouts, does not export XLSX, does not run 4PL, does not delete outlier wells, and does not implement Bradford, NanoDrop, ELISA standard curve, or any report-ready conclusion.
 - Both tools are non-write-to-disk JSON-compatible result structures only; copying results writes to clipboard only.
+- Per user decision after this stage, the old 通用计算器 `WB 上样` tab is not retained; users enter protein loading through Western Blot -> 上样与胶 -> 蛋白上样体系计算.
 
 ## Current Tool Inventory
 
@@ -87,7 +88,7 @@ Protein loading and BCA are implemented with confirmed narrow scopes:
 | `calculator.mass_molarity_v1` | Mass / molarity calculator | experiment_calculator | implemented | yes | no | medium |
 | `calculator.cell_seeding_v1` | Cell seeding calculator | experiment_calculator | implemented | yes | no | medium |
 | `calculator.qpcr_mix_v1` | qPCR mix calculator | experiment_calculator | implemented | yes | no | medium |
-| `calculator.wb_loading_v1` | WB loading calculator | experiment_calculator | implemented | yes | no | medium |
+| `calculator.wb_loading_v1` | WB loading calculator legacy service | experiment_calculator_legacy_service | hidden UI / legacy service | yes | no | medium |
 | `western_blot.sds_page_gel_template_v1` | SDS-PAGE gel template batch calculator | western_blot_template_calculator | implemented | yes | yes | medium |
 | `western_blot.protein_loading_v1` | Protein loading calculator | western_blot_calculator | implemented | yes | no | medium |
 | `western_blot.bca_assay_v1` | BCA protein concentration assay | western_blot_assay_calculator | implemented | yes | no | medium |
@@ -115,7 +116,7 @@ Protein loading and BCA are implemented with confirmed narrow scopes:
 | `calculator.mass_molarity_v1` | partial | yes | no | Confirm assumptions around MW, salts/hydrates, purity notes, and result fields. |
 | `calculator.cell_seeding_v1` | partial | yes | no | Confirm seeding assumptions, overage semantics, and invalid cases. |
 | `calculator.qpcr_mix_v1` | partial | yes | no | Confirm qPCR mix assumptions before any Delta Delta Ct or plate logic. |
-| `calculator.wb_loading_v1` | partial | yes | no | Confirm loading buffer assumptions before any WB image workflow. |
+| `calculator.wb_loading_v1` | partial | no | no | Keep hidden from 通用计算器 UI; use Western Blot protein loading as current entry. |
 | `western_blot.sds_page_gel_template_v1` | yes | no | no | Keep as user-entered template batch calculator; discuss before adding recommendations or built-in recipes. |
 | `western_blot.protein_loading_v1` | yes | no | no | Keep as WB loading assistance; discuss before adding reducer component automation or SOP workflow. |
 | `western_blot.bca_assay_v1` | yes | no | no | Keep as BCA linear-fit assistance; discuss before adding 4PL, ELISA, Bradford, NanoDrop, export, or plate template persistence. |
@@ -140,7 +141,7 @@ Each row is a compact audit record. Detailed Tool Logic Cards below expand the s
 | `calculator.mass_molarity_v1` | Mass / molarity calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_experiment_calculator_center.py`; `test_unit_conversion.py` | yes | no | MW; target molarity; volume; mass unit | enter values; calculate; optionally copy | required mass; moles | weighing / molarity planning aid | manual review | invalid MW; invalid unit; invalid numbers | partial | medium | yes | no | confirm MW and purity assumptions |
 | `calculator.cell_seeding_v1` | Cell seeding calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_experiment_calculator_center.py`; `test_cell_seeding_calculator.py` | yes | no | cell concentration; target cells; wells; volume; overage | enter values; calculate; optionally copy | suspension volume; medium volume; total cells | seeding volume planning aid | manual review | invalid numbers; suspension exceeds final volume | partial | medium | yes | no | confirm overage and viability language |
 | `calculator.qpcr_mix_v1` | qPCR mix calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_l5c_qpcr_wb_calculators.py`; `test_qpcr_mix_calculator.py` | yes | no | reactions; reaction volume; mix; primers; template; overage | enter mix setup; calculate | per reaction and total component volumes | qPCR mix setup aid | manual review | component volume exceeds reaction; invalid percent | partial | medium | yes | no | confirm qPCR assumptions |
-| `calculator.wb_loading_v1` | WB loading calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_l5c_qpcr_wb_calculators.py` | yes | no | protein concentration; target mass; final volume; buffer multiple | enter loading setup; calculate | sample; buffer; water volumes | WB loading volume aid only | manual review | sample + buffer exceeds final volume | partial | medium | yes | no | confirm loading assumptions |
+| `calculator.wb_loading_v1` | WB loading calculator legacy service | experiment_calculator_legacy_service | hidden UI / legacy service | `experiment_calculator_center.py` | `test_l5c_qpcr_wb_calculators.py` | yes | no | protein concentration; target mass; final volume; buffer multiple | no current user-facing workflow in 通用计算器 | sample; buffer; water volumes | legacy WB loading volume aid only | manual review | sample + buffer exceeds final volume | partial | medium | no | no | keep hidden; use `western_blot.protein_loading_v1` |
 | `western_blot.sds_page_gel_template_v1` | SDS-PAGE gel template batch calculator | western_blot_template_calculator | implemented | `sds_page_gel_templates.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_sds_page_gel_templates.py`; `test_labtools_sds_page_gel_tool_ui.py` | yes | yes | user template; resolving / stacking sections; components; gel count; overage | enter or import template; calculate; optional JSON/XLSX export | per-section total amounts; template JSON; calculation XLSX | user-template batch conversion draft | kit / lab SOP review | invalid JSON; conflicts; unsupported unit; invalid gel count; write failure | yes | medium | no | no | keep as user-entered template only |
 | `western_blot.protein_loading_v1` | Protein loading calculator | western_blot_calculator | implemented | `protein_loading.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_western_blot_protein_loading.py`; `test_labtools_western_blot_loading_bca_ui.py` | yes | no | sample concentrations; target protein; final volume; buffer multiple; target buffer concentration; overage | enter multiple samples; calculate; optionally copy | per-sample sample / buffer / water volumes; totals; warnings | WB loading mix assistance draft | manual review | invalid concentration; invalid target or volume; buffer setting invalid; negative water volume; small pipetting volumes | yes | medium | no | no | keep as auxiliary loading calculator |
 | `western_blot.bca_assay_v1` | BCA protein concentration assay | western_blot_assay_calculator | implemented | `bca_assay.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_bca_assay.py`; `test_labtools_western_blot_loading_bca_ui.py` | yes | no | 8x12 OD matrix; well annotations; standards; samples; blank setting | paste OD matrix; annotate wells; calculate; optionally copy | raw data table; standard curve; sample results; warnings | BCA linear-fit assistance draft | kit / lab SOP review | insufficient standards; invalid slope; low R2; high CV; out-of-range sample; negative corrected OD; negative concentration | yes | medium | no | no | keep as BCA v1 linear-fit tool |
@@ -179,7 +180,7 @@ Existing tools that generate user-visible scientific or lab workflow values shou
 
 - Dilution / mass-molarity / cell seeding calculators.
 - qPCR calculator.
-- WB loading calculator / Western Blot protein loading calculator.
+- Western Blot protein loading calculator.
 - BCA v1 only before adding export, template persistence, or non-linear model support.
 - Fluorescence manual ROI.
 - Wound / scratch manual ROI + threshold.
@@ -211,7 +212,7 @@ No blocking mismatch found in this audit.
 
 Non-blocking observations:
 
-- qPCR and the older general-calculator WB loading tool exist and are correctly scoped as calculators, but their assumptions still need user confirmation before expansion.
+- qPCR remains in the calculator center. The older general-calculator WB loading service remains only as legacy service code; its 通用计算器 UI entry is removed.
 - Western Blot protein loading and BCA v1 now have user-confirmed narrow Tool Logic Cards; future expansion still requires a new discussion.
 - Wound / scratch manual ROI exposes `non_scratch_area_fraction` as a computed metric; documentation correctly says this is threshold-based estimation, not automatic migration interpretation.
 - ROI export writes local paths in UI success feedback. The schema index correctly treats this as local UI feedback, not public report content.
@@ -553,23 +554,23 @@ Recommended next step:
 
 - Confirm qPCR setup assumptions; require a new card before Delta Delta Ct work.
 
-## Tool Logic Card: WB loading calculator
+## Tool Logic Card: WB loading calculator legacy service
 
 Current implementation:
 
 - tool_id: `calculator.wb_loading_v1`
-- tool_name: WB loading calculator
-- tool_category: experiment_calculator
-- current_status: implemented
-- implemented_files: `app/labtools/calculators/experiment_calculator_center.py`, `app/labtools/ui/calculator_widgets.py`
+- tool_name: WB loading calculator legacy service
+- tool_category: experiment_calculator_legacy_service
+- current_status: hidden UI / legacy service
+- implemented_files: `app/labtools/calculators/experiment_calculator_center.py`
 - test_files: `tests/labtools/test_l5c_qpcr_wb_calculators.py`
 - does_generate_result: yes
 - does_write_to_disk: no
 
 User workflow:
 
-- User enters protein concentration, target protein mass, final loading volume, and loading buffer multiple.
-- UI returns sample, buffer, and water volumes.
+- No current user-facing workflow in 通用计算器.
+- Users should enter Western Blot loading calculations through `western_blot.protein_loading_v1`.
 
 Inputs:
 
@@ -611,12 +612,12 @@ Confirmed by user:
 Risk:
 
 - risk_level: medium
-- needs_user_discussion: yes
+- needs_user_discussion: no for removal from current UI
 - needs_code整改: no
 
 Recommended next step:
 
-- Confirm loading assumptions; require future card before any WB / gel grayscale feature.
+- Keep hidden from 通用计算器 UI; use Western Blot protein loading as the current entry.
 
 ## Tool Logic Card: SDS-PAGE gel template batch calculator
 

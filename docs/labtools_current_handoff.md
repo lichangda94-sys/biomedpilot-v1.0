@@ -55,7 +55,6 @@
 - 溶液配制计算器。
 - 细胞接种计算器。
 - qPCR 配液计算器。
-- WB / SDS-PAGE 上样计算器。
 - `CalculationRecord` 计算记录结构，支持 JSON-compatible dict。
 - 中文友好错误提示和人工复核提示。
 - L6E 首页和 feature status 文案校准为“本地辅助计算草稿”，避免把计算器描述成正式 SOP、临床建议或生产级结论。
@@ -67,7 +66,8 @@
 - L5C 新增：
   - `QpcrMixInput` / `QpcrMixResult` / `calculate_qpcr_mix_v1()`：输出 qPCR 单反应用量、总用量和 overage 后总用量。
   - `WesternBlotLoadingInput` / `WesternBlotLoadingResult` / `calculate_western_blot_loading_v1()`：根据蛋白浓度、目标蛋白量、目标上样体积和 loading buffer 倍数估算样品、buffer 和水体积。
-- L5C WB/SDS-PAGE 仅为上样体积计算，不进行 WB/凝胶灰度、条带检测、归一化或图像解释。
+- L5C WB/SDS-PAGE 旧通用计算器入口已从“通用计算器”UI 移除；Western Blot 模块内的 Protein Loading v1 是当前用户入口。
+- L5C 旧服务层保留为历史测试/兼容结构，不作为当前 UI 入口；不进行 WB/凝胶灰度、条带检测、归一化或图像解释。
 - SDS-PAGE Gel Template Tool 1 新增：
   - `labtools_sds_page_gel_template_store.v1` 模板 JSON schema。
   - 用户录入 SDS-PAGE 配胶模板，必须包含分离胶和浓缩胶 section；section 可标记为 `0 / 不使用`。
@@ -88,6 +88,7 @@
   - `app/labtools/western_blot/bca_assay.py`：BCA 蛋白浓度测定辅助计算 v1，支持 8×12 OD 矩阵解析、96 孔板标注、批量选区标注、blank 可选扣除、线性标准曲线拟合和样本浓度估算。
   - BCA v1 仅做线性拟合，不做 4PL；CV% 警告阈值为 15%，R² 警告阈值为 0.98；异常孔只提示，不自动剔除。
   - Protein loading 和 BCA 结果均支持复制摘要文本，不写盘、不自动保存、不新增 schema。
+  - 按用户确认，不保留旧通用计算器 WB 上样入口；上样体系只从 Western Blot 模块进入。
 - Western Blot Protein Loading + BCA Assay v1 明确未做：
   - 不做 WB/gel grayscale、条带 ROI、背景扣除、target/loading control ratio。
   - 不做 Bradford、NanoDrop、ELISA 标准曲线、4PL、plate layout 模板保存或 xlsx 导出。
@@ -436,7 +437,7 @@
 
 - dilution / mass-molarity / cell seeding calculators。
 - qPCR mix calculator。
-- WB loading calculator。
+- Western Blot protein loading calculator。
 - fluorescence manual ROI。
 - wound / scratch manual ROI + threshold。
 - ROI export result summary。

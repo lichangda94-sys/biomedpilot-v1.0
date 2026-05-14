@@ -101,7 +101,7 @@ In scope:
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`: 191 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`: 192 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`: 18 passed
-- `QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test`: passed; output included `git_head=a055f78`, `workspace_entries=3`, `labtools_features=6`
+- `QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test`: passed; latest rerun after removing the old general calculator WB entry included `git_head=012d1ba`, `workspace_entries=3`, `labtools_features=6`
 - `python3 -m compileall app/labtools`: passed
 - `git diff --check`: passed
 - `git diff --cached --check`: passed before commit
@@ -113,11 +113,11 @@ In scope:
 - BCA v1 does not export `.xlsx`.
 - BCA v1 flags unusual wells but does not remove them from analysis automatically.
 - Protein loading v1 assumes reducer handling is outside this calculator and prompts the user to confirm loading buffer contents.
-- The older general calculator WB loading surface remains present; the new Western Blot protein loading tool is the module-scoped implementation.
+- The older general calculator WB loading UI surface was removed after user confirmation; the new Western Blot protein loading tool is the only user-facing protein loading entry.
 
 ## Next recommended stage
 
-- Discuss whether the older general calculator WB loading surface should be deprecated, redirected, or kept as a compatibility entry.
+- Keep the old general calculator WB loading UI entry removed; use Western Blot protein loading as the current entry.
 - Create separate Tool Logic Cards before BCA 4PL, Bradford, NanoDrop, ELISA standard curves, WB/gel grayscale, band ROI, background subtraction, target/loading control ratio, plate layout persistence, or export formats.
 
 ## Git status
