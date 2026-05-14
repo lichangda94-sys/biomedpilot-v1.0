@@ -26,9 +26,9 @@ def test_roi_and_audit_records_export_dicts() -> None:
 
     assert roi.to_dict()["coordinates"] == [[0, 0], [1.5, 2.0]]
     assert audit.to_dict()["details"] == {"review": True}
-    assert "手动 ROI 荧光 grayscale 指标" in IMAGE_REVIEW_NOTICE
-    assert "手动 ROI + 阈值划痕面积估算" in IMAGE_REVIEW_NOTICE
-    assert "未启用自动 ROI、细胞计数或灰度/墨值算法" in IMAGE_REVIEW_NOTICE
+    assert "手动 ROI 荧光 grayscale 辅助指标" in IMAGE_REVIEW_NOTICE
+    assert "手动 ROI + 阈值划痕面积辅助估算" in IMAGE_REVIEW_NOTICE
+    assert "未启用自动 ROI、细胞计数、条带识别或生产级真实图像算法" in IMAGE_REVIEW_NOTICE
 
 
 def test_empty_roi_placeholder_has_no_coordinates() -> None:

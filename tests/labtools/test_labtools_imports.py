@@ -20,9 +20,9 @@ def test_labtools_module_exports_features() -> None:
     assert "WB/SDS-PAGE 上样计算" in features[0].description
 
     image_feature = features[2]
-    assert "荧光 manual ROI grayscale" in image_feature.description
-    assert "scratch/wound manual ROI + threshold" in image_feature.description
-    assert "细胞计数、灰度/墨值仍为占位" in image_feature.description
+    assert "消费 shared ImageJ/Fiji 本机引擎检测" in image_feature.description
+    assert "manual ROI 辅助输出为 testing" in image_feature.description
+    assert "未启用自动 ROI、细胞计数、灰度/墨值或生产级真实图像算法" in image_feature.description
     assert "算法开发中" not in image_feature.description
     assert "algorithm in development" not in image_feature.description.lower()
 
@@ -66,9 +66,13 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert widget.current_page_key() == "image_analysis"
     image_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
     image_buttons = [button.text() for button in widget.findChildren(QPushButton)]
+    assert "ImageJ/Fiji 本机引擎" in image_labels
+    assert "LabTools 图像定量 workflow 需要本机 ImageJ/Fiji 图像分析引擎" in image_labels
+    assert "LabTools 不内置自动 ROI、细胞计数、条带识别或生产级图像算法" in image_labels
     assert "MVP 可用：manual ROI grayscale 指标；需人工复核" in image_labels
     assert "MVP 可用：manual ROI + user threshold 面积估算；semi-quantitative" in image_labels
     assert image_labels.count("占位：algorithm_not_available，未生成定量结果") == 2
-    assert "未启用自动 ROI、细胞计数或灰度/墨值算法" in image_labels
+    assert "未启用自动 ROI、细胞计数、条带识别或生产级真实图像算法" in image_labels
     assert "JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG" in image_labels
+    assert "检测 ImageJ/Fiji" in image_buttons
     assert "导出当前 ROI 结果" in image_buttons

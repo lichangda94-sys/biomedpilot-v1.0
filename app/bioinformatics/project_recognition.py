@@ -527,6 +527,13 @@ def _classify_xlsx_table(path: Path) -> RecognitionClassification | None:
 
 def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
     profile = parse_geo_series_matrix(path)
+    organism = str(profile.get("organism") or _species_from_evidence(profile) or "").strip()
+    if organism:
+        if not profile.get("species"):
+            profile["species"] = organism
+        species_group = _species_group_from_organism(organism)
+        if species_group and not profile.get("species_group"):
+            profile["species_group"] = species_group
     if (
         not profile.get("series_accession")
         and not profile.get("sample_metadata_fields")
@@ -661,6 +668,8 @@ def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
         "sample_columns",
         "expression_value_type_candidate",
         "gene_id_type_candidate",
+        "species",
+        "species_group",
         "species_evidence",
         "warnings",
         "requires_user_confirmation",
@@ -1625,6 +1634,22 @@ def _species_group_from_organism(organism: str) -> str:
         return "mouse"
     if normalized == "homo sapiens" or "human" in normalized:
         return "human"
+    return ""
+
+
+def _species_from_evidence(profile: dict[str, object]) -> str:
+    evidence = profile.get("species_evidence")
+    if not isinstance(evidence, list):
+        return ""
+    for confidence in ("high", "medium", "low"):
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("confidence") or "") != confidence:
+                continue
+            species = str(item.get("species") or "").strip()
+            if species:
+                return species
     return ""
 
 

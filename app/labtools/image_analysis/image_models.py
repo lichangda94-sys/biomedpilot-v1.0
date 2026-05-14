@@ -8,9 +8,9 @@ from uuid import uuid4
 
 
 IMAGE_REVIEW_NOTICE = (
-    "当前图像分析仅支持手动 ROI 荧光 grayscale 指标和手动 ROI + 阈值划痕面积估算；"
-    "未启用自动 ROI、细胞计数或灰度/墨值算法。所有结果都需要人工复核，"
-    "请勿将占位状态作为实验结果。"
+    "当前图像分析仅支持手动 ROI 荧光 grayscale 辅助指标和手动 ROI + 阈值划痕面积辅助估算；"
+    "未启用自动 ROI、细胞计数、条带识别或生产级真实图像算法。所有结果都需要人工复核，"
+    "请勿将占位状态作为实验结果，也请勿将辅助输出作为自动算法结论。"
 )
 
 SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif")

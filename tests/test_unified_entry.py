@@ -16,3 +16,11 @@ def test_unified_entry_console_smoke() -> None:
     from app.main import main
 
     assert callable(main)
+
+
+def test_unified_entry_ignores_launchservices_psn_argument() -> None:
+    from app.main import parse_args
+
+    args = parse_args(["-psn_0_12345", "--smoke-test"])
+
+    assert args.smoke_test is True

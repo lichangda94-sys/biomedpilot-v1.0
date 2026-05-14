@@ -13,7 +13,7 @@ def labtools_features() -> list[FeatureItem]:
             "labtools",
             "图像定量",
             FeatureStatus.TESTING,
-            "荧光 manual ROI grayscale 指标和 scratch/wound manual ROI + threshold 面积估算为 MVP 可用；细胞计数、灰度/墨值仍为占位。",
+            "消费 shared ImageJ/Fiji 本机引擎检测；manual ROI 辅助输出为 testing，未启用自动 ROI、细胞计数、灰度/墨值或生产级真实图像算法。",
         ),
         FeatureItem("labtools", "实验模板", FeatureStatus.PENDING, "开发中。"),
     ]
