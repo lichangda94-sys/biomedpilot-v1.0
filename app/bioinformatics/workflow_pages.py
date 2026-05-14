@@ -86,6 +86,10 @@ from app.bioinformatics.project_workspace_binding import (
 )
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
 from app.bioinformatics.download import DatasetDownloadService, GeoDatasetProfile, GeoDatasetProfileService, GeoStudyTextInput, GeoTextSummaryService
+from app.bioinformatics.gse_file_download_candidates import (
+    build_gse_file_download_candidates,
+    save_gse_file_download_candidate_selection,
+)
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import load_result_index, write_result_index
 from app.bioinformatics.search_center import (
@@ -194,6 +198,9 @@ class GeoDatasetDetailPanel(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._candidate: UnifiedDatasetCandidate | None = None
+        self._project_root: Path | None = None
+        self._download_candidate_rows: list[dict[str, object]] = []
+        self._download_candidate_checks: dict[str, QCheckBox] = {}
         self.setObjectName("geoDatasetDetailView")
         self.setVisible(False)
         layout = QVBoxLayout(self)
@@ -249,6 +256,26 @@ class GeoDatasetDetailPanel(QFrame):
         self._asset_text.setObjectName("geoDatasetAssetStatus")
         layout.addWidget(self._asset_text)
 
+        layout.addWidget(_muted("可下载文件候选"))
+        self._download_candidate_hint = _muted("当前只是下载候选选择，不是分析结果；下载后仍需数据识别与标准化确认。")
+        self._download_candidate_hint.setObjectName("geoDownloadCandidateHint")
+        self._download_candidate_hint.setWordWrap(True)
+        layout.addWidget(self._download_candidate_hint)
+        self._download_candidate_table = _table(["选择", "文件名", "文件类型 / 预测角色", "推荐级别", "建议下载", "风险提示", "文件来源", "后续用途"])
+        self._download_candidate_table.setObjectName("geoDownloadCandidateTable")
+        self._download_candidate_table.setMinimumHeight(210)
+        self._download_candidate_table.setMaximumHeight(320)
+        layout.addWidget(self._download_candidate_table)
+        self._save_download_candidates_button = _button("保存候选选择", "secondaryButton", lambda: self._save_download_candidate_selection())
+        self._save_download_candidates_button.setObjectName("geoDownloadCandidateSaveButton")
+        self._download_candidate_status = _muted("")
+        self._download_candidate_status.setObjectName("geoDownloadCandidateStatus")
+        candidate_actions = QHBoxLayout()
+        candidate_actions.addWidget(self._save_download_candidates_button)
+        candidate_actions.addWidget(self._download_candidate_status)
+        candidate_actions.addStretch(1)
+        layout.addLayout(candidate_actions)
+
         decision_actions = QHBoxLayout()
         self._save_button = _button("保存", "primaryButton", lambda: self._emit_save())
         self._download_list_button = _button("加入下载列表", "secondaryButton", lambda: self._emit_add_to_download_list())
@@ -277,6 +304,7 @@ class GeoDatasetDetailPanel(QFrame):
         saved: bool = False,
     ) -> None:
         self._candidate = candidate
+        self._project_root = project_root
         self.setVisible(True)
         self._title.setText(f"{candidate.accession_or_project} · {candidate.display_title or 'GEO 数据集'}")
         _fill_table(self._basic_table, _geo_detail_basic_rows(candidate))
@@ -286,6 +314,7 @@ class GeoDatasetDetailPanel(QFrame):
         self._confirm_comparison_button.setEnabled(bool(profile.candidate_comparisons and project_root is not None))
         self._manual_comparison_button.setEnabled(project_root is not None)
         self._asset_text.setPlainText(_geo_asset_detail_text(project_root, candidate.accession_or_project))
+        self._render_download_candidates(project_root, candidate)
         self.set_saved(saved)
         self.set_pending_assets(saved and _candidate_has_pending_geo_assets(project_root, candidate.accession_or_project))
         if summary_payload:
@@ -310,6 +339,71 @@ class GeoDatasetDetailPanel(QFrame):
 
     def set_busy_text(self, text: str) -> None:
         self._translation_text.setPlainText(text)
+
+    def _render_download_candidates(self, project_root: Path | None, candidate: UnifiedDatasetCandidate) -> None:
+        self._download_candidate_checks.clear()
+        self._download_candidate_rows = []
+        self._download_candidate_table.clearContents()
+        self._download_candidate_table.setRowCount(0)
+        if project_root is None:
+            self._download_candidate_hint.setText("请先创建或打开生信分析项目后再保存 GEO 下载候选。")
+            self._save_download_candidates_button.setEnabled(False)
+            return
+        manifest = build_gse_file_download_candidates(
+            project_root=project_root,
+            accession=candidate.accession_or_project,
+            candidate_metadata=candidate.source_specific_metadata,
+        )
+        rows = [row for row in manifest.get("candidates", []) if isinstance(row, dict)]
+        self._download_candidate_rows = rows
+        self._download_candidate_table.setRowCount(len(rows))
+        self._save_download_candidates_button.setEnabled(bool(rows))
+        if not rows:
+            self._download_candidate_hint.setText("尚未发现可下载文件候选。请先下载/读取 GEO 元数据或 asset manifest。")
+            return
+        selected_count = sum(1 for row in rows if row.get("selected"))
+        self._download_candidate_hint.setText(
+            f"已发现 {len(rows)} 个 GEO 文件候选，默认选择 {selected_count} 个。当前只是下载候选选择，不是分析结果；后续仍需要 recognition 和 standardization confirmation。"
+        )
+        for row_index, row in enumerate(rows):
+            candidate_id = str(row.get("candidate_id") or "")
+            check = QCheckBox()
+            check.setChecked(bool(row.get("selected")))
+            check.setToolTip("选择后将写入 B5.14 下载 handoff manifest。")
+            self._download_candidate_checks[candidate_id] = check
+            self._download_candidate_table.setCellWidget(row_index, 0, check)
+            values = [
+                str(row.get("file_name") or ""),
+                str(row.get("predicted_role") or row.get("predicted_type") or ""),
+                str(row.get("download_priority") or ""),
+                "是" if row.get("suggested_for_download") else "否",
+                str(row.get("risk_warning") or ""),
+                str(row.get("file_source") or ""),
+                _geo_download_candidate_use_text(row),
+            ]
+            for col_index, value in enumerate(values, start=1):
+                item = QTableWidgetItem(value)
+                self._download_candidate_table.setItem(row_index, col_index, item)
+        _set_table_widths(self._download_candidate_table, [72, 240, 170, 90, 88, 260, 140, 260])
+        self._download_candidate_table.resizeRowsToContents()
+        self._download_candidate_status.setText("")
+
+    def _save_download_candidate_selection(self) -> None:
+        if self._candidate is None or self._project_root is None:
+            self._download_candidate_status.setText("请先创建或打开项目。")
+            return
+        selected_ids = tuple(
+            candidate_id
+            for candidate_id, check in self._download_candidate_checks.items()
+            if check.isChecked()
+        )
+        save_gse_file_download_candidate_selection(
+            project_root=self._project_root,
+            accession=self._candidate.accession_or_project,
+            candidate_metadata=self._candidate.source_specific_metadata,
+            selected_candidate_ids=selected_ids,
+        )
+        self._download_candidate_status.setText(f"已保存下载候选选择：{len(selected_ids)} 个文件。")
 
     def _emit_save(self) -> None:
         if self._candidate is not None:
@@ -6996,6 +7090,23 @@ def _geo_asset_detail_text(project_root: Path | None, accession: str) -> str:
             f"当前可分析性：{current}",
         ]
     )
+
+
+def _geo_download_candidate_use_text(row: dict[str, object]) -> str:
+    use = str(row.get("recognition_use") or "")
+    if use == "expression_matrix_candidate":
+        return "适合进入 expression/metadata recognition；需标准化确认。"
+    if use == "sample_metadata_candidate":
+        return "适合进入样本注释 recognition；分组仍需用户确认。"
+    if use == "platform_annotation_candidate":
+        return "平台注释候选；不承诺已完成 ID 映射。"
+    if use == "imported_deg_candidate":
+        return "外部 DEG 结果候选；不是软件计算结果。"
+    if use == "raw_heavy_risk_file":
+        return "RAW/heavy 风险文件；不进入默认下载。"
+    if use == "geo_metadata_container":
+        return "GEO 元数据容器；用于样本/平台元数据识别。"
+    return "下载后需先识别，再进入标准化确认。"
 
 
 def _asset_type_status(assets: list[dict[str, object]], asset_type: str) -> str:

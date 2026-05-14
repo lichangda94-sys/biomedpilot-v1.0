@@ -202,6 +202,65 @@ class _FakeGeoAssetDiscoverer:
         }
 
 
+def _write_geo_candidate_manifest(root: Path, accession: str = "GSE33630") -> Path:
+    geo_dir = root / "raw_data" / "geo" / accession
+    geo_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "schema_version": "biomedpilot.geo_asset_manifest.v1",
+        "accession": accession,
+        "assets": [
+            {
+                "asset_type": "family_soft",
+                "role": "metadata_container",
+                "file_name": f"{accession}_family.soft.gz",
+                "status": "downloaded",
+                "local_path": str(geo_dir / f"{accession}_family.soft.gz"),
+                "remote_url": f"https://example.org/{accession}_family.soft.gz",
+            },
+            {
+                "asset_type": "series_matrix",
+                "role": "expression_matrix_candidate",
+                "file_name": f"{accession}-GPL570_series_matrix.txt.gz",
+                "status": "remote_discovered",
+                "remote_url": f"https://example.org/{accession}-GPL570_series_matrix.txt.gz",
+            },
+            {
+                "asset_type": "supplementary_file",
+                "role": "supplementary_expression_candidate",
+                "file_name": f"{accession}_counts.tsv.gz",
+                "status": "remote_discovered",
+                "remote_url": f"https://example.org/{accession}_counts.tsv.gz",
+            },
+            {
+                "asset_type": "supplementary_file",
+                "role": "supplementary_annotation_candidate",
+                "file_name": "GPL570_probe_annotation.txt.gz",
+                "status": "remote_discovered",
+                "remote_url": "https://example.org/GPL570_probe_annotation.txt.gz",
+            },
+            {
+                "asset_type": "supplementary_file",
+                "role": "supplementary_file",
+                "file_name": f"{accession}_DEG_results.xlsx",
+                "status": "remote_discovered",
+                "remote_url": f"https://example.org/{accession}_DEG_results.xlsx",
+            },
+            {
+                "asset_type": "supplementary_file",
+                "role": "supplementary_file",
+                "file_name": f"{accession}_RAW.tar",
+                "status": "remote_discovered",
+                "remote_url": f"https://example.org/{accession}_RAW.tar",
+                "size_bytes": 2_000_000_000,
+            },
+        ],
+        "summary": {"metadata_downloaded": True, "series_matrix_discovered": True, "supplementary_files_discovered": True},
+    }
+    path = geo_dir / f"{accession}_asset_manifest.json"
+    path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
 class _FakeGeoRemoteAssetDownloader:
     def download_asset(self, asset: dict[str, object], target_dir: Path) -> dict[str, object]:
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -1238,6 +1297,47 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert files
     assert files[0]["recognized_type"] == "geo_soft_container"
     assert "expression_matrix" in files[0]["recognized_roles"]
+
+
+def test_geo_detail_panel_shows_and_saves_download_candidate_selection(qt_app, project_summary) -> None:
+    _write_geo_candidate_manifest(project_summary.project_root)
+    panel = workflow_pages.GeoDatasetDetailPanel()
+    candidate = _geo_candidate()
+
+    panel.show_candidate(candidate, project_root=project_summary.project_root, saved=True)
+
+    table = panel._download_candidate_table
+    assert table.rowCount() == 6
+    table_text = " ".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(1, table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert "GSE33630-GPL570_series_matrix.txt.gz" in table_text
+    assert "GSE33630_counts.tsv.gz" in table_text
+    assert "RAW/heavy 风险文件" in table_text
+    assert "外部 DEG 结果候选；不是软件计算结果" in table_text
+    assert str(project_summary.project_root) not in table_text
+
+    checkboxes = {
+        table.item(row, 1).text(): table.cellWidget(row, 0)
+        for row in range(table.rowCount())
+    }
+    assert isinstance(checkboxes["GSE33630-GPL570_series_matrix.txt.gz"], QCheckBox)
+    assert checkboxes["GSE33630-GPL570_series_matrix.txt.gz"].isChecked()
+    assert checkboxes["GSE33630_counts.tsv.gz"].isChecked()
+    assert not checkboxes["GSE33630_RAW.tar"].isChecked()
+    assert not checkboxes["GSE33630_DEG_results.xlsx"].isChecked()
+
+    checkboxes["GSE33630_counts.tsv.gz"].setChecked(False)
+    panel._save_download_candidates_button.click()
+
+    selection_path = project_summary.project_root / "acquisition" / "gse_file_download_candidates" / "GSE33630_download_candidates.json"
+    saved = json.loads(selection_path.read_text(encoding="utf-8"))
+    selected_files = [row["file_name"] for row in saved["candidates"] if row["selected"]]
+    assert selected_files == ["GSE33630-GPL570_series_matrix.txt.gz"]
+    assert panel._download_candidate_status.text() == "已保存下载候选选择：1 个文件。"
 
 
 def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes_processing(qt_app, project_summary) -> None:
