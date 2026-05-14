@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools SDS-PAGE Gel Template Tool 1，commit 以当前 git log 为准
+- 当前最近完成阶段：Western Blot Protein Loading + BCA Assay v1，commit 以当前 git log 为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -44,6 +44,7 @@
 | LabTools Module Architecture Alignment 1 | 当前 git log | 将 LabTools 首页从四个工具集合入口调整为六个一级模块入口：通用计算器、试剂与实验记录、细胞实验、Western Blot、PCR / qPCR、ELISA / 吸光度与标准曲线；仅调整入口、占位语义、文档和测试，不新增算法、schema、persistence 或导出格式。 |
 | LabTools Western Blot Module Scaffold 1 | 当前 git log | 建立 Western Blot 模块占位框架，页面包含蛋白样品准备、蛋白浓度测定、上样与胶、电泳 / 转膜 / 抗体孵育流程、结果与灰度分析五个分区；仅新增模块分区、文案、文档和测试，不新增 SDS-PAGE 配胶计算、WB 灰度算法、自动配方推荐、胶浓度推导或持久化。 |
 | LabTools SDS-PAGE Gel Template Tool 1 | 当前 git log | 在 Western Blot 模块实现基于用户录入模板的 SDS-PAGE 配胶模板与批量换算工具；支持分离胶/浓缩胶 section、组分备注、默认 3% overage、模板 JSON 导入/导出、冲突跳过/副本导入和本次计算 XLSX 导出；不内置通用配方、不自动推荐胶浓度、不生成配置步骤或 WB 灰度分析。 |
+| Western Blot Protein Loading + BCA Assay v1 | 当前 git log | 在 Western Blot 模块实现蛋白上样体系计算器和 BCA 蛋白浓度测定辅助计算 v1；支持多样本上样体积换算、还原剂人工确认提示、BCA 96 孔 OD 矩阵粘贴、Blank/Standard/Sample/Unused 标注、blank 可选扣除、线性拟合、CV/R²/范围警告和复制结果；不做 WB 灰度、Bradford、NanoDrop、ELISA 标准曲线、4PL、plate layout 保存、xlsx 导出、数据库或联网。 |
 
 ## 3. 当前已实现功能
 
@@ -79,6 +80,18 @@
   - 支持导出本次计算 `.xlsx`，包含 `Summary`、`分离胶`、`浓缩胶` 三个 sheet。
   - UI 明确“基于用户录入的试剂盒/实验室模板进行批量换算”和“结果为实验辅助计算草稿，使用前请按试剂盒说明书和实验室 SOP 人工核对”。
 - SDS-PAGE Gel Template Tool 1 不内置通用配方、不自动推荐胶浓度、不自动推导胶浓度、不生成配置步骤、不做 WB 灰度分析、不做蛋白浓度分析。
+- Western Blot Protein Loading + BCA Assay v1 新增：
+  - `app/labtools/western_blot/protein_loading.py`：多样本蛋白上样体系辅助计算，支持 `µg/µL`、`ug/uL`、`mg/mL`、`µg/mL`、`ug/mL` 浓度单位；`µg/µL` 与 `mg/mL` 等价。
+  - Loading buffer 体积按 `最终上样体积 × 目标终浓度 ÷ Loading buffer 倍数` 计算；蛋白样品体积按 `目标每孔蛋白量 ÷ 蛋白样品浓度` 计算；补水体积为最终体积扣除样品和 buffer。
+  - 默认 overage 为 3%；总量按每个样本单独计算后汇总并乘以 overage。
+  - UI 和复制文本包含还原剂提示：需确认 loading buffer 是否已包含 DTT、β-ME 或其他还原剂。
+  - `app/labtools/western_blot/bca_assay.py`：BCA 蛋白浓度测定辅助计算 v1，支持 8×12 OD 矩阵解析、96 孔板标注、批量选区标注、blank 可选扣除、线性标准曲线拟合和样本浓度估算。
+  - BCA v1 仅做线性拟合，不做 4PL；CV% 警告阈值为 15%，R² 警告阈值为 0.98；异常孔只提示，不自动剔除。
+  - Protein loading 和 BCA 结果均支持复制摘要文本，不写盘、不自动保存、不新增 schema。
+- Western Blot Protein Loading + BCA Assay v1 明确未做：
+  - 不做 WB/gel grayscale、条带 ROI、背景扣除、target/loading control ratio。
+  - 不做 Bradford、NanoDrop、ELISA 标准曲线、4PL、plate layout 模板保存或 xlsx 导出。
+  - 不新增 AI/network、数据库、自动保存或 dist/desktop app 改动。
 - L7A 新增结果复制体验：
   - `format_dilution_copy_text()`、`format_mass_molarity_copy_text()`、`format_cell_seeding_copy_text()` 生成用户可复制文本。
   - copyable text 包含工具名称、输入摘要、计算结果、单位和“实验辅助计算草稿，不替代实验 SOP”人工核对提示。

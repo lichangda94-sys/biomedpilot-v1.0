@@ -23,7 +23,8 @@ def test_labtools_module_exports_features() -> None:
     ]
     assert features[0].status is FeatureStatus.TESTING
     assert features[1].status is FeatureStatus.TESTING
-    assert all(feature.status is FeatureStatus.UNAVAILABLE for feature in features[2:])
+    assert features[3].status is FeatureStatus.TESTING
+    assert all(features[index].status is FeatureStatus.UNAVAILABLE for index in (2, 4, 5))
     assert all(feature.module == "labtools" for feature in features)
 
     descriptions = {feature.name: feature.description for feature in features}
@@ -33,10 +34,12 @@ def test_labtools_module_exports_features() -> None:
     assert "本地 recipe 草稿" in descriptions["试剂与实验记录"]
     assert "不等同于完整 ELN" in descriptions["试剂与实验记录"]
 
-    for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+    for name in ("细胞实验", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
         assert "规划中" in descriptions[name]
         assert "待确认使用逻辑" in descriptions[name]
         assert "算法已完成" not in descriptions[name]
+    assert "部分辅助计算已开放" in descriptions["Western Blot"]
+    assert "待确认使用逻辑" in descriptions["Western Blot"]
 
     from app.labtools.experiment_templates import LABTOOLS_EXPERIMENT_RECORD_DRAFT_STORE_SCHEMA_VERSION
 

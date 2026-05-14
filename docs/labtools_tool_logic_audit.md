@@ -29,10 +29,10 @@ Architecture conclusion:
 - Experiment-specific calculations should not remain permanently grouped under 通用计算器.
 - cell seeding and wound manual ROI are future 细胞实验 module candidates.
 - qPCR mix is a future PCR / qPCR module candidate.
-- WB loading is a Western Blot module candidate; SDS-PAGE gel template batch calculation is now implemented as a user-entered template tool.
+- WB loading has both an older general-calculator implementation and a newer Western Blot module protein loading tool; SDS-PAGE gel template batch calculation is implemented as a user-entered template tool.
 - recipe draft and experiment record draft belong under 试剂与实验记录.
 - fluorescence manual ROI remains a temporary image-assistance capability until ownership is confirmed.
-- absorbance / OD, protein concentration, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
+- absorbance / OD, Bradford, NanoDrop, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
 
 ## Western Blot Module Scaffold 1 Update
 
@@ -44,7 +44,7 @@ Western Blot now has a dedicated scaffold page with five placeholder sections:
 - 电泳 / 转膜 / 抗体孵育流程。
 - 结果与灰度分析。
 
-All sections remain `待确认使用逻辑 / 规划中 / 暂未开放`.
+Western Blot now has implemented child tools under 上样与胶 and 蛋白浓度测定, while unrelated child tools remain `待确认使用逻辑 / 规划中 / 暂未开放`.
 
 Scope conclusion:
 
@@ -53,7 +53,8 @@ Scope conclusion:
 - The scaffold adds no automatic recipe recommendation.
 - The scaffold adds no gel concentration inference.
 - The scaffold adds no SOP workflow, database, autosave, persistence schema, export format, or result interpretation.
-- The 上样与胶 section may show two planned child entries only: 蛋白上样体系计算 and SDS-PAGE 配胶模板与批量配制.
+- The 上样与胶 section may show implemented child entries for 蛋白上样体系计算 and SDS-PAGE 配胶模板与批量配制.
+- The 蛋白浓度测定 section may show BCA 蛋白浓度测定 as implemented, while Bradford and NanoDrop remain planned.
 - The 结果与灰度分析 section remains blocked until WB/gel grayscale, band ROI, background subtraction, target/loading control ratio, and result export logic are reviewed in a Tool Logic Card.
 
 ## SDS-PAGE Gel Template Tool 1 Update
@@ -65,6 +66,16 @@ SDS-PAGE 配胶模板与批量配制 is implemented with a narrow confirmed scop
 - It exports the current calculation result to `.xlsx` with `Summary`, `分离胶`, and `浓缩胶` sheets.
 - It does not include a universal recipe, concentration recommendation, gel concentration inference, preparation step generation, protein concentration analysis, or WB grayscale analysis.
 - Result meaning: experiment-assistance calculation draft requiring kit / lab SOP review.
+
+## Western Blot Protein Loading + BCA Assay v1 Update
+
+Protein loading and BCA are implemented with confirmed narrow scopes:
+
+- `western_blot.protein_loading_v1` calculates Western Blot loading mix volumes from user-entered sample concentration, target protein amount, final loading volume, loading buffer stock multiple, target final buffer concentration, and overage.
+- Protein loading supports multiple samples and copyable result text. It does not add a separate reducing agent component; the UI warns the user to confirm whether loading buffer already includes DTT, β-ME, or another reducing agent.
+- `western_blot.bca_assay_v1` parses 8×12 OD matrices, supports Blank / Standard / Sample / Unused annotations, optional blank subtraction, linear standard curve fitting, CV% / R² / range warnings, sample concentration calculation, and copyable summary text.
+- BCA v1 does not save plate layouts, does not export XLSX, does not run 4PL, does not delete outlier wells, and does not implement Bradford, NanoDrop, ELISA standard curve, or any report-ready conclusion.
+- Both tools are non-write-to-disk JSON-compatible result structures only; copying results writes to clipboard only.
 
 ## Current Tool Inventory
 
@@ -78,6 +89,8 @@ SDS-PAGE 配胶模板与批量配制 is implemented with a narrow confirmed scop
 | `calculator.qpcr_mix_v1` | qPCR mix calculator | experiment_calculator | implemented | yes | no | medium |
 | `calculator.wb_loading_v1` | WB loading calculator | experiment_calculator | implemented | yes | no | medium |
 | `western_blot.sds_page_gel_template_v1` | SDS-PAGE gel template batch calculator | western_blot_template_calculator | implemented | yes | yes | medium |
+| `western_blot.protein_loading_v1` | Protein loading calculator | western_blot_calculator | implemented | yes | no | medium |
+| `western_blot.bca_assay_v1` | BCA protein concentration assay | western_blot_assay_calculator | implemented | yes | no | medium |
 | `image.fluorescence_manual_roi_v1` | Fluorescence manual ROI | image_assistance | implemented | yes | no | medium |
 | `image.wound_manual_roi_threshold_v1` | Wound / scratch manual ROI + threshold | image_assistance | implemented | yes | no | medium |
 | `image.roi_export_package_v1` | ROI export package | image_export | implemented | yes | yes | medium |
@@ -104,6 +117,8 @@ SDS-PAGE 配胶模板与批量配制 is implemented with a narrow confirmed scop
 | `calculator.qpcr_mix_v1` | partial | yes | no | Confirm qPCR mix assumptions before any Delta Delta Ct or plate logic. |
 | `calculator.wb_loading_v1` | partial | yes | no | Confirm loading buffer assumptions before any WB image workflow. |
 | `western_blot.sds_page_gel_template_v1` | yes | no | no | Keep as user-entered template batch calculator; discuss before adding recommendations or built-in recipes. |
+| `western_blot.protein_loading_v1` | yes | no | no | Keep as WB loading assistance; discuss before adding reducer component automation or SOP workflow. |
+| `western_blot.bca_assay_v1` | yes | no | no | Keep as BCA linear-fit assistance; discuss before adding 4PL, ELISA, Bradford, NanoDrop, export, or plate template persistence. |
 | `image.fluorescence_manual_roi_v1` | partial | yes | no | Confirm metrics, background correction meaning, and result summary. |
 | `image.wound_manual_roi_threshold_v1` | partial | yes | no | Confirm wound metric semantics before full wound-healing workflow. |
 | `image.roi_export_package_v1` | partial | yes | no | Confirm manifest summary fields and shareability boundaries. |
@@ -127,6 +142,8 @@ Each row is a compact audit record. Detailed Tool Logic Cards below expand the s
 | `calculator.qpcr_mix_v1` | qPCR mix calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_l5c_qpcr_wb_calculators.py`; `test_qpcr_mix_calculator.py` | yes | no | reactions; reaction volume; mix; primers; template; overage | enter mix setup; calculate | per reaction and total component volumes | qPCR mix setup aid | manual review | component volume exceeds reaction; invalid percent | partial | medium | yes | no | confirm qPCR assumptions |
 | `calculator.wb_loading_v1` | WB loading calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_l5c_qpcr_wb_calculators.py` | yes | no | protein concentration; target mass; final volume; buffer multiple | enter loading setup; calculate | sample; buffer; water volumes | WB loading volume aid only | manual review | sample + buffer exceeds final volume | partial | medium | yes | no | confirm loading assumptions |
 | `western_blot.sds_page_gel_template_v1` | SDS-PAGE gel template batch calculator | western_blot_template_calculator | implemented | `sds_page_gel_templates.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_sds_page_gel_templates.py`; `test_labtools_sds_page_gel_tool_ui.py` | yes | yes | user template; resolving / stacking sections; components; gel count; overage | enter or import template; calculate; optional JSON/XLSX export | per-section total amounts; template JSON; calculation XLSX | user-template batch conversion draft | kit / lab SOP review | invalid JSON; conflicts; unsupported unit; invalid gel count; write failure | yes | medium | no | no | keep as user-entered template only |
+| `western_blot.protein_loading_v1` | Protein loading calculator | western_blot_calculator | implemented | `protein_loading.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_western_blot_protein_loading.py`; `test_labtools_western_blot_loading_bca_ui.py` | yes | no | sample concentrations; target protein; final volume; buffer multiple; target buffer concentration; overage | enter multiple samples; calculate; optionally copy | per-sample sample / buffer / water volumes; totals; warnings | WB loading mix assistance draft | manual review | invalid concentration; invalid target or volume; buffer setting invalid; negative water volume; small pipetting volumes | yes | medium | no | no | keep as auxiliary loading calculator |
+| `western_blot.bca_assay_v1` | BCA protein concentration assay | western_blot_assay_calculator | implemented | `bca_assay.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_bca_assay.py`; `test_labtools_western_blot_loading_bca_ui.py` | yes | no | 8x12 OD matrix; well annotations; standards; samples; blank setting | paste OD matrix; annotate wells; calculate; optionally copy | raw data table; standard curve; sample results; warnings | BCA linear-fit assistance draft | kit / lab SOP review | insufficient standards; invalid slope; low R2; high CV; out-of-range sample; negative corrected OD; negative concentration | yes | medium | no | no | keep as BCA v1 linear-fit tool |
 | `image.fluorescence_manual_roi_v1` | Fluorescence manual ROI | image_assistance | implemented | `fluorescence_analyzer.py`; `fluorescence_models.py`; `image_analysis_widgets.py` | `test_fluorescence_analyzer.py`; `test_fluorescence_export.py`; `test_fluorescence_report.py` | yes | no | image path; signal ROI; background ROI | select image; enter manual ROI; run | grayscale metrics; warnings; previews | manual ROI measurement assistance | manual review | unreadable image; ROI out of bounds; negative CTF warning | partial | medium | yes | no | confirm metrics and background correction |
 | `image.wound_manual_roi_threshold_v1` | Wound / scratch manual ROI + threshold | image_assistance | implemented | `wound_analyzer.py`; `wound_models.py`; `image_analysis_widgets.py` | `test_wound_analyzer.py`; `test_wound_export.py`; `test_wound_report.py` | yes | no | image path; ROI; threshold; mode | select image; enter manual ROI and threshold; run | area pixels and fractions | threshold-based area estimation | manual review | unreadable image; ROI out of bounds; invalid threshold | partial | medium | yes | no | confirm metric meanings |
 | `image.roi_export_package_v1` | ROI export package | image_export | implemented | `export_package.py`; `image_analysis_widgets.py` | `test_roi_export_package_schema.py`; `test_labtools_image_export_ui.py` | yes | yes | current ROI result; output directory | run analysis; choose export directory | JSON; CSV; Markdown; overlay PNG | local manual-review package | manual review | no result; cancel; write failure; source unreadable | partial | medium | yes | no | confirm result summary and path policy |
@@ -162,7 +179,8 @@ Existing tools that generate user-visible scientific or lab workflow values shou
 
 - Dilution / mass-molarity / cell seeding calculators.
 - qPCR calculator.
-- WB loading calculator.
+- WB loading calculator / Western Blot protein loading calculator.
+- BCA v1 only before adding export, template persistence, or non-linear model support.
 - Fluorescence manual ROI.
 - Wound / scratch manual ROI + threshold.
 - ROI export result summary.
@@ -174,7 +192,7 @@ Existing tools that generate user-visible scientific or lab workflow values shou
 The following must not be developed directly from the current placeholder state. Each needs a Tool Logic Card, user discussion, formulas/inputs/outputs review, and risk review first:
 
 - Absorbance / OD calculation.
-- Protein concentration / BCA / Bradford / NanoDrop.
+- Bradford / NanoDrop and protein concentration workflows beyond BCA v1.
 - Wound healing full workflow.
 - Transwell assay.
 - WB / gel grayscale.
@@ -193,7 +211,8 @@ No blocking mismatch found in this audit.
 
 Non-blocking observations:
 
-- qPCR and WB loading calculators exist and are correctly scoped as calculators, but their assumptions still need user confirmation before result wording is treated as stable.
+- qPCR and the older general-calculator WB loading tool exist and are correctly scoped as calculators, but their assumptions still need user confirmation before expansion.
+- Western Blot protein loading and BCA v1 now have user-confirmed narrow Tool Logic Cards; future expansion still requires a new discussion.
 - Wound / scratch manual ROI exposes `non_scratch_area_fraction` as a computed metric; documentation correctly says this is threshold-based estimation, not automatic migration interpretation.
 - ROI export writes local paths in UI success feedback. The schema index correctly treats this as local UI feedback, not public report content.
 - Recipe safety category exists in payload and UI, but category naming should be user-confirmed before richer recipe templates are added.
@@ -204,6 +223,8 @@ Non-blocking observations:
 Priority 1: current implemented result-semantics tools
 
 - Dilution / mass-molarity / cell seeding calculators.
+- Western Blot protein loading calculator.
+- BCA v1 result summary.
 - Fluorescence manual ROI.
 - Wound manual ROI + threshold.
 - ROI export summary.
@@ -216,7 +237,7 @@ Priority 2: current draft / persistence semantics
 Priority 3: next tools requiring discussion before development
 
 - Absorbance / OD calculation.
-- Protein concentration.
+- Protein concentration workflows beyond BCA v1.
 - Wound healing full workflow.
 - Transwell assay.
 - WB / gel grayscale.
@@ -236,10 +257,11 @@ Before development resumes, create user-reviewed Tool Logic Cards for:
 - `image.roi_export_package_v1`: manifest summary fields, local path policy, shareability.
 - `recipe.draft_store_v1`: required recipe fields and safety category meaning.
 - `experiment.record_draft_store_v1`: required record fields and non-ELN wording.
+- Future WB/BCA expansion: reducer component automation, BCA 4PL, Bradford, NanoDrop, ELISA standard curves, plate layout persistence, export formats.
 
 ## Non-goals Confirmed
 
-This stage did not add:
+The original Tool Logic Audit 1 stage did not add:
 
 - Tools.
 - Algorithms.
@@ -670,6 +692,161 @@ Risk:
 Recommended next step:
 
 - Keep current tool limited to user-entered templates; require a new Tool Logic Card before built-in recipes, concentration recommendations, gel concentration inference, or WB grayscale analysis.
+
+## Tool Logic Card: Western Blot protein loading calculator
+
+Current implementation:
+
+- tool_id: `western_blot.protein_loading_v1`
+- tool_name: Protein loading calculator
+- tool_category: western_blot_calculator
+- current_status: implemented
+- implemented_files: `app/labtools/western_blot/protein_loading.py`, `app/labtools/ui/western_blot_widgets.py`
+- test_files: `tests/labtools/test_western_blot_protein_loading.py`, `tests/ui/test_labtools_western_blot_loading_bca_ui.py`
+- does_generate_result: yes
+- does_write_to_disk: no
+
+User workflow:
+
+- User opens Western Blot -> 上样与胶 -> 蛋白上样体系计算.
+- User enters one or more samples with protein concentration and concentration unit.
+- User enters target protein amount, final loading volume, loading buffer multiple, target final buffer concentration, and overage percent.
+- UI calculates per-well component volumes and total volumes, then allows copying the result text.
+
+Inputs:
+
+- Sample name.
+- Protein concentration and unit: `µg/µL`, `ug/uL`, `mg/mL`, `µg/mL`, `ug/mL`.
+- Target protein amount in `µg`.
+- Final loading volume in `µL`.
+- Loading buffer stock multiple and target final concentration.
+- Overage percent, default 3%.
+
+Outputs:
+
+- Per-sample protein sample volume.
+- Per-sample loading buffer volume.
+- Per-sample water volume.
+- Per-sample final loading volume.
+- Total protein sample, loading buffer, and water volumes after overage.
+- Warning list and copyable text.
+
+Result meaning:
+
+- Western Blot loading mix assistance draft.
+- The result does not verify the protein assay, sample dilution history, reducer status, heating condition, or lab SOP.
+- First version assumes reducing agent is handled outside the calculator and requires the user to confirm whether loading buffer already contains DTT, β-ME, or another reducing agent.
+
+Review level:
+
+- Manual review required.
+
+Failure / invalid cases:
+
+- Protein concentration <= 0.
+- Target protein amount <= 0.
+- Final loading volume <= 0.
+- Loading buffer stock multiple <= target final concentration.
+- Component volumes exceed final loading volume.
+- Protein sample volume < 1 µL.
+- Water volume < 1 µL.
+
+Current tests:
+
+- Protein loading service tests.
+- Western Blot loading/BCA UI tests.
+
+Confirmed by user:
+
+- user_logic_confirmed: yes
+
+Risk:
+
+- risk_level: medium
+- needs_user_discussion: no for current v1 formulas and result fields
+- needs_code整改: no
+
+Recommended next step:
+
+- Keep as auxiliary loading mix calculator; discuss before adding reducer component automation, heating workflow, built-in SOP templates, or WB image result workflows.
+
+## Tool Logic Card: BCA protein concentration assay
+
+Current implementation:
+
+- tool_id: `western_blot.bca_assay_v1`
+- tool_name: BCA protein concentration assay
+- tool_category: western_blot_assay_calculator
+- current_status: implemented
+- implemented_files: `app/labtools/western_blot/bca_assay.py`, `app/labtools/ui/western_blot_widgets.py`
+- test_files: `tests/labtools/test_bca_assay.py`, `tests/ui/test_labtools_western_blot_loading_bca_ui.py`
+- does_generate_result: yes
+- does_write_to_disk: no
+
+User workflow:
+
+- User opens Western Blot -> 蛋白浓度测定 -> BCA 蛋白浓度测定.
+- User pastes an 8x12 OD matrix or fills the 96-well grid.
+- User annotates wells as Blank, Standard, Sample, or Unused, with batch range support.
+- User chooses whether to enable blank subtraction.
+- UI calculates Plate Raw Data, Standard Curve, Sample Results, warnings, and copyable summary text.
+
+Inputs:
+
+- 8x12 OD matrix, with optional A-H row names and 1-12 column numbers.
+- Well annotations.
+- Standard name and concentration, with units `µg/mL` or `mg/mL`.
+- Sample name, dilution factor, and note.
+- Optional blank subtraction setting.
+
+Outputs:
+
+- Plate Raw Data rows with raw OD, blank-corrected OD, include flag, and warnings.
+- Standard Curve rows with mean OD, SD, CV%, fit inclusion, and warnings.
+- Linear fit: slope, intercept, R², standard OD range, and standard concentration range.
+- Sample Results rows with mean OD, SD, CV%, measured concentration, dilution-corrected original concentration, range status, warnings, and note.
+- Copyable summary text with blank state, formula, R², sample results, warning list, and review notice.
+
+Result meaning:
+
+- BCA protein concentration measurement assistance draft.
+- It is a linear-fit helper only and does not prove assay success, sample validity, or report-ready concentration.
+- Results require kit instructions, standard curve quality, replicate consistency, and lab SOP review.
+
+Review level:
+
+- Kit / lab SOP review required.
+
+Failure / invalid cases:
+
+- Fewer than 3 standard concentration points.
+- Slope <= 0.
+- R² < 0.98.
+- Standard or sample CV% > 15%.
+- Sample OD or calculated concentration outside standard curve range.
+- Blank-corrected OD < 0.
+- Negative calculated sample concentration.
+- Missing, non-numeric, negative, or unusually high OD.
+- Invalid well annotation or concentration unit.
+
+Current tests:
+
+- BCA service tests.
+- Western Blot loading/BCA UI tests.
+
+Confirmed by user:
+
+- user_logic_confirmed: yes
+
+Risk:
+
+- risk_level: medium
+- needs_user_discussion: no for current BCA v1 linear-fit scope
+- needs_code整改: no
+
+Recommended next step:
+
+- Keep as BCA v1 linear-fit assistance; discuss before adding 4PL, ELISA standard curves, Bradford, NanoDrop, automatic outlier deletion, plate layout persistence, or XLSX export.
 
 ## Tool Logic Card: Fluorescence manual ROI
 

@@ -74,7 +74,7 @@ def test_western_blot_section_descriptions_are_scaffold_only(qapp) -> None:
     text = _visible_text(widget._stack.currentWidget())
 
     assert "用于记录蛋白提取、裂解液/抑制剂草稿、样本分组和实验室自定义流程。当前为流程模板入口，不自动生成唯一实验方案。" in text
-    assert "提供 BCA、Bradford、NanoDrop 等蛋白浓度测定入口；底层逻辑后续与吸光度/标准曲线能力复用。" in text
+    assert "提供 BCA 蛋白浓度测定辅助计算入口；Bradford、NanoDrop 后续仍需单独确认逻辑。" in text
     assert "用于蛋白上样体系计算、loading buffer、还原剂、SDS-PAGE 配胶模板和批量配制计算。" in text
     assert "用于记录电泳参数、电转参数、封闭、一抗、二抗和洗膜步骤模板。用户可录入试剂盒说明书或实验室成熟流程。" in text
     assert "用于后续 WB/gel grayscale、条带 ROI、背景扣除、target/loading control ratio 和结果导出。开发前需单独确认图像分析逻辑。" in text
@@ -87,8 +87,10 @@ def test_sds_page_and_wb_grayscale_are_planned_not_completed(qapp) -> None:
     widget.show_western_blot()
     text = _visible_text(widget._stack.currentWidget())
 
-    assert "蛋白上样体系计算: 待确认使用逻辑 / 规划中 / 暂未开放" in text
-    assert "SDS-PAGE 配胶模板与批量配制: 待确认使用逻辑 / 规划中 / 暂未开放" in text
+    assert "蛋白上样体系计算: 已实现 / 辅助计算草稿" in text
+    assert "SDS-PAGE 配胶模板与批量配制: 已实现 / 用户模板换算" in text
+    assert "BCA 蛋白浓度测定: 已实现 / 辅助计算草稿" in text
+    assert "Bradford / NanoDrop: 待确认使用逻辑 / 规划中 / 暂未开放" in text
     assert "WB/gel grayscale" in text
     assert "开发前需单独确认图像分析逻辑" in text
     for forbidden in (

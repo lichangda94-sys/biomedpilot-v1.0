@@ -18,8 +18,8 @@ def labtools_features() -> list[FeatureItem]:
         FeatureItem(
             "labtools",
             "Western Blot",
-            FeatureStatus.UNAVAILABLE,
-            "用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析；规划中，待确认使用逻辑。",
+            FeatureStatus.TESTING,
+            "用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析；部分辅助计算已开放，后续灰度分析等仍待确认使用逻辑。",
         ),
         FeatureItem(
             "labtools",
