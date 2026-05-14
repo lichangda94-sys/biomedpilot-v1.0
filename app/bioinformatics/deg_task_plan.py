@@ -20,8 +20,8 @@ from app.bioinformatics.project_standardization import load_standardization_arti
 
 
 DEG_PREFLIGHT_MANIFEST = Path("analysis") / "deg" / "preflight" / "deg_preflight_manifest.json"
-EXPRESSION_ASSET_TYPES = {"raw_count_matrix", "expression_matrix", "normalized_expression_matrix"}
-METADATA_ASSET_TYPES = {"sample_metadata", "phenotype_metadata"}
+EXPRESSION_ASSET_TYPES = {"raw_count_matrix", "expression_matrix", "normalized_expression_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
+METADATA_ASSET_TYPES = {"sample_metadata", "phenotype_metadata", "tcga_sample_metadata", "gtex_sample_metadata"}
 MINIMUM_GROUP_SAMPLES = 1
 RECOMMENDED_GROUP_SAMPLES = 2
 
@@ -48,11 +48,12 @@ def build_deg_preflight(
     standardization = load_standardization_artifacts(root)
     registry = standardization.get("registry")
     assets = [item for item in (registry or {}).get("assets", []) or [] if isinstance(item, dict)] if isinstance(registry, dict) else []
+    deg_package = _analysis_input_package(standardization, "deg_recompute")
     expression_assets = [asset for asset in assets if str(asset.get("asset_type") or "") in EXPRESSION_ASSET_TYPES]
     metadata_assets = [asset for asset in assets if str(asset.get("asset_type") or "") in METADATA_ASSET_TYPES]
     imported_deg_assets = [asset for asset in assets if str(asset.get("asset_type") or "") == "differential_result_table"]
     imported_deg_detected = bool(imported_deg_assets or _recognition_has_imported_deg(recognition))
-    selected_expression = _preferred_expression_asset(expression_assets)
+    selected_expression = _asset_from_package(deg_package, assets, "expression_matrix") or _preferred_expression_asset(expression_assets)
     matrix_profile = _matrix_profile(_asset_path(root, selected_expression)) if selected_expression is not None else {}
     expression_samples = set(str(item) for item in matrix_profile.get("sample_columns", []) or [] if str(item).strip())
     if not expression_samples:
@@ -65,6 +66,8 @@ def build_deg_preflight(
     checks: list[dict[str, object]] = []
     blockers: list[str] = []
     warnings: list[str] = []
+    if deg_package and deg_package.get("status") != "ready":
+        warnings.append("analysis_input_repository 中 DEG recompute package 尚未 ready；继续执行输入预检。")
     _add_check(
         checks,
         blockers,
@@ -338,6 +341,29 @@ def _add_check(
 
 def _has_asset_type(assets: Iterable[dict[str, object]], asset_type: str) -> bool:
     return any(str(item.get("asset_type") or "") == asset_type for item in assets)
+
+
+def _analysis_input_package(standardization: dict[str, object], package_type: str) -> dict[str, object] | None:
+    manifest = standardization.get("analysis_ready_manifest") if isinstance(standardization.get("analysis_ready_manifest"), dict) else {}
+    packages = manifest.get("analysis_input_packages") if isinstance(manifest.get("analysis_input_packages"), list) else []
+    for package in packages:
+        if isinstance(package, dict) and str(package.get("package_type") or "") == package_type:
+            return package
+    return None
+
+
+def _asset_from_package(package: dict[str, object] | None, assets: list[dict[str, object]], role: str) -> dict[str, object] | None:
+    if not package or package.get("status") != "ready":
+        return None
+    refs = package.get("asset_refs") if isinstance(package.get("asset_refs"), list) else []
+    for ref in refs:
+        if not isinstance(ref, dict) or str(ref.get("asset_role") or "") != role:
+            continue
+        asset_id = str(ref.get("asset_id") or "")
+        for asset in assets:
+            if str(asset.get("asset_id") or "") == asset_id:
+                return asset
+    return None
 
 
 def _asset_label(asset: dict[str, object] | None) -> str:

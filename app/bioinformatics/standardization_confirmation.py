@@ -275,6 +275,8 @@ def _candidate(
         "candidate_type": candidate_type,
         "asset_type": asset_type,
         "source_file": source_name,
+        "source_path": str(record.get("original_path") or ""),
+        "source_recognition_run_id": str(record.get("recognition_run_id") or ""),
         "source_parser": parser_type,
         "parser_depth": parser_depth,
         "requires_user_confirmation": bool(asset.get("requires_user_confirmation") or record.get("requires_user_confirmation") or candidate_type in {"expression_matrix", "group_candidate"}),
@@ -284,6 +286,8 @@ def _candidate(
         "gene_id_type_candidate": gene_id_type,
         "sample_count": int(record.get("sample_count") or 0),
         "matrix_dimensions": record.get("expression_matrix_dimensions") or asset.get("matrix_dimensions") or {},
+        "matrix_profile": record.get("matrix_profile") if isinstance(record.get("matrix_profile"), dict) else {},
+        "metadata_profile": record.get("metadata_profile") if isinstance(record.get("metadata_profile"), dict) else {},
         "reason": str(asset.get("reason") or record.get("reason") or ""),
     }
     if candidate_type == "imported_deg_result":

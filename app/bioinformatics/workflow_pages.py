@@ -3675,6 +3675,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             return
         registry = artifacts.get("registry") if isinstance(artifacts.get("registry"), dict) else {}
         manifest = artifacts.get("analysis_ready_manifest") if isinstance(artifacts.get("analysis_ready_manifest"), dict) else {}
+        repository_manifest = artifacts.get("repository_manifest") if isinstance(artifacts.get("repository_manifest"), dict) else {}
+        validation_report = artifacts.get("validation_report") if isinstance(artifacts.get("validation_report"), dict) else {}
         assets = registry.get("assets", []) if isinstance(registry, dict) else []
         readiness = load_readiness_artifacts(self._project_root)
         readiness_report = readiness.get("readiness_report") if isinstance(readiness.get("readiness_report"), dict) else {}
@@ -3696,6 +3698,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
                 {
                     "standardized_assets_registry": registry,
                     "analysis_ready_manifest": manifest,
+                    "repository_manifest": repository_manifest,
+                    "validation_report": validation_report,
                     "data_processing_task_plan": artifacts.get("data_processing_task_plan"),
                     "standardization_confirmation": self._last_confirmation,
                     "standardization_candidates": self._last_candidates,
@@ -3704,6 +3708,9 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
                     "paths": {
                         "registry_path": artifacts.get("registry_path"),
                         "manifest_path": artifacts.get("manifest_path"),
+                        "repository_manifest_path": artifacts.get("repository_manifest_path"),
+                        "validation_report_path": artifacts.get("validation_report_path"),
+                        "asset_lineage_path": artifacts.get("asset_lineage_path"),
                         "data_processing_task_plan_path": artifacts.get("data_processing_task_plan_path"),
                     },
                 }
@@ -8830,12 +8837,12 @@ def _standardization_expression_status_text(assets: list[object], readiness: dic
     expression_assets = [
         item
         for item in assets
-        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
+        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
     ]
     if expression_assets:
         labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in expression_assets))
-        return f"表达矩阵：已识别到 {len(expression_assets)} 项（{labels}）；样本数和基因数待后续校验确认。"
-    if available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+        return f"表达矩阵：已整理为 BioMedPilot 内部标准格式 {len(expression_assets)} 项（{labels}）；未执行生物学 normalization。"
+    if available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
         return "表达矩阵：数据准备检查已识别到可用输入；请生成标准化数据。"
     return "表达矩阵：未识别到可用于后续分析的矩阵，请返回数据识别或数据选择补充。"
 
@@ -8845,12 +8852,12 @@ def _standardization_sample_status_text(assets: list[object], readiness: dict[st
     sample_assets = [
         item
         for item in assets
-        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata"}
+        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "tcga_sample_metadata", "gtex_sample_metadata", "tcga_clinical_metadata"}
     ]
     if sample_assets:
         labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in sample_assets))
         return f"样本信息：已识别到 {len(sample_assets)} 项（{labels}）；分组线索需要用户确认。"
-    if {"sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata"} & available:
+    if {"sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "tcga_sample_metadata", "gtex_sample_metadata", "tcga_clinical_metadata"} & available:
         return "样本信息：数据准备检查已识别到样本或临床信息；请生成标准化数据。"
     return "样本信息：未识别到明确样本表；可先确认是否只做表达矩阵预览。"
 
@@ -8872,12 +8879,15 @@ def _standardization_group_status_text(project_root: Path, readiness: dict[str, 
 
 
 def _standardization_default_assets_text(assets: list[object]) -> str:
-    ready_assets = [item for item in assets if isinstance(item, dict) and item.get("analysis_ready")]
-    if not ready_assets:
-        return "当前默认使用的数据：尚未生成可用于后续分析的数据。"
-    labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in ready_assets[:5]))
-    suffix = f"等 {len(ready_assets)} 项" if len(ready_assets) > 5 else f"{len(ready_assets)} 项"
-    return f"当前默认使用的数据：{labels}（{suffix}）。"
+    selected_assets = [item for item in assets if isinstance(item, dict) and item.get("default_selected")]
+    if not selected_assets:
+        ready_assets = [item for item in assets if isinstance(item, dict) and item.get("analysis_ready")]
+        if not ready_assets:
+            return "当前默认使用的数据：尚未生成可用于后续分析的数据。"
+        return "当前默认使用的数据：存在候选资产，但多候选时需要确认默认资产后才能生成稳定分析输入。"
+    labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in selected_assets[:5]))
+    suffix = f"等 {len(selected_assets)} 项" if len(selected_assets) > 5 else f"{len(selected_assets)} 项"
+    return f"当前默认使用的数据：{labels}（{suffix}）；已记录 selection state。"
 
 
 def _standardization_next_step_text(project_root: Path, assets: list[object], readiness: dict[str, object]) -> str:
@@ -8887,7 +8897,7 @@ def _standardization_next_step_text(project_root: Path, assets: list[object], re
     if not assets:
         return "下一步建议：点击“生成标准化数据”，把识别结果登记为后续分析可用的数据。"
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
-    if not available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+    if not available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
         return "下一步建议：返回数据识别或数据选择，补充表达矩阵。"
     if load_confirmed_comparison_config(project_root) is None:
         return "下一步建议：确认分组与比较设计，再进入分析任务中心。"
@@ -8904,8 +8914,8 @@ def _standardization_user_asset_rows(assets: list[object]) -> list[list[object]]
         rows.append(
             [
                 _standardization_asset_display_name(item),
-                "已登记，待用户确认" if warning else "已登记",
-                "是" if analysis_ready else "否",
+                _standardization_asset_status_text(item, warning),
+                "、".join(str(value) for value in item.get("consumable_by", []) or []) if analysis_ready else "否",
                 "有提示，请在开发者诊断中查看。" if warning else _standardization_asset_user_hint(str(item.get("asset_type") or "")),
             ]
         )
@@ -8925,15 +8935,26 @@ def _standardization_asset_display_name(asset: dict[str, object]) -> str:
 
 
 def _standardization_asset_user_hint(asset_type: str) -> str:
-    if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
-        return "可作为表达矩阵输入；样本数和基因数待后续校验确认。"
-    if asset_type in {"sample_metadata", "phenotype_metadata"}:
+    if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+        return "已整理为内部标准格式；未执行生物学 normalization。"
+    if asset_type in {"sample_metadata", "phenotype_metadata", "tcga_sample_metadata", "gtex_sample_metadata"}:
         return "可用于整理样本信息和分组线索。"
-    if asset_type in {"clinical_metadata", "survival_metadata"}:
+    if asset_type in {"clinical_metadata", "survival_metadata", "tcga_clinical_metadata"}:
         return "可用于临床变量或生存相关分析准备。"
+    if asset_type == "differential_result_table":
+        return "用户导入结果；可用于浏览或富集输入，不可作为重新计算 DEG 输入。"
     if asset_type == "gmt_gene_set":
         return "可用于 GSEA 或富集分析准备。"
     return "已登记为项目数据，是否用于分析仍需后续确认。"
+
+
+def _standardization_asset_status_text(item: dict[str, object], warning: str) -> str:
+    repository = str(item.get("repository") or "")
+    validation = str(item.get("validation_status") or "registered")
+    selected = "；默认资产" if item.get("default_selected") else ""
+    if warning:
+        return f"{repository}：{validation}{selected}"
+    return f"{repository}：已登记{selected}"
 
 
 def _format_confidence(value: object) -> str:
@@ -9224,8 +9245,11 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     registry = artifacts.get("registry")
     if not isinstance(registry, dict):
         return False, "尚未生成标准化资产。"
+    stale = artifacts.get("repository_stale_status") if isinstance(artifacts.get("repository_stale_status"), dict) else {}
+    if stale.get("is_stale"):
+        return False, str(stale.get("message") or "标准化资产仓库已过期，请重新生成。")
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
-    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"} for item in assets)
+    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"} for item in assets)
     if not has_ready_core:
         return False, "没有 analysis-ready 表达矩阵资产。"
     return True, ""

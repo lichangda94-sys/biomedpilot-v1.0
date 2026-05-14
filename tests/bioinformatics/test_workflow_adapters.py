@@ -855,6 +855,21 @@ def test_standardization_confirmation_candidates_and_manifest_for_series_matrix(
     loaded = load_standardization_confirmation(project_root)
     assert loaded is not None
     assert loaded["readiness"]["standardization_confirmed"] is True  # type: ignore[index]
+    standardization = generate_standardized_assets(project_root)
+    registry = standardization["registry"]  # type: ignore[index]
+    manifest = standardization["analysis_ready_manifest"]  # type: ignore[index]
+    repository_manifest = standardization["repository_manifest"]  # type: ignore[index]
+
+    assert registry["schema_version"] == "biomedpilot.standardized_assets_registry.v2"
+    assert repository_manifest["schema_version"] == "biomedpilot.repository_manifest.v1"
+    assert (project_root / "standardized_data" / "repositories" / "repository_manifest.json").exists()
+    assert (project_root / "standardized_data" / "repositories" / "validation_report.json").exists()
+    assert (project_root / "standardized_data" / "repositories" / "asset_lineage.jsonl").exists()
+    repository_names = {asset["repository"] for asset in registry["assets"]}  # type: ignore[index]
+    assert {"expression_repository", "sample_metadata_repository", "group_design_repository", "feature_annotation_repository"} <= repository_names
+    deg_packages = [package for package in manifest["analysis_input_packages"] if package["package_type"] == "deg_recompute"]  # type: ignore[index]
+    assert deg_packages and deg_packages[0]["status"] == "blocked"
+    assert "probe_mapping_missing" in deg_packages[0]["blockers"]
 
 
 def test_standardization_confirmation_unknown_expression_value_blocks_deg_preflight(project_root: Path) -> None:
@@ -1049,7 +1064,10 @@ def test_differential_result_table_not_counted_as_expression_input(project_root:
     assert readiness["deg_ready"] is False
     assert "expression_matrix" not in readiness["available_inputs"]
     standardization = generate_standardized_assets(project_root)
-    assert standardization["registry"]["assets"] == []  # type: ignore[index]
+    assets = standardization["registry"]["assets"]  # type: ignore[index]
+    assert [asset["asset_role"] for asset in assets] == ["imported_result"]
+    assert assets[0]["repository"] == "imported_result_repository"
+    assert standardization["analysis_ready_manifest"]["analysis_input_packages"][0]["package_type"] == "enrichment_from_imported_result"  # type: ignore[index]
 
 
 def test_recognition_v2_marks_stale_when_source_file_changes(project_root: Path) -> None:
@@ -1099,6 +1117,9 @@ def test_tcga_expression_recognition_uses_barcode_sample_type(project_root: Path
     assert record["standardization_status"] == "eligible"
     assert record["metadata_profile"]["tcga_sample_type_summary"]["tumor_sample_count"] == 1  # type: ignore[index]
     assert record["metadata_profile"]["tcga_sample_type_summary"]["normal_sample_count"] == 1  # type: ignore[index]
+    standardization = generate_standardized_assets(project_root)
+    repositories = {asset["repository"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert {"expression_repository", "sample_metadata_repository"} <= repositories
 
 
 def test_tcga_clinical_and_gdc_manifest_are_not_expression_inputs(project_root: Path) -> None:
@@ -1119,6 +1140,10 @@ def test_tcga_clinical_and_gdc_manifest_are_not_expression_inputs(project_root: 
     assert by_name["clinical.tsv"]["standardization_status"] == "eligible"
     assert by_name["gdc_manifest.tsv"]["recognized_type"] == "gdc_manifest"
     assert by_name["gdc_manifest.tsv"]["standardization_status"] == "reference_only"
+    standardization = generate_standardized_assets(project_root)
+    repositories = {asset["repository"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert "clinical_repository" in repositories
+    assert "gdc_manifest" not in {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
 
 
 def test_gtex_expression_and_sample_metadata_recognition(project_root: Path) -> None:
@@ -1144,6 +1169,9 @@ def test_gtex_expression_and_sample_metadata_recognition(project_root: Path) -> 
     assert by_name["gtex_tpm.tsv"]["matrix_profile"]["value_type_candidate"] == "TPM"
     assert by_name["gtex_sample_attributes.tsv"]["recognized_type"] == "gtex_sample_metadata"
     assert by_name["gtex_sample_attributes.tsv"]["standardization_status"] == "eligible"
+    standardization = generate_standardized_assets(project_root)
+    repositories = {asset["repository"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert {"expression_repository", "sample_metadata_repository"} <= repositories
 
 
 def test_gzip_text_expression_matrix_is_recognized(project_root: Path) -> None:

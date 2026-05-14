@@ -2962,7 +2962,8 @@ def test_mixed_expression_detection_separates_standardization_and_deg_readiness(
     standardization.refresh_project(project_summary)
     generated = standardization.generate_assets()
     assert generated is not None
-    assert "表达矩阵：已识别到" in standardization.findChild(QLabel, "standardizationExpressionStatus").text()
+    assert "表达矩阵：已整理为 BioMedPilot 内部标准格式" in standardization.findChild(QLabel, "standardizationExpressionStatus").text()
+    assert "未执行生物学 normalization" in standardization.findChild(QLabel, "standardizationExpressionStatus").text()
     assert "尚未检测到明确分组" in standardization.findChild(QLabel, "standardizationGroupStatus").text()
     standardization.continue_to_workflow()
     assert events[-1] == project_summary.project_root
