@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Tool Logic Audit 1，commit 以当前 git log 为准
+- 当前最近完成阶段：LabTools Module Architecture Alignment 1，commit 以当前 git log 为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -41,6 +41,7 @@
 | LabTools Stage L7A | 当前 git log | 优化实验计算器结果复制体验：三个 v1 计算器提供 copyable formatter，UI 每个结果区新增“复制结果”按钮；不新增公式、导出、自动保存或历史记录。 |
 | LabTools Stage L7B | 当前 git log | 优化 recipe draft/template 安全边界和导入冲突提示：新增用户可见 safety category，强化 SOP/SDS/pH/储存/有效期/危险性核对提示，确认冲突导入不覆盖。 |
 | LabTools Tool Logic Audit 1 | 当前 git log | 暂停新增功能，为当前 calculators、manual ROI image assistance、ROI export、recipe draft、experiment record draft 和 planned placeholders 建立 Tool Logic Cards；新增审计文档和文档覆盖测试，不新增工具、算法、公式、schema、导出格式或 UI 功能。 |
+| LabTools Module Architecture Alignment 1 | 当前 git log | 将 LabTools 首页从四个工具集合入口调整为六个一级模块入口：通用计算器、试剂与实验记录、细胞实验、Western Blot、PCR / qPCR、ELISA / 吸光度与标准曲线；仅调整入口、占位语义、文档和测试，不新增算法、schema、persistence 或导出格式。 |
 
 ## 3. 当前已实现功能
 
@@ -281,35 +282,40 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 Tool Logic Audit 1 结果：163 passed
+  - 当前 Module Architecture Alignment 1 结果：163 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 Tool Logic Audit 1 结果：169 passed
+  - 当前 Module Architecture Alignment 1 结果：175 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 Tool Logic Audit 1 结果：18 passed
+  - 当前 Module Architecture Alignment 1 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 Tool Logic Audit 1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 Module Architecture Alignment 1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=6`
 - `python3 -m compileall app/labtools`
-  - 当前 Tool Logic Audit 1 结果：通过
+  - 当前 Module Architecture Alignment 1 结果：通过
 - `git diff --check`
-  - 当前 L7B 结果：通过
-  - 当前 L6D 结果：通过
+  - 当前 Module Architecture Alignment 1 结果：通过
 - `git diff --cached --check`
-  - 当前 L6D 提交前运行。
+  - 当前 Module Architecture Alignment 1 结果：通过
 
 ## 7. Shell / UI 接入状态
 
 - LabTools 已接入统一 BioMedPilot Shell。
-- LabTools 首页当前四个入口：
-  - 实验计算器：可进入；L5B 页面显示“实验计算器中心”，并明确本地辅助计算、人工核对和不替代实验 SOP。
-  - 试剂与配方：可进入。
-  - 图像定量：可进入；荧光强度分析和划痕实验面积分析为手动 MVP 可用，细胞计数和灰度 / 墨值分析仍为 `algorithm_not_available` 占位。
-  - 实验模板：可进入；当前为 qPCR、WB、细胞接种、scratch assay、免疫荧光图像记录的轻量结构化草稿中心。
+- Module Architecture Alignment 1 后，LabTools 首页当前六个一级入口：
+  - 通用计算器：用于浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算；现有 dilution、mass/molarity 和通用试剂计算归入此入口。
+  - 试剂与实验记录：用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN；现有 recipe draft、recipe import/export、experiment template draft 和 experiment record draft JSON persistence 后续归入此模块。
+  - 细胞实验：用于细胞接种、活率、Transwell、wound healing、增殖率、台盼蓝、Alamar Blue 等；当前为规划中 / 待确认使用逻辑 / 暂未开放，cell seeding 和 wound manual ROI 未来归入此模块。
+  - Western Blot：用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析；当前为规划中 / 待确认使用逻辑 / 暂未开放，WB loading、SDS-PAGE 未来归入此模块。
+  - PCR / qPCR：用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析；当前为规划中 / 待确认使用逻辑 / 暂未开放，qPCR mix 未来归入此模块。
+  - ELISA / 吸光度与标准曲线：用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等；当前为规划中 / 待确认使用逻辑 / 暂未开放。
+- fluorescence manual ROI 暂时标记为图像辅助能力，后续归属待单独确认。
 - `LabToolsWorkspaceWidget.page_keys()` 当前包含：
   - `home`
-  - `calculators`
-  - `recipes`
-  - `image_analysis`
-  - `templates`
+  - `general_calculators`
+  - `reagent_records`
+  - `cell_experiments`
+  - `western_blot`
+  - `pcr_qpcr`
+  - `elisa_absorbance`
+- 本阶段只完成顶层入口结构、模块占位页、文案、文档和测试；未新增算法、未新增实验结果分析、未新增图像处理、未新增 schema、未新增 persistence。
 - 普通用户界面应继续保持中文友好，不暴露 traceback、内部 schema、内部 id 或大量调试细节。
 - UI 必须继续使用 BioMedPilot 统一 UI token，不引入 LabTools 独立主题色。
 
@@ -410,6 +416,22 @@
 
 Tool Logic Audit 1 未新增算法、未新增功能、未新增 schema、未新增 persistence、未新增导出格式、未修改 Bioinformatics / Meta / ReleaseBuild / MainLine / dist / desktop app。
 
+## 10.2 Module Architecture Alignment 1 结论
+
+LabTools 顶层入口已从“工具合集”调整为“少量大模块入口”。当前 UI 只完成入口结构和占位页语义，不代表细胞实验、Western Blot、PCR/qPCR、ELISA/吸光度等实验特异性算法已经开放。
+
+当前归类结论：
+
+- 通用计算器只长期承载浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算；不再长期承载全部实验特异性计算。
+- 试剂与实验记录承载 recipe draft、recipe import/export、experiment template draft 和 experiment record draft JSON persistence 语义，但仍不是完整 ELN。
+- cell seeding、wound manual ROI 未来归入细胞实验。
+- qPCR mix 未来归入 PCR / qPCR。
+- WB loading、SDS-PAGE 未来归入 Western Blot。
+- fluorescence manual ROI 暂保持图像辅助能力，后续归属待确认。
+- absorbance / OD、protein concentration、wound healing full workflow、Transwell、WB / gel grayscale、cell counting、qPCR Delta Delta Ct、ELISA standard curve 等仍必须先做 Tool Logic Card，再进入开发。
+
+本阶段未新增算法、未新增实验结果分析、未新增图像处理、未新增 schema、未新增 persistence、未新增导出格式、未修改 Bioinformatics / Meta / ReleaseBuild / MainLine / dist / desktop app。
+
 ## 11. 跨模块边界
 
 - Bioinformatics：不得修改业务逻辑，不得写入 Bioinformatics 项目结构，不得混入 LabTools 计算器、配方或图像分析任务。
@@ -432,11 +454,11 @@ Tool Logic Audit 1 未新增算法、未新增功能、未新增 schema、未新
 
 ## 13. 后续推荐路线
 
-1. L6A.2：ROI export 用户体验微调和更多目录选择体验测试，但仍不得新增算法。
-2. L6C.2：实验记录草稿 Markdown 片段导出体验和导入冲突提示，但仍不做完整 ELN、签名、权限或合规审计。
-3. L6B.2：recipe JSON 导入预览/选择性导入，但仍不做数据库、云同步或正式 SOP 管理。
+1. 为 Priority 1 现有结果语义工具补用户确认版 Tool Logic Cards：dilution / mass-molarity / cell seeding calculators、fluorescence manual ROI、wound manual ROI + threshold、ROI export summary。
+2. 为 recipe draft 和 experiment record draft 补字段、安全边界、非 ELN 语义确认。
+3. 按新模块结构讨论细胞实验、Western Blot、PCR / qPCR、ELISA / 吸光度与标准曲线的首批 Tool Logic Cards。
 4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
 
 ## 14. Handoff 结论
 
-LabTools 当前已经具备实验计算器、本地配方库、来源草稿框架、图像分析框架入口，以及两个边界清晰的真实图像 MVP：手动 ROI 荧光强度分析、手动 ROI + 阈值划痕面积估算。当前最重要的边界是：细胞计数和 WB/凝胶灰度仍未实现；划痕结果不得自动解释迁移效果；外部来源尚未访问网络；AI Gateway 未调用；用户数据和结果导出默认不自动写盘。后续开发应继续小步阶段化，并在每个真实算法、真实网络能力、AI 能力或持久化能力启用前单独确认授权、测试计划和安全提示。
+LabTools 当前已经具备通用计算器、recipe / record draft、来源草稿框架、图像分析框架入口，以及两个边界清晰的真实图像 MVP：手动 ROI 荧光强度分析、手动 ROI + 阈值划痕面积估算。顶层入口现已调整为六个大模块，但这只是入口结构和规划语义：细胞实验、Western Blot、PCR/qPCR、ELISA/吸光度等实验特异性工具后续必须先确认使用逻辑；细胞计数和 WB/凝胶灰度仍未实现；划痕结果不得自动解释迁移效果；外部来源尚未访问网络；AI Gateway 未调用；用户数据和结果导出默认不自动写盘。

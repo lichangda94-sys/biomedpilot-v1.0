@@ -9,27 +9,34 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 def test_labtools_module_exports_features() -> None:
     from app.labtools.workspace import labtools_features
+    from app.shared.feature_status import FeatureStatus
 
     features = labtools_features()
 
-    assert [feature.name for feature in features] == ["实验计算器", "试剂与配方", "图像定量", "实验模板"]
-    assert features[0].status.value == "测试中"
-    assert features[1].status.value == "测试中"
-    assert features[2].status.value == "测试中"
-    assert features[3].status.value == "测试中"
+    assert [feature.name for feature in features] == [
+        "通用计算器",
+        "试剂与实验记录",
+        "细胞实验",
+        "Western Blot",
+        "PCR / qPCR",
+        "ELISA / 吸光度与标准曲线",
+    ]
+    assert features[0].status is FeatureStatus.TESTING
+    assert features[1].status is FeatureStatus.TESTING
+    assert all(feature.status is FeatureStatus.UNAVAILABLE for feature in features[2:])
     assert all(feature.module == "labtools" for feature in features)
-    assert "WB/SDS-PAGE 上样计算" in features[0].description
 
-    image_feature = features[2]
-    assert "荧光 manual ROI grayscale" in image_feature.description
-    assert "scratch/wound manual ROI + threshold" in image_feature.description
-    assert "细胞计数、灰度/墨值仍为占位" in image_feature.description
-    assert "算法开发中" not in image_feature.description
-    assert "algorithm in development" not in image_feature.description.lower()
+    descriptions = {feature.name: feature.description for feature in features}
+    assert "浓度、分子量、质量、体积、稀释、称量" in descriptions["通用计算器"]
+    assert "不长期承载全部实验特异性计算" in descriptions["通用计算器"]
+    assert "承载全部实验计算" not in descriptions["通用计算器"]
+    assert "本地 recipe 草稿" in descriptions["试剂与实验记录"]
+    assert "不等同于完整 ELN" in descriptions["试剂与实验记录"]
 
-    template_feature = features[3]
-    assert "qPCR" in template_feature.description
-    assert "结构化草稿" in template_feature.description
+    for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+        assert "规划中" in descriptions[name]
+        assert "待确认使用逻辑" in descriptions[name]
+        assert "算法已完成" not in descriptions[name]
 
     from app.labtools.experiment_templates import LABTOOLS_EXPERIMENT_RECORD_DRAFT_STORE_SCHEMA_VERSION
 
@@ -49,10 +56,19 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
 
     assert app is not None
     assert widget.objectName() == "labToolsWorkspace"
-    assert widget.page_keys() == ("home", "calculators", "recipes", "image_analysis", "templates")
+    assert widget.page_keys() == (
+        "home",
+        "general_calculators",
+        "reagent_records",
+        "cell_experiments",
+        "western_blot",
+        "pcr_qpcr",
+        "elisa_absorbance",
+    )
     assert widget.current_page_key() == "home"
     assert widget.findChild(QPushButton, "primaryButton") is not None
     widget.show_calculators()
+    assert widget.current_page_key() == "general_calculators"
     tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
     assert tabs is not None
     assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制", "细胞接种", "qPCR 配液", "WB 上样"]
@@ -67,30 +83,24 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert "不做 WB/凝胶灰度或条带分析" in calculator_labels
     assert "人工复核" in calculator_labels or "结果仅供实验前核对" in calculator_labels
     widget.show_recipes()
-    assert widget.current_page_key() == "recipes"
-    recipe_tabs = widget.findChild(QTabWidget, "recipeWorkspaceTabs")
-    assert recipe_tabs is not None
-    assert [recipe_tabs.tabText(index) for index in range(recipe_tabs.count())] == ["本地配方库", "用户配方", "外部来源草稿"]
-    recipe_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
-    recipe_buttons = [button.text() for button in widget.findChildren(QPushButton)]
-    assert "本地配方草稿持久化" in recipe_labels
-    assert "不自动保存、不联网、不调用 AI" in recipe_labels
-    assert "保存用户配方 JSON" in recipe_buttons
-    assert "载入用户配方 JSON" in recipe_buttons
+    assert widget.current_page_key() == "reagent_records"
+    placeholder_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    assert "试剂与实验记录" in placeholder_labels
+    assert "recipe draft store 与 recipe import/export 现有能力后续归入本模块" in placeholder_labels
+    assert "experiment template draft 与 experiment record draft JSON persistence 后续归入本模块" in placeholder_labels
+    assert "不等同于完整 ELN" in placeholder_labels
     widget.show_image_analysis()
-    assert widget.current_page_key() == "image_analysis"
+    assert widget.current_page_key() == "cell_experiments"
     image_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
-    image_buttons = [button.text() for button in widget.findChildren(QPushButton)]
-    assert "MVP 可用：manual ROI grayscale 指标；需人工复核" in image_labels
-    assert "MVP 可用：manual ROI + user threshold 面积估算；semi-quantitative" in image_labels
-    assert image_labels.count("占位：algorithm_not_available，未生成定量结果") == 2
-    assert "未启用自动 ROI、细胞计数或灰度/墨值算法" in image_labels
-    assert "JSON manifest、CSV summary、Markdown 片段和 ROI overlay PNG" in image_labels
-    assert "导出当前 ROI 结果" in image_buttons
+    assert "细胞实验" in image_labels
+    assert "cell seeding 现有计算器未来归入本模块" in image_labels
+    assert "wound manual ROI + threshold 未来归入本模块" in image_labels
+    assert "待确认使用逻辑" in image_labels
     widget.show_templates()
-    assert widget.current_page_key() == "templates"
-    template_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
-    template_buttons = [button.text() for button in widget.findChildren(QPushButton)]
-    assert "实验模板" in template_labels
-    assert "不构成完整 ELN" in template_labels
-    assert "生成记录草稿" in template_buttons
+    assert widget.current_page_key() == "reagent_records"
+    widget.show_western_blot()
+    assert widget.current_page_key() == "western_blot"
+    widget.show_pcr_qpcr()
+    assert widget.current_page_key() == "pcr_qpcr"
+    widget.show_elisa_absorbance()
+    assert widget.current_page_key() == "elisa_absorbance"

@@ -10,6 +10,30 @@ Current LabTools behavior is internally consistent at the feature-boundary level
 
 The main follow-up is not code remediation. It is user logic confirmation for existing result-generating tools before expanding them further.
 
+## Module Architecture Alignment 1 Update
+
+LabTools top-level navigation now uses six module entries instead of four tool-collection entries:
+
+- 通用计算器。
+- 试剂与实验记录。
+- 细胞实验。
+- Western Blot。
+- PCR / qPCR。
+- ELISA / 吸光度与标准曲线。
+
+This alignment does not change formulas, image analysis logic, persistence schema, export formats, or implemented tool behavior. It only changes entry structure and user-visible module grouping.
+
+Architecture conclusion:
+
+- 通用计算器 should remain focused on general reagent calculations such as concentration, molecular weight, mass, volume, dilution, weighing, and future pH / acidity helpers.
+- Experiment-specific calculations should not remain permanently grouped under 通用计算器.
+- cell seeding and wound manual ROI are future 细胞实验 module candidates.
+- qPCR mix is a future PCR / qPCR module candidate.
+- WB loading and SDS-PAGE are future Western Blot module candidates.
+- recipe draft and experiment record draft belong under 试剂与实验记录.
+- fluorescence manual ROI remains a temporary image-assistance capability until ownership is confirmed.
+- absorbance / OD, protein concentration, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
+
 ## Current Tool Inventory
 
 中文范围标签：实验计算器、图像辅助分析、recipe draft、experiment record draft、placeholder / planned tools。

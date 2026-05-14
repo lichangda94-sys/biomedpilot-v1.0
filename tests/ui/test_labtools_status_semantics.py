@@ -36,14 +36,24 @@ def test_labtools_feature_descriptions_keep_testing_and_draft_boundaries() -> No
 
     features = {feature.name: feature for feature in labtools_features()}
 
-    assert all(feature.status is FeatureStatus.TESTING for feature in features.values())
-    assert "本地辅助计算草稿" in features["实验计算器"].description
-    assert "人工核对" in features["实验计算器"].description
-    assert "用户配方草稿" in features["试剂与配方"].description
-    assert "SOP/SDS" in features["试剂与配方"].description
-    assert "manual-review MVP" in features["图像定量"].description
-    assert "细胞计数、灰度/墨值仍为占位" in features["图像定量"].description
-    assert "不是完整 ELN" in features["实验模板"].description
+    assert set(features) == {
+        "通用计算器",
+        "试剂与实验记录",
+        "细胞实验",
+        "Western Blot",
+        "PCR / qPCR",
+        "ELISA / 吸光度与标准曲线",
+    }
+    assert features["通用计算器"].status is FeatureStatus.TESTING
+    assert features["试剂与实验记录"].status is FeatureStatus.TESTING
+    assert all(features[name].status is FeatureStatus.UNAVAILABLE for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"))
+    assert "浓度、分子量、质量、体积、稀释、称量" in features["通用计算器"].description
+    assert "不长期承载全部实验特异性计算" in features["通用计算器"].description
+    assert "本地 recipe 草稿" in features["试剂与实验记录"].description
+    assert "不等同于完整 ELN" in features["试剂与实验记录"].description
+    for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+        assert "规划中" in features[name].description
+        assert "待确认使用逻辑" in features[name].description
 
 
 def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qapp) -> None:
@@ -52,14 +62,14 @@ def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qap
     widget = LabToolsHomeWidget()
     text = _visible_text(widget)
 
-    assert "本地辅助" in text
-    assert "本地草稿" in text
-    assert "manual-review MVP" in text
-    assert "草稿中心" in text
-    assert "结果需人工核对" in text
-    assert "细胞计数和灰度/墨值仍占位" in text
-    assert "不是完整 ELN" in text
-    for forbidden in ("production-grade", "正式报告", "临床诊断", "无需人工复核"):
+    for title in ("通用计算器", "试剂与实验记录", "细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
+        assert title in text
+    assert "已开放 / 待确认使用逻辑" in text
+    assert text.count("规划中 / 待确认使用逻辑 / 暂未开放") == 4
+    assert "用于浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算。" in text
+    assert "不等同于完整 ELN" in text
+    assert "用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等。" in text
+    for forbidden in ("production-grade", "正式报告", "临床诊断", "无需人工复核", "算法已完成"):
         assert forbidden not in text
 
 

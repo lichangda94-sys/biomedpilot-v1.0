@@ -12,10 +12,18 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
 
     class LabToolsHomeWidget(QWidget):
-        calculators_requested = Signal()
-        reagents_requested = Signal()
-        image_quant_requested = Signal()
-        templates_requested = Signal()
+        general_calculators_requested = Signal()
+        reagent_records_requested = Signal()
+        cell_experiments_requested = Signal()
+        western_blot_requested = Signal()
+        pcr_qpcr_requested = Signal()
+        elisa_absorbance_requested = Signal()
+
+        # Backward-compatible aliases for older UI tests and callers.
+        calculators_requested = general_calculators_requested
+        reagents_requested = reagent_records_requested
+        image_quant_requested = cell_experiments_requested
+        templates_requested = reagent_records_requested
 
         def __init__(self) -> None:
             super().__init__()
@@ -37,7 +45,7 @@ if QWidget is not None:
 
             title = QLabel("LabTools / 实验工具")
             title.setObjectName("labToolsTitle")
-            subtitle = QLabel("基础实验辅助计算、本地草稿和 manual-review 结果入口。")
+            subtitle = QLabel("按实验场景组织的 LabTools 模块入口；具体工具开发前需先确认使用逻辑。")
             subtitle.setObjectName("labToolsSubtitle")
             root.addWidget(title)
             root.addWidget(subtitle)
@@ -46,50 +54,74 @@ if QWidget is not None:
             grid.setSpacing(SPACING["md"])
             grid.addWidget(
                 self._entry_card(
-                    "实验计算器",
-                    "本地辅助：稀释、摩尔浓度、细胞接种、qPCR、WB 上样；结果需人工核对",
-                    "本地辅助",
-                    "进入实验计算器",
-                    self.calculators_requested.emit,
-                    object_name="labToolsCalculatorEntry",
+                    "通用计算器",
+                    "用于浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算。",
+                    "已开放 / 待确认使用逻辑",
+                    "进入通用计算器",
+                    self.general_calculators_requested.emit,
+                    object_name="labToolsGeneralCalculatorEntry",
                 ),
                 0,
                 0,
             )
             grid.addWidget(
                 self._entry_card(
-                    "试剂与配方",
-                    "本地配方草稿、体积缩放和 JSON 草稿持久化；需 SOP/SDS 人工核对",
-                    "本地草稿",
-                    "进入试剂与配方",
-                    self.reagents_requested.emit,
-                    object_name="labToolsRecipeEntry",
+                    "试剂与实验记录",
+                    "用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN。",
+                    "已开放 / 待确认使用逻辑",
+                    "进入试剂与实验记录",
+                    self.reagent_records_requested.emit,
+                    object_name="labToolsReagentRecordsEntry",
                 ),
                 0,
                 1,
             )
             grid.addWidget(
                 self._entry_card(
-                    "图像定量",
-                    "荧光 manual ROI 与划痕 threshold MVP；细胞计数和灰度/墨值仍占位",
-                    "manual-review MVP",
-                    "进入图像定量",
-                    self.image_quant_requested.emit,
-                    object_name="labToolsImageEntry",
+                    "细胞实验",
+                    "用于细胞接种、活率、Transwell、wound healing、增殖率、台盼蓝、Alamar Blue 等细胞实验工具。",
+                    "规划中 / 待确认使用逻辑 / 暂未开放",
+                    "查看细胞实验规划",
+                    self.cell_experiments_requested.emit,
+                    object_name="labToolsCellExperimentEntry",
                 ),
                 1,
                 0,
             )
             grid.addWidget(
                 self._entry_card(
-                    "实验模板",
-                    "qPCR、WB、细胞接种和图像记录草稿；不是完整 ELN",
-                    "草稿中心",
-                    "进入实验模板",
-                    self.templates_requested.emit,
-                    object_name="labToolsTemplateEntry",
+                    "Western Blot",
+                    "用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析。",
+                    "规划中 / 待确认使用逻辑 / 暂未开放",
+                    "查看 Western Blot 规划",
+                    self.western_blot_requested.emit,
+                    object_name="labToolsWesternBlotEntry",
                 ),
                 1,
+                1,
+            )
+            grid.addWidget(
+                self._entry_card(
+                    "PCR / qPCR",
+                    "用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析。",
+                    "规划中 / 待确认使用逻辑 / 暂未开放",
+                    "查看 PCR / qPCR 规划",
+                    self.pcr_qpcr_requested.emit,
+                    object_name="labToolsPcrQpcrEntry",
+                ),
+                2,
+                0,
+            )
+            grid.addWidget(
+                self._entry_card(
+                    "ELISA / 吸光度与标准曲线",
+                    "用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等。",
+                    "规划中 / 待确认使用逻辑 / 暂未开放",
+                    "查看 ELISA / 吸光度规划",
+                    self.elisa_absorbance_requested.emit,
+                    object_name="labToolsElisaAbsorbanceEntry",
+                ),
+                2,
                 1,
             )
             root.addLayout(grid)
@@ -121,7 +153,7 @@ if QWidget is not None:
             description_label.setObjectName("labToolsDescription")
             description_label.setWordWrap(True)
             button = QPushButton(button_text)
-            active_statuses = {"可用", "本地辅助", "本地草稿", "manual-review MVP", "草稿中心"}
+            active_statuses = {"可用", "本地辅助", "本地草稿", "manual-review MVP", "草稿中心", "已开放 / 待确认使用逻辑"}
             button.setObjectName("primaryButton" if status in active_statuses else "secondaryButton")
             button.clicked.connect(callback)
             layout.addWidget(status_label, alignment=Qt.AlignLeft)
@@ -142,7 +174,7 @@ if QWidget is not None:
                 border: 0;
                 background: {COLORS["background"]};
             }}
-            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsImageEntry, QFrame#labToolsTemplateEntry, QFrame#labToolsPendingEntry {{
+            QFrame#labToolsGeneralCalculatorEntry, QFrame#labToolsReagentRecordsEntry, QFrame#labToolsCellExperimentEntry, QFrame#labToolsWesternBlotEntry, QFrame#labToolsPcrQpcrEntry, QFrame#labToolsElisaAbsorbanceEntry, QFrame#labToolsPendingEntry {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["lg"]}px;
