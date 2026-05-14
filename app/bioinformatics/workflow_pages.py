@@ -8400,9 +8400,15 @@ def _recognition_type_text(item: dict[str, object]) -> str:
     primary = str(item.get("recognized_type") or "unknown")
     primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != primary]
+    role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
+    if primary == "geo_soft_container":
+        depth = _geo_soft_parser_depth_from_item(item)
+        depth_label = _geo_soft_parser_depth_label(depth)
+        if role_labels:
+            return f"{primary_label}（{depth_label}；含：{'、'.join(role_labels)}）"
+        return f"{primary_label}（{depth_label}）"
     if not roles:
         return primary_label
-    role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
     return f"{primary_label}（含：{'、'.join(role_labels)}）" if role_labels else primary_label
 
 
@@ -8410,6 +8416,17 @@ def _recognition_roles_tooltip(item: dict[str, object]) -> str:
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role)]
     assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
     lines = [f"主类型：{item.get('recognized_type_zh') or TYPE_LABELS.get(str(item.get('recognized_type') or 'unknown'), '未知文件')}"]
+    if str(item.get("recognized_type") or "") == "geo_soft_container":
+        depth = _geo_soft_parser_depth_from_item(item)
+        lines.append(f"SOFT 解析深度：{_geo_soft_parser_depth_label(depth)}")
+        lines.append(f"样本数：{int(item.get('sample_count') or 0)}；平台数：{int(item.get('platform_count') or 0)}")
+        if item.get("expression_table_presence"):
+            lines.append("表达表格：检测为候选输入，进入标准化前需要用户确认。")
+        else:
+            lines.append("表达表格：尚未确认表达矩阵。")
+        warnings = [str(warning) for warning in item.get("warnings", []) or [] if str(warning)]
+        if warnings:
+            lines.append("解析提示：" + "；".join(warnings[:3]))
     if roles:
         lines.append("可用角色：" + "、".join(TYPE_LABELS.get(role, role) for role in roles))
     for asset in assets:
@@ -8418,6 +8435,24 @@ def _recognition_roles_tooltip(item: dict[str, object]) -> str:
         if label or reason:
             lines.append(f"{label}：{reason}".strip("："))
     return "\n".join(lines)
+
+
+def _geo_soft_parser_depth_from_item(item: dict[str, object]) -> str:
+    profile = item.get("content_profile")
+    if item.get("parser_depth"):
+        return str(item.get("parser_depth") or "")
+    if isinstance(profile, dict):
+        return str(profile.get("parser_depth") or "")
+    return ""
+
+
+def _geo_soft_parser_depth_label(depth: str) -> str:
+    return {
+        "container_only": "已识别 GEO SOFT 容器",
+        "metadata_parsed": "已解析样本/平台元数据",
+        "table_detected": "检测到平台或表达表格",
+        "table_parsed": "已解析表格结构",
+    }.get(depth, "已识别 GEO SOFT 容器")
 
 
 def _format_file_size(value: object) -> str:

@@ -2379,6 +2379,11 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
                 "recognized_type": "geo_soft_container",
                 "recognized_type_zh": "GEO SOFT 容器",
                 "recognized_roles": ["expression_matrix", "sample_metadata"],
+                "parser_depth": "table_parsed",
+                "sample_count": 2,
+                "platform_count": 1,
+                "expression_table_presence": True,
+                "warnings": [],
                 "detected_assets": [
                     {"asset_type": "expression_matrix", "label_zh": "表达矩阵", "reason": "SOFT sample table 包含表达值。"},
                     {"asset_type": "sample_metadata", "label_zh": "样本注释", "reason": "SOFT 包含 SAMPLE 块。"},
@@ -2402,9 +2407,53 @@ def test_recognition_table_formats_confidence_size_and_path_tooltip(qt_app, proj
     assert table.item(0, 1).text().startswith("...")
     assert table.horizontalHeaderItem(1).text() == "当前位置"
     assert table.item(0, 1).toolTip() == str(project_summary.project_root / "recognized_data/expression_matrix/GSE54350_series_matrix.txt")
-    assert table.item(0, 2).text() == "GEO SOFT 容器（含：表达矩阵、样本注释）"
+    assert table.item(0, 2).text() == "GEO SOFT 容器（已解析表格结构；含：表达矩阵、样本注释）"
+    assert "SOFT 解析深度：已解析表格结构" in table.item(0, 2).toolTip()
+    assert "表达表格：检测为候选输入" in table.item(0, 2).toolTip()
     assert "可用角色：表达矩阵、样本注释" in table.item(0, 2).toolTip()
     assert "原始 bytes：5763709" in table.item(0, 4).toolTip()
+
+
+def test_geo_soft_metadata_ui_does_not_claim_full_expression_parse(qt_app, project_summary, tmp_path: Path) -> None:
+    source = tmp_path / "GSE6005_family.soft"
+    source.write_text("^SERIES = GSE6005\n^SAMPLE = GSM1\n!Sample_title = untreated\n", encoding="utf-8")
+    _write_mock_recognition_report(
+        project_summary.project_root,
+        [
+            {
+                "file_name": source.name,
+                "original_path": str(source),
+                "recognized_type": "geo_soft_container",
+                "recognized_type_zh": "GEO SOFT 容器",
+                "recognized_roles": ["sample_metadata", "platform_annotation"],
+                "parser_depth": "metadata_parsed",
+                "sample_count": 1,
+                "platform_count": 1,
+                "expression_table_presence": False,
+                "warnings": ["Parsed sample/platform metadata, but no clear ID_REF/VALUE expression table was confirmed."],
+                "detected_assets": [
+                    {"asset_type": "sample_metadata", "label_zh": "样本注释", "input_eligible": True, "reason": "已解析 SOFT SAMPLE 块。"},
+                    {"asset_type": "platform_annotation", "label_zh": "平台注释", "input_eligible": True, "reason": "已解析 SOFT PLATFORM 块。"},
+                ],
+                "confidence": 0.86,
+                "file_size": 128,
+                "reason": "GEO family SOFT 容器，已解析样本/平台元数据；尚未确认表达矩阵。",
+                "warning": "",
+                "route_path": str(source),
+            }
+        ],
+    )
+
+    widget = BioinformaticsRecognitionWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "recognitionResultTable")
+    text = table.item(0, 2).text()
+    tooltip = table.item(0, 2).toolTip()
+
+    assert "已解析样本/平台元数据" in text
+    assert "表达表格：尚未确认表达矩阵" in tooltip
+    assert "完整解析" not in text
+    assert "完整表达矩阵" not in tooltip
 
 
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:

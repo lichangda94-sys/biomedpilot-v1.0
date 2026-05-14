@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT, build_group_preview_report
 
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
@@ -77,6 +78,7 @@ class RecognitionClassification:
     detected_assets: tuple[dict[str, object], ...] = ()
     container_format: str = ""
     content_profile: dict[str, object] | None = None
+    file_level_details: dict[str, object] | None = None
 
 
 def run_project_recognition(project_root: str | Path) -> dict[str, object]:
@@ -111,25 +113,26 @@ def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[st
         kind = classification.primary_type
         reason = classification.reason
         confidence = classification.confidence
-        records.append(
-            {
-                "file_name": path.name,
-                "original_path": str(path),
-                "recognized_type": kind,
-                "recognized_type_zh": TYPE_LABELS.get(kind, "未知文件"),
-                "recognized_roles": list(classification.roles),
-                "recognized_roles_zh": [TYPE_LABELS.get(role, role) for role in classification.roles],
-                "secondary_roles": [role for role in classification.roles if role != kind],
-                "detected_assets": list(classification.detected_assets),
-                "container_format": classification.container_format,
-                "content_profile": classification.content_profile or {},
-                "confidence": confidence,
-                "file_size": path.stat().st_size if path.exists() else 0,
-                "reason": reason,
-                "warning": "低置信度，需要人工确认。" if confidence < 0.5 else "",
-                "route_path": str(root / "recognized_data" / kind / path.name),
-            }
-        )
+        record = {
+            "file_name": path.name,
+            "original_path": str(path),
+            "recognized_type": kind,
+            "recognized_type_zh": TYPE_LABELS.get(kind, "未知文件"),
+            "recognized_roles": list(classification.roles),
+            "recognized_roles_zh": [TYPE_LABELS.get(role, role) for role in classification.roles],
+            "secondary_roles": [role for role in classification.roles if role != kind],
+            "detected_assets": list(classification.detected_assets),
+            "container_format": classification.container_format,
+            "content_profile": classification.content_profile or {},
+            "confidence": confidence,
+            "file_size": path.stat().st_size if path.exists() else 0,
+            "reason": reason,
+            "warning": "低置信度，需要人工确认。" if confidence < 0.5 else "",
+            "route_path": str(root / "recognized_data" / kind / path.name),
+        }
+        if classification.file_level_details:
+            record.update(classification.file_level_details)
+        records.append(record)
     warnings.extend(_recognition_warnings(records))
     group_preview = build_group_preview_report(root, records)
     report = {
@@ -213,6 +216,7 @@ def _classification(
     detected_assets: tuple[dict[str, object], ...] = (),
     container_format: str = "",
     content_profile: dict[str, object] | None = None,
+    file_level_details: dict[str, object] | None = None,
 ) -> RecognitionClassification:
     normalized_roles = tuple(dict.fromkeys(roles if roles is not None else (() if primary_type == "unknown" else (primary_type,))))
     return RecognitionClassification(
@@ -223,6 +227,7 @@ def _classification(
         detected_assets=detected_assets or tuple(_detected_asset(role, confidence=confidence, reason=reason) for role in normalized_roles),
         container_format=container_format,
         content_profile=content_profile,
+        file_level_details=file_level_details,
     )
 
 
@@ -474,62 +479,125 @@ def _classification_from_table_profile(
 
 
 def _classify_geo_soft(path: Path) -> RecognitionClassification | None:
-    scan = _scan_geo_soft(path)
-    if not scan["has_geo_header"]:
+    profile = parse_geo_family_soft(path)
+    if not profile.get("series_accession") and not profile.get("sample_count") and not profile.get("platform_count"):
         return None
     roles: list[str] = []
     assets: list[dict[str, object]] = []
-    if scan["has_expression_table"]:
+    sample_count = int(profile.get("sample_count") or 0)
+    parser_depth = str(profile.get("parser_depth") or "container_only")
+    if profile.get("expression_table_presence"):
         roles.append("expression_matrix")
         assets.append(
             _detected_asset(
                 "expression_matrix",
                 confidence=0.86,
-                reason="SOFT sample table 包含 ID_REF / VALUE 表达值。",
+                reason="SOFT sample table 包含 ID_REF / VALUE 表达候选；进入标准化前需要用户确认。",
                 source_section="sample_table",
                 source_format="geo_family_soft",
-                extra={"sample_count": scan["sample_count"], "value_description": scan["value_description"]},
+                input_eligible=True,
+                evidence=tuple(profile.get("gene_id_evidence", []) or ("ID_REF/VALUE sample table",)),
+                extra={
+                    "sample_count": sample_count,
+                    "parser_depth": parser_depth,
+                    "requires_user_confirmation": True,
+                    "expression_table_row_count": profile.get("expression_table_row_count", 0),
+                },
             )
         )
-    if scan["has_sample_metadata"]:
+    if sample_count or profile.get("sample_metadata_fields"):
         roles.append("sample_metadata")
         assets.append(
             _detected_asset(
                 "sample_metadata",
                 confidence=0.84,
-                reason="SOFT 包含 SAMPLE 块、样本标题或样本 characteristics。",
+                reason="已解析 SOFT SAMPLE 块、样本标题、source_name_ch1 或 characteristics_ch1。",
                 source_section="sample_metadata",
                 source_format="geo_family_soft",
-                extra={"sample_count": scan["sample_count"]},
+                input_eligible=True,
+                evidence=tuple(str(item) for item in profile.get("sample_metadata_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth},
             )
         )
-    if scan["has_platform_annotation"]:
+    if profile.get("phenotype_candidate_fields"):
+        roles.append("phenotype_metadata")
+        assets.append(
+            _detected_asset(
+                "phenotype_metadata",
+                confidence=0.78,
+                reason="SOFT SAMPLE metadata 中提取到 treatment、genotype、tissue、disease 或 cell line 等候选表型字段。",
+                source_section="sample_metadata",
+                source_format="geo_family_soft",
+                input_eligible=True,
+                evidence=tuple(str(item) for item in profile.get("phenotype_candidate_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth, "requires_user_confirmation": True},
+            )
+        )
+    if profile.get("platform_annotation_presence"):
         roles.append("platform_annotation")
         assets.append(
             _detected_asset(
                 "platform_annotation",
                 confidence=0.82,
-                reason="SOFT 包含 PLATFORM 块或 platform table。",
+                reason="已解析 SOFT PLATFORM 块，并检测平台注释表或平台注释字段。",
                 source_section="platform_table",
                 source_format="geo_family_soft",
+                input_eligible=True,
+                evidence=tuple(profile.get("gene_id_evidence", []) or profile.get("platform_accessions", []) or ("PLATFORM block",)),
+                extra={
+                    "platform_count": profile.get("platform_count", 0),
+                    "platform_annotation_presence": bool(profile.get("platform_annotation_presence")),
+                    "parser_depth": parser_depth,
+                },
             )
         )
-    if scan["has_clinical_metadata"]:
+    if profile.get("clinical_candidate_fields"):
         roles.append("clinical_metadata")
         assets.append(
             _detected_asset(
                 "clinical_metadata",
                 confidence=0.68,
-                reason="样本 characteristics 中包含年龄、性别、组织、肿瘤/正常等临床或分组线索。",
+                reason="SOFT SAMPLE characteristics 中包含年龄、性别、分期、状态等临床候选字段。",
                 source_section="sample_characteristics",
                 source_format="geo_family_soft",
-                extra={"sample_count": scan["sample_count"]},
+                input_eligible=True,
+                evidence=tuple(str(item) for item in profile.get("clinical_candidate_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth, "requires_user_confirmation": True},
             )
         )
     if not roles:
         return None
     role_labels = "、".join(TYPE_LABELS.get(role, role) for role in roles)
-    reason = f"GEO family SOFT 容器，检测到：{role_labels}。"
+    depth_labels = {
+        "container_only": "已识别 GEO SOFT 容器",
+        "metadata_parsed": "已解析样本/平台元数据",
+        "table_detected": "检测到平台或表达表格",
+        "table_parsed": "已解析表格结构",
+    }
+    if profile.get("expression_table_presence"):
+        reason = f"GEO family SOFT 容器，{depth_labels.get(parser_depth, parser_depth)}；检测到：{role_labels}；表达表格为候选输入，需用户确认。"
+    elif profile.get("sample_count") or profile.get("platform_annotation_presence"):
+        reason = f"GEO family SOFT 容器，{depth_labels.get(parser_depth, parser_depth)}；尚未确认表达矩阵。"
+    else:
+        reason = f"GEO family SOFT 容器，{depth_labels.get(parser_depth, parser_depth)}。"
+    file_level_keys = {
+        "file_format",
+        "container_type",
+        "parser_depth",
+        "sample_count",
+        "sample_block_count",
+        "platform_count",
+        "platform_block_presence",
+        "sample_metadata_fields",
+        "phenotype_candidate_fields",
+        "platform_annotation_presence",
+        "expression_table_presence",
+        "species_evidence",
+        "gene_id_evidence",
+        "warnings",
+        "can_enter_standardization",
+        "requires_user_confirmation",
+    }
     return _classification(
         "geo_soft_container",
         reason,
@@ -537,6 +605,8 @@ def _classify_geo_soft(path: Path) -> RecognitionClassification | None:
         roles=tuple(roles),
         detected_assets=tuple(assets),
         container_format="geo_family_soft",
+        content_profile=profile,
+        file_level_details={key: profile.get(key) for key in file_level_keys},
     )
 
 

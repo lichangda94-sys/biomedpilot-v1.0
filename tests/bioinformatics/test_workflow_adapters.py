@@ -9,6 +9,7 @@ from xml.sax.saxutils import escape
 import pytest
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center
+from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
@@ -75,14 +76,20 @@ def _write_geo_family_soft(path: Path) -> Path:
                 "!Series_sample_id = GSM139003",
                 "^PLATFORM = GPL570",
                 "!Platform_title = [HG-U133_Plus_2] Affymetrix Human Genome U133 Plus 2.0 Array",
+                "#ID = Probe ID",
+                "#Gene Symbol = Gene Symbol",
                 "!platform_table_begin",
                 "ID\tGene Symbol",
                 "1007_s_at\tDDR1",
                 "!platform_table_end",
                 "^SAMPLE = GSM139002",
                 "!Sample_title = PC10: Normal thyroid paired with tumor",
-                "!Sample_characteristics_ch1 = Tissue: normal thyroid; Gender: male; Age: 71",
-                "#ID_REF =",
+                "!Sample_source_name_ch1 = thyroid",
+                "!Sample_organism_ch1 = Homo sapiens",
+                "!Sample_characteristics_ch1 = tissue: normal thyroid",
+                "!Sample_characteristics_ch1 = gender: male",
+                "!Sample_characteristics_ch1 = age: 71",
+                "#ID_REF = Probe ID",
                 "#VALUE = RMA Gene Expression Estimates",
                 "!sample_table_begin",
                 "ID_REF\tVALUE",
@@ -90,13 +97,54 @@ def _write_geo_family_soft(path: Path) -> Path:
                 "!sample_table_end",
                 "^SAMPLE = GSM139003",
                 "!Sample_title = PC11: Papillary thyroid cancer invasive front",
-                "!Sample_characteristics_ch1 = Tissue: tumor; Gender: female; Age: 55",
-                "#ID_REF =",
+                "!Sample_source_name_ch1 = thyroid cancer",
+                "!Sample_organism_ch1 = Homo sapiens",
+                "!Sample_characteristics_ch1 = tissue: tumor",
+                "!Sample_characteristics_ch1 = gender: female",
+                "!Sample_characteristics_ch1 = age: 55",
+                "#ID_REF = Probe ID",
                 "#VALUE = RMA Gene Expression Estimates",
                 "!sample_table_begin",
                 "ID_REF\tVALUE",
                 "1007_s_at\t9.1",
                 "!sample_table_end",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_geo_family_soft_metadata_only(path: Path) -> Path:
+    path.write_text(
+        "\n".join(
+            [
+                "^DATABASE = GeoMiame",
+                "!Database_name = Gene Expression Omnibus (GEO)",
+                "^SERIES = GSE6005",
+                "!Series_title = Metadata-only GEO family SOFT",
+                "!Series_geo_accession = GSE6005",
+                "!Series_sample_id = GSM200001",
+                "!Series_sample_id = GSM200002",
+                "^PLATFORM = GPL570",
+                "!Platform_title = [HG-U133_Plus_2] Affymetrix Human Genome U133 Plus 2.0 Array",
+                "#ID = Probe ID",
+                "#Gene Symbol = Gene Symbol",
+                "!platform_table_begin",
+                "ID\tGene Symbol",
+                "1007_s_at\tDDR1",
+                "!platform_table_end",
+                "^SAMPLE = GSM200001",
+                "!Sample_title = untreated thyroid sample",
+                "!Sample_source_name_ch1 = thyroid",
+                "!Sample_characteristics_ch1 = tissue: normal thyroid",
+                "!Sample_characteristics_ch1 = treatment: untreated",
+                "^SAMPLE = GSM200002",
+                "!Sample_title = treated thyroid sample",
+                "!Sample_source_name_ch1 = thyroid",
+                "!Sample_characteristics_ch1 = tissue: normal thyroid",
+                "!Sample_characteristics_ch1 = treatment: treated",
                 "",
             ]
         ),
@@ -397,6 +445,22 @@ def test_recognition_dedupes_raw_file_also_registered_by_reference(project_root:
 
 def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Path) -> None:
     source = _write_geo_family_soft(tmp_path / "GSE6004_family.soft")
+    parsed = parse_geo_family_soft(source)
+    assert parsed["geoparse_status"] == "parsed"
+    assert parsed["sample_count"] == 2
+    assert parsed["sample_block_count"] == 2
+    assert parsed["sample_accessions"] == ["GSM139002", "GSM139003"]
+    assert parsed["sample_titles"]["GSM139002"] == "PC10: Normal thyroid paired with tumor"  # type: ignore[index]
+    assert "tissue" in parsed["sample_metadata_fields"]  # type: ignore[operator]
+    assert "thyroid" in parsed["source_name_ch1"]["GSM139002"]  # type: ignore[index]
+    assert "tissue: normal thyroid" in parsed["characteristics_ch1"]["GSM139002"]  # type: ignore[index]
+    assert parsed["platform_block_presence"] is True
+    assert parsed["platform_annotation_presence"] is True
+    assert parsed["expression_table_presence"] is True
+    assert any("Homo sapiens" in item for item in parsed["species_evidence"])  # type: ignore[operator]
+    assert any("ID_REF" in item or "Gene Symbol" in item for item in parsed["gene_id_evidence"])  # type: ignore[operator]
+    assert parsed["parser_depth"] == "table_parsed"
+
     register_acquisition(
         project_root,
         source_type="local_import",
@@ -410,8 +474,25 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
 
     assert record["recognized_type"] == "geo_soft_container"
     assert record["recognized_type_zh"] == "GEO SOFT 容器"
-    assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
-    assert {asset["asset_type"] for asset in record["detected_assets"]} >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
+    assert record["file_format"] == "SOFT"
+    assert record["container_type"] == "geo_family_soft"
+    assert record["parser_depth"] == "table_parsed"
+    assert record["sample_count"] == 2
+    assert record["sample_block_count"] == 2
+    assert record["platform_count"] == 1
+    assert record["platform_block_presence"] is True
+    assert record["platform_annotation_presence"] is True
+    assert record["expression_table_presence"] is True
+    assert any("Homo sapiens" in item for item in record["species_evidence"])  # type: ignore[operator]
+    assert any("ID_REF" in item or "Gene Symbol" in item for item in record["gene_id_evidence"])  # type: ignore[operator]
+    assert record["can_enter_standardization"] is True
+    assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "phenotype_metadata", "platform_annotation", "clinical_metadata"}
+    assert {asset["asset_type"] for asset in record["detected_assets"]} >= {"expression_matrix", "sample_metadata", "phenotype_metadata", "platform_annotation", "clinical_metadata"}
+    assets = _asset_by_role(record)
+    assert assets["expression_matrix"]["requires_user_confirmation"] is True
+    assert assets["expression_matrix"]["input_eligible"] is True
+    assert "完整解析" not in record["reason"]
+    assert "完整表达矩阵" not in record["reason"]
     assert recognition["type_counts"]["geo_soft_container"] == 1  # type: ignore[index]
     assert recognition["type_counts"]["expression_matrix"] == 1  # type: ignore[index]
     assert recognition["type_counts"]["sample_metadata"] == 1  # type: ignore[index]
@@ -428,6 +509,33 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
     assert asset_types >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
     task_types = {task["task_type"] for task in standardization["data_processing_task_plan"]["tasks"]}  # type: ignore[index]
     assert {"expression_matrix_cleaning", "gene_annotation_mapping", "sample_annotation_review"} <= task_types
+
+
+def test_geo_family_soft_metadata_only_does_not_unlock_standardization(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft_metadata_only(source)
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "geo_soft_container"
+    assert record["parser_depth"] == "table_parsed"
+    assert record["sample_count"] == 2
+    assert record["platform_annotation_presence"] is True
+    assert record["expression_table_presence"] is False
+    assert record["can_enter_standardization"] is False
+    assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+    assert "sample_metadata" in record["recognized_roles"]  # type: ignore[operator]
+    assert "platform_annotation" in record["recognized_roles"]  # type: ignore[operator]
+    assert "尚未确认表达矩阵" in record["reason"]
+    assert "完整解析" not in record["reason"]
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    assert report["standardization_ready"] is False
+    assert report["has_core_input"] is False
+    assert "expression_matrix" not in report["available_inputs"]
 
 
 def test_recognition_skips_organized_geo_soft_duplicate(project_root: Path) -> None:
@@ -450,6 +558,28 @@ def test_recognition_skips_organized_geo_soft_duplicate(project_root: Path) -> N
     soft_assets = [asset for asset in assets if Path(str(asset["source_file"])).name == "GSE6004_family.soft"]
     assert len([asset for asset in soft_assets if asset["asset_type"] == "expression_matrix"]) == 1
     assert len([asset for asset in soft_assets if asset["asset_type"] == "sample_metadata"]) == 1
+
+
+def test_geo_family_soft_and_xlsx_results_stay_file_scoped(project_root: Path) -> None:
+    soft = project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    xlsx = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    soft.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft_metadata_only(soft)
+    _write_xlsx_count_matrix(xlsx)
+
+    recognition = run_project_recognition(project_root)
+    by_name = {record["file_name"]: record for record in recognition["files"]}  # type: ignore[index]
+    soft_record = by_name["GSE6005_family.soft"]
+    xlsx_record = by_name["GSE236866_Processed_data_tau_with_inhibitors.xlsx"]
+
+    assert soft_record["recognized_type"] == "geo_soft_container"
+    assert soft_record["expression_table_presence"] is False
+    assert "raw_count_matrix" not in soft_record["recognized_roles"]  # type: ignore[operator]
+    assert "normalized_expression_matrix" not in soft_record["recognized_roles"]  # type: ignore[operator]
+    assert "differential_result_table" not in soft_record["recognized_roles"]  # type: ignore[operator]
+    assert xlsx_record["recognized_type"] == "raw_count_matrix"
+    assert "parser_depth" not in xlsx_record
+    assert "sample_count" not in xlsx_record
 
 
 def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
