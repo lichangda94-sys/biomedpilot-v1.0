@@ -25,6 +25,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
 
     assert result.mode == "local-python-launcher"
     assert result.app_version == "0.1.0-internal-beta"
+    assert result.code_signed is (sys.platform == "darwin")
     assert result.app_path.exists()
     assert result.launcher_path.exists()
     assert result.build_info_path.exists()
@@ -54,6 +55,8 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert info["CFBundleName"] == "BioMedPilotTest"
     assert info["CFBundleDisplayName"] == "BioMedPilotTest"
     assert info["BioMedPilotVersion"] == "0.1.0-internal-beta"
+    if sys.platform == "darwin":
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
 
 
 def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:

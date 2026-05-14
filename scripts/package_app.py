@@ -55,6 +55,7 @@ class PackagingResult:
     python_executable: str
     app_version: str
     git_head: str
+    code_signed: bool
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
@@ -91,6 +92,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _write_build_info(build_info_path, repo_root=repo_root, app_name=options.app_name, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
+    code_signed = _ad_hoc_codesign(app_path)
 
     return PackagingResult(
         app_path=app_path,
@@ -101,6 +103,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         python_executable=options.python_executable,
         app_version=APP_VERSION,
         git_head=git_head,
+        code_signed=code_signed,
     )
 
 
@@ -131,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"mode={result.mode}")
     print(f"python={result.python_executable}")
     print(f"build_info={result.build_info_path}")
+    print(f"code_signed={str(result.code_signed).lower()}")
     print("standalone=false")
     print("network_downloads=false")
 
@@ -235,6 +239,15 @@ exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _ad_hoc_codesign(app_path: Path) -> bool:
+    if sys.platform != "darwin":
+        return False
+    if shutil.which("codesign") is None:
+        return False
+    subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app_path)], check=True)
+    return True
 
 
 def _git_head(repo_root: Path) -> str:

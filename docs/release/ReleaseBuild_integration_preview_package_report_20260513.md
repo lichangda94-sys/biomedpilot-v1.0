@@ -18,6 +18,7 @@ No MainLine source was modified. No module branch was merged. No remote push was
 | Integration readiness report | `docs/integration/Integration_package_readiness_audit_rerun_20260513.md` |
 | ReleaseBuild executor base commit | `d2bc191` |
 | Packaging mode | `local-python-launcher` |
+| Code signing | ad-hoc signed after packaging |
 | Network downloads | not used |
 | Packaging command path | ReleaseBuild packaging executor, with Integration worktree as package `repo_root` |
 
@@ -84,6 +85,14 @@ pyside6_available=True
 | `BioMedPilotGitHead` | `7dd4256` |
 
 ReleaseBuild metadata logic was tightened so `CFBundleDisplayName` also follows the requested app name. The generated Integration Preview bundle was corrected in place; no other app bundle was modified.
+
+The generated bundle was ad-hoc signed after packaging and verified with:
+
+```text
+codesign --verify --deep --strict --verbose=2 dist/BioMedPilot Integration Preview.app
+```
+
+Verification result: valid on disk and satisfies its designated requirement.
 
 ## Overwrite confirmation
 
