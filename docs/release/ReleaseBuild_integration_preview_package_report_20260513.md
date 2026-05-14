@@ -18,7 +18,7 @@ No MainLine source was modified. No module branch was merged. No remote push was
 | Integration readiness report | `docs/integration/Integration_package_readiness_audit_rerun_20260513.md` |
 | ReleaseBuild executor base commit | `d2bc191` |
 | Packaging mode | `local-python-launcher` |
-| Code signing | ad-hoc signed after packaging |
+| Code signing | ad-hoc signed after packaging; re-signed after launch fixes |
 | Network downloads | not used |
 | Packaging command path | ReleaseBuild packaging executor, with Integration worktree as package `repo_root` |
 
@@ -71,6 +71,15 @@ labtools_features=4
 pyside6_available=True
 ```
 
+Post-build launch regression check after user-reported Finder launch failure:
+
+- `codesign --verify --deep --strict --verbose=2 dist/BioMedPilot Integration Preview.app`: passed
+- `dist/BioMedPilot Integration Preview.app/Contents/MacOS/BioMedPilotIntegrationPreview --smoke-test`: passed
+- `dist/BioMedPilot Integration Preview.app/Contents/MacOS/BioMedPilotIntegrationPreview -psn_0_12345 --smoke-test`: passed
+- `open -W -n dist/BioMedPilot Integration Preview.app`: stayed running after 6 seconds; test process was then terminated
+
+Root cause found during the launch re-check: Finder/LaunchServices started the framework Python as `x86_64`, while the installed Pillow `_imaging` extension was `arm64`. LabTools image-analysis imports then fell back to a non-`QWidget` placeholder class and `MainWindow` exited during startup. The launcher now forces `arch -arm64` on Apple Silicon when that slice is available, filters LaunchServices `-psn_*` arguments, and uses a space-free executable file name while preserving the visible app name.
+
 ## Metadata verification
 
 | Field | Value |
@@ -81,10 +90,11 @@ pyside6_available=True
 | `BUILD_INFO.launch_mode` | `packaged-local-python` |
 | `CFBundleName` | `BioMedPilot Integration Preview` |
 | `CFBundleDisplayName` | `BioMedPilot Integration Preview` |
-| `CFBundleExecutable` | `BioMedPilot Integration Preview` |
+| `CFBundleExecutable` | `BioMedPilotIntegrationPreview` |
+| `CFBundleIdentifier` | `local.biomedpilot.integration-preview` |
 | `BioMedPilotGitHead` | `7dd4256` |
 
-ReleaseBuild metadata logic was tightened so `CFBundleDisplayName` also follows the requested app name. The generated Integration Preview bundle was corrected in place; no other app bundle was modified.
+ReleaseBuild metadata logic was tightened so `CFBundleDisplayName` follows the requested app name, while `CFBundleExecutable` uses the space-free launcher name `BioMedPilotIntegrationPreview`. The generated Integration Preview bundle was corrected in place; no other app bundle was modified.
 
 The generated bundle was ad-hoc signed after packaging and verified with:
 

@@ -54,6 +54,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert info["CFBundleExecutable"] == "BioMedPilotTest"
     assert info["CFBundleName"] == "BioMedPilotTest"
     assert info["CFBundleDisplayName"] == "BioMedPilotTest"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.biomedpilottest"
     assert info["BioMedPilotVersion"] == "0.1.0-internal-beta"
     if sys.platform == "darwin":
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
@@ -81,3 +82,48 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
+
+
+def test_packaged_launcher_ignores_launchservices_process_serial_number(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilotLaunchServices",
+            python_executable=sys.executable,
+        )
+    )
+    env = os.environ.copy()
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    completed = subprocess.run(
+        [str(result.launcher_path), "-psn_0_12345", "--smoke-test"],
+        env=env,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    assert "launch_mode=packaged-local-python" in completed.stdout
+
+
+def test_package_app_keeps_display_name_separate_from_executable_name(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilot Integration Preview",
+            python_executable=sys.executable,
+        )
+    )
+
+    assert result.launcher_path.name == "BioMedPilotIntegrationPreview"
+    assert result.launcher_path.exists()
+    launcher_text = result.launcher_path.read_text(encoding="utf-8")
+    assert "PYTHON_ARCH=\"arm64\"" in launcher_text
+    assert "exec arch -arm64 \"$PYTHON_BIN\" -m app.main \"$@\"" in launcher_text
+
+    with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
+        info = plistlib.load(handle)
+    assert info["CFBundleExecutable"] == "BioMedPilotIntegrationPreview"
+    assert info["CFBundleName"] == "BioMedPilot Integration Preview"
+    assert info["CFBundleDisplayName"] == "BioMedPilot Integration Preview"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.integration-preview"

@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -67,7 +68,8 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     macos_dir = contents_dir / "MacOS"
     resources_dir = contents_dir / "Resources"
     resource_root = resources_dir / "app"
-    launcher_path = macos_dir / options.app_name
+    executable_name = _executable_name(options.app_name)
+    launcher_path = macos_dir / executable_name
 
     if app_path.exists() and options.clean:
         shutil.rmtree(app_path)
@@ -90,7 +92,12 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     git_head = _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
     _write_build_info(build_info_path, repo_root=repo_root, app_name=options.app_name, git_head=git_head)
-    _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
+    _write_info_plist(
+        contents_dir / "Info.plist",
+        app_name=options.app_name,
+        executable_name=executable_name,
+        git_head=git_head,
+    )
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
     code_signed = _ad_hoc_codesign(app_path)
 
@@ -198,15 +205,15 @@ def _write_build_info(path: Path, *, repo_root: Path, app_name: str, git_head: s
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
+def _write_info_plist(path: Path, *, app_name: str, executable_name: str, git_head: str) -> None:
     payload = {
         "CFBundleName": app_name,
         "CFBundleDisplayName": app_name,
-        "CFBundleIdentifier": "local.biomedpilot.desktop",
+        "CFBundleIdentifier": _bundle_identifier(app_name),
         "CFBundleVersion": APP_BUNDLE_VERSION,
         "CFBundleShortVersionString": APP_BUNDLE_VERSION,
         "CFBundlePackageType": "APPL",
-        "CFBundleExecutable": app_name,
+        "CFBundleExecutable": executable_name,
         "LSMinimumSystemVersion": "12.0",
         "NSHighResolutionCapable": True,
         "BioMedPilotVersion": APP_VERSION,
@@ -234,7 +241,28 @@ if [ -z "$PYTHON_BIN" ]; then
   exit 127
 fi
 
+PYTHON_ARCH=""
+if command -v arch >/dev/null 2>&1; then
+  if [ "$(sysctl -in hw.optional.arm64 2>/dev/null || echo 0)" = "1" ]; then
+    if arch -arm64 "$PYTHON_BIN" -c "import sys" >/dev/null 2>&1; then
+      PYTHON_ARCH="arm64"
+    fi
+  fi
+fi
+
+# Finder/LaunchServices may pass a process serial number argument that the
+# Python CLI parser should never see.
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -psn_*) shift ;;
+    *) break ;;
+  esac
+done
+
 cd "$RESOURCE_ROOT"
+if [ "$PYTHON_ARCH" = "arm64" ]; then
+  exec arch -arm64 "$PYTHON_BIN" -m app.main "$@"
+fi
 exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
@@ -248,6 +276,23 @@ def _ad_hoc_codesign(app_path: Path) -> bool:
         return False
     subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app_path)], check=True)
     return True
+
+
+def _executable_name(app_name: str) -> str:
+    if app_name == DEFAULT_APP_NAME:
+        return DEFAULT_APP_NAME
+    executable_name = re.sub(r"[^A-Za-z0-9]+", "", app_name)
+    return executable_name or DEFAULT_APP_NAME
+
+
+def _bundle_identifier(app_name: str) -> str:
+    if app_name == DEFAULT_APP_NAME:
+        return "local.biomedpilot.desktop"
+    raw = app_name.strip().lower()
+    if raw.startswith("biomedpilot "):
+        raw = raw[len("biomedpilot ") :]
+    slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
+    return f"local.biomedpilot.{slug or 'desktop'}"
 
 
 def _git_head(repo_root: Path) -> str:
