@@ -43,6 +43,7 @@ class PackagingOptions:
     output_dir: Path
     app_name: str = DEFAULT_APP_NAME
     python_executable: str = sys.executable
+    package_git_head: str | None = None
     clean: bool = True
 
 
@@ -89,7 +90,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
 
     _copy_package_resources(repo_root, resource_root)
     _create_project_storage(resource_root / "project_storage")
-    git_head = _git_head(repo_root) or "unknown"
+    git_head = options.package_git_head or _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
     _write_build_info(build_info_path, repo_root=repo_root, app_name=options.app_name, git_head=git_head)
     _write_info_plist(
@@ -119,6 +120,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", default="dist", help="Directory where the .app bundle will be written.")
     parser.add_argument("--app-name", default=DEFAULT_APP_NAME, help="Application bundle name.")
     parser.add_argument("--python", default=sys.executable, help="Python executable used by the launcher.")
+    parser.add_argument(
+        "--package-git-head",
+        help="Source git commit to record in package metadata when packaging from a scoped source snapshot.",
+    )
     parser.add_argument("--no-clean", action="store_true", help="Do not remove an existing bundle before rebuilding.")
     parser.add_argument("--smoke-test", action="store_true", help="Run the generated app launcher with --smoke-test after packaging.")
     return parser.parse_args(argv)
@@ -132,6 +137,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=REPO_ROOT / args.output_dir,
             app_name=args.app_name,
             python_executable=args.python,
+            package_git_head=args.package_git_head,
             clean=not args.no_clean,
         )
     )
@@ -231,6 +237,7 @@ APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
+export PYTHONDONTWRITEBYTECODE="1"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
@@ -274,15 +281,12 @@ def _ad_hoc_codesign(app_path: Path) -> bool:
         return False
     if shutil.which("codesign") is None:
         return False
-    subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app_path)], check=True)
+    subprocess.run(["codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", str(app_path)], check=True)
     return True
 
 
 def _executable_name(app_name: str) -> str:
-    if app_name == DEFAULT_APP_NAME:
-        return DEFAULT_APP_NAME
-    executable_name = re.sub(r"[^A-Za-z0-9]+", "", app_name)
-    return executable_name or DEFAULT_APP_NAME
+    return DEFAULT_APP_NAME
 
 
 def _bundle_identifier(app_name: str) -> str:

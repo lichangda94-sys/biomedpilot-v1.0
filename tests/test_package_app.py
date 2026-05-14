@@ -51,7 +51,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
 
     with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
-    assert info["CFBundleExecutable"] == "BioMedPilotTest"
+    assert info["CFBundleExecutable"] == "BioMedPilot"
     assert info["CFBundleName"] == "BioMedPilotTest"
     assert info["CFBundleDisplayName"] == "BioMedPilotTest"
     assert info["CFBundleIdentifier"] == "local.biomedpilot.biomedpilottest"
@@ -115,15 +115,36 @@ def test_package_app_keeps_display_name_separate_from_executable_name(tmp_path) 
         )
     )
 
-    assert result.launcher_path.name == "BioMedPilotIntegrationPreview"
+    assert result.launcher_path.name == "BioMedPilot"
     assert result.launcher_path.exists()
     launcher_text = result.launcher_path.read_text(encoding="utf-8")
+    assert "export PYTHONDONTWRITEBYTECODE=\"1\"" in launcher_text
     assert "PYTHON_ARCH=\"arm64\"" in launcher_text
     assert "exec arch -arm64 \"$PYTHON_BIN\" -m app.main \"$@\"" in launcher_text
 
     with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
-    assert info["CFBundleExecutable"] == "BioMedPilotIntegrationPreview"
+    assert info["CFBundleExecutable"] == "BioMedPilot"
     assert info["CFBundleName"] == "BioMedPilot Integration Preview"
     assert info["CFBundleDisplayName"] == "BioMedPilot Integration Preview"
     assert info["CFBundleIdentifier"] == "local.biomedpilot.integration-preview"
+
+
+def test_package_app_can_record_source_git_head(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilot MainLine Preview",
+            python_executable=sys.executable,
+            package_git_head="83749d1",
+        )
+    )
+
+    build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
+    assert result.git_head == "83749d1"
+    assert build_info["git_head"] == "83749d1"
+
+    with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
+        info = plistlib.load(handle)
+    assert info["BioMedPilotGitHead"] == "83749d1"
