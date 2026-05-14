@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Tool Logic Retrospective Audit，commit 以当前 git log 为准
+- 当前最近完成阶段：LabTools Tool Logic Audit 1，commit 以当前 git log 为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -40,7 +40,7 @@
 | LabTools Stage L6E | 当前 git log | 审计并校准 LabTools 用户可见状态语义：已实现功能显示为本地辅助/草稿/manual-review MVP，placeholder 功能继续显示占位或未开放；不新增功能。 |
 | LabTools Stage L7A | 当前 git log | 优化实验计算器结果复制体验：三个 v1 计算器提供 copyable formatter，UI 每个结果区新增“复制结果”按钮；不新增公式、导出、自动保存或历史记录。 |
 | LabTools Stage L7B | 当前 git log | 优化 recipe draft/template 安全边界和导入冲突提示：新增用户可见 safety category，强化 SOP/SDS/pH/储存/有效期/危险性核对提示，确认冲突导入不覆盖。 |
-| LabTools Tool Logic Retrospective Audit | 当前 git log | 暂停新增功能，回顾当前 LabTools 工具使用逻辑、结果语义、写盘/网络/AI 边界和测试基线；新增 `docs/labtools_tool_logic_audit.md` 和阶段报告，不新增工具、算法或 UI 功能。 |
+| LabTools Tool Logic Audit 1 | 当前 git log | 暂停新增功能，为当前 calculators、manual ROI image assistance、ROI export、recipe draft、experiment record draft 和 planned placeholders 建立 Tool Logic Cards；新增审计文档和文档覆盖测试，不新增工具、算法、公式、schema、导出格式或 UI 功能。 |
 
 ## 3. 当前已实现功能
 
@@ -70,7 +70,7 @@
   - 计算器 UI 每个结果区有“复制结果”按钮；无有效结果或 invalid 输入时禁用，成功计算后启用。
   - 点击复制只写系统 clipboard，不写文件、不保存历史、不生成 JSON/CSV/manifest。
 - L6D 新增 `docs/labtools_schema_index.md`，统一记录 LabTools 当前 schema / JSON-compatible 结构、用途、字段、用户语义、公开分享风险、本地路径风险和 draft / auxiliary / local persistence 边界。
-- Tool Logic Retrospective Audit 新增 `docs/labtools_tool_logic_audit.md`，统一回顾计算器、配方、来源草稿、图像 manual ROI、ROI export 和实验模板的使用逻辑与结果语义；不新增公式、schema 或导出格式。
+- Tool Logic Audit 1 新增 `docs/labtools_tool_logic_audit.md`，为 dilution、mass/molarity、cell seeding、qPCR、WB loading、fluorescence manual ROI、wound manual ROI、ROI export、recipe draft、experiment record draft 和 planned placeholder 工具建立 Tool Logic Cards；不新增公式、schema 或导出格式。
 
 ### 3.2 本地试剂与配方库
 
@@ -281,15 +281,15 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 Tool Logic Retrospective Audit 结果：159 passed
+  - 当前 Tool Logic Audit 1 结果：163 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 Tool Logic Retrospective Audit 结果：169 passed
+  - 当前 Tool Logic Audit 1 结果：169 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 Tool Logic Retrospective Audit 结果：18 passed
+  - 当前 Tool Logic Audit 1 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 Tool Logic Retrospective Audit 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 Tool Logic Audit 1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 Tool Logic Retrospective Audit 结果：通过
+  - 当前 Tool Logic Audit 1 结果：通过
 - `git diff --check`
   - 当前 L7B 结果：通过
   - 当前 L6D 结果：通过
@@ -376,6 +376,39 @@
 - L6D 确认现有写盘路径仍保持用户触发、无自动保存、无 silent overwrite、失败可见、schema version 存在和 draft/manual-review/auxiliary 语义。
 
 后续如需保存用户实验数据，必须先设计本地项目存储策略、用户选择位置、隐私边界、审计字段和迁移/清理规则。
+
+## 10.1 Tool Logic Audit 1 结论
+
+当前结论：后续涉及结果生成、实验解释、图像自动分析、正式记录或报告形态的工具，必须先讨论使用逻辑并补 Tool Logic Card，再进入开发。
+
+现有需要用户确认的工具：
+
+- dilution / mass-molarity / cell seeding calculators。
+- qPCR mix calculator。
+- WB loading calculator。
+- fluorescence manual ROI。
+- wound / scratch manual ROI + threshold。
+- ROI export result summary。
+- recipe draft fields、safety category 和 import/export 语义。
+- experiment template draft fields 和 experiment record draft JSON persistence 语义。
+
+未来开发前必须先做 Tool Logic Card 的工具：
+
+- absorbance / OD calculation。
+- protein concentration / BCA / Bradford / NanoDrop。
+- wound healing full workflow。
+- Transwell assay。
+- WB / gel grayscale。
+- cell counting。
+- qPCR Delta Delta Ct。
+- ELISA standard curve。
+- automatic ROI。
+- AI interpretation。
+- formal report-ready result。
+- full ELN。
+- batch image processing。
+
+Tool Logic Audit 1 未新增算法、未新增功能、未新增 schema、未新增 persistence、未新增导出格式、未修改 Bioinformatics / Meta / ReleaseBuild / MainLine / dist / desktop app。
 
 ## 11. 跨模块边界
 
