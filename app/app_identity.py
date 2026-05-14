@@ -18,6 +18,7 @@ APP_ICON_PNG_PATH = APP_ICON_DIR / "biomedpilot_app_icon.png"
 APP_ICON_ICNS_PATH = APP_ICON_DIR / "biomedpilot_app_icon.icns"
 BIOINFORMATICS_MODULE_ICON_PATH = MODULE_ICON_DIR / "bioinformatics_module_icon.png"
 META_ANALYSIS_MODULE_ICON_PATH = MODULE_ICON_DIR / "meta_analysis_module_icon.png"
+LABTOOLS_MODULE_ICON_PATH = MODULE_ICON_DIR / "labtools_module_icon.png"
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
     "brand": UI01_LOGIN_ICON_DIR / "brand.png",
@@ -87,6 +88,7 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("app.main", "主 App 图标", "应用入口", APP_ICON_PNG_PATH, ("QApplication", "MainWindow", "macOS app/window icon")),
     IconAssetSlot("module.bioinformatics", "生信分析模块图标", "模块入口", BIOINFORMATICS_MODULE_ICON_PATH, ("UI-02 模块选择首页",)),
     IconAssetSlot("module.meta_analysis", "Meta 分析模块图标", "模块入口", META_ANALYSIS_MODULE_ICON_PATH, ("UI-02 模块选择首页",)),
+    IconAssetSlot("module.labtools", "实验工具模块图标", "模块入口", LABTOOLS_MODULE_ICON_PATH, ("UI-02 模块选择首页",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -145,6 +147,7 @@ def load_module_icon(module_key: str) -> QIcon:
     path = {
         "bioinformatics": BIOINFORMATICS_MODULE_ICON_PATH,
         "meta_analysis": META_ANALYSIS_MODULE_ICON_PATH,
+        "labtools": LABTOOLS_MODULE_ICON_PATH,
     }.get(module_key)
     if path is None or not path.exists():
         return QIcon()
