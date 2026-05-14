@@ -25,3 +25,24 @@ environment testing.
 - Settings reserves cross-module configuration fields.
 - Environment checks Python, PySide6, R, and storage paths.
 
+## Local Tools and Models
+
+BioMedPilot local tools and local models follow the principle:
+`架构上统一，体验上按需`.
+
+- Shared backend management may later live under `app/shared/local_engines/`,
+  but the main screen must not expose a large "External Engines" center.
+- Features detect their own required local dependency when entered or triggered.
+  Missing dependencies should show contextual setup, not a required first-use
+  configuration step.
+- Settings may contain an advanced `设置 > 本地工具与模型` page for manual
+  configuration, diagnostics, and troubleshooting.
+- ImageJ/Fiji is the preferred local image-analysis backend for future
+  ImageJ-assisted/manual-review image workflows.
+- Ollama/local LLM is a local environment capability. It must not consume cloud
+  AI credits and must not be gated by membership/payment entitlement.
+- Cloud AI is separate and may later use account login, membership, AI credits,
+  platform API, user API keys, and usage/cost records.
+- LabTools, Bioinformatics, and Meta must not each implement separate local
+  tool/model configuration stacks; they should consume shared status/config
+  concepts when those are implemented.
