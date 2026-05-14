@@ -122,7 +122,11 @@ def test_module_placeholder_pages_keep_logic_confirmation_boundary(qapp) -> None
         assert title in text
         assert "待确认使用逻辑" in text
         assert "暂未开放" in text
-        assert "不新增算法、公式、图像处理、schema 或导出格式" in text
+        if key == "western_blot":
+            assert "基于用户录入的试剂盒/实验室模板进行批量换算" in text
+            assert "不进行自动配方推荐" in text
+        else:
+            assert "不新增算法、公式、图像处理、schema 或导出格式" in text
 
 
 def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:

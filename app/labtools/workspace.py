@@ -41,6 +41,7 @@ try:
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -357,7 +358,7 @@ if QWidget is not None:
                     "活率、Transwell、增殖率、台盼蓝、Alamar Blue 均待确认使用逻辑。",
                 ),
             )
-            self._western_blot_page = LabToolsWesternBlotScaffoldPage()
+            self._western_blot_page = LabToolsWesternBlotWidget()
             self._pcr_qpcr_page = LabToolsModulePlaceholderPage(
                 "PCR / qPCR",
                 "用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析。",

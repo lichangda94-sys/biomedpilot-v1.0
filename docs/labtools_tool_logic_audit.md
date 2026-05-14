@@ -29,7 +29,7 @@ Architecture conclusion:
 - Experiment-specific calculations should not remain permanently grouped under 通用计算器.
 - cell seeding and wound manual ROI are future 细胞实验 module candidates.
 - qPCR mix is a future PCR / qPCR module candidate.
-- WB loading and SDS-PAGE are future Western Blot module candidates.
+- WB loading is a Western Blot module candidate; SDS-PAGE gel template batch calculation is now implemented as a user-entered template tool.
 - recipe draft and experiment record draft belong under 试剂与实验记录.
 - fluorescence manual ROI remains a temporary image-assistance capability until ownership is confirmed.
 - absorbance / OD, protein concentration, wound healing full workflow, Transwell, WB / gel grayscale, cell counting, qPCR Delta Delta Ct, ELISA standard curve, automatic ROI, AI interpretation, formal report-ready output, full ELN, and batch image processing still require a Tool Logic Card before development.
@@ -49,12 +49,22 @@ All sections remain `待确认使用逻辑 / 规划中 / 暂未开放`.
 Scope conclusion:
 
 - The scaffold adds no WB grayscale analysis.
-- The scaffold adds no SDS-PAGE gel calculation logic.
+- SDS-PAGE gel template batch calculation is now implemented separately as a user-entered template tool.
 - The scaffold adds no automatic recipe recommendation.
 - The scaffold adds no gel concentration inference.
 - The scaffold adds no SOP workflow, database, autosave, persistence schema, export format, or result interpretation.
 - The 上样与胶 section may show two planned child entries only: 蛋白上样体系计算 and SDS-PAGE 配胶模板与批量配制.
 - The 结果与灰度分析 section remains blocked until WB/gel grayscale, band ROI, background subtraction, target/loading control ratio, and result export logic are reviewed in a Tool Logic Card.
+
+## SDS-PAGE Gel Template Tool 1 Update
+
+SDS-PAGE 配胶模板与批量配制 is implemented with a narrow confirmed scope:
+
+- It calculates batch totals only from a user-entered kit / lab template.
+- It stores and imports a single template JSON using `labtools_sds_page_gel_template_store.v1`.
+- It exports the current calculation result to `.xlsx` with `Summary`, `分离胶`, and `浓缩胶` sheets.
+- It does not include a universal recipe, concentration recommendation, gel concentration inference, preparation step generation, protein concentration analysis, or WB grayscale analysis.
+- Result meaning: experiment-assistance calculation draft requiring kit / lab SOP review.
 
 ## Current Tool Inventory
 
@@ -67,6 +77,7 @@ Scope conclusion:
 | `calculator.cell_seeding_v1` | Cell seeding calculator | experiment_calculator | implemented | yes | no | medium |
 | `calculator.qpcr_mix_v1` | qPCR mix calculator | experiment_calculator | implemented | yes | no | medium |
 | `calculator.wb_loading_v1` | WB loading calculator | experiment_calculator | implemented | yes | no | medium |
+| `western_blot.sds_page_gel_template_v1` | SDS-PAGE gel template batch calculator | western_blot_template_calculator | implemented | yes | yes | medium |
 | `image.fluorescence_manual_roi_v1` | Fluorescence manual ROI | image_assistance | implemented | yes | no | medium |
 | `image.wound_manual_roi_threshold_v1` | Wound / scratch manual ROI + threshold | image_assistance | implemented | yes | no | medium |
 | `image.roi_export_package_v1` | ROI export package | image_export | implemented | yes | yes | medium |
@@ -92,6 +103,7 @@ Scope conclusion:
 | `calculator.cell_seeding_v1` | partial | yes | no | Confirm seeding assumptions, overage semantics, and invalid cases. |
 | `calculator.qpcr_mix_v1` | partial | yes | no | Confirm qPCR mix assumptions before any Delta Delta Ct or plate logic. |
 | `calculator.wb_loading_v1` | partial | yes | no | Confirm loading buffer assumptions before any WB image workflow. |
+| `western_blot.sds_page_gel_template_v1` | yes | no | no | Keep as user-entered template batch calculator; discuss before adding recommendations or built-in recipes. |
 | `image.fluorescence_manual_roi_v1` | partial | yes | no | Confirm metrics, background correction meaning, and result summary. |
 | `image.wound_manual_roi_threshold_v1` | partial | yes | no | Confirm wound metric semantics before full wound-healing workflow. |
 | `image.roi_export_package_v1` | partial | yes | no | Confirm manifest summary fields and shareability boundaries. |
@@ -114,6 +126,7 @@ Each row is a compact audit record. Detailed Tool Logic Cards below expand the s
 | `calculator.cell_seeding_v1` | Cell seeding calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_experiment_calculator_center.py`; `test_cell_seeding_calculator.py` | yes | no | cell concentration; target cells; wells; volume; overage | enter values; calculate; optionally copy | suspension volume; medium volume; total cells | seeding volume planning aid | manual review | invalid numbers; suspension exceeds final volume | partial | medium | yes | no | confirm overage and viability language |
 | `calculator.qpcr_mix_v1` | qPCR mix calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_l5c_qpcr_wb_calculators.py`; `test_qpcr_mix_calculator.py` | yes | no | reactions; reaction volume; mix; primers; template; overage | enter mix setup; calculate | per reaction and total component volumes | qPCR mix setup aid | manual review | component volume exceeds reaction; invalid percent | partial | medium | yes | no | confirm qPCR assumptions |
 | `calculator.wb_loading_v1` | WB loading calculator | experiment_calculator | implemented | `experiment_calculator_center.py`; `calculator_widgets.py` | `test_l5c_qpcr_wb_calculators.py` | yes | no | protein concentration; target mass; final volume; buffer multiple | enter loading setup; calculate | sample; buffer; water volumes | WB loading volume aid only | manual review | sample + buffer exceeds final volume | partial | medium | yes | no | confirm loading assumptions |
+| `western_blot.sds_page_gel_template_v1` | SDS-PAGE gel template batch calculator | western_blot_template_calculator | implemented | `sds_page_gel_templates.py`; `western_blot_widgets.py`; `labtools_schema_index.md` | `test_sds_page_gel_templates.py`; `test_labtools_sds_page_gel_tool_ui.py` | yes | yes | user template; resolving / stacking sections; components; gel count; overage | enter or import template; calculate; optional JSON/XLSX export | per-section total amounts; template JSON; calculation XLSX | user-template batch conversion draft | kit / lab SOP review | invalid JSON; conflicts; unsupported unit; invalid gel count; write failure | yes | medium | no | no | keep as user-entered template only |
 | `image.fluorescence_manual_roi_v1` | Fluorescence manual ROI | image_assistance | implemented | `fluorescence_analyzer.py`; `fluorescence_models.py`; `image_analysis_widgets.py` | `test_fluorescence_analyzer.py`; `test_fluorescence_export.py`; `test_fluorescence_report.py` | yes | no | image path; signal ROI; background ROI | select image; enter manual ROI; run | grayscale metrics; warnings; previews | manual ROI measurement assistance | manual review | unreadable image; ROI out of bounds; negative CTF warning | partial | medium | yes | no | confirm metrics and background correction |
 | `image.wound_manual_roi_threshold_v1` | Wound / scratch manual ROI + threshold | image_assistance | implemented | `wound_analyzer.py`; `wound_models.py`; `image_analysis_widgets.py` | `test_wound_analyzer.py`; `test_wound_export.py`; `test_wound_report.py` | yes | no | image path; ROI; threshold; mode | select image; enter manual ROI and threshold; run | area pixels and fractions | threshold-based area estimation | manual review | unreadable image; ROI out of bounds; invalid threshold | partial | medium | yes | no | confirm metric meanings |
 | `image.roi_export_package_v1` | ROI export package | image_export | implemented | `export_package.py`; `image_analysis_widgets.py` | `test_roi_export_package_schema.py`; `test_labtools_image_export_ui.py` | yes | yes | current ROI result; output directory | run analysis; choose export directory | JSON; CSV; Markdown; overlay PNG | local manual-review package | manual review | no result; cancel; write failure; source unreadable | partial | medium | yes | no | confirm result summary and path policy |
@@ -582,6 +595,81 @@ Risk:
 Recommended next step:
 
 - Confirm loading assumptions; require future card before any WB / gel grayscale feature.
+
+## Tool Logic Card: SDS-PAGE gel template batch calculator
+
+Current implementation:
+
+- tool_id: `western_blot.sds_page_gel_template_v1`
+- tool_name: SDS-PAGE gel template batch calculator
+- tool_category: western_blot_template_calculator
+- current_status: implemented
+- implemented_files: `app/labtools/western_blot/sds_page_gel_templates.py`, `app/labtools/ui/western_blot_widgets.py`, `docs/labtools_schema_index.md`
+- test_files: `tests/labtools/test_sds_page_gel_templates.py`, `tests/ui/test_labtools_sds_page_gel_tool_ui.py`
+- does_generate_result: yes
+- does_write_to_disk: yes, only after user-selected JSON or XLSX path
+
+User workflow:
+
+- User enters a template from a kit or lab template.
+- User fills resolving gel and stacking gel sections; either section can be marked `0 / 不使用`.
+- User enters gel count and optional overage percent.
+- UI calculates batch totals and can export a single template JSON or current calculation XLSX.
+- Imported JSON is schema-checked; conflicts are skipped or imported as a copy.
+
+Inputs:
+
+- Template name, version, gel concentration, gel thickness, well count, format/note, and source.
+- Resolving gel and stacking gel component name, amount per gel, unit, and note.
+- Gel count.
+- Overage percent, default 3%.
+
+Outputs:
+
+- Total amount with overage per component.
+- Template JSON with `labtools_sds_page_gel_template_store.v1`.
+- Current calculation `.xlsx` with `Summary`, `分离胶`, and `浓缩胶` sheets.
+
+Result meaning:
+
+- User-template batch conversion draft.
+- It does not define a universal correct formula, recommend concentration, infer gel concentration, generate preparation steps, analyze protein concentration, or analyze WB grayscale.
+
+Review level:
+
+- Kit / lab SOP review required.
+
+Failure / invalid cases:
+
+- Empty template name.
+- Invalid gel count.
+- Negative overage.
+- No active gel section.
+- Empty component name.
+- Negative component amount.
+- Unsupported unit.
+- Invalid JSON.
+- Template ID or name conflict.
+- XLSX write failure or user-cancelled export.
+
+Current tests:
+
+- SDS-PAGE gel template service tests.
+- SDS-PAGE gel tool UI tests.
+
+Confirmed by user:
+
+- user_logic_confirmed: yes
+
+Risk:
+
+- risk_level: medium
+- needs_user_discussion: no for current user-template scope
+- needs_code整改: no
+
+Recommended next step:
+
+- Keep current tool limited to user-entered templates; require a new Tool Logic Card before built-in recipes, concentration recommendations, gel concentration inference, or WB grayscale analysis.
 
 ## Tool Logic Card: Fluorescence manual ROI
 

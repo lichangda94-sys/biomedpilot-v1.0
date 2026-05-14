@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Western Blot Module Scaffold 1，commit 以当前 git log 为准
+- 当前最近完成阶段：LabTools SDS-PAGE Gel Template Tool 1，commit 以当前 git log 为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -43,6 +43,7 @@
 | LabTools Tool Logic Audit 1 | 当前 git log | 暂停新增功能，为当前 calculators、manual ROI image assistance、ROI export、recipe draft、experiment record draft 和 planned placeholders 建立 Tool Logic Cards；新增审计文档和文档覆盖测试，不新增工具、算法、公式、schema、导出格式或 UI 功能。 |
 | LabTools Module Architecture Alignment 1 | 当前 git log | 将 LabTools 首页从四个工具集合入口调整为六个一级模块入口：通用计算器、试剂与实验记录、细胞实验、Western Blot、PCR / qPCR、ELISA / 吸光度与标准曲线；仅调整入口、占位语义、文档和测试，不新增算法、schema、persistence 或导出格式。 |
 | LabTools Western Blot Module Scaffold 1 | 当前 git log | 建立 Western Blot 模块占位框架，页面包含蛋白样品准备、蛋白浓度测定、上样与胶、电泳 / 转膜 / 抗体孵育流程、结果与灰度分析五个分区；仅新增模块分区、文案、文档和测试，不新增 SDS-PAGE 配胶计算、WB 灰度算法、自动配方推荐、胶浓度推导或持久化。 |
+| LabTools SDS-PAGE Gel Template Tool 1 | 当前 git log | 在 Western Blot 模块实现基于用户录入模板的 SDS-PAGE 配胶模板与批量换算工具；支持分离胶/浓缩胶 section、组分备注、默认 3% overage、模板 JSON 导入/导出、冲突跳过/副本导入和本次计算 XLSX 导出；不内置通用配方、不自动推荐胶浓度、不生成配置步骤或 WB 灰度分析。 |
 
 ## 3. 当前已实现功能
 
@@ -66,6 +67,18 @@
   - `QpcrMixInput` / `QpcrMixResult` / `calculate_qpcr_mix_v1()`：输出 qPCR 单反应用量、总用量和 overage 后总用量。
   - `WesternBlotLoadingInput` / `WesternBlotLoadingResult` / `calculate_western_blot_loading_v1()`：根据蛋白浓度、目标蛋白量、目标上样体积和 loading buffer 倍数估算样品、buffer 和水体积。
 - L5C WB/SDS-PAGE 仅为上样体积计算，不进行 WB/凝胶灰度、条带检测、归一化或图像解释。
+- SDS-PAGE Gel Template Tool 1 新增：
+  - `labtools_sds_page_gel_template_store.v1` 模板 JSON schema。
+  - 用户录入 SDS-PAGE 配胶模板，必须包含分离胶和浓缩胶 section；section 可标记为 `0 / 不使用`。
+  - 每个 section 支持用户填写组分名称、每块胶用量、单位和备注。
+  - 支持单位：`µL`、`mL`、`mg`、`g`。
+  - 胶厚度默认下拉：`0.75 mm`、`1.0 mm`、`1.5 mm`。
+  - 孔数默认下拉：`10 wells`、`12 wells`、`15 wells`。
+  - 批量换算公式：`total_amount = amount_per_gel × gel_count × (1 + overage_percent / 100)`，默认 overage 为 3%。
+  - 支持导出单个模板 JSON、导入模板 JSON，导入冲突只允许跳过或作为副本导入，不覆盖已有模板。
+  - 支持导出本次计算 `.xlsx`，包含 `Summary`、`分离胶`、`浓缩胶` 三个 sheet。
+  - UI 明确“基于用户录入的试剂盒/实验室模板进行批量换算”和“结果为实验辅助计算草稿，使用前请按试剂盒说明书和实验室 SOP 人工核对”。
+- SDS-PAGE Gel Template Tool 1 不内置通用配方、不自动推荐胶浓度、不自动推导胶浓度、不生成配置步骤、不做 WB 灰度分析、不做蛋白浓度分析。
 - L7A 新增结果复制体验：
   - `format_dilution_copy_text()`、`format_mass_molarity_copy_text()`、`format_cell_seeding_copy_text()` 生成用户可复制文本。
   - copyable text 包含工具名称、输入摘要、计算结果、单位和“实验辅助计算草稿，不替代实验 SOP”人工核对提示。
@@ -248,7 +261,8 @@
 - 未实现批量分析或批量导出。
 - 未实现自动划痕边界识别或全自动迁移效果判断。
 - 未实现细胞计数。
-- 未实现 WB / 凝胶灰度分析；L5C 只提供 WB/SDS-PAGE 上样体积计算。
+- 未实现 WB / 凝胶灰度分析；L5C 只提供 WB/SDS-PAGE 上样体积计算，SDS-PAGE Gel Template Tool 1 只提供用户录入模板的批量换算。
+- 未实现 SDS-PAGE 通用配方库、自动配方推荐、胶浓度自动推导或配置步骤生成。
 - 未实现 ImageJ/Fiji 接入。
 - 未实现 OpenCV / scikit-image / imageio / napari / cellpose / stardist 等依赖接入。
 - 未实现交互式 ROI 绘制器、在线 overlay 复核或图像预览器；L6A 仅生成用户确认导出的静态 ROI overlay PNG。
@@ -283,19 +297,19 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 Western Blot Module Scaffold 1 结果：163 passed
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：173 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 Western Blot Module Scaffold 1 结果：180 passed
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：186 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 Western Blot Module Scaffold 1 结果：18 passed
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 Western Blot Module Scaffold 1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=6`
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=6`
 - `python3 -m compileall app/labtools`
-  - 当前 Western Blot Module Scaffold 1 结果：通过
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：通过
 - `git diff --check`
-  - 当前 Western Blot Module Scaffold 1 结果：通过
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：通过
 - `git diff --cached --check`
-  - 当前 Western Blot Module Scaffold 1 结果：通过
+  - 当前 SDS-PAGE Gel Template Tool 1 结果：通过
 
 ## 7. Shell / UI 接入状态
 
@@ -304,7 +318,7 @@
   - 通用计算器：用于浓度、分子量、质量、体积、稀释、称量和后续 pH/酸碱度等通用试剂计算；现有 dilution、mass/molarity 和通用试剂计算归入此入口。
   - 试剂与实验记录：用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN；现有 recipe draft、recipe import/export、experiment template draft 和 experiment record draft JSON persistence 后续归入此模块。
   - 细胞实验：用于细胞接种、活率、Transwell、wound healing、增殖率、台盼蓝、Alamar Blue 等；当前为规划中 / 待确认使用逻辑 / 暂未开放，cell seeding 和 wound manual ROI 未来归入此模块。
-  - Western Blot：用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析；当前已有模块 scaffold 页面，五个分区均为待确认使用逻辑 / 规划中 / 暂未开放。
+  - Western Blot：用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析；当前已有模块页面，上样与胶区域包含 SDS-PAGE 配胶模板与批量换算工具。
   - PCR / qPCR：用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析；当前为规划中 / 待确认使用逻辑 / 暂未开放，qPCR mix 未来归入此模块。
   - ELISA / 吸光度与标准曲线：用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等；当前为规划中 / 待确认使用逻辑 / 暂未开放。
 - fluorescence manual ROI 暂时标记为图像辅助能力，后续归属待单独确认。
@@ -317,13 +331,13 @@
   - `pcr_qpcr`
   - `elisa_absorbance`
 - 本阶段只完成顶层入口结构、模块占位页、文案、文档和测试；未新增算法、未新增实验结果分析、未新增图像处理、未新增 schema、未新增 persistence。
-- Western Blot Module Scaffold 1 仅建立 Western Blot 分区页面：
+- Western Blot 模块页面包含：
   - 蛋白样品准备。
   - 蛋白浓度测定。
-  - 上样与胶，包含 planned 子入口“蛋白上样体系计算”和“SDS-PAGE 配胶模板与批量配制”。
+  - 上样与胶，包含 planned 子入口“蛋白上样体系计算”和已实现的“SDS-PAGE 配胶模板与批量配制”工具。
   - 电泳 / 转膜 / 抗体孵育流程。
   - 结果与灰度分析。
-- Western Blot scaffold 未新增 SDS-PAGE 配胶计算逻辑、WB 灰度分析、自动配方推荐、胶浓度自动推导、数据库或自动保存。
+- 未开放区域仍标记为待确认使用逻辑 / 规划中 / 暂未开放；SDS-PAGE 工具仅基于用户录入模板进行批量换算。
 - 普通用户界面应继续保持中文友好，不暴露 traceback、内部 schema、内部 id 或大量调试细节。
 - UI 必须继续使用 BioMedPilot 统一 UI token，不引入 LabTools 独立主题色。
 
@@ -370,6 +384,16 @@
   - L6B.1 显示导入冲突 summary；重复 `recipe_id` 会作为 imported copy 保存，不覆盖现有用户配方。
   - 保存/载入不会自动发生，不写数据库，不联网，不调用 AI。
   - 保存使用 no-overwrite 策略，避免 silent overwrite。
+- SDS-PAGE 配胶模板 JSON：
+  - schema 为 `labtools_sds_page_gel_template_store.v1`。
+  - 仅保存用户录入模板，不保存通用配方库或自动推荐内容。
+  - 保存只在用户选择 JSON 路径后发生；不自动保存、不进数据库、不云同步。
+  - 导入前校验 schema；同名或同 `template_id` 冲突时只允许跳过或作为副本导入，不覆盖已有模板。
+- SDS-PAGE 本次计算 XLSX：
+  - 只导出 `.xlsx`。
+  - 仅保存本次批量换算结果，不是模板 schema。
+  - workbook 包含 `Summary`、`分离胶`、`浓缩胶` 三个 sheet。
+  - 导出只在用户选择 XLSX 路径后发生。
 - 来源草稿：手动来源和摘录草稿在 UI / 模型层流转，确认后才进入用户配方 store。
 - 图片记录：引用本地路径并生成 `LabImageRecord`，不复制、不上传、不自动写盘。
 - 荧光结果导出：
@@ -452,6 +476,20 @@ Western Blot 模块页已建立五个占位分区：
 
 本阶段未新增 WB 灰度分析、未新增 SDS-PAGE 配胶计算逻辑、未新增自动配方推荐、未新增胶浓度自动推导、未新增 SOP、未新增数据库或自动保存。
 
+## 10.4 SDS-PAGE Gel Template Tool 1 结论
+
+SDS-PAGE 配胶模板与批量配制工具已实现，范围限定为用户录入模板的批量换算：
+
+- 模板包含 `template_id`、`template_name`、`template_version`、胶浓度、胶厚度、孔数、胶格式/备注、试剂盒或实验室模板来源、创建/更新时间、review status、safety note、分离胶 section 和浓缩胶 section。
+- 分离胶 / 浓缩胶 section 均支持 `0 / 不使用`；至少需要一个有效 section。
+- 每个组分包含名称、每块胶用量、单位和备注。
+- 支持单位：`µL`、`mL`、`mg`、`g`。
+- 默认 overage 为 3%，批量计算公式为 `total_amount = amount_per_gel × gel_count × (1 + overage_percent / 100)`。
+- JSON 导出用于模板备份/迁移/共享；JSON 导入会校验 schema，冲突只允许跳过或作为副本导入。
+- XLSX 导出只包含本次计算结果，sheet 为 `Summary`、`分离胶`、`浓缩胶`。
+
+本工具不内置通用配方、不自动推荐配方、不自动推导胶浓度、不生成配置步骤、不做 WB 灰度分析、不做蛋白浓度分析、不联网、不调用 AI、不自动保存。
+
 ## 11. 跨模块边界
 
 - Bioinformatics：不得修改业务逻辑，不得写入 Bioinformatics 项目结构，不得混入 LabTools 计算器、配方或图像分析任务。
@@ -476,9 +514,10 @@ Western Blot 模块页已建立五个占位分区：
 
 1. 为 Priority 1 现有结果语义工具补用户确认版 Tool Logic Cards：dilution / mass-molarity / cell seeding calculators、fluorescence manual ROI、wound manual ROI + threshold、ROI export summary。
 2. 为 recipe draft 和 experiment record draft 补字段、安全边界、非 ELN 语义确认。
-3. 为 Western Blot 的五个分区逐一补 Tool Logic Cards，优先确认蛋白上样体系计算、SDS-PAGE 配胶模板、蛋白浓度测定和 WB/gel grayscale 的输入输出边界。
-4. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
+3. 为 SDS-PAGE 配胶模板工具补更多 UI 导入预览交互 polish，但仍不做自动配方推荐或胶浓度推导。
+4. 为 Western Blot 后续工具继续补 Tool Logic Cards：蛋白上样体系计算、蛋白浓度测定和 WB/gel grayscale。
+5. 后续单独阶段再评估细胞计数、WB/凝胶灰度、ImageJ/Fiji、OpenCV/scikit-image、网络检索或 AI Gateway。
 
 ## 14. Handoff 结论
 
-LabTools 当前已经具备通用计算器、recipe / record draft、来源草稿框架、图像分析框架入口，以及两个边界清晰的真实图像 MVP：手动 ROI 荧光强度分析、手动 ROI + 阈值划痕面积估算。顶层入口现已调整为六个大模块，Western Blot 模块已有五个 scaffold 分区，但这仍只是入口结构和规划语义：SDS-PAGE 配胶计算、WB 灰度分析、胶浓度推导和自动配方推荐均未实现；细胞实验、PCR/qPCR、ELISA/吸光度等实验特异性工具后续必须先确认使用逻辑；细胞计数和 WB/凝胶灰度仍未实现；划痕结果不得自动解释迁移效果；外部来源尚未访问网络；AI Gateway 未调用；用户数据和结果导出默认不自动写盘。
+LabTools 当前已经具备通用计算器、recipe / record draft、来源草稿框架、图像分析框架入口、SDS-PAGE 用户模板批量换算工具，以及两个边界清晰的真实图像 MVP：手动 ROI 荧光强度分析、手动 ROI + 阈值划痕面积估算。顶层入口现已调整为六个大模块，Western Blot 模块已有五个分区；其中 SDS-PAGE 配胶模板工具只基于用户录入模板计算，不内置通用配方、不推导胶浓度、不推荐配方、不生成配置步骤。WB 灰度分析、蛋白浓度分析、细胞计数仍未实现；划痕结果不得自动解释迁移效果；外部来源尚未访问网络；AI Gateway 未调用；用户数据和结果导出默认不自动写盘。
