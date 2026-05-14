@@ -49,6 +49,8 @@ try:
     )
     from app.labtools.image_analysis.image_io import create_image_record
     from app.labtools.image_analysis.image_models import LabImageRecord
+    from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
+    from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -65,10 +67,11 @@ if QWidget is not None:
 
 
     class LabToolsImageAnalysisWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, *, imagej_bridge: ImageJFijiBridge | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsImageAnalysisWorkspace")
             self.setStyleSheet(self._stylesheet())
+            self._imagej_bridge = imagej_bridge
             self._image_records: list[LabImageRecord] = []
             self._tasks: list[ImageAnalysisTask] = []
             self._latest_export_kind = ""
@@ -94,6 +97,13 @@ if QWidget is not None:
             notice.setWordWrap(True)
             root.addWidget(title)
             root.addWidget(notice)
+            root.addWidget(
+                LabToolsImageJFijiStatusPanel(
+                    workflow_name="LabTools 图像分析 workflow",
+                    bridge=self._imagej_bridge,
+                    can_continue_without_engine=True,
+                )
+            )
             root.addWidget(self._build_import_card())
             root.addWidget(self._build_task_card_grid())
             root.addWidget(self._build_wound_healing_card())

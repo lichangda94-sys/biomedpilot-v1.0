@@ -61,6 +61,8 @@ try:
         save_sds_page_gel_calculation_xlsx,
         save_sds_page_gel_template_json,
     )
+    from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
+    from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -87,10 +89,11 @@ if QWidget is not None:
 
 
     class LabToolsWesternBlotWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, *, imagej_bridge: ImageJFijiBridge | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsWesternBlotWorkspace")
             self.setStyleSheet(self._stylesheet())
+            self._imagej_bridge = imagej_bridge
             self._template_store = SdsPageGelTemplateStore()
             self._current_template: SdsPageGelTemplate | None = None
             self._current_result: SdsPageGelCalculationResult | None = None
@@ -545,6 +548,14 @@ if QWidget is not None:
                 open_tool.clicked.connect(lambda: self._tabs.setCurrentIndex(1))
                 layout.addWidget(open_loading, alignment=Qt.AlignLeft)
                 layout.addWidget(open_tool, alignment=Qt.AlignLeft)
+            if title == "结果与灰度分析":
+                layout.addWidget(
+                    LabToolsImageJFijiStatusPanel(
+                        workflow_name="Western Blot 灰度分析 workflow",
+                        bridge=self._imagej_bridge,
+                        can_continue_without_engine=False,
+                    )
+                )
             layout.addStretch(1)
             return frame
 

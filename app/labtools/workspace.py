@@ -41,7 +41,6 @@ try:
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
-    from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJBridgeWidget
     from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -268,8 +267,6 @@ if QWidget is not None:
                 return "pcr_qpcr"
             if current is self._elisa_absorbance_page:
                 return "elisa_absorbance"
-            if current is self._imagej_bridge_page:
-                return "imagej_fiji_bridge"
             return "unknown"
 
         def show_home(self) -> None:
@@ -292,9 +289,6 @@ if QWidget is not None:
 
         def show_elisa_absorbance(self) -> None:
             self._stack.setCurrentWidget(self._elisa_absorbance_page)
-
-        def show_imagej_bridge_settings(self) -> None:
-            self._stack.setCurrentWidget(self._imagej_bridge_page)
 
         # Backward-compatible route names for existing internal callers.
         def show_calculators(self) -> None:
@@ -327,10 +321,6 @@ if QWidget is not None:
             home = QPushButton("工具首页")
             home.clicked.connect(self.show_home)
             header_layout.addWidget(home)
-            imagej = QPushButton("ImageJ/Fiji 后端设置")
-            imagej.setObjectName("labToolsImageJBridgeSettingsButton")
-            imagej.clicked.connect(self.show_imagej_bridge_settings)
-            header_layout.addWidget(imagej)
             if self._on_back is not None:
                 back = QPushButton("返回模块首页")
                 back.clicked.connect(self._on_back)
@@ -386,7 +376,6 @@ if QWidget is not None:
                     "本模块暂未开放，必须先做 Tool Logic Card。",
                 ),
             )
-            self._imagej_bridge_page = LabToolsImageJBridgeWidget()
             for key, page in (
                 ("home", self._home_page),
                 ("general_calculators", self._general_calculator_page),
@@ -395,7 +384,6 @@ if QWidget is not None:
                 ("western_blot", self._western_blot_page),
                 ("pcr_qpcr", self._pcr_qpcr_page),
                 ("elisa_absorbance", self._elisa_absorbance_page),
-                ("imagej_fiji_bridge", self._imagej_bridge_page),
             ):
                 self._page_keys.append(key)
                 self._stack.addWidget(page)
@@ -406,4 +394,4 @@ else:  # pragma: no cover
 
     class LabToolsWorkspaceWidget:  # type: ignore[no-redef]
         def page_keys(self) -> tuple[str, ...]:
-            return ("home", "general_calculators", "reagent_records", "cell_experiments", "western_blot", "pcr_qpcr", "elisa_absorbance", "imagej_fiji_bridge")
+            return ("home", "general_calculators", "reagent_records", "cell_experiments", "western_blot", "pcr_qpcr", "elisa_absorbance")

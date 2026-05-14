@@ -67,7 +67,6 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
         "western_blot",
         "pcr_qpcr",
         "elisa_absorbance",
-        "imagej_fiji_bridge",
     )
     assert widget.current_page_key() == "home"
     assert widget.findChild(QPushButton, "primaryButton") is not None
@@ -108,5 +107,3 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert widget.current_page_key() == "pcr_qpcr"
     widget.show_elisa_absorbance()
     assert widget.current_page_key() == "elisa_absorbance"
-    widget.show_imagej_bridge_settings()
-    assert widget.current_page_key() == "imagej_fiji_bridge"
