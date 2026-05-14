@@ -11,6 +11,7 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.project_recognition import load_recognition_report
+from app.bioinformatics.standardization_confirmation import load_standardization_confirmation
 
 
 READINESS_REPORT = Path("logs") / "readiness" / "readiness_report.json"
@@ -42,6 +43,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     expression_samples = expression_samples_from_recognition_report(recognition if isinstance(recognition, dict) else {})
     comparison_match = comparison_sample_match_status(confirmed_comparison, expression_samples)
     standardization_ready = bool(available & CORE_INPUTS)
+    confirmation = load_standardization_confirmation(root) or {}
+    confirmation_readiness = confirmation.get("readiness") if isinstance(confirmation.get("readiness"), dict) else {}
     has_core_input = standardization_ready
     warnings: list[str] = [str(item) for item in recognition.get("warnings", []) or []]
     if not has_core_input:
@@ -109,7 +112,10 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         "available_inputs": sorted(available),
         "has_core_input": has_core_input,
         "standardization_ready": standardization_ready,
+        "standardization_confirmed": bool(confirmation_readiness.get("standardization_confirmed")),
         "deg_ready": deg_ready,
+        "deg_preflight_ready": bool(confirmation_readiness.get("deg_preflight_ready")),
+        "imported_result_ready": bool(confirmation_readiness.get("imported_result_ready")),
         "warnings": warnings,
         "comparison_config_summary": confirmed_comparison.to_dict() if confirmed_comparison is not None else {},
         "comparison_group_summary_zh": comparison_summary_text(confirmed_comparison),

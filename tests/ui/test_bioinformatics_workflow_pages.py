@@ -2508,6 +2508,122 @@ def test_geo_series_matrix_ui_shows_candidate_confirmation_not_confirmed_group(q
     assert "表达矩阵已标准化" not in tooltip
 
 
+def test_standardization_confirmation_page_shows_series_matrix_candidates_without_raw_paths(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99999",
+                "!Series_platform_id\tGPL96",
+                "!Sample_title\tcase sample\tcontrol sample",
+                "!Sample_geo_accession\tGSM900001\tGSM900002",
+                "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+                "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM900001\tGSM900002",
+                "1007_s_at\t10\t12",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "standardizationConfirmationCandidateTable")
+    table_text = " ".join(table.item(row, col).text() for row in range(table.rowCount()) for col in range(table.columnCount()) if table.item(row, col))
+
+    assert "表达矩阵候选" in table_text
+    assert "GSE99999_series_matrix.txt" in table_text
+    assert "geo_series_matrix" in table_text
+    assert "Sample_organism_ch1" in table_text
+    assert str(project_summary.project_root) not in table_text
+    assert "已确认分组" not in table_text
+    assert "已完成差异分析" not in table_text
+    assert "可直接做 DEG" not in table_text
+    assert "表达矩阵已标准化" not in table_text
+    assert "当前不会运行真实差异分析" in widget.findChild(QLabel, "standardizationConfirmationSummary").text()
+
+
+def test_standardization_confirmation_page_writes_manifest_and_preflight_readiness(qt_app, project_summary) -> None:
+    source = project_summary.project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99999",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM900001\tGSM900002",
+                "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+                "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM900001\tGSM900002",
+                "1007_s_at\t10\t12",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    manifest = widget.confirm_expression_candidate(value_type_confirmed=False)
+
+    assert manifest is not None
+    assert manifest["readiness"]["deg_preflight_ready"] is False
+    manifest = widget.confirm_expression_candidate(value_type="count_like_candidate", value_type_confirmed=True)
+    assert manifest is not None
+    assert manifest["readiness"]["deg_preflight_ready"] is False
+    widget.confirm_species_candidate()
+    widget.confirm_gene_id_type("probe_id")
+    manifest = widget.confirm_group_candidate()
+
+    assert manifest is not None
+    assert manifest["confirmed_group_design"]["group_confirmed"] is True
+    assert manifest["readiness"]["deg_preflight_ready"] is True
+    assert (project_summary.project_root / "manifests" / "standardization_confirmation.json").exists()
+
+
+def test_standardization_confirmation_page_filters_soft_metadata_and_lists_xlsx(qt_app, project_summary) -> None:
+    soft = project_summary.project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    xlsx = project_summary.project_root / "raw_data" / "local_import" / "counts.xlsx"
+    soft.parent.mkdir(parents=True, exist_ok=True)
+    soft.write_text(
+        "\n".join(
+            [
+                "^DATABASE = GeoMiame",
+                "^SERIES = GSE6005",
+                "!Series_sample_id = GSM1",
+                "^PLATFORM = GPL570",
+                "!Platform_title = demo",
+                "^SAMPLE = GSM1",
+                "!Sample_title = metadata only",
+                "!Sample_characteristics_ch1 = treatment: untreated",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_xlsx_count_matrix(xlsx)
+    workflow_pages.run_project_recognition(project_summary.project_root)
+
+    widget = BioinformaticsStandardizedAssetsWidget()
+    widget.refresh_project(project_summary)
+    table = widget.findChild(QTableWidget, "standardizationConfirmationCandidateTable")
+    expression_rows = [
+        [table.item(row, col).text() for col in range(table.columnCount()) if table.item(row, col)]
+        for row in range(table.rowCount())
+        if table.item(row, 0) and table.item(row, 0).text() == "表达矩阵候选"
+    ]
+    expression_text = " ".join(" ".join(row) for row in expression_rows)
+
+    assert "counts.xlsx" in expression_text
+    assert "xlsx" in expression_text
+    assert "GSE6005_family.soft" not in expression_text
+
+
 def test_recognition_refresh_does_not_call_backend_but_rerun_does(qt_app, project_summary, monkeypatch) -> None:
     source = project_summary.project_root / "raw_data" / "local_import" / "expression.tsv"
     source.parent.mkdir(parents=True, exist_ok=True)

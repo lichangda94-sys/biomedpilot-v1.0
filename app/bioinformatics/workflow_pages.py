@@ -59,6 +59,12 @@ from app.bioinformatics.project_readiness import (
 )
 from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
+from app.bioinformatics.standardization_confirmation import (
+    collect_standardization_candidates,
+    confirm_group_design_from_preview,
+    load_standardization_confirmation_artifacts,
+    save_standardization_confirmation,
+)
 from app.bioinformatics.project_workflow_orchestrator import (
     default_workflow_state,
     load_workflow_state,
@@ -3314,6 +3320,8 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
+        self._last_candidates: dict[str, object] = {}
+        self._last_confirmation: dict[str, object] = {}
         self.setObjectName("bioinformaticsStandardizedAssetsPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -3330,6 +3338,7 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
+        self.refresh_confirmation_candidates()
         artifacts = generate_standardized_assets(self._project_root)
         self._render(artifacts)
         return artifacts
@@ -3366,6 +3375,97 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
     def status_message(self) -> str:
         return self._status_label.text()
 
+    def refresh_confirmation_candidates(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        artifacts = load_standardization_confirmation_artifacts(self._project_root)
+        self._last_candidates = artifacts.get("candidates") if isinstance(artifacts.get("candidates"), dict) else {}
+        self._last_confirmation = artifacts.get("confirmation") if isinstance(artifacts.get("confirmation"), dict) else {}
+        self._render_confirmation_state()
+        return artifacts
+
+    def confirm_expression_candidate(
+        self,
+        candidate_id: str | None = None,
+        *,
+        value_type: str | None = None,
+        value_type_confirmed: bool = True,
+    ) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        candidates = collect_standardization_candidates(self._project_root)
+        expression = _standardization_candidate_list(candidates, "expression_matrix_candidates")
+        selected_id = candidate_id or (str(expression[0].get("candidate_id") or "") if expression else "")
+        if not selected_id:
+            self._status_label.setText("没有可确认的表达矩阵候选。")
+            return None
+        selected = _standardization_find_candidate(candidates, selected_id) or {}
+        selected_value_type = value_type or str(selected.get("expression_value_type_candidate") or "unknown")
+        manifest = save_standardization_confirmation(
+            self._project_root,
+            selected_expression_candidate_id=selected_id,
+            expression_value_type=selected_value_type,
+            expression_value_type_confirmed=value_type_confirmed,
+        )
+        self._last_confirmation = manifest
+        self._last_candidates = candidates
+        self._render_confirmation_state()
+        self._status_label.setText("已保存表达矩阵候选确认。当前不会运行真实差异分析。")
+        return manifest
+
+    def confirm_species_candidate(self, species: str | None = None, *, manual: bool = False) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        candidates = collect_standardization_candidates(self._project_root)
+        species_candidates = _standardization_candidate_list(candidates, "species_candidates")
+        selected_species = species or (str(species_candidates[0].get("species") or "") if species_candidates else "")
+        if not selected_species:
+            self._status_label.setText("没有物种证据，请手动输入后再确认。")
+            return None
+        manifest = save_standardization_confirmation(
+            self._project_root,
+            species=selected_species,
+            species_confirmed=True,
+            species_manual_confirmed=manual,
+        )
+        self._last_confirmation = manifest
+        self._last_candidates = candidates
+        self._render_confirmation_state()
+        self._status_label.setText("已保存物种确认。")
+        return manifest
+
+    def confirm_gene_id_type(self, gene_id_type: str | None = None) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        candidates = collect_standardization_candidates(self._project_root)
+        gene_candidates = _standardization_candidate_list(candidates, "gene_id_candidates")
+        selected_type = gene_id_type or (str(gene_candidates[0].get("gene_id_type") or "") if gene_candidates else "unknown")
+        manifest = save_standardization_confirmation(
+            self._project_root,
+            gene_id_type=selected_type,
+            gene_id_type_confirmed=True,
+        )
+        self._last_confirmation = manifest
+        self._last_candidates = candidates
+        self._render_confirmation_state()
+        self._status_label.setText("已保存 gene ID 类型确认；Probe ID 仍需平台注释或映射确认。")
+        return manifest
+
+    def confirm_group_candidate(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        manifest = confirm_group_design_from_preview(self._project_root)
+        self._last_confirmation = manifest
+        self._last_candidates = collect_standardization_candidates(self._project_root)
+        self._render_confirmation_state()
+        self._status_label.setText("已保存候选分组确认，可用于 DEG preflight；当前不会运行真实差异分析。")
+        return manifest
+
     def _build_ui(self) -> None:
         root = _scroll_root(self)
         root.addWidget(_header("数据标准化", "确认识别后的表达矩阵、样本信息和分组设计，生成后续分析可用的数据。", back_text="返回数据准备状态", back_signal=self.back_requested))
@@ -3401,6 +3501,25 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         readiness_layout.addWidget(self._sample_status_label)
         readiness_layout.addWidget(self._group_status_label)
         root.addWidget(readiness_card)
+
+        confirmation_card, confirmation_layout = _card("标准化确认候选")
+        self._confirmation_summary_label = _muted("识别阶段已发现候选表达矩阵，请在标准化阶段确认后再用于分析。")
+        self._confirmation_summary_label.setObjectName("standardizationConfirmationSummary")
+        confirmation_layout.addWidget(self._confirmation_summary_label)
+        confirmation_actions = QHBoxLayout()
+        confirmation_actions.addWidget(_button("刷新候选", "secondaryButton", self.refresh_confirmation_candidates))
+        confirmation_actions.addWidget(_button("确认表达矩阵候选", "secondaryButton", lambda: self.confirm_expression_candidate()))
+        confirmation_actions.addWidget(_button("确认物种候选", "secondaryButton", lambda: self.confirm_species_candidate()))
+        confirmation_actions.addWidget(_button("确认 gene ID 类型", "secondaryButton", lambda: self.confirm_gene_id_type()))
+        confirmation_actions.addWidget(_button("确认候选分组", "secondaryButton", lambda: self.confirm_group_candidate()))
+        confirmation_actions.addStretch(1)
+        confirmation_layout.addLayout(confirmation_actions)
+        self._confirmation_candidates = _table(["候选类型", "来源文件", "来源 parser", "确认状态", "说明"])
+        self._confirmation_candidates.setObjectName("standardizationConfirmationCandidateTable")
+        confirmation_layout.addWidget(self._confirmation_candidates)
+        _set_table_widths(self._confirmation_candidates, [150, 190, 150, 150, 380])
+        self._confirmation_candidates.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        root.addWidget(confirmation_card)
 
         default_card, default_layout = _card("默认资产与下一步")
         self._default_asset_label = _muted("当前默认使用的数据：待生成标准化数据。")
@@ -3452,6 +3571,9 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         readiness = load_readiness_artifacts(self._project_root)
         readiness_report = readiness.get("readiness_report") if isinstance(readiness.get("readiness_report"), dict) else {}
         recognition = load_recognition_report(self._project_root) or {}
+        confirmation_artifacts = load_standardization_confirmation_artifacts(self._project_root)
+        self._last_candidates = confirmation_artifacts.get("candidates") if isinstance(confirmation_artifacts.get("candidates"), dict) else {}
+        self._last_confirmation = confirmation_artifacts.get("confirmation") if isinstance(confirmation_artifacts.get("confirmation"), dict) else {}
         self._input_source_label.setText(_standardization_input_source_text(recognition if isinstance(recognition, dict) else {}))
         self._input_status_label.setText(_standardization_input_status_text(recognition if isinstance(recognition, dict) else {}))
         self._input_summary_label.setText(_standardization_input_summary_text(recognition if isinstance(recognition, dict) else {}))
@@ -3460,12 +3582,15 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._group_status_label.setText(_standardization_group_status_text(self._project_root, readiness_report if isinstance(readiness_report, dict) else {}))
         self._default_asset_label.setText(_standardization_default_assets_text(assets if isinstance(assets, list) else []))
         self._next_step_label.setText(_standardization_next_step_text(self._project_root, assets if isinstance(assets, list) else [], readiness_report if isinstance(readiness_report, dict) else {}))
+        self._render_confirmation_state()
         self._developer_details.setPlainText(
             _json(
                 {
                     "standardized_assets_registry": registry,
                     "analysis_ready_manifest": manifest,
                     "data_processing_task_plan": artifacts.get("data_processing_task_plan"),
+                    "standardization_confirmation": self._last_confirmation,
+                    "standardization_candidates": self._last_candidates,
                     "readiness_details": readiness,
                     "recognition_report": recognition,
                     "paths": {
@@ -3475,6 +3600,23 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
                     },
                 }
             )
+        )
+
+    def _render_confirmation_state(self) -> None:
+        candidates = self._last_candidates if isinstance(self._last_candidates, dict) else {}
+        confirmation = self._last_confirmation if isinstance(self._last_confirmation, dict) else {}
+        rows = _standardization_confirmation_rows(candidates, confirmation)
+        _fill_table(self._confirmation_candidates, rows)
+        _set_table_widths(self._confirmation_candidates, [150, 190, 150, 150, 380])
+        readiness = confirmation.get("readiness") if isinstance(confirmation.get("readiness"), dict) else {}
+        expression_count = len(_standardization_candidate_list(candidates, "expression_matrix_candidates"))
+        sample_count = len(_standardization_candidate_list(candidates, "sample_metadata_candidates"))
+        group_count = len(_standardization_candidate_list(candidates, "group_candidates"))
+        imported_count = len(_standardization_candidate_list(candidates, "imported_deg_candidates"))
+        self._confirmation_summary_label.setText(
+            "识别阶段已发现候选表达矩阵，请在标准化阶段确认后再用于分析。"
+            f" 表达矩阵候选 {expression_count} 个，样本注释候选 {sample_count} 个，分组候选 {group_count} 个，导入 DEG 结果候选 {imported_count} 个。"
+            f" DEG preflight ready：{'是' if readiness.get('deg_preflight_ready') else '否'}。当前不会运行真实差异分析。"
         )
 
 
@@ -3934,7 +4076,7 @@ class BioinformaticsDegConfigWidget(QWidget):
                 self._checks_table,
                 [
                     ["表达矩阵", str(state.get("expression_status_zh") or "待检查"), "需要 count matrix 或可用表达矩阵。"],
-                    ["样本信息", str(state.get("metadata_status_zh") or "待检查"), "需要样本信息或可由已确认分组构建。"],
+                    ["样本信息", str(state.get("metadata_status_zh") or "待检查"), "需要样本信息或用户确认的比较组设置。"],
                     ["分组与比较设计", str(state.get("comparison_status_zh") or "待确认"), "需要 case/control 或用户确认比较。"],
                     ["真实执行", "未运行", "本页不会运行真实 DEG，也不会生成结果图。"],
                 ],
@@ -8222,6 +8364,86 @@ def _save_manual_supplement(project_root: Path, normalized: str, text: str) -> P
         metadata={"supplement_kind": normalized, "ui_stage": "UI-07", "manual_input": True},
     )
     return target
+
+
+def _standardization_candidate_list(candidates: dict[str, object], key: str) -> list[dict[str, object]]:
+    values = candidates.get(key)
+    return [item for item in values if isinstance(item, dict)] if isinstance(values, list) else []
+
+
+def _standardization_find_candidate(candidates: dict[str, object], candidate_id: str) -> dict[str, object] | None:
+    for key in (
+        "expression_matrix_candidates",
+        "sample_metadata_candidates",
+        "group_candidates",
+        "species_candidates",
+        "gene_id_candidates",
+        "platform_annotation_candidates",
+        "imported_deg_candidates",
+    ):
+        for item in _standardization_candidate_list(candidates, key):
+            if str(item.get("candidate_id") or "") == candidate_id:
+                return item
+    return None
+
+
+def _standardization_confirmation_rows(candidates: dict[str, object], confirmation: dict[str, object]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    selected_expression = confirmation.get("selected_expression_candidate") if isinstance(confirmation.get("selected_expression_candidate"), dict) else {}
+    selected_expression_id = str(selected_expression.get("candidate_id") or "")
+    selected_sample = confirmation.get("selected_sample_metadata_candidate") if isinstance(confirmation.get("selected_sample_metadata_candidate"), dict) else {}
+    selected_sample_id = str(selected_sample.get("candidate_id") or "")
+    selected_species = confirmation.get("species_confirmed") if isinstance(confirmation.get("species_confirmed"), dict) else {}
+    selected_gene = confirmation.get("gene_id_type_confirmed") if isinstance(confirmation.get("gene_id_type_confirmed"), dict) else {}
+    selected_platform = confirmation.get("platform_annotation_confirmed") if isinstance(confirmation.get("platform_annotation_confirmed"), dict) else {}
+    group_design = confirmation.get("confirmed_group_design") if isinstance(confirmation.get("confirmed_group_design"), dict) else {}
+    for item in _standardization_candidate_list(candidates, "expression_matrix_candidates"):
+        rows.append(_standardization_candidate_row("表达矩阵候选", item, "已选择" if str(item.get("candidate_id") or "") == selected_expression_id else "待确认"))
+    for item in _standardization_candidate_list(candidates, "sample_metadata_candidates"):
+        rows.append(_standardization_candidate_row("样本注释候选", item, "已选择" if str(item.get("candidate_id") or "") == selected_sample_id else "待确认"))
+    for item in _standardization_candidate_list(candidates, "group_candidates"):
+        rows.append(_standardization_candidate_row("分组候选", item, "已确认" if group_design.get("group_confirmed") else "候选，待确认"))
+    for item in _standardization_candidate_list(candidates, "species_candidates"):
+        status = "已确认" if selected_species.get("confirmed") and str(item.get("species") or "") == str(selected_species.get("species") or "") else "待确认"
+        rows.append(_standardization_candidate_row("物种候选", item, status))
+    for item in _standardization_candidate_list(candidates, "gene_id_candidates"):
+        status = "已确认" if selected_gene.get("confirmed") and str(item.get("gene_id_type") or "") == str(selected_gene.get("gene_id_type") or "") else "待确认"
+        rows.append(_standardization_candidate_row("gene ID 候选", item, status))
+    for item in _standardization_candidate_list(candidates, "platform_annotation_candidates"):
+        status = "已确认" if selected_platform.get("confirmed") and str(item.get("candidate_id") or "") == str(selected_platform.get("candidate_id") or "") else "待确认"
+        rows.append(_standardization_candidate_row("平台注释候选", item, status))
+    for item in _standardization_candidate_list(candidates, "imported_deg_candidates"):
+        rows.append(_standardization_candidate_row("已有 DEG 结果候选", item, "可浏览；不是重新计算结果"))
+    return rows
+
+
+def _standardization_candidate_row(label: str, item: dict[str, object], status: str) -> list[object]:
+    warnings = [str(value) for value in item.get("warnings", []) or [] if str(value)]
+    fields = []
+    if item.get("expression_value_type_candidate"):
+        fields.append(f"表达值类型候选：{item.get('expression_value_type_candidate')}")
+    if item.get("gene_id_type_candidate") or item.get("gene_id_type"):
+        fields.append(f"ID 类型候选：{item.get('gene_id_type_candidate') or item.get('gene_id_type')}")
+    if item.get("species"):
+        fields.append(f"物种：{item.get('species')}（{item.get('source_field') or '未记录'}）")
+    if item.get("group_field"):
+        fields.append(f"候选字段：{item.get('group_field')}")
+    if item.get("requires_user_confirmation"):
+        fields.append("需要用户确认")
+    if item.get("can_enter_next_step") is False:
+        fields.append("暂不可进入下一步")
+    if warnings:
+        fields.append("warning：" + "；".join(warnings[:2]))
+    reason = str(item.get("reason") or "")
+    if reason:
+        fields.append(reason)
+    return [
+        label,
+        str(item.get("source_file") or "未记录"),
+        str(item.get("source_parser") or "unknown"),
+        status,
+        "；".join(fields) if fields else "待用户确认。",
+    ]
 
 
 def _standardization_user_summary(registry: dict[str, object], manifest: dict[str, object]) -> str:

@@ -15,6 +15,12 @@ from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
 from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, run_project_recognition
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
+from app.bioinformatics.standardization_confirmation import (
+    collect_standardization_candidates,
+    confirm_group_design_from_preview,
+    load_standardization_confirmation,
+    save_standardization_confirmation,
+)
 from app.bioinformatics.project_workflow_orchestrator import load_workflow_state, run_project_stage, run_project_workflow
 from app.bioinformatics.project_workspace import create_bioinformatics_project
 from app.bioinformatics.project_workspace_binding import (
@@ -779,6 +785,169 @@ def test_geo_series_matrix_unknown_expression_values_still_standardization_ready
     assert any("Expression value type is unknown" in warning for warning in record["warnings"])  # type: ignore[operator]
     assert readiness["standardization_ready"] is True
     assert readiness["deg_ready"] is False
+
+
+def test_standardization_confirmation_candidates_and_manifest_for_series_matrix(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n".join(
+        [
+            "!Series_title\tDemo gzipped series",
+            "!Series_geo_accession\tGSE99999",
+            "!Series_platform_id\tGPL96",
+            "!Sample_title\tcase sample\tcontrol sample",
+            "!Sample_geo_accession\tGSM900001\tGSM900002",
+            "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+            "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+            "!series_matrix_table_begin",
+            "ID_REF\tGSM900001\tGSM900002",
+            "1007_s_at\t10\t12",
+            "1053_at\t15\t18",
+            "!series_matrix_table_end",
+            "",
+        ]
+    )
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write(content)
+
+    run_project_recognition(project_root)
+    candidates = collect_standardization_candidates(project_root)
+    expression = candidates["expression_matrix_candidates"][0]  # type: ignore[index]
+    species = candidates["species_candidates"][0]  # type: ignore[index]
+    gene = candidates["gene_id_candidates"][0]  # type: ignore[index]
+
+    assert expression["source_file"] == "GSE99999_series_matrix.txt.gz"
+    assert expression["source_parser"] == "geo_series_matrix"
+    assert expression["expression_value_type_candidate"] == "count_like_candidate"
+    assert expression["requires_user_confirmation"] is True
+    assert species["species"] == "Homo sapiens"
+    assert species["source_field"] == "Sample_organism_ch1"
+    assert gene["gene_id_type"] == "probe_id"
+    assert gene["gene_id_type"] != "gene_symbol"
+
+    manifest = save_standardization_confirmation(project_root, selected_expression_candidate_id=str(expression["candidate_id"]))
+    assert manifest["readiness"]["deg_preflight_ready"] is False  # type: ignore[index]
+    manifest = save_standardization_confirmation(
+        project_root,
+        expression_value_type="count_like_candidate",
+        expression_value_type_confirmed=True,
+        species="Homo sapiens",
+        species_confirmed=True,
+        gene_id_type="probe_id",
+        gene_id_type_confirmed=True,
+    )
+    assert manifest["readiness"]["deg_preflight_ready"] is False  # type: ignore[index]
+    manifest = confirm_group_design_from_preview(project_root)
+    assert manifest["confirmed_group_design"]["group_confirmed"] is True  # type: ignore[index]
+    assert manifest["readiness"]["deg_preflight_ready"] is True  # type: ignore[index]
+    assert (project_root / "manifests" / "standardization_confirmation.json").exists()
+    loaded = load_standardization_confirmation(project_root)
+    assert loaded is not None
+    assert loaded["readiness"]["standardization_confirmed"] is True  # type: ignore[index]
+
+
+def test_standardization_confirmation_unknown_expression_value_blocks_deg_preflight(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99997_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99997",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+                "!Sample_characteristics_ch1\tcondition: case\tcondition: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "1007_s_at\tpresent\tabsent",
+                "1053_at\tabsent\tpresent",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    run_project_recognition(project_root)
+    candidates = collect_standardization_candidates(project_root)
+    expression = candidates["expression_matrix_candidates"][0]  # type: ignore[index]
+    save_standardization_confirmation(
+        project_root,
+        selected_expression_candidate_id=str(expression["candidate_id"]),
+        expression_value_type="unknown",
+        expression_value_type_confirmed=True,
+        species="Homo sapiens",
+        species_confirmed=True,
+        gene_id_type="probe_id",
+        gene_id_type_confirmed=True,
+    )
+    manifest = confirm_group_design_from_preview(project_root)
+
+    assert manifest["readiness"]["standardization_confirmed"] is True  # type: ignore[index]
+    assert manifest["readiness"]["deg_preflight_ready"] is False  # type: ignore[index]
+    assert any("unknown" in warning for warning in manifest["warnings"])  # type: ignore[operator]
+
+
+def test_standardization_confirmation_filters_family_soft_and_detects_xlsx_candidates(project_root: Path) -> None:
+    soft_metadata = project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    soft_expression = project_root / "raw_data" / "local_import" / "GSE6004_family.soft"
+    xlsx = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    soft_metadata.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft_metadata_only(soft_metadata)
+    _write_geo_family_soft(soft_expression)
+    _write_xlsx_count_matrix(xlsx)
+
+    run_project_recognition(project_root)
+    candidates = collect_standardization_candidates(project_root)
+    expression_sources = {item["source_file"] for item in candidates["expression_matrix_candidates"]}  # type: ignore[index]
+    by_source = {item["source_file"]: item for item in candidates["expression_matrix_candidates"]}  # type: ignore[index]
+
+    assert "GSE6005_family.soft" not in expression_sources
+    assert "GSE6004_family.soft" in expression_sources
+    assert by_source["GSE6004_family.soft"]["requires_user_confirmation"] is True
+    assert by_source["GSE6004_family.soft"]["source_parser"] == "geo_family_soft"
+    assert "GSE236866_Processed_data_tau_with_inhibitors.xlsx" in expression_sources
+    assert by_source["GSE236866_Processed_data_tau_with_inhibitors.xlsx"]["source_parser"] == "xlsx"
+
+
+def test_standardization_confirmation_detects_mixed_xlsx_fpkm_and_imported_deg(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "mixed.xlsx"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("placeholder", encoding="utf-8")
+    recognition_path = project_root / "logs" / "recognition" / "recognition_report.json"
+    recognition_path.parent.mkdir(parents=True, exist_ok=True)
+    recognition_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.recognition_report.v1",
+                "files": [
+                    {
+                        "file_name": source.name,
+                        "original_path": str(source),
+                        "recognized_type": "tabular_text_file",
+                        "recognized_type_zh": "RNA-seq 综合表达结果表",
+                        "recognized_roles": [],
+                        "detected_assets": [
+                            {"asset_type": "raw_count_matrix", "label_zh": "count 矩阵", "input_eligible": True},
+                            {"asset_type": "normalized_expression_matrix", "label_zh": "FPKM 矩阵", "input_eligible": True},
+                            {"asset_type": "differential_result_table", "label_zh": "差异分析结果", "input_eligible": False},
+                        ],
+                        "route_path": str(source),
+                    }
+                ],
+                "warnings": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    candidates = collect_standardization_candidates(project_root)
+    value_types = {item["expression_value_type_candidate"] for item in candidates["expression_matrix_candidates"]}  # type: ignore[index]
+
+    assert {"count", "FPKM"} <= value_types
+    assert candidates["imported_deg_candidates"]  # type: ignore[index]
+    manifest = save_standardization_confirmation(project_root)
+    assert manifest["readiness"]["imported_result_ready"] is True  # type: ignore[index]
 
 
 def test_csv_expression_matrix_content_profile(project_root: Path) -> None:

@@ -86,8 +86,8 @@ def build_deg_preflight(
         blockers,
         "sample_metadata",
         bool(metadata_assets or assignments),
-        "样本信息可由样本表或已确认分组构建。",
-        "缺 sample metadata，且无法从已确认分组构建样本信息。",
+        "样本信息可由样本表或用户确认的比较组设置构建。",
+        "缺 sample metadata，且无法从用户确认的比较组设置构建样本信息。",
     )
     _add_check(
         checks,
