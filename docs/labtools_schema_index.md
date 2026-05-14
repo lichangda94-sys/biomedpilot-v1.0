@@ -1,12 +1,14 @@
 # LabTools Schema Index
 
-日期：2026-05-13
+日期：2026-05-14
 
 本文档是 LabTools 当前 persistence/export schema 的统一索引。LabTools 仍处于 Developer Preview / testing 状态；以下 schema 均不是生产级、临床级、提交级报告规范，也不替代实验室 SOP、SDS、伦理/安全审核或人工复核。
 
 每个条目都说明用途、主要字段、用户语义、是否可公开分享、是否包含本地路径或路径片段风险，以及它属于草稿、辅助结果还是用户确认的本地持久化文件。
 
 L6E status audit note：普通 LabTools UI 只暴露用户需要理解的本地辅助、草稿、manual-review MVP 和 placeholder 状态；本 schema index 是开发/交接文档，不应被 UI 文案替代为正式报告、完整 ELN、临床建议、production-grade 输出或 SOP。
+
+Tool Logic Retrospective Audit note：本次回顾审计未新增 persistence schema、未修改 schema version、未新增导出格式；`docs/labtools_tool_logic_audit.md` 只记录当前工具使用逻辑与结果语义边界。
 
 ## 1. 总览
 

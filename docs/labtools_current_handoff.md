@@ -6,7 +6,7 @@
 
 - 当前 worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - 当前分支：`dev/labtools`
-- 当前最近完成阶段：LabTools Tool Logic Audit 1，commit 以当前 git log 为准
+- 当前最近完成阶段：LabTools Tool Logic Retrospective Audit，commit 以当前 git log 为准
 - 当前进行阶段：下一阶段待定。
 - 权威总开发手册：`/Users/changdali/Developer/biomedpilot v1.0/01_ProjectControl/Global_Development_Manual.md`
 - 模块定位：LabTools / 医研智析实验工具模块，处于 Developer Preview / internal beta / local testing 状态。
@@ -40,7 +40,7 @@
 | LabTools Stage L6E | 当前 git log | 审计并校准 LabTools 用户可见状态语义：已实现功能显示为本地辅助/草稿/manual-review MVP，placeholder 功能继续显示占位或未开放；不新增功能。 |
 | LabTools Stage L7A | 当前 git log | 优化实验计算器结果复制体验：三个 v1 计算器提供 copyable formatter，UI 每个结果区新增“复制结果”按钮；不新增公式、导出、自动保存或历史记录。 |
 | LabTools Stage L7B | 当前 git log | 优化 recipe draft/template 安全边界和导入冲突提示：新增用户可见 safety category，强化 SOP/SDS/pH/储存/有效期/危险性核对提示，确认冲突导入不覆盖。 |
-| LabTools Tool Logic Audit 1 | 当前 git log | 暂停新增功能，回顾当前 LabTools 工具使用逻辑、结果语义、写盘/网络/AI 边界和测试基线；只新增审计文档，不新增工具、算法或 UI 功能。 |
+| LabTools Tool Logic Retrospective Audit | 当前 git log | 暂停新增功能，回顾当前 LabTools 工具使用逻辑、结果语义、写盘/网络/AI 边界和测试基线；新增 `docs/labtools_tool_logic_audit.md` 和阶段报告，不新增工具、算法或 UI 功能。 |
 
 ## 3. 当前已实现功能
 
@@ -70,6 +70,7 @@
   - 计算器 UI 每个结果区有“复制结果”按钮；无有效结果或 invalid 输入时禁用，成功计算后启用。
   - 点击复制只写系统 clipboard，不写文件、不保存历史、不生成 JSON/CSV/manifest。
 - L6D 新增 `docs/labtools_schema_index.md`，统一记录 LabTools 当前 schema / JSON-compatible 结构、用途、字段、用户语义、公开分享风险、本地路径风险和 draft / auxiliary / local persistence 边界。
+- Tool Logic Retrospective Audit 新增 `docs/labtools_tool_logic_audit.md`，统一回顾计算器、配方、来源草稿、图像 manual ROI、ROI export 和实验模板的使用逻辑与结果语义；不新增公式、schema 或导出格式。
 
 ### 3.2 本地试剂与配方库
 
@@ -280,15 +281,15 @@
 - `python3 - <<'PY' ... from PIL import Image ... PY`
   - 当前 L4C 结果：通过，输出 `Pillow import OK ...`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/labtools -q`
-  - 当前 Tool Logic Audit 1 结果：159 passed
+  - 当前 Tool Logic Retrospective Audit 结果：159 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
-  - 当前 Tool Logic Audit 1 结果：169 passed
+  - 当前 Tool Logic Retrospective Audit 结果：169 passed
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui/test_module_selection.py tests/ui/test_sidebar.py tests/test_unified_entry.py -q`
-  - 当前 Tool Logic Audit 1 结果：18 passed
+  - 当前 Tool Logic Retrospective Audit 结果：18 passed
 - `python3 -m app.main --smoke-test`
-  - 当前 Tool Logic Audit 1 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
+  - 当前 Tool Logic Retrospective Audit 结果：通过，输出包含 `workspace_entries=3`、`labtools_features=4`
 - `python3 -m compileall app/labtools`
-  - 当前 Tool Logic Audit 1 结果：通过
+  - 当前 Tool Logic Retrospective Audit 结果：通过
 - `git diff --check`
   - 当前 L7B 结果：通过
   - 当前 L6D 结果：通过

@@ -1,16 +1,16 @@
-# LabTools Tool Logic Audit 1 Report
+# LabTools Tool Logic Retrospective Audit Report
 
 日期：2026-05-14
 
 ## Stage
 
-LabTools Tool Logic Audit 1 - 使用逻辑与结果语义回顾审计。
+LabTools Tool Logic Retrospective Audit - 使用逻辑与结果语义回顾审计。
 
 ## Worktree
 
 - Worktree：`/Users/changdali/Developer/biomedpilot v1.0/LabTools`
 - Branch：`dev/labtools`
-- Starting commit：`44597bb Polish LabTools recipe template safety`
+- Starting commit：`8d9c7d3 docs(labtools): add tool logic audit report`
 - Scope：只做审计、文档和必要测试检查；不新增工具、不新增算法、不扩展 UI 功能。
 
 ## Entry Checks
@@ -19,7 +19,7 @@ LabTools Tool Logic Audit 1 - 使用逻辑与结果语义回顾审计。
 
 - `git status --short`：clean，无未提交业务代码。
 - `git branch --show-current`：`dev/labtools`。
-- `git log --oneline -15`：最近 15 个提交均处于 LabTools 相关开发线，HEAD 为 `44597bb Polish LabTools recipe template safety`。
+- `git log --oneline -15`：最近 15 个提交均处于 LabTools 相关开发线，HEAD 为 `8d9c7d3 docs(labtools): add tool logic audit report`。
 
 未执行回退、覆盖或 push。
 
@@ -29,6 +29,7 @@ LabTools Tool Logic Audit 1 - 使用逻辑与结果语义回顾审计。
 - `README.md`
 - `docs/labtools_current_handoff.md`
 - `docs/labtools_schema_index.md`
+- `docs/labtools_tool_logic_audit.md`
 - `docs/stage_labtools_*.md`
 - `reports/LabTools_handoff_report_20260513.md`
 
@@ -41,6 +42,8 @@ LabTools Tool Logic Audit 1 - 使用逻辑与结果语义回顾审计。
 - 未实现能力是否仍保持 placeholder / `algorithm_not_available`，未生成 fake 结果。
 - 写盘行为是否只发生在用户选择目录或 JSON 路径后，且保留 no-overwrite、失败可见和 schema version。
 - 是否出现网络、AI Gateway、本地模型、ImageJ/Fiji、OpenCV、scikit-image 或跨模块持久化路径。
+
+新增 `docs/labtools_tool_logic_audit.md` 作为长期回顾审计索引，阶段报告保留本轮命令、结果和交接状态。
 
 ## Findings
 
@@ -90,7 +93,7 @@ Pass. 实验模板仍为本地结构化记录草稿，保存/载入只处理 `la
 
 - 图像导出成功 UI 会显示用户选择的导出目录和生成文件绝对路径，这是本地 UI 反馈；schema index 已明确这些路径不属于公开报告正文。
 - `create_fluorescence_audit_records()` 和 `create_wound_healing_audit_records()` 的 audit details 内包含 `source_path`，当前只在内存审计记录中使用；如果未来写入持久审计日志，需要重新审查本地路径暴露边界。
-- 本次未新增回归测试，因为现有 L6D/L6E/L7A/L7B 覆盖已经直接命中本阶段审计点。
+- 本次未新增回归测试，因为现有 L6D/L6E/L7A/L7B 覆盖已经直接命中本阶段审计点；本阶段只补齐审计文档。
 
 ## Validation
 
