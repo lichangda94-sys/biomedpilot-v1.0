@@ -156,6 +156,29 @@ def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, t
     assert artifacts["record"]["strategy"] == "reference"  # type: ignore[index]
 
 
+def test_acquisition_binding_preserves_multifile_source_files(project_root: Path, tmp_path: Path) -> None:
+    sources = []
+    for name in ("GSE6004_family.soft", "expression_matrix.tsv", "sample_metadata.tsv", "clinical.tsv"):
+        source = tmp_path / name
+        source.write_text("id\tvalue\nA\t1\n", encoding="utf-8")
+        sources.append(source)
+
+    summary = register_acquisition(
+        project_root,
+        source_type="local_import",
+        source_label="本地数据导入",
+        strategy="reference",
+        selected_paths=sources,
+    )
+
+    expected = tuple(str(path.resolve()) for path in sources)
+    assert summary.source_files == expected
+    assert summary.referenced_paths == expected
+    artifacts = read_acquisition_artifacts(project_root)
+    assert artifacts["record"]["source_files"] == list(expected)  # type: ignore[index]
+    assert artifacts["handoff"]["source_files"] == list(expected)  # type: ignore[index]
+
+
 def test_gse_acquisition_plan_is_plan_only(project_root: Path) -> None:
     summary = generate_gse_acquisition_plan(project_root, "GSE33630")
 

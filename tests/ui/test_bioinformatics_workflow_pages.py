@@ -381,6 +381,77 @@ def test_data_source_shows_local_file_source_summary_and_copy_open(qt_app, proje
     assert opened == [str(source.resolve().parent)]
 
 
+def test_data_source_multifile_local_batch_display_detail_and_recognition_handoff(qt_app, project_summary, tmp_path: Path) -> None:
+    files = {
+        "GSE6004_family.soft": "^SERIES = GSE6004\n!Series_title = demo\n",
+        "expression_matrix.tsv": "gene\tcase_1\tcontrol_1\nTP53\t2\t1\n",
+        "sample_metadata.tsv": "sample\tgroup\ncase_1\tcase\ncontrol_1\tcontrol\n",
+        "clinical.tsv": "sample\tstage\ncase_1\tII\ncontrol_1\tNA\n",
+    }
+    sources = []
+    for name, content in files.items():
+        path = tmp_path / name
+        path.write_text(content, encoding="utf-8")
+        sources.append(path)
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.register_local_paths(sources, strategy="reference", selected_kind="file", summary_key="local_import")
+
+    expected_paths = [str(path.resolve()) for path in sources]
+    assert summary is not None
+    assert list(summary.source_files) == expected_paths
+    assert list(summary.referenced_paths) == expected_paths
+    assert widget.source_summary_text("local_import") == "已选择本地数据：本地导入批次：4 个文件"
+    assert str(sources[0].resolve()) not in widget.source_summary_text("local_import")
+    assert "另有 1 个文件" in widget.source_summary_tooltip("local_import")
+    raw_import_root = project_summary.project_root / "raw_data" / "local_import"
+    assert not any(path.is_file() for path in raw_import_root.rglob("*"))
+
+    table = widget._dataset_list_panel._table
+    assert table.rowCount() == 1
+    assert table.item(0, 2).text() == "本地导入批次：4 个文件"
+    assert table.item(0, 2).text() != "GSE6004_family.soft"
+    assert table.item(0, 4).text() == "待识别：4 个文件"
+    assert table.item(0, 6).text() == "包含 GSE6004_family.soft 等 4 个文件"
+    visible_table_text = "\n".join(
+        table.item(row, col).text()
+        for row in range(table.rowCount())
+        for col in range(table.columnCount())
+        if table.item(row, col) is not None
+    )
+    assert str(sources[0].resolve()) not in visible_table_text
+
+    key = next(iter(widget._dataset_entries))
+    widget._show_dataset_detail(key)
+    detail_text = widget._dataset_detail_panel._summary.toPlainText()
+    assert "文件总数：4 个" in detail_text
+    assert "保存方式：引用原始位置" in detail_text
+    for source in sources:
+        assert source.name in detail_text
+
+    checkbox = table.cellWidget(0, 0)
+    assert isinstance(checkbox, QCheckBox)
+    checkbox.setChecked(True)
+    widget.continue_to_recognition()
+    pending = json.loads((project_summary.project_root / "manifests" / "pending_recognition_selection.json").read_text(encoding="utf-8"))
+    assert pending["selected_sources"][0]["display_name"] == "本地导入批次：4 个文件"
+    assert pending["selected_sources"][0]["source_files"] == expected_paths
+    assert pending["selected_sources"][0]["source_file_count"] == 4
+
+    recognition = BioinformaticsRecognitionWidget()
+    recognition.refresh_project(project_summary)
+    pre_table = recognition.findChild(QTableWidget, "preRecognitionInputList")
+    assert pre_table.rowCount() == 1
+    assert pre_table.item(0, 2).text() == "本地导入批次：4 个文件"
+    assert pre_table.item(0, 3).text() == "4 个文件"
+    report = recognition.run_recognition()
+
+    assert report is not None
+    assert report["selected_input_count"] == 4
+    assert set(report["selected_inputs"]) == set(expected_paths)
+
+
 def test_data_source_copy_strategy_displays_chinese_policy(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "copy_expression.csv"
     source.write_text("gene,s1\nTP53,1\n", encoding="utf-8")

@@ -120,6 +120,9 @@ class SelectedSourceSummary:
     acquisition_record_path: str
     handoff_path: str
     created_at: str
+    source_files: tuple[str, ...] = ()
+    copied_files: tuple[str, ...] = ()
+    referenced_paths: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
 
 
@@ -134,6 +137,7 @@ class RegisteredSourceRow:
     created_at: str
     strategy: str
     location_tooltip: str = ""
+    source_files: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -155,6 +159,8 @@ class DatasetListEntry:
     source_type_key: str
     accession: str = ""
     acquisition_ids: tuple[str, ...] = ()
+    source_files: tuple[str, ...] = ()
+    storage_policy: str = ""
 
 
 @dataclass(frozen=True)
@@ -906,6 +912,9 @@ class BioinformaticsDataSourceWidget(QWidget):
             acquisition_record_path=str(summary.record_path),
             handoff_path=str(summary.handoff_path),
             created_at=summary.created_at,
+            source_files=summary.source_files,
+            copied_files=summary.copied_files,
+            referenced_paths=summary.referenced_paths,
             warnings=tuple(summary.warnings),
         )
         self._source_summaries[key] = selected_summary
@@ -4720,6 +4729,7 @@ def _summary_to_dict(summary: AcquisitionSummary | None) -> dict[str, object] | 
         "strategy": summary.strategy,
         "created_at": summary.created_at,
         "status": summary.status,
+        "source_files": list(summary.source_files),
         "registered_files": list(summary.registered_files),
         "copied_files": list(summary.copied_files),
         "referenced_paths": list(summary.referenced_paths),
@@ -4762,8 +4772,9 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
             created_at=str(payload.get("created_at") or ""),
             strategy=str(payload.get("strategy") or ""),
             location_tooltip=_registered_source_full_location(payload, metadata),  # type: ignore[arg-type]
+            source_files=tuple(_recognition_source_files_from_payload(payload)),
         )
-        key = (row.source_type_key, row.source_label)
+        key = (row.source_type_key, row.acquisition_id) if row.source_type_key == "local_import" else (row.source_type_key, row.source_label)
         previous = rows_by_key.get(key)
         if previous is None or _registered_row_rank(row) >= _registered_row_rank(previous):
             rows_by_key[key] = row
@@ -4802,6 +4813,7 @@ def _current_project_dataset_entries(project_root: Path | None, *, geo_only: boo
             created_at=str(payload.get("created_at") or ""),
             strategy=str(payload.get("strategy") or ""),
             location_tooltip=_registered_source_full_location(payload, metadata),
+            source_files=tuple(_recognition_source_files_from_payload(payload)),
         )
         entry = _dataset_entry_from_record(project_root, row, payload, metadata, notes)
         rank = _dataset_entry_rank(entry, row.created_at)
@@ -4857,6 +4869,10 @@ def _dataset_entry_from_record(
     available = _dataset_available_content(row, status, metadata)
     missing = _dataset_missing_content(row, status, metadata)
     accession = _geo_accession_from_record(payload, metadata) if _is_geo_record(payload, metadata) else ""
+    source_files = tuple(_recognition_source_files_from_payload(payload))
+    note = notes.get(key, "")
+    if not note and row.source_type_key == "local_import":
+        note = _local_import_default_note(payload)
     return DatasetListEntry(
         key=key,
         source=_dataset_source_label(row, metadata),
@@ -4864,7 +4880,7 @@ def _dataset_entry_from_record(
         status=status,
         available_content=available,
         missing_content=missing,
-        note=notes.get(key, ""),
+        note=note,
         title=title,
         abstract=abstract,
         keywords=_dataset_keywords(metadata),
@@ -4875,6 +4891,8 @@ def _dataset_entry_from_record(
         source_type_key=row.source_type_key,
         accession=accession,
         acquisition_ids=(row.acquisition_id,),
+        source_files=source_files,
+        storage_policy=str(payload.get("strategy") or ""),
     )
 
 
@@ -4931,7 +4949,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
 
 def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: dict[str, object]) -> str:
     if row.source_type_key == "local_import":
-        return "待识别"
+        count = len(row.source_files)
+        return f"待识别：{count} 个文件" if count > 1 else "待识别"
     assets: list[str] = []
     raw_status = row.status
     if "表达矩阵已下载" in raw_status:
@@ -4990,6 +5009,7 @@ def _dataset_keywords(metadata: dict[str, object]) -> str:
 
 
 def _dataset_technical_info(project_root: Path, row: RegisteredSourceRow, payload: dict[str, object], metadata: dict[str, object]) -> str:
+    source_files = _recognition_source_files_from_payload(payload)
     return _json(
         {
             "数据来源": row.source_type,
@@ -4998,6 +5018,7 @@ def _dataset_technical_info(project_root: Path, row: RegisteredSourceRow, payloa
             "下载状态": metadata.get("download_status", "未记录"),
             "已发现内容": _dataset_available_content(row, row.status, metadata),
             "缺失内容": _dataset_missing_content(row, row.status, metadata),
+            "source_files": source_files,
             "最近更新时间": payload.get("created_at", "未记录"),
             "日志或错误摘要": payload.get("warnings", []),
             "project_root": str(project_root),
@@ -5039,18 +5060,38 @@ def _dataset_entry_tooltip(entry: DatasetListEntry, column: int) -> str:
         return entry.title
     if column == 6:
         return entry.note
+    if entry.source_type_key == "local_import":
+        return ""
     return entry.technical_info if column in {3, 4, 5} else ""
 
 
 def _dataset_detail_summary(entry: DatasetListEntry) -> str:
-    return "\n".join(
-        [
-            f"数据集编号或文件名：{entry.name}",
-            f"标题：{entry.title or '暂无标题'}",
-            f"摘要：{entry.abstract or '暂无摘要'}",
-            f"关键词 / 疾病 / 组织 / 平台：{entry.keywords or '暂无关键词'}",
-        ]
-    )
+    lines = [
+        f"数据集编号或文件名：{entry.name}",
+        f"标题：{entry.title or '暂无标题'}",
+        f"摘要：{entry.abstract or '暂无摘要'}",
+        f"关键词 / 疾病 / 组织 / 平台：{entry.keywords or '暂无关键词'}",
+    ]
+    if entry.source_type_key == "local_import":
+        files = list(entry.source_files)
+        storage = _storage_policy_text(entry.storage_policy)
+        lines.extend(
+            [
+                f"文件总数：{len(files)} 个",
+                f"文件来源状态：{entry.status}",
+                f"保存方式：{storage}",
+            ]
+        )
+        for index, raw_path in enumerate(files, start=1):
+            lines.append(f"{index}. {Path(raw_path).name}｜{storage}｜{raw_path}")
+    return "\n".join(lines)
+
+
+def _local_import_default_note(payload: dict[str, object]) -> str:
+    files = _local_import_declared_files(payload)
+    if len(files) <= 1:
+        return ""
+    return f"包含 {Path(files[0]).name} 等 {len(files)} 个文件"
 
 
 def _compact_note(note: str) -> str:
@@ -5205,6 +5246,16 @@ def _save_pending_recognition_selection(project_root: Path, entries: list[Datase
         "updated_at": _utc_now_iso(),
         "selected_keys": [entry.key for entry in entries],
         "selected_acquisition_ids": sorted({acquisition_id for entry in entries for acquisition_id in entry.acquisition_ids}),
+        "selected_sources": [
+            {
+                "key": entry.key,
+                "display_name": entry.name,
+                "source_type": entry.source_type_key,
+                "source_files": list(entry.source_files),
+                "source_file_count": len(entry.source_files),
+            }
+            for entry in entries
+        ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -5246,10 +5297,7 @@ def _recognition_paths_for_rows(project_root: Path, rows: list[RegisteredSourceR
         payload = _acquisition_payload_by_id(project_root, row.acquisition_id)
         if not payload:
             continue
-        for key in ("copied_files", "referenced_paths", "registered_files"):
-            values = payload.get(key)
-            if isinstance(values, list):
-                paths.extend(str(value) for value in values if str(value).strip())
+        paths.extend(_recognition_source_files_from_payload(payload))
     return list(dict.fromkeys(paths))
 
 
@@ -5725,8 +5773,10 @@ def _candidate_geo_asset_manifest(project_root: Path | None, accession_or_projec
 def _registered_source_display_name(payload: dict[str, object], metadata: dict[str, object]) -> str:
     source_type = str(payload.get("source_type") or "")
     if source_type == "local_import":
-        values = payload.get("registered_files") or payload.get("referenced_paths") or payload.get("copied_files")
-        if isinstance(values, list) and values:
+        values = _local_import_declared_files(payload)
+        if len(values) > 1:
+            return f"本地导入批次：{len(values)} 个文件"
+        if values:
             return Path(str(values[0])).name
     if source_type in GEO_SOURCE_TYPES:
         return str(metadata.get("gse_id") or payload.get("source_label") or metadata.get("accession_or_project") or "未知 GSE")
@@ -5738,6 +5788,10 @@ def _registered_source_display_name(payload: dict[str, object], metadata: dict[s
 
 
 def _registered_source_location(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    if str(payload.get("source_type") or "") == "local_import":
+        values = _recognition_source_files_from_payload(payload)
+        if len(values) > 1:
+            return f"{len(values)} 个文件"
     for key in ("registered_files", "referenced_paths", "copied_files"):
         values = payload.get(key)
         if isinstance(values, list) and values:
@@ -5753,11 +5807,40 @@ def _registered_source_location(payload: dict[str, object], metadata: dict[str, 
 
 
 def _registered_source_full_location(payload: dict[str, object], metadata: dict[str, object]) -> str:
+    if str(payload.get("source_type") or "") == "local_import":
+        values = _recognition_source_files_from_payload(payload)
+        if len(values) > 1:
+            return "\n".join(values)
     for key in ("registered_files", "referenced_paths", "copied_files"):
         values = payload.get(key)
         if isinstance(values, list) and values:
             return str(values[0])
     return _registered_source_location(payload, metadata)
+
+
+def _payload_string_list(payload: dict[str, object], key: str) -> list[str]:
+    values = payload.get(key)
+    if not isinstance(values, list):
+        return []
+    return [str(value) for value in values if str(value).strip()]
+
+
+def _local_import_declared_files(payload: dict[str, object]) -> list[str]:
+    return (
+        _payload_string_list(payload, "source_files")
+        or _payload_string_list(payload, "registered_files")
+        or _payload_string_list(payload, "referenced_paths")
+        or _payload_string_list(payload, "copied_files")
+    )
+
+
+def _recognition_source_files_from_payload(payload: dict[str, object]) -> list[str]:
+    strategy = str(payload.get("strategy") or "")
+    if strategy == "copy":
+        return _payload_string_list(payload, "copied_files") or _local_import_declared_files(payload)
+    if strategy == "reference":
+        return _payload_string_list(payload, "referenced_paths") or _local_import_declared_files(payload)
+    return _payload_string_list(payload, "copied_files") or _payload_string_list(payload, "referenced_paths") or _local_import_declared_files(payload)
 
 
 def _registered_status_text(payload: dict[str, object]) -> str:
@@ -5847,7 +5930,7 @@ def _display_name_for_paths(paths: list[Path], fallback: str) -> str:
         return fallback
     if len(paths) == 1:
         return paths[0].name or str(paths[0])
-    return f"{len(paths)} 个文件：{paths[0].name}"
+    return f"本地导入批次：{len(paths)} 个文件"
 
 
 def _storage_policy_text(policy: str) -> str:
@@ -5948,6 +6031,19 @@ def _selected_source_summary_text(summary: SelectedSourceSummary, *, compact: bo
         f"最近更新时间：{summary.created_at or '未记录'}",
         f"下一步建议：{next_step}",
     ]
+    if summary.source_type == "local_import" and len(summary.source_files) > 1:
+        lines.append(f"文件总数：{len(summary.source_files)} 个")
+        if summary.storage_policy == "copy":
+            lines.append("文件来源状态：已复制到项目目录；识别阶段使用复制后的项目内文件。")
+        elif summary.storage_policy == "reference":
+            lines.append("文件来源状态：使用原文件位置；识别阶段引用原始文件，不复制。")
+        else:
+            lines.append(f"文件来源状态：{_storage_policy_text(summary.storage_policy)}")
+        preview_names = "、".join(Path(path).name for path in summary.source_files[:3])
+        remaining = len(summary.source_files) - 3
+        lines.append(f"主界面摘要：{preview_names}" + (f"，另有 {remaining} 个文件" if remaining > 0 else ""))
+        for index, raw_path in enumerate(summary.source_files, start=1):
+            lines.append(f"{index}. {Path(raw_path).name}｜{raw_path}")
     if summary.source_type in {"tcga_gtex_tcga_folder", "tcga_gtex_gtex_folder"}:
         lines.append("警告：当前未进行正式 batch correction，后续分析需谨慎解释。")
     if summary.warnings:
@@ -7096,6 +7192,9 @@ def _selected_source_technical_details(summary: SelectedSourceSummary) -> str:
             "source_label": summary.source_label,
             "selected_kind": summary.selected_kind,
             "source_path": summary.absolute_path or "未记录来源位置",
+            "source_files": list(summary.source_files),
+            "copied_files": list(summary.copied_files),
+            "referenced_paths": list(summary.referenced_paths),
             "storage_policy": summary.storage_policy,
             "acquisition_plan_path": summary.acquisition_plan_path,
             "acquisition_record_path": summary.acquisition_record_path,
@@ -7113,7 +7212,7 @@ def _acquisition_user_summary(summary: AcquisitionSummary | None, artifacts: dic
     plan = artifacts.get("plan")
     record = artifacts.get("record")
     handoff = artifacts.get("handoff")
-    file_count = len(summary.registered_files) + len(summary.copied_files) + len(summary.referenced_paths)
+    file_count = len(summary.source_files or summary.registered_files or summary.copied_files or summary.referenced_paths)
     next_step = "可以继续进入数据识别。" if summary.strategy != "plan_only" and file_count else "当前只是获取计划或缺少实际文件，请补充本地文件后再继续。"
     warnings = "；".join(summary.warnings) if summary.warnings else "无"
     return "\n".join(
