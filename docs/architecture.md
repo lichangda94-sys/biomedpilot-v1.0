@@ -30,8 +30,10 @@ environment testing.
 BioMedPilot local tools and local models follow the principle:
 `架构上统一，体验上按需`.
 
-- Shared backend management may later live under `app/shared/local_engines/`,
-  but the main screen must not expose a large "External Engines" center.
+- Shared backend management lives under `app/shared/local_engines/`, currently
+  with ImageJ/Fiji configuration, status serialization, local path detection,
+  and headless smoke-test helpers. The main screen must not expose a large
+  "External Engines" center.
 - Features detect their own required local dependency when entered or triggered.
   Missing dependencies should show contextual setup, not a required first-use
   configuration step.
@@ -39,6 +41,9 @@ BioMedPilot local tools and local models follow the principle:
   configuration, diagnostics, and troubleshooting.
 - ImageJ/Fiji is the preferred local image-analysis backend for future
   ImageJ-assisted/manual-review image workflows.
+- This foundation is availability infrastructure only. It does not add WB/gel
+  real analysis, agarose gel, cell counting, automatic ROI, pathology analysis,
+  or any concrete production image algorithm.
 - Ollama/local LLM is a local environment capability. It must not consume cloud
   AI credits and must not be gated by membership/payment entitlement.
 - Cloud AI is separate and may later use account login, membership, AI credits,

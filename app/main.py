@@ -12,7 +12,8 @@ from app.version import app_version_summary
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch BioMedPilot.")
     parser.add_argument("--smoke-test", action="store_true", help="Load startup state and exit without opening the GUI event loop.")
-    return parser.parse_args(argv)
+    clean_argv = [arg for arg in (argv or sys.argv[1:]) if not arg.startswith("-psn_")]
+    return parser.parse_args(clean_argv)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,9 +28,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"launch_mode={version.launch_mode}")
         print(f"app_root={version.app_root}")
         print(f"git_head={version.git_head}")
-        print(f"workspace_entries=2")
+        print(f"workspace_entries=3")
         print(f"bioinformatics_features={len(dashboard.bioinformatics_features)}")
         print(f"meta_analysis_features={len(dashboard.meta_analysis_features)}")
+        print(f"labtools_features={len(dashboard.labtools_features)}")
         print(f"pyside6_available={environment.pyside6_available}")
         return 0
 

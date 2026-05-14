@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.bioinformatics.workspace import bioinformatics_features
+from app.labtools.workspace import labtools_features
 from app.meta_analysis.workspace import meta_analysis_features
 from app.shared.environment.checks import EnvironmentStatus, check_local_environment
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
@@ -16,6 +17,7 @@ class DashboardModel:
     product_subtitle: str
     bioinformatics_features: tuple[str, ...]
     meta_analysis_features: tuple[str, ...]
+    labtools_features: tuple[str, ...]
     recent_projects: tuple[ProjectRecord, ...]
     recent_tasks: tuple[TaskRecord, ...]
     environment: EnvironmentStatus
@@ -36,6 +38,7 @@ def build_dashboard_model(
         ),
         bioinformatics_features=tuple(item.name for item in bioinformatics_features()),
         meta_analysis_features=tuple(item.name for item in meta_analysis_features()),
+        labtools_features=tuple(item.name for item in labtools_features()),
         recent_projects=tuple(project_center.list_projects(limit=5)),
         recent_tasks=tuple(task_center.list_tasks(limit=5)),
         environment=check_local_environment(),

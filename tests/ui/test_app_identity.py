@@ -14,6 +14,7 @@ try:
         APP_ICON_PNG_PATH,
         APP_NAME,
         BIOINFORMATICS_MODULE_ICON_PATH,
+        LABTOOLS_MODULE_ICON_PATH,
         META_ANALYSIS_MODULE_ICON_PATH,
         UI01_LOGIN_ICON_PATHS,
         UI01_LOGIN_ICON_SHEET_PATH,
@@ -76,10 +77,13 @@ def test_main_window_uses_app_icon(qt_app) -> None:
 def test_module_icons_load(qt_app) -> None:
     assert BIOINFORMATICS_MODULE_ICON_PATH.exists()
     assert META_ANALYSIS_MODULE_ICON_PATH.exists()
+    assert LABTOOLS_MODULE_ICON_PATH.exists()
     assert not load_module_icon("bioinformatics").isNull()
     assert not load_module_pixmap("bioinformatics").isNull()
     assert not load_module_icon("meta_analysis").isNull()
     assert not load_module_pixmap("meta_analysis").isNull()
+    assert not load_module_icon("labtools").isNull()
+    assert not load_module_pixmap("labtools").isNull()
 
 
 def test_ui01_login_icon_assets_load(qt_app) -> None:
@@ -155,5 +159,6 @@ def test_icon_asset_inventory_reports_generated_and_pending_slots(qt_app) -> Non
     assert any(item.label == "UI-04 数据来源图标组" and item.state_label == "待生成" for item in statuses)
     assert any(item.label == "UI-01 Subscription 图标" and item.state_label == "已生成，等待接入" for item in statuses)
     assert any("UI-02 模块选择首页" in item.usages for item in statuses if item.key == "module.bioinformatics")
+    assert any("UI-02 模块选择首页" in item.usages for item in statuses if item.key == "module.labtools")
     assert any(item.label == "UI-02 Dashboard 图标" and item.state_label == "已生成并接入" for item in statuses)
     assert any(item.label == "UI-03 创建项目图标" and item.state_label == "已生成并接入" for item in statuses)
