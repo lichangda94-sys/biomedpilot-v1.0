@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 MODULE_DESCRIPTIONS = {
     "通用试剂计算器": "浓度、质量、体积、摩尔量、稀释快速计算，以及用户自定义试剂模板、本次配制换算和子模板展开。",
     "ImageJ/Fiji 本地引擎": "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置。",
-    "Western Blot 工具": "WB 上样计算、条带定量 workflow 占位。",
+    "Western Blot 工具": "Western Blot 上样体系计算器可用；ImageJ-assisted 条带定量 workflow 仍为 planned / 未启用；不启用 WB 图像分析、条带识别、灰度定量或自动 ROI。",
     "PCR/qPCR 工具": "PCR mix、qPCR 结果整理 workflow 占位。",
     "ELISA/吸光度工具": "标准曲线、OD 数据整理 workflow 占位。",
     "细胞实验工具": "细胞接种、处理分组、实验记录 workflow 占位。",
@@ -74,14 +74,14 @@ def test_labtools_home_module_descriptions_match_architecture_copy(qapp) -> None
         assert description in text
 
 
-def test_specialized_module_entries_are_planned_not_completed_algorithms(qapp) -> None:
+def test_specialized_module_entries_keep_status_boundaries(qapp) -> None:
     from PySide6.QtWidgets import QFrame
 
     from app.labtools.labtools_home import LabToolsHomeWidget
 
     widget = LabToolsHomeWidget()
     forbidden = ("已完成算法", "算法已完成", "自动分析已开放", "正式报告", "临床诊断", "无需人工复核")
-    for title in ("Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
+    for title in ("PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
         frame = widget.findChild(QFrame, ENTRY_OBJECTS[title])
         assert frame is not None
         text = _visible_text(frame)
@@ -89,6 +89,13 @@ def test_specialized_module_entries_are_planned_not_completed_algorithms(qapp) -
         assert "已开放" not in text
         for term in forbidden:
             assert term not in text
+    western_frame = widget.findChild(QFrame, ENTRY_OBJECTS["Western Blot 工具"])
+    assert western_frame is not None
+    western_text = _visible_text(western_frame)
+    assert "available / 可用" in western_text
+    assert "不启用 WB 图像分析" in western_text
+    for term in forbidden:
+        assert term not in western_text
 
 
 def test_general_calculator_is_not_described_as_all_experiment_calculation(qapp) -> None:
@@ -112,7 +119,6 @@ def test_planned_tool_detail_pages_keep_logic_card_and_boundaries(qapp) -> None:
     widget = LabToolsWorkspaceWidget()
     planned_routes = (
         (widget.show_cell_experiments, "cell_experiments", "细胞实验工具"),
-        (widget.show_western_blot, "western_blot", "Western Blot 工具"),
         (widget.show_pcr_qpcr, "pcr_qpcr", "PCR/qPCR 工具"),
         (widget.show_elisa_absorbance, "elisa_absorbance", "ELISA/吸光度工具"),
     )
@@ -127,6 +133,19 @@ def test_planned_tool_detail_pages_keep_logic_card_and_boundaries(qapp) -> None:
         assert "当前不可做内容" in text
         assert "后续开发前需要 Tool Logic Card" in text
         assert "不替代人工判断" in text or "不替代人工复核" in text or "不替代试剂盒说明书" in text
+
+
+def test_western_blot_available_page_keeps_image_analysis_disabled(qapp) -> None:
+    from app.labtools.workspace import LabToolsWorkspaceWidget
+
+    widget = LabToolsWorkspaceWidget()
+    widget.show_western_blot()
+    text = _visible_text(widget._stack.currentWidget())
+
+    assert widget.current_page_key() == "western_blot"
+    assert "Western Blot 上样计算器：available / 可用" in text
+    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in text
+    assert "不启用 WB 图像分析、条带识别、灰度定量、自动 ROI" in text
 
 
 def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:

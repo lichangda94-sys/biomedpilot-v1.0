@@ -61,6 +61,7 @@ try:
         save_sds_page_gel_calculation_xlsx,
         save_sds_page_gel_template_json,
     )
+    from app.labtools.western_blot.widgets import WesternBlotLoadingCalculatorWidget
     from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
     from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
@@ -117,15 +118,23 @@ if QWidget is not None:
 
             title = QLabel("Western Blot")
             title.setObjectName("labToolsWesternBlotTitle")
-            description = QLabel("用于蛋白样品准备、蛋白浓度测定入口、上样体系、SDS-PAGE 配胶、电泳/转膜参数、抗体孵育流程和后续灰度分析。")
+            description = QLabel("用于蛋白样品准备、蛋白浓度测定入口、Western Blot 上样体系、SDS-PAGE 配胶、电泳/转膜参数和抗体孵育流程记录。")
             description.setObjectName("labToolsWesternBlotDescription")
             description.setWordWrap(True)
             notice = QLabel(f"{GEL_TEMPLATE_CONTEXT_NOTICE}。{GEL_REVIEW_NOTICE}。")
             notice.setObjectName("labToolsWesternBlotBoundary")
             notice.setWordWrap(True)
+            l4_status = QLabel(
+                "Western Blot 上样计算器：available / 可用\n"
+                "ImageJ-assisted 条带定量 workflow：planned / 未启用\n"
+                "当前 L4 仅支持上样体系计算，不启用 WB 图像分析、条带识别、灰度定量、自动 ROI；当前不会运行真实图像分析。"
+            )
+            l4_status.setObjectName("labToolsWesternBlotL4Status")
+            l4_status.setWordWrap(True)
             layout.addWidget(title)
             layout.addWidget(description)
             layout.addWidget(notice)
+            layout.addWidget(l4_status)
 
             self._tabs = QTabWidget()
             self._tabs.setObjectName("westernBlotTabs")
@@ -176,90 +185,7 @@ if QWidget is not None:
             return tab
 
         def _build_protein_loading_tab(self) -> QWidget:
-            tab = QWidget()
-            layout = QVBoxLayout(tab)
-            layout.setContentsMargins(0, SPACING["md"], 0, 0)
-            layout.setSpacing(SPACING["md"])
-
-            intro = QLabel("蛋白上样体系计算")
-            intro.setObjectName("labToolsWesternBlotSectionTitle")
-            boundary = QLabel(PROTEIN_LOADING_REVIEW_NOTICE)
-            boundary.setObjectName("labToolsWesternBlotDescription")
-            boundary.setWordWrap(True)
-            reducing = QLabel(REDUCING_AGENT_NOTICE)
-            reducing.setObjectName("labToolsWesternBlotBoundary")
-            reducing.setWordWrap(True)
-            layout.addWidget(intro)
-            layout.addWidget(boundary)
-            layout.addWidget(reducing)
-
-            sample_card = self._card()
-            sample_layout = QVBoxLayout(sample_card)
-            sample_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-            self._loading_sample_table = QTableWidget(2, 3)
-            self._loading_sample_table.setObjectName("proteinLoadingSampleTable")
-            self._loading_sample_table.setHorizontalHeaderLabels(("样本名称", "蛋白样品浓度", "浓度单位"))
-            for row in range(2):
-                self._loading_sample_table.setItem(row, 0, QTableWidgetItem(f"Sample {row + 1}"))
-                self._loading_sample_table.setItem(row, 1, QTableWidgetItem(""))
-                unit_combo = _combo(SUPPORTED_PROTEIN_CONCENTRATION_UNITS, "µg/µL")
-                unit_combo.setObjectName("proteinLoadingConcentrationUnitCombo")
-                self._loading_sample_table.setCellWidget(row, 2, unit_combo)
-            add_row = QPushButton("添加样本行")
-            add_row.setObjectName("proteinLoadingAddSampleRowButton")
-            add_row.clicked.connect(self._add_loading_sample_row)
-            sample_layout.addWidget(self._loading_sample_table)
-            sample_layout.addWidget(add_row, alignment=Qt.AlignLeft)
-            layout.addWidget(sample_card)
-
-            settings = self._card()
-            settings_layout = QGridLayout(settings)
-            settings_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-            self._loading_target_protein = _line_edit("目标每孔蛋白量 µg", "20")
-            self._loading_target_protein.setObjectName("proteinLoadingTargetProteinField")
-            self._loading_final_volume = _line_edit("最终上样体积 µL", "20")
-            self._loading_final_volume.setObjectName("proteinLoadingFinalVolumeField")
-            self._loading_buffer_multiple = _line_edit("Loading buffer 倍数，例如 4", "4")
-            self._loading_buffer_multiple.setObjectName("proteinLoadingBufferMultipleField")
-            self._loading_buffer_target = _line_edit("Loading buffer 目标终浓度", "1")
-            self._loading_buffer_target.setObjectName("proteinLoadingBufferTargetField")
-            self._loading_overage = _line_edit("余量百分比", str(int(DEFAULT_LOADING_OVERAGE_PERCENT)))
-            self._loading_overage.setObjectName("proteinLoadingOverageField")
-            for index, (label, widget) in enumerate(
-                (
-                    ("目标每孔蛋白量 (µg)", self._loading_target_protein),
-                    ("最终上样体积 (µL)", self._loading_final_volume),
-                    ("Loading buffer 倍数", self._loading_buffer_multiple),
-                    ("Loading buffer 目标终浓度", self._loading_buffer_target),
-                    ("余量百分比", self._loading_overage),
-                )
-            ):
-                settings_layout.addWidget(QLabel(label), index // 3 * 2, index % 3)
-                settings_layout.addWidget(widget, index // 3 * 2 + 1, index % 3)
-            layout.addWidget(settings)
-
-            action = self._card()
-            action_layout = QHBoxLayout(action)
-            action_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-            self._loading_calculate_button = QPushButton("计算上样体系")
-            self._loading_calculate_button.setObjectName("proteinLoadingCalculateButton")
-            self._loading_calculate_button.clicked.connect(self._handle_loading_calculate)
-            self._loading_copy_button = QPushButton("复制结果")
-            self._loading_copy_button.setObjectName("proteinLoadingCopyResultButton")
-            self._loading_copy_button.setEnabled(False)
-            self._loading_copy_button.clicked.connect(self._copy_loading_result)
-            action_layout.addWidget(self._loading_calculate_button)
-            action_layout.addWidget(self._loading_copy_button)
-            action_layout.addStretch(1)
-            layout.addWidget(action)
-
-            self._loading_result = QTextEdit()
-            self._loading_result.setObjectName("proteinLoadingResultPanel")
-            self._loading_result.setReadOnly(True)
-            self._loading_result.setMinimumHeight(180)
-            self._loading_result.setText("尚未计算。填写样本浓度和全局设置后生成辅助计算草稿。")
-            layout.addWidget(self._loading_result, 1)
-            return tab
+            return WesternBlotLoadingCalculatorWidget()
 
         def _build_bca_assay_tab(self) -> QWidget:
             tab = QWidget()

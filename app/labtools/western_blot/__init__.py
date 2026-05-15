@@ -45,6 +45,20 @@ from app.labtools.western_blot.bca_assay import (
     parse_bca_od_matrix,
     wells_in_range,
 )
+from app.labtools.western_blot.calculator import (
+    SUPPORTED_FIXED_LANE_COUNTS,
+    SUPPORTED_LOADING_BUFFER_FACTORS,
+    calculate_wb_loading,
+)
+from app.labtools.western_blot.models import (
+    WB_LOADING_REVIEW_NOTICE,
+    WBLoadingCalculatorError,
+    WBLoadingConfig,
+    WBLoadingResult,
+    WBLoadingResultRow,
+    WBLane,
+    WBSampleInput,
+)
 
 __all__ = [
     "GEL_REVIEW_NOTICE",
@@ -88,4 +102,14 @@ __all__ = [
     "annotate_well_range",
     "parse_bca_od_matrix",
     "wells_in_range",
+    "SUPPORTED_FIXED_LANE_COUNTS",
+    "SUPPORTED_LOADING_BUFFER_FACTORS",
+    "calculate_wb_loading",
+    "WB_LOADING_REVIEW_NOTICE",
+    "WBLoadingCalculatorError",
+    "WBLoadingConfig",
+    "WBLoadingResult",
+    "WBLoadingResultRow",
+    "WBLane",
+    "WBSampleInput",
 ]

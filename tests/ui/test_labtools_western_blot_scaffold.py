@@ -40,11 +40,11 @@ def test_western_blot_module_entry_exists(qapp) -> None:
 
     assert widget.findChild(QFrame, "labToolsWesternBlotEntry") is not None
     assert "Western Blot 工具" in text
-    assert "WB 上样计算、条带定量 workflow 占位。" in text
-    assert "planned / 未启用" in text
+    assert "Western Blot 上样体系计算器可用" in text
+    assert "available / 可用" in text
 
 
-def test_western_blot_entry_opens_planned_detail_page(qapp) -> None:
+def test_western_blot_entry_opens_available_tool_page(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
@@ -52,28 +52,26 @@ def test_western_blot_entry_opens_planned_detail_page(qapp) -> None:
     text = _visible_text(widget._stack.currentWidget())
 
     assert widget.current_page_key() == "western_blot"
-    assert "当前状态：planned / 未启用" in text
-    assert "可做内容：未来将支持什么" in text
-    assert "当前不可做内容" in text
-    assert "后续开发前需要 Tool Logic Card" in text
-    assert "ImageJ/Fiji 本地引擎状态" in text
+    assert "Western Blot 上样计算器：available / 可用" in text
+    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in text
+    assert "当前 L4 仅支持上样体系计算" in text
 
 
-def test_western_blot_planned_detail_keeps_algorithm_boundaries(qapp) -> None:
+def test_western_blot_page_keeps_algorithm_boundaries(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
     widget.show_western_blot()
     text = _visible_text(widget._stack.currentWidget())
 
-    assert "WB 上样体系计算和实验记录入口" in text
-    assert "条带定量 workflow 的人工复核式整理" in text
-    assert "不启用 WB/gel 真实分析" in text
-    assert "不做条带自动识别或自动 ROI" in text
-    assert "不替代人工判断、试剂盒说明书或实验室 SOP" in text
+    assert "Western Blot 上样计算器" in text
+    assert "不启用 WB 图像分析" in text
+    assert "条带识别" in text
+    assert "自动 ROI" in text
+    assert "本工具不判断实验设计合理性" in text
 
 
-def test_sds_page_and_wb_grayscale_are_planned_not_completed(qapp) -> None:
+def test_wb_grayscale_is_planned_not_completed(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
@@ -81,12 +79,9 @@ def test_sds_page_and_wb_grayscale_are_planned_not_completed(qapp) -> None:
     text = _visible_text(widget._stack.currentWidget())
 
     assert "planned / 未启用" in text
-    assert "不启用 WB/gel 真实分析" in text
+    assert "不启用 WB 图像分析" in text
     assert "当前不会运行真实图像分析" in text
     for forbidden in (
-        "蛋白上样体系计算: 已实现 / 辅助计算草稿",
-        "SDS-PAGE 配胶模板与批量配制: 已实现 / 用户模板换算",
-        "BCA 蛋白浓度测定: 已实现 / 辅助计算草稿",
         "SDS-PAGE 配胶已完成",
         "胶浓度自动推导已完成",
         "WB 灰度分析已完成",

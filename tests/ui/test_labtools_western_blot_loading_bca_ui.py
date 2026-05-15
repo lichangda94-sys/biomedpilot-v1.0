@@ -95,6 +95,9 @@ def test_protein_loading_calculation_enables_copy_and_shows_totals(qapp) -> None
     assert copy_button.isEnabled()
     assert "总 loading buffer 体积" in result_text
     assert "Western Blot 上样体系辅助计算草稿" in result_text
+    assert "横向 lane layout" in result_text
+    assert "Lane 1" in result_text
+    assert "Protein Marker" in result_text
 
 
 def test_bca_ui_displays_plate_matrix_annotation_and_result_entries(qapp) -> None:
@@ -158,6 +161,42 @@ def test_bca_calculation_enables_copy_and_shows_results(qapp) -> None:
     assert "slope" in page.findChild(QTextEdit, "bcaStandardCurvePanel").toPlainText()
     assert "Sample 1" in page.findChild(QTextEdit, "bcaSampleResultsPanel").toPlainText()
     assert "BCA 蛋白浓度测定辅助计算草稿" in page.findChild(QTextEdit, "bcaSampleResultsPanel").toPlainText()
+
+
+def test_wb_loading_ui_generates_lane_layout_and_marker_variants(qapp) -> None:
+    from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QTextEdit
+
+    _, page = _western_blot_page()
+    table = page.findChild(QTableWidget, "proteinLoadingSampleTable")
+    table.setItem(0, 0, QTableWidgetItem("S1"))
+    table.setItem(0, 1, QTableWidgetItem("2"))
+    table.setItem(1, 0, QTableWidgetItem("S2"))
+    table.setItem(1, 1, QTableWidgetItem("4"))
+
+    page.findChild(QPushButton, "proteinLoadingCalculateButton").click()
+    lane_text = page.findChild(QTextEdit, "wbLoadingLaneLayoutPanel").toPlainText()
+    assert "Lane 1" in lane_text
+    assert "Protein Marker" in lane_text
+    assert "S1" in lane_text
+
+    page.findChild(QCheckBox, "wbLoadingMarkerEnabledCheck").setChecked(False)
+    page.findChild(QPushButton, "proteinLoadingCalculateButton").click()
+    lane_text = page.findChild(QTextEdit, "wbLoadingLaneLayoutPanel").toPlainText()
+    assert "样本\tS1\tS2" in lane_text
+
+    page.findChild(QCheckBox, "wbLoadingMarkerEnabledCheck").setChecked(True)
+    page.findChild(QComboBox, "wbLoadingLaneModeCombo").setCurrentText("fixed")
+    page.findChild(QComboBox, "wbLoadingFixedLaneCountCombo").setCurrentText("10")
+    page.findChild(QPushButton, "proteinLoadingCalculateButton").click()
+    lane_text = page.findChild(QTextEdit, "wbLoadingLaneLayoutPanel").toPlainText()
+    assert "Lane 10" in lane_text
+    assert "Empty" in lane_text
+
+    page.findChild(QComboBox, "wbLoadingReducingModeCombo").setCurrentText("percent_of_final")
+    page.findChild(QLineEdit, "wbLoadingReducingNameField").setText("β-ME")
+    page.findChild(QLineEdit, "wbLoadingReducingPercentField").setText("5")
+    page.findChild(QPushButton, "proteinLoadingCalculateButton").click()
+    assert "β-ME" in page.findChild(QTextEdit, "wbLoadingLaneLayoutPanel").toPlainText()
 
 
 def test_loading_and_bca_ui_avoid_misleading_claims(qapp) -> None:
