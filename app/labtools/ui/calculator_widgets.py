@@ -51,6 +51,7 @@ try:
     from app.labtools.reagent_templates import (
         CommercialReagentInfo,
         PreparationRequest,
+        PHRecord,
         ReagentComponent,
         ReagentTemplate,
         ReagentTemplateError,
@@ -639,7 +640,7 @@ if QWidget is not None:
             component_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
             self._component_name = _line_edit("组分名称")
             self._component_name.setObjectName("reagentComponentNameField")
-            self._component_type = _combo(("liquid", "powder", "commercial_reagent", "solvent", "ph_adjustment", "self_prepared_template"), "liquid")
+            self._component_type = _combo(("liquid", "powder", "commercial_reagent", "solvent", "self_prepared_template"), "liquid")
             self._component_type.setObjectName("reagentComponentTypeCombo")
             self._component_amount = _line_edit("基准用量")
             self._component_amount.setObjectName("reagentComponentAmountField")
@@ -656,6 +657,7 @@ if QWidget is not None:
             self._auto_fill.setObjectName("reagentComponentAutoFillCheck")
             self._reference_template = QComboBox()
             self._reference_template.setObjectName("reagentComponentReferenceTemplateCombo")
+            self._component_type.currentTextChanged.connect(self._handle_component_type_changed)
             self._component_notes = _line_edit("组分备注")
             self._component_notes.setObjectName("reagentComponentNotesField")
             self._commercial_concentration = _line_edit("商品化试剂浓度")
@@ -666,6 +668,16 @@ if QWidget is not None:
             self._commercial_supplier.setObjectName("reagentCommercialSupplierField")
             self._commercial_storage = _line_edit("保存条件")
             self._commercial_storage.setObjectName("reagentCommercialStorageField")
+            self._initial_mode = _combo(("none", "percent_of_final", "fixed_amount", "note_only"), "none")
+            self._initial_mode.setObjectName("reagentSolventInitialModeCombo")
+            self._initial_percent = _line_edit("例如 80")
+            self._initial_percent.setObjectName("reagentSolventInitialPercentField")
+            self._initial_amount = _line_edit("固定初始加入量")
+            self._initial_amount.setObjectName("reagentSolventInitialAmountField")
+            self._initial_unit = _combo(supported_volume_units(), "mL")
+            self._initial_unit.setObjectName("reagentSolventInitialUnitCombo")
+            self._initial_note = _line_edit("初始加入备注")
+            self._initial_note.setObjectName("reagentSolventInitialNoteField")
             component_widgets = (
                 ("组分名称", self._component_name),
                 ("组分类型", self._component_type),
@@ -677,6 +689,11 @@ if QWidget is not None:
                 ("商品化批号", self._commercial_lot),
                 ("供应商", self._commercial_supplier),
                 ("保存条件", self._commercial_storage),
+                ("初始加入模式", self._initial_mode),
+                ("初始加入比例 %", self._initial_percent),
+                ("固定初始加入量", self._initial_amount),
+                ("固定初始单位", self._initial_unit),
+                ("初始加入备注", self._initial_note),
             )
             for index, (label, widget) in enumerate(component_widgets):
                 component_layout.addWidget(QLabel(label), index // 2 * 2, index % 2)
@@ -684,7 +701,7 @@ if QWidget is not None:
             checks = QHBoxLayout()
             for check in (self._scale_volume, self._scale_strength, self._contributes_volume, self._auto_fill):
                 checks.addWidget(check)
-            component_layout.addLayout(checks, 10, 0, 1, 2)
+            component_layout.addLayout(checks, 16, 0, 1, 2)
             add_component = QPushButton("添加组分")
             add_component.setObjectName("reagentTemplateAddComponentButton")
             add_component.clicked.connect(self._handle_add_component)
@@ -699,8 +716,44 @@ if QWidget is not None:
             component_actions.addWidget(remove_component)
             component_actions.addWidget(clear_components)
             component_actions.addStretch(1)
-            component_layout.addLayout(component_actions, 11, 0, 1, 2)
+            component_layout.addLayout(component_actions, 17, 0, 1, 2)
+            reference_note = QLabel(
+                "self_prepared_template 表示本次需要按引用模板配制，可展开内部清单；"
+                "commercial_reagent 表示商品化/已有试剂，只计算加入量，不展开。"
+            )
+            reference_note.setObjectName("labToolsCalculatorNotice")
+            reference_note.setWordWrap(True)
+            component_layout.addWidget(reference_note, 18, 0, 1, 2)
             root.addWidget(component_card)
+
+            ph_card = QFrame()
+            ph_card.setObjectName("labToolsCard")
+            ph_layout = QGridLayout(ph_card)
+            ph_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._ph_enabled = QCheckBox("启用 pH / 调节记录")
+            self._ph_enabled.setObjectName("reagentPhRecordEnabledCheck")
+            self._ph_target = _line_edit("例如 7.4")
+            self._ph_target.setObjectName("reagentPhTargetField")
+            self._ph_measured = _line_edit("实测 pH，可选")
+            self._ph_measured.setObjectName("reagentPhMeasuredField")
+            self._ph_note = _line_edit("例如 使用 HCl 或 NaOH 调整，需 pH meter 实测")
+            self._ph_note.setObjectName("reagentPhAdjustmentNoteField")
+            self._ph_include_steps = QCheckBox("写入配制步骤")
+            self._ph_include_steps.setObjectName("reagentPhIncludeStepsCheck")
+            self._ph_include_steps.setChecked(True)
+            ph_layout.addWidget(self._ph_enabled, 0, 0, 1, 2)
+            for index, (label, widget) in enumerate(
+                (
+                    ("目标 pH", self._ph_target),
+                    ("实测 pH", self._ph_measured),
+                    ("调节说明", self._ph_note),
+                ),
+                start=1,
+            ):
+                ph_layout.addWidget(QLabel(label), index, 0)
+                ph_layout.addWidget(widget, index, 1)
+            ph_layout.addWidget(self._ph_include_steps, 4, 0, 1, 2)
+            root.addWidget(ph_card)
 
             self._component_summary = QTextEdit()
             self._component_summary.setObjectName("reagentTemplateComponentSummary")
@@ -727,6 +780,7 @@ if QWidget is not None:
             self._status.setReadOnly(True)
             self._status.setMinimumHeight(110)
             root.addWidget(self._status)
+            self._handle_component_type_changed(self._component_type.currentText())
 
         def _refresh_template_list(self) -> None:
             self._template_list.clear()
@@ -739,10 +793,17 @@ if QWidget is not None:
             self._reference_template.addItem("不引用", "")
             for template in self._templates:
                 self._reference_template.addItem(template.name, template.template_id)
-            if current:
+            if current and self._component_type.currentText() == "self_prepared_template":
                 index = self._reference_template.findData(current)
                 if index >= 0:
                     self._reference_template.setCurrentIndex(index)
+            self._handle_component_type_changed(self._component_type.currentText())
+
+        def _handle_component_type_changed(self, component_type: str) -> None:
+            can_reference = component_type == "self_prepared_template"
+            self._reference_template.setEnabled(can_reference)
+            if not can_reference:
+                self._reference_template.setCurrentIndex(0)
 
         def _handle_template_selected(self, row: int) -> None:
             if row < 0 or row >= len(self._templates):
@@ -755,6 +816,7 @@ if QWidget is not None:
             self._default_strength.setText(template.default_strength)
             self._notes.setText(template.notes)
             self._components = list(template.components)
+            self._set_ph_record(template.ph_record)
             self._refresh_component_summary()
 
         def _handle_new_template(self) -> None:
@@ -765,15 +827,17 @@ if QWidget is not None:
             self._default_strength.setText("1X")
             self._notes.clear()
             self._components = []
+            self._set_ph_record(None)
             self._refresh_component_summary()
 
         def _handle_add_component(self) -> None:
             try:
                 amount = float(self._component_amount.text())
-                reference_id = str(self._reference_template.currentData() or "")
+                component_type = self._component_type.currentText()
+                reference_id = str(self._reference_template.currentData() or "") if component_type == "self_prepared_template" else ""
                 component = ReagentComponent(
                     name=self._component_name.text().strip(),
-                    component_type=self._component_type.currentText(),
+                    component_type=component_type,
                     base_amount=amount,
                     unit=self._component_unit.currentText(),
                     scale_with_volume=self._scale_volume.isChecked(),
@@ -782,6 +846,11 @@ if QWidget is not None:
                     auto_fill_to_final_volume=self._auto_fill.isChecked(),
                     notes=self._component_notes.text().strip(),
                     referenced_template_id=reference_id,
+                    initial_addition_mode=self._initial_mode.currentText(),
+                    initial_addition_percent=float(self._initial_percent.text() or 0),
+                    initial_addition_amount=float(self._initial_amount.text() or 0),
+                    initial_addition_unit=self._initial_unit.currentText(),
+                    initial_addition_note=self._initial_note.text().strip(),
                     commercial_info=CommercialReagentInfo(
                         concentration=self._commercial_concentration.text().strip(),
                         lot_number=self._commercial_lot.text().strip(),
@@ -804,6 +873,13 @@ if QWidget is not None:
             self._commercial_lot.clear()
             self._commercial_supplier.clear()
             self._commercial_storage.clear()
+            self._initial_mode.setCurrentText("none")
+            self._initial_percent.clear()
+            self._initial_amount.clear()
+            self._initial_note.clear()
+            self._component_type.setCurrentText("liquid")
+            self._reference_template.setCurrentIndex(0)
+            self._handle_component_type_changed(self._component_type.currentText())
 
         def _handle_remove_last_component(self) -> None:
             if not self._components:
@@ -833,10 +909,32 @@ if QWidget is not None:
                     flags.append("参与体积")
                 if component.auto_fill_to_final_volume:
                     flags.append("自动补足")
+                if component.initial_addition_mode != "none":
+                    flags.append(f"初始加入:{component.initial_addition_mode}")
                 if component.referenced_template_id:
                     flags.append("引用子模板")
                 lines.append(f"{component.name}: {component.base_amount:g} {component.unit} / {component.component_type} / {', '.join(flags) or '固定记录'}")
+            ph_record = self._build_ph_record()
+            if ph_record is not None:
+                lines.append(f"pH / 调节记录: 目标 pH {ph_record.target_ph or '待填'} / {ph_record.adjustment_note or '无说明'}")
             self._component_summary.setText("\n".join(lines))
+
+        def _set_ph_record(self, ph_record: PHRecord | None) -> None:
+            self._ph_enabled.setChecked(ph_record is not None)
+            self._ph_target.setText(ph_record.target_ph if ph_record is not None else "")
+            self._ph_measured.setText(ph_record.measured_ph if ph_record is not None else "")
+            self._ph_note.setText(ph_record.adjustment_note if ph_record is not None else "")
+            self._ph_include_steps.setChecked(True if ph_record is None else ph_record.include_in_steps)
+
+        def _build_ph_record(self) -> PHRecord | None:
+            if not self._ph_enabled.isChecked():
+                return None
+            return PHRecord(
+                target_ph=self._ph_target.text().strip(),
+                measured_ph=self._ph_measured.text().strip(),
+                adjustment_note=self._ph_note.text().strip(),
+                include_in_steps=self._ph_include_steps.isChecked(),
+            )
 
         def _build_template_from_form(self) -> ReagentTemplate:
             try:
@@ -854,6 +952,7 @@ if QWidget is not None:
                     default_strength=self._default_strength.text().strip() or "1X",
                     notes=self._notes.text().strip(),
                     components=tuple(self._components),
+                    ph_record=self._build_ph_record(),
                     created_at=created_at,
                     updated_at=created_at,
                 )
@@ -864,6 +963,7 @@ if QWidget is not None:
                 default_strength=self._default_strength.text().strip() or "1X",
                 notes=self._notes.text().strip(),
                 components=tuple(self._components),
+                ph_record=self._build_ph_record(),
             )
 
         def _handle_save_template(self) -> None:

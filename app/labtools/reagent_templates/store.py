@@ -44,11 +44,12 @@ class ReagentTemplateStore:
         raw_templates = payload.get("templates")
         if not isinstance(raw_templates, list):
             raise ReagentTemplateError("试剂模板 JSON 缺少 templates 列表。")
-        templates = tuple(ReagentTemplate.from_dict(item) for item in raw_templates)
+        templates = tuple(ReagentTemplate.from_dict(item).normalized_for_storage() for item in raw_templates)
         self._validate_all(templates)
         return templates
 
     def save_all(self, templates: tuple[ReagentTemplate, ...]) -> Path:
+        templates = tuple(template.normalized_for_storage() for template in templates)
         self._validate_all(templates)
         path = self.resolved_path()
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -65,7 +66,7 @@ class ReagentTemplateStore:
 
     def upsert_template(self, template: ReagentTemplate) -> ReagentTemplate:
         templates = list(self.load())
-        updated = template.with_updated_timestamp()
+        updated = template.normalized_for_storage().with_updated_timestamp()
         for index, existing in enumerate(templates):
             if existing.template_id == template.template_id:
                 templates[index] = updated
@@ -114,7 +115,7 @@ def _validate_references(templates: tuple[ReagentTemplate, ...]) -> None:
     ids = {template.template_id for template in templates}
     for template in templates:
         for component in template.components:
-            if component.referenced_template_id and component.referenced_template_id not in ids:
+            if component.component_type == "self_prepared_template" and component.referenced_template_id and component.referenced_template_id not in ids:
                 raise ReagentTemplateError(f"{template.name} 的组分 {component.name} 引用了不存在的子模板。")
 
 

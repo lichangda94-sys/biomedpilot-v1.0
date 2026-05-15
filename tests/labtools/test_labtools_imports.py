@@ -25,10 +25,13 @@ def test_labtools_tool_registry_lists_available_and_planned_tools() -> None:
     assert tools[0].is_planned_only is False
     assert tools[1].is_available is True
     assert tools[1].requires_imagej_fiji is False
-    assert all(tool.is_planned_only for tool in tools[2:])
-    assert all(tool.status == "planned / 未启用" for tool in tools[2:])
+    assert tools[2].is_available is True
+    assert tools[2].is_planned_only is False
+    assert tools[2].status == "available / 可用"
+    assert all(tool.is_planned_only for tool in tools[3:])
+    assert all(tool.status == "planned / 未启用" for tool in tools[3:])
     assert all(tool.boundary_statement for tool in tools)
-    assert tools[2].requires_imagej_fiji is True
+    assert tools[2].requires_imagej_fiji is False
 
 
 def test_labtools_module_exports_features() -> None:
@@ -47,7 +50,8 @@ def test_labtools_module_exports_features() -> None:
     ]
     assert features[0].status is FeatureStatus.TESTING
     assert features[1].status is FeatureStatus.TESTING
-    assert all(features[index].status is FeatureStatus.UNAVAILABLE for index in (2, 3, 4, 5))
+    assert features[2].status is FeatureStatus.TESTING
+    assert all(features[index].status is FeatureStatus.UNAVAILABLE for index in (3, 4, 5))
     assert all(feature.module == "labtools" for feature in features)
 
     descriptions = {feature.name: feature.description for feature in features}
@@ -57,7 +61,10 @@ def test_labtools_module_exports_features() -> None:
     assert "ImageJ/Fiji 检测与路径配置" in descriptions["ImageJ/Fiji 本地引擎"]
     assert "不是图像分析结果工具" in descriptions["ImageJ/Fiji 本地引擎"]
 
-    for name in ("Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
+    assert "上样体系计算器可用" in descriptions["Western Blot 工具"]
+    assert "不启用 WB 图像分析" in descriptions["Western Blot 工具"]
+
+    for name in ("PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
         assert "占位" in descriptions[name] or "workflow" in descriptions[name]
         assert "算法已完成" not in descriptions[name]
 
@@ -127,9 +134,9 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert widget.current_page_key() == "reagent_records"
     widget.show_western_blot()
     assert widget.current_page_key() == "western_blot"
-    planned_text = "\n".join(label.text() for label in widget._stack.currentWidget().findChildren(QLabel))
-    assert "当前状态：planned / 未启用" in planned_text
-    assert "后续开发前需要 Tool Logic Card" in planned_text
+    western_text = "\n".join(label.text() for label in widget._stack.currentWidget().findChildren(QLabel))
+    assert "Western Blot 上样计算器：available / 可用" in western_text
+    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in western_text
     widget.show_pcr_qpcr()
     assert widget.current_page_key() == "pcr_qpcr"
     widget.show_elisa_absorbance()
@@ -169,13 +176,20 @@ def test_labtools_calculator_workbench_saves_template_and_generates_preparation(
     widget.findChild(QLineEdit, "reagentComponentAmountField").setText("0")
     widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(False)
     widget.findChild(QCheckBox, "reagentComponentAutoFillCheck").setChecked(True)
+    widget.findChild(QComboBox, "reagentSolventInitialModeCombo").setCurrentText("percent_of_final")
+    widget.findChild(QLineEdit, "reagentSolventInitialPercentField").setText("80")
     widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QCheckBox, "reagentPhRecordEnabledCheck").setChecked(True)
+    widget.findChild(QLineEdit, "reagentPhTargetField").setText("7.4")
+    widget.findChild(QLineEdit, "reagentPhAdjustmentNoteField").setText("使用 HCl 或 NaOH 调整，需 pH meter 实测")
     widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
 
     saved = store.load()
     assert len(saved) == 1
     assert saved[0].name == "试剂 A"
     assert len(saved[0].components) == 2
+    assert saved[0].ph_record is not None
+    assert saved[0].ph_record.target_ph == "7.4"
 
     tabs.setCurrentIndex(2)
     widget.findChild(QPushButton, "preparationReloadTemplatesButton").click()
@@ -189,4 +203,63 @@ def test_labtools_calculator_workbench_saves_template_and_generates_preparation(
     assert "建议配制体积：82.5 mL" in result_text
     assert "- B: 8.25 mL" in result_text
     assert "- 水（溶剂补足）: 74.25 mL" in result_text
+    assert "pH / 调节记录" in result_text
+    assert "目标 pH: 7.4" in result_text
+    assert "7.4 mL" not in result_text
+    assert "初始加入约 66 mL" in result_text
+    assert "调节或记录 pH 至目标 pH 7.4" in result_text
     assert "人工复核提示" in result_text
+
+
+def test_labtools_template_ui_clears_reference_after_self_prepared_component(tmp_path) -> None:
+    try:
+        from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QLineEdit, QPushButton, QTabWidget
+
+        from app.labtools.reagent_templates import ReagentTemplateStore
+        from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"PySide6 UI runtime unavailable: {exc}")
+
+    app = QApplication.instance() or QApplication([])
+    store = ReagentTemplateStore(tmp_path / "reagent_templates.json")
+    widget = LabToolsCalculatorWidget(reagent_template_store=store)
+    tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert app is not None
+    assert tabs is not None
+    tabs.setCurrentIndex(1)
+
+    widget.findChild(QLineEdit, "reagentTemplateNameField").setText("10X PBS stock")
+    widget.findChild(QLineEdit, "reagentTemplateDefaultVolumeField").setText("1000")
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("NaCl")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("80")
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
+    stock = store.load()[0]
+
+    widget.findChild(QPushButton, "reagentTemplateNewButton").click()
+    widget.findChild(QLineEdit, "reagentTemplateNameField").setText("1X PBS from stock")
+    widget.findChild(QLineEdit, "reagentTemplateDefaultVolumeField").setText("100")
+    widget.findChild(QComboBox, "reagentComponentTypeCombo").setCurrentText("self_prepared_template")
+    reference_combo = widget.findChild(QComboBox, "reagentComponentReferenceTemplateCombo")
+    reference_combo.setCurrentIndex(reference_combo.findData(stock.template_id))
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("10X PBS stock")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("10")
+    widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(True)
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+
+    assert widget.findChild(QComboBox, "reagentComponentTypeCombo").currentText() == "liquid"
+    assert widget.findChild(QComboBox, "reagentComponentReferenceTemplateCombo").currentData() == ""
+    assert widget.findChild(QComboBox, "reagentComponentReferenceTemplateCombo").isEnabled() is False
+
+    widget.findChild(QComboBox, "reagentComponentTypeCombo").setCurrentText("solvent")
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("ddH2O")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("0")
+    widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(True)
+    widget.findChild(QCheckBox, "reagentComponentAutoFillCheck").setChecked(True)
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
+
+    working = next(template for template in store.load() if template.name == "1X PBS from stock")
+    components = {component.name: component for component in working.components}
+    assert components["10X PBS stock"].referenced_template_id == stock.template_id
+    assert components["ddH2O"].referenced_template_id == ""

@@ -24,6 +24,7 @@ try:
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
     from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
+    from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -503,7 +504,7 @@ if QWidget is not None:
                 status_text="已开放能力待重新归类 / 待确认使用逻辑",
             )
             self._cell_experiments_page = self._planned_tool_pages["cell_experiments"]
-            self._western_blot_page = self._planned_tool_pages["western_blot"]
+            self._western_blot_page = LabToolsWesternBlotWidget()
             self._pcr_qpcr_page = self._planned_tool_pages["pcr_qpcr"]
             self._elisa_absorbance_page = self._planned_tool_pages["elisa_absorbance"]
             self._route_pages = {
