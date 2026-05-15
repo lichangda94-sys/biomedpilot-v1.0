@@ -21,13 +21,6 @@ from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO
 DEFAULT_APP_NAME = "BioMedPilot"
 COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
-PACKAGE_RESOURCE_FILES = (
-    "data/medical_terms/mini_medical_terms_index.json",
-    "data/medical_terms/zh_term_overrides.json",
-    "data/medical_terms/source_metadata.json",
-    "data/medical_terms/license_attribution.md",
-)
-PACKAGE_RESOURCE_DIRS = ("data/medical_terms/reference_checklists",)
 STORAGE_DIRS = ("projects", "data", "tasks", "reports", "test_feedback")
 IGNORE_NAMES = {
     "__pycache__",
@@ -55,6 +48,7 @@ class PackagingResult:
     python_executable: str
     app_version: str
     git_head: str
+    signing_status: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
@@ -84,14 +78,13 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         if source.exists():
             shutil.copy2(source, resource_root / filename)
 
-    _copy_package_resources(repo_root, resource_root)
     _create_project_storage(resource_root / "project_storage")
     git_head = _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
     _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
-    _ad_hoc_sign_app(app_path)
+    signing_status = _ad_hoc_sign_app(app_path)
 
     return PackagingResult(
         app_path=app_path,
@@ -102,6 +95,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         python_executable=options.python_executable,
         app_version=APP_VERSION,
         git_head=git_head,
+        signing_status=signing_status,
     )
 
 
@@ -131,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
     print(f"python={result.python_executable}")
+    print(f"signing_status={result.signing_status}")
     print(f"build_info={result.build_info_path}")
     print("standalone=false")
     print("network_downloads=false")
@@ -158,20 +153,6 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
         elif path.is_dir() and name in {"dist", "build", ".git", ".venv", ".venv-meta"}:
             ignored.add(name)
     return ignored
-
-
-def _copy_package_resources(repo_root: Path, resource_root: Path) -> None:
-    for relative_name in PACKAGE_RESOURCE_FILES:
-        source = repo_root / relative_name
-        if source.exists():
-            target = resource_root / relative_name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
-
-    for relative_name in PACKAGE_RESOURCE_DIRS:
-        source = repo_root / relative_name
-        if source.exists():
-            shutil.copytree(source, resource_root / relative_name, ignore=_copy_ignore, dirs_exist_ok=True)
 
 
 def _create_project_storage(storage_root: Path) -> None:
@@ -221,7 +202,6 @@ APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 RESOURCE_ROOT="$APP_DIR/Resources/app"
 PYTHON_BIN="${{BIOMEDPILOT_PYTHON:-{python_executable}}}"
 export BIOMEDPILOT_LAUNCH_MODE="packaged-local-python"
-export PYTHONDONTWRITEBYTECODE="1"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3 || true)"
@@ -233,21 +213,24 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 cd "$RESOURCE_ROOT"
+export PYTHONDONTWRITEBYTECODE="1"
 exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
 
 
-def _ad_hoc_sign_app(app_path: Path) -> None:
-    if sys.platform != "darwin" or shutil.which("codesign") is None:
-        return
+def _ad_hoc_sign_app(app_path: Path) -> str:
+    codesign = shutil.which("codesign")
+    if not codesign:
+        return "codesign_unavailable"
     subprocess.run(
-        ["codesign", "--force", "--sign", "-", "--timestamp=none", str(app_path)],
+        [codesign, "--force", "--deep", "--sign", "-", str(app_path)],
         check=True,
         text=True,
         capture_output=True,
     )
+    return "ad_hoc_signed"
 
 
 def _git_head(repo_root: Path) -> str:

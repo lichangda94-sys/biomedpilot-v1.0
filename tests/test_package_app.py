@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import json
 import plistlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,27 +25,18 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     )
 
     assert result.mode == "local-python-launcher"
+    if shutil.which("codesign"):
+        assert result.signing_status == "ad_hoc_signed"
     assert result.app_version == "0.1.0-internal-beta"
     assert result.app_path.exists()
     assert result.launcher_path.exists()
     assert result.build_info_path.exists()
     assert os.access(result.launcher_path, os.X_OK)
-    assert 'PYTHONDONTWRITEBYTECODE="1"' in result.launcher_path.read_text(encoding="utf-8")
-    if sys.platform == "darwin":
-        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
     assert (result.resource_root / "app" / "main.py").exists()
     assert (result.resource_root / "config" / "bioinformatics" / "analysis_defaults.yaml").exists()
     assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
     assert not (result.resource_root / ".git").exists()
-    medical_terms = result.resource_root / "data" / "medical_terms"
-    assert (medical_terms / "mini_medical_terms_index.json").exists()
-    assert (medical_terms / "zh_term_overrides.json").exists()
-    assert (medical_terms / "source_metadata.json").exists()
-    assert (medical_terms / "license_attribution.md").exists()
-    assert (medical_terms / "reference_checklists").is_dir()
-    assert not (medical_terms / "medical_terms_index.sqlite").exists()
-    assert not (medical_terms / "raw").exists()
 
     build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
     assert build_info["version"] == "0.1.0-internal-beta"
@@ -79,5 +71,26 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
-    if sys.platform == "darwin":
+    if shutil.which("codesign"):
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
+
+
+def test_packaged_launcher_ignores_launchservices_process_serial_number(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilotLaunchServices",
+            python_executable=sys.executable,
+        )
+    )
+    env = os.environ.copy()
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    completed = subprocess.run(
+        [str(result.launcher_path), "-psn_0_12345", "--smoke-test"],
+        env=env,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    assert "launch_mode=packaged-local-python" in completed.stdout

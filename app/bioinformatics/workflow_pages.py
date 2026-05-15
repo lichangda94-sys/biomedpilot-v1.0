@@ -38,27 +38,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.bioinformatics.analysis_task_runs import create_deg_task_run, list_analysis_task_runs, task_run_status_label
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
-from app.bioinformatics.deg_executor_preflight import run_deg_executor_preflight
-from app.bioinformatics.deg_task_plan import save_deg_task_plan
-from app.bioinformatics.group_comparison_design import (
-    build_default_comparison_rows,
-    build_default_group_rows,
-    design_status_summary,
-    has_confirmed_group_comparison_design,
-    load_group_design_context,
-    save_group_comparison_design,
-    validate_group_comparison_design,
-)
 from app.bioinformatics.comparison_config import (
     build_geo_comparison_config_text,
+    comparison_sample_match_status,
     comparison_summary_text,
     evidence_field_label_zh,
+    expression_samples_from_recognition_report,
     group_label_zh,
     confirmed_group_assignments,
     load_confirmed_comparison_config,
 )
+from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
 from app.bioinformatics.project_readiness import (
     has_standardizable_expression_input,
@@ -66,32 +57,8 @@ from app.bioinformatics.project_readiness import (
     readiness_status_zh,
     run_project_readiness,
 )
-from app.bioinformatics.project_recognition import (
-    TYPE_LABELS,
-    classify_file,
-    delete_recognition_run,
-    list_recognition_runs,
-    load_recognition_report,
-    run_project_recognition,
-    run_project_recognition_for_paths,
-    set_current_recognition_run,
-)
-from app.bioinformatics.recognition_detail_report import (
-    build_recognition_detail_payload,
-    export_recognition_report_markdown,
-    format_recognition_detail_technical,
-    format_recognition_detail_text,
-)
-from app.bioinformatics.recognition_next_steps import (
-    build_recognition_next_steps,
-    standardization_current_input_summary,
-)
+from app.bioinformatics.project_recognition import TYPE_LABELS, classify_file, load_recognition_report, run_project_recognition, run_project_recognition_for_paths
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
-from app.bioinformatics.standardized_asset_selection import (
-    build_asset_selection_context,
-    save_standardized_asset_selection,
-    selection_status_label,
-)
 from app.bioinformatics.standardization_confirmation import (
     collect_standardization_candidates,
     confirm_group_design_from_preview,
@@ -119,9 +86,15 @@ from app.bioinformatics.project_workspace_binding import (
 )
 from app.bioinformatics.adapters.legacy_geo import geo_check_command, run_geo_environment_check
 from app.bioinformatics.download import DatasetDownloadService, GeoDatasetProfile, GeoDatasetProfileService, GeoStudyTextInput, GeoTextSummaryService
-from app.bioinformatics.retrieval.geo_detail_enrichment import GeoDetailEnrichmentService, build_geo_detail_metadata
+from app.bioinformatics.gse_file_download_candidates import (
+    build_gse_file_download_candidates,
+    load_gse_file_download_candidate_selection,
+    save_gse_file_download_candidate_selection,
+    selected_gse_file_download_candidates,
+)
+from app.bioinformatics.gene_set_resources import list_local_gene_sets, validate_gene_set_registry
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
-from app.bioinformatics.results.project_results import build_imported_deg_view, load_imported_deg_comparisons, load_result_index, write_result_index
+from app.bioinformatics.results.project_results import load_result_index, write_result_index
 from app.bioinformatics.search_center import (
     BioinformaticsSearchCenterResult,
     BioinformaticsSourceRouter,
@@ -132,7 +105,6 @@ from app.bioinformatics.search_center import (
     UnifiedDatasetCandidate,
 )
 from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
-from app.bioinformatics.services.organism_display import get_organism_display_name
 from app.shared.ai_gateway import (
     create_ai_draft_record,
     desktop_local_ollama_config,
@@ -210,17 +182,16 @@ class DatasetListEntry:
 class GseDatasetPreview:
     gse_id: str
     title: str = "未记录"
-    organism: str = "未记录"
     platform: str = "未记录"
     sample_count: str = "未记录"
     status: str = "尚未添加"
-    detail_metadata: dict[str, object] | None = None
 
 
 class GeoDatasetDetailPanel(QFrame):
     save_requested = Signal(object)
     ignore_requested = Signal(object)
     remove_requested = Signal(object)
+    add_to_download_list_requested = Signal(object)
     download_assets_requested = Signal(object)
     translate_requested = Signal(object)
     brief_requested = Signal(object)
@@ -230,6 +201,9 @@ class GeoDatasetDetailPanel(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._candidate: UnifiedDatasetCandidate | None = None
+        self._project_root: Path | None = None
+        self._download_candidate_rows: list[dict[str, object]] = []
+        self._download_candidate_checks: dict[str, QCheckBox] = {}
         self.setObjectName("geoDatasetDetailView")
         self.setVisible(False)
         layout = QVBoxLayout(self)
@@ -240,7 +214,7 @@ class GeoDatasetDetailPanel(QFrame):
         self._title.setObjectName("bioProjectCardTitle")
         self._title.setWordWrap(True)
         layout.addWidget(self._title)
-        self._saved_status = _status_label("尚未加入待处理数据集。")
+        self._saved_status = _status_label("尚未加入下载列表 / 待处理数据来源。")
         layout.addWidget(self._saved_status)
 
         layout.addWidget(_muted("基础信息"))
@@ -285,14 +259,36 @@ class GeoDatasetDetailPanel(QFrame):
         self._asset_text.setObjectName("geoDatasetAssetStatus")
         layout.addWidget(self._asset_text)
 
+        layout.addWidget(_muted("可下载文件候选"))
+        self._download_candidate_hint = _muted("当前只是下载候选选择，不是分析结果；下载后仍需数据识别与标准化确认。")
+        self._download_candidate_hint.setObjectName("geoDownloadCandidateHint")
+        self._download_candidate_hint.setWordWrap(True)
+        layout.addWidget(self._download_candidate_hint)
+        self._download_candidate_table = _table(["选择", "文件名", "文件类型 / 预测角色", "推荐级别", "建议下载", "风险提示", "文件来源", "后续用途"])
+        self._download_candidate_table.setObjectName("geoDownloadCandidateTable")
+        self._download_candidate_table.setMinimumHeight(210)
+        self._download_candidate_table.setMaximumHeight(320)
+        layout.addWidget(self._download_candidate_table)
+        self._save_download_candidates_button = _button("保存候选选择", "secondaryButton", lambda: self._save_download_candidate_selection())
+        self._save_download_candidates_button.setObjectName("geoDownloadCandidateSaveButton")
+        self._download_candidate_status = _muted("")
+        self._download_candidate_status.setObjectName("geoDownloadCandidateStatus")
+        candidate_actions = QHBoxLayout()
+        candidate_actions.addWidget(self._save_download_candidates_button)
+        candidate_actions.addWidget(self._download_candidate_status)
+        candidate_actions.addStretch(1)
+        layout.addLayout(candidate_actions)
+
         decision_actions = QHBoxLayout()
-        self._save_button = _button("添加到项目", "primaryButton", lambda: self._emit_save())
+        self._save_button = _button("保存", "primaryButton", lambda: self._emit_save())
+        self._download_list_button = _button("加入下载列表", "secondaryButton", lambda: self._emit_add_to_download_list())
         self._download_assets_button = _button("下载补充文件", "primaryButton", lambda: self._emit_download_assets())
         self._remove_button = _button("从项目列表移除", "secondaryButton", lambda: self._emit_remove())
-        self._ignore_button = _button("忽略该数据集", "secondaryButton", lambda: self._emit_ignore())
+        self._ignore_button = _button("忽略", "secondaryButton", lambda: self._emit_ignore())
         self._download_assets_button.setVisible(False)
         self._remove_button.setVisible(False)
         decision_actions.addWidget(self._save_button)
+        decision_actions.addWidget(self._download_list_button)
         decision_actions.addWidget(self._download_assets_button)
         decision_actions.addWidget(self._remove_button)
         decision_actions.addWidget(self._ignore_button)
@@ -311,15 +307,17 @@ class GeoDatasetDetailPanel(QFrame):
         saved: bool = False,
     ) -> None:
         self._candidate = candidate
+        self._project_root = project_root
         self.setVisible(True)
         self._title.setText(f"{candidate.accession_or_project} · {candidate.display_title or 'GEO 数据集'}")
         _fill_table(self._basic_table, _geo_detail_basic_rows(candidate))
         self._english_text.setPlainText(_geo_detail_english_text(candidate))
         profile = _build_geo_detail_profile(project_root, candidate, summary_payload)
-        self._profile_text.setPlainText(_geo_profile_user_display(profile, candidate))
+        self._profile_text.setPlainText(_geo_profile_user_display(profile))
         self._confirm_comparison_button.setEnabled(bool(profile.candidate_comparisons and project_root is not None))
         self._manual_comparison_button.setEnabled(project_root is not None)
         self._asset_text.setPlainText(_geo_asset_detail_text(project_root, candidate.accession_or_project))
+        self._render_download_candidates(project_root, candidate)
         self.set_saved(saved)
         self.set_pending_assets(saved and _candidate_has_pending_geo_assets(project_root, candidate.accession_or_project))
         if summary_payload:
@@ -328,9 +326,11 @@ class GeoDatasetDetailPanel(QFrame):
             self._translation_text.setPlainText("尚未生成中文翻译。")
 
     def set_saved(self, saved: bool) -> None:
-        self._saved_status.setText("已在待处理数据集中。" if saved else "尚未加入待处理数据集。")
-        self._save_button.setText("已添加" if saved else "添加到项目")
+        self._saved_status.setText("已在下载列表 / 待处理数据来源中。" if saved else "尚未加入下载列表 / 待处理数据来源。")
+        self._save_button.setText("已保存" if saved else "保存")
         self._save_button.setEnabled(not saved)
+        self._download_list_button.setEnabled(not saved)
+        self._download_list_button.setVisible(not saved)
         self._remove_button.setVisible(saved)
 
     def set_pending_assets(self, pending: bool) -> None:
@@ -343,9 +343,78 @@ class GeoDatasetDetailPanel(QFrame):
     def set_busy_text(self, text: str) -> None:
         self._translation_text.setPlainText(text)
 
+    def _render_download_candidates(self, project_root: Path | None, candidate: UnifiedDatasetCandidate) -> None:
+        self._download_candidate_checks.clear()
+        self._download_candidate_rows = []
+        self._download_candidate_table.clearContents()
+        self._download_candidate_table.setRowCount(0)
+        if project_root is None:
+            self._download_candidate_hint.setText("请先创建或打开生信分析项目后再保存 GEO 下载候选。")
+            self._save_download_candidates_button.setEnabled(False)
+            return
+        manifest = build_gse_file_download_candidates(
+            project_root=project_root,
+            accession=candidate.accession_or_project,
+            candidate_metadata=candidate.source_specific_metadata,
+        )
+        rows = [row for row in manifest.get("candidates", []) if isinstance(row, dict)]
+        self._download_candidate_rows = rows
+        self._download_candidate_table.setRowCount(len(rows))
+        self._save_download_candidates_button.setEnabled(bool(rows))
+        if not rows:
+            self._download_candidate_hint.setText("尚未发现可下载文件候选。请先下载/读取 GEO 元数据或 asset manifest。")
+            return
+        selected_count = sum(1 for row in rows if row.get("selected"))
+        self._download_candidate_hint.setText(
+            f"已发现 {len(rows)} 个 GEO 文件候选，默认选择 {selected_count} 个。当前只是下载候选选择，不是分析结果；后续仍需要 recognition 和 standardization confirmation。"
+        )
+        for row_index, row in enumerate(rows):
+            candidate_id = str(row.get("candidate_id") or "")
+            check = QCheckBox()
+            check.setChecked(bool(row.get("selected")))
+            check.setToolTip("选择后将写入 B5.14 下载 handoff manifest。")
+            self._download_candidate_checks[candidate_id] = check
+            self._download_candidate_table.setCellWidget(row_index, 0, check)
+            values = [
+                str(row.get("file_name") or ""),
+                str(row.get("predicted_role") or row.get("predicted_type") or ""),
+                str(row.get("download_priority") or ""),
+                "是" if row.get("suggested_for_download") else "否",
+                str(row.get("risk_warning") or ""),
+                str(row.get("file_source") or ""),
+                _geo_download_candidate_use_text(row),
+            ]
+            for col_index, value in enumerate(values, start=1):
+                item = QTableWidgetItem(value)
+                self._download_candidate_table.setItem(row_index, col_index, item)
+        _set_table_widths(self._download_candidate_table, [72, 240, 170, 90, 88, 260, 140, 260])
+        self._download_candidate_table.resizeRowsToContents()
+        self._download_candidate_status.setText("")
+
+    def _save_download_candidate_selection(self) -> None:
+        if self._candidate is None or self._project_root is None:
+            self._download_candidate_status.setText("请先创建或打开项目。")
+            return
+        selected_ids = tuple(
+            candidate_id
+            for candidate_id, check in self._download_candidate_checks.items()
+            if check.isChecked()
+        )
+        save_gse_file_download_candidate_selection(
+            project_root=self._project_root,
+            accession=self._candidate.accession_or_project,
+            candidate_metadata=self._candidate.source_specific_metadata,
+            selected_candidate_ids=selected_ids,
+        )
+        self._download_candidate_status.setText(f"已保存下载候选选择：{len(selected_ids)} 个文件。")
+
     def _emit_save(self) -> None:
         if self._candidate is not None:
             self.save_requested.emit(self._candidate)
+
+    def _emit_add_to_download_list(self) -> None:
+        if self._candidate is not None:
+            self.add_to_download_list_requested.emit(self._candidate)
 
     def _emit_ignore(self) -> None:
         if self._candidate is not None:
@@ -396,8 +465,13 @@ class GeoDownloadListPanel(QFrame):
         self._title_label = QLabel(title)
         self._title_label.setObjectName("bioProjectCardTitle")
         layout.addWidget(self._title_label)
-        self._empty = _muted("尚未选择数据。")
+        self._empty = _muted("尚未添加数据来源。请先从上方三类入口导入或检索。")
         layout.addWidget(self._empty)
+        self._batch_summary = _muted("")
+        self._batch_summary.setObjectName("datasetBatchSummaryText")
+        self._batch_summary.setWordWrap(True)
+        self._batch_summary.setVisible(False)
+        layout.addWidget(self._batch_summary)
         self._table = _table(["选择", "来源", "数据集 / 文件名", "数据状态", "可用内容", "需要补充", "备注", "操作"])
         self._table.setObjectName("geoDownloadListTable")
         self._table.setMinimumHeight(180)
@@ -414,10 +488,13 @@ class GeoDownloadListPanel(QFrame):
         layout.addLayout(batch_row)
 
     def refresh(self, project_root: Path | None) -> None:
-        entries = _current_project_dataset_entries(project_root, geo_only=self._geo_only)
+        entries = _current_project_dataset_entries(project_root, geo_only=self._geo_only, expand_geo_files=not self._geo_only)
         self._entries = entries
         self._checks = {}
         self._empty.setVisible(not entries)
+        summary_text = _dataset_batch_summary_text(entries)
+        self._batch_summary.setText(summary_text)
+        self._batch_summary.setVisible(bool(summary_text))
         self._table.setVisible(bool(entries))
         _fill_table(
             self._table,
@@ -503,16 +580,16 @@ class DatasetDetailPanel(QFrame):
         self._title.setObjectName("bioProjectCardTitle")
         self._title.setWordWrap(True)
         layout.addWidget(self._title)
-        self._summary = _text_preview(120)
+        self._summary = _text_preview(190)
         self._summary.setObjectName("datasetDefaultSummary")
         layout.addWidget(self._summary)
 
         layout.addWidget(_muted("用户备注"))
         self._note_edit = QPlainTextEdit()
         self._note_edit.setObjectName("datasetUserNoteEdit")
-        self._note_edit.setPlaceholderText("可记录筛选理由、疑问或后续处理计划。备注只作为笔记保存。")
-        self._note_edit.setMinimumHeight(72)
-        self._note_edit.setMaximumHeight(120)
+        self._note_edit.setPlaceholderText("可记录筛选理由、疑问或后续处理计划，备注只作为笔记保存")
+        self._note_edit.setMinimumHeight(48)
+        self._note_edit.setMaximumHeight(76)
         layout.addWidget(self._note_edit)
         note_actions = QHBoxLayout()
         note_actions.addWidget(_button("保存备注", "secondaryButton", self._save_note))
@@ -590,7 +667,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
         else:
-            self._set_status("先添加数据，下一步进入数据识别。")
+            self._set_status("先添加数据，下一步进入数据检查与准备。")
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
 
@@ -618,10 +695,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("请输入 GSE 编号。", error=True)
             return None
         self._gse_input.setText(gse_id)
-        try:
-            metadata_text = _fetch_geo_accession_metadata(gse_id, self._project_root)
-        except TypeError:
-            metadata_text = _fetch_geo_accession_metadata(gse_id)
+        metadata_text = _fetch_geo_accession_metadata(gse_id)
         self._gse_preview = _gse_preview_from_metadata(gse_id, metadata_text)
         candidate = _geo_candidate_from_gse_preview(self._gse_preview)
         self._geo_candidates[candidate.accession_or_project] = candidate
@@ -652,7 +726,6 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_preview = GseDatasetPreview(
             gse_id=preview.gse_id,
             title=preview.title,
-            organism=preview.organism,
             platform=preview.platform,
             sample_count=preview.sample_count,
             status="已选择",
@@ -711,7 +784,7 @@ class BioinformaticsDataSourceWidget(QWidget):
 
     def search_research_topic(self) -> str:
         self.open_chinese_search()
-        return "中文研究问题检索已移动到独立页面。"
+        return "中文研究主题检索已移动到独立页面。"
 
     def pending_chinese_query(self) -> str:
         return self._pending_chinese_query
@@ -741,21 +814,24 @@ class BioinformaticsDataSourceWidget(QWidget):
         root.addWidget(
             _header(
                 "数据导入与检索",
-                "先添加数据，下一步进入数据识别。",
+                "先添加数据，下一步进入数据检查与准备。",
                 back_text="返回项目首页",
                 back_signal=self.back_requested,
             )
         )
         self._project_label = _status_label("请先创建或打开生信分析项目。")
         root.addWidget(self._project_label)
-        self._status_label = _status_label("先添加数据，下一步进入数据识别。")
+        self._status_label = _status_label("先添加数据，下一步进入数据检查与准备。")
         root.addWidget(self._status_label)
 
         root.addWidget(self._local_import_card())
         root.addWidget(self._gse_card())
         root.addWidget(self._research_card())
 
-        self._dataset_list_panel = GeoDownloadListPanel(title="待处理数据集")
+        self._selection_status_card = self._data_selection_status_card()
+        root.addWidget(self._selection_status_card)
+
+        self._dataset_list_panel = GeoDownloadListPanel(title="下载列表 / 待处理数据来源")
         self._dataset_list_panel.view_requested.connect(self._show_dataset_detail)
         self._dataset_list_panel.download_selected_requested.connect(self._download_selected_dataset_entries)
         self._dataset_list_panel.delete_selected_requested.connect(self._delete_selected_dataset_entries)
@@ -783,8 +859,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions_frame.setObjectName("dataSourceBottomActionBar")
         actions = QHBoxLayout(actions_frame)
         actions.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
-        self._registered_count_label = _status_label("已选择的数据：0 个")
-        self._next_button = _button("下一步：数据识别", "primaryButton", self.continue_to_recognition)
+        self._registered_count_label = _status_label("已保存数据来源：0 个；待处理：0 个；可识别：0 个")
+        self._next_button = _button("下一步：数据检查与准备", "primaryButton", self.continue_to_recognition)
         self._next_button.setEnabled(False)
         actions.addWidget(self._registered_count_label)
         actions.addStretch(1)
@@ -794,47 +870,30 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _local_import_card(self) -> QFrame:
         card, layout = _card("本地数据导入")
         card.setObjectName("localImportEntryCard")
-        layout.addWidget(_muted("导入本地表达矩阵、GEO Series Matrix、样本信息、临床表或注释文件。"))
+        layout.addWidget(_muted("用于导入表达矩阵、样本信息、临床表或已下载数据。"))
         self._local_strategy_combo = QComboBox()
         self._local_strategy_combo.setObjectName("localImportStrategyCombo")
-        self._local_strategy_combo.addItems(["复制到项目文件夹（推荐）", "使用原文件位置"])
-        self._local_strategy_combo.currentIndexChanged.connect(self._update_local_strategy_hint)
+        self._local_strategy_combo.addItems(["复制到项目（推荐）", "保留原位置，仅记录路径"])
         layout.addWidget(self._local_strategy_combo)
-        self._local_strategy_hint = _muted("")
-        self._local_strategy_hint.setObjectName("localImportStrategyHint")
-        self._local_strategy_hint.setWordWrap(True)
-        layout.addWidget(self._local_strategy_hint)
-        self._update_local_strategy_hint()
-        select_button = _button("选择本地数据", "primaryButton", self._choose_local_files)
+        select_button = _button("选择本地文件或文件夹", "primaryButton", self._choose_local_data)
         select_button.setMinimumHeight(44)
-        folder_button = _button("选择本地文件夹", "secondaryButton", self._choose_local_folder)
-        folder_button.setMinimumHeight(44)
         actions = QHBoxLayout()
         actions.addWidget(select_button)
-        actions.addWidget(folder_button)
         actions.addStretch(1)
         layout.addLayout(actions)
         layout.addWidget(self._source_summary_frame("local_import", "尚未选择本地数据。", detail_button_text="查看导入详情"))
         return card
 
-    def _update_local_strategy_hint(self) -> None:
-        if not hasattr(self, "_local_strategy_hint"):
-            return
-        if _strategy_from_combo(self._local_strategy_combo) == "copy":
-            self._local_strategy_hint.setText("把数据文件复制到当前项目，便于后续复用、迁移和归档。")
-        else:
-            self._local_strategy_hint.setText("不复制文件；后续分析将从原位置读取，请勿移动或删除。原文件移动或删除后，项目可能无法继续读取该数据。")
-
     def _gse_card(self) -> QFrame:
         card, layout = _card("GSE 编号检索")
         card.setObjectName("gseSearchEntryCard")
-        layout.addWidget(_muted("已知 GEO 数据集编号时使用，例如 GSE33630。"))
+        layout.addWidget(_muted("已知 GEO 数据集编号时使用，可查看详情并加入项目数据来源。"))
         self._gse_input = QLineEdit()
-        self._gse_input.setPlaceholderText("请输入 GSE 编号，例如 GSE33630")
+        self._gse_input.setPlaceholderText("请输入 GSE 编号，例如 GSE60235")
         self._gse_input.setMinimumHeight(44)
         layout.addWidget(self._gse_input)
         gse_actions = QHBoxLayout()
-        search_button = _button("检索数据集", "primaryButton", self.search_gse_dataset)
+        search_button = _button("检索", "primaryButton", self.search_gse_dataset)
         search_button.setMinimumHeight(44)
         self._register_gse_button = _button("添加到项目", "secondaryButton", self.register_gse_dataset)
         self._register_gse_button.setEnabled(False)
@@ -845,7 +904,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addLayout(gse_actions)
         self._gse_status_label = _status_label("尚未检索 GSE 数据集。")
         layout.addWidget(self._gse_status_label)
-        self._gse_summary_table = _table(["GSE 编号", "数据集标题", "物种", "平台", "样本数量", "数据状态"])
+        self._gse_summary_table = _table(["GSE 编号", "数据集标题", "平台", "样本数量", "数据状态"])
         self._gse_summary_table.setObjectName("gseDatasetSummaryTable")
         self._gse_summary_table.setMaximumHeight(120)
         self._gse_summary_table.setVisible(False)
@@ -858,6 +917,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(self._gse_search_details)
         self._gse_geo_detail_panel = GeoDatasetDetailPanel()
         self._gse_geo_detail_panel.save_requested.connect(self._save_gse_geo_candidate)
+        self._gse_geo_detail_panel.add_to_download_list_requested.connect(self._save_gse_geo_candidate)
         self._gse_geo_detail_panel.ignore_requested.connect(self._ignore_gse_geo_candidate)
         self._gse_geo_detail_panel.remove_requested.connect(self._remove_gse_geo_candidate)
         self._gse_geo_detail_panel.translate_requested.connect(self._generate_gse_geo_summary)
@@ -869,9 +929,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _research_card(self) -> QFrame:
-        card, layout = _card("中文研究问题检索")
+        card, layout = _card("中文研究主题检索")
         card.setObjectName("chineseResearchSearchEntryCard")
-        layout.addWidget(_muted("输入中文研究方向，生成英文检索词并推荐 GEO、TCGA、GTEx 候选数据集。"))
+        layout.addWidget(_muted("面向 GEO / TCGA / GTEx 的生信数据检索辅助，用于寻找表达数据来源。"))
         self._chinese_query_input = QLineEdit()
         self._chinese_query_input.setObjectName("chineseResearchTopicEntry")
         self._chinese_query_input.setPlaceholderText("请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据")
@@ -879,9 +939,31 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(self._chinese_query_input)
         self._chinese_search_status_label = _status_label("尚未进行中文检索。")
         layout.addWidget(self._chinese_search_status_label)
-        button = _button("进入检索界面", "primaryButton", self.open_chinese_search)
+        button = _button("进入中文主题检索", "primaryButton", self.open_chinese_search)
         button.setMinimumHeight(44)
         layout.addWidget(button, alignment=Qt.AlignLeft)
+        return card
+
+    def _data_selection_status_card(self) -> QFrame:
+        card, layout = _card("当前数据选择状态")
+        card.setObjectName("dataSelectionStatusSummaryCard")
+        self._selection_saved_count_label = _status_label("已保存数据来源：0 个")
+        self._selection_saved_count_label.setObjectName("dataSelectionSavedCount")
+        self._selection_download_count_label = _status_label("下载列表 / 待处理：0 个")
+        self._selection_download_count_label.setObjectName("dataSelectionDownloadCount")
+        self._selection_ready_count_label = _status_label("可进入数据检查：0 个")
+        self._selection_ready_count_label.setObjectName("dataSelectionReadyCount")
+        self._selection_next_step_label = _muted("下一步：先导入本地数据，或检索 GSE / 中文研究主题。")
+        self._selection_next_step_label.setObjectName("dataSelectionNextStep")
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(SPACING["md"])
+        grid.setVerticalSpacing(SPACING["xs"])
+        grid.addWidget(self._selection_saved_count_label, 0, 0)
+        grid.addWidget(self._selection_download_count_label, 0, 1)
+        grid.addWidget(self._selection_ready_count_label, 0, 2)
+        layout.addLayout(grid)
+        layout.addWidget(self._selection_next_step_label)
         return card
 
     def _choose_local_data(self) -> None:
@@ -939,7 +1021,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         )
         self._source_summaries[key] = selected_summary
         self._update_source_summary_label(key, selected_summary)
-        self._set_status("先添加数据，下一步进入数据识别。")
+        self._set_status("先添加数据，下一步进入数据检查与准备。")
         self._technical_details.setPlainText(_selected_source_technical_details(selected_summary))
 
     def source_summary_text(self, key: str) -> str:
@@ -1028,14 +1110,13 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_summary_table.setVisible(False)
         _fill_table(
             self._gse_summary_table,
-            [[preview.gse_id, preview.title, preview.organism, preview.platform, preview.sample_count, preview.status]],
+            [[preview.gse_id, preview.title, preview.platform, preview.sample_count, preview.status]],
         )
         self._gse_search_details.setPlainText(
             _json(
                 {
                     "GSE 编号": preview.gse_id,
                     "数据集标题": preview.title,
-                    "物种": preview.organism,
                     "平台": preview.platform,
                     "样本数量": preview.sample_count,
                     "数据状态": preview.status,
@@ -1069,7 +1150,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
         if _is_geo_saved_to_download_list(self._project_root, candidate.accession_or_project):
-            self._set_status(f"已在待处理数据集中：{candidate.accession_or_project}")
+            self._set_status(f"已在下载列表 / 待处理数据来源中：{candidate.accession_or_project}")
             self._show_gse_geo_detail(candidate)
             self._refresh_geo_download_list()
             return None
@@ -1086,7 +1167,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._latest_summary = summary
         self._refresh_geo_download_list()
         self._show_gse_geo_detail(candidate)
-        self._set_status(f"{candidate.accession_or_project} 已添加到待处理数据集。")
+        self._set_status(f"{candidate.accession_or_project} 已添加到下载列表 / 待处理数据来源。")
         return summary
 
     def _ignore_gse_geo_candidate(self, candidate: UnifiedDatasetCandidate) -> None:
@@ -1103,9 +1184,9 @@ class BioinformaticsDataSourceWidget(QWidget):
             candidate = self._geo_candidates.get(accession)
             if candidate is not None:
                 self._show_gse_geo_detail(candidate)
-            self._set_status(f"已从待处理数据集中移除：{accession}")
+            self._set_status(f"已从下载列表 / 待处理数据来源中移除：{accession}")
         else:
-            self._set_status(f"待处理数据集中未找到：{accession}", error=True)
+            self._set_status(f"下载列表 / 待处理数据来源中未找到：{accession}", error=True)
 
     def _generate_gse_geo_summary(self, candidate: UnifiedDatasetCandidate) -> dict[str, object] | None:
         cached = self._geo_brief_cache.get(candidate.accession_or_project)
@@ -1116,29 +1197,11 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_geo_detail_panel.set_busy_text("正在生成中文翻译与提炼，请稍候。")
         QApplication.processEvents()
         metadata = candidate.source_specific_metadata
-        summary_en = str(metadata.get("summary_en") or "")
-        overall_design_en = str(metadata.get("overall_design_en") or "")
-        sample_overview_en = str(metadata.get("sample_summary") or _geo_sample_overview_for_summary(metadata))
-        if not summary_en.strip() and not overall_design_en.strip():
-            payload = {
-                "status": "missing_source_metadata",
-                "title_zh": "",
-                "summary_zh": "",
-                "overall_design_zh": "",
-                "brief_zh": "未抓取到 GEO Summary / Overall design，无法生成可靠中文提炼。",
-                "error_message": "未抓取到 GEO Summary / Overall design，无法翻译。",
-                "quality_warnings": ["未抓取到 GEO Summary / Overall design，无法翻译。"],
-            }
-            self._geo_brief_cache[candidate.accession_or_project] = payload
-            self._gse_geo_detail_panel.render_summary(candidate, payload)
-            self._set_status("未抓取到 GEO Summary / Overall design，无法翻译。", error=True)
-            return payload
         text_input = GeoStudyTextInput(
             accession=candidate.accession_or_project,
             title_en=str(metadata.get("title_en") or candidate.display_title),
-            summary_en=summary_en,
-            overall_design_en=overall_design_en,
-            sample_overview_en=sample_overview_en,
+            summary_en=str(metadata.get("summary_en") or ""),
+            overall_design_en=str(metadata.get("overall_design_en") or ""),
         )
         summary = self._text_summary_service.summarize(text_input)
         payload = summary.to_dict()
@@ -1225,11 +1288,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         rows = _registered_source_rows(self._project_root)
         self._refresh_geo_download_list()
         self._refresh_history_cache()
-        count = len(_current_project_dataset_entries(self._project_root))
+        entries = _current_project_dataset_entries(self._project_root)
+        count = len(entries)
         ready_count = _ready_registered_source_count(self._project_root)
-        self._registered_count_label.setText(f"已选择的数据：{count} 个；可进入识别：{ready_count} 个")
+        pending_count = _pending_dataset_entry_count(entries)
+        self._registered_count_label.setText(f"已保存数据来源：{count} 个；待处理：{pending_count} 个；可识别：{ready_count} 个")
         self._next_button.setEnabled(ready_count > 0 and self._project_root is not None)
         self._chinese_search_status_label.setText(_chinese_search_entry_status(rows))
+        self._refresh_data_selection_status(entries, ready_count, pending_count)
 
     def _refresh_geo_download_list(self) -> None:
         entries = _current_project_dataset_entries(self._project_root)
@@ -1361,13 +1427,25 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _registered_source_count(self) -> int:
         return _ready_registered_source_count(self._project_root)
 
+    def _refresh_data_selection_status(self, entries: list[DatasetListEntry], ready_count: int, pending_count: int) -> None:
+        count = len(entries)
+        self._selection_saved_count_label.setText(f"已保存数据来源：{count} 个")
+        self._selection_download_count_label.setText(f"下载列表 / 待处理：{pending_count} 个")
+        self._selection_ready_count_label.setText(f"可进入数据检查：{ready_count} 个")
+        message = _data_selection_next_step_text(self._project_root, count=count, ready_count=ready_count, pending_count=pending_count)
+        self._selection_next_step_label.setText(message)
+        if self._project_root is not None and self._status_label.property("status") != "error":
+            self._status_label.setText(message)
+            self._status_label.setProperty("status", "ok")
+            _refresh_style(self._status_label)
+
     def _toggle_source_detail(self, key: str) -> None:
         detail = self._source_detail_edits.get(key)
         if detail is not None:
             _toggle_details(detail)
 
     def _set_status(self, text: str, *, error: bool = False) -> None:
-        self._status_label.setText(text if error else "先添加数据，下一步进入数据识别。")
+        self._status_label.setText(text)
         self._status_label.setProperty("status", "error" if error else "ok")
         _refresh_style(self._status_label)
 
@@ -1397,6 +1475,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._candidates: dict[tuple[str, str], UnifiedDatasetCandidate] = {}
         self._candidate_register_buttons: dict[tuple[str, str], QPushButton] = {}
         self._candidate_download_buttons: dict[tuple[str, str], QPushButton] = {}
+        self._candidate_ignore_buttons: dict[tuple[str, str], QPushButton] = {}
+        self._ignored_candidates: set[tuple[str, str]] = set()
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
         self._selected_candidate: UnifiedDatasetCandidate | None = None
         self._source_detail_titles: dict[str, QLabel] = {}
@@ -1809,25 +1889,62 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self, max_width=1080)
-        root.addWidget(_header("中文研究问题检索", "输入中文研究方向，选择 GEO、TCGA/GDC、GTEx 数据源后进入数据识别。", back_text="返回数据来源", back_signal=self.back_requested))
+        root.addWidget(_header("中文研究主题检索", "生成 GEO / TCGA / GTEx 数据检索草稿，用户确认后再进入候选数据选择。", back_text="返回数据来源", back_signal=self.back_requested))
         self._project_label = _status_label("请先创建或打开生信分析项目。")
         root.addWidget(self._project_label)
-        input_card, input_layout = _card("研究主题输入")
+        input_card, input_layout = _card("中文研究主题输入")
+        input_layout.addWidget(_muted("用于生成 GEO / TCGA / GTEx 数据检索草稿，确认草稿后再选择候选数据来源。"))
         self._query_input = QLineEdit()
-        self._query_input.setPlaceholderText("例如：甲状腺癌、乳腺癌转移、肺癌免疫治疗耐药")
+        self._query_input.setPlaceholderText("例如：甲状腺癌 脂质代谢 免疫浸润")
         self._query_input.setMinimumHeight(44)
         input_layout.addWidget(self._query_input)
         action_row = QHBoxLayout()
         action_row.addWidget(_button("生成草稿", "primaryButton", self.generate_terms))
         action_row.addStretch(1)
         input_layout.addLayout(action_row)
-        self._status_label = _status_label("未生成检索词")
+        self._status_label = _status_label("未生成 query draft")
         input_layout.addWidget(self._status_label)
         self._topic_summary_label = _status_label("主题识别：尚未开始。")
         input_layout.addWidget(self._topic_summary_label)
         root.addWidget(input_card)
 
-        result_card, result_layout = _card("数据库区")
+        draft_card, draft_layout = _card("Query draft（草稿 / 待确认）")
+        draft_card.setObjectName("chineseQueryDraftOverviewCard")
+        self._draft_overview_status = _status_label("草稿状态：尚未生成")
+        self._draft_overview_geo = _muted("GEO：尚未生成草稿")
+        self._draft_overview_tcga = _muted("TCGA：尚未生成草稿")
+        self._draft_overview_gtex = _muted("GTEx：尚未生成草稿")
+        draft_layout.addWidget(self._draft_overview_status)
+        draft_layout.addWidget(self._draft_overview_geo)
+        draft_layout.addWidget(self._draft_overview_tcga)
+        draft_layout.addWidget(self._draft_overview_gtex)
+        draft_actions = QHBoxLayout()
+        draft_actions.addWidget(_button("展开分区草稿", "secondaryButton", self._toggle_full_drafts))
+        draft_actions.addWidget(_button("确认草稿", "secondaryButton", lambda: self.confirm_query_draft()))
+        draft_actions.addStretch(1)
+        draft_layout.addLayout(draft_actions)
+        root.addWidget(draft_card)
+
+        status_card, status_layout = _card("检索状态")
+        status_card.setObjectName("chineseSearchStatusSummaryCard")
+        self._chinese_draft_status_label = _status_label("Query draft：未生成")
+        self._chinese_partition_status_label = _status_label("分区候选：GEO 0 个，TCGA 0 个，GTEx 0 个")
+        self._chinese_saved_count_label = _status_label("已保存候选：0 个")
+        self._chinese_download_count_label = _status_label("加入下载列表：0 个")
+        self._chinese_next_step_label = _muted("下一步：先输入中文研究主题并生成草稿。")
+        status_grid = QGridLayout()
+        status_grid.setContentsMargins(0, 0, 0, 0)
+        status_grid.setHorizontalSpacing(SPACING["md"])
+        status_grid.setVerticalSpacing(SPACING["xs"])
+        status_grid.addWidget(self._chinese_draft_status_label, 0, 0)
+        status_grid.addWidget(self._chinese_partition_status_label, 0, 1)
+        status_grid.addWidget(self._chinese_saved_count_label, 1, 0)
+        status_grid.addWidget(self._chinese_download_count_label, 1, 1)
+        status_layout.addLayout(status_grid)
+        status_layout.addWidget(self._chinese_next_step_label)
+        root.addWidget(status_card)
+
+        result_card, result_layout = _card("数据库分区结果")
         self._tabs = QTabWidget()
         self._draft_detail_widgets: list[QWidget] = []
         self._geo_tab_page = self._build_database_tab(
@@ -1874,11 +1991,11 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         result_layout.addWidget(self._tabs)
         root.addWidget(result_card)
 
-        log_card, log_layout = _card("高级信息")
+        log_card, log_layout = _card("开发者诊断")
         self._mapping_log = _text_preview(180)
         self._mapping_log.setObjectName("chineseMappingLog")
         self._mapping_log.setVisible(False)
-        log_layout.addWidget(_button("查看映射日志", "secondaryButton", lambda: _toggle_details(self._mapping_log)), alignment=Qt.AlignLeft)
+        log_layout.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._mapping_log)), alignment=Qt.AlignLeft)
         log_layout.addWidget(self._mapping_log)
         root.addWidget(log_card)
 
@@ -1887,7 +2004,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         bottom_layout = QHBoxLayout(bottom_frame)
         bottom_layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
         self._registered_count_label = _status_label("已选 GEO 0 个，TCGA 0 个，GTEx 0 个；0 个可进入识别。")
-        self._continue_button = _button("下一步：进入数据识别", "primaryButton", self.continue_to_recognition)
+        self._continue_button = _button("下一步：数据检查与准备", "primaryButton", self.continue_to_recognition)
         self._continue_button.setEnabled(False)
         bottom_layout.addWidget(self._registered_count_label)
         bottom_layout.addStretch(1)
@@ -1971,12 +2088,12 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         detail_title = _status_label("候选详情")
         detail_text = _text_preview(140)
         detail_text.setObjectName(f"{source_key}CandidateDetailText")
-        detail_text.setPlainText("点击候选结果的“详情”查看标题、中文简介、匹配原因、资产状态和下载建议。")
+        detail_text.setPlainText("点击候选结果的“查看详情”查看标题、摘要、匹配原因、资产状态和下载建议。")
         detail_layout.addWidget(detail_title)
         detail_layout.addWidget(detail_text)
         detail_actions = QHBoxLayout()
-        select_button = _button("选择", "secondaryButton", self._select_current_candidate)
-        download_button = _button("下载并添加" if source_key == "geo" else "创建下载任务", "secondaryButton", self._download_current_candidate)
+        select_button = _button("保存", "secondaryButton", self._select_current_candidate)
+        download_button = _button("加入下载列表", "secondaryButton", self._download_current_candidate)
         brief_button = _button("生成中文简介", "secondaryButton", self._brief_current_candidate)
         select_button.setEnabled(False)
         download_button.setEnabled(False)
@@ -1994,6 +2111,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_dataset_detail_panel.save_requested.connect(self._save_geo_candidate_from_detail)
             self._geo_dataset_detail_panel.ignore_requested.connect(self._ignore_geo_candidate_from_detail)
             self._geo_dataset_detail_panel.remove_requested.connect(self._remove_geo_candidate_from_detail)
+            self._geo_dataset_detail_panel.add_to_download_list_requested.connect(lambda candidate: self.generate_candidate_download_task(candidate.source, candidate.accession_or_project))
             self._geo_dataset_detail_panel.download_assets_requested.connect(lambda candidate: self.download_geo_supplementary_assets(candidate.accession_or_project))
             self._geo_dataset_detail_panel.translate_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
             self._geo_dataset_detail_panel.brief_requested.connect(lambda candidate: self.generate_geo_chinese_brief(candidate.accession_or_project))
@@ -2098,19 +2216,59 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._candidates = {(candidate.source, candidate.accession_or_project): candidate for candidate in result.candidates}
         self._candidate_register_buttons.clear()
         self._candidate_download_buttons.clear()
+        self._candidate_ignore_buttons.clear()
         self._candidate_status_labels.clear()
         self._render_candidate_tables(result, searched=searched)
         self._refresh_candidate_registration_buttons()
         self._mapping_log.setPlainText(_mapping_log_text(result))
+        self._refresh_query_draft_overview(result)
+        self._refresh_chinese_search_status_summary()
 
     def _render_candidate_tables(self, result: BioinformaticsSearchCenterResult, *, searched: bool) -> None:
         grouped: dict[str, list[UnifiedDatasetCandidate]] = {"geo": [], "tcga_gdc": [], "gtex": []}
         for candidate in result.candidates:
-            if candidate.source in grouped:
+            if candidate.source in grouped and (candidate.source, candidate.accession_or_project) not in self._ignored_candidates:
                 grouped[candidate.source].append(candidate)
         self._fill_geo_candidates(grouped["geo"], result.source_results.get("geo"), searched=searched)
         self._fill_tcga_candidates(grouped["tcga_gdc"])
         self._fill_gtex_candidates(grouped["gtex"])
+        self._refresh_chinese_search_status_summary()
+
+    def _refresh_query_draft_overview(self, result: BioinformaticsSearchCenterResult) -> None:
+        query = result.query
+        self._draft_overview_status.setText("草稿状态：已生成，待用户确认")
+        self._draft_overview_geo.setText("GEO：" + ("；".join(query.geo_query_candidates) if query.geo_query_candidates else "未生成草稿"))
+        self._draft_overview_tcga.setText("TCGA：" + (", ".join(query.tcga_project_ids) if query.tcga_project_ids else "未生成草稿"))
+        self._draft_overview_gtex.setText("GTEx：" + (", ".join(query.gtex_tissues) if query.gtex_tissues else "未生成草稿"))
+        self._chinese_draft_status_label.setText("Query draft：已生成，待确认")
+
+    def _refresh_chinese_search_status_summary(self) -> None:
+        visible_candidates = [
+            candidate
+            for key, candidate in self._candidates.items()
+            if key not in self._ignored_candidates
+        ]
+        candidate_counts = {
+            "geo": sum(1 for candidate in visible_candidates if candidate.source == "geo"),
+            "tcga_gdc": sum(1 for candidate in visible_candidates if candidate.source == "tcga_gdc"),
+            "gtex": sum(1 for candidate in visible_candidates if candidate.source == "gtex"),
+        }
+        rows = self._registered_chinese_rows()
+        ready_count = _ready_chinese_source_count(self._project_root)
+        download_list_count = _download_list_row_count(self._project_root, rows)
+        self._chinese_partition_status_label.setText(
+            f"分区候选：GEO {candidate_counts['geo']} 个，TCGA {candidate_counts['tcga_gdc']} 个，GTEx {candidate_counts['gtex']} 个"
+        )
+        self._chinese_saved_count_label.setText(f"已保存候选：{len(rows)} 个")
+        self._chinese_download_count_label.setText(f"加入下载列表：{download_list_count} 个")
+        if self._last_result is None:
+            self._chinese_next_step_label.setText("下一步：先输入中文研究主题并生成草稿。")
+        elif not rows:
+            self._chinese_next_step_label.setText("下一步：查看候选详情，保存或加入下载列表。")
+        elif ready_count:
+            self._chinese_next_step_label.setText("下一步：可以进入数据检查与准备；仍可继续补充候选数据来源。")
+        else:
+            self._chinese_next_step_label.setText("下一步：完成下载或确认数据来源后进入数据检查与准备。")
 
     def _fill_geo_candidates(self, candidates: list[UnifiedDatasetCandidate], source_result: object | None = None, *, searched: bool = False) -> None:
         self._geo_empty_label.setVisible(not candidates)
@@ -2133,7 +2291,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             ],
         )
         self._install_candidate_action_buttons(self._geo_table, candidates)
-        _set_table_widths(self._geo_table, [140, 92, 300, 70, 160, 72, 150])
+        _set_table_widths(self._geo_table, [300, 92, 300, 70, 160, 72, 150])
 
     def _fill_tcga_candidates(self, candidates: list[UnifiedDatasetCandidate]) -> None:
         self._tcga_empty_label.setVisible(not candidates)
@@ -2155,6 +2313,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._candidate_register_buttons.pop(key, None)
         for key in [key for key in self._candidate_download_buttons if key[0] == source_key]:
             self._candidate_download_buttons.pop(key, None)
+        for key in [key for key in self._candidate_ignore_buttons if key[0] == source_key]:
+            self._candidate_ignore_buttons.pop(key, None)
         for key in [key for key in self._candidate_status_labels if key[0] == source_key]:
             self._candidate_status_labels.pop(key, None)
         cards_widget.setVisible(bool(candidates))
@@ -2193,18 +2353,21 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         layout.addLayout(grid)
 
         actions = QHBoxLayout()
-        register_text = "选择项目" if candidate.source == "tcga_gdc" else "选择组织"
-        register_button = QPushButton(register_text)
+        register_button = QPushButton("保存")
         register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
         register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
-        detail_button = QPushButton("查看说明")
+        detail_button = QPushButton("查看详情")
         detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
         detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-        download_button = QPushButton("创建下载清单")
+        ignore_button = QPushButton("忽略")
+        ignore_button.setObjectName(f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+        ignore_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.ignore_candidate(s, a))
+        download_button = QPushButton("加入下载列表")
         download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
         download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
         actions.addWidget(register_button)
         actions.addWidget(detail_button)
+        actions.addWidget(ignore_button)
         actions.addWidget(download_button)
         actions.addStretch(1)
         layout.addLayout(actions)
@@ -2212,6 +2375,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         key = (candidate.source, candidate.accession_or_project)
         self._candidate_register_buttons[key] = register_button
         self._candidate_download_buttons[key] = download_button
+        self._candidate_ignore_buttons[key] = ignore_button
         self._candidate_status_labels[key] = status_label
         return frame
 
@@ -2243,17 +2407,18 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         total_count = len(rows)
         ready_count = _ready_chinese_source_count(self._project_root)
         source_counts = {key: len(value) for key, value in grouped_rows.items()}
-        prefix = f"已选 GEO {source_counts['geo']} 个，TCGA {source_counts['tcga_gdc']} 个，GTEx {source_counts['gtex']} 个；{ready_count} 个可进入识别。"
+        prefix = f"已选 GEO {source_counts['geo']} 个，TCGA {source_counts['tcga_gdc']} 个，GTEx {source_counts['gtex']} 个；{ready_count} 个可进入数据检查。"
         if ready_count:
-            self._registered_count_label.setText(f"{prefix} 当前状态：可进入识别。")
+            self._registered_count_label.setText(f"{prefix} 当前状态：可进入数据检查。")
         elif total_count:
             self._registered_count_label.setText(f"{prefix} 当前建议操作：先补全表达矩阵。")
         else:
             self._registered_count_label.setText(f"{prefix} 当前建议操作：先选择数据源。")
         can_continue = ready_count > 0 and self._project_root is not None
         self._continue_button.setEnabled(can_continue)
-        self._continue_button.setText("下一步：进入数据识别")
+        self._continue_button.setText("下一步：数据检查与准备")
         self._refresh_geo_download_list()
+        self._refresh_chinese_search_status_summary()
 
     def _refresh_geo_download_list(self) -> None:
         panel = getattr(self, "_geo_download_list_panel", None)
@@ -2280,7 +2445,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
 
     def _install_candidate_action_buttons(self, table: QTableWidget, candidates: list[UnifiedDatasetCandidate]) -> None:
         action_col = _table_column_index(table, "操作")
-        table.setColumnWidth(action_col, 140)
+        table.setColumnWidth(action_col, 300)
         for row_index, candidate in enumerate(candidates):
             key = (candidate.source, candidate.accession_or_project)
             action_widget = QWidget()
@@ -2289,15 +2454,24 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             detail_button = QPushButton("查看详情")
             detail_button.setObjectName(f"candidateDetailButton_{candidate.source}_{candidate.accession_or_project}")
             detail_button.clicked.connect(lambda checked=False, item=candidate: self._show_candidate_detail(item))
-            if candidate.source != "geo":
-                register_button = QPushButton("选择")
-                register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
-                register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
-                layout.addWidget(register_button)
-                self._candidate_register_buttons[key] = register_button
             layout.addWidget(detail_button)
+            register_button = QPushButton("保存")
+            register_button.setObjectName(f"registerCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            register_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.register_candidate(s, a))
+            ignore_button = QPushButton("忽略")
+            ignore_button.setObjectName(f"ignoreCandidateButton_{candidate.source}_{candidate.accession_or_project}")
+            ignore_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.ignore_candidate(s, a))
+            download_button = QPushButton("加入下载列表")
+            download_button.setObjectName(f"candidateDownloadButton_{candidate.source}_{candidate.accession_or_project}")
+            download_button.clicked.connect(lambda checked=False, s=candidate.source, a=candidate.accession_or_project: self.generate_candidate_download_task(s, a))
+            layout.addWidget(register_button)
+            layout.addWidget(ignore_button)
+            layout.addWidget(download_button)
             layout.addStretch(1)
             table.setCellWidget(row_index, action_col, action_widget)
+            self._candidate_register_buttons[key] = register_button
+            self._candidate_ignore_buttons[key] = ignore_button
+            self._candidate_download_buttons[key] = download_button
         self._refresh_candidate_registration_buttons()
 
     def _show_candidate_detail(self, candidate: UnifiedDatasetCandidate) -> None:
@@ -2316,7 +2490,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._detail_select_button.setEnabled(not self._is_candidate_registered(candidate.source, candidate.accession_or_project))
         self._detail_download_button.setEnabled(True)
         self._detail_download_button.setVisible(candidate.source == "geo" or candidate.source in {"tcga_gdc", "gtex"})
-        self._detail_download_button.setText("下载并添加" if candidate.source == "geo" else "创建下载任务")
+        self._detail_download_button.setText("加入下载列表")
         self._detail_brief_button.setVisible(candidate.source == "geo")
         self._detail_brief_button.setEnabled(candidate.source == "geo")
         self._set_status(f"正在查看：{candidate.accession_or_project}")
@@ -2347,8 +2521,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._refresh_geo_download_list()
 
     def _ignore_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
-        self._geo_dataset_detail_panel.setVisible(False)
-        self._set_status(f"已忽略：{candidate.accession_or_project}")
+        self.ignore_candidate(candidate.source, candidate.accession_or_project)
 
     def _remove_geo_candidate_from_detail(self, candidate: UnifiedDatasetCandidate) -> None:
         self._remove_geo_accession_from_download_list(candidate.accession_or_project)
@@ -2363,6 +2536,28 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._set_status(f"已从待处理数据集中移除：{accession}")
         else:
             self._set_status(f"待处理数据集中未找到：{accession}", error=True)
+
+    def ignore_candidate(self, source: str, accession_or_project: str) -> bool:
+        key = (source, accession_or_project)
+        candidate = self._candidates.get(key)
+        if candidate is None:
+            self._set_status("候选结果不存在。", error=True)
+            return False
+        self._ignored_candidates.add(key)
+        if self._selected_candidate is not None and (self._selected_candidate.source, self._selected_candidate.accession_or_project) == key:
+            self._selected_candidate = None
+        if source == "geo":
+            self._geo_dataset_detail_panel.setVisible(False)
+        else:
+            bucket = _candidate_source_bucket(source)
+            self._source_detail_titles[bucket].setText("候选详情")
+            self._source_detail_texts[bucket].setPlainText("已忽略该候选；不会删除真实数据，也不会写入项目数据来源。")
+            self._source_detail_select_buttons[bucket].setEnabled(False)
+            self._source_detail_download_buttons[bucket].setEnabled(False)
+        if self._last_result is not None:
+            self._render_candidate_tables(self._last_result, searched=self._last_render_searched)
+        self._set_status(f"已忽略：{accession_or_project}。仅从当前候选展示中移除。")
+        return True
 
     def _select_current_candidate(self) -> None:
         if self._selected_candidate is None:
@@ -2390,13 +2585,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         for (source, accession), button in self._candidate_register_buttons.items():
             registered = self._is_candidate_registered(source, accession)
             if registered:
-                button.setText("已选择")
-            elif source == "tcga_gdc":
-                button.setText("选择项目")
-            elif source == "gtex":
-                button.setText("选择组织")
+                button.setText("已保存")
             else:
-                button.setText("选择")
+                button.setText("保存")
             button.setEnabled(not registered)
         for (source, accession), button in self._candidate_download_buttons.items():
             ready = self._is_candidate_ready_for_recognition(source, accession)
@@ -2408,7 +2599,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     button.setEnabled(True)
                 else:
                     status_text = _candidate_record_status_text(self._project_root, source, accession)
-                    button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "下载并添加"))
+                    button.setText("补充文件已下载" if "补充文件已下载" in status_text else ("元数据已下载" if ready else "加入下载列表"))
                     button.setEnabled(not ready)
             else:
                 manifest_created = _candidate_has_download_manifest(self._project_root, source, accession)
@@ -2416,7 +2607,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
                     button.setText("下载清单已创建")
                     button.setEnabled(False)
                 else:
-                    button.setText("创建下载清单")
+                    button.setText("加入下载列表")
                     button.setEnabled(True)
 
     def _refresh_candidate_status_cells(self) -> None:
@@ -2609,30 +2800,21 @@ class BioinformaticsAcquisitionStatusWidget(QWidget):
         actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_status))
         actions.addWidget(_button("打开项目文件夹", "secondaryButton", lambda: _open_path(self._project_root)))
         actions.addWidget(_button("打开 raw_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "raw_data" if self._project_root else None)))
-        actions.addWidget(_button("继续：数据识别", "primaryButton", self.continue_to_recognition))
+        actions.addWidget(_button("继续：数据检查与准备", "primaryButton", self.continue_to_recognition))
         actions.addStretch(1)
         root.addLayout(actions)
 
 
 class BioinformaticsRecognitionWidget(QWidget):
     continue_requested = Signal(object)
-    navigate_requested = Signal(str, object)
     back_requested = Signal()
 
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
         self._last_report: dict[str, object] | None = None
-        self._selected_detail_run: dict[str, object] | None = None
-        self._selected_detail_file: dict[str, object] | None = None
-        self._selected_detail_payload: dict[str, object] | None = None
-        self._active_next_run: dict[str, object] | None = None
-        self._active_next_files: list[dict[str, object]] = []
-        self._active_next_steps: dict[str, object] | None = None
-        self._next_step_actions: list[dict[str, object]] = []
         self._pre_recognition_rows: list[RegisteredSourceRow] = []
         self._pre_recognition_checks: dict[str, QCheckBox] = {}
-        self._history_expanded = False
         self.setObjectName("bioinformaticsRecognitionPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -2643,7 +2825,6 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
-        self._last_report = None
         self.refresh_report()
 
     def run_recognition(self) -> dict[str, object] | None:
@@ -2652,7 +2833,7 @@ class BioinformaticsRecognitionWidget(QWidget):
             return None
         selected_rows = self._selected_pre_recognition_rows()
         if not selected_rows:
-            self._set_status("请先选择需要识别的数据源。")
+            self._set_status("请先选择需要识别的数据。")
             return None
         selected_paths = _recognition_paths_for_rows(self._project_root, selected_rows)
         if not selected_paths:
@@ -2666,7 +2847,6 @@ class BioinformaticsRecognitionWidget(QWidget):
             skipped_unselected_count=max(0, len(self._pre_recognition_rows) - len(selected_rows)),
         )
         self._render_report(report)
-        self._render_recognition_history()
         self._set_status(f"{self.status_message()} 本次只识别已勾选的数据。")
         return report
 
@@ -2675,9 +2855,16 @@ class BioinformaticsRecognitionWidget(QWidget):
             self._set_status("请先创建或打开生信分析项目。")
             return
         self._render_pre_recognition_inputs()
-        self._clear_current_recognition_display()
-        self._render_recognition_history()
-        self._set_status("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
+        report = load_recognition_report(self._project_root)
+        if report is None:
+            self._set_status("尚未生成数据识别报告。")
+            self._table.setRowCount(0)
+            self._counts.setPlainText("")
+            self._group_preview.setPlainText("")
+            self._technical_details.setPlainText("")
+            return
+        self._render_report(report)
+        self._set_status(f"{self.status_message()} 刷新报告只重新读取当前识别报告显示，不重新扫描文件，也不改变项目文件。")
 
     def clean_old_recognition_results(self, *, skip_confirmation: bool = False) -> bool:
         if self._project_root is None:
@@ -2700,23 +2887,12 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._last_report = None
         self._table.setRowCount(0)
         self._counts.setPlainText("旧识别结果已清理。raw_data 中的原始导入文件未删除。")
-        self._asset_summary.setPlainText("")
         self._technical_details.setPlainText("")
-        self._clear_recognition_detail()
-        self._render_recognition_history()
         self._set_status("旧识别结果已清理；原始数据文件未删除。请点击“重新识别”重新扫描。")
         return True
 
     def status_message(self) -> str:
         return self._status_label.text()
-
-    def export_recognition_detail_report(self) -> Path | None:
-        if self._project_root is None or self._selected_detail_run is None:
-            self._set_status("请先查看一个识别详情，再导出报告。")
-            return None
-        path = export_recognition_report_markdown(self._project_root, self._selected_detail_run, self._selected_detail_file)
-        self._set_status("数据识别报告已导出，可在该识别批次详情中查看。")
-        return path
 
     def continue_to_readiness(self) -> None:
         if self._project_root is None:
@@ -2731,36 +2907,30 @@ class BioinformaticsRecognitionWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        header = _header("数据识别", "Developer Preview / 本地测试版", back_text="返回数据导入与检索", back_signal=self.back_requested)
-        _apply_button_semantics_by_text(header, "返回数据导入与检索", "back")
-        root.addWidget(header)
+        root.addWidget(_header("数据识别", "Developer Preview / 本地测试版", back_text="返回数据导入与检索", back_signal=self.back_requested))
         pre_card, pre_layout = _card("待识别数据源")
         self._pre_recognition_empty_label = _muted("尚未选择数据。")
         pre_layout.addWidget(self._pre_recognition_empty_label)
-        self._pre_recognition_table = _table(["选择", "来源类型", "名称 / 编号", "简化位置", "数据状态"])
+        self._pre_recognition_table = _table(["选择", "来源类型", "名称 / 编号", "当前位置", "数据状态"])
         self._pre_recognition_table.setObjectName("preRecognitionInputList")
-        self._pre_recognition_table.setMinimumHeight(88)
-        self._pre_recognition_table.setMaximumHeight(150)
+        self._pre_recognition_table.setMinimumHeight(130)
         self._pre_recognition_table.horizontalHeader().sectionClicked.connect(self._toggle_pre_recognition_header)
         pre_layout.addWidget(self._pre_recognition_table)
         pre_actions = QHBoxLayout()
-        self._delete_selected_inputs_button = _button("删除所选", "secondaryButton", self._delete_selected_pre_recognition_sources, role="danger")
+        self._delete_selected_inputs_button = _button("删除所选", "secondaryButton", self._delete_selected_pre_recognition_sources)
         self._delete_selected_inputs_button.setEnabled(False)
         pre_actions.addStretch(1)
         pre_actions.addWidget(self._delete_selected_inputs_button)
         pre_layout.addLayout(pre_actions)
         root.addWidget(pre_card)
         actions = QHBoxLayout()
-        actions.addWidget(_button("开始识别", "primaryButton", self.run_recognition, role="primary_action"))
-        actions.addWidget(_button("刷新", "secondaryButton", self.refresh_report, role="secondary"))
+        actions.addWidget(_button("开始识别", "primaryButton", self.run_recognition))
+        actions.addWidget(_button("刷新", "secondaryButton", self.refresh_report))
         actions.addStretch(1)
         root.addLayout(actions)
         root.addWidget(_muted("开始识别只处理上方勾选的数据；刷新只更新当前报告显示。"))
-        self._status_label = _status_label("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
+        self._status_label = _status_label("尚未生成数据识别报告。")
         root.addWidget(self._status_label)
-        result_card, result_layout = _card("本次识别结果")
-        self._current_result_hint = _muted("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
-        result_layout.addWidget(self._current_result_hint)
         filter_row = QHBoxLayout()
         filter_row.addWidget(_muted("文件显示："))
         self._duplicate_filter = QComboBox()
@@ -2768,102 +2938,48 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._duplicate_filter.currentIndexChanged.connect(self._rerender_last_report)
         filter_row.addWidget(self._duplicate_filter)
         filter_row.addStretch(1)
-        result_layout.addLayout(filter_row)
-        result_layout.addWidget(_muted("本次识别结果摘要"))
-        self._counts = _read_only_report_view(58)
-        self._counts.setObjectName("recognitionSummaryReport")
-        self._counts.setMinimumHeight(48)
-        self._counts.setMaximumHeight(58)
-        result_layout.addWidget(self._counts)
-        next_card, next_layout = _card("下一步操作")
-        next_actions = QHBoxLayout()
-        self._next_action_buttons: list[QPushButton] = []
-        for index in range(2):
-            button = _button("", f"recognitionNextActionButton_{index}", lambda _checked=False, i=index: self._execute_next_step_action(i))
-            _apply_button_semantics(button, "primary_next" if index == 0 else "secondary")
-            button.setVisible(False)
-            self._next_action_buttons.append(button)
-            next_actions.addWidget(button)
-        next_actions.addStretch(1)
-        next_layout.addLayout(next_actions)
-        self._next_steps_summary = _read_only_report_view(44)
-        self._next_steps_summary.setObjectName("recognitionNextStepSummary")
-        self._next_steps_summary.setMinimumHeight(40)
-        self._next_steps_summary.setMaximumHeight(48)
-        self._next_steps_summary.setPlainText("完成本次识别后，可继续进入数据准备与标准化。")
-        next_layout.addWidget(self._next_steps_summary)
-        result_layout.addWidget(next_card)
-        self._table = _table(["文件名", "文件位置", "识别类型", "识别可信度", "文件大小", "识别理由", "提醒", "操作"])
+        root.addLayout(filter_row)
+        self._table = _table(["文件名", "当前位置", "识别类型", "识别可信度", "文件大小", "标准化状态 / 识别理由", "warning"])
         self._table.setObjectName("recognitionResultTable")
-        self._table.setMinimumHeight(110)
-        self._table.setMaximumHeight(170)
         confidence_header = self._table.horizontalHeaderItem(3)
         if confidence_header is not None:
             confidence_header.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
-        result_layout.addWidget(self._table)
-        self._asset_summary = _read_only_report_view(150)
-        self._asset_summary.setObjectName("recognitionAssetSummary")
-        result_layout.addWidget(self._asset_summary)
+        root.addWidget(self._table)
+        self._counts = _read_only_report_view(130)
+        self._counts.setObjectName("recognitionSummaryReport")
+        root.addWidget(self._counts)
         group_card, group_layout = _card("样本与分组预览")
         group_card.setObjectName("recognitionGroupPreviewCard")
         self._group_preview = _read_only_report_view(130)
         self._group_preview.setObjectName("recognitionGroupPreviewReport")
         group_layout.addWidget(self._group_preview)
-        result_layout.addWidget(group_card)
-        root.addWidget(result_card)
-
-        history_card, history_layout = _card("历史识别记录")
-        history_layout.addWidget(_muted("这里保存之前运行过的识别结果，不属于本次操作。"))
-        history_summary_row = QHBoxLayout()
-        self._history_summary_label = _muted("暂无历史识别记录。")
-        self._history_toggle_button = _button("展开历史记录", "secondaryButton", self._toggle_history_table, role="secondary")
-        self._history_summary_label.setObjectName("recognitionHistorySummary")
-        self._history_toggle_button.setObjectName("recognitionHistoryToggleButton")
-        self._history_toggle_button.setEnabled(False)
-        history_summary_row.addWidget(self._history_summary_label)
-        history_summary_row.addStretch(1)
-        history_summary_row.addWidget(self._history_toggle_button)
-        history_layout.addLayout(history_summary_row)
-        self._history_table = _table(["时间", "批次名称", "输入数据源", "识别文件数", "内容摘要", "提醒数量", "当前状态", "操作"])
-        self._history_table.setObjectName("recognitionHistoryTable")
-        self._history_table.setMinimumHeight(120)
-        self._history_table.setVisible(False)
-        history_layout.addWidget(self._history_table)
-        root.addWidget(history_card)
-
-        detail_card, detail_layout = _card("识别详情")
-        detail_layout.addWidget(_muted("只读查看本次识别文件或历史识别记录，不会修改当前识别批次。"))
-        self._detail_report = _read_only_report_view(260)
-        self._detail_report.setObjectName("recognitionDetailReport")
-        self._detail_report.setPlainText("请选择本次识别文件或历史识别记录查看详情。")
-        detail_layout.addWidget(self._detail_report)
-        detail_actions = QHBoxLayout()
-        self._detail_export_button = _button("导出数据识别报告", "recognitionDetailExportButton", self.export_recognition_detail_report, role="secondary")
-        self._detail_export_button.setEnabled(False)
-        detail_actions.addWidget(self._detail_export_button)
-        detail_actions.addStretch(1)
-        detail_layout.addLayout(detail_actions)
-        self._detail_technical = _text_preview(180)
-        self._detail_technical.setObjectName("recognitionDetailTechnical")
-        self._detail_technical.setVisible(False)
-        root.addWidget(detail_card)
-
+        root.addWidget(group_card)
         self._technical_details = _text_preview(180)
         self._technical_details.setVisible(False)
+        root.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._technical_details)), alignment=Qt.AlignLeft)
+        root.addWidget(self._technical_details)
+        tech_ops = QFrame()
+        tech_ops.setObjectName("recognitionTechnicalOperations")
+        tech_ops.setVisible(False)
+        tech_layout = QHBoxLayout(tech_ops)
+        tech_layout.setContentsMargins(0, 0, 0, 0)
+        tech_layout.addWidget(_button("清理旧识别结果", "secondaryButton", self.clean_old_recognition_results))
+        tech_layout.addWidget(_button("打开 recognized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "recognized_data" if self._project_root else None)))
+        tech_layout.addStretch(1)
+        root.addWidget(_button("技术操作", "secondaryButton", lambda: tech_ops.setVisible(not tech_ops.isVisible())), alignment=Qt.AlignLeft)
+        root.addWidget(tech_ops)
+        root.addWidget(_button("继续：数据准备与标准化", "primaryButton", self.continue_to_readiness), alignment=Qt.AlignLeft)
 
     def _render_report(self, report: dict[str, object]) -> None:
         self._last_report = report
         self._render_pre_recognition_inputs()
-        self._current_result_hint.setVisible(False)
         annotated = _annotated_recognition_files(report, self._project_root)
         files = _filter_recognition_files(annotated, self._duplicate_filter.currentText())
         warnings = [str(item) for item in report.get("warnings", []) or []]
         duplicate_count = sum(1 for item in annotated if item.get("_duplicate"))
-        self._set_status(f"已读取识别报告：{len(annotated)} 个文件，{len(warnings)} 条提醒。")
+        self._set_status(f"已读取识别报告：{len(annotated)} 个文件，{len(warnings)} 条 warning。")
         self._fill_recognition_table(files)
-        self._counts.setPlainText(_recognition_status_bar_summary(report, annotated))
-        self._asset_summary.setPlainText(_recognition_asset_summary(files))
-        self._render_next_steps(self._detail_run_for_current_report(report), files)
+        self._counts.setPlainText(_recognition_user_summary(report, annotated, warnings, self._project_root))
         self._group_preview.setPlainText(_group_preview_user_summary(report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}))
         self._technical_details.setPlainText(
             _json(
@@ -2880,190 +2996,6 @@ class BioinformaticsRecognitionWidget(QWidget):
         if self._last_report is not None:
             self._render_report(self._last_report)
 
-    def _clear_current_recognition_display(self) -> None:
-        self._last_report = None
-        self._current_result_hint.setVisible(True)
-        self._table.setRowCount(0)
-        self._counts.setPlainText("尚未开始本次识别。请选择上方数据源后点击“开始识别”。")
-        self._asset_summary.setPlainText("")
-        self._clear_next_steps()
-        self._group_preview.setPlainText("")
-        self._technical_details.setPlainText("")
-        self._clear_recognition_detail()
-
-    def _render_recognition_history(self) -> None:
-        runs = list_recognition_runs(self._project_root) if self._project_root is not None else []
-        self._history_summary_label.setText(_recognition_history_summary_text(runs))
-        self._history_toggle_button.setEnabled(bool(runs))
-        self._history_toggle_button.setText("收起历史记录" if self._history_expanded else "展开历史记录")
-        self._history_table.setVisible(bool(runs) and self._history_expanded)
-        rows = [
-            [
-                _format_history_time(str(run.get("generated_at") or "")),
-                str(run.get("batch_name") or run.get("run_id") or "识别记录"),
-                _history_input_text(run),
-                str(run.get("recognized_file_count") or 0),
-                _history_content_summary(run),
-                str(run.get("warning_count") or 0),
-                "当前使用中" if run.get("is_current") else _history_status_text(run),
-                "",
-            ]
-            for run in runs
-        ]
-        _fill_table(self._history_table, rows)
-        _set_table_widths(self._history_table, [150, 150, 220, 100, 260, 90, 110, 220])
-        self._history_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
-        for row_index, run in enumerate(runs):
-            actions = QFrame()
-            actions_layout = QHBoxLayout(actions)
-            actions_layout.setContentsMargins(0, 0, 0, 0)
-            actions_layout.setSpacing(4)
-            run_id = str(run.get("run_id") or "")
-            view_button = _button("查看批次详情", "secondaryButton", lambda _checked=False, rid=run_id: self._view_history_run(rid), role="secondary", small=True)
-            delete_button = _button("删除记录", "secondaryButton", lambda _checked=False, rid=run_id: self._delete_history_run(rid), role="danger", small=True)
-            actions_layout.addWidget(view_button)
-            actions_layout.addWidget(delete_button)
-            self._history_table.setCellWidget(row_index, 7, actions)
-
-    def _toggle_history_table(self) -> None:
-        self._history_expanded = not self._history_expanded
-        self._render_recognition_history()
-
-    def _view_history_run(self, run_id: str) -> None:
-        run = _recognition_run_by_id(self._project_root, run_id)
-        if run is None:
-            self._set_status("未找到该历史识别记录。")
-            return
-        self._render_recognition_detail(run, None)
-        self._set_status("已显示历史识别详情；它不属于本次识别结果，也未修改当前识别批次。")
-
-    def _view_current_file_detail(self, file_record: dict[str, object]) -> None:
-        if self._project_root is None:
-            self._set_status("请先创建或打开生信分析项目。")
-            return
-        report = self._last_report or {"files": [file_record]}
-        self._render_recognition_detail(self._detail_run_for_current_report(report), file_record)
-        self._set_status("已显示本次识别文件详情；未修改当前识别批次。")
-
-    def _render_recognition_detail(self, run: dict[str, object], file_record: dict[str, object] | None) -> None:
-        if self._project_root is None:
-            return
-        payload = build_recognition_detail_payload(self._project_root, run, file_record)
-        self._selected_detail_run = run
-        self._selected_detail_file = file_record
-        self._selected_detail_payload = payload
-        self._detail_report.setPlainText(format_recognition_detail_text(payload))
-        self._detail_technical.setPlainText(format_recognition_detail_technical(payload))
-        self._detail_export_button.setEnabled(True)
-
-    def _render_next_steps(self, run: dict[str, object], files: list[dict[str, object]] | None) -> None:
-        if self._project_root is None:
-            return
-        next_steps = build_recognition_next_steps(self._project_root, run, files)
-        self._active_next_run = run
-        self._active_next_files = [dict(item) for item in files or []]
-        self._active_next_steps = next_steps
-        self._next_steps_summary.setPlainText(_recognition_primary_next_step_text(next_steps))
-        self._next_step_actions = [
-            {"label": "继续：数据准备与标准化", "target": "continue_to_readiness"},
-            {"label": "导出数据识别报告", "target": "export_recognition_report"},
-        ]
-        for index, button in enumerate(self._next_action_buttons):
-            if index < len(self._next_step_actions):
-                button.setText(str(self._next_step_actions[index].get("label") or "操作"))
-                _apply_button_semantics(button, "primary_next" if index == 0 else "secondary")
-                button.setVisible(True)
-                button.setEnabled(True)
-            else:
-                button.setVisible(False)
-                button.setEnabled(False)
-
-    def _clear_next_steps(self) -> None:
-        self._active_next_run = None
-        self._active_next_files = []
-        self._active_next_steps = None
-        self._next_step_actions = []
-        self._next_steps_summary.setPlainText("完成本次识别后，可继续进入数据准备与标准化。")
-        for button in self._next_action_buttons:
-            button.setVisible(False)
-            button.setEnabled(False)
-
-    def _execute_next_step_action(self, index: int) -> None:
-        if self._project_root is None or index >= len(self._next_step_actions):
-            return
-        action = self._next_step_actions[index]
-        target = str(action.get("target") or "")
-        if target == "continue_to_readiness":
-            self.continue_to_readiness()
-            return
-        if target == "set_current_recognition_run":
-            run_id = str(action.get("run_id") or (self._active_next_run or {}).get("run_id") or "")
-            self._set_history_run_current(run_id)
-            run = _recognition_run_by_id(self._project_root, run_id)
-            if run is not None:
-                self._render_next_steps(run, None)
-                self._render_recognition_detail(run, self._selected_detail_file)
-            return
-        if target == "detail":
-            if self._active_next_run is not None:
-                first_file = self._active_next_files[0] if self._active_next_files else None
-                self._render_recognition_detail(self._active_next_run, first_file)
-                self._set_status("已显示识别详情；未修改当前识别批次。")
-            return
-        if target == "export_recognition_report":
-            if self._selected_detail_run is None and self._active_next_run is not None:
-                self._selected_detail_run = self._active_next_run
-                self._selected_detail_file = self._active_next_files[0] if self._active_next_files else None
-            self.export_recognition_detail_report()
-            return
-        if target == "data_source":
-            self.navigate_requested.emit("data_source", self._project_root)
-            return
-        if target in {"standardization", "analysis_tasks", "result_browser", "group_design"}:
-            self.navigate_requested.emit(target, self._project_root)
-            return
-        self._set_status(f"下一步操作暂未接入：{action.get('label') or target}")
-
-    def _clear_recognition_detail(self) -> None:
-        self._selected_detail_run = None
-        self._selected_detail_file = None
-        self._selected_detail_payload = None
-        self._detail_report.setPlainText("请选择本次识别文件或历史识别记录查看详情。")
-        self._detail_technical.setPlainText("")
-        self._detail_technical.setVisible(False)
-        self._detail_export_button.setEnabled(False)
-
-    def _detail_run_for_current_report(self, report: dict[str, object]) -> dict[str, object]:
-        if self._project_root is not None:
-            current = next((run for run in list_recognition_runs(self._project_root) if run.get("is_current")), None)
-            if current is not None:
-                return current
-        return {
-            "run_id": str(report.get("run_id") or "current_session"),
-            "batch_name": "本次识别",
-            "generated_at": report.get("generated_at"),
-            "recognition_report": report,
-        }
-
-    def _set_history_run_current(self, run_id: str) -> None:
-        if self._project_root is None or not set_current_recognition_run(self._project_root, run_id):
-            self._set_status("设为当前结果失败。")
-            return
-        self._render_recognition_history()
-        self._set_status("已将该识别记录设为当前标准化输入。")
-
-    def _delete_history_run(self, run_id: str) -> None:
-        run = _recognition_run_by_id(self._project_root, run_id)
-        was_current = bool(run and run.get("is_current"))
-        if self._project_root is None or not delete_recognition_run(self._project_root, run_id):
-            self._set_status("删除历史识别记录失败。")
-            return
-        self._render_recognition_history()
-        if was_current:
-            self._set_status("当前识别结果已删除，请重新识别或选择另一条历史记录。")
-        else:
-            self._set_status("已删除历史识别记录。")
-
     def _render_pre_recognition_inputs(self) -> None:
         rows = _registered_source_rows(self._project_root)
         self._pre_recognition_rows = rows
@@ -3078,7 +3010,7 @@ class BioinformaticsRecognitionWidget(QWidget):
         if header_item is not None:
             header_item.setText("选择")
             header_item.setCheckState(Qt.Unchecked)
-        _set_table_widths(self._pre_recognition_table, [56, 130, 180, 200, 170])
+        _set_table_widths(self._pre_recognition_table, [56, 140, 190, 260, 210])
         self._pre_recognition_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         for row_index, row in enumerate(rows):
             checkbox = QCheckBox()
@@ -3103,17 +3035,15 @@ class BioinformaticsRecognitionWidget(QWidget):
             warning = str(item.get("warning") or "")
             if item.get("_duplicate"):
                 warning = "检测到可能重复导入的文件。" if not warning else f"{warning}；检测到可能重复导入的文件。"
-            display_path, tooltip_path = _recognition_file_display_path(item)
             rows.append(
                 [
                     str(item.get("file_name", "")),
-                    display_path,
+                    _compact_path(str(item.get("route_path") or item.get("original_path") or ""), max_chars=54),
                     _recognition_type_text(item),
                     _format_confidence(item.get("confidence")),
                     _format_file_size(item.get("file_size")),
-                    str(item.get("reason", "")),
+                    _recognition_status_reason(item),
                     warning,
-                    "",
                 ]
             )
         for row_index, row in enumerate(rows):
@@ -3121,17 +3051,16 @@ class BioinformaticsRecognitionWidget(QWidget):
                 table_item = QTableWidgetItem(value)
                 source = files[row_index]
                 if col_index == 1:
-                    table_item.setToolTip(_recognition_file_display_path(source)[1])
+                    table_item.setToolTip(str(source.get("route_path") or source.get("original_path") or ""))
                 elif col_index == 2:
                     table_item.setToolTip(_recognition_roles_tooltip(source))
                 elif col_index == 3:
                     table_item.setToolTip("软件根据文件内容推断文件类型的可信程度。它不是数据质量评分，也不是科研可信度评分。")
                 elif col_index == 4:
                     table_item.setToolTip(f"原始 bytes：{source.get('file_size', '未记录')}")
+                elif col_index == 5:
+                    table_item.setToolTip(str(source.get("next_action") or source.get("reason") or ""))
                 self._table.setItem(row_index, col_index, table_item)
-            detail_button = _button("查看文件详情", "secondaryButton", lambda _checked=False, record=dict(files[row_index]): self._view_current_file_detail(record), role="secondary", small=True)
-            detail_button.setObjectName(f"recognitionFileDetailButton_{row_index}")
-            self._table.setCellWidget(row_index, 7, detail_button)
         self._table.resizeColumnsToContents()
 
     def _toggle_pre_recognition_header(self, section: int) -> None:
@@ -3198,12 +3127,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self.refresh_status()
 
     def run_readiness_check(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        artifacts = run_project_readiness(self._project_root)
-        self._render(artifacts)
-        return artifacts
+        return self.save_and_rerun_readiness()
 
     def refresh_status(self) -> None:
         if self._project_root is None:
@@ -3212,12 +3136,17 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         artifacts = load_readiness_artifacts(self._project_root)
         if artifacts.get("readiness_report") is None:
             self._last_artifacts = {}
-            self._status_label.setText("暂不能继续：尚未运行数据准备检查。")
+            self._status_label.setText("暂不能继续：尚未运行数据检查。")
             self._recognized_inputs_label.setText("已识别到的数据：尚未检查")
             self._missing_inputs_label.setText("仍需补充的数据：尚未检查")
-            self._next_step_label.setText("下一步建议：点击“重新检查”，让系统读取最新的数据识别结果。")
-            self._warning_chips.setText("提示：尚未运行数据准备检查。")
+            self._next_step_label.setText("下一步建议：点击“运行数据检查”，逐文件刷新 recognition 和 ready check。")
+            self._warning_chips.setText("提示：尚未运行数据检查。")
             self._render_todo_items(set())
+            self._render_file_status_rows(_pending_data_check_file_statuses(self._project_root))
+            self._render_dataset_readiness_summary({})
+            self._render_group_recommendation({})
+            self._render_gsea_gene_set_status({})
+            self._update_run_check_button(False)
             self._matrix.setRowCount(0)
             self._details.setPlainText("")
         else:
@@ -3248,10 +3177,10 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
             self._status_label.setText("请先创建或打开生信分析项目。")
             return False
         normalized = _normalize_missing_input(kind)
-        if normalized not in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config", "gmt_gene_set"}:
+        if normalized not in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config"}:
             self._status_label.setText("当前缺失项暂不支持在本页补充。")
             return False
-        if normalized in {"expression_matrix", "gmt_gene_set"} and mode == "manual":
+        if normalized in {"expression_matrix"} and mode == "manual":
             self._status_label.setText(f"{_missing_input_label(normalized)}仅支持选择本地文件补充。")
             return False
         if mode == "file":
@@ -3317,7 +3246,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         run_project_recognition(self._project_root)
         artifacts = run_project_readiness(self._project_root)
         self._render(artifacts)
-        self._status_label.setText("已确认候选分组为正式比较组，并重新检查数据准备状态。")
+        self._status_label.setText("已确认候选分组为正式比较组，并重新运行数据检查。")
         return True
 
     def create_missing_info_template(self, kind: str) -> Path | None:
@@ -3338,27 +3267,54 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
-        run_project_recognition(self._project_root)
+        selected_paths = _pending_data_check_paths(self._project_root)
+        if selected_paths:
+            run_project_recognition_for_paths(self._project_root, selected_paths)
+        else:
+            run_project_recognition(self._project_root)
         artifacts = run_project_readiness(self._project_root)
         self._render(artifacts)
-        self._status_label.setText(f"{self._status_label.text()}；已重新检查。")
+        self._status_label.setText(f"{self._status_label.text()}；已重新运行数据检查。")
         return artifacts
+
+    def open_gene_set_resource_manager(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        validation = validate_gene_set_registry(self._project_root)
+        resources = list_local_gene_sets(self._project_root)
+        if resources:
+            resource_lines = [
+                f"{item.get('name') or item.get('resource_id')} · {item.get('collection_type')} · {item.get('species')} · {item.get('gene_id_type')} · {item.get('status')}"
+                for item in resources
+            ]
+            message = "已可用的本地资源：\n" + "\n".join(resource_lines)
+        else:
+            message = "暂无本地 GSEA 基因集资源。你可以导入本地 GMT，或在下一阶段配置 / 下载常用基因集资源。"
+        message += (
+            "\n\n导入本地 GMT：将在 GSEA 基因集资源管理器阶段支持。"
+            "\n下载 / 配置常用基因集资源：GO BP、GO CC、GO MF、Reactome、KEGG、MSigDB Hallmark、自定义 GMT。"
+            "\nB5.16 不会静默下载或默认内置 gene set。"
+        )
+        self._status_label.setText("已打开 GSEA 基因集资源管理器入口；完整导入、下载和缓存将在 B5.17 开发。")
+        QMessageBox.information(self, "GSEA 基因集资源管理器", message)
+        return {"validation": validation, "resources": resources, "message": message}
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("数据准备状态", "检查当前数据能否进入标准化和后续分析。", back_text="返回数据识别", back_signal=self.back_requested))
+        root.addWidget(_header("数据检查与准备", "第一步检查每个文件；第二步继续标准化数据。", back_text="返回数据导入与检索", back_signal=self.back_requested))
 
-        status_card, status_layout = _card("数据准备概览")
+        status_card, status_layout = _card("数据检查与准备概览")
         status_card.setObjectName("readinessStatusCard")
-        self._status_label = _status_label("暂不能继续：尚未运行数据准备检查。")
+        self._status_label = _status_label("暂不能继续：尚未运行数据检查。")
         self._status_label.setObjectName("readinessStatusBadge")
         self._recognized_inputs_label = _muted("已识别到的数据：尚未检查")
         self._recognized_inputs_label.setObjectName("readinessRecognizedInputs")
         self._missing_inputs_label = _muted("仍需补充的数据：尚未检查")
         self._missing_inputs_label.setObjectName("readinessMissingInputs")
-        self._next_step_label = _muted("下一步建议：点击“重新检查”，让系统读取最新的数据识别结果。")
+        self._next_step_label = _muted("下一步建议：点击“运行数据检查”，逐文件刷新 recognition 和 ready check。")
         self._next_step_label.setObjectName("readinessNextStep")
-        self._warning_chips = _muted("提示：尚未运行数据准备检查。")
+        self._warning_chips = _muted("提示：尚未运行数据检查。")
         self._warning_chips.setObjectName("readinessWarningChips")
         status_layout.addWidget(self._status_label)
         status_layout.addWidget(self._recognized_inputs_label)
@@ -3366,6 +3322,52 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         status_layout.addWidget(self._next_step_label)
         status_layout.addWidget(self._warning_chips)
         root.addWidget(status_card)
+
+        file_card, file_layout = _card("第一步：数据检查")
+        file_card.setObjectName("dataCheckFileStatusCard")
+        self._file_status_hint = _muted("每个待处理文件都会独立检查；灰色为未检查，绿色为通过，黄色为需确认，红色为不可作为标准化输入。")
+        self._file_status_hint.setWordWrap(True)
+        file_layout.addWidget(self._file_status_hint)
+        self._file_status_table = _table(["文件名", "类型 / 后缀", "来源", "检查状态", "预计用途 / 待识别", "可用内容", "缺失 / 风险", "操作"])
+        self._file_status_table.setObjectName("dataCheckFileStatusTable")
+        self._file_status_table.setMinimumHeight(220)
+        file_layout.addWidget(self._file_status_table)
+        root.addWidget(file_card)
+
+        dataset_card, dataset_layout = _card("数据集级 readiness 汇总")
+        dataset_card.setObjectName("datasetReadinessSummaryCard")
+        self._dataset_readiness_table = _table(["检查项", "状态", "说明"])
+        self._dataset_readiness_table.setObjectName("datasetReadinessSummaryTable")
+        self._dataset_readiness_table.setMinimumHeight(210)
+        dataset_layout.addWidget(self._dataset_readiness_table)
+        root.addWidget(dataset_card)
+
+        group_card, group_layout = _card("推荐分组")
+        group_card.setObjectName("recommendedGroupCard")
+        self._group_recommendation = _read_only_report_view(150)
+        self._group_recommendation.setObjectName("recommendedGroupPreview")
+        group_layout.addWidget(self._group_recommendation)
+        group_actions = QHBoxLayout()
+        self._group_confirm_button = _button("确认推荐分组", "secondaryButton", self.confirm_group_preview_as_comparison)
+        self._group_modify_button = _button("修改分组", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="manual"))
+        self._group_reject_button = _button("拒绝推荐分组", "secondaryButton", lambda: self._defer_optional_analysis("comparison_config"))
+        self._group_later_button = _button("稍后处理", "secondaryButton", lambda: self._defer_optional_analysis("comparison_config"))
+        for button in (self._group_confirm_button, self._group_modify_button, self._group_reject_button, self._group_later_button):
+            group_actions.addWidget(button)
+        group_actions.addStretch(1)
+        group_layout.addLayout(group_actions)
+        root.addWidget(group_card)
+
+        gsea_card, gsea_layout = _card("GSEA 基因集选择")
+        gsea_card.setObjectName("gseaGeneSetStatusCard")
+        self._gsea_status_label = _status_label("GSEA 基因集：未选择")
+        self._gsea_status_label.setObjectName("gseaGeneSetStatus")
+        self._gsea_status_help = _muted("GSEA 基因集用于后续 GSEA 分析，不属于当前 GEO / TCGA / GTEx 数据文件本身。未选择基因集不影响当前数据检查、标准化准备或 DEG preflight。")
+        self._gsea_status_help.setWordWrap(True)
+        gsea_layout.addWidget(self._gsea_status_label)
+        gsea_layout.addWidget(self._gsea_status_help)
+        gsea_layout.addWidget(_button("选择 GSEA 基因集", "secondaryButton", self.open_gene_set_resource_manager), alignment=Qt.AlignLeft)
+        root.addWidget(gsea_card)
 
         todo_card, todo_layout = _card("待办清单")
         todo_card.setObjectName("readinessTodoCard")
@@ -3387,14 +3389,11 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._comparison_manual_button = _button("手动设置比较组", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="manual"))
         self._comparison_file_button = _button("导入比较组表", "secondaryButton", lambda: self.supplement_missing_info("comparison_config", mode="file"))
         self._comparison_template_button = _button("下载比较组模板", "secondaryButton", lambda: self.create_missing_info_template("comparison_config"))
-        self._gmt_file_button = _button("上传 GMT 文件", "secondaryButton", lambda: self.supplement_missing_info("gmt_gene_set", mode="file"))
-        self._gmt_defer_button = _button("暂不做 GSEA", "secondaryButton", lambda: self._defer_optional_analysis("gmt_gene_set"))
         todo_items = [
             ("expression_matrix", "表达矩阵", "用途：后续标准化、差异表达、富集和相关性分析的核心输入。", "当前状态：未提供。", [self._expression_file_button]),
             ("sample_metadata", "样本信息", "用途：识别样本分组、组织来源和实验条件。", "当前状态：未提供。", [self._sample_file_button, self._sample_manual_button, self._sample_template_button]),
             ("clinical_metadata", "临床信息", "用途：用于生存分析和临床变量关联。", "当前状态：未提供。", [self._clinical_file_button, self._clinical_defer_button]),
             ("comparison_config", "比较分组", "用途：用于差异表达分析，例如 control vs treatment。", "当前状态：未设置。", [self._comparison_preview_button, self._comparison_manual_button, self._comparison_file_button, self._comparison_template_button]),
-            ("gmt_gene_set", "GMT 基因集", "用途：用于 GSEA。", "当前状态：未提供。", [self._gmt_file_button, self._gmt_defer_button]),
         ]
         self._todo_state_labels: dict[str, QLabel] = {}
         for key, title, purpose, state, buttons in todo_items:
@@ -3416,7 +3415,8 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         root.addWidget(_button("技术详情", "secondaryButton", lambda: _toggle_details(self._details)))
         root.addWidget(self._details)
         bottom_actions = QHBoxLayout()
-        bottom_actions.addWidget(_button("重新检查", "secondaryButton", self.save_and_rerun_readiness))
+        self._run_check_button = _button("运行数据检查", "primaryButton", self.save_and_rerun_readiness)
+        bottom_actions.addWidget(self._run_check_button)
         bottom_actions.addWidget(_button("继续：标准化数据", "primaryButton", self.continue_to_standardization))
         bottom_actions.addStretch(1)
         root.addLayout(bottom_actions)
@@ -3435,6 +3435,11 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         self._next_step_label.setText(_readiness_next_step_text(readiness_payload, matrix_payload, missing, group_preview))
         self._warning_chips.setText(_readiness_default_warning_summary(readiness_payload, matrix_payload, missing))
         self._render_todo_items(missing, group_preview)
+        self._render_file_status_rows(readiness_payload.get("file_statuses", []) if isinstance(readiness_payload.get("file_statuses"), list) else [])
+        self._render_dataset_readiness_summary(readiness_payload.get("dataset_readiness", {}) if isinstance(readiness_payload.get("dataset_readiness"), dict) else {})
+        self._render_group_recommendation(group_preview)
+        self._render_gsea_gene_set_status(readiness_payload.get("gsea_gene_set_status", {}) if isinstance(readiness_payload.get("gsea_gene_set_status"), dict) else {})
+        self._update_run_check_button(True)
         self._details.setPlainText(
             _json(
                 {
@@ -3462,6 +3467,50 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         _set_table_widths(self._matrix, [190, 170, 240, 280])
         self._matrix.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
+    def _render_file_status_rows(self, file_statuses: list[object]) -> None:
+        rows = []
+        for item in file_statuses:
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                [
+                    str(item.get("file_name") or ""),
+                    f"{item.get('recognized_type_zh') or item.get('recognized_type') or '待识别'} / {item.get('file_suffix') or '无后缀'}",
+                    str(item.get("source") or ""),
+                    _data_check_status_badge(item),
+                    str(item.get("suggested_use") or ""),
+                    str(item.get("available_content") or ""),
+                    "；".join(part for part in [str(item.get("missing_content") or ""), str(item.get("risk_notes") or "")] if part and part != "无"),
+                    _data_check_file_action(item),
+                ]
+            )
+        _fill_table(self._file_status_table, rows)
+        _set_table_widths(self._file_status_table, [190, 180, 100, 150, 260, 220, 280, 150])
+        self._file_status_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
+    def _render_dataset_readiness_summary(self, summary: dict[str, object]) -> None:
+        rows = _dataset_readiness_user_rows(summary)
+        _fill_table(self._dataset_readiness_table, rows)
+        _set_table_widths(self._dataset_readiness_table, [220, 120, 430])
+        self._dataset_readiness_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+
+    def _render_group_recommendation(self, preview: dict[str, object]) -> None:
+        self._group_recommendation.setPlainText(_group_recommendation_detail_text(preview))
+        has_candidate = _group_preview_has_candidate(preview)
+        for button in (self._group_confirm_button, self._group_modify_button, self._group_reject_button, self._group_later_button):
+            button.setEnabled(has_candidate or button is self._group_modify_button)
+
+    def _render_gsea_gene_set_status(self, status: dict[str, object]) -> None:
+        self._gsea_status_label.setText(str(status.get("label") or "GSEA 基因集：未选择"))
+        self._gsea_status_help.setText(
+            str(status.get("message") or "GSEA 基因集用于后续 GSEA 分析，不属于当前 GEO / TCGA / GTEx 数据文件本身。未选择基因集不影响当前数据检查、标准化准备或 DEG preflight。")
+        )
+
+    def _update_run_check_button(self, has_existing_result: bool) -> None:
+        self._run_check_button.setText("重新运行数据检查" if has_existing_result else "运行数据检查")
+        has_pending = bool(_pending_data_check_file_statuses(self._project_root))
+        self._run_check_button.setEnabled(self._project_root is not None and (has_pending or has_existing_result))
+
     def _render_todo_items(self, missing: set[str], group_preview: dict[str, object] | None = None) -> None:
         visible = {key for key in missing if key in self._todo_rows}
         self._todo_empty_label.setVisible(not visible)
@@ -3484,7 +3533,6 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
 class BioinformaticsStandardizedAssetsWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
-    group_design_requested = Signal(object)
 
     def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -3518,12 +3566,9 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             return
         artifacts = load_standardization_artifacts(self._project_root)
         if artifacts.get("registry") is None:
-            self._status_label.setText("尚未生成标准化资产。")
+            self._status_label.setText("尚未生成标准化数据。")
             self._assets.setRowCount(0)
-            self._selection_table.setRowCount(0)
-            self._render_user_overview(artifacts)
-            self._summary.setPlainText("")
-            self._manifest.setPlainText(_json({"current_input": standardization_current_input_summary(self._project_root)}))
+            self._render_user_state(artifacts)
         else:
             self._render(artifacts)
 
@@ -3533,9 +3578,16 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             return
         ok, reason = _can_continue_from_standardization(self._project_root)
         if not ok:
-            self._status_label.setText(f"不能继续：{reason} 请返回数据来源补充文件。")
+            self._status_label.setText(f"不能继续：{reason} 请按页面提示补齐数据、标准化数据或分组设计。")
             return
         self.continue_requested.emit(self._project_root)
+
+    def continue_to_group_design(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self._status_label.setText("请在数据准备状态页确认分组与比较设计。")
+        self.back_requested.emit()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -3633,46 +3685,50 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("数据准备与标准化", "确认表达矩阵和样本分组，生成后续分析可用的标准化资产。", back_text="返回 Ready 检查", back_signal=self.back_requested))
-        self._status_label = _status_label("尚未生成标准化资产。")
+        root.addWidget(_header("数据标准化", "确认识别后的表达矩阵、样本信息和分组设计，生成后续分析可用的数据。", back_text="返回数据准备状态", back_signal=self.back_requested))
+        actions = QHBoxLayout()
+        actions.addWidget(_button("生成标准化数据", "primaryButton", self.generate_assets))
+        actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.continue_to_group_design))
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_assets))
+        actions.addStretch(1)
+        root.addLayout(actions)
+        self._status_label = _status_label("尚未生成标准化数据。")
         root.addWidget(self._status_label)
 
         input_card, input_layout = _card("当前输入数据")
-        self._current_input_summary = _read_only_report_view(100)
-        self._current_input_summary.setObjectName("standardizationCurrentRecognitionInput")
-        input_layout.addWidget(self._current_input_summary)
-        self._input_detail = _text_preview(120)
-        self._input_detail.setObjectName("standardizationInputDetail")
-        self._input_detail.setVisible(False)
-        input_actions = QHBoxLayout()
-        input_actions.addWidget(_button("查看输入详情", "secondaryButton", lambda: _toggle_details(self._input_detail), role="secondary"))
-        input_actions.addStretch(1)
-        input_layout.addLayout(input_actions)
-        input_layout.addWidget(self._input_detail)
+        self._input_source_label = _muted("数据来源：待识别。")
+        self._input_source_label.setObjectName("standardizationInputSource")
+        self._input_status_label = _muted("识别状态：尚未读取。")
+        self._input_status_label.setObjectName("standardizationInputStatus")
+        self._input_summary_label = _muted("内容摘要：待生成识别报告。")
+        self._input_summary_label.setObjectName("standardizationInputSummary")
+        input_layout.addWidget(self._input_source_label)
+        input_layout.addWidget(self._input_status_label)
+        input_layout.addWidget(self._input_summary_label)
         root.addWidget(input_card)
 
-        expression_card, expression_layout = _card("表达矩阵状态")
-        self._expression_status = _read_only_report_view(100)
-        self._expression_status.setObjectName("standardizationExpressionStatus")
-        expression_layout.addWidget(self._expression_status)
-        root.addWidget(expression_card)
-
-        group_card, group_layout = _card("分组确认")
-        self._group_status = _read_only_report_view(110)
-        self._group_status.setObjectName("standardizationGroupStatus")
-        group_layout.addWidget(self._group_status)
-        root.addWidget(group_card)
+        readiness_card, readiness_layout = _card("分析输入状态")
+        self._expression_status_label = _muted("表达矩阵：待确认。")
+        self._expression_status_label.setObjectName("standardizationExpressionStatus")
+        self._sample_status_label = _muted("样本信息：待确认。")
+        self._sample_status_label.setObjectName("standardizationSampleStatus")
+        self._group_status_label = _muted("分组与比较设计：待确认。")
+        self._group_status_label.setObjectName("standardizationGroupStatus")
+        readiness_layout.addWidget(self._expression_status_label)
+        readiness_layout.addWidget(self._sample_status_label)
+        readiness_layout.addWidget(self._group_status_label)
+        root.addWidget(readiness_card)
 
         confirmation_card, confirmation_layout = _card("标准化确认候选")
         self._confirmation_summary_label = _muted("识别阶段已发现候选表达矩阵，请在标准化阶段确认后再用于分析。")
         self._confirmation_summary_label.setObjectName("standardizationConfirmationSummary")
         confirmation_layout.addWidget(self._confirmation_summary_label)
         confirmation_actions = QHBoxLayout()
-        confirmation_actions.addWidget(_button("刷新候选", "secondaryButton", self.refresh_confirmation_candidates, role="secondary"))
-        confirmation_actions.addWidget(_button("确认表达矩阵候选", "secondaryButton", lambda: self.confirm_expression_candidate(), role="secondary"))
-        confirmation_actions.addWidget(_button("确认物种候选", "secondaryButton", lambda: self.confirm_species_candidate(), role="secondary"))
-        confirmation_actions.addWidget(_button("确认 gene ID 类型", "secondaryButton", lambda: self.confirm_gene_id_type(), role="secondary"))
-        confirmation_actions.addWidget(_button("确认候选分组", "secondaryButton", lambda: self.confirm_group_candidate(), role="secondary"))
+        confirmation_actions.addWidget(_button("刷新候选", "secondaryButton", self.refresh_confirmation_candidates))
+        confirmation_actions.addWidget(_button("确认表达矩阵候选", "secondaryButton", lambda: self.confirm_expression_candidate()))
+        confirmation_actions.addWidget(_button("确认物种候选", "secondaryButton", lambda: self.confirm_species_candidate()))
+        confirmation_actions.addWidget(_button("确认 gene ID 类型", "secondaryButton", lambda: self.confirm_gene_id_type()))
+        confirmation_actions.addWidget(_button("确认候选分组", "secondaryButton", lambda: self.confirm_group_candidate()))
         confirmation_actions.addStretch(1)
         confirmation_layout.addLayout(confirmation_actions)
         self._confirmation_candidates = _table(["候选类型", "来源文件", "来源 parser", "确认状态", "说明"])
@@ -3682,195 +3738,93 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         self._confirmation_candidates.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
         root.addWidget(confirmation_card)
 
-        status_card, status_layout = _card("标准化状态")
-        status_grid = QGridLayout()
-        status_grid.setHorizontalSpacing(SPACING["sm"])
-        status_grid.setVerticalSpacing(SPACING["sm"])
-        self._standardization_status_blocks: dict[str, tuple[QLabel, QLabel]] = {}
-        for index, key in enumerate(("expression", "sample_metadata", "group_design", "gene_annotation", "standardized_result")):
-            block = QFrame()
-            block.setObjectName("bioProjectMiniStatusBlock")
-            block_layout = QVBoxLayout(block)
-            block_layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
-            block_layout.setSpacing(2)
-            title = QLabel("")
-            title.setObjectName("bioProjectMiniStatusTitle")
-            value = QLabel("")
-            value.setObjectName("bioProjectMiniStatusValue")
-            value.setWordWrap(True)
-            block_layout.addWidget(title)
-            block_layout.addWidget(value)
-            self._standardization_status_blocks[key] = (title, value)
-            status_grid.addWidget(block, index // 3, index % 3)
-        status_layout.addLayout(status_grid)
-        root.addWidget(status_card)
+        default_card, default_layout = _card("默认资产与下一步")
+        self._default_asset_label = _muted("当前默认使用的数据：待生成标准化数据。")
+        self._default_asset_label.setObjectName("standardizationDefaultAssets")
+        self._next_step_label = _muted("下一步建议：先完成数据识别和准备状态检查。")
+        self._next_step_label.setObjectName("standardizationNextStep")
+        default_layout.addWidget(self._default_asset_label)
+        default_layout.addWidget(self._next_step_label)
+        root.addWidget(default_card)
 
-        main_card, main_layout = _card("主操作")
-        main_actions = QHBoxLayout()
-        self._confirm_group_button = _button("确认分组与比较设计", "primaryButton", self.open_group_design, role="primary_action")
-        self._generate_assets_button = _button("生成标准化资产", "primaryButton", self.generate_assets, role="primary_action")
-        self._continue_tasks_button = _button("继续：分析任务中心", "primaryButton", self.continue_to_workflow, role="primary_next")
-        self._refresh_assets_button = _button("刷新状态", "secondaryButton", self.refresh_assets, role="secondary")
-        self._export_report_button = _button("导出标准化报告", "secondaryButton", self.export_standardization_report, role="secondary")
-        for button in (self._confirm_group_button, self._generate_assets_button, self._continue_tasks_button, self._refresh_assets_button, self._export_report_button):
-            main_actions.addWidget(button)
-        main_actions.addStretch(1)
-        main_layout.addLayout(main_actions)
-        self._workflow_note = _muted("可进入分析任务中心不等于可以直接启动 DEG；DEG 需要表达矩阵可用，并且分组与比较设计已确认。")
-        self._workflow_note.setObjectName("standardizationWorkflowGateNote")
-        main_layout.addWidget(self._workflow_note)
-        root.addWidget(main_card)
+        self._assets = _table(["数据内容", "当前状态", "用于后续分析", "说明"])
+        self._assets.setObjectName("standardizationUserAssetTable")
+        root.addWidget(self._assets)
+        _set_table_widths(self._assets, [180, 170, 120, 320])
+        self._assets.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
-        diagnostic_card, diagnostic_layout = _card("标准化详情 / 开发者诊断")
-        diagnostic_layout.addWidget(_muted("普通流程不需要查看这些内容；仅用于排错、审计和开发者诊断。"))
-        self._diagnostic_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_diagnostics, role="secondary")
-        diagnostic_layout.addWidget(self._diagnostic_toggle_button, alignment=Qt.AlignLeft)
-        self._diagnostic_frame = QFrame()
-        self._diagnostic_frame.setVisible(False)
-        diagnostic_inner = QVBoxLayout(self._diagnostic_frame)
-        diagnostic_inner.setContentsMargins(0, 0, 0, 0)
-        self._assets = _table(["资产 ID", "资产类型", "来源文件", "样本数", "物种", "用途", "限制", "状态", "默认"])
-        self._assets.setObjectName("standardizedAssetsTable")
-        diagnostic_inner.addWidget(self._assets)
-        self._selection_table = _table(["资产类型", "候选数", "默认资产", "状态", "说明"])
-        self._selection_table.setObjectName("standardizedAssetSelectionTable")
-        diagnostic_inner.addWidget(self._selection_table)
-        diagnostic_actions = QHBoxLayout()
-        diagnostic_actions.addWidget(_button("保存默认资产选择", "secondaryButton", self.save_asset_selection, role="secondary"))
-        diagnostic_actions.addWidget(_button("打开标准化结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "standardized_data" if self._project_root else None), role="secondary"))
-        diagnostic_actions.addStretch(1)
-        diagnostic_inner.addLayout(diagnostic_actions)
-        self._summary = _text_preview(140)
-        diagnostic_inner.addWidget(self._summary)
-        self._manifest = _text_preview(150)
-        diagnostic_inner.addWidget(self._manifest)
-        diagnostic_layout.addWidget(self._diagnostic_frame)
-        root.addWidget(diagnostic_card)
-
-    def open_group_design(self) -> None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return
-        self.group_design_requested.emit(self._project_root)
-
-    def export_standardization_report(self) -> Path | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        report_dir = self._project_root / "reports"
-        report_dir.mkdir(parents=True, exist_ok=True)
-        path = report_dir / "standardization_report.md"
-        text = "\n\n".join(
-            [
-                "# 数据准备与标准化报告",
-                "## 当前输入",
-                self._current_input_summary.toPlainText(),
-                "## 分组状态",
-                self._group_status.toPlainText(),
-                "## 流程提示",
-                self._workflow_note.text(),
-            ]
-        )
-        path.write_text(text, encoding="utf-8")
-        self._status_label.setText("标准化报告已导出。")
-        return path
-
-    def _toggle_diagnostics(self) -> None:
-        self._diagnostic_frame.setVisible(not self._diagnostic_frame.isVisible())
-        self._diagnostic_toggle_button.setText("收起开发者诊断" if self._diagnostic_frame.isVisible() else "展开开发者诊断")
-
-    def save_asset_selection(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        selections: dict[str, str] = {}
-        for row in range(self._selection_table.rowCount()):
-            asset_type_item = self._selection_table.item(row, 0)
-            combo = self._selection_table.cellWidget(row, 2)
-            if asset_type_item is None or not isinstance(combo, QComboBox):
-                continue
-            selected = combo.currentData()
-            if selected:
-                selections[asset_type_item.text()] = str(selected)
-        payload = save_standardized_asset_selection(self._project_root, selections)
-        self.refresh_assets()
-        self._status_label.setText(f"已保存默认资产选择：{len(payload.get('asset_selections', []) or [])} 类资产。")
-        return payload
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addWidget(_button("打开 standardized_data 文件夹", "secondaryButton", lambda: _open_path(self._project_root / "standardized_data" if self._project_root else None)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(150)
+        self._developer_details.setObjectName("standardizationDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        self._manifest = self._developer_details
+        root.addWidget(developer_card)
+        root.addWidget(_button("继续到分析任务中心", "primaryButton", self.continue_to_workflow), alignment=Qt.AlignLeft)
 
     def _render(self, artifacts: dict[str, object]) -> None:
         registry = artifacts.get("registry") or {}
         manifest = artifacts.get("analysis_ready_manifest") or {}
         assets = registry.get("assets", []) if isinstance(registry, dict) else []
         warnings = registry.get("warnings", []) if isinstance(registry, dict) else []
-        selection_context = build_asset_selection_context(self._project_root) if self._project_root is not None else {"groups": []}
-        selection_by_type = {
-            str(group.get("asset_type") or ""): group
-            for group in selection_context.get("groups", []) or []
-            if isinstance(group, dict)
-        }
-        self._status_label.setText(f"标准化资产：{len(assets)} 个，warning {len(warnings)} 条。")
-        if self._project_root is not None:
-            self._current_input_summary.setPlainText(standardization_current_input_summary(self._project_root))
+        self._status_label.setText(f"标准化数据：{len(assets)} 项；提示 {len(warnings)} 条。")
         _fill_table(
             self._assets,
-            [
-                [
-                    item.get("asset_id", ""),
-                    item.get("asset_type", ""),
-                    item.get("source_file", ""),
-                    item.get("sample_count", ""),
-                    item.get("species", "") or item.get("species_group", ""),
-                    _asset_usage_text(item),
-                    _asset_limitations_text(item),
-                    item.get("validation_status", ""),
-                    _asset_default_text(item, selection_by_type),
-                ]
-                for item in assets
-                if isinstance(item, dict)
-            ],
+            _standardization_user_asset_rows(assets if isinstance(assets, list) else []),
         )
-        self._render_selection_table(selection_context)
-        summary_text = _standardization_user_summary(registry if isinstance(registry, dict) else {}, manifest if isinstance(manifest, dict) else {})
-        if self._project_root is not None:
-            summary_text = f"{summary_text}\n{_asset_selection_summary_text(selection_context)}\n{design_status_summary(self._project_root)}"
-        self._summary.setPlainText(summary_text)
-        self._manifest.setPlainText(
-            _json(
-                {
-                    "analysis-ready manifest": manifest,
-                    "asset_selection": selection_context,
-                    "standardization_confirmation": self._last_confirmation,
-                    "standardization_candidates": self._last_candidates,
-                    "warning": warnings,
-                }
-            )
-        )
-        self._render_user_overview(artifacts)
+        self._render_user_state(artifacts)
 
-    def _render_user_overview(self, artifacts: dict[str, object]) -> None:
+    def _render_user_state(self, artifacts: dict[str, object]) -> None:
         if self._project_root is None:
             return
         registry = artifacts.get("registry") if isinstance(artifacts.get("registry"), dict) else {}
-        assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)] if registry else []
-        report = load_recognition_report(self._project_root) or {}
-        files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
+        manifest = artifacts.get("analysis_ready_manifest") if isinstance(artifacts.get("analysis_ready_manifest"), dict) else {}
+        repository_manifest = artifacts.get("repository_manifest") if isinstance(artifacts.get("repository_manifest"), dict) else {}
+        validation_report = artifacts.get("validation_report") if isinstance(artifacts.get("validation_report"), dict) else {}
+        assets = registry.get("assets", []) if isinstance(registry, dict) else []
+        readiness = load_readiness_artifacts(self._project_root)
+        readiness_report = readiness.get("readiness_report") if isinstance(readiness.get("readiness_report"), dict) else {}
+        recognition = load_recognition_report(self._project_root) or {}
         confirmation_artifacts = load_standardization_confirmation_artifacts(self._project_root)
         self._last_candidates = confirmation_artifacts.get("candidates") if isinstance(confirmation_artifacts.get("candidates"), dict) else {}
         self._last_confirmation = confirmation_artifacts.get("confirmation") if isinstance(confirmation_artifacts.get("confirmation"), dict) else {}
-        assets_generated = bool(registry)
-        group_confirmed = has_confirmed_group_comparison_design(self._project_root)
-        self._status_label.setText(_standardization_status_message(assets, assets_generated))
-        self._current_input_summary.setPlainText(_standardization_current_input_user_summary(self._project_root, report))
-        self._input_detail.setPlainText(_standardization_input_detail_text(self._project_root, report))
-        self._expression_status.setPlainText(_standardization_expression_user_summary(report, assets))
-        self._group_status.setPlainText(_standardization_group_user_summary(self._project_root, report, assets))
-        status_values = _standardization_status_values(report, assets, assets_generated, group_confirmed)
-        for key, title_text, value_text in status_values:
-            title, value = self._standardization_status_blocks[key]
-            title.setText(title_text)
-            value.setText(value_text)
+        self._input_source_label.setText(_standardization_input_source_text(recognition if isinstance(recognition, dict) else {}))
+        self._input_status_label.setText(_standardization_input_status_text(recognition if isinstance(recognition, dict) else {}))
+        self._input_summary_label.setText(_standardization_input_summary_text(recognition if isinstance(recognition, dict) else {}))
+        self._expression_status_label.setText(_standardization_expression_status_text(assets if isinstance(assets, list) else [], readiness_report if isinstance(readiness_report, dict) else {}))
+        self._sample_status_label.setText(_standardization_sample_status_text(assets if isinstance(assets, list) else [], readiness_report if isinstance(readiness_report, dict) else {}))
+        self._group_status_label.setText(_standardization_group_status_text(self._project_root, readiness_report if isinstance(readiness_report, dict) else {}))
+        self._default_asset_label.setText(_standardization_default_assets_text(assets if isinstance(assets, list) else []))
+        self._next_step_label.setText(_standardization_next_step_text(self._project_root, assets if isinstance(assets, list) else [], readiness_report if isinstance(readiness_report, dict) else {}))
         self._render_confirmation_state()
-        self._update_main_actions(assets_generated=assets_generated, group_confirmed=group_confirmed, has_expression=_standardization_has_expression_asset(files, assets))
+        self._developer_details.setPlainText(
+            _json(
+                {
+                    "standardized_assets_registry": registry,
+                    "analysis_ready_manifest": manifest,
+                    "repository_manifest": repository_manifest,
+                    "validation_report": validation_report,
+                    "data_processing_task_plan": artifacts.get("data_processing_task_plan"),
+                    "standardization_confirmation": self._last_confirmation,
+                    "standardization_candidates": self._last_candidates,
+                    "readiness_details": readiness,
+                    "recognition_report": recognition,
+                    "paths": {
+                        "registry_path": artifacts.get("registry_path"),
+                        "manifest_path": artifacts.get("manifest_path"),
+                        "repository_manifest_path": artifacts.get("repository_manifest_path"),
+                        "validation_report_path": artifacts.get("validation_report_path"),
+                        "asset_lineage_path": artifacts.get("asset_lineage_path"),
+                        "data_processing_task_plan_path": artifacts.get("data_processing_task_plan_path"),
+                    },
+                }
+            )
+        )
 
     def _render_confirmation_state(self) -> None:
         candidates = self._last_candidates if isinstance(self._last_candidates, dict) else {}
@@ -3888,265 +3842,6 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
             f" 表达矩阵候选 {expression_count} 个，样本注释候选 {sample_count} 个，分组候选 {group_count} 个，导入 DEG 结果候选 {imported_count} 个。"
             f" DEG preflight ready：{'是' if readiness.get('deg_preflight_ready') else '否'}。当前不会运行真实差异分析。"
         )
-
-    def _update_main_actions(self, *, assets_generated: bool, group_confirmed: bool, has_expression: bool) -> None:
-        if group_confirmed:
-            self._confirm_group_button.setText("编辑分组设计")
-            _apply_button_semantics(self._confirm_group_button, "secondary")
-        else:
-            self._confirm_group_button.setText("确认分组与比较设计")
-            _apply_button_semantics(self._confirm_group_button, "primary_action")
-        self._confirm_group_button.setVisible(True)
-
-        self._generate_assets_button.setText("重新生成标准化资产" if assets_generated else "生成标准化资产")
-        _apply_button_semantics(self._generate_assets_button, "secondary" if (not group_confirmed or assets_generated) else "primary_action")
-        self._generate_assets_button.setVisible(True)
-
-        self._continue_tasks_button.setVisible(assets_generated and has_expression)
-        self._continue_tasks_button.setEnabled(assets_generated and has_expression)
-        _apply_button_semantics(self._continue_tasks_button, "primary_next")
-
-        self._export_report_button.setVisible(assets_generated)
-        self._export_report_button.setEnabled(assets_generated)
-        self._refresh_assets_button.setVisible(True)
-
-    def _render_selection_table(self, context: dict[str, object]) -> None:
-        groups = [group for group in context.get("groups", []) or [] if isinstance(group, dict)]
-        self._selection_table.clearContents()
-        self._selection_table.setRowCount(len(groups))
-        for row, group in enumerate(groups):
-            self._selection_table.setItem(row, 0, QTableWidgetItem(str(group.get("asset_type") or "")))
-            self._selection_table.setItem(row, 1, QTableWidgetItem(str(group.get("candidate_count") or 0)))
-            combo = QComboBox()
-            for asset in group.get("candidates", []) or []:
-                if not isinstance(asset, dict):
-                    continue
-                asset_id = str(asset.get("asset_id") or "")
-                source = Path(str(asset.get("source_file") or asset.get("file_path") or "")).name
-                combo.addItem(f"{asset_id} · {source}", asset_id)
-            selected_id = str(group.get("selected_asset_id") or "")
-            if selected_id:
-                index = combo.findData(selected_id)
-                if index >= 0:
-                    combo.setCurrentIndex(index)
-            self._selection_table.setCellWidget(row, 2, combo)
-            self._selection_table.setItem(row, 3, QTableWidgetItem(str(group.get("status_label") or selection_status_label(str(group.get("selection_state") or "")))))
-            self._selection_table.setItem(row, 4, QTableWidgetItem(str(group.get("reason") or "")))
-        self._selection_table.resizeColumnsToContents()
-
-
-class BioinformaticsGroupComparisonDesignWidget(QWidget):
-    continue_requested = Signal(object)
-    back_requested = Signal()
-
-    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._project_root: Path | None = None
-        self._context: dict[str, object] = {}
-        self.setObjectName("bioinformaticsGroupComparisonDesignPage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
-        self._build_ui()
-        if on_continue is not None:
-            self.continue_requested.connect(on_continue)
-        if on_back is not None:
-            self.back_requested.connect(on_back)
-
-    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
-        self._project_root = _project_root(summary)
-        self.refresh_design()
-
-    def refresh_design(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        self._context = load_group_design_context(self._project_root)
-        self._render(self._context)
-        return self._context
-
-    def add_comparison_row(
-        self,
-        comparison_name: str = "",
-        case_group: str = "",
-        control_group: str = "",
-        *,
-        source: str = "user_confirmed",
-        status: str = "待保存",
-    ) -> None:
-        row = self._comparison_table.rowCount()
-        self._comparison_table.insertRow(row)
-        for column, value in enumerate([comparison_name, case_group, control_group, source, status]):
-            self._comparison_table.setItem(row, column, QTableWidgetItem(str(value)))
-
-    def add_one_vs_control_suggestions(self) -> None:
-        groups = self._group_rows_from_table()
-        suggestions = build_default_comparison_rows(self._context, groups)
-        self._comparison_table.setRowCount(0)
-        for item in suggestions:
-            self.add_comparison_row(
-                str(item.get("comparison_name") or ""),
-                str(item.get("case_group") or ""),
-                str(item.get("control_group") or ""),
-                source=str(item.get("source") or "one_vs_control_suggestion"),
-                status="待保存",
-            )
-        self._status_label.setText(f"已生成 {len(suggestions)} 个 one-vs-control 比较建议，请检查后保存。")
-
-    def save_design(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        groups = self._group_rows_from_table()
-        comparisons = self._comparison_rows_from_table()
-        warnings = validate_group_comparison_design(groups, comparisons)
-        payload = save_group_comparison_design(
-            self._project_root,
-            groups,
-            comparisons,
-            imported_deg_references=[
-                item
-                for item in self._context.get("imported_deg_references", []) or []
-                if isinstance(item, dict)
-            ],
-        )
-        load_analysis_task_center(self._project_root)
-        self._context = load_group_design_context(self._project_root)
-        self._status_label.setText(
-            "已保存分组与比较设计。"
-            if not warnings
-            else "已保存分组与比较设计，但仍需检查：" + "；".join(warnings)
-        )
-        self._summary.setPlainText(_group_design_context_summary(self._context))
-        return payload
-
-    def continue_to_tasks(self) -> None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return
-        self.continue_requested.emit(self._project_root)
-
-    def status_message(self) -> str:
-        return self._status_label.text()
-
-    def _build_ui(self) -> None:
-        root = _scroll_root(self)
-        root.addWidget(_header("分组与比较设计", "确认样本组、用户组名、对照组和比较关系。", back_text="返回标准化资产", back_signal=self.back_requested))
-        actions = QHBoxLayout()
-        actions.addWidget(_button("刷新分组设计", "secondaryButton", self.refresh_design))
-        actions.addWidget(_button("从对照组生成比较", "secondaryButton", self.add_one_vs_control_suggestions))
-        actions.addWidget(_button("保存分组与比较设计", "primaryButton", self.save_design))
-        actions.addStretch(1)
-        root.addLayout(actions)
-        self._status_label = _status_label("尚未读取分组设计。")
-        root.addWidget(self._status_label)
-        self._summary = _read_only_report_view(145)
-        self._summary.setObjectName("groupDesignSummary")
-        root.addWidget(self._summary)
-        self._sample_group_table = _table(["推断组", "用户组名", "组角色", "样本数", "样本 ID", "备注"])
-        self._sample_group_table.setObjectName("groupDesignSampleGroupsTable")
-        root.addWidget(self._sample_group_table)
-        self._comparison_table = _table(["比较名称", "实验组", "对照组", "来源", "状态"])
-        self._comparison_table.setObjectName("groupDesignComparisonsTable")
-        root.addWidget(self._comparison_table)
-        self._imported_deg_table = _table(["已有比较", "状态", "可用路径"])
-        self._imported_deg_table.setObjectName("groupDesignImportedDegTable")
-        root.addWidget(self._imported_deg_table)
-        self._technical = _text_preview(140)
-        self._technical.setObjectName("groupDesignTechnical")
-        self._technical.setVisible(False)
-        root.addWidget(_button("展开技术详情", "secondaryButton", lambda: _toggle_details(self._technical)))
-        root.addWidget(self._technical)
-        root.addWidget(_button("继续：分析任务中心", "primaryButton", self.continue_to_tasks), alignment=Qt.AlignLeft)
-
-    def _render(self, context: dict[str, object]) -> None:
-        groups = build_default_group_rows(context)
-        comparisons = build_default_comparison_rows(context, groups)
-        imported = [item for item in context.get("imported_deg_references", []) or [] if isinstance(item, dict)]
-        warnings = [str(item) for item in context.get("warnings", []) or [] if str(item)]
-        self._status_label.setText(
-            "状态：已确认分组设计" if context.get("has_confirmed_design") else "状态：尚未确认分组设计"
-        )
-        self._summary.setPlainText(_group_design_context_summary(context))
-        _fill_table(
-            self._sample_group_table,
-            [
-                [
-                    item.get("inferred_group_id", ""),
-                    item.get("user_group_name", ""),
-                    item.get("group_role", "unknown"),
-                    item.get("sample_count", ""),
-                    _preview_list([str(value) for value in item.get("sample_ids", []) or []], limit=6, more_label="样本"),
-                    item.get("note", ""),
-                ]
-                for item in groups
-            ],
-        )
-        _fill_table(
-            self._comparison_table,
-            [
-                [
-                    item.get("comparison_name", ""),
-                    item.get("case_group", ""),
-                    item.get("control_group", ""),
-                    item.get("source", "user_confirmed"),
-                    "已确认" if item.get("status") == "confirmed" else "待保存",
-                ]
-                for item in comparisons
-            ],
-        )
-        _fill_table(
-            self._imported_deg_table,
-            [
-                [
-                    item.get("comparison_name", ""),
-                    "完整" if item.get("is_complete") else "不完整",
-                    "可直接浏览、筛选、富集输入" if item.get("is_complete") else "可查看，部分筛选功能受限",
-                ]
-                for item in imported
-            ],
-        )
-        self._technical.setPlainText(_json({"context": context, "warnings": warnings}))
-
-    def _group_rows_from_table(self) -> list[dict[str, object]]:
-        original = {
-            str(item.get("inferred_group_id") or ""): item
-            for item in self._context.get("sample_groups", []) or []
-            if isinstance(item, dict)
-        }
-        rows: list[dict[str, object]] = []
-        for row in range(self._sample_group_table.rowCount()):
-            inferred = _table_text(self._sample_group_table, row, 0)
-            source = original.get(inferred, {})
-            rows.append(
-                {
-                    "inferred_group_id": inferred,
-                    "user_group_name": _table_text(self._sample_group_table, row, 1) or inferred,
-                    "group_role": _table_text(self._sample_group_table, row, 2) or "unknown",
-                    "sample_count": int(source.get("sample_count") or _table_text(self._sample_group_table, row, 3) or 0),
-                    "sample_ids": list(source.get("sample_ids", []) or []),
-                    "source_columns": list(source.get("source_columns", []) or []),
-                    "note": _table_text(self._sample_group_table, row, 5),
-                }
-            )
-        return rows
-
-    def _comparison_rows_from_table(self) -> list[dict[str, object]]:
-        groups = {str(item.get("user_group_name") or ""): item for item in self._group_rows_from_table()}
-        rows: list[dict[str, object]] = []
-        for row in range(self._comparison_table.rowCount()):
-            case = _table_text(self._comparison_table, row, 1)
-            control = _table_text(self._comparison_table, row, 2)
-            rows.append(
-                {
-                    "comparison_name": _table_text(self._comparison_table, row, 0),
-                    "case_group": case,
-                    "control_group": control,
-                    "case_inferred_group_id": groups.get(case, {}).get("inferred_group_id", ""),
-                    "control_inferred_group_id": groups.get(control, {}).get("inferred_group_id", ""),
-                    "status": "confirmed",
-                    "source": _table_text(self._comparison_table, row, 3) or "user_confirmed",
-                }
-            )
-        return rows
 
 
 class BioinformaticsWorkflowStatusWidget(QWidget):
@@ -4251,9 +3946,18 @@ class BioinformaticsWorkflowStatusWidget(QWidget):
 class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
-    group_design_requested = Signal(object)
+    deg_config_requested = Signal(object)
+    imported_deg_requested = Signal(object)
 
-    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        on_continue: Callable[[Path], None] | None = None,
+        on_back: Callable[[], None] | None = None,
+        on_configure_deg: Callable[[Path], None] | None = None,
+        on_view_imported_deg: Callable[[Path], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsAnalysisTaskCenterPage")
@@ -4263,6 +3967,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self.continue_requested.connect(on_continue)
         if on_back is not None:
             self.back_requested.connect(on_back)
+        if on_configure_deg is not None:
+            self.deg_config_requested.connect(on_configure_deg)
+        if on_view_imported_deg is not None:
+            self.imported_deg_requested.connect(on_view_imported_deg)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -4286,9 +3994,25 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         except ValueError as exc:
             self._status_label.setText(str(exc))
             return None
-        self._status_label.setText(f"已创建任务：{task.label} · {task.status}")
-        self._records.setPlainText(_json({"任务记录": [task.__dict__ | {"record_path": str(task.record_path)}]}))
+        self.refresh_task_center()
+        self._status_label.setText(f"已创建配置草稿：{task.label}。当前仅保存任务记录，未执行真实分析。")
         return task
+
+    def create_deg_task_draft(self) -> object | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.deg_config_requested.emit(self._project_root)
+        self._status_label.setText("已打开差异分析配置页；当前只做配置和 preflight，不执行真实 DEG。")
+        return {"next_page": "deg_config", "project_root": str(self._project_root)}
+
+    def open_imported_deg_browser(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.imported_deg_requested.emit(self._project_root)
+        self._status_label.setText("已打开导入结果浏览；该入口只查看用户导入 / 外部分析结果，不运行 DEG。")
+        return {"next_page": "imported_deg", "project_root": str(self._project_root)}
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -4331,14 +4055,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             _append_geo_deg_results_to_index(self._project_root, summaries)
             load_analysis_task_center(self._project_root)
             comparison_message = f"；{comparison_summary_text(comparison_config)}" if comparison_config is not None else ""
-            self._status_label.setText(f"已运行 GEO 差异分析：{len(summaries)} 个表达矩阵{comparison_message}")
-            self._records.setPlainText(_json({"差异分析结果": summaries, "warnings": warnings, "comparison_config": comparison_config.to_dict() if comparison_config is not None else {}}))
+            self.refresh_task_center()
+            self._status_label.setText(f"已生成测试级 GEO 差异分析结果：{len(summaries)} 个表达矩阵{comparison_message}。该入口用于内部测试，不等于正式 DEG 分析。")
             return {"summaries": summaries, "warnings": warnings}
         if comparison_config is not None:
             self._status_label.setText("差异分析未运行：已确认比较组，但表达矩阵样本 ID 未能匹配。请修正比较组或选择其他表达文件。")
         else:
             self._status_label.setText("差异分析未运行：尚未确认比较组。请先点击“设置比较组”。")
-        self._records.setPlainText(_json({"warnings": warnings}))
+        self._set_developer_details({"warnings": warnings})
         return {"summaries": [], "warnings": warnings}
 
     def configure_comparison_groups(self, manual_text: str | None = None) -> bool:
@@ -4359,74 +4083,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         run_project_recognition(self._project_root)
         run_project_readiness(self._project_root)
         self.refresh_task_center()
-        self._status_label.setText("已保存比较组设置，并重新检查分析任务。")
+        self._status_label.setText("已保存比较组设置，并重新运行分析任务检查。")
         return True
-
-    def configure_deg_task_plan(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        try:
-            payload = save_deg_task_plan(self._project_root)
-        except ValueError as exc:
-            self._status_label.setText(str(exc))
-            return None
-        center = load_analysis_task_center(self._project_root)
-        self._render(center)
-        self._status_label.setText(f"已创建 DEG 配置草稿：{len(payload.get('comparisons', []) or [])} 个比较；未执行真实 DEG。")
-        self._records.setPlainText(_json({"DEG task plan": payload}))
-        return payload
-
-    def create_deg_task_run_record(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        try:
-            payload = create_deg_task_run(self._project_root)
-        except ValueError as exc:
-            self._status_label.setText(str(exc))
-            return None
-        center = load_analysis_task_center(self._project_root)
-        self._render(center)
-        self._status_label.setText("已生成 DEG 任务记录；当前版本尚未执行真实差异分析。")
-        self._records.setPlainText(_json({"DEG task run": payload}))
-        return payload
-
-    def generate_deg_executor_preflight(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        task_run_id = ""
-        row = self._task_runs.currentRow()
-        runs = list_analysis_task_runs(self._project_root, task_family="deg")
-        if 0 <= row < len(runs):
-            task_run_id = str(runs[row].get("run_id") or "")
-        payload = run_deg_executor_preflight(self._project_root, task_run_id=task_run_id or None)
-        center = load_analysis_task_center(self._project_root)
-        self._render(center)
-        status = str(payload.get("status") or "")
-        status_text = {
-            "passed": "DEG 输入校验：通过",
-            "passed_with_warnings": "DEG 输入校验：通过，但有提示",
-            "failed": "DEG 输入校验：未通过，请查看错误",
-        }.get(status, f"DEG 输入校验：{status}")
-        self._status_label.setText(f"{status_text}；当前版本尚未执行真实差异分析。")
-        self._records.setPlainText(_json({"DEG executor preflight": payload}))
-        return payload
-
-    def show_selected_task_run_detail(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return None
-        row = self._task_runs.currentRow()
-        runs = list_analysis_task_runs(self._project_root)
-        if row < 0 or row >= len(runs):
-            self._status_label.setText("请选择一条任务历史记录。")
-            return None
-        run = runs[row]
-        self._records.setPlainText(_json({"任务运行详情": run}))
-        self._status_label.setText(f"任务详情已载入：{task_run_status_label(str(run.get('status') or ''))}")
-        return run
 
     def continue_to_results(self) -> None:
         if self._project_root is None:
@@ -4443,84 +4101,419 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("分析任务中心", "Developer Preview / 本地测试版", back_text="返回工作流总控", back_signal=self.back_requested))
-        self._status_label = _status_label("没有 task center 时请先运行工作流或生成任务中心。")
+        root.addWidget(_header("分析任务中心", "根据当前数据判断哪些分析可配置、哪些还需要补充信息。", back_text="返回数据标准化", back_signal=self.back_requested))
+        self._status_label = _status_label("请先完成数据识别和数据标准化，再查看可配置的分析任务。")
         root.addWidget(self._status_label)
+
+        summary_card, summary_layout = _card("当前分析条件")
+        self._analysis_input_label = _muted("核心输入：待检查。")
+        self._analysis_input_label.setObjectName("analysisTaskInputSummary")
+        self._analysis_result_label = _muted("结果状态：暂无结果。")
+        self._analysis_result_label.setObjectName("analysisTaskResultSummary")
+        self._analysis_next_step_label = _muted("下一步建议：先返回数据标准化确认输入。")
+        self._analysis_next_step_label.setObjectName("analysisTaskNextStep")
+        summary_layout.addWidget(self._analysis_input_label)
+        summary_layout.addWidget(self._analysis_result_label)
+        summary_layout.addWidget(self._analysis_next_step_label)
+        root.addWidget(summary_card)
+
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_task_center, role="secondary"))
-        self._task_type_input = QLineEdit()
-        self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
-        actions.addWidget(self._task_type_input)
-        actions.addWidget(_button("确认分组", "secondaryButton", self.open_group_design, role="secondary"))
-        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups, role="secondary"))
-        actions.addWidget(_button("创建 DEG 配置草稿", "primaryButton", self.configure_deg_task_plan, role="primary_action"))
-        actions.addWidget(_button("生成任务记录", "secondaryButton", self.create_deg_task_run_record, role="secondary"))
-        actions.addWidget(_button("校验 DEG 输入", "secondaryButton", self.generate_deg_executor_preflight, role="secondary"))
-        actions.addWidget(_button("创建通用任务", "secondaryButton", self.create_task, role="secondary"))
-        actions.addWidget(_button("运行 GEO 差异分析", "secondaryButton", self.run_geo_differential_expression_task, role="secondary"))
+        actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
+        actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
+        actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
         root.addLayout(actions)
-        self._capability_summary = _read_only_report_view(150)
-        self._capability_summary.setObjectName("analysisCapabilityGroupedSummary")
-        root.addWidget(self._capability_summary)
-        self._tasks = _table(["任务", "是否可运行", "来源与状态", "已有输入", "缺失输入", "warning", "默认参数", "preview"])
+
+        self._tasks = _table(["分析任务", "当前状态", "需要输入", "当前缺少", "下一步"])
+        self._tasks.setObjectName("analysisTaskUserTable")
         root.addWidget(self._tasks)
-        root.addWidget(_muted("任务历史记录"))
-        self._task_runs = _table(["时间", "任务类型", "记录", "输入摘要", "比较数量", "状态", "操作"])
-        self._task_runs.setObjectName("analysisTaskRunHistoryTable")
-        root.addWidget(self._task_runs)
-        root.addWidget(_button("查看详情", "secondaryButton", self.show_selected_task_run_detail, role="secondary"), alignment=Qt.AlignLeft)
-        diagnostic_card, diagnostic_layout = _card("开发者诊断")
-        diagnostic_layout.addWidget(_muted("普通流程不需要查看这些内容；用于任务记录、预检 manifest、run id 和原始 JSON 排错。"))
-        self._records_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_records_diagnostics, role="secondary")
-        diagnostic_layout.addWidget(self._records_toggle_button, alignment=Qt.AlignLeft)
+        _set_table_widths(self._tasks, [160, 150, 220, 220, 300])
+        self._tasks.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._records)))
+        self._task_type_input = QLineEdit()
+        self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
+        developer_actions.addWidget(self._task_type_input)
+        developer_actions.addWidget(_button("创建指定任务记录", "secondaryButton", self.create_task))
+        developer_actions.addWidget(_button("生成测试级 GEO 差异结果", "secondaryButton", self.run_geo_differential_expression_task))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
         self._records = _text_preview(120)
         self._records.setObjectName("analysisTaskDeveloperDiagnostics")
         self._records.setVisible(False)
-        diagnostic_layout.addWidget(self._records)
-        root.addWidget(diagnostic_card)
-        root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results, role="primary_next"), alignment=Qt.AlignLeft)
-
-    def _toggle_records_diagnostics(self) -> None:
-        self._records.setVisible(not self._records.isVisible())
-        self._records_toggle_button.setText("收起开发者诊断" if self._records.isVisible() else "展开开发者诊断")
-
-    def open_group_design(self) -> None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return
-        self.group_design_requested.emit(self._project_root)
+        developer_layout.addWidget(self._records)
+        root.addWidget(developer_card)
+        root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
 
     def _render(self, center: dict[str, object]) -> None:
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
-        self._status_label.setText(f"分析任务中心：{len(tasks)} 个任务模板。不可运行任务将显示缺失输入。")
-        self._capability_summary.setPlainText(_analysis_task_group_summary(center))
-        _fill_table(
-            self._tasks,
-            [
-                [
-                    item.get("label", ""),
-                    "可运行" if item.get("can_run") else "不可运行",
-                    _task_source_status_text(item),
-                    "、".join(str(v) for v in item.get("available_inputs", []) or []),
-                    "、".join(str(v) for v in item.get("missing_inputs", []) or []),
-                    "、".join(str(v) for v in item.get("warnings", []) or []),
-                    _json(item.get("default_parameters", {})),
-                    item.get("preview_status", ""),
-                ]
-                for item in tasks
-            ],
+        records = load_task_records(self._project_root) if self._project_root else []
+        result_index = load_result_index(self._project_root) if self._project_root else {}
+        entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
+        imported_deg = _analysis_imported_deg_detected(self._project_root)
+        configurable = sum(1 for item in tasks if item.get("can_run"))
+        blocked = len(tasks) - configurable
+        self._status_label.setText(f"分析任务中心：{len(tasks)} 类任务；可配置 {configurable} 类，需要补充 {blocked} 类。")
+        self._analysis_input_label.setText(_analysis_task_input_summary(tasks))
+        self._analysis_result_label.setText(_analysis_task_result_summary(entries, records, imported_deg))
+        self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
+        _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
+        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index})
+
+    def _set_developer_details(self, payload: dict[str, object]) -> None:
+        self._records.setPlainText(_json(payload))
+
+
+class BioinformaticsDegConfigWidget(QWidget):
+    back_requested = Signal()
+
+    def __init__(self, *, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self.setObjectName("bioinformaticsDegConfigPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_preflight_state()
+
+    def refresh_preflight_state(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            self._set_developer_details({})
+            return None
+        state = _deg_config_user_state(self._project_root)
+        manifest = load_deg_preflight_manifest(self._project_root)
+        self._render(state, manifest)
+        return {"state": state, "preflight_manifest": manifest}
+
+    def run_preflight_check(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            result = build_deg_preflight(
+                self._project_root,
+                method=self._method_input.text().strip() or "DEG executor not connected",
+                log2fc_threshold=float(self._log2fc_input.text().strip() or "1.0"),
+                p_value_threshold=float(self._p_value_input.text().strip() or "0.05"),
+                fdr_threshold=float(self._fdr_input.text().strip() or "0.05"),
+            )
+        except ValueError:
+            self._status_label.setText("阈值格式不正确，请输入数字。")
+            return None
+        self.refresh_preflight_state()
+        status_text = {
+            "passed": "preflight 已通过",
+            "warning": "preflight 已生成，但存在警告",
+            "blocked": "preflight 已生成，但存在阻塞",
+            "draft": "配置草稿",
+        }.get(result.status, "preflight 已生成")
+        self._status_label.setText(f"{status_text}；这是输入校验记录，不是 DEG 结果，也不会进入正式结果页。")
+        return result.manifest
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(
+            _header(
+                "DEG 配置与 preflight 输入校验",
+                "确认差异分析运行前输入是否齐备；本页仅配置、仅校验，未运行真实差异分析。",
+                back_text="返回分析任务中心",
+                back_signal=self.back_requested,
+            )
         )
-        runs = [item for item in center.get("task_runs", []) or [] if isinstance(item, dict)]
-        _fill_table(self._task_runs, [_analysis_task_run_row(item) for item in runs])
-        self._records.setPlainText(_json({"已创建任务": load_task_records(self._project_root) if self._project_root else [], "任务运行记录": runs}))
+        self._status_label = _status_label("请先完成数据标准化，并确认分组与比较设计。")
+        root.addWidget(self._status_label)
+
+        input_card, input_layout = _card("当前分析输入")
+        self._input_summary_label = _muted("表达矩阵、样本信息和分组状态待检查。")
+        self._input_summary_label.setObjectName("degInputSummary")
+        self._comparison_summary_label = _muted("比较设计：待确认。")
+        self._comparison_summary_label.setObjectName("degComparisonSummary")
+        self._boundary_label = _muted("边界：仅配置 / 仅校验 / 未运行真实差异分析。")
+        self._boundary_label.setObjectName("degConfigBoundary")
+        input_layout.addWidget(self._input_summary_label)
+        input_layout.addWidget(self._comparison_summary_label)
+        input_layout.addWidget(self._boundary_label)
+        root.addWidget(input_card)
+
+        config_card, config_layout = _card("DEG 配置草稿")
+        config_layout.addWidget(_muted("方法状态：DESeq2 / edgeR / limma 待接入；本阶段不连接真实执行器。"))
+        method_row = QHBoxLayout()
+        self._method_input = QLineEdit("DEG executor not connected")
+        self._method_input.setPlaceholderText("方法草稿，例如 DESeq2 待接入")
+        self._log2fc_input = QLineEdit("1.0")
+        self._log2fc_input.setPlaceholderText("log2FC")
+        self._p_value_input = QLineEdit("0.05")
+        self._p_value_input.setPlaceholderText("p value")
+        self._fdr_input = QLineEdit("0.05")
+        self._fdr_input.setPlaceholderText("FDR")
+        for editor in (self._method_input, self._log2fc_input, self._p_value_input, self._fdr_input):
+            method_row.addWidget(editor)
+        config_layout.addLayout(method_row)
+        root.addWidget(config_card)
+
+        actions = QHBoxLayout()
+        actions.addWidget(_button("生成 preflight 输入校验", "primaryButton", self.run_preflight_check))
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_preflight_state))
+        actions.addWidget(_button("返回分析任务中心", "secondaryButton", self.back_requested.emit))
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self._checks_table = _table(["检查项", "状态", "说明"])
+        self._checks_table.setObjectName("degPreflightCheckTable")
+        root.addWidget(self._checks_table)
+        _set_table_widths(self._checks_table, [180, 120, 520])
+        self._checks_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+
+        self._next_step_label = _muted("下一步建议：先返回标准化或确认分组。")
+        self._next_step_label.setObjectName("degNextStep")
+        root.addWidget(self._next_step_label)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(160)
+        self._developer_details.setObjectName("degPreflightDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        root.addWidget(developer_card)
+
+    def _render(self, state: dict[str, object], manifest: dict[str, object] | None) -> None:
+        self._input_summary_label.setText(str(state.get("input_summary_zh") or "当前输入状态待检查。"))
+        self._comparison_summary_label.setText(str(state.get("comparison_summary_zh") or "比较设计：待确认。"))
+        self._boundary_label.setText("配置草稿：仅配置 / 仅校验 / 未运行真实差异分析；preflight passed 不等于 real computed result。")
+        if manifest is None:
+            self._status_label.setText("DEG 配置页：尚未生成 preflight；当前是配置草稿。")
+            _fill_table(
+                self._checks_table,
+                [
+                    ["表达矩阵", str(state.get("expression_status_zh") or "待检查"), "需要 count matrix 或可用表达矩阵。"],
+                    ["样本信息", str(state.get("metadata_status_zh") or "待检查"), "需要样本信息或用户确认的比较组设置。"],
+                    ["分组与比较设计", str(state.get("comparison_status_zh") or "待确认"), "需要 case/control 或用户确认比较。"],
+                    ["真实执行", "未运行", "本页不会运行真实 DEG，也不会生成结果图。"],
+                ],
+            )
+        else:
+            status = str(manifest.get("status_label_zh") or manifest.get("status") or "未知状态")
+            self._status_label.setText(f"DEG preflight 状态：{status}；该记录不是 DEG 结果。")
+            rows = []
+            for check in manifest.get("checks", []) or []:
+                if not isinstance(check, dict):
+                    continue
+                rows.append(
+                    [
+                        _deg_check_label(str(check.get("check_id") or "")),
+                        _deg_preflight_check_status_label(str(check.get("status") or "")),
+                        str(check.get("message_zh") or ""),
+                    ]
+                )
+            _fill_table(self._checks_table, rows)
+        self._next_step_label.setText(str(state.get("next_step_zh") or "下一步建议：返回分析任务中心。"))
+        self._set_developer_details({"deg_config_state": state, "preflight_manifest": manifest or {}})
+
+    def _set_developer_details(self, payload: dict[str, object]) -> None:
+        self._developer_details.setPlainText(_json(payload))
+
+
+class BioinformaticsImportedDegBrowserWidget(QWidget):
+    back_requested = Signal()
+    report_requested = Signal(object)
+
+    def __init__(
+        self,
+        *,
+        on_back: Callable[[], None] | None = None,
+        on_report: Callable[[Path], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self.setObjectName("bioinformaticsImportedDegBrowserPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+        if on_report is not None:
+            self.report_requested.connect(on_report)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_imported_deg_results()
+
+    def refresh_imported_deg_results(self) -> list[object]:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            self._set_developer_details({})
+            return []
+        results = list_imported_deg_results(self._project_root)
+        self._render(results)
+        return results
+
+    def mark_report_candidates(self) -> list[dict[str, object]]:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return []
+        entries = mark_imported_deg_report_candidates(self._project_root)
+        self.refresh_imported_deg_results()
+        self._status_label.setText("已标记导入结果为报告候选；仍必须说明为用户导入 / 外部分析结果，不是 BioMedPilot 重新计算。")
+        return entries
+
+    def continue_to_report(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.report_requested.emit(self._project_root)
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(
+            _header(
+                "导入结果浏览",
+                "查看用户导入 / 外部分析得到的差异分析结果；这里不会运行 DEG，也不会生成火山图或富集结果。",
+                back_text="返回结果浏览",
+                back_signal=self.back_requested,
+            )
+        )
+        self._status_label = _status_label("请先导入差异分析结果表，或返回结果浏览。")
+        root.addWidget(self._status_label)
+
+        summary_card, summary_layout = _card("当前导入 DEG 状态")
+        self._summary_label = _muted("当前是否存在已导入 DEG 结果：待检查。")
+        self._summary_label.setObjectName("importedDegSummary")
+        self._boundary_label = _muted("这是用户导入的外部差异分析结果，不是 BioMedPilot 重新计算得到的结果。")
+        self._boundary_label.setObjectName("importedDegBoundary")
+        self._next_step_label = _muted("下一步建议：先确认列映射和来源标签。")
+        self._next_step_label.setObjectName("importedDegNextStep")
+        summary_layout.addWidget(self._summary_label)
+        summary_layout.addWidget(self._boundary_label)
+        summary_layout.addWidget(self._next_step_label)
+        root.addWidget(summary_card)
+
+        actions = QHBoxLayout()
+        actions.addWidget(_button("刷新导入结果", "secondaryButton", self.refresh_imported_deg_results))
+        actions.addWidget(_button("标记为报告候选", "primaryButton", self.mark_report_candidates))
+        actions.addWidget(_button("查看报告草稿", "secondaryButton", self.continue_to_report))
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self._results = _table(["结果名称", "来源说明", "状态", "可用于报告", "主要列识别", "上调 / 下调 / 不显著", "查看详情"])
+        self._results.setObjectName("importedDegUserTable")
+        root.addWidget(self._results)
+        _set_table_widths(self._results, [180, 190, 120, 110, 260, 180, 300])
+        self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+
+        detail_card, detail_layout = _card("结果详情预览")
+        self._detail_label = _muted("请选择或刷新导入结果后查看详情。预览限制行数，避免一次性加载大文件。")
+        self._detail_label.setObjectName("importedDegDetailSummary")
+        detail_layout.addWidget(self._detail_label)
+        self._preview = _table(["列"] )
+        self._preview.setObjectName("importedDegPreviewTable")
+        detail_layout.addWidget(self._preview)
+        self._note = _text_preview(90)
+        self._note.setObjectName("importedDegUserNote")
+        self._note.setPlainText("用户备注：仅用于人工阅读，不参与内部计算字段。")
+        detail_layout.addWidget(self._note)
+        root.addWidget(detail_card)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(160)
+        self._developer_details.setObjectName("importedDegDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        root.addWidget(developer_card)
+
+    def _render(self, results: list[object]) -> None:
+        typed_results = [result for result in results if hasattr(result, "to_user_row")]
+        if not typed_results:
+            self._status_label.setText("暂无已导入差异分析结果。请先导入外部 DEG 表格，或返回分析任务中心。")
+            self._summary_label.setText("当前是否存在已导入 DEG 结果：否。")
+            self._next_step_label.setText("下一步建议：导入外部 DEG 表格，或继续 B2 preflight 配置。")
+            _fill_table(self._results, [])
+            self._render_preview(None)
+            self._set_developer_details({"imported_deg_results": [], "summary": {}})
+            return
+        ready = sum(1 for result in typed_results if getattr(result, "status", "") == "ready")
+        needs_confirmation = sum(1 for result in typed_results if getattr(result, "status", "") == "needs_confirmation")
+        missing = sum(1 for result in typed_results if getattr(result, "status", "") == "missing")
+        self._status_label.setText(f"导入结果浏览：{len(typed_results)} 个 imported DEG；可浏览 {ready} 个，待确认 {needs_confirmation} 个，缺少文件 {missing} 个。")
+        self._summary_label.setText(f"当前是否存在已导入 DEG 结果：是，共 {len(typed_results)} 个。")
+        self._boundary_label.setText("这是用户导入的外部差异分析结果，不是 BioMedPilot 重新计算得到的结果。")
+        self._next_step_label.setText("下一步建议：确认列映射和来源说明后，可标记为报告候选；报告中必须保留导入标签。")
+        _fill_table(self._results, [result.to_user_row() for result in typed_results])
+        self._render_preview(typed_results[0])
+        self._set_developer_details(
+            {
+                "imported_deg_results": [result.to_dict() for result in typed_results],
+                "summary": imported_deg_summary(self._project_root) if self._project_root else {},
+                "result_index": load_result_index(self._project_root) if self._project_root else {},
+            }
+        )
+
+    def _render_preview(self, result: object | None) -> None:
+        if result is None:
+            self._detail_label.setText("结果详情：暂无导入 DEG。")
+            self._preview.setColumnCount(1)
+            self._preview.setHorizontalHeaderLabels(["预览"])
+            _fill_table(self._preview, [])
+            return
+        headers = list(getattr(result, "preview_headers", ()) or ())
+        rows = [list(row) for row in getattr(result, "preview_rows", ()) or ()]
+        mapping = getattr(result, "column_mapping", {}) or {}
+        counts = getattr(result, "regulation_counts", {}) or {}
+        top_up = getattr(result, "top_up_genes", ()) or ()
+        top_down = getattr(result, "top_down_genes", ()) or ()
+        count_text = "待确认" if counts.get("status") != "computed" else f"上调 {counts.get('up')}；下调 {counts.get('down')}；不显著 {counts.get('not_significant')}"
+        top_up_text = "、".join(str(item.get("gene") or "未命名") for item in list(top_up)[:5]) if top_up else "暂无"
+        top_down_text = "、".join(str(item.get("gene") or "未命名") for item in list(top_down)[:5]) if top_down else "暂无"
+        self._detail_label.setText(
+            "详情："
+            f"{getattr(result, 'name', '导入差异分析结果')}；"
+            "关键列映射 "
+            + ("、".join(f"{key}->{value}" for key, value in mapping.items()) if mapping else "待确认")
+            + f"；阈值草稿 |log2FC| >= 1 且 p value/FDR <= 0.05；计数：{count_text}；"
+            + f"Top up genes：{top_up_text}；Top down genes：{top_down_text}；"
+            + "报告可用性：只能写“用户导入的外部分析结果显示”。"
+        )
+        self._preview.setColumnCount(max(1, len(headers)))
+        self._preview.setHorizontalHeaderLabels(headers or ["预览"])
+        _fill_table(self._preview, rows)
+
+    def _set_developer_details(self, payload: dict[str, object]) -> None:
+        self._developer_details.setPlainText(_json(payload))
 
 
 class BioinformaticsResultsBrowserWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
+    imported_deg_requested = Signal(object)
 
-    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        on_continue: Callable[[Path], None] | None = None,
+        on_back: Callable[[], None] | None = None,
+        on_view_imported_deg: Callable[[Path], None] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsResultsBrowserPage")
@@ -4530,6 +4523,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self.continue_requested.connect(on_continue)
         if on_back is not None:
             self.back_requested.connect(on_back)
+        if on_view_imported_deg is not None:
+            self.imported_deg_requested.connect(on_view_imported_deg)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -4548,136 +4543,83 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._status_label.setText("请先创建或打开生信分析项目。")
             return
         payload = load_result_index(self._project_root)
-        entries = [item for item in payload.get("entries", []) or [] if isinstance(item, dict)]
+        entries = _result_entries_for_display(self._project_root, payload)
         if not entries:
-            self._status_label.setText("不能继续：暂无可用于报告的结果。请返回数据来源补充文件，完成分析并生成结果后再进入报告。")
+            self._status_label.setText("不能继续：暂无可用于报告草稿的结果。请返回分析任务中心，完成配置或导入明确标记的结果。")
             return
         self.continue_requested.emit(self._project_root)
+
+    def open_imported_deg_browser(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.imported_deg_requested.emit(self._project_root)
+        self._status_label.setText("已打开导入结果浏览；这里只查看 imported DEG，不运行或生成 DEG。")
+        return {"next_page": "imported_deg", "project_root": str(self._project_root)}
 
     def status_message(self) -> str:
         return self._status_label.text()
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("结果浏览", "Developer Preview / 本地测试版", back_text="返回分析任务中心", back_signal=self.back_requested))
-        self._status_label = _status_label("暂无结果，请先在分析任务中心创建并运行分析任务。")
+        root.addWidget(_header("结果浏览", "查看导入结果、测试级结果和任务记录，确认哪些内容可进入报告草稿。", back_text="返回分析任务中心", back_signal=self.back_requested))
+        self._status_label = _status_label("暂无结果，请先在分析任务中心创建配置草稿，或导入明确标记的结果。")
         root.addWidget(self._status_label)
+
+        summary_card, summary_layout = _card("当前结果状态")
+        self._result_summary_label = _muted("当前结果：待检查。")
+        self._result_summary_label.setObjectName("resultsSourceSummary")
+        self._result_report_label = _muted("报告适用性：暂无可用于报告草稿的结果。")
+        self._result_report_label.setObjectName("resultsReportReadiness")
+        self._result_next_step_label = _muted("下一步建议：返回分析任务中心。")
+        self._result_next_step_label.setObjectName("resultsNextStep")
+        summary_layout.addWidget(self._result_summary_label)
+        summary_layout.addWidget(self._result_report_label)
+        summary_layout.addWidget(self._result_next_step_label)
+        root.addWidget(summary_card)
+
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results, role="secondary"))
-        actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None), role="secondary"))
-        actions.addWidget(_button("继续到项目报告", "primaryButton", self.continue_to_report, role="primary_next"))
+        actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results))
+        actions.addWidget(_button("导入结果浏览", "secondaryButton", self.open_imported_deg_browser))
+        actions.addWidget(_button("查看报告草稿", "primaryButton", self.continue_to_report))
         actions.addStretch(1)
         root.addLayout(actions)
-        comparison_row = QHBoxLayout()
-        comparison_row.addWidget(_muted("已有 DEG 比较："))
-        self._imported_deg_selector = QComboBox()
-        self._imported_deg_selector.setObjectName("importedDegComparisonSelector")
-        self._imported_deg_selector.currentIndexChanged.connect(self._render_selected_imported_deg)
-        comparison_row.addWidget(self._imported_deg_selector)
-        comparison_row.addStretch(1)
-        root.addLayout(comparison_row)
-        self._imported_deg_summary = _read_only_report_view(120)
-        self._imported_deg_summary.setObjectName("importedDegSummary")
-        root.addWidget(self._imported_deg_summary)
-        self._results = _table(["结果名称", "分析类型", "文件类型", "创建时间", "可打开", "状态", "备注"])
+        self._results = _table(["结果名称", "结果类型", "来源", "状态", "可用于报告", "生成时间", "简短说明", "查看详情"])
+        self._results.setObjectName("resultsUserTable")
         root.addWidget(self._results)
-        self._deg_preview = _table(["gene_id", "gene_name", "log2FC", "p value", "adjusted p value", "gene_biotype", "gene_description"])
-        self._deg_preview.setObjectName("importedDegPreviewTable")
-        root.addWidget(self._deg_preview)
-        diagnostic_card, diagnostic_layout = _card("开发者诊断")
-        diagnostic_layout.addWidget(_muted("完整路径、result index、manifest 和原始 JSON 仅用于排错，不默认展示在主界面。"))
-        diagnostic_actions = QHBoxLayout()
-        self._details_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_result_diagnostics, role="secondary")
-        diagnostic_actions.addWidget(self._details_toggle_button)
-        diagnostic_actions.addWidget(_button("打开结果索引", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None), role="secondary"))
-        diagnostic_actions.addWidget(_button("加入报告（占位）", "secondaryButton", lambda: self._status_label.setText("加入报告：testing placeholder，未正式支持。"), role="secondary"))
-        diagnostic_actions.addStretch(1)
-        diagnostic_layout.addLayout(diagnostic_actions)
+        _set_table_widths(self._results, [170, 110, 170, 120, 120, 160, 280, 100])
+        self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._details)))
+        developer_actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None)))
+        developer_actions.addWidget(_button("打开参数 JSON", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
         self._details = _text_preview(130)
         self._details.setObjectName("resultsDeveloperDiagnostics")
         self._details.setVisible(False)
-        diagnostic_layout.addWidget(self._details)
-        root.addWidget(diagnostic_card)
-
-    def _toggle_result_diagnostics(self) -> None:
-        self._details.setVisible(not self._details.isVisible())
-        self._details_toggle_button.setText("收起开发者诊断" if self._details.isVisible() else "展开开发者诊断")
+        developer_layout.addWidget(self._details)
+        root.addWidget(developer_card)
+        root.addWidget(_button("继续：报告查看", "primaryButton", self.continue_to_report), alignment=Qt.AlignLeft)
 
     def _render(self, payload: dict[str, object]) -> None:
-        entries = [item for item in payload.get("entries", []) or [] if isinstance(item, dict)]
+        entries = _result_entries_for_display(self._project_root, payload)
+        records = load_task_records(self._project_root) if self._project_root else []
         warnings = [str(item) for item in payload.get("warnings", []) or []]
-        if not entries:
-            self._status_label.setText("暂无结果，请先在分析任务中心创建并运行分析任务。")
+        if not entries and not records:
+            self._status_label.setText("暂无结果，请先在分析任务中心创建配置草稿，或导入明确标记的结果。")
         else:
-            self._status_label.setText(f"已读取结果索引：{len(entries)} 个结果，{len(warnings)} 条 warning。")
+            self._status_label.setText(f"结果浏览：{len(entries)} 个可查看结果，{len(records)} 个配置/流程记录，{len(warnings)} 条提示。")
+        self._result_summary_label.setText(_results_page_source_summary(entries, records))
+        self._result_report_label.setText(_results_page_report_summary(entries, records))
+        self._result_next_step_label.setText(_results_page_next_step(entries, records))
         _fill_table(
             self._results,
-            [
-                [
-                    item.get("result_name") or item.get("name", "未命名结果"),
-                    item.get("analysis_type", "未知"),
-                    item.get("file_type", "未知"),
-                    item.get("created_at", "未记录"),
-                    "可打开" if (item.get("path") or item.get("file_path")) else "未记录",
-                    item.get("status", "未知"),
-                    item.get("warning", ""),
-                ]
-                for item in entries
-            ],
+            _results_user_rows(self._project_root, entries, records),
         )
-        self._details.setPlainText(_json({"结果详情": entries[:1], "warnings": warnings}))
-        self._render_imported_deg_selector()
-
-    def _render_imported_deg_selector(self) -> None:
-        self._imported_deg_selector.blockSignals(True)
-        self._imported_deg_selector.clear()
-        comparisons = load_imported_deg_comparisons(self._project_root) if self._project_root is not None else []
-        for item in comparisons:
-            label = str(item.get("comparison_name") or "未命名比较")
-            source = str(item.get("source_file_name") or Path(str(item.get("source_file") or "")).name)
-            self._imported_deg_selector.addItem(f"{label} · {source}", item)
-        first_complete = next((index for index, item in enumerate(comparisons) if item.get("is_complete")), 0)
-        if comparisons:
-            self._imported_deg_selector.setCurrentIndex(first_complete)
-        self._imported_deg_selector.blockSignals(False)
-        self._render_selected_imported_deg()
-
-    def _render_selected_imported_deg(self) -> None:
-        if self._project_root is None or self._imported_deg_selector.count() == 0:
-            self._deg_preview.setRowCount(0)
-            if self._project_root is None:
-                self._imported_deg_summary.setPlainText("")
-            else:
-                view = build_imported_deg_view(self._project_root)
-                warnings = [str(item) for item in view.get("warnings", []) or [] if str(item)]
-                self._imported_deg_summary.setPlainText("；".join(warnings) if warnings else "")
-            return
-        item = self._imported_deg_selector.currentData()
-        if not isinstance(item, dict):
-            return
-        view = build_imported_deg_view(
-            self._project_root,
-            source_asset_id=str(item.get("source_asset_id") or ""),
-            comparison_name=str(item.get("comparison_name") or ""),
-        )
-        rows = [row for row in view.get("rows", []) or [] if isinstance(row, dict)]
-        _fill_table(
-            self._deg_preview,
-            [
-                [
-                    row.get("gene_id", ""),
-                    row.get("gene_name", ""),
-                    row.get("log2FC", ""),
-                    row.get("p value", ""),
-                    row.get("adjusted p value", ""),
-                    row.get("gene_biotype", ""),
-                    row.get("gene_description", ""),
-                ]
-                for row in rows[:100]
-            ],
-        )
-        self._imported_deg_summary.setPlainText(_imported_deg_user_summary(view, comparison_count=self._imported_deg_selector.count()))
-        self._details.setPlainText(_json({"imported_deg_view": {key: value for key, value in view.items() if key != "rows"}, "preview_row_count": min(len(rows), 100)}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings}))
 
 
 class BioinformaticsReportViewerWidget(QWidget):
@@ -4717,50 +4659,74 @@ class BioinformaticsReportViewerWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("项目报告", "Developer Preview / 本地测试版", back_text="返回结果浏览", back_signal=self.back_requested))
+        root.addWidget(_header("项目报告", "生成和查看项目报告草稿，保持导入、测试级和未运行状态的边界。", back_text="返回结果浏览", back_signal=self.back_requested))
         actions = QHBoxLayout()
-        actions.addWidget(_button("生成 / 刷新项目报告", "primaryButton", self.generate_report, role="primary_action"))
-        actions.addWidget(_button("打开报告文件", "secondaryButton", lambda: _open_path(self._project_root / "reports/project_analysis_report.md" if self._project_root else None), role="secondary"))
-        actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None), role="secondary"))
-        actions.addWidget(_button("导出 DOCX", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：testing placeholder，未正式支持。"), role="secondary"))
-        actions.addWidget(_button("导出 HTML", "secondaryButton", lambda: self._status_label.setText("HTML 导出：testing placeholder。"), role="secondary"))
+        actions.addWidget(_button("刷新报告草稿", "primaryButton", self.generate_report))
+        actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
+        actions.addWidget(_button("复制报告摘要", "secondaryButton", self.copy_report_summary))
         actions.addStretch(1)
         root.addLayout(actions)
-        self._status_label = _status_label("没有报告时请点击生成 / 刷新项目报告。PDF 当前未正式支持。")
+        self._status_label = _status_label("没有报告草稿时请点击刷新报告草稿。本阶段只生成 Markdown 和 report_manifest.json。")
         root.addWidget(self._status_label)
-        root.addWidget(_muted("可纳入报告的内容"))
-        self._reportable_content = _read_only_report_view(100)
-        self._reportable_content.setObjectName("reportableContentSummary")
-        root.addWidget(self._reportable_content)
-        root.addWidget(_muted("报告预览（草稿）"))
-        self._markdown = _text_preview(320)
+
+        summary_card, summary_layout = _card("报告草稿状态")
+        self._report_status_label = _muted("报告状态：尚未生成。")
+        self._report_status_label.setObjectName("reportDraftStatus")
+        self._report_semantics_label = _muted("结果语义：暂无结果。")
+        self._report_semantics_label.setObjectName("reportResultSemantics")
+        self._report_next_step_label = _muted("下一步建议：先返回结果浏览确认结果来源。")
+        self._report_next_step_label.setObjectName("reportNextStep")
+        summary_layout.addWidget(self._report_status_label)
+        summary_layout.addWidget(self._report_semantics_label)
+        summary_layout.addWidget(self._report_next_step_label)
+        root.addWidget(summary_card)
+
+        self._sections = _table(["报告部分", "当前状态", "来源说明", "注意事项"])
+        self._sections.setObjectName("reportDraftSectionsTable")
+        root.addWidget(self._sections)
+        _set_table_widths(self._sections, [170, 150, 260, 320])
+        self._sections.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        self._markdown = _text_preview(220)
+        self._markdown.setObjectName("reportDraftUserPreview")
         root.addWidget(self._markdown)
-        diagnostic_card, diagnostic_layout = _card("开发者诊断")
-        diagnostic_layout.addWidget(_muted("报告 manifest、上游 manifest 引用和导出占位状态默认折叠，仅用于审计和排错。"))
-        self._manifest_toggle_button = _button("展开开发者诊断", "secondaryButton", self._toggle_manifest_diagnostics, role="secondary")
-        diagnostic_layout.addWidget(self._manifest_toggle_button, alignment=Qt.AlignLeft)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._manifest)))
+        developer_actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
         self._manifest = _text_preview(140)
         self._manifest.setObjectName("reportDeveloperDiagnostics")
         self._manifest.setVisible(False)
-        diagnostic_layout.addWidget(self._manifest)
-        root.addWidget(diagnostic_card)
-
-    def _toggle_manifest_diagnostics(self) -> None:
-        self._manifest.setVisible(not self._manifest.isVisible())
-        self._manifest_toggle_button.setText("收起开发者诊断" if self._manifest.isVisible() else "展开开发者诊断")
+        developer_layout.addWidget(self._manifest)
+        root.addWidget(developer_card)
 
     def _render(self, payload: dict[str, object]) -> None:
         markdown = str(payload.get("markdown") or "")
         manifest = payload.get("manifest")
-        if self._project_root is not None:
-            self._reportable_content.setPlainText(_reportable_content_summary(load_result_index(self._project_root)))
+        result_payload = load_result_index(self._project_root) if self._project_root else {}
+        entries = _result_entries_for_display(self._project_root, result_payload)
+        records = load_task_records(self._project_root) if self._project_root else []
         if not markdown:
-            self._status_label.setText("尚未生成项目报告。PDF 当前未正式支持。")
-            self._markdown.setPlainText("")
+            self._status_label.setText("尚未生成项目报告草稿。本阶段只生成 Markdown 和 report_manifest.json。")
         else:
-            self._status_label.setText("已读取项目级 Markdown 报告。PDF 当前只能显示 placeholder，未正式支持。")
-            self._markdown.setPlainText(markdown)
-        self._manifest.setPlainText(_json(manifest or {"PDF": "未正式支持", "DOCX": "testing placeholder"}))
+            self._status_label.setText("已读取项目级 Markdown 报告草稿。本阶段不导出 Word 或 PDF。")
+        self._report_status_label.setText(_report_draft_status_text(markdown, manifest))
+        self._report_semantics_label.setText(_report_result_semantics_text(entries, records))
+        self._report_next_step_label.setText(_report_next_step_text(markdown, entries, records))
+        _fill_table(self._sections, _report_section_rows(self._project_root, entries, records, bool(markdown)))
+        self._markdown.setPlainText(_report_user_preview_text(markdown, entries, records))
+        self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records}))
+
+    def copy_report_summary(self) -> str:
+        summary = self._markdown.toPlainText().strip()
+        if not summary:
+            summary = "当前尚未生成报告草稿。"
+        QApplication.clipboard().setText(summary)
+        self._status_label.setText("已复制报告摘要。")
+        return summary
 
 
 class BioinformaticsSettingsAndLocalAIWidget(QWidget):
@@ -4996,31 +4962,11 @@ def _readiness_todo_row(title: str, purpose: str, state: str, buttons: list[QPus
     return frame, state_label
 
 
-def _button(text: str, object_name: str, callback: Callable[..., Any], *, role: str | None = None, small: bool = False) -> QPushButton:
+def _button(text: str, object_name: str, callback: Callable[..., Any]) -> QPushButton:
     button = QPushButton(text)
     button.setObjectName(object_name)
-    if role is not None or small:
-        _apply_button_semantics(button, role or "secondary", small=small)
     button.clicked.connect(callback)
     return button
-
-
-def _apply_button_semantics(button: QPushButton, role: str, *, small: bool = False) -> QPushButton:
-    button.setProperty("buttonRole", role)
-    if small:
-        button.setProperty("buttonSize", "small")
-    elif button.property("buttonSize") == "small":
-        button.setProperty("buttonSize", "")
-    button.style().unpolish(button)
-    button.style().polish(button)
-    button.update()
-    return button
-
-
-def _apply_button_semantics_by_text(parent: QWidget, text: str, role: str, *, small: bool = False) -> None:
-    for button in parent.findChildren(QPushButton):
-        if button.text() == text:
-            _apply_button_semantics(button, role, small=small)
 
 
 def _muted(text: str) -> QLabel:
@@ -5075,16 +5021,12 @@ def _fill_table(table: QTableWidget, rows: list[list[object]]) -> None:
     table.resizeColumnsToContents()
 
 
-def _table_text(table: QTableWidget, row: int, column: int) -> str:
-    item = table.item(row, column)
-    return item.text().strip() if item is not None else ""
-
-
 def _clear_layout(layout: QVBoxLayout) -> None:
     while layout.count():
         item = layout.takeAt(0)
         widget = item.widget()
         if widget is not None:
+            widget.setParent(None)
             widget.deleteLater()
 
 
@@ -5206,12 +5148,7 @@ def _registered_source_rows(project_root: Path | None) -> list[RegisteredSourceR
     return sorted(rows_by_key.values(), key=lambda row: row.created_at)
 
 
-def _current_project_dataset_entries(
-    project_root: Path | None,
-    *,
-    geo_only: bool = False,
-    expand_geo_files: bool = True,
-) -> list[DatasetListEntry]:
+def _current_project_dataset_entries(project_root: Path | None, *, geo_only: bool = False, expand_geo_files: bool = True) -> list[DatasetListEntry]:
     if project_root is None:
         return []
     notes = _load_user_dataset_notes(project_root)
@@ -5272,12 +5209,109 @@ def _current_project_dataset_entries(
 
 
 def _expand_dataset_entries(entry: DatasetListEntry, notes: dict[str, str], *, expand_geo_files: bool) -> list[DatasetListEntry]:
-    if expand_geo_files and entry.source_type_key in GEO_SOURCE_TYPES and len(entry.source_files) > 1:
+    local_entries = _expand_local_dataset_entries(entry, notes)
+    if len(local_entries) != 1 or local_entries[0] is not entry:
+        return local_entries
+    if expand_geo_files:
         return _expand_geo_dataset_entries(entry, notes)
     return [entry]
 
 
+def _pending_dataset_entry_count(entries: Iterable[DatasetListEntry]) -> int:
+    return sum(
+        1
+        for entry in entries
+        if entry.downloadable
+        or entry.status in {"未下载", "元数据已下载", "需要补充信息"}
+        or entry.missing_content not in {"无", "待识别确认"}
+    )
+
+
+def _data_selection_next_step_text(project_root: Path | None, *, count: int, ready_count: int, pending_count: int) -> str:
+    if project_root is None:
+        return "下一步：请先创建或打开项目。"
+    if count == 0:
+        return "下一步：先导入本地数据，或检索 GSE / 中文研究主题。"
+    if ready_count > 0 and pending_count > 0:
+        return "下一步：可先进入数据检查与准备；仍有待下载或待确认的数据来源可稍后补充。"
+    if ready_count > 0:
+        return "下一步：可以进入数据检查与准备。"
+    if pending_count > 0:
+        return "下一步：先完成下载或确认数据来源，再进入数据检查与准备。"
+    return "下一步：请检查数据来源状态。"
+
+
+def _dataset_entry_from_record(
+    project_root: Path,
+    row: RegisteredSourceRow,
+    payload: dict[str, object],
+    metadata: dict[str, object],
+    notes: dict[str, str],
+) -> DatasetListEntry:
+    key = _dataset_entry_key(row, metadata)
+    title = _dataset_title_from_record(row, payload, metadata)
+    abstract = _dataset_abstract_from_record(payload, metadata)
+    status = _dataset_status_text(row, payload, metadata)
+    available = _dataset_available_content(row, status, metadata)
+    missing = _dataset_missing_content(row, status, metadata)
+    accession = _geo_accession_from_record(payload, metadata) if _is_geo_record(payload, metadata) else ""
+    source_files = tuple(_recognition_source_files_from_payload(payload))
+    note = notes.get(key, "")
+    return DatasetListEntry(
+        key=key,
+        source=_dataset_source_label(row, metadata),
+        name=row.source_label,
+        status=status,
+        available_content=available,
+        missing_content=missing,
+        note=note,
+        title=title,
+        abstract=abstract,
+        keywords=_dataset_keywords(metadata),
+        technical_info=_dataset_technical_info(project_root, row, payload, metadata),
+        ready_for_recognition=_record_ready_for_recognition(payload, metadata),
+        downloadable=_dataset_is_downloadable(row, payload, metadata),
+        removable=True,
+        source_type_key=row.source_type_key,
+        accession=accession,
+        acquisition_ids=(row.acquisition_id,),
+        source_files=source_files,
+        storage_policy=str(payload.get("strategy") or ""),
+    )
+
+
+def _expand_local_dataset_entries(entry: DatasetListEntry, notes: dict[str, str]) -> list[DatasetListEntry]:
+    if entry.source_type_key != "local_import" or len(entry.source_files) <= 1:
+        return [entry]
+    storage = _storage_policy_text(entry.storage_policy)
+    batch_summary = _local_import_batch_summary(entry.source_files, entry.storage_policy, entry.status)
+    expanded: list[DatasetListEntry] = []
+    for index, raw_path in enumerate(entry.source_files, start=1):
+        file_key = f"{entry.key}:file:{index}"
+        file_name = Path(raw_path).name
+        expanded.append(
+            DatasetListEntry(
+                **{
+                    **entry.__dict__,
+                    "key": file_key,
+                    "name": file_name,
+                    "available_content": "待识别：1 个文件",
+                    "note": notes.get(file_key, ""),
+                    "title": file_name,
+                    "abstract": f"本地导入批次中的第 {index} 个文件。",
+                    "keywords": _local_file_type_hint(file_name),
+                    "technical_info": _local_file_dataset_technical_info(entry, raw_path, index, storage),
+                    "focused_source_file": raw_path,
+                    "batch_summary": batch_summary,
+                }
+            )
+        )
+    return expanded
+
+
 def _expand_geo_dataset_entries(entry: DatasetListEntry, notes: dict[str, str]) -> list[DatasetListEntry]:
+    if entry.source_type_key not in GEO_SOURCE_TYPES or len(entry.source_files) <= 1:
+        return [entry]
     batch_summary = _geo_download_batch_summary(entry.source_files, entry.accession or entry.name, entry.status)
     expanded: list[DatasetListEntry] = []
     for index, raw_path in enumerate(entry.source_files, start=1):
@@ -5327,6 +5361,26 @@ def _geo_file_dataset_technical_info(entry: DatasetListEntry, focused_source_fil
     )
 
 
+def _local_import_batch_summary(source_files: tuple[str, ...], storage_policy: str, status: str) -> str:
+    if not source_files:
+        return ""
+    names = [Path(path).name for path in source_files]
+    preview = "、".join(names[:3])
+    remaining = len(names) - 3
+    if remaining > 0:
+        preview = f"{preview}，另有 {remaining} 个文件"
+    contains = f"包含 {names[0]} 等 {len(names)} 个文件" if len(names) > 1 else f"包含 {names[0]}"
+    return "；".join(
+        [
+            f"文件总数：{len(names)} 个",
+            f"保存方式：{_storage_policy_text(storage_policy)}",
+            f"来源状态：{status}",
+            contains,
+            f"文件预览：{preview}",
+        ]
+    )
+
+
 def _local_file_type_hint(file_name: str) -> str:
     lowered = file_name.lower()
     if lowered.endswith(".soft") or "family.soft" in lowered:
@@ -5340,44 +5394,17 @@ def _local_file_type_hint(file_name: str) -> str:
     return "本地文件"
 
 
-def _dataset_entry_from_record(
-    project_root: Path,
-    row: RegisteredSourceRow,
-    payload: dict[str, object],
-    metadata: dict[str, object],
-    notes: dict[str, str],
-) -> DatasetListEntry:
-    key = _dataset_entry_key(row, metadata)
-    title = _dataset_title_from_record(row, payload, metadata)
-    abstract = _dataset_abstract_from_record(payload, metadata)
-    status = _dataset_status_text(row, payload, metadata)
-    available = _dataset_available_content(row, status, metadata)
-    missing = _dataset_missing_content(row, status, metadata)
-    accession = _geo_accession_from_record(payload, metadata) if _is_geo_record(payload, metadata) else ""
-    source_files = tuple(_recognition_source_files_from_payload(payload))
-    note = notes.get(key, "")
-    if not note and row.source_type_key == "local_import":
-        note = _local_import_default_note(payload)
-    return DatasetListEntry(
-        key=key,
-        source=_dataset_source_label(row, metadata),
-        name=row.source_label,
-        status=status,
-        available_content=available,
-        missing_content=missing,
-        note=note,
-        title=title,
-        abstract=abstract,
-        keywords=_dataset_keywords(metadata),
-        technical_info=_dataset_technical_info(project_root, row, payload, metadata),
-        ready_for_recognition=_record_ready_for_recognition(payload, metadata),
-        downloadable=_dataset_is_downloadable(row, payload, metadata),
-        removable=True,
-        source_type_key=row.source_type_key,
-        accession=accession,
-        acquisition_ids=(row.acquisition_id,),
-        source_files=source_files,
-        storage_policy=str(payload.get("strategy") or ""),
+def _local_file_dataset_technical_info(entry: DatasetListEntry, focused_source_file: str, index: int, storage: str) -> str:
+    return _json(
+        {
+            "数据来源": entry.source,
+            "当前文件": focused_source_file,
+            "文件序号": index,
+            "批次文件总数": len(entry.source_files),
+            "保存方式": storage,
+            "source_files": list(entry.source_files),
+            "acquisition_ids": list(entry.acquisition_ids),
+        }
     )
 
 
@@ -5550,6 +5577,23 @@ def _dataset_entry_tooltip(entry: DatasetListEntry, column: int) -> str:
     return entry.technical_info if column in {3, 4, 5} else ""
 
 
+def _dataset_batch_summary_text(entries: Iterable[DatasetListEntry]) -> str:
+    summaries: list[str] = []
+    seen: set[tuple[str, ...]] = set()
+    for entry in entries:
+        if entry.source_type_key not in {"local_import", *GEO_SOURCE_TYPES} or len(entry.source_files) <= 1:
+            continue
+        acquisition_key = entry.acquisition_ids or (entry.key,)
+        if acquisition_key in seen:
+            continue
+        seen.add(acquisition_key)
+        if entry.source_type_key == "local_import":
+            summaries.append(f"本地导入批次摘要：{entry.batch_summary or _local_import_batch_summary(entry.source_files, entry.storage_policy, entry.status)}")
+        else:
+            summaries.append(f"GEO 下载批次摘要：{entry.batch_summary or _geo_download_batch_summary(entry.source_files, entry.accession or entry.name, entry.status)}")
+    return "\n".join(summaries)
+
+
 def _dataset_detail_summary(entry: DatasetListEntry) -> str:
     lines = [
         f"数据集编号或文件名：{entry.name}",
@@ -5560,6 +5604,19 @@ def _dataset_detail_summary(entry: DatasetListEntry) -> str:
     if entry.source_type_key == "local_import":
         files = list(entry.source_files)
         storage = _storage_policy_text(entry.storage_policy)
+        if entry.focused_source_file:
+            focused_name = Path(entry.focused_source_file).name
+            lines.extend(
+                [
+                    f"当前查看文件：{focused_name}",
+                    f"文件来源状态：{entry.status}",
+                    f"保存方式：{storage}",
+                    f"批次摘要：{entry.batch_summary}",
+                    "批次完整文件列表：",
+                ]
+            )
+        else:
+            lines.append("批次完整文件列表：")
         lines.extend(
             [
                 f"文件总数：{len(files)} 个",
@@ -5569,30 +5626,19 @@ def _dataset_detail_summary(entry: DatasetListEntry) -> str:
         )
         for index, raw_path in enumerate(files, start=1):
             lines.append(f"{index}. {Path(raw_path).name}｜{storage}｜{raw_path}")
-    return "\n".join(lines)
-
-
-def _dataset_batch_summary_text(entries: Iterable[DatasetListEntry]) -> str:
-    summaries: list[str] = []
-    seen: set[tuple[str, ...]] = set()
-    for entry in entries:
-        if entry.source_type_key not in GEO_SOURCE_TYPES or len(entry.source_files) <= 1:
-            continue
-        acquisition_key = entry.acquisition_ids or (entry.key,)
-        if acquisition_key in seen:
-            continue
-        seen.add(acquisition_key)
-        summaries.append(
-            f"GEO 下载批次摘要：{entry.batch_summary or _geo_download_batch_summary(entry.source_files, entry.accession or entry.name, entry.status)}"
+    elif entry.source_type_key in GEO_SOURCE_TYPES and entry.focused_source_file:
+        lines.extend(
+            [
+                f"当前查看文件：{Path(entry.focused_source_file).name}",
+                f"文件来源状态：{entry.status}",
+                f"批次摘要：{entry.batch_summary}",
+                "下载批次完整文件列表：",
+                f"文件总数：{len(entry.source_files)} 个",
+            ]
         )
-    return "\n".join(summaries)
-
-
-def _local_import_default_note(payload: dict[str, object]) -> str:
-    files = _local_import_declared_files(payload)
-    if len(files) <= 1:
-        return ""
-    return f"包含 {Path(files[0]).name} 等 {len(files)} 个文件"
+        for index, raw_path in enumerate(entry.source_files, start=1):
+            lines.append(f"{index}. {Path(raw_path).name}｜GEO 下载文件｜{raw_path}")
+    return "\n".join(lines)
 
 
 def _compact_note(note: str) -> str:
@@ -5742,21 +5788,31 @@ def _pending_recognition_selection_path(project_root: Path) -> Path:
 
 def _save_pending_recognition_selection(project_root: Path, entries: list[DatasetListEntry]) -> None:
     path = _pending_recognition_selection_path(project_root)
+    selected_sources: list[dict[str, object]] = []
+    seen_sources: set[tuple[str, ...] | str] = set()
+    for entry in entries:
+        source_key: tuple[str, ...] | str = entry.acquisition_ids or entry.key
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        display_name = entry.name
+        if entry.source_type_key == "local_import" and len(entry.source_files) > 1:
+            display_name = f"本地导入批次：{len(entry.source_files)} 个文件"
+        selected_sources.append(
+            {
+                "key": entry.key,
+                "display_name": display_name,
+                "source_type": entry.source_type_key,
+                "source_files": list(entry.source_files),
+                "source_file_count": len(entry.source_files),
+            }
+        )
     payload = {
         "schema_version": "biomedpilot.pending_recognition_selection.v1",
         "updated_at": _utc_now_iso(),
         "selected_keys": [entry.key for entry in entries],
         "selected_acquisition_ids": sorted({acquisition_id for entry in entries for acquisition_id in entry.acquisition_ids}),
-        "selected_sources": [
-            {
-                "key": entry.key,
-                "display_name": entry.name,
-                "source_type": entry.source_type_key,
-                "source_files": list(entry.source_files),
-                "source_file_count": len(entry.source_files),
-            }
-            for entry in entries
-        ],
+        "selected_sources": selected_sources,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -5800,6 +5856,48 @@ def _recognition_paths_for_rows(project_root: Path, rows: list[RegisteredSourceR
             continue
         paths.extend(_recognition_source_files_from_payload(payload))
     return list(dict.fromkeys(paths))
+
+
+def _pending_data_check_rows(project_root: Path | None) -> list[RegisteredSourceRow]:
+    rows = _registered_source_rows(project_root)
+    if project_root is None:
+        return []
+    selection = _load_pending_recognition_selection(project_root)
+    selected = [row for row in rows if _recognition_row_selected_by_context(row, selection)]
+    return selected or [row for row in rows if row.source_files]
+
+
+def _pending_data_check_paths(project_root: Path | None) -> list[str]:
+    if project_root is None:
+        return []
+    return _recognition_paths_for_rows(project_root, _pending_data_check_rows(project_root))
+
+
+def _pending_data_check_file_statuses(project_root: Path | None) -> list[dict[str, object]]:
+    statuses: list[dict[str, object]] = []
+    for row in _pending_data_check_rows(project_root):
+        source = "GEO 下载" if row.source_type_key in GEO_SOURCE_TYPES else "本地导入"
+        for raw_path in row.source_files:
+            path = Path(raw_path)
+            statuses.append(
+                {
+                    "file_name": path.name,
+                    "file_suffix": path.suffix.lower() or "无后缀",
+                    "source": source,
+                    "source_file": raw_path,
+                    "recognized_type": "unchecked",
+                    "recognized_type_zh": "待识别",
+                    "suggested_use": "待识别",
+                    "available_content": "未检查",
+                    "missing_content": "未检查",
+                    "risk_notes": "",
+                    "status": "unchecked",
+                    "status_zh": "未检查",
+                    "status_color": "gray",
+                    "can_enter_standardization": False,
+                }
+            )
+    return statuses
 
 
 def _acquisition_payload_by_id(project_root: Path, acquisition_id: str) -> dict[str, object] | None:
@@ -6031,36 +6129,30 @@ def _geo_candidate_from_download_entry(project_root: Path | None, accession: str
         if _geo_accession_from_record(payload, metadata) != normalized:
             continue
         title = _geo_record_title(payload, metadata)
-        source_metadata = metadata.get("source_specific_metadata") if isinstance(metadata.get("source_specific_metadata"), dict) else {}
-        candidate_metadata = {
-            **dict(source_metadata or {}),
-            "title_en": title,
-            "platform_accessions": metadata.get("platform_accessions") or dict(source_metadata or {}).get("platform_accessions", []),
-            "geo_url": metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={normalized}",
-            "query_used": metadata.get("query_used") or normalized,
-            "match_reason": metadata.get("match_reason") or "待处理数据集记录",
-        }
-        if metadata.get("organism"):
-            candidate_metadata.setdefault("organism", metadata.get("organism"))
-        candidate_metadata.setdefault("organism_display_name", get_organism_display_name(candidate_metadata.get("organism") or metadata.get("organism")))
         return UnifiedDatasetCandidate(
             source="geo",
             accession_or_project=normalized,
             display_title=title,
-            organism=str(candidate_metadata.get("organism") or metadata.get("organism") or "未记录"),
+            organism=str(metadata.get("organism") or "Homo sapiens"),
             disease="",
             tissue="",
-            data_modality=str(candidate_metadata.get("experiment_type") or metadata.get("data_modality") or "GEO dataset"),
-            sample_count=candidate_metadata.get("sample_count") or metadata.get("sample_count") or "待确认",
+            data_modality=str(metadata.get("data_modality") or "GEO dataset"),
+            sample_count=metadata.get("sample_count") or "待确认",
             has_expression_matrix=False,
             has_sample_metadata=False,
             has_clinical_metadata=False,
-            has_platform_annotation=bool(candidate_metadata.get("platform_accessions") or metadata.get("platform_accessions")),
+            has_platform_annotation=bool(metadata.get("platform_accessions")),
             recommended_analyses=("data_recognition",),
             download_plan_available=True,
             score=55,
             warnings=tuple(str(item) for item in metadata.get("warnings", []) or []) if isinstance(metadata.get("warnings"), list) else (),
-            source_specific_metadata=candidate_metadata,
+            source_specific_metadata={
+                "title_en": title,
+                "platform_accessions": metadata.get("platform_accessions", []),
+                "geo_url": metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={normalized}",
+                "query_used": metadata.get("query_used") or normalized,
+                "match_reason": metadata.get("match_reason") or "待处理数据集记录",
+            },
         )
     return None
 
@@ -6161,6 +6253,15 @@ def _ready_chinese_source_count(project_root: Path | None) -> int:
     return len(ready_keys)
 
 
+def _download_list_row_count(project_root: Path | None, rows: Iterable[RegisteredSourceRow]) -> int:
+    count = 0
+    for row in rows:
+        status = _current_registered_row_status(project_root, row)
+        if row.strategy == "plan_only" or "下载" in status or "清单" in status or "待补充" in status:
+            count += 1
+    return count
+
+
 def _candidate_record_status_text(project_root: Path | None, source: str, accession_or_project: str) -> str:
     if project_root is None:
         return ""
@@ -6195,10 +6296,21 @@ def _candidate_has_pending_geo_assets(project_root: Path | None, accession_or_pr
     manifest = _candidate_geo_asset_manifest(project_root, accession_or_project)
     if not manifest:
         return False
+    selected_file_names: set[str] | None = None
+    if project_root is not None:
+        selection = load_gse_file_download_candidate_selection(project_root=project_root, accession=accession_or_project)
+        if selection:
+            selected_file_names = {
+                str(row.get("file_name") or "")
+                for row in selected_gse_file_download_candidates(selection)
+                if str(row.get("file_name") or "")
+            }
     for asset in manifest.get("assets", []) or []:
         if not isinstance(asset, dict):
             continue
         if asset.get("asset_type") not in {"series_matrix", "supplementary_file"}:
+            continue
+        if selected_file_names is not None and str(asset.get("file_name") or "") not in selected_file_names:
             continue
         if asset.get("status") != "downloaded" and asset.get("remote_url"):
             return True
@@ -6517,7 +6629,7 @@ def _infer_local_data_type(paths: list[Path], *, source_type: str = "local_impor
 def _selected_source_summary_text(summary: SelectedSourceSummary, *, compact: bool) -> str:
     path = _compact_path(summary.absolute_path) if compact else (summary.absolute_path or "未记录来源位置")
     registration_state = "需要补充数据" if summary.storage_policy == "plan_only" else "已完成"
-    next_step = "可以点击“继续：数据识别”。" if summary.storage_policy != "plan_only" else "请导入已下载的 Series Matrix 文件，或等待后续版本接入自动下载。"
+    next_step = "可以点击“继续：数据检查与准备”。" if summary.storage_policy != "plan_only" else "请导入已下载的 Series Matrix 文件，或等待后续版本接入自动下载。"
     lines = [
         f"当前数据：{summary.source_label}",
         f"来源内容：{summary.display_name}",
@@ -6588,13 +6700,7 @@ def _geo_fetcher_class() -> type[Any] | None:
         return None
 
 
-def _fetch_geo_accession_metadata(gse_id: str, project_root: Path | None = None) -> str:
-    try:
-        detail = GeoDetailEnrichmentService(timeout=12).enrich(gse_id, project_root=project_root)
-        if detail.summary or detail.overall_design or detail.sample_preview:
-            return _geo_accession_metadata_text_from_detail(detail.to_candidate_metadata())
-    except Exception:
-        pass
+def _fetch_geo_accession_metadata(gse_id: str) -> str:
     fetcher_cls = _geo_fetcher_class()
     if fetcher_cls is None:
         return (
@@ -6620,25 +6726,6 @@ def _fetch_geo_accession_metadata(gse_id: str, project_root: Path | None = None)
             "当前不会自动下载数据。请确认编号，或导入已下载的 Series Matrix 文件。"
         )
     info = matched[0]
-    try:
-        detail = build_geo_detail_metadata(
-            info.gse_id,
-            existing_metadata={
-                "title_en": info.title_en,
-                "summary_en": info.summary_en,
-                "overall_design_en": info.overall_design_en,
-                "organism": info.organism,
-                "experiment_type": info.experiment_type,
-                "sample_count": info.sample_count,
-                "platform_accessions": [item.strip() for item in str(info.platform or "").replace(";", ",").split(",") if item.strip().startswith("GPL")],
-                "platform_titles": [info.platform] if info.platform and not str(info.platform).strip().startswith("GPL") else [],
-                "pmid": info.pubmed_id,
-            },
-        )
-        if detail.summary or detail.overall_design:
-            return _geo_accession_metadata_text_from_detail(detail.to_candidate_metadata())
-    except Exception:
-        pass
     return "\n".join(
         [
             f"当前 GSE 编号：{info.gse_id}",
@@ -6653,89 +6740,34 @@ def _fetch_geo_accession_metadata(gse_id: str, project_root: Path | None = None)
     )
 
 
-def _geo_accession_metadata_text_from_detail(metadata: dict[str, object]) -> str:
-    accession = str(metadata.get("accession") or metadata.get("gse_id") or metadata.get("query_used") or "")
-    platforms = metadata.get("platforms")
-    platform_text = _geo_platform_summary(metadata)
-    supplementary = metadata.get("supplementary_files")
-    raw_files = []
-    if isinstance(supplementary, list):
-        raw_files = [str(item.get("file_name") or "") for item in supplementary if isinstance(item, dict) and str(item.get("file_name") or "").strip()]
-    return "\n".join(
-        [
-            f"当前 GSE 编号：{accession}",
-            "处理状态：已获取 GEO 详情元数据；当前不会自动下载数据。",
-            f"数据集标题：{metadata.get('title_en') or '未记录'}",
-            f"样本数：{metadata.get('sample_count') or '未记录'}",
-            f"平台信息：{platform_text or '未记录'}",
-            f"物种：{metadata.get('organism') or '未记录'}",
-            f"实验类型：{metadata.get('experiment_type') or '未记录'}",
-            f"公开日期：{metadata.get('public_date') or '未记录'}",
-            f"PMID：{metadata.get('pmid') or '未记录'}",
-            f"BioProject：{metadata.get('bioproject') or '未记录'}",
-            f"SuperSeries：{metadata.get('superseries') or '未记录'}",
-            f"可用文件：{', '.join(raw_files) if raw_files else '请在 GEO 页面或已下载 Series Matrix 中确认。'}",
-            "下一步建议：查看样本标题和 characteristics 后确认分组，再下载或导入数据。",
-            "GEO detail metadata JSON：" + json.dumps(metadata, ensure_ascii=False, separators=(",", ":")),
-        ]
-    )
-
-
 def _gse_preview_from_metadata(gse_id: str, metadata_text: str) -> GseDatasetPreview:
     values: dict[str, str] = {}
-    detail_metadata: dict[str, object] | None = None
     for line in metadata_text.splitlines():
         if "：" not in line:
             continue
         key, value = line.split("：", 1)
         values[key.strip()] = value.strip() or "未记录"
-        if key.strip() == "GEO detail metadata JSON":
-            try:
-                payload = json.loads(value)
-            except json.JSONDecodeError:
-                payload = None
-            if isinstance(payload, dict):
-                detail_metadata = payload
     return GseDatasetPreview(
         gse_id=values.get("当前 GSE 编号", gse_id),
         title=values.get("数据集标题", "未记录"),
         platform=values.get("平台信息", "未记录"),
         sample_count=values.get("样本数", "未记录"),
-        organism=values.get("物种", "未记录"),
         status="尚未添加",
-        detail_metadata=detail_metadata,
     )
 
 
 def _geo_candidate_from_gse_preview(preview: GseDatasetPreview) -> UnifiedDatasetCandidate:
     platform = preview.platform if preview.platform != "未记录" else ""
     platforms = [item.strip() for item in platform.replace(";", ",").split(",") if item.strip()]
-    detail_metadata = dict(preview.detail_metadata or {})
-    if detail_metadata:
-        raw_platforms = detail_metadata.get("platform_accessions")
-        platforms = [str(item) for item in raw_platforms if str(item).strip()] if isinstance(raw_platforms, list) else platforms
-    display_title = str(detail_metadata.get("title_en") or preview.title)
-    organism = str(detail_metadata.get("organism") or ("" if preview.organism == "未记录" else preview.organism))
-    experiment_type = str(detail_metadata.get("experiment_type") or "GEO dataset")
-    sample_count = detail_metadata.get("sample_count") or preview.sample_count
-    metadata = {
-        "title_en": display_title,
-        "platform_accessions": platforms,
-        "geo_url": f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={preview.gse_id}",
-        "match_reason": "GSE 编号精确匹配",
-        "query_used": preview.gse_id,
-    }
-    metadata.update(detail_metadata)
-    metadata.setdefault("organism_display_name", get_organism_display_name(organism))
     return UnifiedDatasetCandidate(
         source="geo",
         accession_or_project=preview.gse_id,
-        display_title=display_title,
-        organism=organism,
+        display_title=preview.title,
+        organism="Homo sapiens",
         disease="",
         tissue="",
-        data_modality=experiment_type,
-        sample_count=sample_count,
+        data_modality="GEO dataset",
+        sample_count=preview.sample_count,
         has_expression_matrix=False,
         has_sample_metadata=False,
         has_clinical_metadata=False,
@@ -6744,7 +6776,13 @@ def _geo_candidate_from_gse_preview(preview: GseDatasetPreview) -> UnifiedDatase
         download_plan_available=True,
         score=55,
         warnings=(),
-        source_specific_metadata=metadata,
+        source_specific_metadata={
+            "title_en": preview.title,
+            "platform_accessions": platforms,
+            "geo_url": f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={preview.gse_id}",
+            "match_reason": "GSE 编号精确匹配",
+            "query_used": preview.gse_id,
+        },
     )
 
 
@@ -6969,17 +7007,17 @@ def _candidate_match_reason(candidate: UnifiedDatasetCandidate) -> str:
 
 def _geo_detail_basic_rows(candidate: UnifiedDatasetCandidate) -> list[list[object]]:
     metadata = candidate.source_specific_metadata
-    platforms = _geo_platform_summary(metadata) or "未记录"
-    organism_display = str(metadata.get("organism_display_name") or get_organism_display_name(candidate.organism))
+    platforms = metadata.get("platform_accessions") or metadata.get("platform_titles") or "未记录"
+    if isinstance(platforms, list):
+        platforms = ", ".join(str(item) for item in platforms) or "未记录"
     return [
         ["GSE 编号", candidate.accession_or_project],
         ["英文标题", candidate.display_title or "未记录"],
         ["数据来源", "GEO"],
-        ["物种", organism_display],
+        ["物种", candidate.organism or "未记录"],
         ["样本数", candidate.sample_count or "待确认"],
-        ["平台", platforms],
-        ["数据类型", _geo_data_type_display(metadata.get("experiment_type") or candidate.data_modality)],
-        ["公开日期", metadata.get("public_date") or metadata.get("status") or "未记录"],
+        ["平台 GPL", platforms],
+        ["数据类型", candidate.data_modality or "待确认"],
         ["匹配原因", _candidate_match_reason(candidate)],
         ["分析潜力", _geo_candidate_potential_text(None, candidate)],
         ["GEO 链接", metadata.get("geo_url") or f"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={candidate.accession_or_project}"],
@@ -6988,73 +7026,17 @@ def _geo_detail_basic_rows(candidate: UnifiedDatasetCandidate) -> list[list[obje
 
 def _geo_detail_english_text(candidate: UnifiedDatasetCandidate) -> str:
     metadata = candidate.source_specific_metadata
-    summary = str(metadata.get("summary_en") or "").strip()
-    design = str(metadata.get("overall_design_en") or metadata.get("sample_summary") or "").strip()
-    contributors = metadata.get("contributors")
-    if isinstance(contributors, list):
-        contributor_text = ", ".join(str(item) for item in contributors[:8] if str(item).strip()) or "未记录"
-    else:
-        contributor_text = str(contributors or "未记录")
     lines = [
-        f"English title：{metadata.get('title_en') or candidate.display_title or '未记录'}",
-        f"Summary：{summary or '未记录'}",
-        f"Overall design：{design or '未记录'}",
+        f"英文标题：{metadata.get('title_en') or candidate.display_title or '未记录'}",
+        f"英文摘要：{metadata.get('summary_en') or '未记录'}",
+        f"样本信息：{metadata.get('sample_summary') or metadata.get('overall_design_en') or '未记录'}",
         f"样本数量：{candidate.sample_count or '待确认'}",
-        f"平台信息：{_geo_platform_summary(metadata) or '未记录'}",
-        f"实验类型：{metadata.get('experiment_type') or candidate.data_modality or '待确认'}",
-        f"Contributors：{contributor_text}",
-        f"Citation：{metadata.get('citation') or '未记录'}",
-        f"PMID：{metadata.get('pmid') or metadata.get('pubmed_id') or '未记录'}",
-        f"BioProject：{metadata.get('bioproject') or '未记录'}",
-        f"SuperSeries：{metadata.get('superseries') or '未记录'}",
+        f"平台信息：{metadata.get('platform_titles') or metadata.get('platform_accessions') or '未记录'}",
+        f"实验类型：{candidate.data_modality or '待确认'}",
         f"原始关键词：{metadata.get('query_used') or metadata.get('executed_query') or '未记录'}",
-        f"GEO link：{metadata.get('geo_url') or '未记录'}",
+        f"PMID/DOI/GEO link：{metadata.get('pmid') or metadata.get('doi') or metadata.get('geo_url') or '未记录'}",
     ]
     return "\n".join(lines)
-
-
-def _geo_platform_summary(metadata: dict[str, object]) -> str:
-    platforms = metadata.get("platforms")
-    if isinstance(platforms, list) and platforms:
-        rows: list[str] = []
-        for item in platforms:
-            if not isinstance(item, dict):
-                continue
-            accession = str(item.get("accession") or "").strip()
-            title = str(item.get("title") or "").strip()
-            if accession and title:
-                rows.append(f"{accession}，{title}")
-            elif accession:
-                rows.append(accession)
-            elif title:
-                rows.append(title)
-        if rows:
-            return "；".join(rows)
-    accessions = metadata.get("platform_accessions")
-    titles = metadata.get("platform_titles")
-    if isinstance(accessions, list):
-        rows = []
-        for index, accession in enumerate(accessions):
-            title = str(titles[index]) if isinstance(titles, list) and index < len(titles) else ""
-            rows.append(f"{accession}，{title}" if title else str(accession))
-        return "；".join(row for row in rows if row.strip())
-    if isinstance(titles, list):
-        return "；".join(str(item) for item in titles if str(item).strip())
-    return str(accessions or titles or "").strip()
-
-
-def _geo_data_type_display(value: object) -> str:
-    text = str(value or "").strip()
-    if not text:
-        return "待确认"
-    lowered = text.lower()
-    if "array" in lowered or "microarray" in lowered:
-        return f"芯片表达谱（{text}）"
-    if "rna-seq" in lowered or "sequencing" in lowered:
-        return f"测序表达谱（{text}）"
-    if "single-cell" in lowered or "single cell" in lowered:
-        return f"单细胞数据（{text}）"
-    return text
 
 
 def _geo_candidate_potential_text(project_root: Path | None, candidate: UnifiedDatasetCandidate) -> str:
@@ -7109,7 +7091,7 @@ def _geo_recognition_report_for_accession(project_root: Path | None, accession: 
     return None
 
 
-def _geo_profile_user_display(profile: GeoDatasetProfile, candidate: UnifiedDatasetCandidate | None = None) -> str:
+def _geo_profile_user_display(profile: GeoDatasetProfile) -> str:
     lines = [
         f"分析潜力：{profile.analysis_potential_level}",
         f"判断依据：{profile.analysis_potential_reason or '结构化元数据不足，需人工判断。'}",
@@ -7149,8 +7131,6 @@ def _geo_profile_user_display(profile: GeoDatasetProfile, candidate: UnifiedData
                 )
     else:
         lines.append("候选比较组：未识别到明确候选比较组。")
-    if candidate is not None:
-        lines.extend(_geo_detail_sample_platform_download_lines(candidate))
     lines.extend(_geo_download_recommendation_lines(profile))
     if profile.supplementary_file_preview:
         lines.append("补充文件预览：")
@@ -7166,69 +7146,6 @@ def _geo_profile_user_display(profile: GeoDatasetProfile, candidate: UnifiedData
     warnings = [warning for warning in profile.warnings if warning]
     if warnings:
         lines.append("提示：" + "；".join(warnings[:3]))
-    return "\n".join(lines)
-
-
-def _geo_detail_sample_platform_download_lines(candidate: UnifiedDatasetCandidate) -> list[str]:
-    metadata = candidate.source_specific_metadata
-    lines: list[str] = []
-    platforms = _geo_platform_summary(metadata)
-    if platforms:
-        lines.append(f"平台：{platforms}")
-    sample_preview = metadata.get("sample_preview")
-    if isinstance(sample_preview, list) and sample_preview:
-        lines.append("样本预览：")
-        for item in sample_preview[:20]:
-            if not isinstance(item, dict):
-                continue
-            accession = str(item.get("accession") or "")
-            title = str(item.get("title") or "")
-            chars = item.get("characteristics")
-            char_text = ""
-            if isinstance(chars, list) and chars:
-                char_text = "；" + "；".join(str(value) for value in chars[:2] if str(value).strip())
-            lines.append(f"- {accession}：{title}{char_text}".rstrip("："))
-        if len(sample_preview) > 20:
-            lines.append(f"- 另有 {len(sample_preview) - 20} 个样本。")
-    supplementary = metadata.get("supplementary_files")
-    if isinstance(supplementary, list) and supplementary:
-        lines.append("下载文件：")
-        for item in supplementary[:8]:
-            if not isinstance(item, dict):
-                continue
-            name = str(item.get("file_name") or "")
-            size = str(item.get("file_size") or "")
-            file_type = str(item.get("file_type") or "")
-            detail = "，".join(value for value in (file_type, size) if value)
-            lines.append(f"- {name}：{detail or 'GEO supplementary file'}")
-    download_links = metadata.get("download_links")
-    if isinstance(download_links, list) and download_links:
-        labels = [str(item.get("label") or "") for item in download_links if isinstance(item, dict) and str(item.get("label") or "").strip()]
-        if labels:
-            lines.append("处理数据：可查看 " + " / ".join(dict.fromkeys(labels)))
-    title_and_design = " ".join(str(metadata.get(key) or "") for key in ("title_en", "summary_en", "overall_design_en")).lower()
-    if "cd4" in title_and_design and ("anti-cd3" in title_and_design or "activation" in title_and_design):
-        lines.append("分析建议：该数据包含 CD4+ T 细胞静息和多种刺激条件；后续分组识别需要读取 GSM title/characteristics，不能只凭 GSE 标题判断。")
-    return lines
-
-
-def _geo_sample_overview_for_summary(metadata: dict[str, object]) -> str:
-    sample_preview = metadata.get("sample_preview")
-    if not isinstance(sample_preview, list):
-        return ""
-    lines: list[str] = []
-    for item in sample_preview[:20]:
-        if not isinstance(item, dict):
-            continue
-        accession = str(item.get("accession") or "")
-        title = str(item.get("title") or "")
-        characteristics = item.get("characteristics")
-        chars = ""
-        if isinstance(characteristics, list) and characteristics:
-            chars = "; ".join(str(value) for value in characteristics[:3] if str(value).strip())
-        line = " | ".join(value for value in (accession, title, chars) if value)
-        if line:
-            lines.append(line)
     return "\n".join(lines)
 
 
@@ -7433,6 +7350,23 @@ def _geo_asset_detail_text(project_root: Path | None, accession: str) -> str:
     )
 
 
+def _geo_download_candidate_use_text(row: dict[str, object]) -> str:
+    use = str(row.get("recognition_use") or "")
+    if use == "expression_matrix_candidate":
+        return "适合进入 expression/metadata recognition；需标准化确认。"
+    if use == "sample_metadata_candidate":
+        return "适合进入样本注释 recognition；分组仍需用户确认。"
+    if use == "platform_annotation_candidate":
+        return "平台注释候选；不承诺已完成 ID 映射。"
+    if use == "imported_deg_candidate":
+        return "外部 DEG 结果候选；不是软件计算结果。"
+    if use == "raw_heavy_risk_file":
+        return "RAW/heavy 风险文件；不进入默认下载。"
+    if use == "geo_metadata_container":
+        return "GEO 元数据容器；用于样本/平台元数据识别。"
+    return "下载后需先识别，再进入标准化确认。"
+
+
 def _asset_type_status(assets: list[dict[str, object]], asset_type: str) -> str:
     matches = [asset for asset in assets if asset.get("asset_type") == asset_type]
     if any(asset.get("status") == "downloaded" for asset in matches):
@@ -7510,7 +7444,7 @@ def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, o
             str(payload.get("brief_zh") or ""),
         ]
     )
-    input_text = "\n".join([text.title_en, text.summary_en, text.overall_design_en, text.sample_overview_en])
+    input_text = "\n".join([text.title_en, text.summary_en, text.overall_design_en])
     status = "suggested" if payload.get("status") == "completed" else "suggested"
     return create_ai_draft_record(
         module="bioinformatics",
@@ -7696,10 +7630,10 @@ def _candidate_detail_text(candidate: UnifiedDatasetCandidate, project_root: Pat
 
 def _candidate_next_action_text(candidate: UnifiedDatasetCandidate, status: str) -> str:
     if "可进入识别" in status and "待确认" not in status and "待下载" not in status:
-        return "可进入数据识别。"
+        return "可进入数据检查。"
     if candidate.source == "geo":
         if "已发现补充文件" in status or "表达矩阵待确认" in status or "表达矩阵待下载" in status:
-            return "下载补充文件或 Series Matrix 后再进入数据识别。"
+            return "下载补充文件或 Series Matrix 后再进入数据检查与准备。"
         return "先下载并添加 GEO 元数据。"
     if candidate.source in {"tcga_gdc", "gtex"}:
         return "当前先生成计划来源，后续接入真实下载。"
@@ -7906,7 +7840,7 @@ def _acquisition_user_summary(summary: AcquisitionSummary | None, artifacts: dic
     record = artifacts.get("record")
     handoff = artifacts.get("handoff")
     file_count = len(summary.source_files or summary.registered_files or summary.copied_files or summary.referenced_paths)
-    next_step = "可以继续进入数据识别。" if summary.strategy != "plan_only" and file_count else "当前只是获取计划或缺少实际文件，请补充本地文件后再继续。"
+    next_step = "可以继续进入数据检查与准备。" if summary.strategy != "plan_only" and file_count else "当前只是获取计划或缺少实际文件，请补充本地文件后再继续。"
     warnings = "；".join(summary.warnings) if summary.warnings else "无"
     return "\n".join(
         [
@@ -7951,7 +7885,7 @@ def _supplement_hint_text(readiness: dict[str, object], matrix: dict[str, object
     missing = [_missing_input_label(item) for item in _missing_readiness_inputs(readiness, matrix)]
     if not missing:
         return "当前没有必须补充的信息。可以继续生成标准化数据。"
-    return "检测到缺失信息：" + "、".join(missing) + "。请在待办清单中处理后点击“重新检查”。"
+    return "检测到缺失信息：" + "、".join(missing) + "。请在待办清单中处理后点击“重新运行数据检查”。"
 
 
 def _readiness_overall_summary(readiness: dict[str, object], matrix: dict[str, object], missing: set[str]) -> str:
@@ -7972,7 +7906,7 @@ def _readiness_overall_summary(readiness: dict[str, object], matrix: dict[str, o
 def _readiness_recognized_inputs_text(readiness: dict[str, object]) -> str:
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
     labels = []
-    for key in ("expression_matrix", "sample_metadata", "clinical_metadata", "platform_annotation", "gene_annotation", "comparison_config", "gmt_gene_set"):
+    for key in ("expression_matrix", "sample_metadata", "clinical_metadata", "platform_annotation", "gene_annotation", "comparison_config"):
         if key == "expression_matrix" and available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
             labels.append("表达矩阵")
         elif key in available:
@@ -8019,9 +7953,7 @@ def _readiness_next_step_text(
         return "下一步建议：建议先设置比较组，以便进行差异表达分析；也可以先进入标准化，之后再补充分组信息。"
     if "sample_metadata" in missing:
         return "下一步建议：请补充样本信息；如果暂时只做表达矩阵清洗，也可以先进入标准化。"
-    if missing == {"gmt_gene_set"}:
-        return "下一步建议：GSEA 需要 GMT 基因集文件；不做 GSEA 时可暂时忽略。"
-    if "clinical_metadata" in missing and missing <= {"clinical_metadata", "gmt_gene_set"}:
+    if "clinical_metadata" in missing and missing <= {"clinical_metadata"}:
         return "下一步建议：临床信息只影响生存分析和临床变量关联；不做这些分析时可以先进入标准化。"
     if available:
         return "下一步建议：可以先进入标准化数据；后续再按分析目标补充待办项。"
@@ -8046,7 +7978,7 @@ def _readiness_default_warning_summary(readiness: dict[str, object], matrix: dic
 
 
 def _ordered_missing_inputs(missing: set[str]) -> list[str]:
-    order = ["expression_matrix", "sample_metadata", "comparison_config", "gmt_gene_set", "clinical_metadata"]
+    order = ["expression_matrix", "sample_metadata", "comparison_config", "clinical_metadata"]
     return [key for key in order if key in missing] + sorted(key for key in missing if key not in order)
 
 
@@ -8097,8 +8029,8 @@ def _analysis_suggested_action(row: dict[str, object], group_preview: dict[str, 
         return "确认比较组"
     if "comparison_config" in missing:
         return "设置比较组"
-    if "gmt_gene_set" in missing:
-        return "上传 GMT 文件，或暂不做 GSEA"
+    if "gsea_gene_set_selection" in missing:
+        return "选择 GSEA 基因集；不影响当前数据检查和 DEG preflight"
     if "clinical_metadata" in missing:
         return "上传临床信息，或暂不做相关分析"
     if row.get("can_run"):
@@ -8106,6 +8038,631 @@ def _analysis_suggested_action(row: dict[str, object], group_preview: dict[str, 
     if row.get("analysis_type") == "reporting":
         return "先生成分析结果"
     return "查看说明"
+
+
+def _deg_config_user_state(project_root: Path) -> dict[str, object]:
+    recognition = load_recognition_report(project_root) or {}
+    artifacts = load_standardization_artifacts(project_root)
+    registry = artifacts.get("registry")
+    assets = [item for item in (registry or {}).get("assets", []) or [] if isinstance(item, dict)] if isinstance(registry, dict) else []
+    expression_assets = [item for item in assets if str(item.get("asset_type") or "") in {"raw_count_matrix", "expression_matrix", "normalized_expression_matrix"}]
+    metadata_assets = [item for item in assets if str(item.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata"}]
+    imported_deg_assets = [item for item in assets if str(item.get("asset_type") or "") == "differential_result_table"]
+    imported_deg_detected = bool(imported_deg_assets or _deg_recognition_has_imported_result(recognition if isinstance(recognition, dict) else {}))
+    comparison_config = load_confirmed_comparison_config(project_root)
+    expression_samples = expression_samples_from_recognition_report(recognition if isinstance(recognition, dict) else {})
+    comparison_match = comparison_sample_match_status(comparison_config, expression_samples)
+    group_sizes = dict(getattr(comparison_config, "group_sizes", {}) or {}) if comparison_config is not None else {}
+    case_group = str(getattr(comparison_config, "case_group", "") or "")
+    control_group = str(getattr(comparison_config, "control_group", "") or "")
+    has_count = any(str(item.get("asset_type") or "") == "raw_count_matrix" for item in expression_assets)
+    has_normalized = any(str(item.get("asset_type") or "") == "normalized_expression_matrix" for item in expression_assets)
+    input_parts = [
+        f"表达矩阵 {len(expression_assets)} 个",
+        f"count matrix {'已找到' if has_count else '未确认'}",
+        f"normalized matrix {'已找到' if has_normalized else '未确认'}",
+        f"样本信息 {'已找到或可构建' if metadata_assets or comparison_config is not None else '未确认'}",
+    ]
+    if imported_deg_detected:
+        input_parts.append("检测到 imported DEG，但不作为重新计算输入")
+    if expression_samples:
+        input_parts.append(f"识别到样本列 {len(expression_samples)} 个")
+    expression_status = "已找到可校验表达矩阵" if expression_assets else "阻塞：缺 count matrix 或可用表达矩阵"
+    metadata_status = "已找到或可由分组构建" if metadata_assets or comparison_config is not None else "阻塞：缺 sample metadata"
+    if comparison_config is None:
+        comparison_status = "阻塞：缺分组设计"
+        comparison_summary = "比较设计：尚未确认 case/control 或用户比较。"
+        next_step = "下一步建议：返回标准化页，确认分组与比较设计。"
+    else:
+        match_label = _sample_match_user_label(str(comparison_match.get("sample_id_match_status") or "not_checked"))
+        comparison_status = f"已确认：{case_group or 'case'} vs {control_group or 'control'}"
+        comparison_summary = (
+            f"比较设计：{comparison_summary_text(comparison_config)}"
+            f"样本匹配：{match_label}；每组样本数：{_group_sizes_text(group_sizes) or '待确认'}。"
+        )
+        if not expression_assets:
+            next_step = "下一步建议：返回数据选择或标准化，补充可用表达矩阵。"
+        elif str(comparison_match.get("sample_id_match_status") or "") == "mismatch":
+            next_step = "下一步建议：修正样本名或重新确认分组与比较设计。"
+        else:
+            next_step = "下一步建议：生成 preflight 输入校验；通过后仍需后续真实执行器接入前审计。"
+    return {
+        "input_summary_zh": "当前分析输入：" + "；".join(input_parts) + "。",
+        "comparison_summary_zh": comparison_summary,
+        "expression_status_zh": expression_status,
+        "metadata_status_zh": metadata_status,
+        "comparison_status_zh": comparison_status,
+        "next_step_zh": next_step,
+        "developer_diagnostics": {
+            "standardization_artifacts": artifacts,
+            "expression_asset_count": len(expression_assets),
+            "metadata_asset_count": len(metadata_assets),
+            "imported_deg_detected": imported_deg_detected,
+            "comparison_match": comparison_match,
+        },
+    }
+
+
+def _deg_check_label(check_id: str) -> str:
+    return {
+        "expression_matrix": "表达矩阵",
+        "sample_columns": "样本列",
+        "sample_metadata": "样本信息",
+        "group_design": "分组设计",
+        "comparison_design": "比较设计",
+        "case_control_non_empty": "case/control 样本",
+        "sample_name_match": "样本名匹配",
+        "numeric_matrix": "数值矩阵",
+    }.get(check_id, check_id or "检查项")
+
+
+def _deg_preflight_check_status_label(status: str) -> str:
+    return {
+        "passed": "通过",
+        "blocked": "阻塞",
+        "warning": "警告",
+        "draft": "草稿",
+    }.get(status, status or "未知")
+
+
+def _sample_match_user_label(status: str) -> str:
+    return {
+        "matched": "完全匹配",
+        "partial": "部分匹配",
+        "mismatch": "不匹配",
+        "not_checked": "未完成校验",
+    }.get(status, status or "未完成校验")
+
+
+def _group_sizes_text(group_sizes: dict[str, object]) -> str:
+    return "、".join(f"{group} {count} 个" for group, count in group_sizes.items() if str(group))
+
+
+def _deg_recognition_has_imported_result(recognition: dict[str, object]) -> bool:
+    for item in recognition.get("files", []) or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("recognized_type") or "") == "differential_result_table":
+            return True
+        if any(str(role) == "differential_result_table" for role in item.get("recognized_roles", []) or []):
+            return True
+        for asset in item.get("detected_assets", []) or []:
+            if isinstance(asset, dict) and str(asset.get("asset_type") or asset.get("role") or "") == "differential_result_table":
+                return True
+    return False
+
+
+def _analysis_task_user_rows(
+    tasks: list[dict[str, object]],
+    project_root: Path | None,
+    result_entries: list[dict[str, object]],
+    task_records: list[dict[str, object]],
+) -> list[list[object]]:
+    imported_deg = _analysis_imported_deg_detected(project_root)
+    rows: list[list[object]] = []
+    for task in tasks:
+        task_type = str(task.get("task_type") or "")
+        label = _analysis_task_display_label(task)
+        status = _analysis_task_user_status(task, task_records, result_entries, imported_deg)
+        required = _analysis_required_inputs_text(task_type)
+        missing = _analysis_task_missing_text(task)
+        next_step = _analysis_task_next_action(task, task_records, result_entries, imported_deg)
+        rows.append([label, status, required, missing, next_step])
+    return rows
+
+
+def _analysis_task_display_label(task: dict[str, object]) -> str:
+    task_type = str(task.get("task_type") or "")
+    if task_type == "reporting":
+        return "结果浏览与报告"
+    return str(task.get("label") or task_type or "未命名任务")
+
+
+def _analysis_task_user_status(
+    task: dict[str, object],
+    task_records: list[dict[str, object]],
+    result_entries: list[dict[str, object]],
+    imported_deg: bool,
+) -> str:
+    task_type = str(task.get("task_type") or "")
+    if task_type == "differential_expression":
+        if imported_deg and not task.get("can_run"):
+            return "已有导入结果"
+        if _analysis_has_result(result_entries, "differential_expression"):
+            return "已有测试级结果"
+        if task.get("can_run"):
+            return "可配置"
+        missing = {_normalize_missing_input(str(item)) for item in task.get("missing_inputs", []) or []}
+        if "comparison_config" in missing:
+            return "需要确认分组"
+        return "需要补充信息"
+    if task_type == "reporting":
+        if result_entries:
+            return "已有结果可浏览"
+        return "需要先有结果"
+    if task_type == "tcga_gtex_joint":
+        return "测试级 / 暂不可用"
+    if _analysis_has_task_record(task_records, task_type):
+        return "已有配置草稿"
+    if task.get("can_run"):
+        return "可配置"
+    return "暂不可用" if not task.get("missing_inputs") else "需要补充信息"
+
+
+def _analysis_required_inputs_text(task_type: str) -> str:
+    return {
+        "differential_expression": "表达矩阵、样本信息、分组设计",
+        "enrichment": "表达矩阵或差异分析结果",
+        "gsea": "表达矩阵、GSEA 基因集选择",
+        "correlation": "表达矩阵、目标基因",
+        "survival": "表达矩阵、临床/生存信息",
+        "clinical_association": "临床信息",
+        "tcga_gtex_joint": "TCGA 数据、GTEx 数据、批次校正方案",
+        "reporting": "真实结果或明确标记的导入/测试级结果",
+    }.get(task_type, "按任务配置补充输入")
+
+
+def _analysis_task_missing_text(task: dict[str, object]) -> str:
+    missing = [str(item) for item in task.get("missing_inputs", []) or []]
+    if not missing:
+        return "无"
+    labels = []
+    for item in missing:
+        if "analysis_capability_matrix" in item:
+            labels.append("请先完成数据准备检查")
+        else:
+            labels.append(_missing_input_label(item))
+    return "、".join(dict.fromkeys(labels))
+
+
+def _analysis_task_next_action(
+    task: dict[str, object],
+    task_records: list[dict[str, object]],
+    result_entries: list[dict[str, object]],
+    imported_deg: bool,
+) -> str:
+    task_type = str(task.get("task_type") or "")
+    missing = {_normalize_missing_input(str(item)) for item in task.get("missing_inputs", []) or []}
+    if task_type == "differential_expression":
+        if imported_deg and not task.get("can_run"):
+            return "当前为导入表格中的已有差异分析结果，不是本软件重新计算；可进入结果浏览或补充表达矩阵与分组。"
+        if _analysis_has_result(result_entries, "differential_expression"):
+            return "进入结果浏览；这些结果需按结果状态区分测试级或导入来源。"
+        if "comparison_config" in missing:
+            return "请先确认分组与比较设计。"
+        if "expression_matrix" in missing:
+            return "请返回数据选择或数据识别补充表达矩阵。"
+        if task.get("can_run"):
+            return "进入差异分析配置与 preflight；当前只做配置和输入校验，未执行真实分析。"
+        return "补齐缺失输入后再配置差异分析。"
+    if task_type == "enrichment":
+        return "需要差异分析结果或基因列表；不要生成假富集结果。"
+    if task_type == "gsea":
+        return "先在 GSEA 基因集资源管理器选择本地资源；未选择只阻断 GSEA preflight / execution。"
+    if task_type == "correlation":
+        return "确认目标基因和样本数量后再配置。"
+    if task_type == "survival":
+        return "补充临床/生存信息后再配置。"
+    if task_type == "clinical_association":
+        return "补充临床信息后再配置。"
+    if task_type == "tcga_gtex_joint":
+        return "当前仅测试级准备，后续需正式批次校正方案。"
+    if task_type == "reporting":
+        if result_entries:
+            return "进入结果浏览，确认结果状态后再生成报告。"
+        return "先生成或导入明确标记的结果。"
+    if _analysis_has_task_record(task_records, task_type):
+        return "查看任务记录或继续补充参数。"
+    return "查看缺失输入并返回标准化页面补充。"
+
+
+def _analysis_task_input_summary(tasks: list[dict[str, object]]) -> str:
+    diff = next((item for item in tasks if item.get("task_type") == "differential_expression"), None)
+    if not isinstance(diff, dict):
+        return "核心输入：尚未生成分析任务中心。"
+    missing = _analysis_task_missing_text(diff)
+    if diff.get("can_run"):
+        return "核心输入：已具备表达矩阵、样本信息和分组设计，可进入 DEG 配置与 preflight。"
+    return f"核心输入：差异表达分析仍缺少 {missing}。"
+
+
+def _analysis_task_result_summary(entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:
+    if entries:
+        imported_count = sum(1 for item in entries if _analysis_entry_semantics(item) == "imported result")
+        testing_count = sum(1 for item in entries if _analysis_entry_semantics(item) == "testing-level")
+        real_count = sum(1 for item in entries if _analysis_entry_semantics(item) == "real computed result")
+        parts = [f"结果 {len(entries)} 个"]
+        if imported_count:
+            parts.append(f"导入结果 {imported_count} 个")
+        if testing_count:
+            parts.append(f"测试级结果 {testing_count} 个")
+        if real_count:
+            parts.append(f"真实计算结果 {real_count} 个")
+        return "结果状态：" + "；".join(parts) + "。"
+    if imported_deg:
+        return "结果状态：识别到导入差异分析表格；这不是本软件重新计算的 DEG。"
+    if records:
+        return f"结果状态：已有 {len(records)} 个配置草稿，尚未产生结果。"
+    return "结果状态：暂无结果。"
+
+
+def _analysis_task_next_step(tasks: list[dict[str, object]], entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:
+    diff = next((item for item in tasks if item.get("task_type") == "differential_expression"), {})
+    if entries:
+        return "下一步建议：进入结果浏览，确认每个结果是导入、测试级还是真实计算。"
+    if imported_deg:
+        return "下一步建议：进入结果浏览或补充原始表达矩阵与分组；导入 DEG 不等于本软件计算结果。"
+    if isinstance(diff, dict) and diff.get("can_run"):
+        return "下一步建议：进入差异分析配置与 preflight；当前不会执行真实 DEG。"
+    if records:
+        return "下一步建议：继续补充任务参数或返回标准化页确认输入。"
+    return "下一步建议：返回数据标准化或确认分组与比较设计。"
+
+
+def _analysis_has_task_record(records: list[dict[str, object]], task_type: str) -> bool:
+    return any(str(item.get("task_type") or "") == task_type for item in records)
+
+
+def _analysis_has_result(entries: list[dict[str, object]], analysis_type: str) -> bool:
+    return any(str(item.get("analysis_type") or "") == analysis_type for item in entries)
+
+
+def _analysis_entry_semantics(entry: dict[str, object]) -> str:
+    explicit = str(entry.get("result_semantics") or entry.get("execution_level") or entry.get("status") or "").lower()
+    if "dry" in explicit or "preflight" in explicit:
+        return "dry-run"
+    if "configured" in explicit or "not_run" in explicit or "not run" in explicit:
+        return "configured-not-run"
+    if "import" in explicit or "导入" in explicit:
+        return "imported result"
+    if "real" in explicit or "computed" in explicit and "testing" not in explicit:
+        return "real computed result"
+    if "testing" in explicit or "preview" in explicit or "generated" in explicit:
+        return "testing-level"
+    return "testing-level"
+
+
+def _result_entries_for_display(project_root: Path | None, payload: dict[str, object]) -> list[dict[str, object]]:
+    entries = [dict(item) for item in payload.get("entries", []) or [] if isinstance(item, dict)]
+    if project_root is None:
+        return entries
+    seen_paths = {str(item.get("path") or item.get("file_path") or "") for item in entries if str(item.get("path") or item.get("file_path") or "")}
+    recognition = load_recognition_report(project_root)
+    if isinstance(recognition, dict):
+        for item in recognition.get("files", []) or []:
+            if not isinstance(item, dict) or str(item.get("recognized_type") or "") != "differential_result_table":
+                continue
+            path_text = str(item.get("original_path") or item.get("route_path") or "")
+            if path_text and path_text in seen_paths:
+                continue
+            entries.append(
+                {
+                    "result_id": f"recognition-imported-deg-{len(entries) + 1}",
+                    "result_name": f"导入差异分析表格：{item.get('file_name') or '未命名表格'}",
+                    "result_type": "导入结果",
+                    "analysis_type": "differential_expression",
+                    "file_type": "table",
+                    "path": path_text,
+                    "source_label": "用户导入 / 外部差异分析结果",
+                    "status": "imported",
+                    "result_semantics": "imported result",
+                    "report_candidate": True,
+                    "report_usage_label": "可进入报告草稿，必须标明导入来源",
+                    "generated_at": str(item.get("generated_at") or ""),
+                    "short_description": "用户导入的外部 DEG 表；需要确认列映射后用于报告草稿。",
+                    "display_action": "查看详情",
+                    "warning": "导入表格中的已有差异分析结果，不是本软件重新计算。",
+                    "_display_source": "recognition_imported_deg",
+                }
+            )
+            if path_text:
+                seen_paths.add(path_text)
+    return entries
+
+
+def _results_user_rows(project_root: Path | None, entries: list[dict[str, object]], records: list[dict[str, object]]) -> list[list[object]]:
+    rows = [
+        [
+            _result_display_name(entry),
+            _result_type_label(entry),
+            _result_source_label(entry),
+            _result_status_label(entry),
+            _result_report_label(entry),
+            _result_generated_at_label(entry),
+            _result_short_description_label(entry),
+            str(entry.get("display_action") or "查看详情"),
+        ]
+        for entry in entries
+    ]
+    for record in records:
+        rows.append(
+            [
+                str(record.get("label") or "分析任务配置"),
+                "配置草稿",
+                _task_record_source_label(record),
+                _task_record_status_label(record),
+                "否",
+                str(record.get("created_at") or ""),
+                "任务已配置但尚未执行。",
+                "已配置但尚未运行；请返回分析任务中心继续配置或满足执行条件。",
+            ]
+        )
+    return rows
+
+
+def _result_display_name(entry: dict[str, object]) -> str:
+    return str(entry.get("result_name") or entry.get("name") or "未命名结果")
+
+
+def _result_type_label(entry: dict[str, object]) -> str:
+    explicit = str(entry.get("result_type") or "")
+    if explicit:
+        return explicit
+    analysis_type = str(entry.get("analysis_type") or "")
+    semantics = _analysis_entry_semantics(entry)
+    if semantics == "imported result":
+        return "导入结果"
+    if semantics == "testing-level":
+        return "测试级结果"
+    if semantics == "configured-not-run":
+        return "配置草稿"
+    if semantics == "real computed result":
+        return "真实计算结果"
+    if "preflight" in analysis_type:
+        return "输入检查"
+    return "分析结果"
+
+
+def _result_source_label(entry: dict[str, object]) -> str:
+    semantics = _analysis_entry_semantics(entry)
+    if semantics == "imported result":
+        return "导入表格中的已有差异分析结果，不是本软件重新计算。"
+    if semantics == "testing-level":
+        return "测试级 / 开发者预览结果，不等于正式科研结果。"
+    if semantics == "dry-run":
+        return "流程记录 / dry-run，未执行真实分析。"
+    if semantics == "configured-not-run":
+        return "已配置，尚未运行。"
+    if semantics == "real computed result":
+        return "真实计算结果。"
+    return "结果来源待确认。"
+
+
+def _result_status_label(entry: dict[str, object]) -> str:
+    semantics = _analysis_entry_semantics(entry)
+    warning = str(entry.get("warning") or "")
+    if "文件缺失" in warning:
+        return "文件缺失"
+    return {
+        "imported result": "导入结果",
+        "testing-level": "测试级",
+        "dry-run": "dry-run / 未执行",
+        "configured-not-run": "已配置未运行",
+        "real computed result": "真实计算结果",
+    }.get(semantics, "待确认")
+
+
+def _result_openable_label(project_root: Path | None, entry: dict[str, object]) -> str:
+    path_text = str(entry.get("path") or entry.get("file_path") or "")
+    if not path_text:
+        return "否"
+    path = Path(path_text).expanduser()
+    if project_root is not None and not path.is_absolute():
+        path = project_root / path
+    return "是" if path.exists() else "否，文件缺失"
+
+
+def _result_report_label(entry: dict[str, object]) -> str:
+    semantics = _analysis_entry_semantics(entry)
+    if semantics == "real computed result":
+        return "可"
+    if semantics == "imported result":
+        return "可，需标明导入"
+    if semantics == "testing-level":
+        return "可，需标明测试级"
+    return "否"
+
+
+def _result_generated_at_label(entry: dict[str, object]) -> str:
+    return str(entry.get("generated_at") or entry.get("created_at") or "未记录")
+
+
+def _result_short_description_label(entry: dict[str, object]) -> str:
+    text = str(entry.get("short_description") or "").strip()
+    if text:
+        return text
+    return _result_next_step_label(entry)
+
+
+def _result_next_step_label(entry: dict[str, object]) -> str:
+    semantics = _analysis_entry_semantics(entry)
+    if semantics == "imported result":
+        return "可查看或进入报告草稿，但必须标注为导入结果。"
+    if semantics == "testing-level":
+        return "可用于内部测试报告草稿，不可写成正式科研结论。"
+    if semantics == "dry-run":
+        return "请先完成配置并满足执行条件。"
+    if semantics == "configured-not-run":
+        return "请返回分析任务中心继续配置或运行前检查。"
+    if semantics == "real computed result":
+        return "可进入报告草稿；仍需人工核对。"
+    return "先确认结果来源。"
+
+
+def _task_record_source_label(record: dict[str, object]) -> str:
+    execution = str(record.get("execution") or "")
+    if execution in {"not_run", "not run", ""}:
+        return "配置草稿 / 未执行真实分析。"
+    if "dry" in execution:
+        return "流程记录 / dry-run，未执行真实分析。"
+    return "任务记录，结果状态需人工确认。"
+
+
+def _task_record_status_label(record: dict[str, object]) -> str:
+    execution = str(record.get("execution") or "")
+    status = str(record.get("status") or "")
+    if execution in {"not_run", "not run", ""} or status == "created":
+        return "已配置，尚未运行"
+    if "dry" in execution:
+        return "dry-run / 未执行"
+    return "任务记录"
+
+
+def _results_page_source_summary(entries: list[dict[str, object]], records: list[dict[str, object]]) -> str:
+    if not entries and not records:
+        return "当前结果：暂无结果或任务记录。"
+    counts = _result_semantics_counts(entries)
+    parts = [f"可查看结果 {len(entries)} 个"]
+    if counts.get("imported result"):
+        parts.append(f"导入结果 {counts['imported result']} 个")
+    if counts.get("testing-level"):
+        parts.append(f"测试级结果 {counts['testing-level']} 个")
+    if counts.get("dry-run"):
+        parts.append(f"dry-run {counts['dry-run']} 个")
+    if counts.get("real computed result"):
+        parts.append(f"真实计算结果 {counts['real computed result']} 个")
+    if records:
+        parts.append(f"配置草稿 {len(records)} 个")
+    return "当前结果：" + "；".join(parts) + "。"
+
+
+def _results_page_report_summary(entries: list[dict[str, object]], records: list[dict[str, object]]) -> str:
+    reportable = [entry for entry in entries if _analysis_entry_semantics(entry) in {"imported result", "testing-level", "real computed result"}]
+    if reportable:
+        return f"报告适用性：{len(reportable)} 个结果可进入报告草稿，但必须保留导入/测试级/真实计算标签。"
+    if records:
+        return "报告适用性：当前只有配置草稿或 dry-run，不适合生成结果报告。"
+    return "报告适用性：暂无可用于报告草稿的结果。"
+
+
+def _results_page_next_step(entries: list[dict[str, object]], records: list[dict[str, object]]) -> str:
+    if entries:
+        return "下一步建议：查看报告草稿，并在报告中保留每个结果的来源标签。"
+    if records:
+        return "下一步建议：返回分析任务中心继续配置；当前记录未产生真实结果。"
+    return "下一步建议：返回分析任务中心，创建配置草稿或导入明确标记的结果。"
+
+
+def _result_semantics_counts(entries: list[dict[str, object]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for entry in entries:
+        key = _analysis_entry_semantics(entry)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _report_draft_status_text(markdown: str, manifest: object) -> str:
+    if markdown:
+        return "报告状态：已生成 Markdown 报告草稿；本阶段不导出 Word 或 PDF。"
+    if manifest:
+        return "报告状态：找到报告 manifest，但尚未读取到 Markdown 草稿。"
+    return "报告状态：尚未生成报告草稿。"
+
+
+def _report_result_semantics_text(entries: list[dict[str, object]], records: list[dict[str, object]]) -> str:
+    if not entries and not records:
+        return "结果语义：暂无结果。"
+    counts = _result_semantics_counts(entries)
+    parts = []
+    for key, label in (
+        ("imported result", "导入结果"),
+        ("testing-level", "测试级结果"),
+        ("dry-run", "dry-run"),
+        ("configured-not-run", "已配置未运行"),
+        ("real computed result", "真实计算结果"),
+    ):
+        if counts.get(key):
+            parts.append(f"{label} {counts[key]} 个")
+    if records:
+        parts.append(f"配置草稿 {len(records)} 个")
+    return "结果语义：" + ("；".join(parts) if parts else "待确认") + "。"
+
+
+def _report_next_step_text(markdown: str, entries: list[dict[str, object]], records: list[dict[str, object]]) -> str:
+    if markdown and entries:
+        return "下一步建议：人工核对报告草稿，确认导入、测试级和未运行内容没有被写成正式结论。"
+    if entries:
+        return "下一步建议：生成报告草稿，并保留每个结果的来源标签。"
+    if records:
+        return "下一步建议：当前只有配置草稿，先返回分析任务中心或结果浏览。"
+    return "下一步建议：先返回结果浏览或分析任务中心。"
+
+
+def _report_section_rows(project_root: Path | None, entries: list[dict[str, object]], records: list[dict[str, object]], has_markdown: bool) -> list[list[object]]:
+    acquisition = load_latest_acquisition_summary(project_root) if project_root is not None else None
+    recognition = load_recognition_report(project_root) if project_root is not None else {}
+    readiness = load_readiness_artifacts(project_root).get("readiness_report") if project_root is not None else {}
+    standardization = load_standardization_artifacts(project_root).get("analysis_ready_manifest") if project_root is not None else {}
+    comparison = load_confirmed_comparison_config(project_root) if project_root is not None else None
+    recognition_files = len(recognition.get("files", []) or []) if isinstance(recognition, dict) else 0
+    result_summary = _report_result_semantics_text(entries, records).replace("结果语义：", "")
+    return [
+        ["项目信息", "可写入草稿", "当前项目元信息", "Developer Preview / internal beta；不是临床或投稿级报告。"],
+        ["数据来源", "已记录" if acquisition else "缺失", acquisition.source_label if acquisition else "尚未记录数据来源", "缺失时请返回数据选择。"],
+        ["数据识别", "已生成" if recognition_files else "缺失", f"识别文件 {recognition_files} 个", "识别结果只描述文件类型，不代表分析结论。"],
+        ["数据标准化", "已生成" if isinstance(standardization, dict) and standardization.get("exists") else "缺失", "标准化数据状态", "当前仍是资产注册与轻量校验，不等于正式 normalization。"],
+        ["分组与比较设计", "已确认" if comparison is not None else "待确认", comparison_summary_text(comparison) if comparison is not None else "尚未确认比较设计", "缺分组时不能把 DEG 写成已执行。"],
+        ["分析任务状态", f"配置草稿 {len(records)} 个" if records else "暂无配置草稿", "analysis task records", "配置草稿或 dry-run 不等于真实结果。"],
+        ["已有结果", f"结果 {len(entries)} 个" if entries else "暂无结果", result_summary, "导入和测试级结果必须在报告中保留标签。"],
+        ["报告草稿", "已生成" if has_markdown else "尚未生成", "Markdown 报告草稿", "不得自动生成医学结论或临床建议。"],
+    ]
+
+
+def _report_user_preview_text(markdown: str, entries: list[dict[str, object]], records: list[dict[str, object]]) -> str:
+    lines = [
+        "报告草稿预览",
+        _report_result_semantics_text(entries, records),
+        "说明：报告草稿仅用于内部测试和人工核对，不代表 production-ready、clinical-grade 或 submission-grade 输出。",
+        "报告应包含：项目信息、数据来源、数据识别、数据标准化、分组与比较设计、分析任务状态、已有结果、注意事项。",
+    ]
+    if not markdown:
+        lines.append("当前尚未生成 Markdown 报告草稿。")
+    else:
+        lines.append("以下为中文 Markdown 报告草稿预览。")
+        lines.append("")
+        lines.append(markdown)
+    if any(_analysis_entry_semantics(entry) == "imported result" for entry in entries):
+        lines.append("导入结果必须写明来自外部表格，不是本软件重新计算。")
+    if any(_analysis_entry_semantics(entry) == "testing-level" for entry in entries):
+        lines.append("测试级结果只能作为 Developer Preview / 内部测试材料。")
+    if records:
+        lines.append("配置草稿或 dry-run 记录不应写成真实分析结论。")
+    return "\n".join(lines)
+
+
+def _analysis_imported_deg_detected(project_root: Path | None) -> bool:
+    if project_root is None:
+        return False
+    recognition = load_recognition_report(project_root)
+    if isinstance(recognition, dict):
+        for item in recognition.get("files", []) or []:
+            if isinstance(item, dict) and str(item.get("recognized_type") or "") == "differential_result_table":
+                return True
+    result_index = load_result_index(project_root)
+    for entry in result_index.get("entries", []) or []:
+        if isinstance(entry, dict) and str(entry.get("analysis_type") or "") == "differential_expression" and _analysis_entry_semantics(entry) == "imported result":
+            return True
+    return False
 
 
 def _project_group_preview(project_root: Path | None) -> dict[str, object]:
@@ -8126,29 +8683,22 @@ def _group_preview_has_candidate(preview: dict[str, object] | None) -> bool:
 
 def _group_preview_user_summary(preview: dict[str, object]) -> str:
     if not preview:
-        return "\n".join(
-            [
-                "样本数：0",
-                "候选分组：未识别",
-                "分组数量：0",
-                "分组置信度：低",
-                "建议：可以继续进入标准化；不能直接进入差异分析，需在标准化阶段确认分组。",
-            ]
-        )
+        return "尚未生成样本与分组预览。"
     status = str(preview.get("status") or "")
     if status == "confirmed_comparison_exists":
-        advice = "建议：已存在正式比较组设置，可在标准化后继续分析。"
+        status_line = "状态：已存在正式比较组设置。"
     elif _group_preview_has_candidate(preview):
-        advice = "建议：已生成候选分组；进入标准化后请确认正式比较组。"
+        status_line = "状态：已生成候选分组，正式比较组需由你确认。"
     else:
         reason = str(preview.get("missing_group_reason") or "未识别到明确分组，请在下一步手动设置比较组。")
         return "\n".join(
             [
                 f"样本数：{int(preview.get('sample_count') or 0)}",
-                "候选分组：未识别",
+                "识别到的候选分组：无",
                 "分组数量：0 组",
-                "分组置信度：低",
-                f"建议：可以继续进入标准化；不能直接进入差异分析，需在标准化阶段确认分组。{reason}",
+                "置信度：低",
+                f"状态说明：{reason}",
+                "这是系统根据样本信息生成的分组预览，正式比较组需由你确认。",
             ]
         )
     group_sizes = preview.get("group_sizes") if isinstance(preview.get("group_sizes"), dict) else {}
@@ -8157,11 +8707,12 @@ def _group_preview_user_summary(preview: dict[str, object]) -> str:
     return "\n".join(
         [
             f"样本数：{int(preview.get('sample_count') or 0)}",
-            f"候选分组：{fields}",
+            f"识别到的候选分组：{fields}",
             f"分组数量：{int(preview.get('group_count') or 0)} 组",
             f"每组样本数：{size_text}",
-            f"分组置信度：{_group_preview_confidence_zh(str(preview.get('confidence') or 'low'))}",
-            advice,
+            f"置信度：{_group_preview_confidence_zh(str(preview.get('confidence') or 'low'))}",
+            status_line,
+            "这是系统根据样本信息生成的分组预览，正式比较组需由你确认。",
         ]
     )
 
@@ -8203,7 +8754,7 @@ def _missing_readiness_inputs(readiness: dict[str, object], matrix: dict[str, ob
     for row in rows:
         for item in row.get("missing_inputs", []) or []:
             normalized = _normalize_missing_input(str(item))
-            if normalized in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config", "gmt_gene_set"}:
+            if normalized in {"sample_metadata", "clinical_metadata", "expression_matrix", "comparison_config"}:
                 missing.add(normalized)
     for warning in readiness.get("warnings", []) or []:
         text = str(warning)
@@ -8237,6 +8788,7 @@ def _normalize_missing_input(value: str) -> str:
         "gmt_gene_set": "gmt_gene_set",
         "gmt 基因集": "gmt_gene_set",
         "基因集": "gmt_gene_set",
+        "gsea_gene_set_selection": "gsea_gene_set_selection",
         "comparison": "comparison_config",
         "comparison_config": "comparison_config",
         "contrast": "comparison_config",
@@ -8254,6 +8806,7 @@ def _missing_input_label(value: str) -> str:
         "expression_matrix": "表达矩阵",
         "comparison_config": "比较分组",
         "gmt_gene_set": "GMT 基因集",
+        "gsea_gene_set_selection": "GSEA 基因集选择",
         "platform_annotation": "平台注释",
         "gene_annotation": "基因注释",
     }.get(normalized, "其他缺失资产")
@@ -8265,9 +8818,117 @@ def _friendly_readiness_text(text: str) -> str:
         .replace("样本信息缺失。", "缺少样本信息")
         .replace("临床信息缺失。", "缺少临床信息")
         .replace("comparison_config", "比较分组")
-        .replace("gmt_gene_set", "GMT 基因集")
+        .replace("gmt_gene_set", "GSEA 基因集")
+        .replace("gsea_gene_set_selection", "GSEA 基因集选择")
         .replace("。", "")
     )
+
+
+def _data_check_status_badge(item: dict[str, object]) -> str:
+    color = str(item.get("status_color") or "gray")
+    label = str(item.get("status_zh") or item.get("status") or "未检查")
+    prefix = {
+        "gray": "灰色",
+        "green": "绿色",
+        "yellow": "黄色",
+        "red": "红色",
+    }.get(color, "灰色")
+    return f"{prefix}：{label}"
+
+
+def _data_check_file_action(item: dict[str, object]) -> str:
+    color = str(item.get("status_color") or "gray")
+    recognized = str(item.get("recognized_type") or "")
+    if color == "gray":
+        return "运行数据检查"
+    if recognized == "differential_result_table":
+        return "作为导入结果查看"
+    if recognized == "raw_heavy_file" or color == "red":
+        return "排除或替换"
+    if color == "yellow":
+        return "确认用途 / 补充信息"
+    return "可进入标准化确认"
+
+
+def _dataset_readiness_user_rows(summary: dict[str, object]) -> list[list[str]]:
+    if not summary:
+        return [
+            ["表达矩阵", "未检查", "尚未运行数据检查。"],
+            ["样本 metadata", "未检查", "尚未运行数据检查。"],
+            ["GSEA 基因集", "未选择", "不影响当前数据检查、标准化准备或 DEG preflight。"],
+        ]
+    rows = [
+        ["可用 expression matrix", _yes_no(summary.get("has_expression_matrix")), "标准化确认的核心输入。"],
+        ["sample metadata", _yes_no(summary.get("has_sample_metadata")), "用于样本信息、分组候选和样本匹配。"],
+        ["group design / 推荐分组", _group_design_dataset_status(summary), "推荐分组必须由用户确认后才能写入 group design。"],
+        ["species 信息", _known_unknown(summary.get("species")), str(summary.get("species") or "unknown")],
+        ["gene ID 类型", _known_unknown(summary.get("gene_id_type")), str(summary.get("gene_id_type") or "unknown")],
+        ["platform annotation", _platform_annotation_dataset_status(summary), "probe_id 或 unknown ID 时需要平台注释确认映射。"],
+        ["imported DEG", "存在" if summary.get("imported_deg_present") else "未检测到", str(summary.get("imported_deg_note") or "imported DEG 不作为重新计算输入。")],
+        ["进入标准化确认", _yes_no(summary.get("can_enter_standardization_confirmation")), "数据检查完成后才进入标准化确认，不代表标准化已完成。"],
+        ["进入 DEG preflight", _yes_no(summary.get("can_enter_deg_preflight")), "需要表达矩阵、样本信息和已确认比较组。"],
+        ["GSEA 数据基础", _yes_no(summary.get("has_gsea_data_basis")), "GSEA gene set 未选择不阻断当前数据检查和 DEG preflight。"],
+    ]
+    return rows
+
+
+def _yes_no(value: object) -> str:
+    return "是" if bool(value) else "否"
+
+
+def _known_unknown(value: object) -> str:
+    text = str(value or "").strip()
+    return "已识别" if text and text != "unknown" else "待确认"
+
+
+def _group_design_dataset_status(summary: dict[str, object]) -> str:
+    if summary.get("has_group_design"):
+        return "已确认"
+    if summary.get("has_recommended_group"):
+        return "有推荐，待确认"
+    return "未检测到"
+
+
+def _platform_annotation_dataset_status(summary: dict[str, object]) -> str:
+    if not summary.get("needs_platform_annotation"):
+        return "非必须"
+    return "已提供" if summary.get("has_platform_annotation") else "需要确认"
+
+
+def _group_recommendation_detail_text(preview: dict[str, object]) -> str:
+    if not _group_preview_has_candidate(preview):
+        return _group_preview_user_summary(preview)
+    comparison_text = _comparison_config_text_from_group_preview(preview).strip().splitlines()
+    values = comparison_text[1].split("\t") if len(comparison_text) > 1 else ["case_vs_control", "", "case", "control"]
+    comparison_name = values[0] if len(values) > 0 else "case_vs_control"
+    case_group = values[2] if len(values) > 2 else "case"
+    control_group = values[3] if len(values) > 3 else "control"
+    group_sizes = preview.get("group_sizes") if isinstance(preview.get("group_sizes"), dict) else {}
+    assignments = preview.get("sample_group_assignments") if isinstance(preview.get("sample_group_assignments"), dict) else {}
+    case_samples = _group_sample_preview(assignments, case_group)
+    control_samples = _group_sample_preview(assignments, control_group)
+    field = str(preview.get("selected_preview_field") or "")
+    return "\n".join(
+        [
+            f"推荐分组：{case_group} vs {control_group}",
+            f"推荐比较名称：{comparison_name}",
+            f"Case：{case_group}，{int(group_sizes.get(case_group, 0) or 0)} 个样本",
+            f"Case 样本预览：{case_samples or '未记录'}",
+            f"Control：{control_group}，{int(group_sizes.get(control_group, 0) or 0)} 个样本",
+            f"Control 样本预览：{control_samples or '未记录'}",
+            f"依据字段：{evidence_field_label_zh(field) if field else '未记录'}",
+            f"置信度：{_group_preview_confidence_zh(str(preview.get('confidence') or 'low'))}",
+            "状态：需要用户确认；确认前不会写入正式 group design / standardization confirmation。",
+        ]
+    )
+
+
+def _group_sample_preview(assignments: dict[object, object], group: str) -> str:
+    samples = [str(sample) for sample, value in assignments.items() if str(value) == group]
+    preview = "、".join(samples[:5])
+    if len(samples) > 5:
+        preview = f"{preview} 等 {len(samples)} 个样本"
+    return preview
 
 
 def _template_text_for_missing_input(kind: str) -> str:
@@ -8295,300 +8956,6 @@ def _save_manual_supplement(project_root: Path, normalized: str, text: str) -> P
         metadata={"supplement_kind": normalized, "ui_stage": "UI-07", "manual_input": True},
     )
     return target
-
-
-def _standardization_status_message(assets: list[dict[str, object]], assets_generated: bool) -> str:
-    if not assets_generated:
-        return "尚未生成标准化资产。请确认输入与分组状态后生成。"
-    reminder_count = sum(1 for item in assets if str(item.get("warning") or "").strip())
-    return f"标准化结果已生成：{len(assets)} 项；提醒 {reminder_count} 条。"
-
-
-def _standardization_current_input_user_summary(project_root: Path, report: dict[str, object]) -> str:
-    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
-    current_run = next((run for run in list_recognition_runs(project_root) if run.get("is_current")), {})
-    if not files or not current_run:
-        return "尚未选择当前识别结果。\n请先完成数据识别。"
-    generated_at = _format_history_time(str(current_run.get("generated_at") or report.get("generated_at") or ""))
-    names = [str(item.get("file_name") or Path(str(item.get("original_path") or "")).name or "未命名文件") for item in files]
-    shown = "、".join(names[:3])
-    if len(names) > 3:
-        shown += f"；另有 {len(names) - 3} 个文件"
-    return "\n".join(
-        [
-            "已选择识别结果",
-            f"输入文件数量：{len(files)}",
-            f"输入文件：{shown}",
-            f"识别批次时间：{generated_at or '未记录'}",
-            f"内容摘要：{_standardization_content_summary(files)}",
-        ]
-    )
-
-
-def _standardization_input_detail_text(project_root: Path, report: dict[str, object]) -> str:
-    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
-    if not files:
-        return "暂无输入详情。"
-    lines = ["输入文件详情"]
-    for item in files:
-        path = str(item.get("original_path") or item.get("source_file") or item.get("file_name") or "")
-        lines.append(f"- {item.get('file_name') or Path(path).name or '未命名文件'}：{_compact_path(path, max_chars=72)}")
-    lines.append(f"项目位置：{_compact_path(str(project_root), max_chars=72)}")
-    return "\n".join(lines)
-
-
-def _standardization_content_summary(files: list[dict[str, object]]) -> str:
-    labels: list[str] = []
-    for item in files:
-        blocks = _content_blocks_by_type(item)
-        if "count_expression_matrix" in blocks:
-            labels.append("count 矩阵")
-        if "fpkm_expression_matrix" in blocks:
-            labels.append("FPKM")
-        if "tpm_expression_matrix" in blocks:
-            labels.append("TPM")
-        if "deg_comparisons" in blocks:
-            labels.append("差异结果")
-        if "gene_annotation" in blocks:
-            labels.append("基因注释")
-        if not blocks:
-            labels.append(_recognition_type_text(item))
-    return "、".join(dict.fromkeys(label for label in labels if label)) or "未识别明确内容"
-
-
-def _standardization_expression_user_summary(report: dict[str, object], assets: list[dict[str, object]]) -> str:
-    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
-    expression_assets = [item for item in assets if str(item.get("asset_type") or "") in {"count_matrix", "expression_matrix", "raw_count_matrix", "normalized_expression_matrix"}]
-    expression_available = bool(expression_assets) or _recognition_has_expression_asset(files)
-    if not expression_available:
-        return "表达矩阵：缺失\n请返回数据识别或数据来源页补充表达矩阵。"
-    matrix_types = _standardization_matrix_type_text(files, expression_assets)
-    primary = expression_assets[0] if expression_assets else _first_expression_record(files)
-    gene_id = str(primary.get("gene_id_type") or _standardization_profile_value(primary, "gene_id_type") or "")
-    species = str(primary.get("species") or _standardization_profile_value(primary, "species") or "未识别")
-    sample_count = _standardization_sample_count(files, expression_assets)
-    gene_count = int(primary.get("gene_count") or primary.get("feature_count") or 0)
-    gene_text = str(gene_count) if gene_count else "未记录"
-    return "\n".join(
-        [
-            "表达矩阵：可用",
-            f"矩阵类型：{matrix_types}",
-            f"基因 ID 类型：{_gene_id_type_label(gene_id)}",
-            f"物种：{species}",
-            f"数据规模：基因数 {gene_text}；样本数 {sample_count if sample_count else '未记录'}",
-        ]
-    )
-
-
-def _standardization_matrix_type_text(files: list[dict[str, object]], assets: list[dict[str, object]]) -> str:
-    labels: list[str] = []
-    for asset in assets:
-        value_type = str(asset.get("value_type") or "")
-        asset_type = str(asset.get("asset_type") or "")
-        if value_type:
-            labels.append(value_type.upper() if value_type != "count" else "count")
-        elif asset_type == "count_matrix":
-            labels.append("count")
-        elif asset_type == "normalized_expression_matrix":
-            labels.append("FPKM/TPM")
-        elif asset_type in {"expression_matrix", "raw_count_matrix"}:
-            labels.append("表达矩阵")
-    for item in files:
-        blocks = _content_blocks_by_type(item)
-        if "count_expression_matrix" in blocks:
-            labels.append("count")
-        if "fpkm_expression_matrix" in blocks:
-            labels.append("FPKM")
-        if "tpm_expression_matrix" in blocks:
-            labels.append("TPM")
-    return " / ".join(dict.fromkeys(label for label in labels if label)) or "表达矩阵"
-
-
-def _first_expression_record(files: list[dict[str, object]]) -> dict[str, object]:
-    return next((item for item in files if _recognition_has_expression_asset([item])), files[0] if files else {})
-
-
-def _standardization_profile_value(item: dict[str, object], key: str) -> object:
-    profile = item.get("content_profile") if isinstance(item.get("content_profile"), dict) else {}
-    return profile.get(key)
-
-
-def _standardization_sample_count(files: list[dict[str, object]], assets: list[dict[str, object]]) -> int:
-    values = [int(item.get("sample_count") or 0) for item in assets if int(item.get("sample_count") or 0) > 0]
-    for item in files:
-        for block in _content_blocks_by_type(item).values():
-            if str(block.get("block_type") or "") in {"count_expression_matrix", "fpkm_expression_matrix", "tpm_expression_matrix"}:
-                count = int(block.get("sample_count") or len(block.get("sample_columns", []) or []))
-                if count:
-                    values.append(count)
-    return max(values) if values else 0
-
-
-def _standardization_group_user_summary(project_root: Path, report: dict[str, object], assets: list[dict[str, object]]) -> str:
-    preview = report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}
-    confirmed = has_confirmed_group_comparison_design(project_root)
-    context = load_group_design_context(project_root) if assets else {}
-    groups = [item for item in context.get("sample_groups", []) or [] if isinstance(item, dict)] if context else []
-    sample_count = sum(int(item.get("sample_count") or 0) for item in groups) or int(preview.get("sample_count") or 0) or _standardization_sample_count([item for item in report.get("files", []) or [] if isinstance(item, dict)], assets)
-    group_sizes = {str(item.get("inferred_group_id") or item.get("user_group_name") or ""): int(item.get("sample_count") or 0) for item in groups if item.get("inferred_group_id") or item.get("user_group_name")}
-    if not group_sizes and isinstance(preview.get("group_sizes"), dict):
-        group_sizes = {str(key): int(value) for key, value in preview.get("group_sizes", {}).items()}
-    group_count = len(group_sizes) or int(preview.get("group_count") or 0)
-    group_text = "、".join(f"{key} {value}" for key, value in group_sizes.items()) if group_sizes else "未识别"
-    confidence = _group_preview_confidence_zh(str(preview.get("confidence") or "low"))
-    source = "人工确认" if confirmed else ("系统推断" if group_count else "未识别")
-    lines = [
-        f"样本数：{sample_count if sample_count else '未记录'}",
-        f"分组数量：{group_count if group_count else 0}",
-        f"每组样本数：{group_text}",
-        f"分组来源：{source}",
-        f"分组置信度：{confidence}",
-        f"是否人工确认：{'是' if confirmed else '否'}",
-    ]
-    if not confirmed and group_count < 2:
-        lines.append("尚未检测到明确分组。")
-    if not confirmed:
-        lines.append("分组信息未确认，可以进入分析任务中心查看任务，但不能直接启动 DEG 分析。请先确认分组与比较设计。")
-    return "\n".join(lines)
-
-
-def _standardization_status_values(
-    report: dict[str, object],
-    assets: list[dict[str, object]],
-    assets_generated: bool,
-    group_confirmed: bool,
-) -> list[tuple[str, str, str]]:
-    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
-    has_expression = _standardization_has_expression_asset(files, assets)
-    has_sample = any(str(asset.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata"} for asset in assets) or any(
-        "sample_metadata" in [str(role) for role in item.get("recognized_roles", []) or []] for item in files
-    )
-    has_annotation = any(str(asset.get("asset_type") or "") == "gene_annotation" for asset in assets) or any("gene_annotation" in _content_blocks_by_type(item) for item in files)
-    return [
-        ("expression", "表达矩阵", "可用" if has_expression else "缺失"),
-        ("sample_metadata", "样本信息表", "可用" if has_sample else "需补充"),
-        ("group_design", "分组设计", "已确认" if group_confirmed else "未确认"),
-        ("gene_annotation", "基因注释", "已识别" if has_annotation else "需确认"),
-        ("standardized_result", "标准化结果", "已生成" if assets_generated else "未生成"),
-    ]
-
-
-def _standardization_has_expression_asset(files: list[dict[str, object]], assets: list[dict[str, object]]) -> bool:
-    if any(str(asset.get("asset_type") or "") in {"count_matrix", "expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} for asset in assets):
-        return True
-    return _recognition_has_expression_asset(files)
-
-
-def _standardization_user_summary(registry: dict[str, object], manifest: dict[str, object]) -> str:
-    assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
-    ready_assets = [item for item in assets if item.get("analysis_ready")]
-    warnings = [str(item) for item in registry.get("warnings", []) or []] + [str(item) for item in manifest.get("warnings", []) or []]
-    usable = [str(item) for item in manifest.get("usable_analyses", []) or []]
-    missing = [str(item) for item in manifest.get("missing_assets", []) or []]
-    asset_types = {str(item.get("asset_type") or "") for item in assets}
-    lines: list[str] = []
-    if {"count_matrix", "normalized_expression_matrix", "deg_result_table", "gene_annotation"} <= asset_types:
-        lines.extend(
-            [
-                "检测到一个综合 RNA-seq 表。",
-                "系统已拆分为 count 矩阵、FPKM 矩阵、差异分析结果和基因注释。",
-                "标准化资产：count matrix、FPKM / normalized expression matrix、imported DEG result table、gene annotation、gene identifier metadata",
-                "提示：重新差异分析建议使用 count；表达展示、热图和相关性可使用 FPKM。",
-            ]
-        )
-    lines.extend(
-        [
-            f"注册资产：{len(assets)} 个",
-            f"analysis-ready 资产：{len(ready_assets)} 个",
-            f"可用于分析：{'、'.join(usable) if usable else '暂无'}",
-            f"缺失关键资产：{'、'.join(missing) if missing else '无'}",
-            f"warning：{'；'.join(dict.fromkeys(warnings)) if warnings else '无'}",
-            "说明：当前为资产注册和轻量校验，不等于正式 biological normalization。",
-        ]
-    )
-    return "\n".join(lines)
-
-
-def _asset_usage_text(asset: dict[str, object]) -> str:
-    recommended = [str(item) for item in asset.get("recommended_for", []) or [] if str(item)]
-    if recommended:
-        return "、".join(recommended)
-    return "后续分析输入" if asset.get("analysis_ready") else "待确认"
-
-
-def _asset_limitations_text(asset: dict[str, object]) -> str:
-    limitations = [str(item) for item in asset.get("limitations", []) or [] if str(item)]
-    return "；".join(limitations) if limitations else str(asset.get("warning") or "")
-
-
-def _asset_default_text(asset: dict[str, object], selection_by_type: dict[str, dict[str, object]]) -> str:
-    asset_id = str(asset.get("asset_id") or "")
-    group = selection_by_type.get(str(asset.get("asset_type") or ""), {})
-    if asset_id and asset_id == str(group.get("selected_asset_id") or ""):
-        return str(group.get("status_label") or selection_status_label(str(group.get("selection_state") or "")))
-    if group.get("selection_state") == "needs_selection":
-        return "候选"
-    return ""
-
-
-def _asset_selection_summary_text(context: dict[str, object]) -> str:
-    groups = [group for group in context.get("groups", []) or [] if isinstance(group, dict)]
-    if not groups:
-        return "默认资产选择：暂无可选择资产"
-    counts: dict[str, int] = {}
-    for group in groups:
-        state = str(group.get("selection_state") or "")
-        counts[state] = counts.get(state, 0) + 1
-    parts = []
-    for state in ("confirmed", "recommended_default", "needs_selection", "invalid"):
-        if counts.get(state):
-            parts.append(f"{selection_status_label(state)} {counts[state]} 类")
-    return "默认资产选择：" + "，".join(parts)
-
-
-def _group_design_context_summary(context: dict[str, object]) -> str:
-    has_count = bool(context.get("has_count_matrix"))
-    has_normalized = bool(context.get("has_normalized_expression_matrix"))
-    group_count = int(context.get("group_count") or 0)
-    imported_count = int(context.get("imported_deg_count") or 0)
-    warnings = [str(item) for item in context.get("warnings", []) or [] if str(item)]
-    matrix_text = "count matrix" if has_count else ("FPKM/TPM matrix" if has_normalized else "未检测到")
-    match = context.get("count_fpkm_sample_match")
-    match_text = ""
-    if match is True:
-        match_text = "Count 与 FPKM 样本匹配"
-    elif match is False:
-        match_text = "Count 与 FPKM 样本不完全一致，请检查。"
-    status = "已确认分组设计" if context.get("has_confirmed_design") else "尚未确认分组设计"
-    lines = [
-        f"当前数据来源：{'综合 RNA-seq 表' if (has_count and imported_count) else '当前标准化资产'}",
-        f"表达矩阵：{matrix_text}",
-        f"推断分组：{group_count} 组",
-        f"已有 DEG comparisons：{imported_count} 个",
-        f"物种：{context.get('species') or 'unknown'}",
-        f"状态：{status}",
-    ]
-    if match_text:
-        lines.append(match_text)
-    if has_count and not context.get("has_confirmed_design"):
-        lines.append("重新差异分析前，请先确认分组。")
-    if not has_count and has_normalized:
-        lines.append("当前仅检测到 FPKM/TPM 表达矩阵。可用于表达展示、热图和相关性；如需重新差异分析，请提供 count matrix 或确认适用方法。")
-    if not has_count and not has_normalized:
-        lines.append("未检测到可用于分组设计的表达矩阵。")
-    if imported_count:
-        lines.append("已有导入差异结果可直接用于结果浏览和富集分析；如需重新计算，请保存上方分组和比较设计。")
-    if warnings:
-        lines.append("提醒：" + "；".join(dict.fromkeys(warnings)))
-    return "\n".join(lines)
-
-
-def _format_confidence(value: object) -> str:
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return "未记录"
-    return f"{numeric * 100:.0f}%"
 
 
 def _standardization_candidate_list(candidates: dict[str, object], key: str) -> list[dict[str, object]]:
@@ -8644,7 +9011,7 @@ def _standardization_confirmation_rows(candidates: dict[str, object], confirmati
 
 def _standardization_candidate_row(label: str, item: dict[str, object], status: str) -> list[object]:
     warnings = [str(value) for value in item.get("warnings", []) or [] if str(value)]
-    fields: list[str] = []
+    fields = []
     if item.get("expression_value_type_candidate"):
         fields.append(f"表达值类型候选：{item.get('expression_value_type_candidate')}")
     if item.get("gene_id_type_candidate") or item.get("gene_id_type"):
@@ -8671,12 +9038,210 @@ def _standardization_candidate_row(label: str, item: dict[str, object], status: 
     ]
 
 
+def _standardization_user_summary(registry: dict[str, object], manifest: dict[str, object]) -> str:
+    assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
+    ready_assets = [item for item in assets if item.get("analysis_ready")]
+    warnings = [str(item) for item in registry.get("warnings", []) or []] + [str(item) for item in manifest.get("warnings", []) or []]
+    usable = [str(item) for item in manifest.get("usable_analyses", []) or []]
+    missing = [str(item) for item in manifest.get("missing_assets", []) or []]
+    return "\n".join(
+        [
+            f"注册资产：{len(assets)} 个",
+            f"analysis-ready 资产：{len(ready_assets)} 个",
+            f"可用于分析：{'、'.join(usable) if usable else '暂无'}",
+            f"缺失关键资产：{'、'.join(missing) if missing else '无'}",
+            f"warning：{'；'.join(dict.fromkeys(warnings)) if warnings else '无'}",
+            "说明：当前为资产注册和轻量校验，不等于正式 biological normalization。",
+        ]
+    )
+
+
+def _standardization_input_source_text(recognition: dict[str, object]) -> str:
+    files = [item for item in recognition.get("files", []) or [] if isinstance(item, dict)]
+    if not files:
+        return "数据来源：尚未读取到识别结果。"
+    names = [str(item.get("file_name") or Path(str(item.get("original_path") or "")).name or "未命名文件") for item in files[:3]]
+    suffix = f"等 {len(files)} 个文件" if len(files) > 3 else f"{len(files)} 个文件"
+    return f"数据来源：{ '、'.join(names) }（{suffix}）。"
+
+
+def _standardization_input_status_text(recognition: dict[str, object]) -> str:
+    files = [item for item in recognition.get("files", []) or [] if isinstance(item, dict)]
+    if not files:
+        return "识别状态：尚未完成数据识别。"
+    generated_at = str(recognition.get("generated_at") or "未记录")
+    warnings = [str(item) for item in recognition.get("warnings", []) or [] if str(item)]
+    warning_text = f"；提示 {len(warnings)} 条" if warnings else ""
+    return f"识别状态：已识别 {len(files)} 个文件；识别时间：{generated_at}{warning_text}。"
+
+
+def _standardization_input_summary_text(recognition: dict[str, object]) -> str:
+    files = [item for item in recognition.get("files", []) or [] if isinstance(item, dict)]
+    if not files:
+        return "内容摘要：请先返回数据识别页生成识别报告。"
+    counts = recognition.get("type_counts") if isinstance(recognition.get("type_counts"), dict) else {}
+    labels = []
+    for key, count in counts.items():
+        try:
+            numeric = int(count)
+        except (TypeError, ValueError):
+            numeric = 0
+        if numeric > 0:
+            labels.append(f"{TYPE_LABELS.get(str(key), str(key))} {numeric} 个")
+    return f"内容摘要：{'；'.join(labels) if labels else '已完成识别，类型仍需人工确认'}。"
+
+
+def _standardization_expression_status_text(assets: list[object], readiness: dict[str, object]) -> str:
+    available = {str(item) for item in readiness.get("available_inputs", []) or []}
+    expression_assets = [
+        item
+        for item in assets
+        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
+    ]
+    if expression_assets:
+        labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in expression_assets))
+        return f"表达矩阵：已整理为 BioMedPilot 内部标准格式 {len(expression_assets)} 项（{labels}）；未执行生物学 normalization。"
+    if available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+        return "表达矩阵：数据准备检查已识别到可用输入；请生成标准化数据。"
+    return "表达矩阵：未识别到可用于后续分析的矩阵，请返回数据识别或数据选择补充。"
+
+
+def _standardization_sample_status_text(assets: list[object], readiness: dict[str, object]) -> str:
+    available = {str(item) for item in readiness.get("available_inputs", []) or []}
+    sample_assets = [
+        item
+        for item in assets
+        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "tcga_sample_metadata", "gtex_sample_metadata", "tcga_clinical_metadata"}
+    ]
+    if sample_assets:
+        labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in sample_assets))
+        return f"样本信息：已识别到 {len(sample_assets)} 项（{labels}）；分组线索需要用户确认。"
+    if {"sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "tcga_sample_metadata", "gtex_sample_metadata", "tcga_clinical_metadata"} & available:
+        return "样本信息：数据准备检查已识别到样本或临床信息；请生成标准化数据。"
+    return "样本信息：未识别到明确样本表；可先确认是否只做表达矩阵预览。"
+
+
+def _standardization_group_status_text(project_root: Path, readiness: dict[str, object]) -> str:
+    comparison = load_confirmed_comparison_config(project_root)
+    if comparison is not None:
+        summary = comparison_summary_text(comparison)
+        match = readiness.get("comparison_sample_match") if isinstance(readiness.get("comparison_sample_match"), dict) else {}
+        matched = match.get("matched_sample_count") if isinstance(match, dict) else None
+        suffix = f"；已匹配样本 {matched} 个" if matched not in (None, "") else ""
+        return f"分组与比较设计：已确认，{summary}{suffix}。"
+    status = str(readiness.get("comparison_group_status") or "")
+    if status == "candidate_pending":
+        return "分组与比较设计：已检测到候选分组，待用户确认比较设计。"
+    if status == "no_group_detected":
+        return "分组与比较设计：尚未检测到明确分组，请确认样本信息或手动补充分组。"
+    return "分组与比较设计：待确认。"
+
+
+def _standardization_default_assets_text(assets: list[object]) -> str:
+    selected_assets = [item for item in assets if isinstance(item, dict) and item.get("default_selected")]
+    if not selected_assets:
+        ready_assets = [item for item in assets if isinstance(item, dict) and item.get("analysis_ready")]
+        if not ready_assets:
+            return "当前默认使用的数据：尚未生成可用于后续分析的数据。"
+        return "当前默认使用的数据：存在候选资产，但多候选时需要确认默认资产后才能生成稳定分析输入。"
+    labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in selected_assets[:5]))
+    suffix = f"等 {len(selected_assets)} 项" if len(selected_assets) > 5 else f"{len(selected_assets)} 项"
+    return f"当前默认使用的数据：{labels}（{suffix}）；已记录 selection state。"
+
+
+def _standardization_next_step_text(project_root: Path, assets: list[object], readiness: dict[str, object]) -> str:
+    recognition = load_recognition_report(project_root)
+    if not isinstance(recognition, dict) or not recognition.get("files"):
+        return "下一步建议：先返回数据识别页生成识别报告。"
+    if not assets:
+        return "下一步建议：点击“生成标准化数据”，把识别结果登记为后续分析可用的数据。"
+    available = {str(item) for item in readiness.get("available_inputs", []) or []}
+    if not available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+        return "下一步建议：返回数据识别或数据选择，补充表达矩阵。"
+    if load_confirmed_comparison_config(project_root) is None:
+        return "下一步建议：确认分组与比较设计，再进入分析任务中心。"
+    return "下一步建议：已具备核心输入，可继续到分析任务中心创建预览任务。"
+
+
+def _standardization_user_asset_rows(assets: list[object]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for item in assets:
+        if not isinstance(item, dict):
+            continue
+        analysis_ready = bool(item.get("analysis_ready"))
+        warning = str(item.get("warning") or "")
+        rows.append(
+            [
+                _standardization_asset_display_name(item),
+                _standardization_asset_status_text(item, warning),
+                "、".join(str(value) for value in item.get("consumable_by", []) or []) if analysis_ready else "否",
+                "有提示，请在开发者诊断中查看。" if warning else _standardization_asset_user_hint(str(item.get("asset_type") or "")),
+            ]
+        )
+    return rows
+
+
+def _standardization_asset_display_name(asset: dict[str, object]) -> str:
+    asset_type = str(asset.get("asset_type") or "")
+    label = str(asset.get("label_zh") or TYPE_LABELS.get(asset_type, "") or "")
+    if label:
+        return label
+    return {
+        "normalized_expression_matrix": "标准化表达矩阵",
+        "raw_count_matrix": "原始计数矩阵",
+        "phenotype_metadata": "样本表型信息",
+    }.get(asset_type, "其他数据")
+
+
+def _standardization_asset_user_hint(asset_type: str) -> str:
+    if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+        return "已整理为内部标准格式；未执行生物学 normalization。"
+    if asset_type in {"sample_metadata", "phenotype_metadata", "tcga_sample_metadata", "gtex_sample_metadata"}:
+        return "可用于整理样本信息和分组线索。"
+    if asset_type in {"clinical_metadata", "survival_metadata", "tcga_clinical_metadata"}:
+        return "可用于临床变量或生存相关分析准备。"
+    if asset_type == "differential_result_table":
+        return "用户导入结果；可用于浏览或富集输入，不可作为重新计算 DEG 输入。"
+    if asset_type == "gmt_gene_set":
+        return "可用于 GSEA 或富集分析准备。"
+    return "已登记为项目数据，是否用于分析仍需后续确认。"
+
+
+def _standardization_asset_status_text(item: dict[str, object], warning: str) -> str:
+    repository = str(item.get("repository") or "")
+    validation = str(item.get("validation_status") or "registered")
+    selected = "；默认资产" if item.get("default_selected") else ""
+    if warning:
+        return f"{repository}：{validation}{selected}"
+    return f"{repository}：已登记{selected}"
+
+
+def _format_confidence(value: object) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "未记录"
+    return f"{numeric * 100:.0f}%"
+
+
+def _recognition_status_reason(item: dict[str, object]) -> str:
+    status = str(item.get("standardization_status_zh") or "")
+    reason = str(item.get("reason") or "")
+    if not status:
+        roles = {str(role) for role in item.get("recognized_roles", []) or []}
+        primary = str(item.get("recognized_type") or "")
+        if primary in {"unknown", "raw_heavy_file"}:
+            status = "不能用于分析"
+        elif roles & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "clinical_metadata", "tcga_expression_matrix", "gtex_expression_matrix"}:
+            status = "可进入标准化"
+        elif roles & {"platform_annotation", "gene_annotation", "platform_reference_hint", "gmt_gene_set"}:
+            status = "仅作参考/注释"
+    return f"{status}：{reason}" if status and reason else (status or reason)
+
+
 def _recognition_type_text(item: dict[str, object]) -> str:
     primary = str(item.get("recognized_type") or "unknown")
     primary_label = str(item.get("recognized_type_zh") or TYPE_LABELS.get(primary, "未知文件"))
-    semantic_label = str(item.get("semantic_type_zh") or "")
-    if semantic_label:
-        return semantic_label
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role) and str(role) != primary]
     role_labels = [TYPE_LABELS.get(role, role) for role in roles if role != "unknown"]
     if primary == "geo_soft_container":
@@ -8698,257 +9263,14 @@ def _recognition_type_text(item: dict[str, object]) -> str:
     return f"{primary_label}（含：{'、'.join(role_labels)}）" if role_labels else primary_label
 
 
-def _recognition_asset_summary(files: list[dict[str, object]]) -> str:
-    if not files:
-        return ""
-    summaries = []
-    for item in files:
-        if item.get("semantic_type") == "rna_seq_integrated_result_table":
-            summaries.append(_integrated_rnaseq_asset_summary(item))
-        else:
-            label = _recognition_type_text(item)
-            name = str(item.get("file_name") or "未命名文件")
-            summaries.append(f"文件：{name}\n文件类型：{label}")
-    return "\n\n".join(summaries)
-
-
-def _integrated_rnaseq_asset_summary(item: dict[str, object]) -> str:
-    blocks = _content_blocks_by_type(item)
-    gene_block = blocks.get("gene_identifier", {})
-    count_block = blocks.get("count_expression_matrix", {})
-    fpkm_block = blocks.get("fpkm_expression_matrix", {})
-    deg_block = blocks.get("deg_comparisons", {})
-    annotation_block = blocks.get("gene_annotation", {})
-    count_sample_count = int(count_block.get("sample_count") or len(count_block.get("sample_columns", []) or []))
-    fpkm_sample_count = int(fpkm_block.get("sample_count") or len(fpkm_block.get("sample_columns", []) or []))
-    comparison_count = int(deg_block.get("complete_comparison_count") or deg_block.get("comparison_count") or len(deg_block.get("comparisons", []) or []))
-    gene_id_type = str(item.get("gene_id_type") or gene_block.get("gene_id_type") or "")
-    gene_prefix = _gene_id_prefix(gene_id_type, gene_block)
-    comparison_names = [str(comparison.get("comparison_name") or "") for comparison in deg_block.get("comparisons", []) or [] if isinstance(comparison, dict) and str(comparison.get("comparison_name") or "")]
-    annotation_fields = [str(field) for field in annotation_block.get("annotation_fields", []) or [] if str(field)]
-    group_text = _expression_group_summary(count_block)
-    comparison_preview = _preview_list(comparison_names, limit=4, more_label="比较")
-    annotation_preview = _preview_list(_preferred_annotation_fields(annotation_fields), limit=3, more_label="字段")
-    lines = [
-        "文件类型：RNA-seq 综合表达结果表",
-        "包含 count、FPKM、差异分析结果和基因注释。",
-        f"物种：{item.get('species') or gene_block.get('species') or '未识别'}",
-        f"基因 ID：{_gene_id_type_label(gene_id_type)}",
-        f"表达数据：count 矩阵 {count_sample_count} 列；FPKM 矩阵 {fpkm_sample_count} 列",
-        f"差异比较：{comparison_count} 个完整比较",
-        f"基因注释：{'已包含' if annotation_fields else '未识别'}",
-        "状态：可进入标准化",
-        "数据内容：",
-        f"基因标识：{gene_prefix} / {_gene_id_type_label(gene_id_type)}",
-        f"Count 矩阵：{count_sample_count} 列{group_text}",
-        f"FPKM 矩阵：{fpkm_sample_count} 列{_fpkm_match_text(fpkm_block)}",
-        f"差异比较：{comparison_preview or '未识别'}",
-        f"注释字段：{annotation_preview or '未识别'}",
-        "提醒：",
-        "检测到 count 与 FPKM。差异分析建议使用 count；表达展示可使用 FPKM。",
-    ]
-    if comparison_count:
-        lines.append("文件已包含差异分析结果，可用于结果浏览和富集分析；如需重新计算差异分析，请确认分组配置。")
-    if str(item.get("species_group") or gene_block.get("species_group") or "") == "mouse":
-        lines.append("该数据集为小鼠数据，适合动物模型分析、机制探索和方法验证，不应直接按人类临床队列解释。")
-    return "\n".join(lines)
-
-
-def _content_blocks_by_type(item: dict[str, object]) -> dict[str, dict[str, object]]:
-    blocks = item.get("content_blocks")
-    if not isinstance(blocks, list):
-        profile = item.get("content_profile")
-        blocks = profile.get("content_blocks") if isinstance(profile, dict) else []
-    result: dict[str, dict[str, object]] = {}
-    for block in blocks or []:
-        if isinstance(block, dict):
-            result[str(block.get("block_type") or "")] = block
-    return result
-
-
-def _gene_id_type_label(value: str) -> str:
-    return {
-        "ensembl_mouse_gene_id": "Ensembl mouse gene ID",
-        "ensembl_human_gene_id": "Ensembl human gene ID",
-        "ensembl_mouse_transcript_id": "Ensembl mouse transcript ID",
-        "ensembl_id": "Ensembl ID",
-    }.get(value, value or "未识别")
-
-
-def _gene_id_prefix(gene_id_type: str, gene_block: dict[str, object]) -> str:
-    examples = [str(value) for value in gene_block.get("example_values", []) or [] if str(value)]
-    if examples:
-        match = re.match(r"([A-Z]+)", examples[0])
-        if match:
-            return match.group(1)
-    return {
-        "ensembl_mouse_gene_id": "ENSMUSG",
-        "ensembl_human_gene_id": "ENSG",
-        "ensembl_mouse_transcript_id": "ENSMUST",
-    }.get(gene_id_type, "gene_id")
-
-
-def _expression_group_summary(block: dict[str, object]) -> str:
-    groups = [str(group) for group in block.get("inferred_groups", []) or [] if str(group)]
-    replicate_counts = block.get("replicate_count_by_group") if isinstance(block.get("replicate_count_by_group"), dict) else {}
-    if not groups:
-        return ""
-    counts = [int(value) for value in replicate_counts.values() if isinstance(value, (int, float))]
-    replicate_text = f"，每组约 {round(sum(counts) / len(counts))} 个重复" if counts else ""
-    return f"，{len(groups)} 组{replicate_text}"
-
-
-def _fpkm_match_text(block: dict[str, object]) -> str:
-    if block.get("matches_count_sample_ids") is True:
-        return "，与 count 样本匹配"
-    if block.get("matches_count_sample_ids") is False:
-        return "，与 count 样本不完全匹配"
-    return ""
-
-
-def _preview_list(values: list[str], *, limit: int, more_label: str) -> str:
-    clean = [value for value in values if value]
-    if not clean:
-        return ""
-    shown = "、".join(clean[:limit])
-    remaining = len(clean) - limit
-    return f"{shown}；另有 {remaining} 个{more_label}" if remaining > 0 else shown
-
-
-def _preferred_annotation_fields(fields: list[str]) -> list[str]:
-    preferred = ["gene_name", "gene_biotype", "gene_description", "tf_family"]
-    result = [field for field in preferred if field in fields]
-    result.extend(field for field in fields if field not in result)
-    return result
-
-
-def _analysis_task_group_summary(center: dict[str, object]) -> str:
-    capabilities = [item for item in center.get("capabilities", []) or [] if isinstance(item, dict)]
-    available = {
-        str(item.get("task_id") or ""): item
-        for item in capabilities
-        if item.get("status") in {"available", "ready_with_group_confirmation", "ready_with_threshold_selection", "configured_not_run", "skipped_dry_run"}
-    }
-    lines: list[str] = []
-    count_status = available.get("differential_expression_recompute", {}).get("status")
-    if count_status == "ready_with_group_confirmation":
-        count_group_title = "需要确认分组后运行"
-    elif count_status == "configured_not_run":
-        count_group_title = "DEG 任务已配置未运行"
-    elif count_status == "skipped_dry_run":
-        count_group_title = "DEG 任务记录已生成"
-    else:
-        count_group_title = "已确认分组后可运行"
-    groups = [
-        ("可直接使用已有结果", [("deg_result_browse", "查看差异基因结果"), ("deg_filtering", "DEG 筛选"), ("volcano_plot", "火山图"), ("enrichment_from_deg", "富集分析输入")]),
-        (count_group_title, [("differential_expression_recompute", "重新差异表达分析"), ("qc", "样本 QC"), ("normalization", "count 矩阵标准化")]),
-        ("表达数据探索", [("heatmap", "表达热图"), ("correlation", "样本相关性"), ("gene_expression_browse", "候选基因表达查看")]),
-        ("注释与报告", [("gene_annotation_display", "gene annotation 浏览"), ("protein_coding_filter", "protein-coding 筛选"), ("report_annotation", "报告注释")]),
-    ]
-    for title, tasks in groups:
-        labels = [label for task_id, label in tasks if task_id in available]
-        if labels:
-            lines.append(f"{title}：{'、'.join(labels)}")
-    count_capability = available.get("differential_expression_recompute")
-    if count_capability and count_capability.get("status") in {"ready_with_group_confirmation", "configured_not_run"}:
-        lines.append(str(count_capability.get("reason") or "检测到推断分组，请确认实验分组后重新差异分析。"))
-    mouse_capability = next((item for item in capabilities if item.get("task_id") == "human_cohort_integration" and item.get("status") == "not_available"), None)
-    if mouse_capability:
-        lines.append("小鼠数据：适合动物模型分析、机制探索和方法验证；不推荐人类队列整合。")
-    return "\n".join(lines) if lines else "尚未生成可用分析任务。"
-
-
-def _task_source_status_text(item: dict[str, object]) -> str:
-    source = str(item.get("source_asset_type") or "")
-    status = str(item.get("capability_status") or "")
-    source_label = {
-        "deg_result_table": "导入表格中的 DEG comparison",
-        "count_matrix": "count matrix",
-        "normalized_expression_matrix": "FPKM matrix",
-        "gene_annotation": "gene annotation",
-    }.get(source, source or "未识别来源资产")
-    status_label = {
-        "available": "可直接使用",
-        "ready_with_group_confirmation": "需要确认分组",
-        "ready_with_threshold_selection": "可用；需选择阈值",
-        "needs_asset_selection": "需要选择默认资产",
-        "configured_not_run": "已配置未运行",
-        "skipped_dry_run": "当前版本仅生成任务记录",
-        "planned": "已规划",
-        "not_available": "不可用",
-    }.get(status, status or "未知状态")
-    reason = "；".join(str(value) for value in item.get("warnings", []) or [] if str(value))
-    if reason:
-        return f"来源：{source_label}；状态：{status_label}；{reason}"
-    return f"来源：{source_label}；状态：{status_label}"
-
-
-def _analysis_task_run_row(run: dict[str, object]) -> list[object]:
-    source_assets = [item for item in run.get("source_assets", []) or [] if isinstance(item, dict)]
-    asset_text = f"{len(source_assets)} 个输入资产" if source_assets else "未记录"
-    comparisons = [item for item in run.get("comparisons", []) or [] if isinstance(item, dict)]
-    return [
-        run.get("created_at", ""),
-        run.get("task_type", ""),
-        "任务记录",
-        asset_text,
-        len(comparisons),
-        task_run_status_label(str(run.get("status") or "")),
-        "查看详情",
-    ]
-
-
-def _reportable_content_summary(result_index: dict[str, object]) -> str:
-    items = [item for item in result_index.get("items", []) or [] if isinstance(item, dict)]
-    if not items:
-        return "暂无可纳入报告的结果内容。尚未完成的 dry-run 任务不会被写成真实结果。"
-    imported = [item for item in items if item.get("item_type") == "imported_deg_result"]
-    task_runs = [item for item in items if item.get("item_type") == "analysis_task_run"]
-    completed = [item for item in items if item.get("item_type") == "completed_result"]
-    lines = ["可纳入报告的内容："]
-    if imported:
-        lines.append(f"- 导入表格中的已有差异分析结果：{len(imported)} 项")
-    if completed:
-        lines.append(f"- 已完成分析结果：{len(completed)} 项")
-    if task_runs:
-        dry_count = sum(1 for item in task_runs if item.get("status") == "skipped_dry_run")
-        suffix = f"，其中 {dry_count} 项为 dry-run 任务记录" if dry_count else ""
-        lines.append(f"- 尚未完成的任务记录：{len(task_runs)} 项{suffix}")
-        lines.append("  任务记录只保存输入、比较设计和参数，不代表 DEG 已完成。")
-    return "\n".join(lines)
-
-
-def _imported_deg_user_summary(view: dict[str, object], *, comparison_count: int = 0) -> str:
-    stats = view.get("statistics") if isinstance(view.get("statistics"), dict) else {}
-    thresholds = view.get("selected_thresholds") if isinstance(view.get("selected_thresholds"), dict) else {}
-    gene_lists = view.get("gene_lists") if isinstance(view.get("gene_lists"), dict) else {}
-    enrichment_species = str(view.get("enrichment_species") or "unknown")
-    species = str(view.get("species") or "")
-    species_text = f"{enrichment_species} / {species}" if species and species != enrichment_species else enrichment_species
-    lines = [
-        "当前结果来源：导入表格中的已有差异分析结果",
-        f"比较数量：{comparison_count}",
-        f"物种：{species or enrichment_species or 'unknown'}",
-        "可用于：DEG 浏览、筛选、火山图输入、富集分析输入",
-        "差异结果来源：导入表格中的已有结果",
-        f"当前比较：{view.get('comparison_name') or '未选择'}",
-        f"筛选阈值：padj < {thresholds.get('padj', 0.05)}；abs(log2FC) > {thresholds.get('abs_log2fc', 1.0)}",
-        f"统计：total genes {stats.get('total_genes', 0)}；significant genes {stats.get('significant_genes', 0)}；upregulated {stats.get('upregulated', 0)}；downregulated {stats.get('downregulated', 0)}",
-        f"富集物种：{species_text}",
-        f"Gene list：up genes {len(gene_lists.get('up_genes', []) or [])}；down genes {len(gene_lists.get('down_genes', []) or [])}；all significant genes {len(gene_lists.get('all_significant_genes', []) or [])}。优先使用 gene_name / gene symbol。",
-    ]
-    warnings = [str(item) for item in view.get("warnings", []) or [] if str(item)]
-    if warnings:
-        lines.append("提醒：" + "；".join(warnings))
-    if view.get("gene_id_type") and not any(gene_lists.get(key) for key in ("up_genes", "down_genes", "all_significant_genes")):
-        lines.append("若仅有 Ensembl ID，需要先做 ID 转换再进入富集分析。")
-    return "\n".join(lines)
-
-
 def _recognition_roles_tooltip(item: dict[str, object]) -> str:
     roles = [str(role) for role in item.get("recognized_roles", []) or [] if str(role)]
     assets = [asset for asset in item.get("detected_assets", []) or [] if isinstance(asset, dict)]
     lines = [f"主类型：{item.get('recognized_type_zh') or TYPE_LABELS.get(str(item.get('recognized_type') or 'unknown'), '未知文件')}"]
+    if item.get("standardization_status_zh"):
+        lines.append(f"标准化状态：{item.get('standardization_status_zh')}")
+    if item.get("next_action"):
+        lines.append(f"建议动作：{item.get('next_action')}")
     if str(item.get("recognized_type") or "") == "geo_soft_container":
         depth = _geo_soft_parser_depth_from_item(item)
         lines.append(f"SOFT 解析深度：{_geo_soft_parser_depth_label(depth)}")
@@ -9095,80 +9417,22 @@ def _filter_recognition_files(files: list[dict[str, object]], mode: str) -> list
     return files
 
 
-def _recognition_file_display_path(item: dict[str, object]) -> tuple[str, str]:
-    source_path = str(item.get("original_path") or item.get("input_path") or item.get("source_path") or "").strip()
-    if source_path:
-        return _compact_path(source_path, max_chars=54), source_path
-    file_name = str(item.get("file_name") or "未记录")
-    return file_name, file_name
-
-
-def _recognition_status_bar_summary(report: dict[str, object], files: list[dict[str, object]]) -> str:
-    file_count = len(files)
-    type_text = _recognition_type_brief(files)
-    expression_text = (
-        "表达矩阵已识别，可以继续进入数据准备与标准化"
-        if _recognition_has_expression_asset(files)
-        else "表达矩阵未识别，未识别到表达矩阵或原始计数矩阵"
-    )
-    preview = report.get("group_preview") if isinstance(report.get("group_preview"), dict) else {}
-    if _group_preview_has_candidate(preview) or str(preview.get("status") or "") == "confirmed_comparison_exists":
-        group_text = "分组信息已生成候选，需在标准化阶段确认。"
-    else:
-        group_text = "分组信息未识别，确认分组后才能进行 DEG 分析。"
-    return f"已识别 {file_count} 个文件：{type_text}；{expression_text}；{group_text}"
-
-
-def _recognition_type_brief(files: list[dict[str, object]]) -> str:
-    labels = []
-    for item in files:
-        label = _recognition_type_text(item)
-        if label and label not in labels:
-            labels.append(label)
-        if len(labels) >= 3:
-            break
-    if not labels:
-        return "暂无可识别类型"
-    remaining = len(files) - len(labels)
-    suffix = f"等 {len(files)} 类/文件" if remaining > 0 else ""
-    return "、".join(labels) + suffix
-
-
-def _recognition_has_expression_asset(files: list[dict[str, object]]) -> bool:
-    expression_types = {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"}
-    expression_blocks = {"count_expression_matrix", "fpkm_expression_matrix", "tpm_expression_matrix"}
-    for item in files:
-        if str(item.get("recognized_type") or "") in expression_types:
-            return True
-        roles = {str(role) for role in item.get("recognized_roles", []) or []}
-        if roles & expression_types:
-            return True
-        for block in _content_blocks_by_type(item):
-            if block in expression_blocks:
-                return True
-        if str(item.get("semantic_type") or "") == "rna_seq_integrated_result_table":
-            return True
-    return False
-
-
-def _recognition_primary_next_step_text(next_steps: dict[str, object]) -> str:
-    confirm = [str(item) for item in next_steps.get("needs_confirmation", []) or [] if str(item)]
-    if confirm:
-        return "可以继续进入数据准备与标准化；做 DEG 分析前，需要确认分组信息。"
-    return "可以继续进入数据准备与标准化。"
-
-
 def _recognition_user_summary(report: dict[str, object], files: list[dict[str, object]], warnings: list[str], project_root: Path | None) -> str:
     counts = report.get("type_counts", {}) if isinstance(report.get("type_counts"), dict) else {}
     duplicate_count = sum(1 for item in files if item.get("_duplicate"))
     effective_count = sum(1 for item in files if item.get("_effective_source"))
+    status_counts = {
+        "可进入标准化": sum(1 for item in files if str(item.get("standardization_status") or "") == "eligible"),
+        "仅作参考/注释": sum(1 for item in files if str(item.get("standardization_status") or "") == "reference_only"),
+        "不能用于分析": sum(1 for item in files if str(item.get("standardization_status") or "") == "blocked"),
+    }
     type_lines = []
     for key, label in TYPE_LABELS.items():
         count = int(counts.get(key, 0) or 0)
         if count:
             type_lines.append(f"{label}：{count}")
     if project_root is not None and not _current_effective_source_paths(project_root):
-        source_note = "本次识别结果仅来自本次选择的数据源。"
+        source_note = "当前版本会扫描项目 raw_data 中所有已选择文件，因此历史导入副本也可能显示在识别结果中。"
     else:
         source_note = f"当前有效数据来源文件：{effective_count} 个。"
     has_core = has_standardizable_expression_input(files)
@@ -9176,122 +9440,22 @@ def _recognition_user_summary(report: dict[str, object], files: list[dict[str, o
         next_step = "可以继续进入数据准备与标准化；需在标准化阶段确认分组后才能进行 DEG 分析。"
     else:
         next_step = "未识别到表达矩阵或原始计数矩阵，请返回数据来源补充文件。"
+    stale = report.get("stale_status") if isinstance(report.get("stale_status"), dict) else {}
+    stale_line = "识别报告状态：当前。"
+    if stale.get("is_stale"):
+        stale_line = f"识别报告状态：已过期，{stale.get('message') or '请重新识别。'}"
     return "\n".join(
         [
             f"识别文件总数：{len(files)}",
             f"warning 数量：{len(warnings)}",
             f"类型统计：{'；'.join(type_lines) if type_lines else '暂无可识别类型'}",
+            "标准化状态：" + "；".join(f"{label}：{count}" for label, count in status_counts.items()),
             f"疑似重复文件：{duplicate_count} 个",
+            stale_line,
             source_note,
             f"下一步建议：{next_step}",
         ]
     )
-
-
-def _format_history_time(value: str) -> str:
-    if not value:
-        return "未记录"
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone().strftime("%Y-%m-%d %H:%M")
-    except ValueError:
-        return value
-
-
-def _history_input_text(run: dict[str, object]) -> str:
-    values = run.get("input_data")
-    if not isinstance(values, list) or not values:
-        return "未记录"
-    names = [Path(str(value)).name for value in values if str(value).strip()]
-    if not names:
-        return "未记录"
-    return names[0] if len(names) == 1 else f"{len(names)} 个输入：{names[0]}"
-
-
-def _history_status_text(run: dict[str, object]) -> str:
-    if run.get("legacy"):
-        return "由旧版项目结构导入"
-    status = str(run.get("status") or "completed")
-    return {
-        "completed": "已完成",
-        "completed_with_warnings": "完成但有警告",
-        "failed": "识别失败",
-        "history": "历史记录",
-    }.get(status, status or "历史记录")
-
-
-def _history_content_summary(run: dict[str, object]) -> str:
-    report = _history_report_payload(run)
-    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)] if isinstance(report, dict) else []
-    if not files:
-        return "无有效识别文件"
-    semantic_count = sum(1 for item in files if item.get("semantic_type") == "rna_seq_integrated_result_table")
-    if semantic_count:
-        return f"RNA-seq 综合表达结果表：{semantic_count}"
-    labels = []
-    for item in files[:3]:
-        label = str(item.get("semantic_type_zh") or item.get("recognized_type_zh") or TYPE_LABELS.get(str(item.get("recognized_type") or "unknown"), "未知文件"))
-        if label:
-            labels.append(label)
-    remaining = len(files) - len(labels)
-    suffix = f"；另有 {remaining} 个文件" if remaining > 0 else ""
-    legacy = "；由旧版项目结构导入" if run.get("legacy") else ""
-    return f"{'、'.join(labels) if labels else '未知文件'}{suffix}{legacy}"
-
-
-def _recognition_history_summary_text(runs: list[dict[str, object]]) -> str:
-    if not runs:
-        return "暂无历史识别记录。"
-    current_count = sum(1 for run in runs if run.get("is_current"))
-    warning_count = sum(int(run.get("warning_count") or 0) for run in runs)
-    latest = _format_history_time(str(runs[0].get("generated_at") or ""))
-    parts = [f"共 {len(runs)} 条历史记录", f"最近：{latest}"]
-    if current_count:
-        parts.append("包含当前标准化输入")
-    if warning_count:
-        parts.append(f"提醒 {warning_count} 条")
-    return "；".join(parts)
-
-
-def _history_run_detail_text(run: dict[str, object]) -> str:
-    report = _history_report_payload(run)
-    files = [item for item in report.get("files", []) or [] if isinstance(item, dict)] if isinstance(report, dict) else []
-    warnings = [str(item) for item in report.get("warnings", []) or []] if isinstance(report, dict) else []
-    lines = [
-        f"批次名称：{run.get('batch_name') or run.get('run_id') or '识别记录'}",
-        f"当前状态：{'当前使用中' if run.get('is_current') else _history_status_text(run)}",
-        f"识别报告路径：{run.get('recognition_report_path') or '未记录'}",
-        f"内容摘要：{_history_content_summary(run)}",
-    ]
-    if run.get("legacy"):
-        lines.append("来源：由旧版项目结构导入")
-    if files:
-        lines.append("文件摘要：")
-        lines.append(_recognition_asset_summary(files))
-    if warnings:
-        lines.append("Warning：" + "；".join(warnings[:5]))
-    lines.append("技术详情：")
-    lines.append(_json({"history_recognition_run": run, "recognition_report": report}))
-    return "\n".join(lines)
-
-
-def _history_report_payload(run: dict[str, object]) -> dict[str, object]:
-    path = Path(str(run.get("recognition_report_path") or ""))
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _recognition_run_by_id(project_root: Path | None, run_id: str) -> dict[str, object] | None:
-    if project_root is None or not run_id:
-        return None
-    for run in list_recognition_runs(project_root):
-        if str(run.get("run_id") or "") == run_id:
-            return run
-    return None
 
 
 def _can_continue_from_acquisition(project_root: Path) -> tuple[bool, str]:
@@ -9310,6 +9474,9 @@ def _can_continue_from_recognition(project_root: Path) -> tuple[bool, str]:
     report = load_recognition_report(project_root)
     if not isinstance(report, dict):
         return False, "尚未生成数据识别报告。"
+    stale = report.get("stale_status") if isinstance(report.get("stale_status"), dict) else {}
+    if stale.get("is_stale"):
+        return False, str(stale.get("message") or "识别报告已过期，请重新识别。")
     files = [item for item in report.get("files", []) or [] if isinstance(item, dict)]
     if not files:
         return False, "识别报告中没有任何文件。"
@@ -9337,10 +9504,13 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     registry = artifacts.get("registry")
     if not isinstance(registry, dict):
         return False, "尚未生成标准化资产。"
+    stale = artifacts.get("repository_stale_status") if isinstance(artifacts.get("repository_stale_status"), dict) else {}
+    if stale.get("is_stale"):
+        return False, str(stale.get("message") or "标准化资产仓库已过期，请重新生成。")
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
-    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "raw_count_matrix", "count_matrix", "normalized_expression_matrix"} for item in assets)
+    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"} for item in assets)
     if not has_ready_core:
-        return False, "没有可用于分析的表达矩阵。"
+        return False, "没有 analysis-ready 表达矩阵资产。"
     return True, ""
 
 
@@ -9383,15 +9553,17 @@ def _append_geo_deg_results_to_index(project_root: Path, summaries: list[dict[st
         dataset_id = str(summary.get("dataset_id") or Path(result_path).parent.name)
         entries.append(
             {
-                "result_name": f"{dataset_id} 差异表达结果",
+                "result_name": f"{dataset_id} 测试级差异表达结果",
                 "analysis_type": "differential_expression",
                 "file_type": "csv",
                 "created_at": str(summary.get("generated_at") or _utc_now_iso()),
                 "path": result_path,
-                "status": "generated",
+                "status": "testing-level",
+                "result_semantics": "testing-level",
+                "execution_level": "testing-level computed preview",
                 "summary_path": str(summary.get("summary_path") or ""),
                 "dataset_id": dataset_id,
-                "warning": "、".join(str(item) for item in summary.get("warnings", []) or []),
+                "warning": "测试级结果，不等于正式 DEG 分析。" + ("；" + "、".join(str(item) for item in summary.get("warnings", []) or []) if summary.get("warnings") else ""),
             }
         )
         seen_paths.add(result_path)

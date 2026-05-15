@@ -327,6 +327,64 @@ def test_plan_only_project_is_not_ready(project_root: Path) -> None:
     assert not any(row["analysis_type"] == "reporting" and row["can_run"] for row in matrix_rows)
 
 
+def test_b5_16_multifile_readiness_keeps_file_level_statuses(project_root: Path, tmp_path: Path) -> None:
+    expression = tmp_path / "expression_matrix.tsv"
+    metadata = tmp_path / "sample_metadata.tsv"
+    raw = tmp_path / "reads.fastq.gz"
+    expression.write_text("gene\tcase_1\tcontrol_1\nTP53\t2\t1\n", encoding="utf-8")
+    metadata.write_text("sample_id\tgroup\ncase_1\tcase\ncontrol_1\tcontrol\n", encoding="utf-8")
+    raw.write_text("@SEQ\nACGT\n+\n!!!!\n", encoding="utf-8")
+    register_acquisition(
+        project_root,
+        source_type="local_import",
+        source_label="本地数据导入",
+        strategy="reference",
+        selected_paths=[expression, metadata, raw],
+    )
+
+    recognition = run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+
+    assert len(recognition["files"]) == 3  # type: ignore[index]
+    assert len(report["file_statuses"]) == 3  # type: ignore[index]
+    statuses = {item["file_name"]: item for item in report["file_statuses"]}  # type: ignore[index]
+    assert statuses["expression_matrix.tsv"]["status_color"] == "green"
+    assert statuses["sample_metadata.tsv"]["status_color"] in {"green", "yellow"}
+    assert statuses["reads.fastq.gz"]["status_color"] == "red"
+    assert statuses["reads.fastq.gz"]["can_enter_standardization"] is False
+    dataset = report["dataset_readiness"]  # type: ignore[index]
+    assert dataset["has_expression_matrix"] is True
+    assert dataset["has_sample_metadata"] is True
+    assert dataset["can_enter_standardization_confirmation"] is True
+
+
+def test_b5_16_gsea_gene_set_not_data_check_missing_item(project_root: Path) -> None:
+    expression = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text("gene\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
+
+    run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    rows = readiness["capability_matrix"]["rows"]  # type: ignore[index]
+    gsea = next(row for row in rows if row["analysis_type"] == "gsea")
+    missing_for_non_gsea = {
+        item
+        for row in rows
+        if row["analysis_type"] != "gsea"
+        for item in row["missing_inputs"]
+    }
+
+    assert report["gsea_gene_set_status"]["label"] == "GSEA 基因集：未选择"  # type: ignore[index]
+    assert report["gsea_gene_set_status"]["blocks_current_data_check"] is False  # type: ignore[index]
+    assert report["gsea_gene_set_status"]["blocks_standardization"] is False  # type: ignore[index]
+    assert report["gsea_gene_set_status"]["blocks_deg_preflight"] is False  # type: ignore[index]
+    assert gsea["missing_inputs"] == ["gsea_gene_set_selection"]
+    assert "gmt_gene_set" not in missing_for_non_gsea
+    assert "GMT" not in " ".join(str(item) for item in report["warnings"])  # type: ignore[index]
+
+
 def test_recognition_readiness_standardization_chain(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
