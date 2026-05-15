@@ -21,6 +21,7 @@ from app.labtools.reagent_templates.models import (
 
 
 def validate_template(template: ReagentTemplate, templates: tuple[ReagentTemplate, ...] = ()) -> None:
+    template = template.normalized_for_storage()
     if not template.template_id.strip():
         raise ReagentTemplateError("模板缺少 template_id。")
     if not template.name.strip():
@@ -40,6 +41,7 @@ def validate_template(template: ReagentTemplate, templates: tuple[ReagentTemplat
 
 
 def detect_template_cycles(templates: tuple[ReagentTemplate, ...]) -> None:
+    templates = tuple(template.normalized_for_storage() for template in templates)
     template_map = {template.template_id: template for template in templates}
     visiting: list[str] = []
     visited: set[str] = set()
@@ -53,7 +55,7 @@ def detect_template_cycles(templates: tuple[ReagentTemplate, ...]) -> None:
             return
         visiting.append(template_id)
         for component in template_map[template_id].components:
-            if component.referenced_template_id:
+            if component.component_type == "self_prepared_template" and component.referenced_template_id:
                 visit(component.referenced_template_id)
         visiting.pop()
         visited.add(template_id)
@@ -63,6 +65,7 @@ def detect_template_cycles(templates: tuple[ReagentTemplate, ...]) -> None:
 
 
 def calculate_preparation(request: PreparationRequest, templates: tuple[ReagentTemplate, ...]) -> PreparationResult:
+    templates = tuple(template.normalized_for_storage() for template in templates)
     template_map = {template.template_id: template for template in templates}
     if request.template_id not in template_map:
         raise ReagentTemplateError("请选择有效试剂模板。")
@@ -195,6 +198,7 @@ def _calculate_node(
 
 
 def _component_result(component: ReagentComponent, *, volume_factor: float, strength_factor: float) -> PreparationComponentResult:
+    component = component.normalized_for_storage()
     factor = 1.0
     if component.scale_with_volume:
         factor *= volume_factor
@@ -214,7 +218,7 @@ def _component_result(component: ReagentComponent, *, volume_factor: float, stre
         unit=unit,
         display_amount=f"{format_number(amount)} {unit}",
         is_commercial=component.component_type == "commercial_reagent",
-        is_subtemplate=bool(component.referenced_template_id),
+        is_subtemplate=component.component_type == "self_prepared_template" and bool(component.referenced_template_id),
         referenced_template_id=component.referenced_template_id,
         notes=component.notes,
         warnings=tuple(warnings),

@@ -24,6 +24,7 @@ COMPONENT_TYPES = (
 
 SUPPORTED_TEMPLATE_UNITS = ("L", "mL", "µL", "g", "mg", "µg", "M", "mM", "µM", "%", "X")
 SOLVENT_INITIAL_ADDITION_MODES = ("none", "percent_of_final", "fixed_amount", "note_only")
+REFERENCE_COMPONENT_TYPES = {"self_prepared_template"}
 
 
 class ReagentTemplateError(ValueError):
@@ -116,6 +117,11 @@ class ReagentComponent:
     initial_addition_unit: str = "mL"
     initial_addition_note: str = ""
 
+    def normalized_for_storage(self) -> "ReagentComponent":
+        if self.component_type in REFERENCE_COMPONENT_TYPES:
+            return self
+        return replace(self, referenced_template_id="")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
@@ -158,7 +164,7 @@ class ReagentComponent:
             initial_addition_amount=float(payload.get("initial_addition_amount") or 0),
             initial_addition_unit=str(payload.get("initial_addition_unit") or "mL"),
             initial_addition_note=str(payload.get("initial_addition_note") or ""),
-        )
+        ).normalized_for_storage()
 
 
 @dataclass(frozen=True)
@@ -213,18 +219,22 @@ class ReagentTemplate:
     def with_updated_timestamp(self) -> "ReagentTemplate":
         return replace(self, updated_at=utc_now())
 
+    def normalized_for_storage(self) -> "ReagentTemplate":
+        return replace(self, components=tuple(component.normalized_for_storage() for component in self.components))
+
     def to_dict(self) -> dict[str, Any]:
+        normalized = self.normalized_for_storage()
         return {
-            "template_id": self.template_id,
-            "name": self.name,
-            "default_volume": self.default_volume,
-            "default_volume_unit": self.default_volume_unit,
-            "default_strength": self.default_strength,
-            "notes": self.notes,
-            "components": [component.to_dict() for component in self.components],
-            "ph_record": self.ph_record.to_dict() if self.ph_record is not None else None,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "template_id": normalized.template_id,
+            "name": normalized.name,
+            "default_volume": normalized.default_volume,
+            "default_volume_unit": normalized.default_volume_unit,
+            "default_strength": normalized.default_strength,
+            "notes": normalized.notes,
+            "components": [component.to_dict() for component in normalized.components],
+            "ph_record": normalized.ph_record.to_dict() if normalized.ph_record is not None else None,
+            "created_at": normalized.created_at,
+            "updated_at": normalized.updated_at,
         }
 
     @classmethod
@@ -248,7 +258,7 @@ class ReagentTemplate:
             ph_record=ph_record,
             created_at=str(payload.get("created_at") or utc_now()),
             updated_at=str(payload.get("updated_at") or utc_now()),
-        )
+        ).normalized_for_storage()
 
 
 @dataclass(frozen=True)
@@ -325,14 +335,22 @@ class PreparationResult:
         if solvent_details:
             lines.extend(["", "溶剂分阶段加入"])
             lines.extend(f"- {component.name}: {component.initial_addition_detail}" for component in solvent_details)
-        if self.ph_record is not None:
+        if _ph_record_has_content(self.ph_record):
             lines.extend(["", "pH / 调节记录", _ph_record_line(self.ph_record)])
         if self.tree.children:
-            lines.extend(["", "完整展开清单"])
+            lines.extend(
+                [
+                    "",
+                    "完整展开清单",
+                    "子模板展开提示：该展开结果表示本次需要按需求量配制此子试剂；如果实验室已有该 stock，请将该组分设置为商品化/已有试剂，不需要展开。",
+                ]
+            )
             lines.extend(_tree_lines(self.tree))
         if self.warnings:
             lines.extend(["", "警告信息", *self.warnings])
-        lines.extend(["", "pH 记录字段", *self.ph_record_fields, "", "配制步骤", *self.steps, "", "人工复核提示", self.review_notice])
+        if _ph_record_has_content(self.ph_record):
+            lines.extend(["", "pH 记录字段", *self.ph_record_fields])
+        lines.extend(["", "配制步骤", *self.steps, "", "人工复核提示", self.review_notice])
         return "\n".join(lines)
 
 
@@ -365,11 +383,19 @@ def _ph_record_line(ph_record: PHRecord) -> str:
     return "；".join(parts) if parts else "pH 记录待填写"
 
 
+def _ph_record_has_content(ph_record: PHRecord | None) -> bool:
+    if ph_record is None:
+        return False
+    return bool(ph_record.target_ph.strip() or ph_record.measured_ph.strip() or ph_record.adjustment_note.strip())
+
+
 def _tree_lines(node: PreparationTreeNode, depth: int = 0) -> list[str]:
     indent = "  " * depth
     lines = [f"{indent}- {node.template_name}: {_fmt(node.suggested_volume)} {node.suggested_volume_unit}"]
     for component in node.components:
         lines.append(f"{indent}  {_component_line(component)}")
+    if depth > 0 and _ph_record_has_content(node.ph_record):
+        lines.append(f"{indent}  - 子模板 pH：{_ph_record_line(node.ph_record)}")
     for child in node.children:
         lines.extend(_tree_lines(child, depth + 1))
     return lines

@@ -110,6 +110,43 @@ def _pbs_template() -> ReagentTemplate:
     )
 
 
+def _pbs_stock_template() -> ReagentTemplate:
+    return ReagentTemplate.create(
+        name="10X PBS stock",
+        default_volume=1000,
+        default_volume_unit="mL",
+        default_strength="10X",
+        components=(
+            _component("NaCl", 80.0, "g", component_type="powder"),
+            _component("KCl", 2.0, "g", component_type="powder"),
+            _component("Na2HPO4", 14.4, "g", component_type="powder"),
+            _component("KH2PO4", 2.4, "g", component_type="powder"),
+            _component("ddH2O", 0, "mL", component_type="solvent", contributes_to_final_volume=True, auto_fill=True),
+        ),
+        ph_record=PHRecord(target_ph="7.4", adjustment_note="按实验室 SOP 处理", include_in_steps=True),
+    )
+
+
+def _pbs_from_stock_template(stock_id: str, *, commercial: bool = False) -> ReagentTemplate:
+    return ReagentTemplate.create(
+        name="1X PBS from 10X stock",
+        default_volume=100,
+        default_volume_unit="mL",
+        default_strength="1X",
+        components=(
+            _component(
+                "10X PBS stock",
+                10,
+                "mL",
+                component_type="commercial_reagent" if commercial else "self_prepared_template",
+                contributes_to_final_volume=True,
+                referenced_template_id="" if commercial else stock_id,
+            ),
+            _component("ddH2O", 0, "mL", component_type="solvent", contributes_to_final_volume=True, auto_fill=True),
+        ),
+    )
+
+
 def test_reagent_template_model_serializes_schema_fields() -> None:
     template = _template_a()
     payload = template.to_dict()
@@ -168,6 +205,28 @@ def test_legacy_ph_component_is_migrated_to_ph_record_on_read(tmp_path) -> None:
     assert loaded.ph_record is not None
     assert loaded.ph_record.target_ph == "7.4"
     assert all(component.component_type != "ph_adjustment" for component in loaded.components)
+
+
+def test_non_reference_components_clear_stale_referenced_template_id_in_store(tmp_path) -> None:
+    stock = _pbs_stock_template()
+    contaminated = ReagentTemplate.create(
+        name="残留引用模板",
+        default_volume=100,
+        components=(
+            _component("10X PBS stock", 10, "mL", component_type="self_prepared_template", contributes_to_final_volume=True, referenced_template_id=stock.template_id),
+            _component("ddH2O", 0, "mL", component_type="solvent", contributes_to_final_volume=True, auto_fill=True, referenced_template_id=stock.template_id),
+            _component("已有 10X stock", 10, "mL", component_type="commercial_reagent", contributes_to_final_volume=True, referenced_template_id=stock.template_id),
+        ),
+    )
+    store = ReagentTemplateStore(tmp_path / "templates.json")
+
+    store.save_all((stock, contaminated))
+    loaded = {template.name: template for template in store.load()}
+
+    components = {component.name: component for component in loaded["残留引用模板"].components}
+    assert components["10X PBS stock"].referenced_template_id == stock.template_id
+    assert components["ddH2O"].referenced_template_id == ""
+    assert components["已有 10X stock"].referenced_template_id == ""
 
 
 def test_reagent_template_store_saves_loads_copies_and_requires_delete_confirmation(tmp_path) -> None:
@@ -333,6 +392,57 @@ def test_l3_template_units_are_explicitly_limited_to_first_version_scope() -> No
         calculate_preparation(PreparationRequest(unsupported.template_id, 10), (unsupported,))
 
 
+def test_10x_pbs_stock_and_1x_from_stock_regression_with_subtemplate_ph_display() -> None:
+    stock = _pbs_stock_template()
+    working = _pbs_from_stock_template(stock.template_id)
+    result = calculate_preparation(PreparationRequest(working.template_id, 75, expand_subtemplates=True), (stock, working))
+    amounts = {component.name: component.amount for component in result.direct_components}
+    text = result.as_text()
+    before_expand = text.split("完整展开清单", 1)[0]
+
+    assert result.suggested_volume == pytest.approx(75)
+    assert amounts["10X PBS stock"] == pytest.approx(7.5)
+    assert amounts["ddH2O"] == pytest.approx(67.5)
+    assert "pH / 调节记录" not in before_expand
+    assert "pH 记录字段" not in before_expand
+    assert "子模板 pH：目标 pH: 7.4；调节说明: 按实验室 SOP 处理" in text
+    assert "子模板展开提示" in text
+    assert "- NaCl: 0.6 g" in text
+    assert "- KCl: 0.015 g" in text
+    assert "- Na2HPO4: 0.108 g" in text
+    assert "- KH2PO4: 0.018 g" in text
+    assert "- ddH2O（溶剂补足）: 7.5 mL" in text
+
+
+def test_commercial_existing_stock_path_does_not_expand_internal_template() -> None:
+    stock = _pbs_stock_template()
+    working = _pbs_from_stock_template(stock.template_id, commercial=True)
+    result = calculate_preparation(PreparationRequest(working.template_id, 75, expand_subtemplates=True), (stock, working))
+    text = result.as_text()
+    amounts = {component.name: component.amount for component in result.direct_components}
+
+    assert amounts["10X PBS stock"] == pytest.approx(7.5)
+    assert amounts["ddH2O"] == pytest.approx(67.5)
+    assert "完整展开清单" not in text
+    assert "- NaCl: 0.6 g" not in text
+    assert "子模板 pH" not in text
+
+
+def test_10x_pbs_stock_1000_ml_regression() -> None:
+    stock = _pbs_stock_template()
+    result = calculate_preparation(PreparationRequest(stock.template_id, 1000, "mL", "10X"), (stock,))
+    amounts = {component.name: component.amount for component in result.direct_components}
+    text = result.as_text()
+
+    assert amounts["NaCl"] == pytest.approx(80)
+    assert amounts["KCl"] == pytest.approx(2)
+    assert amounts["Na2HPO4"] == pytest.approx(14.4)
+    assert amounts["KH2PO4"] == pytest.approx(2.4)
+    assert amounts["ddH2O"] == pytest.approx(1000)
+    assert "目标 pH: 7.4" in text
+    assert "pH 记录: 7.4 mL" not in text
+
+
 def test_subtemplate_expands_with_child_target_volume() -> None:
     child = _template_c()
     parent = _template_a(child_id=child.template_id)
@@ -371,9 +481,9 @@ def test_preparation_steps_are_generic_and_include_review_notice() -> None:
     assert "准备合适容器" in text
     assert "按一级配制清单加入非补足组分" in text
     assert "混匀，确保粉末或其他组分充分溶解" in text
-    assert "pH 记录字段" in text
-    assert "目标 pH" in text
-    assert "实测 pH" in text
+    assert "pH 记录字段" not in text
+    assert "目标 pH:" not in text
+    assert "实测 pH:" not in text
     assert "补足至建议配制体积" in text
     assert "人工复核提示" in text
     for forbidden in ("自动 pH 预测", "自动推荐最佳配方", "无需人工复核"):

@@ -657,6 +657,7 @@ if QWidget is not None:
             self._auto_fill.setObjectName("reagentComponentAutoFillCheck")
             self._reference_template = QComboBox()
             self._reference_template.setObjectName("reagentComponentReferenceTemplateCombo")
+            self._component_type.currentTextChanged.connect(self._handle_component_type_changed)
             self._component_notes = _line_edit("组分备注")
             self._component_notes.setObjectName("reagentComponentNotesField")
             self._commercial_concentration = _line_edit("商品化试剂浓度")
@@ -716,6 +717,13 @@ if QWidget is not None:
             component_actions.addWidget(clear_components)
             component_actions.addStretch(1)
             component_layout.addLayout(component_actions, 17, 0, 1, 2)
+            reference_note = QLabel(
+                "self_prepared_template 表示本次需要按引用模板配制，可展开内部清单；"
+                "commercial_reagent 表示商品化/已有试剂，只计算加入量，不展开。"
+            )
+            reference_note.setObjectName("labToolsCalculatorNotice")
+            reference_note.setWordWrap(True)
+            component_layout.addWidget(reference_note, 18, 0, 1, 2)
             root.addWidget(component_card)
 
             ph_card = QFrame()
@@ -772,6 +780,7 @@ if QWidget is not None:
             self._status.setReadOnly(True)
             self._status.setMinimumHeight(110)
             root.addWidget(self._status)
+            self._handle_component_type_changed(self._component_type.currentText())
 
         def _refresh_template_list(self) -> None:
             self._template_list.clear()
@@ -784,10 +793,17 @@ if QWidget is not None:
             self._reference_template.addItem("不引用", "")
             for template in self._templates:
                 self._reference_template.addItem(template.name, template.template_id)
-            if current:
+            if current and self._component_type.currentText() == "self_prepared_template":
                 index = self._reference_template.findData(current)
                 if index >= 0:
                     self._reference_template.setCurrentIndex(index)
+            self._handle_component_type_changed(self._component_type.currentText())
+
+        def _handle_component_type_changed(self, component_type: str) -> None:
+            can_reference = component_type == "self_prepared_template"
+            self._reference_template.setEnabled(can_reference)
+            if not can_reference:
+                self._reference_template.setCurrentIndex(0)
 
         def _handle_template_selected(self, row: int) -> None:
             if row < 0 or row >= len(self._templates):
@@ -817,10 +833,11 @@ if QWidget is not None:
         def _handle_add_component(self) -> None:
             try:
                 amount = float(self._component_amount.text())
-                reference_id = str(self._reference_template.currentData() or "")
+                component_type = self._component_type.currentText()
+                reference_id = str(self._reference_template.currentData() or "") if component_type == "self_prepared_template" else ""
                 component = ReagentComponent(
                     name=self._component_name.text().strip(),
-                    component_type=self._component_type.currentText(),
+                    component_type=component_type,
                     base_amount=amount,
                     unit=self._component_unit.currentText(),
                     scale_with_volume=self._scale_volume.isChecked(),
@@ -860,6 +877,9 @@ if QWidget is not None:
             self._initial_percent.clear()
             self._initial_amount.clear()
             self._initial_note.clear()
+            self._component_type.setCurrentText("liquid")
+            self._reference_template.setCurrentIndex(0)
+            self._handle_component_type_changed(self._component_type.currentText())
 
         def _handle_remove_last_component(self) -> None:
             if not self._components:

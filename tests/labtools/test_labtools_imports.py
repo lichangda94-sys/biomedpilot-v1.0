@@ -202,3 +202,57 @@ def test_labtools_calculator_workbench_saves_template_and_generates_preparation(
     assert "初始加入约 66 mL" in result_text
     assert "调节或记录 pH 至目标 pH 7.4" in result_text
     assert "人工复核提示" in result_text
+
+
+def test_labtools_template_ui_clears_reference_after_self_prepared_component(tmp_path) -> None:
+    try:
+        from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QLineEdit, QPushButton, QTabWidget
+
+        from app.labtools.reagent_templates import ReagentTemplateStore
+        from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"PySide6 UI runtime unavailable: {exc}")
+
+    app = QApplication.instance() or QApplication([])
+    store = ReagentTemplateStore(tmp_path / "reagent_templates.json")
+    widget = LabToolsCalculatorWidget(reagent_template_store=store)
+    tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert app is not None
+    assert tabs is not None
+    tabs.setCurrentIndex(1)
+
+    widget.findChild(QLineEdit, "reagentTemplateNameField").setText("10X PBS stock")
+    widget.findChild(QLineEdit, "reagentTemplateDefaultVolumeField").setText("1000")
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("NaCl")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("80")
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
+    stock = store.load()[0]
+
+    widget.findChild(QPushButton, "reagentTemplateNewButton").click()
+    widget.findChild(QLineEdit, "reagentTemplateNameField").setText("1X PBS from stock")
+    widget.findChild(QLineEdit, "reagentTemplateDefaultVolumeField").setText("100")
+    widget.findChild(QComboBox, "reagentComponentTypeCombo").setCurrentText("self_prepared_template")
+    reference_combo = widget.findChild(QComboBox, "reagentComponentReferenceTemplateCombo")
+    reference_combo.setCurrentIndex(reference_combo.findData(stock.template_id))
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("10X PBS stock")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("10")
+    widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(True)
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+
+    assert widget.findChild(QComboBox, "reagentComponentTypeCombo").currentText() == "liquid"
+    assert widget.findChild(QComboBox, "reagentComponentReferenceTemplateCombo").currentData() == ""
+    assert widget.findChild(QComboBox, "reagentComponentReferenceTemplateCombo").isEnabled() is False
+
+    widget.findChild(QComboBox, "reagentComponentTypeCombo").setCurrentText("solvent")
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("ddH2O")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("0")
+    widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(True)
+    widget.findChild(QCheckBox, "reagentComponentAutoFillCheck").setChecked(True)
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
+
+    working = next(template for template in store.load() if template.name == "1X PBS from stock")
+    components = {component.name: component for component in working.components}
+    assert components["10X PBS stock"].referenced_template_id == stock.template_id
+    assert components["ddH2O"].referenced_template_id == ""
