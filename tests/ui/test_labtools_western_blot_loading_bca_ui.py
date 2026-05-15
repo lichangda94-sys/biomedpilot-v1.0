@@ -18,11 +18,10 @@ def qapp():
 
 
 def _western_blot_page():
-    from app.labtools.workspace import LabToolsWorkspaceWidget
+    from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
 
-    widget = LabToolsWorkspaceWidget()
-    widget.show_western_blot()
-    return widget, widget._stack.currentWidget()
+    page = LabToolsWesternBlotWidget()
+    return page, page
 
 
 def _visible_text(widget) -> str:

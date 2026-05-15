@@ -2,38 +2,19 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from app.labtools.labtools_tool_registry import LabToolsTool, labtools_tool_registry
 from app.shared.feature_status import FeatureItem, FeatureStatus
 
 
 def labtools_features() -> list[FeatureItem]:
     return [
-        FeatureItem("labtools", "通用试剂计算器", FeatureStatus.TESTING, "用于浓度、质量、体积、摩尔量、稀释等基础实验计算；不长期承载全部实验特异性计算。"),
-        FeatureItem("labtools", "ImageJ/Fiji 本地引擎", FeatureStatus.TESTING, "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置；不启用真实图像分析算法。"),
-        FeatureItem("labtools", "试剂与实验记录", FeatureStatus.TESTING, "用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN。"),
         FeatureItem(
             "labtools",
-            "细胞实验",
-            FeatureStatus.UNAVAILABLE,
-            "用于细胞接种、活率、Transwell、wound healing、增殖率、台盼蓝、Alamar Blue 等；规划中，待确认使用逻辑。",
-        ),
-        FeatureItem(
-            "labtools",
-            "Western Blot",
-            FeatureStatus.UNAVAILABLE,
-            "用于 WB 上样计算、条带定量 workflow 占位；planned / 规划中 / 未启用，不启用 WB/gel 真实分析。",
-        ),
-        FeatureItem(
-            "labtools",
-            "PCR / qPCR",
-            FeatureStatus.UNAVAILABLE,
-            "用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析；规划中，待确认使用逻辑。",
-        ),
-        FeatureItem(
-            "labtools",
-            "ELISA / 吸光度与标准曲线",
-            FeatureStatus.UNAVAILABLE,
-            "用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等；规划中，待确认使用逻辑。",
-        ),
+            tool.chinese_name,
+            FeatureStatus.TESTING if tool.is_available else FeatureStatus.UNAVAILABLE,
+            f"{tool.description} {tool.boundary_statement}",
+        )
+        for tool in labtools_tool_registry()
     ]
 
 
@@ -43,7 +24,6 @@ try:
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
     from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
-    from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -145,6 +125,114 @@ if QWidget is not None:
                 color: {COLORS["text"]};
                 background: #FFF4F2;
                 border: 1px solid #F3B4AA;
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
+            }}
+            """
+
+    class LabToolsPlannedToolDetailPage(QWidget):
+        def __init__(self, tool: LabToolsTool) -> None:
+            super().__init__()
+            self._tool = tool
+            self.setObjectName("labToolsPlannedToolDetailPage")
+            self.setStyleSheet(self._stylesheet())
+
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
+            root.setSpacing(SPACING["lg"])
+
+            title = QLabel(tool.chinese_name)
+            title.setObjectName("labToolsPlannedToolTitle")
+            subtitle = QLabel(f"{tool.english_name} / {tool.category}")
+            subtitle.setObjectName("labToolsPlannedToolSubtitle")
+            status = QLabel(f"当前状态：{tool.status}")
+            status.setObjectName("labToolsPlannedToolStatus")
+            description = QLabel(tool.description)
+            description.setObjectName("labToolsPlannedToolDescription")
+            description.setWordWrap(True)
+            boundary = QLabel(f"边界声明：{tool.boundary_statement}")
+            boundary.setObjectName("labToolsPlannedToolBoundary")
+            boundary.setWordWrap(True)
+
+            root.addWidget(title)
+            root.addWidget(subtitle)
+            root.addWidget(status)
+            root.addWidget(description)
+            root.addWidget(self._section("可做内容：未来将支持什么", tool.future_capabilities))
+            root.addWidget(self._section("当前不可做内容", tool.unavailable_capabilities))
+            root.addWidget(boundary)
+            logic_card = QLabel("后续开发前需要 Tool Logic Card：需先明确输入、输出、公式/算法来源、人工复核点、失败状态、测试夹具和 UI 边界。")
+            logic_card.setObjectName("labToolsPlannedToolLogicCard")
+            logic_card.setWordWrap(True)
+            root.addWidget(logic_card)
+            if tool.requires_imagej_fiji:
+                imagej_note = QLabel("本工具后续图像 workflow 可能读取 ImageJ/Fiji 本地引擎状态；当前不会运行真实图像分析。")
+                imagej_note.setObjectName("labToolsPlannedToolImageJNote")
+                imagej_note.setWordWrap(True)
+                root.addWidget(imagej_note)
+            root.addStretch(1)
+
+        def _section(self, title: str, rows: tuple[str, ...]) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsPlannedToolSection")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+            heading = QLabel(title)
+            heading.setObjectName("labToolsPlannedToolSectionTitle")
+            body = QLabel("\n".join(f"- {row}" for row in rows) if rows else "- 暂未登记")
+            body.setObjectName("labToolsPlannedToolSectionBody")
+            body.setWordWrap(True)
+            layout.addWidget(heading)
+            layout.addWidget(body)
+            return frame
+
+        def _stylesheet(self) -> str:
+            return f"""
+            QWidget#labToolsPlannedToolDetailPage {{
+                background: {COLORS["background"]};
+                color: {COLORS["text"]};
+                font-size: {FONT_SIZE["body"]}px;
+            }}
+            QLabel#labToolsPlannedToolTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["page_title"]}px;
+                font-weight: 760;
+            }}
+            QLabel#labToolsPlannedToolSubtitle, QLabel#labToolsPlannedToolDescription {{
+                color: {COLORS["muted"]};
+            }}
+            QLabel#labToolsPlannedToolStatus {{
+                color: #0E6F66;
+                background: #E7F7F5;
+                border: 1px solid #BCE7E2;
+                border-radius: {RADIUS["sm"]}px;
+                padding: 6px 10px;
+                font-weight: 700;
+            }}
+            QFrame#labToolsPlannedToolSection {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+            }}
+            QLabel#labToolsPlannedToolSectionTitle {{
+                color: {COLORS["bio"]};
+                font-weight: 760;
+            }}
+            QLabel#labToolsPlannedToolSectionBody {{
+                color: {COLORS["text"]};
+            }}
+            QLabel#labToolsPlannedToolBoundary {{
+                color: {COLORS["text"]};
+                background: #FFF4F2;
+                border: 1px solid #F3B4AA;
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
+            }}
+            QLabel#labToolsPlannedToolLogicCard, QLabel#labToolsPlannedToolImageJNote {{
+                color: {COLORS["text"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["sm"]}px;
                 padding: 8px 10px;
             }}
@@ -308,47 +396,44 @@ if QWidget is not None:
 
         def current_page_key(self) -> str:
             current = self._stack.currentWidget()
-            if current is self._home_page:
-                return "home"
-            if current is self._general_calculator_page:
-                return "general_calculators"
-            if current is self._imagej_fiji_page:
-                return "imagej_fiji"
-            if current is self._reagent_records_page:
-                return "reagent_records"
-            if current is self._cell_experiments_page:
-                return "cell_experiments"
-            if current is self._western_blot_page:
-                return "western_blot"
-            if current is self._pcr_qpcr_page:
-                return "pcr_qpcr"
-            if current is self._elisa_absorbance_page:
-                return "elisa_absorbance"
+            for key, page in self._route_pages.items():
+                if current is page:
+                    return key
             return "unknown"
 
         def show_home(self) -> None:
-            self._stack.setCurrentWidget(self._home_page)
+            self._show_page("home")
 
         def show_general_calculators(self) -> None:
-            self._stack.setCurrentWidget(self._general_calculator_page)
+            self._show_page("general_calculators")
 
         def show_imagej_fiji(self) -> None:
-            self._stack.setCurrentWidget(self._imagej_fiji_page)
+            self._show_page("imagej_fiji")
 
         def show_reagent_records(self) -> None:
-            self._stack.setCurrentWidget(self._reagent_records_page)
+            self._show_page("reagent_records")
 
         def show_cell_experiments(self) -> None:
-            self._stack.setCurrentWidget(self._cell_experiments_page)
+            self._show_page("cell_experiments")
 
         def show_western_blot(self) -> None:
-            self._stack.setCurrentWidget(self._western_blot_page)
+            self._show_page("western_blot")
 
         def show_pcr_qpcr(self) -> None:
-            self._stack.setCurrentWidget(self._pcr_qpcr_page)
+            self._show_page("pcr_qpcr")
 
         def show_elisa_absorbance(self) -> None:
-            self._stack.setCurrentWidget(self._elisa_absorbance_page)
+            self._show_page("elisa_absorbance")
+
+        def show_tool(self, tool_id: str) -> None:
+            for tool in labtools_tool_registry():
+                if tool.tool_id == tool_id:
+                    self._show_page(tool.entry_page)
+                    return
+            raise KeyError(f"Unknown LabTools tool_id: {tool_id}")
+
+        def _show_page(self, key: str) -> None:
+            self._stack.setCurrentWidget(self._route_pages[key])
 
         # Backward-compatible route names for existing internal callers.
         def show_calculators(self) -> None:
@@ -389,6 +474,7 @@ if QWidget is not None:
 
             self._stack = QStackedWidget()
             self._home_page = LabToolsHomeWidget()
+            self._home_page.tool_requested.connect(self.show_tool)
             self._home_page.general_calculators_requested.connect(self.show_general_calculators)
             self._home_page.reagent_records_requested.connect(self.show_reagent_records)
             self._home_page.imagej_fiji_requested.connect(self.show_imagej_fiji)
@@ -398,6 +484,11 @@ if QWidget is not None:
             self._home_page.elisa_absorbance_requested.connect(self.show_elisa_absorbance)
             self._general_calculator_page = LabToolsCalculatorWidget()
             self._imagej_fiji_page = LabToolsImageJConfigPage()
+            self._planned_tool_pages = {
+                tool.entry_page: LabToolsPlannedToolDetailPage(tool)
+                for tool in labtools_tool_registry()
+                if tool.is_planned_only
+            }
             self._reagent_records_page = LabToolsModulePlaceholderPage(
                 "试剂与实验记录",
                 "用于本地 recipe 草稿、实验记录草稿、模板保存和 JSON 导入导出；不等同于完整 ELN。",
@@ -411,43 +502,21 @@ if QWidget is not None:
                 ),
                 status_text="已开放能力待重新归类 / 待确认使用逻辑",
             )
-            self._cell_experiments_page = LabToolsModulePlaceholderPage(
-                "细胞实验",
-                "用于细胞接种、活率、Transwell、wound healing、增殖率、台盼蓝、Alamar Blue 等细胞实验工具。",
-                (
-                    "cell seeding 现有计算器未来归入本模块。",
-                    "wound manual ROI + threshold 未来归入本模块，当前仍是 manual-review 辅助估算。",
-                    "活率、Transwell、增殖率、台盼蓝、Alamar Blue 均待确认使用逻辑。",
-                ),
-            )
-            self._western_blot_page = LabToolsWesternBlotWidget()
-            self._pcr_qpcr_page = LabToolsModulePlaceholderPage(
-                "PCR / qPCR",
-                "用于 PCR/qPCR 体系计算、运行参数、plate layout、Ct / ΔCt / ΔΔCt 结果分析。",
-                (
-                    "qPCR mix 现有计算器未来归入本模块。",
-                    "PCR/qPCR 运行参数、plate layout、Ct / ΔCt / ΔΔCt 分析待确认使用逻辑。",
-                    "Delta Delta Ct 结果分析暂未开放。",
-                ),
-            )
-            self._elisa_absorbance_page = LabToolsModulePlaceholderPage(
-                "ELISA / 吸光度与标准曲线",
-                "用于 OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推等。",
-                (
-                    "OD 值、标准曲线、BCA、Bradford、NanoDrop、ELISA 样本浓度反推均为 planned tools。",
-                    "本模块暂未开放，必须先做 Tool Logic Card。",
-                ),
-            )
-            for key, page in (
-                ("home", self._home_page),
-                ("general_calculators", self._general_calculator_page),
-                ("imagej_fiji", self._imagej_fiji_page),
-                ("reagent_records", self._reagent_records_page),
-                ("cell_experiments", self._cell_experiments_page),
-                ("western_blot", self._western_blot_page),
-                ("pcr_qpcr", self._pcr_qpcr_page),
-                ("elisa_absorbance", self._elisa_absorbance_page),
-            ):
+            self._cell_experiments_page = self._planned_tool_pages["cell_experiments"]
+            self._western_blot_page = self._planned_tool_pages["western_blot"]
+            self._pcr_qpcr_page = self._planned_tool_pages["pcr_qpcr"]
+            self._elisa_absorbance_page = self._planned_tool_pages["elisa_absorbance"]
+            self._route_pages = {
+                "home": self._home_page,
+                "general_calculators": self._general_calculator_page,
+                "imagej_fiji": self._imagej_fiji_page,
+                "reagent_records": self._reagent_records_page,
+                "cell_experiments": self._cell_experiments_page,
+                "western_blot": self._western_blot_page,
+                "pcr_qpcr": self._pcr_qpcr_page,
+                "elisa_absorbance": self._elisa_absorbance_page,
+            }
+            for key, page in self._route_pages.items():
                 self._page_keys.append(key)
                 self._stack.addWidget(page)
             self._stack.setCurrentWidget(self._home_page)

@@ -41,44 +41,36 @@ def test_western_blot_module_entry_exists(qapp) -> None:
     assert widget.findChild(QFrame, "labToolsWesternBlotEntry") is not None
     assert "Western Blot 工具" in text
     assert "WB 上样计算、条带定量 workflow 占位。" in text
-    assert "规划中" in text
+    assert "planned / 未启用" in text
 
 
-def test_western_blot_page_contains_five_placeholder_sections(qapp) -> None:
-    from PySide6.QtWidgets import QFrame
-
-    from app.labtools.workspace import LabToolsWorkspaceWidget
-
-    widget = LabToolsWorkspaceWidget()
-    widget.show_western_blot()
-    page = widget._stack.currentWidget()
-    text = _visible_text(page)
-
-    assert widget.current_page_key() == "western_blot"
-    assert len(page.findChildren(QFrame, "labToolsWesternBlotSectionCard")) == 5
-    for section in (
-        "蛋白样品准备",
-        "蛋白浓度测定",
-        "上样与胶",
-        "电泳 / 转膜 / 抗体孵育流程",
-        "结果与灰度分析",
-    ):
-        assert section in text
-    assert text.count("待确认使用逻辑 / 规划中 / 暂未开放") >= 5
-
-
-def test_western_blot_section_descriptions_are_scaffold_only(qapp) -> None:
+def test_western_blot_entry_opens_planned_detail_page(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
     widget.show_western_blot()
     text = _visible_text(widget._stack.currentWidget())
 
-    assert "用于记录蛋白提取、裂解液/抑制剂草稿、样本分组和实验室自定义流程。当前为流程模板入口，不自动生成唯一实验方案。" in text
-    assert "提供 BCA 蛋白浓度测定辅助计算入口；Bradford、NanoDrop 后续仍需单独确认逻辑。" in text
-    assert "用于蛋白上样体系计算、loading buffer、还原剂、SDS-PAGE 配胶模板和批量配制计算。" in text
-    assert "用于记录电泳参数、电转参数、封闭、一抗、二抗和洗膜步骤模板。用户可录入试剂盒说明书或实验室成熟流程。" in text
-    assert "用于后续 WB/gel grayscale、条带 ROI、背景扣除、target/loading control ratio 和结果导出。开发前需单独确认图像分析逻辑。" in text
+    assert widget.current_page_key() == "western_blot"
+    assert "当前状态：planned / 未启用" in text
+    assert "可做内容：未来将支持什么" in text
+    assert "当前不可做内容" in text
+    assert "后续开发前需要 Tool Logic Card" in text
+    assert "ImageJ/Fiji 本地引擎状态" in text
+
+
+def test_western_blot_planned_detail_keeps_algorithm_boundaries(qapp) -> None:
+    from app.labtools.workspace import LabToolsWorkspaceWidget
+
+    widget = LabToolsWorkspaceWidget()
+    widget.show_western_blot()
+    text = _visible_text(widget._stack.currentWidget())
+
+    assert "WB 上样体系计算和实验记录入口" in text
+    assert "条带定量 workflow 的人工复核式整理" in text
+    assert "不启用 WB/gel 真实分析" in text
+    assert "不做条带自动识别或自动 ROI" in text
+    assert "不替代人工判断、试剂盒说明书或实验室 SOP" in text
 
 
 def test_sds_page_and_wb_grayscale_are_planned_not_completed(qapp) -> None:
@@ -88,13 +80,13 @@ def test_sds_page_and_wb_grayscale_are_planned_not_completed(qapp) -> None:
     widget.show_western_blot()
     text = _visible_text(widget._stack.currentWidget())
 
-    assert "蛋白上样体系计算: 已实现 / 辅助计算草稿" in text
-    assert "SDS-PAGE 配胶模板与批量配制: 已实现 / 用户模板换算" in text
-    assert "BCA 蛋白浓度测定: 已实现 / 辅助计算草稿" in text
-    assert "Bradford / NanoDrop: 待确认使用逻辑 / 规划中 / 暂未开放" in text
-    assert "WB/gel grayscale" in text
-    assert "开发前需单独确认图像分析逻辑" in text
+    assert "planned / 未启用" in text
+    assert "不启用 WB/gel 真实分析" in text
+    assert "当前不会运行真实图像分析" in text
     for forbidden in (
+        "蛋白上样体系计算: 已实现 / 辅助计算草稿",
+        "SDS-PAGE 配胶模板与批量配制: 已实现 / 用户模板换算",
+        "BCA 蛋白浓度测定: 已实现 / 辅助计算草稿",
         "SDS-PAGE 配胶已完成",
         "胶浓度自动推导已完成",
         "WB 灰度分析已完成",

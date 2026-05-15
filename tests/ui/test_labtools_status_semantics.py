@@ -39,23 +39,20 @@ def test_labtools_feature_descriptions_keep_testing_and_draft_boundaries() -> No
     assert set(features) == {
         "通用试剂计算器",
         "ImageJ/Fiji 本地引擎",
-        "试剂与实验记录",
-        "细胞实验",
-        "Western Blot",
-        "PCR / qPCR",
-        "ELISA / 吸光度与标准曲线",
+        "Western Blot 工具",
+        "PCR/qPCR 工具",
+        "ELISA/吸光度工具",
+        "细胞实验工具",
     }
     assert features["通用试剂计算器"].status is FeatureStatus.TESTING
     assert features["ImageJ/Fiji 本地引擎"].status is FeatureStatus.TESTING
-    assert features["试剂与实验记录"].status is FeatureStatus.TESTING
-    assert all(features[name].status is FeatureStatus.UNAVAILABLE for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"))
+    assert all(features[name].status is FeatureStatus.UNAVAILABLE for name in ("Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"))
     assert "浓度、质量、体积、摩尔量、稀释" in features["通用试剂计算器"].description
-    assert "不长期承载全部实验特异性计算" in features["通用试剂计算器"].description
+    assert "不替代实验 SOP" in features["通用试剂计算器"].description
     assert "ImageJ/Fiji 检测与路径配置" in features["ImageJ/Fiji 本地引擎"].description
-    assert "本地 recipe 草稿" in features["试剂与实验记录"].description
-    assert "不等同于完整 ELN" in features["试剂与实验记录"].description
-    for name in ("细胞实验", "Western Blot", "PCR / qPCR", "ELISA / 吸光度与标准曲线"):
-        assert "规划中" in features[name].description
+    assert "不是图像分析结果工具" in features["ImageJ/Fiji 本地引擎"].description
+    for name in ("Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
+        assert "占位" in features[name].description or "workflow" in features[name].description
 
 
 def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qapp) -> None:

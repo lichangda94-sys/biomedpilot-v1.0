@@ -31,11 +31,10 @@ def _visible_text(widget) -> str:
 
 
 def _western_blot_page():
-    from app.labtools.workspace import LabToolsWorkspaceWidget
+    from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
 
-    widget = LabToolsWorkspaceWidget()
-    widget.show_western_blot()
-    return widget, widget._stack.currentWidget()
+    page = LabToolsWesternBlotWidget()
+    return None, page
 
 
 def _fill_valid_template(page) -> None:
@@ -60,10 +59,9 @@ def _fill_valid_template(page) -> None:
 def test_western_blot_page_can_enter_sds_page_gel_tool(qapp) -> None:
     from PySide6.QtWidgets import QPushButton, QTabWidget
 
-    widget, page = _western_blot_page()
+    _, page = _western_blot_page()
     button = page.findChild(QPushButton, "openSdsPageGelToolButton")
 
-    assert widget.current_page_key() == "western_blot"
     assert button is not None
     button.click()
     tabs = page.findChild(QTabWidget, "westernBlotTabs")

@@ -53,14 +53,16 @@ def test_labtools_home_exposes_six_top_level_module_entries(qapp) -> None:
     from PySide6.QtWidgets import QFrame
 
     from app.labtools.labtools_home import LabToolsHomeWidget
+    from app.labtools.labtools_tool_registry import labtools_tool_registry
 
     widget = LabToolsHomeWidget()
     text = _visible_text(widget)
 
-    for title, object_name in ENTRY_OBJECTS.items():
-        assert title in text
-        assert widget.findChild(QFrame, object_name) is not None
-    assert len(ENTRY_OBJECTS) == 6
+    for tool in labtools_tool_registry():
+        assert tool.chinese_name in text
+        assert tool.english_name in text
+        assert widget.findChild(QFrame, tool.object_name) is not None
+    assert len(labtools_tool_registry()) == 6
 
 
 def test_labtools_home_module_descriptions_match_architecture_copy(qapp) -> None:
@@ -104,15 +106,15 @@ def test_general_calculator_is_not_described_as_all_experiment_calculation(qapp)
     assert "承载全部实验" not in text
 
 
-def test_module_placeholder_pages_keep_logic_confirmation_boundary(qapp) -> None:
+def test_planned_tool_detail_pages_keep_logic_card_and_boundaries(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
     planned_routes = (
-        (widget.show_cell_experiments, "cell_experiments", "细胞实验"),
-        (widget.show_western_blot, "western_blot", "Western Blot"),
-        (widget.show_pcr_qpcr, "pcr_qpcr", "PCR / qPCR"),
-        (widget.show_elisa_absorbance, "elisa_absorbance", "ELISA / 吸光度与标准曲线"),
+        (widget.show_cell_experiments, "cell_experiments", "细胞实验工具"),
+        (widget.show_western_blot, "western_blot", "Western Blot 工具"),
+        (widget.show_pcr_qpcr, "pcr_qpcr", "PCR/qPCR 工具"),
+        (widget.show_elisa_absorbance, "elisa_absorbance", "ELISA/吸光度工具"),
     )
 
     for show_page, key, title in planned_routes:
@@ -120,13 +122,11 @@ def test_module_placeholder_pages_keep_logic_confirmation_boundary(qapp) -> None
         assert widget.current_page_key() == key
         text = _visible_text(widget._stack.currentWidget())
         assert title in text
-        assert "待确认使用逻辑" in text
-        assert "暂未开放" in text
-        if key == "western_blot":
-            assert "基于用户录入的试剂盒/实验室模板进行批量换算" in text
-            assert "不进行自动配方推荐" in text
-        else:
-            assert "不新增算法、公式、图像处理、schema 或导出格式" in text
+        assert "当前状态：planned / 未启用" in text
+        assert "可做内容：未来将支持什么" in text
+        assert "当前不可做内容" in text
+        assert "后续开发前需要 Tool Logic Card" in text
+        assert "不替代人工判断" in text or "不替代人工复核" in text or "不替代试剂盒说明书" in text
 
 
 def test_main_window_can_instantiate_labtools_workspace_offscreen(qapp) -> None:
