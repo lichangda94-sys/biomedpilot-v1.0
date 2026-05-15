@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import json
 import plistlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +25,8 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     )
 
     assert result.mode == "local-python-launcher"
+    if shutil.which("codesign"):
+        assert result.signing_status == "ad_hoc_signed"
     assert result.app_version == "0.1.0-internal-beta"
     assert result.app_path.exists()
     assert result.launcher_path.exists()
@@ -68,3 +71,26 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
+    if shutil.which("codesign"):
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
+
+
+def test_packaged_launcher_ignores_launchservices_process_serial_number(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilotLaunchServices",
+            python_executable=sys.executable,
+        )
+    )
+    env = os.environ.copy()
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    completed = subprocess.run(
+        [str(result.launcher_path), "-psn_0_12345", "--smoke-test"],
+        env=env,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    assert "launch_mode=packaged-local-python" in completed.stdout

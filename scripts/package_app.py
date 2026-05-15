@@ -48,6 +48,7 @@ class PackagingResult:
     python_executable: str
     app_version: str
     git_head: str
+    signing_status: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
@@ -83,6 +84,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
+    signing_status = _ad_hoc_sign_app(app_path)
 
     return PackagingResult(
         app_path=app_path,
@@ -93,6 +95,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         python_executable=options.python_executable,
         app_version=APP_VERSION,
         git_head=git_head,
+        signing_status=signing_status,
     )
 
 
@@ -122,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
     print(f"python={result.python_executable}")
+    print(f"signing_status={result.signing_status}")
     print(f"build_info={result.build_info_path}")
     print("standalone=false")
     print("network_downloads=false")
@@ -209,10 +213,24 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 cd "$RESOURCE_ROOT"
+export PYTHONDONTWRITEBYTECODE="1"
 exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _ad_hoc_sign_app(app_path: Path) -> str:
+    codesign = shutil.which("codesign")
+    if not codesign:
+        return "codesign_unavailable"
+    subprocess.run(
+        [codesign, "--force", "--deep", "--sign", "-", str(app_path)],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return "ad_hoc_signed"
 
 
 def _git_head(repo_root: Path) -> str:
