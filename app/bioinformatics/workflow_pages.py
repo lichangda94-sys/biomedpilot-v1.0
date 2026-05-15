@@ -450,7 +450,6 @@ class GeoDownloadListPanel(QFrame):
     download_assets_requested = Signal(str)
     download_selected_requested = Signal(tuple)
     delete_selected_requested = Signal(tuple)
-    continue_requested = Signal()
     remove_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None, *, title: str = "待处理数据集", geo_only: bool = False) -> None:
@@ -480,14 +479,11 @@ class GeoDownloadListPanel(QFrame):
         batch_row = QHBoxLayout()
         self._download_selected_button = _button("下载所选", "secondaryButton", self._emit_download_selected)
         self._delete_selected_button = _button("删除所选", "secondaryButton", self._emit_delete_selected)
-        self._continue_selected_button = _button("进入数据识别", "primaryButton", self._emit_continue_selected)
         self._download_selected_button.setEnabled(False)
         self._delete_selected_button.setEnabled(False)
-        self._continue_selected_button.setEnabled(False)
         batch_row.addStretch(1)
         batch_row.addWidget(self._download_selected_button)
         batch_row.addWidget(self._delete_selected_button)
-        batch_row.addWidget(self._continue_selected_button)
         layout.addLayout(batch_row)
 
     def refresh(self, project_root: Path | None) -> None:
@@ -556,7 +552,6 @@ class GeoDownloadListPanel(QFrame):
         else:
             self._download_selected_button.setText("下载所选")
         self._delete_selected_button.setEnabled(has_selection)
-        self._continue_selected_button.setEnabled(any(entry.ready_for_recognition for entry in entries))
 
     def _emit_download_selected(self) -> None:
         keys = self.selected_keys()
@@ -567,11 +562,6 @@ class GeoDownloadListPanel(QFrame):
         keys = self.selected_keys()
         if keys:
             self.delete_selected_requested.emit(keys)
-
-    def _emit_continue_selected(self) -> None:
-        if self.selected_entries():
-            self.continue_requested.emit()
-
 
 class DatasetDetailPanel(QFrame):
     save_note_requested = Signal(str, str)
@@ -844,7 +834,6 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._dataset_list_panel.view_requested.connect(self._show_dataset_detail)
         self._dataset_list_panel.download_selected_requested.connect(self._download_selected_dataset_entries)
         self._dataset_list_panel.delete_selected_requested.connect(self._delete_selected_dataset_entries)
-        self._dataset_list_panel.continue_requested.connect(self.continue_to_recognition)
         root.addWidget(self._dataset_list_panel)
 
         self._history_cache_card, self._history_cache_layout = _card("历史缓存数据")
@@ -2132,7 +2121,6 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             self._geo_download_list_panel.view_requested.connect(self._show_geo_detail_by_accession)
             self._geo_download_list_panel.download_selected_requested.connect(self._download_selected_geo_entries)
             self._geo_download_list_panel.delete_selected_requested.connect(self._delete_selected_geo_entries)
-            self._geo_download_list_panel.continue_requested.connect(self.continue_to_recognition)
             layout.addWidget(self._geo_download_list_panel)
 
         layout.addWidget(_muted("已选本库数据源"))
@@ -2420,7 +2408,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         source_counts = {key: len(value) for key, value in grouped_rows.items()}
         prefix = f"已选 GEO {source_counts['geo']} 个，TCGA {source_counts['tcga_gdc']} 个，GTEx {source_counts['gtex']} 个；{ready_count} 个可进入识别。"
         if ready_count:
-            self._registered_count_label.setText(f"{prefix} 当前建议操作：进入数据识别。")
+            self._registered_count_label.setText(f"{prefix} 当前状态：可进入识别。")
         elif total_count:
             self._registered_count_label.setText(f"{prefix} 当前建议操作：先补全表达矩阵。")
         else:
@@ -7560,7 +7548,7 @@ def _registered_missing_assets(row: RegisteredSourceRow, status: str | None = No
 def _registered_next_step(row: RegisteredSourceRow, status: str | None = None) -> str:
     status = status or row.status
     if "可进入识别" in status and "表达矩阵待下载" not in status and "表达矩阵待确认" not in status:
-        return "进入数据识别"
+        return "可识别"
     if "表达矩阵待确认" in status or "表达矩阵待下载" in status or "已发现补充文件" in status:
         return "下载补充文件"
     if "待下载" in status:

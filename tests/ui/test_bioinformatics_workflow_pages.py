@@ -716,7 +716,8 @@ def test_data_source_technical_details_are_folded_by_default(qt_app) -> None:
 def test_data_source_registered_summary_and_next_button_states(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "expression_matrix.tsv"
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
-    widget = BioinformaticsDataSourceWidget()
+    events: list[Path] = []
+    widget = BioinformaticsDataSourceWidget(on_continue=events.append)
     widget.refresh_project(project_summary)
 
     assert widget._dataset_list_panel._table.rowCount() == 0
@@ -726,7 +727,8 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     assert not widget.findChild(QPushButton, "local_importCopyPathButton").isVisible()
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert not widget._dataset_list_panel._delete_selected_button.isEnabled()
-    assert not widget._dataset_list_panel._continue_selected_button.isEnabled()
+    recognition_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert recognition_buttons == ["下一步：数据识别"]
     assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：0 个"
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
     assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据识别：0 个"
@@ -753,13 +755,16 @@ def test_data_source_registered_summary_and_next_button_states(qt_app, project_s
     checkbox.setChecked(True)
     assert not widget._dataset_list_panel._download_selected_button.isEnabled()
     assert widget._dataset_list_panel._delete_selected_button.isEnabled()
-    assert widget._dataset_list_panel._continue_selected_button.isEnabled()
     assert widget._next_button.isEnabled()
+    recognition_buttons = [button.text() for button in widget.findChildren(QPushButton) if "数据识别" in button.text()]
+    assert recognition_buttons == ["下一步：数据识别"]
     assert widget._registered_count_label.text() == "已保存数据来源：1 个；待处理：0 个；可识别：1 个"
     assert widget.findChild(QLabel, "dataSelectionSavedCount").text() == "已保存数据来源：1 个"
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
     assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据识别：1 个"
     assert widget.findChild(QLabel, "dataSelectionNextStep").text() == "下一步：可以进入数据识别。"
+    widget._next_button.click()
+    assert events == [project_summary.project_root]
 
 
 def test_data_source_dataset_detail_prefers_summary_and_saves_user_note(qt_app, project_summary, tmp_path: Path) -> None:
@@ -1272,8 +1277,10 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     assert Path(result.downloaded_files[0]).exists()
     assert "元数据已下载" in widget.status_message()
     assert "表达矩阵待下载" in widget.status_message()
-    assert widget._registered_count_label.text() == "已选 GEO 1 个，TCGA 0 个，GTEx 0 个；1 个可进入识别。 当前建议操作：进入数据识别。"
+    assert widget._registered_count_label.text() == "已选 GEO 1 个，TCGA 0 个，GTEx 0 个；1 个可进入识别。 当前状态：可进入识别。"
     assert widget._continue_button.isEnabled()
+    recognition_buttons = [button.text() for button in widget.findChildren(QPushButton) if "进入数据识别" in button.text()]
+    assert recognition_buttons == ["下一步：进入数据识别"]
     assert widget._geo_table.item(0, 6).text() == "元数据已下载 / 表达矩阵待下载 / 已发现补充文件 / 可进入识别"
     widget._show_candidate_detail(candidate)
     assert "元数据已下载" in widget._geo_dataset_detail_panel._asset_text.toPlainText()
@@ -1288,6 +1295,7 @@ def test_chinese_dataset_search_downloads_geo_and_runs_recognition(qt_app, proje
     widget._geo_download_list_panel._checks["geo:GSE33630"].setChecked(True)
     assert widget._geo_download_list_panel._download_selected_button.text() == "下载补充文件"
     assert widget._geo_download_list_panel._download_selected_button.isEnabled()
+    assert widget._geo_download_list_panel._delete_selected_button.isEnabled()
     manifest_path = Path(str(result.details["asset_manifest_path"]))
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1366,7 +1374,7 @@ def test_chinese_dataset_search_downloads_geo_supplementary_assets_and_refreshes
     assert widget._geo_registered_table.rowCount() == 1
     assert widget._geo_registered_table.item(0, 0).text() == "GSE33630"
     assert "表达矩阵" in widget._geo_registered_table.item(0, 2).text()
-    assert widget._geo_registered_table.item(0, 4).text() == "进入数据识别"
+    assert widget._geo_registered_table.item(0, 4).text() == "可识别"
     pending_entries = workflow_pages._current_project_dataset_entries(project_summary.project_root, expand_geo_files=True)
     geo_file_entries = [entry for entry in pending_entries if entry.source_type_key == "geo_accession"]
     assert [entry.name for entry in geo_file_entries] == ["GSE33630-GPL570_series_matrix.txt.gz", "GSE33630_counts.tsv.gz"]
@@ -1546,6 +1554,8 @@ def test_chinese_dataset_search_registers_candidate_and_recognition_pre_input(qt
     assert widget._registered_count_label.text() == "已选 GEO 0 个，TCGA 1 个，GTEx 0 个；0 个可进入识别。 当前建议操作：先补全表达矩阵。"
     assert not widget._continue_button.isEnabled()
     assert widget._continue_button.text() == "下一步：进入数据识别"
+    recognition_buttons = [button.text() for button in widget.findChildren(QPushButton) if "进入数据识别" in button.text()]
+    assert recognition_buttons == ["下一步：进入数据识别"]
     assert widget.status_message() == "已选择候选来源，待下载数据文件。"
     assert "已选择，待创建下载任务" in _source_card_text(widget, "tcga_gdc")
     download_result = widget.generate_candidate_download_task("tcga_gdc", "TCGA-THCA")
@@ -1625,7 +1635,9 @@ def test_chinese_dataset_search_continue_enters_recognition(qt_app, project_summ
     )
     widget._chinese_search_page._candidates = {("geo", "GSE33630"): _geo_candidate()}
     widget._chinese_search_page.download_geo_candidate("GSE33630")
-    widget._chinese_search_page.continue_to_recognition()
+    recognition_buttons = [button.text() for button in widget._chinese_search_page.findChildren(QPushButton) if "进入数据识别" in button.text()]
+    assert recognition_buttons == ["下一步：进入数据识别"]
+    widget._chinese_search_page._continue_button.click()
 
     assert widget.current_page_object_name() == "bioinformaticsRecognitionPage"
     table = widget._recognition_page.findChild(QTableWidget, "preRecognitionInputList")
