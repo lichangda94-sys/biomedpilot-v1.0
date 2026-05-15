@@ -18,6 +18,8 @@ RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
 RECOGNITION_RUNS_DIR = Path("recognized_data") / "runs"
 CURRENT_RECOGNITION_RUN = Path("recognized_data") / "current.json"
 RECOGNIZED_FILES = Path("logs") / "recognition" / "recognized_files.json"
+RECOGNITION_REPORT_SCHEMA_VERSION = "biomedpilot.recognition_report.v1"
+RECOGNITION_ENGINE_VERSION = "developer-preview"
 
 TYPE_LABELS = {
     "expression_matrix": "表达矩阵",
@@ -2023,6 +2025,30 @@ def _type_counts(records: list[dict[str, object]]) -> dict[str, int]:
         for key in dict.fromkeys(key for key in keys if key):
             counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def _build_input_fingerprint(paths: list[Path]) -> dict[str, object]:
+    rows: list[dict[str, object]] = []
+    for path in paths:
+        candidate = path.expanduser()
+        try:
+            stat = candidate.stat()
+        except OSError:
+            rows.append({"path": str(candidate), "exists": False})
+            continue
+        rows.append(
+            {
+                "path": str(candidate.resolve()),
+                "exists": True,
+                "size_bytes": stat.st_size,
+                "mtime_ns": stat.st_mtime_ns,
+            }
+        )
+    return {
+        "schema_version": "bioinformatics_recognition_input_fingerprint.v1",
+        "file_count": len(rows),
+        "files": rows,
+    }
 
 
 def _now() -> str:

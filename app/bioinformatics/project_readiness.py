@@ -175,6 +175,8 @@ def available_inputs_from_recognition_files(files: list[object]) -> set[str]:
                     continue
                 role = str(asset.get("role") or asset.get("asset_type") or "")
                 _add_available_input(available, role)
+            if str(item.get("semantic_type") or "") == "rna_seq_integrated_result_table":
+                _add_available_input(available, "raw_count_matrix")
             continue
         primary = str(item.get("recognized_type") or "")
         _add_available_input(available, primary)
@@ -270,6 +272,8 @@ def _add_available_input(available: set[str], role: str) -> None:
     if not role or role in {"unknown", "differential_result_table", "unsupported", "archive", "raw_heavy_file", "gdc_manifest", "gmt_gene_set"}:
         return
     available.add(role)
+    if role == "raw_count_matrix":
+        available.add("count_matrix")
     if role in EXPRESSION_COMPATIBLE_INPUTS:
         available.add("expression_matrix")
 

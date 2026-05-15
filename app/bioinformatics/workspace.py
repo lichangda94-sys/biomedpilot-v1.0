@@ -33,7 +33,9 @@ try:
         BioinformaticsAnalysisTaskCenterWidget,
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
+        BioinformaticsDegConfigWidget,
         BioinformaticsGroupComparisonDesignWidget,
+        BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
         BioinformaticsReportViewerWidget,
@@ -78,16 +80,18 @@ if QWidget is not None:
                 on_continue=self.show_readiness,
                 on_back=self.show_data_source,
             )
-            self._recognition_page.navigate_requested.connect(self._handle_workflow_navigation)
+            if hasattr(self._recognition_page, "navigate_requested"):
+                self._recognition_page.navigate_requested.connect(self._handle_workflow_navigation)
             self._readiness_page = BioinformaticsReadinessDashboardWidget(
                 on_continue=self.show_standardization,
                 on_back=self.show_data_source,
             )
             self._standardized_assets_page = BioinformaticsStandardizedAssetsWidget(
-                on_continue=self.show_workflow_status,
+                on_continue=self.show_analysis_tasks,
                 on_back=self.show_readiness,
             )
-            self._standardized_assets_page.group_design_requested.connect(self.show_group_design)
+            if hasattr(self._standardized_assets_page, "group_design_requested"):
+                self._standardized_assets_page.group_design_requested.connect(self.show_group_design)
             self._group_design_page = BioinformaticsGroupComparisonDesignWidget(
                 on_continue=self.show_analysis_tasks,
                 on_back=self.show_standardization,
@@ -100,7 +104,15 @@ if QWidget is not None:
                 on_continue=self.show_results_browser,
                 on_back=self.show_workflow_status,
             )
-            self._analysis_task_page.group_design_requested.connect(self.show_group_design)
+            if hasattr(self._analysis_task_page, "group_design_requested"):
+                self._analysis_task_page.group_design_requested.connect(self.show_group_design)
+            self._deg_config_page = BioinformaticsDegConfigWidget(
+                on_back=self.show_analysis_tasks,
+            )
+            self._imported_deg_browser_page = BioinformaticsImportedDegBrowserWidget(
+                on_back=self.show_analysis_tasks,
+                on_report=self.show_report_viewer,
+            )
             self._results_browser_page = BioinformaticsResultsBrowserWidget(
                 on_continue=self.show_report_viewer,
                 on_back=self.show_analysis_tasks,
@@ -122,6 +134,8 @@ if QWidget is not None:
                 self._group_design_page,
                 self._workflow_status_page,
                 self._analysis_task_page,
+                self._deg_config_page,
+                self._imported_deg_browser_page,
                 self._results_browser_page,
                 self._report_viewer_page,
                 self._settings_page,
@@ -179,6 +193,16 @@ if QWidget is not None:
             self._set_current_project(summary)
             self._analysis_task_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._analysis_task_page)
+
+        def show_deg_config(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._deg_config_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._deg_config_page)
+
+        def show_imported_deg_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._imported_deg_browser_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._imported_deg_browser_page)
 
         def show_results_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

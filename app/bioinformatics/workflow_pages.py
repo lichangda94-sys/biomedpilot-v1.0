@@ -4133,6 +4133,62 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         )
 
 
+class BioinformaticsGroupComparisonDesignWidget(QWidget):
+    continue_requested = Signal(object)
+    back_requested = Signal()
+
+    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self.setObjectName("bioinformaticsGroupComparisonDesignPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        root = _scroll_root(self)
+        root.addWidget(_header("分组与比较设计", "当前集成预览保留入口；请优先在数据准备与标准化页确认候选分组。", back_text="返回标准化资产", back_signal=self.back_requested))
+        self._status_label = _status_label("请先打开项目。")
+        self._summary = _read_only_report_view(160)
+        root.addWidget(self._status_label)
+        root.addWidget(self._summary)
+        actions = QHBoxLayout()
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_design))
+        actions.addWidget(_button("继续：分析任务中心", "primaryButton", self.continue_to_tasks))
+        actions.addStretch(1)
+        root.addLayout(actions)
+        if on_continue is not None:
+            self.continue_requested.connect(on_continue)
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_design()
+
+    def refresh_design(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            self._summary.setPlainText("")
+            return None
+        recognition = load_recognition_report(self._project_root) or {}
+        comparison = load_confirmed_comparison_config(self._project_root)
+        preview = recognition.get("group_preview") if isinstance(recognition, dict) else {}
+        payload = {
+            "confirmed_comparison": comparison.to_dict() if comparison is not None else {},
+            "group_preview": preview if isinstance(preview, dict) else {},
+            "boundary": "integration_preview_entry_only",
+        }
+        self._status_label.setText("已确认比较组。" if comparison is not None else "尚未确认比较组；请返回标准化页确认候选分组或手动补充。")
+        self._summary.setPlainText(_json(payload))
+        return payload
+
+    def continue_to_tasks(self) -> None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return
+        self.continue_requested.emit(self._project_root)
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+
 class BioinformaticsWorkflowStatusWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
@@ -9391,7 +9447,7 @@ def _standardization_expression_status_text(assets: list[object], readiness: dic
         labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in expression_assets))
         return f"表达矩阵：已整理为 BioMedPilot 内部标准格式 {len(expression_assets)} 项（{labels}）；未执行生物学 normalization。"
     if available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
-        return "表达矩阵：数据准备检查已识别到可用输入；请生成标准化数据。"
+        return "表达矩阵：已整理为 BioMedPilot 内部标准格式 0 项；数据准备检查已识别到可用输入，请生成标准化数据；未执行生物学 normalization。"
     return "表达矩阵：未识别到可用于后续分析的矩阵，请返回数据识别或数据选择补充。"
 
 
@@ -9799,6 +9855,9 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
     has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"} for item in assets)
     if not has_ready_core:
+        readiness = load_readiness_artifacts(project_root).get("readiness_report")
+        if isinstance(readiness, dict) and readiness.get("standardization_ready"):
+            return True, ""
         return False, "没有 analysis-ready 表达矩阵资产。"
     return True, ""
 
