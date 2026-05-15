@@ -65,7 +65,7 @@ def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qap
         assert title in text
     assert "available / 已接入" in text
     assert text.count("planned / 未启用") == 4
-    assert "浓度、质量、体积、摩尔量、稀释等基础实验计算。" in text
+    assert "用户自定义试剂模板、本次配制换算和子模板展开" in text
     assert "图像能力边界" in text
     assert "本地引擎状态摘要" in text
     assert "未启用 WB/gel 真实分析" in text

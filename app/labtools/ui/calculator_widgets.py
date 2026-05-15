@@ -4,12 +4,16 @@ from collections.abc import Callable
 
 try:
     from PySide6.QtWidgets import (
+        QApplication,
+        QCheckBox,
         QComboBox,
         QFrame,
         QGridLayout,
         QHBoxLayout,
         QLabel,
         QLineEdit,
+        QListWidget,
+        QMessageBox,
         QPushButton,
         QTabWidget,
         QTextEdit,
@@ -29,12 +33,13 @@ try:
         DilutionInput,
         MassMolarityInput,
         QpcrMixInput,
-        WesternBlotLoadingInput,
         calculate_cell_seeding_v1,
         calculate_dilution_v1,
         calculate_mass_molarity_v1,
         calculate_qpcr_mix_v1,
-        calculate_western_blot_loading_v1,
+        format_cell_seeding_copy_text,
+        format_dilution_copy_text,
+        format_mass_molarity_copy_text,
     )
     from app.labtools.calculators.solution_preparation_calculator import calculate_solution_preparation
     from app.labtools.calculators.unit_conversion import (
@@ -42,6 +47,15 @@ try:
         supported_concentration_units,
         supported_mass_units,
         supported_volume_units,
+    )
+    from app.labtools.reagent_templates import (
+        CommercialReagentInfo,
+        PreparationRequest,
+        ReagentComponent,
+        ReagentTemplate,
+        ReagentTemplateError,
+        ReagentTemplateStore,
+        calculate_preparation,
     )
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -73,15 +87,48 @@ if QWidget is not None:
             self.setReadOnly(True)
             self.setMinimumHeight(180)
             self.setText("填写参数后点击计算。")
+            self._copyable_text = ""
+            self._copy_button: QPushButton | None = None
 
         def show_result(self, result: CalculationResult) -> None:
             self.setText(result.as_text())
+            self.set_copyable_text(result.as_text())
 
-        def show_text_result(self, text: str) -> None:
+        def show_text_result(self, text: str, *, copyable_text: str = "") -> None:
             self.setText(text)
+            self.set_copyable_text(copyable_text)
 
         def show_error(self, message: str) -> None:
             self.setText(f"输入需要调整\n{message}")
+            self.set_copyable_text("")
+
+        def set_copy_button(self, button: QPushButton) -> None:
+            self._copy_button = button
+            self._copy_button.setEnabled(False)
+            self._copy_button.clicked.connect(self.copy_to_clipboard)
+
+        def set_copyable_text(self, text: str) -> None:
+            self._copyable_text = text.strip()
+            if self._copy_button is not None:
+                self._copy_button.setEnabled(bool(self._copyable_text))
+
+        def copyable_text(self) -> str:
+            return self._copyable_text
+
+        def copy_to_clipboard(self) -> bool:
+            if not self._copyable_text:
+                return False
+            QApplication.clipboard().setText(self._copyable_text)
+            base_text = self.toPlainText().split("\n\n已复制计算结果，请使用前人工核对。")[0]
+            self.setText(f"{base_text}\n\n已复制计算结果，请使用前人工核对。")
+            return True
+
+
+    def _copy_button_for(panel: ResultPanel) -> QPushButton:
+        button = QPushButton("复制结果")
+        button.setObjectName("secondaryButton")
+        panel.set_copy_button(button)
+        return button
 
 
     class ConcentrationCalculatorWidget(QWidget):
@@ -170,6 +217,8 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
 
         def _card(self, title: str) -> QFrame:
             frame = QFrame()
@@ -215,20 +264,19 @@ if QWidget is not None:
 
         def _handle_mass(self) -> None:
             try:
-                result = calculate_mass_molarity_v1(
-                    MassMolarityInput(
-                        molecular_weight=self._target_mw.text(),
-                        target_concentration=self._target_molarity.text(),
-                        concentration_unit=self._target_molarity_unit.currentText(),
-                        final_volume=self._target_volume.text(),
-                        volume_unit=self._target_volume_unit.currentText(),
-                        output_mass_unit=self._mass_output_unit.currentText(),
-                    )
+                input_data = MassMolarityInput(
+                    molecular_weight=self._target_mw.text(),
+                    target_concentration=self._target_molarity.text(),
+                    concentration_unit=self._target_molarity_unit.currentText(),
+                    final_volume=self._target_volume.text(),
+                    volume_unit=self._target_volume_unit.currentText(),
+                    output_mass_unit=self._mass_output_unit.currentText(),
                 )
+                result = calculate_mass_molarity_v1(input_data)
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=format_mass_molarity_copy_text(input_data, result))
 
 
     class DilutionCalculatorWidget(QWidget):
@@ -273,24 +321,25 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_dilution_v1(
-                    DilutionInput(
-                        stock_concentration=self._stock_value.text(),
-                        stock_unit=self._stock_unit.currentText(),
-                        target_concentration=self._target_value.text(),
-                        target_unit=self._target_unit.currentText(),
-                        final_volume=self._volume_value.text(),
-                        final_volume_unit=self._volume_unit.currentText(),
-                    )
+                input_data = DilutionInput(
+                    stock_concentration=self._stock_value.text(),
+                    stock_unit=self._stock_unit.currentText(),
+                    target_concentration=self._target_value.text(),
+                    target_unit=self._target_unit.currentText(),
+                    final_volume=self._volume_value.text(),
+                    final_volume_unit=self._volume_unit.currentText(),
                 )
+                result = calculate_dilution_v1(input_data)
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=format_dilution_copy_text(input_data, result))
 
 
     class SolutionPreparationCalculatorWidget(QWidget):
@@ -336,6 +385,8 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
@@ -404,25 +455,26 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_cell_seeding_v1(
-                    CellSeedingInput(
-                        current_cell_concentration=self._cell_density.text(),
-                        concentration_unit=self._density_unit.currentText(),
-                        target_cells_per_well=self._target_cells.text(),
-                        well_count=self._wells.text(),
-                        volume_per_well=self._volume_per_well.text(),
-                        volume_unit=self._volume_unit.currentText(),
-                        overage_percentage=self._overage_percent.text(),
-                    )
+                input_data = CellSeedingInput(
+                    current_cell_concentration=self._cell_density.text(),
+                    concentration_unit=self._density_unit.currentText(),
+                    target_cells_per_well=self._target_cells.text(),
+                    well_count=self._wells.text(),
+                    volume_per_well=self._volume_per_well.text(),
+                    volume_unit=self._volume_unit.currentText(),
+                    overage_percentage=self._overage_percent.text(),
                 )
+                result = calculate_cell_seeding_v1(input_data)
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=format_cell_seeding_copy_text(input_data, result))
 
 
     class QpcrMixCalculatorWidget(QWidget):
@@ -476,6 +528,8 @@ if QWidget is not None:
 
             self._result = ResultPanel()
             root.addWidget(self._result)
+            self._copy_button = _copy_button_for(self._result)
+            root.addWidget(self._copy_button)
             root.addStretch(1)
 
         def _handle_calculate(self) -> None:
@@ -495,82 +549,481 @@ if QWidget is not None:
             except Exception as exc:  # pragma: no cover - defensive UI guard
                 self._result.show_error(str(exc))
                 return
-            self._result.show_text_result(result.as_text())
+            self._result.show_text_result(result.as_text(), copyable_text=result.as_text() if result.valid else "")
 
 
-    class WesternBlotLoadingCalculatorWidget(QWidget):
+    class QuickCalculationWidget(QWidget):
         def __init__(self, on_record: Callable[[CalculationRecord], None] | None = None) -> None:
             super().__init__()
-            self.setObjectName("labToolsWesternBlotLoadingCalculator")
-            self._on_record = on_record
+            self.setObjectName("labToolsQuickCalculationWorkspace")
+            root = QVBoxLayout(self)
+            root.setContentsMargins(0, 0, 0, 0)
+            tabs = QTabWidget()
+            tabs.setObjectName("labToolsQuickCalculatorTabs")
+            tabs.addTab(ConcentrationCalculatorWidget(on_record=on_record), "浓度换算")
+            tabs.addTab(DilutionCalculatorWidget(on_record=on_record), "稀释计算")
+            tabs.addTab(SolutionPreparationCalculatorWidget(on_record=on_record), "溶液配制")
+            root.addWidget(tabs)
+
+
+    class ReagentTemplateManagerWidget(QWidget):
+        def __init__(self, store: ReagentTemplateStore | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsReagentTemplateManager")
+            self._store = store or ReagentTemplateStore()
+            self._templates: tuple[ReagentTemplate, ...] = ()
+            self._components: list[ReagentComponent] = []
+            self._selected_template_id = ""
             self._build_ui()
+            self.refresh_templates()
+            self._handle_new_template()
+
+        def refresh_templates(self) -> None:
+            try:
+                self._templates = self._store.load()
+                self._status.setText(f"本地模板数：{len(self._templates)}\n路径：{self._store.resolved_path()}\n不联网、不上传、不依赖账号。")
+            except ReagentTemplateError as exc:
+                self._templates = ()
+                self._status.setText(f"读取需要调整\n{exc}")
+            self._refresh_template_list()
+            self._refresh_reference_combo()
 
         def _build_ui(self) -> None:
             root = QVBoxLayout(self)
             root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
             root.setSpacing(SPACING["md"])
-            title = QLabel("WB / SDS-PAGE 上样计算")
+            title = QLabel("我的试剂模板")
             title.setObjectName("labToolsSectionTitle")
+            note = QLabel("手动录入本实验室确认过的试剂模板；第一版不做 Excel/CSV/OCR 导入，不提供内置配方库。")
+            note.setObjectName("labToolsCalculatorNotice")
+            note.setWordWrap(True)
             root.addWidget(title)
+            root.addWidget(note)
+
+            row = QHBoxLayout()
+            self._template_list = QListWidget()
+            self._template_list.setObjectName("reagentTemplateList")
+            self._template_list.currentRowChanged.connect(self._handle_template_selected)
+            row.addWidget(self._template_list, 1)
+
+            form = QFrame()
+            form.setObjectName("labToolsCard")
+            form_layout = QGridLayout(form)
+            form_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._name = _line_edit("例如 试剂 A")
+            self._name.setObjectName("reagentTemplateNameField")
+            self._default_volume = _line_edit("例如 100")
+            self._default_volume.setObjectName("reagentTemplateDefaultVolumeField")
+            self._default_volume_unit = _combo(supported_volume_units(), "mL")
+            self._default_volume_unit.setObjectName("reagentTemplateDefaultVolumeUnitCombo")
+            self._default_strength = _line_edit("例如 1X、100%、原液")
+            self._default_strength.setObjectName("reagentTemplateDefaultStrengthField")
+            self._notes = _line_edit("备注")
+            self._notes.setObjectName("reagentTemplateNotesField")
+            fields = (
+                ("模板名称", self._name),
+                ("默认体积", self._default_volume),
+                ("体积单位", self._default_volume_unit),
+                ("默认倍数/浓度", self._default_strength),
+                ("备注", self._notes),
+            )
+            for index, (label, widget) in enumerate(fields):
+                form_layout.addWidget(QLabel(label), index, 0)
+                form_layout.addWidget(widget, index, 1)
+            row.addWidget(form, 2)
+            root.addLayout(row)
+
+            component_card = QFrame()
+            component_card.setObjectName("labToolsCard")
+            component_layout = QGridLayout(component_card)
+            component_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            self._component_name = _line_edit("组分名称")
+            self._component_name.setObjectName("reagentComponentNameField")
+            self._component_type = _combo(("liquid", "powder", "commercial_reagent", "solvent", "ph_adjustment", "self_prepared_template"), "liquid")
+            self._component_type.setObjectName("reagentComponentTypeCombo")
+            self._component_amount = _line_edit("基准用量")
+            self._component_amount.setObjectName("reagentComponentAmountField")
+            self._component_unit = _combo(("L", "mL", "µL", "g", "mg", "µg", "M", "mM", "µM", "%", "X"), "mL")
+            self._component_unit.setObjectName("reagentComponentUnitCombo")
+            self._scale_volume = QCheckBox("随总量缩放")
+            self._scale_volume.setObjectName("reagentComponentScaleVolumeCheck")
+            self._scale_volume.setChecked(True)
+            self._scale_strength = QCheckBox("按目标倍数缩放")
+            self._scale_strength.setObjectName("reagentComponentScaleStrengthCheck")
+            self._contributes_volume = QCheckBox("参与最终体积")
+            self._contributes_volume.setObjectName("reagentComponentContributesVolumeCheck")
+            self._auto_fill = QCheckBox("自动补足至最终体积")
+            self._auto_fill.setObjectName("reagentComponentAutoFillCheck")
+            self._reference_template = QComboBox()
+            self._reference_template.setObjectName("reagentComponentReferenceTemplateCombo")
+            self._component_notes = _line_edit("组分备注")
+            self._component_notes.setObjectName("reagentComponentNotesField")
+            self._commercial_concentration = _line_edit("商品化试剂浓度")
+            self._commercial_concentration.setObjectName("reagentCommercialConcentrationField")
+            self._commercial_lot = _line_edit("批号")
+            self._commercial_lot.setObjectName("reagentCommercialLotField")
+            self._commercial_supplier = _line_edit("供应商")
+            self._commercial_supplier.setObjectName("reagentCommercialSupplierField")
+            self._commercial_storage = _line_edit("保存条件")
+            self._commercial_storage.setObjectName("reagentCommercialStorageField")
+            component_widgets = (
+                ("组分名称", self._component_name),
+                ("组分类型", self._component_type),
+                ("基准用量", self._component_amount),
+                ("单位", self._component_unit),
+                ("引用子模板", self._reference_template),
+                ("备注", self._component_notes),
+                ("商品化浓度", self._commercial_concentration),
+                ("商品化批号", self._commercial_lot),
+                ("供应商", self._commercial_supplier),
+                ("保存条件", self._commercial_storage),
+            )
+            for index, (label, widget) in enumerate(component_widgets):
+                component_layout.addWidget(QLabel(label), index // 2 * 2, index % 2)
+                component_layout.addWidget(widget, index // 2 * 2 + 1, index % 2)
+            checks = QHBoxLayout()
+            for check in (self._scale_volume, self._scale_strength, self._contributes_volume, self._auto_fill):
+                checks.addWidget(check)
+            component_layout.addLayout(checks, 10, 0, 1, 2)
+            add_component = QPushButton("添加组分")
+            add_component.setObjectName("reagentTemplateAddComponentButton")
+            add_component.clicked.connect(self._handle_add_component)
+            remove_component = QPushButton("移除最后组分")
+            remove_component.setObjectName("reagentTemplateRemoveLastComponentButton")
+            remove_component.clicked.connect(self._handle_remove_last_component)
+            clear_components = QPushButton("清空组分")
+            clear_components.setObjectName("reagentTemplateClearComponentsButton")
+            clear_components.clicked.connect(self._handle_clear_components)
+            component_actions = QHBoxLayout()
+            component_actions.addWidget(add_component)
+            component_actions.addWidget(remove_component)
+            component_actions.addWidget(clear_components)
+            component_actions.addStretch(1)
+            component_layout.addLayout(component_actions, 11, 0, 1, 2)
+            root.addWidget(component_card)
+
+            self._component_summary = QTextEdit()
+            self._component_summary.setObjectName("reagentTemplateComponentSummary")
+            self._component_summary.setReadOnly(True)
+            self._component_summary.setMinimumHeight(120)
+            root.addWidget(self._component_summary)
+
+            actions = QHBoxLayout()
+            for text, name, handler in (
+                ("新建模板", "reagentTemplateNewButton", self._handle_new_template),
+                ("保存模板", "reagentTemplateSaveButton", self._handle_save_template),
+                ("复制模板", "reagentTemplateCopyButton", self._handle_copy_template),
+                ("删除模板", "reagentTemplateDeleteButton", self._handle_delete_template),
+                ("重新读取", "reagentTemplateReloadButton", self.refresh_templates),
+            ):
+                button = QPushButton(text)
+                button.setObjectName(name)
+                button.clicked.connect(handler)
+                actions.addWidget(button)
+            actions.addStretch(1)
+            root.addLayout(actions)
+            self._status = QTextEdit()
+            self._status.setObjectName("reagentTemplateStatusPanel")
+            self._status.setReadOnly(True)
+            self._status.setMinimumHeight(110)
+            root.addWidget(self._status)
+
+        def _refresh_template_list(self) -> None:
+            self._template_list.clear()
+            for template in self._templates:
+                self._template_list.addItem(f"{template.name} · {template.default_volume:g} {template.default_volume_unit} · {template.default_strength}")
+
+        def _refresh_reference_combo(self) -> None:
+            current = self._reference_template.currentData()
+            self._reference_template.clear()
+            self._reference_template.addItem("不引用", "")
+            for template in self._templates:
+                self._reference_template.addItem(template.name, template.template_id)
+            if current:
+                index = self._reference_template.findData(current)
+                if index >= 0:
+                    self._reference_template.setCurrentIndex(index)
+
+        def _handle_template_selected(self, row: int) -> None:
+            if row < 0 or row >= len(self._templates):
+                return
+            template = self._templates[row]
+            self._selected_template_id = template.template_id
+            self._name.setText(template.name)
+            self._default_volume.setText(f"{template.default_volume:g}")
+            self._default_volume_unit.setCurrentText(template.default_volume_unit)
+            self._default_strength.setText(template.default_strength)
+            self._notes.setText(template.notes)
+            self._components = list(template.components)
+            self._refresh_component_summary()
+
+        def _handle_new_template(self) -> None:
+            self._selected_template_id = ""
+            self._name.clear()
+            self._default_volume.setText("100")
+            self._default_volume_unit.setCurrentText("mL")
+            self._default_strength.setText("1X")
+            self._notes.clear()
+            self._components = []
+            self._refresh_component_summary()
+
+        def _handle_add_component(self) -> None:
+            try:
+                amount = float(self._component_amount.text())
+                reference_id = str(self._reference_template.currentData() or "")
+                component = ReagentComponent(
+                    name=self._component_name.text().strip(),
+                    component_type=self._component_type.currentText(),
+                    base_amount=amount,
+                    unit=self._component_unit.currentText(),
+                    scale_with_volume=self._scale_volume.isChecked(),
+                    scale_with_strength=self._scale_strength.isChecked(),
+                    contributes_to_final_volume=self._contributes_volume.isChecked(),
+                    auto_fill_to_final_volume=self._auto_fill.isChecked(),
+                    notes=self._component_notes.text().strip(),
+                    referenced_template_id=reference_id,
+                    commercial_info=CommercialReagentInfo(
+                        concentration=self._commercial_concentration.text().strip(),
+                        lot_number=self._commercial_lot.text().strip(),
+                        supplier=self._commercial_supplier.text().strip(),
+                        storage_condition=self._commercial_storage.text().strip(),
+                        notes=self._component_notes.text().strip(),
+                    )
+                    if self._component_type.currentText() == "commercial_reagent"
+                    else None,
+                )
+            except ValueError:
+                self._status.setText("组分需要调整\n基准用量必须是有效数字。")
+                return
+            self._components.append(component)
+            self._refresh_component_summary()
+            self._component_name.clear()
+            self._component_amount.clear()
+            self._component_notes.clear()
+            self._commercial_concentration.clear()
+            self._commercial_lot.clear()
+            self._commercial_supplier.clear()
+            self._commercial_storage.clear()
+
+        def _handle_remove_last_component(self) -> None:
+            if not self._components:
+                self._status.setText("当前模板尚未添加组分。")
+                return
+            removed = self._components.pop()
+            self._refresh_component_summary()
+            self._status.setText(f"已移除最后组分：{removed.name}。保存模板后写入本地 JSON。")
+
+        def _handle_clear_components(self) -> None:
+            self._components = []
+            self._refresh_component_summary()
+            self._status.setText("已清空当前表单组分。保存模板后写入本地 JSON。")
+
+        def _refresh_component_summary(self) -> None:
+            if not self._components:
+                self._component_summary.setText("尚未添加组分。")
+                return
+            lines = []
+            for component in self._components:
+                flags = []
+                if component.scale_with_volume:
+                    flags.append("随总量缩放")
+                if component.scale_with_strength:
+                    flags.append("按倍数缩放")
+                if component.contributes_to_final_volume:
+                    flags.append("参与体积")
+                if component.auto_fill_to_final_volume:
+                    flags.append("自动补足")
+                if component.referenced_template_id:
+                    flags.append("引用子模板")
+                lines.append(f"{component.name}: {component.base_amount:g} {component.unit} / {component.component_type} / {', '.join(flags) or '固定记录'}")
+            self._component_summary.setText("\n".join(lines))
+
+        def _build_template_from_form(self) -> ReagentTemplate:
+            try:
+                default_volume = float(self._default_volume.text())
+            except ValueError as exc:
+                raise ReagentTemplateError("默认配制体积必须是有效数字。") from exc
+            if self._selected_template_id:
+                existing = next((template for template in self._templates if template.template_id == self._selected_template_id), None)
+                created_at = existing.created_at if existing is not None else ""
+                return ReagentTemplate(
+                    template_id=self._selected_template_id,
+                    name=self._name.text().strip(),
+                    default_volume=default_volume,
+                    default_volume_unit=self._default_volume_unit.currentText(),
+                    default_strength=self._default_strength.text().strip() or "1X",
+                    notes=self._notes.text().strip(),
+                    components=tuple(self._components),
+                    created_at=created_at,
+                    updated_at=created_at,
+                )
+            return ReagentTemplate.create(
+                name=self._name.text().strip(),
+                default_volume=default_volume,
+                default_volume_unit=self._default_volume_unit.currentText(),
+                default_strength=self._default_strength.text().strip() or "1X",
+                notes=self._notes.text().strip(),
+                components=tuple(self._components),
+            )
+
+        def _handle_save_template(self) -> None:
+            try:
+                template = self._store.upsert_template(self._build_template_from_form())
+            except ReagentTemplateError as exc:
+                self._status.setText(f"保存需要调整\n{exc}")
+                return
+            self._selected_template_id = template.template_id
+            self.refresh_templates()
+            self._status.setText(f"模板已保存\n名称：{template.name}\ntemplate_id：{template.template_id}\n路径：{self._store.resolved_path()}\n本地 JSON 保存，不联网、不上传。")
+
+        def _handle_copy_template(self) -> None:
+            if not self._selected_template_id:
+                self._status.setText("请先选择要复制的模板。")
+                return
+            try:
+                copied = self._store.copy_template(self._selected_template_id)
+            except ReagentTemplateError as exc:
+                self._status.setText(f"复制需要调整\n{exc}")
+                return
+            self.refresh_templates()
+            self._status.setText(f"模板已复制\n名称：{copied.name}\ntemplate_id：{copied.template_id}")
+
+        def _handle_delete_template(self, _checked: bool = False, *, confirmed: bool = False) -> None:
+            if not self._selected_template_id:
+                self._status.setText("请先选择要删除的模板。")
+                return
+            if not confirmed:
+                answer = QMessageBox.question(self, "确认删除模板", "删除模板前请确认。此操作只影响本地 JSON。")
+                if answer != QMessageBox.Yes:
+                    self._status.setText("已取消删除。")
+                    return
+            try:
+                self._store.delete_template(self._selected_template_id, confirmed=True)
+            except ReagentTemplateError as exc:
+                self._status.setText(f"删除需要调整\n{exc}")
+                return
+            self._selected_template_id = ""
+            self._components = []
+            self.refresh_templates()
+            self._status.setText("模板已删除。本地 JSON 已更新。")
+
+
+    class ReagentPreparationWidget(QWidget):
+        def __init__(self, store: ReagentTemplateStore | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsReagentPreparationWorkspace")
+            self._store = store or ReagentTemplateStore()
+            self._templates: tuple[ReagentTemplate, ...] = ()
+            self._build_ui()
+            self.refresh_templates()
+
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            root.setSpacing(SPACING["md"])
+            title = QLabel("本次配制")
+            title.setObjectName("labToolsSectionTitle")
+            note = QLabel("选择本地模板后输入本次目标体积、目标倍数和损耗系数，生成本次配制清单。")
+            note.setObjectName("labToolsCalculatorNotice")
+            note.setWordWrap(True)
+            root.addWidget(title)
+            root.addWidget(note)
 
             card = QFrame()
             card.setObjectName("labToolsCard")
             grid = QGridLayout(card)
             grid.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-            self._protein_concentration = _line_edit("例如 2")
-            self._protein_concentration_unit = _combo(("mg/mL", "µg/µL"), "mg/mL")
-            self._target_mass = _line_edit("例如 20")
-            self._final_volume = _line_edit("例如 20")
-            self._volume_unit = _combo(supported_volume_units(), "µL")
-            self._loading_buffer_x = _line_edit("例如 4")
-            self._loading_buffer_x.setText("4")
-            button = QPushButton("计算上样体系")
-            button.setObjectName("primaryButton")
-            button.clicked.connect(self._handle_calculate)
-            grid.addWidget(QLabel("蛋白浓度"), 0, 0)
-            grid.addWidget(self._protein_concentration, 0, 1)
-            grid.addWidget(self._protein_concentration_unit, 0, 2)
-            grid.addWidget(QLabel("目标上样蛋白量 µg"), 1, 0)
-            grid.addWidget(self._target_mass, 1, 1, 1, 2)
-            grid.addWidget(QLabel("目标上样体积"), 2, 0)
-            grid.addWidget(self._final_volume, 2, 1)
-            grid.addWidget(self._volume_unit, 2, 2)
-            grid.addWidget(QLabel("loading buffer 倍数"), 3, 0)
-            grid.addWidget(self._loading_buffer_x, 3, 1, 1, 2)
-            grid.addWidget(button, 4, 0, 1, 3)
+            self._template_combo = QComboBox()
+            self._template_combo.setObjectName("preparationTemplateCombo")
+            self._target_volume = _line_edit("例如 75")
+            self._target_volume.setObjectName("preparationTargetVolumeField")
+            self._target_volume_unit = _combo(supported_volume_units(), "mL")
+            self._target_volume_unit.setObjectName("preparationTargetVolumeUnitCombo")
+            self._target_strength = _line_edit("例如 1X、0.5X、100%")
+            self._target_strength.setObjectName("preparationTargetStrengthField")
+            self._target_strength.setText("1X")
+            self._overage = _line_edit("例如 10")
+            self._overage.setObjectName("preparationOverageField")
+            self._overage.setText("0")
+            self._expand = QCheckBox("展开子模板")
+            self._expand.setObjectName("preparationExpandSubtemplatesCheck")
+            fields = (
+                ("试剂模板", self._template_combo),
+                ("目标体积", self._target_volume),
+                ("体积单位", self._target_volume_unit),
+                ("目标倍数/浓度", self._target_strength),
+                ("损耗系数 %", self._overage),
+            )
+            for index, (label, widget) in enumerate(fields):
+                grid.addWidget(QLabel(label), index, 0)
+                grid.addWidget(widget, index, 1)
+            grid.addWidget(self._expand, len(fields), 0, 1, 2)
             root.addWidget(card)
 
-            notice = QLabel("仅估算样品、loading buffer 和水的体积；不做 WB/凝胶灰度或条带分析。")
-            notice.setObjectName("labToolsCalculatorNotice")
-            notice.setWordWrap(True)
-            root.addWidget(notice)
-            self._result = ResultPanel()
-            root.addWidget(self._result)
-            root.addStretch(1)
+            actions = QHBoxLayout()
+            reload_button = QPushButton("重新读取模板")
+            reload_button.setObjectName("preparationReloadTemplatesButton")
+            reload_button.clicked.connect(self.refresh_templates)
+            calculate_button = QPushButton("生成本次配制清单")
+            calculate_button.setObjectName("preparationCalculateButton")
+            calculate_button.clicked.connect(self._handle_calculate)
+            actions.addWidget(reload_button)
+            actions.addWidget(calculate_button)
+            actions.addStretch(1)
+            root.addLayout(actions)
+
+            self._result = QTextEdit()
+            self._result.setObjectName("preparationResultPanel")
+            self._result.setReadOnly(True)
+            self._result.setMinimumHeight(320)
+            self._result.setText("尚未生成配制清单。模板保存为本地 JSON，生成结果不联网、不上传。")
+            root.addWidget(self._result, 1)
+
+        def refresh_templates(self) -> None:
+            try:
+                self._templates = self._store.load()
+            except ReagentTemplateError as exc:
+                self._templates = ()
+                self._result.setText(f"读取模板需要调整\n{exc}")
+            current = self._template_combo.currentData()
+            self._template_combo.clear()
+            for template in self._templates:
+                self._template_combo.addItem(template.name, template.template_id)
+            if current:
+                index = self._template_combo.findData(current)
+                if index >= 0:
+                    self._template_combo.setCurrentIndex(index)
 
         def _handle_calculate(self) -> None:
-            try:
-                result = calculate_western_blot_loading_v1(
-                    WesternBlotLoadingInput(
-                        protein_concentration=self._protein_concentration.text(),
-                        concentration_unit=self._protein_concentration_unit.currentText(),
-                        target_protein_mass_ug=self._target_mass.text(),
-                        final_loading_volume=self._final_volume.text(),
-                        volume_unit=self._volume_unit.currentText(),
-                        loading_buffer_x=self._loading_buffer_x.text(),
-                    )
-                )
-            except Exception as exc:  # pragma: no cover - defensive UI guard
-                self._result.show_error(str(exc))
+            template_id = str(self._template_combo.currentData() or "")
+            if not template_id:
+                self._result.setText("请先创建并选择试剂模板。")
                 return
-            self._result.show_text_result(result.as_text())
+            try:
+                request = PreparationRequest(
+                    template_id=template_id,
+                    target_volume=float(self._target_volume.text()),
+                    target_volume_unit=self._target_volume_unit.currentText(),
+                    target_strength=self._target_strength.text().strip() or "1X",
+                    overage_percent=float(self._overage.text() or 0),
+                    expand_subtemplates=self._expand.isChecked(),
+                )
+                result = calculate_preparation(request, self._templates)
+            except ValueError:
+                self._result.setText("输入需要调整\n目标体积和损耗系数必须是有效数字。")
+                return
+            except ReagentTemplateError as exc:
+                self._result.setText(f"配制需要调整\n{exc}")
+                return
+            self._result.setText(result.as_text())
 
 
     class LabToolsCalculatorWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, reagent_template_store: ReagentTemplateStore | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsCalculatorWorkspace")
             self.setStyleSheet(self._stylesheet())
+            self._reagent_template_store = reagent_template_store or ReagentTemplateStore()
             self._latest_record: CalculationRecord | None = None
             root = QVBoxLayout(self)
             root.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["lg"])
@@ -578,9 +1031,12 @@ if QWidget is not None:
             self._record_summary = QLabel("最近一次计算：暂无")
             self._record_summary.setObjectName("labToolsRecordSummary")
             self._record_summary.setWordWrap(True)
-            title = QLabel("实验计算器中心")
+            title = QLabel("通用试剂计算器")
             title.setObjectName("labToolsCalculatorTitle")
-            subtitle = QLabel("本地辅助计算：稀释、摩尔浓度换算、细胞接种。结果仅供实验前核对，不替代实验 SOP。")
+            subtitle = QLabel(
+                "本地通用试剂模板与分层配制计算工作台：保留浓度换算、C1V1 稀释和溶液配制快速计算，"
+                "并支持用户自定义试剂模板、本次配制换算、子模板展开与本地 JSON 保存。结果仅供实验前核对，不替代实验 SOP。"
+            )
             subtitle.setObjectName("labToolsCalculatorNotice")
             subtitle.setWordWrap(True)
             risk = QLabel(CALCULATION_REVIEW_NOTICE)
@@ -592,12 +1048,9 @@ if QWidget is not None:
             root.addWidget(self._record_summary)
             tabs = QTabWidget()
             tabs.setObjectName("labToolsCalculatorTabs")
-            tabs.addTab(ConcentrationCalculatorWidget(on_record=self._set_latest_record), "浓度换算")
-            tabs.addTab(DilutionCalculatorWidget(on_record=self._set_latest_record), "稀释计算")
-            tabs.addTab(SolutionPreparationCalculatorWidget(on_record=self._set_latest_record), "溶液配制")
-            tabs.addTab(CellSeedingCalculatorWidget(on_record=self._set_latest_record), "细胞接种")
-            tabs.addTab(QpcrMixCalculatorWidget(on_record=self._set_latest_record), "qPCR 配液")
-            tabs.addTab(WesternBlotLoadingCalculatorWidget(on_record=self._set_latest_record), "WB 上样")
+            tabs.addTab(QuickCalculationWidget(on_record=self._set_latest_record), "快速计算")
+            tabs.addTab(ReagentTemplateManagerWidget(self._reagent_template_store), "我的试剂模板")
+            tabs.addTab(ReagentPreparationWidget(self._reagent_template_store), "本次配制")
             root.addWidget(tabs)
 
         def latest_record(self) -> CalculationRecord | None:
@@ -654,6 +1107,14 @@ if QWidget is not None:
                 border-radius: {RADIUS["sm"]}px;
                 min-height: {CONTROL_HEIGHT["primary"] - 12}px;
                 font-weight: 700;
+            }}
+            QPushButton#secondaryButton {{
+                color: {COLORS["bio"]};
+                background: {COLORS["bio_soft"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                min-height: {CONTROL_HEIGHT["primary"] - 12}px;
+                font-weight: 600;
             }}
             QTextEdit#labToolsResultPanel {{
                 background: {COLORS["surface"]};

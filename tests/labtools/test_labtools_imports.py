@@ -95,10 +95,14 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert widget.current_page_key() == "general_calculators"
     tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
     assert tabs is not None
-    assert [tabs.tabText(index) for index in range(tabs.count())] == ["浓度换算", "稀释计算", "溶液配制"]
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["快速计算", "我的试剂模板", "本次配制"]
+    quick_tabs = widget.findChild(QTabWidget, "labToolsQuickCalculatorTabs")
+    assert quick_tabs is not None
+    assert [quick_tabs.tabText(index) for index in range(quick_tabs.count())] == ["浓度换算", "稀释计算", "溶液配制"]
     calculator_labels = "\n".join(label.text() for label in widget._stack.currentWidget().findChildren(QLabel))
     assert "通用试剂计算器" in calculator_labels
-    assert "本地基础实验计算：浓度换算、摩尔量/质量/体积换算、C1V1 稀释和溶液配制" in calculator_labels
+    assert "本地通用试剂模板与分层配制计算工作台" in calculator_labels
+    assert "用户自定义试剂模板" in calculator_labels
     assert "不替代实验 SOP" in calculator_labels
     assert "溶液稀释" in calculator_labels or "C1V1 = C2V2 稀释计算" in calculator_labels
     assert "摩尔浓度" in calculator_labels
@@ -130,3 +134,59 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     assert widget.current_page_key() == "pcr_qpcr"
     widget.show_elisa_absorbance()
     assert widget.current_page_key() == "elisa_absorbance"
+
+
+def test_labtools_calculator_workbench_saves_template_and_generates_preparation(tmp_path) -> None:
+    try:
+        from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QLineEdit, QPushButton, QTabWidget, QTextEdit
+
+        from app.labtools.reagent_templates import ReagentTemplateStore
+        from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"PySide6 UI runtime unavailable: {exc}")
+
+    app = QApplication.instance() or QApplication([])
+    store = ReagentTemplateStore(tmp_path / "reagent_templates.json")
+    widget = LabToolsCalculatorWidget(reagent_template_store=store)
+
+    assert app is not None
+    tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
+    assert tabs is not None
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["快速计算", "我的试剂模板", "本次配制"]
+
+    tabs.setCurrentIndex(1)
+    widget.findChild(QLineEdit, "reagentTemplateNameField").setText("试剂 A")
+    widget.findChild(QLineEdit, "reagentTemplateDefaultVolumeField").setText("100")
+    widget.findChild(QLineEdit, "reagentTemplateDefaultStrengthField").setText("1X")
+
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("B")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("10")
+    widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(True)
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+
+    widget.findChild(QLineEdit, "reagentComponentNameField").setText("水")
+    widget.findChild(QComboBox, "reagentComponentTypeCombo").setCurrentText("solvent")
+    widget.findChild(QLineEdit, "reagentComponentAmountField").setText("0")
+    widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(False)
+    widget.findChild(QCheckBox, "reagentComponentAutoFillCheck").setChecked(True)
+    widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
+
+    saved = store.load()
+    assert len(saved) == 1
+    assert saved[0].name == "试剂 A"
+    assert len(saved[0].components) == 2
+
+    tabs.setCurrentIndex(2)
+    widget.findChild(QPushButton, "preparationReloadTemplatesButton").click()
+    widget.findChild(QLineEdit, "preparationTargetVolumeField").setText("75")
+    widget.findChild(QLineEdit, "preparationOverageField").setText("10")
+    widget.findChild(QPushButton, "preparationCalculateButton").click()
+
+    result_text = widget.findChild(QTextEdit, "preparationResultPanel").toPlainText()
+    assert "试剂 A 本次配制清单" in result_text
+    assert "目标最终体积：75 mL" in result_text
+    assert "建议配制体积：82.5 mL" in result_text
+    assert "- B: 8.25 mL" in result_text
+    assert "- 水（溶剂补足）: 74.25 mL" in result_text
+    assert "人工复核提示" in result_text
