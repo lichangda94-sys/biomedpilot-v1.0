@@ -10,7 +10,7 @@ from app.bioinformatics.comparison_config import (
     expression_samples_from_recognition_report,
     load_confirmed_comparison_config,
 )
-from app.bioinformatics.gene_set_resources import get_selected_gene_set, validate_gene_set_registry
+from app.bioinformatics.gene_set_resources import build_gsea_gene_set_readiness, get_selected_gene_set, validate_gene_set_registry
 from app.bioinformatics.project_recognition import load_recognition_report
 from app.bioinformatics.standardization_confirmation import load_standardization_confirmation
 
@@ -49,6 +49,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     gene_set_validation = validate_gene_set_registry(root)
     selected_gene_set = get_selected_gene_set(root)
     gsea_gene_set_status = _gsea_gene_set_status(selected_gene_set)
+    gsea_gene_set_readiness = build_gsea_gene_set_readiness(root)
     has_core_input = standardization_ready
     warnings: list[str] = [str(item) for item in recognition.get("warnings", []) or []]
     if not has_core_input:
@@ -145,6 +146,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
             deg_ready=deg_ready,
         ),
         "gsea_gene_set_status": gsea_gene_set_status,
+        "gsea_gene_set_readiness": gsea_gene_set_readiness,
         "gene_set_registry_validation": gene_set_validation,
     }
     matrix = {

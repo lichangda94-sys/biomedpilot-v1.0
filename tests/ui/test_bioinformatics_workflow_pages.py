@@ -26,6 +26,7 @@ try:
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsDegConfigWidget,
+        GseaGeneSetResourceManagerDialog,
         BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
@@ -82,6 +83,14 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
     )
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+    return path
+
+
+def _write_gmt(path: Path) -> Path:
+    path.write_text(
+        "CUSTOM_ALPHA\tna\tTP53\tBAX\tCASP3\nCUSTOM_BETA\tna\tSTAT1\tIRF1\n",
+        encoding="utf-8",
+    )
     return path
 
 
@@ -1935,6 +1944,59 @@ def test_readiness_missing_info_entry_and_templates(qt_app, project_summary) -> 
     comparison_template = readiness.create_missing_info_template("comparison_config")
     assert comparison_template is not None
     assert "case_group" in comparison_template.read_text(encoding="utf-8")
+
+
+def test_gsea_gene_set_resource_manager_displays_and_selects_local_resource(qt_app, project_summary, tmp_path: Path) -> None:
+    gmt = _write_gmt(tmp_path / "custom_signatures.gmt")
+    dialog = GseaGeneSetResourceManagerDialog(project_summary.project_root)
+
+    result = dialog.import_local_gmt(
+        gmt,
+        {
+            "name": "Custom signatures",
+            "collection_type": "Custom",
+            "species": "human",
+            "gene_id_type": "symbol",
+            "source_name": "unit test",
+        },
+    )
+
+    assert result is not None
+    table = dialog.findChild(QTableWidget, "gseaGeneSetResourceTable")
+    assert table is not None
+    assert table.rowCount() == 1
+    assert table.item(0, 0).text() == "Custom signatures"
+    assert table.item(0, 6).text() == "available"
+    assert table.item(0, 7).text() == "2"
+
+    dialog.select_current_resource()
+    assert table.item(0, 8).text() == "是"
+    detail = dialog.show_current_resource_detail()
+    assert detail is not None
+    assert detail["gene_id_type"] == "symbol"
+
+
+def test_readiness_gene_set_button_opens_manager_and_status_updates(qt_app, project_summary, tmp_path: Path) -> None:
+    readiness = BioinformaticsReadinessDashboardWidget()
+    readiness.refresh_project(project_summary)
+
+    opened = readiness.open_gene_set_resource_manager()
+
+    assert opened is not None
+    dialog = opened["dialog"]
+    assert isinstance(dialog, GseaGeneSetResourceManagerDialog)
+    table = dialog.findChild(QTableWidget, "gseaGeneSetResourceTable")
+    assert table is not None
+    assert table.rowCount() == 1
+    assert table.item(0, 0).text() == "暂无本地 GSEA 基因集资源。"
+
+    dialog.import_local_gmt(
+        _write_gmt(tmp_path / "selected.gmt"),
+        {"name": "Selected gene set", "collection_type": "Custom", "species": "human", "gene_id_type": "symbol"},
+    )
+    dialog.select_current_resource()
+
+    assert readiness.findChild(QLabel, "gseaGeneSetStatus").text() == "GSEA 基因集：已选择 Selected gene set"
 
 
 def test_readiness_default_view_hides_technical_warnings(qt_app, project_summary) -> None:

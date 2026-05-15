@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QApplication,
     QCheckBox,
+    QDialog,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -92,7 +93,18 @@ from app.bioinformatics.gse_file_download_candidates import (
     save_gse_file_download_candidate_selection,
     selected_gse_file_download_candidates,
 )
-from app.bioinformatics.gene_set_resources import list_local_gene_sets, validate_gene_set_registry
+from app.bioinformatics.gene_set_resources import (
+    COLLECTION_TYPES,
+    GENE_ID_TYPES,
+    SPECIES_VALUES,
+    build_gsea_gene_set_readiness,
+    get_gene_set,
+    import_gmt_file,
+    list_local_gene_sets,
+    remove_gene_set,
+    select_gene_set,
+    validate_gene_set_registry,
+)
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
 from app.bioinformatics.results.project_results import load_result_index, write_result_index
 from app.bioinformatics.search_center import (
@@ -3106,6 +3118,212 @@ class BioinformaticsRecognitionWidget(QWidget):
         self._status_label.setText(text)
 
 
+class GseaGeneSetResourceManagerDialog(QDialog):
+    selection_changed = Signal()
+
+    def __init__(self, project_root: Path, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root = Path(project_root).expanduser().resolve()
+        self._resources: list[dict[str, Any]] = []
+        self.setObjectName("gseaGeneSetResourceManagerDialog")
+        self.setWindowTitle("GSEA 基因集资源管理器")
+        self.resize(980, 620)
+        self._build_ui()
+        self.refresh_resources()
+
+    def refresh_resources(self) -> dict[str, object]:
+        validation = validate_gene_set_registry(self._project_root)
+        self._resources = [dict(item) for item in validation.get("resources", []) if isinstance(item, dict)]
+        self._render_resources()
+        if self._resources:
+            self._status_label.setText(f"本地 GSEA 基因集资源：{len(self._resources)} 个。")
+        else:
+            self._status_label.setText("暂无本地 GSEA 基因集资源。你可以导入本地 GMT，或在后续阶段配置 / 下载常用基因集资源。")
+        return validation
+
+    def import_local_gmt(self, path: str | Path | None = None, metadata: dict[str, object] | None = None) -> dict[str, object] | None:
+        source_path: str | Path | None = path
+        metadata_payload = dict(metadata or {})
+        if source_path is None:
+            selected, _ = QFileDialog.getOpenFileName(self, "导入本地 GMT", "", "GMT files (*.gmt);;Text files (*.txt *.gmt);;All files (*)")
+            if not selected:
+                return None
+            source_path = selected
+        if not metadata_payload:
+            metadata_payload = self._prompt_import_metadata(Path(source_path))
+            if metadata_payload is None:
+                return None
+        result = import_gmt_file(self._project_root, source_path, metadata_payload)
+        resource = result.get("resource") if isinstance(result.get("resource"), dict) else {}
+        self.refresh_resources()
+        self.selection_changed.emit()
+        self._status_label.setText(f"已导入 GMT：{resource.get('name') or Path(source_path).name}；状态：{resource.get('status') or 'unknown'}。")
+        return result
+
+    def select_current_resource(self) -> dict[str, object] | None:
+        resource = self._current_resource()
+        if resource is None:
+            self._status_label.setText("请先在本地资源表中选择一条资源。")
+            return None
+        try:
+            selected = select_gene_set(self._project_root, str(resource.get("resource_id") or ""))
+        except ValueError as exc:
+            self._status_label.setText(str(exc))
+            return None
+        self.refresh_resources()
+        self.selection_changed.emit()
+        self._status_label.setText(f"已选择 GSEA 基因集：{selected.get('name') or selected.get('resource_id')}。")
+        return selected
+
+    def remove_current_resource(self) -> dict[str, object] | None:
+        resource = self._current_resource()
+        if resource is None:
+            self._status_label.setText("请先在本地资源表中选择一条资源。")
+            return None
+        removed = remove_gene_set(self._project_root, str(resource.get("resource_id") or ""))
+        self.refresh_resources()
+        self.selection_changed.emit()
+        self._status_label.setText(f"已移除 GSEA 基因集资源：{resource.get('name') or resource.get('resource_id')}。")
+        return removed
+
+    def show_current_resource_detail(self) -> dict[str, object] | None:
+        resource = self._current_resource()
+        if resource is None:
+            self._status_label.setText("请先在本地资源表中选择一条资源。")
+            return None
+        detail = get_gene_set(self._project_root, str(resource.get("resource_id") or "")) or resource
+        self._details.setPlainText(_json(detail))
+        return detail
+
+    def _build_ui(self) -> None:
+        root = QVBoxLayout(self)
+        title = QLabel("GSEA 基因集资源管理器")
+        title.setObjectName("pageTitle")
+        subtitle = _muted("管理本地 GMT 资源；本阶段不内置、不静默下载 gene set。")
+        root.addWidget(title)
+        root.addWidget(subtitle)
+        local_card, local_layout = _card("已可用的本地资源")
+        local_card.setObjectName("gseaGeneSetLocalResourcesCard")
+        self._status_label = _muted("")
+        self._status_label.setObjectName("gseaGeneSetManagerStatus")
+        local_layout.addWidget(self._status_label)
+        self._table = _table(["名称", "类型", "物种", "Gene ID 类型", "来源", "版本 / 日期", "状态", "Gene set 数量", "当前选择", "操作"])
+        self._table.setObjectName("gseaGeneSetResourceTable")
+        self._table.setMinimumHeight(240)
+        local_layout.addWidget(self._table)
+        actions = QHBoxLayout()
+        self._select_button = _button("选择", "primaryButton", self.select_current_resource)
+        self._select_button.setObjectName("selectGseaGeneSetResourceButton")
+        self._detail_button = _button("查看详情", "secondaryButton", self.show_current_resource_detail)
+        self._detail_button.setObjectName("viewGseaGeneSetResourceButton")
+        self._remove_button = _button("移除", "secondaryButton", self.remove_current_resource)
+        self._remove_button.setObjectName("removeGseaGeneSetResourceButton")
+        self._refresh_button = _button("刷新状态", "secondaryButton", self.refresh_resources)
+        self._refresh_button.setObjectName("refreshGseaGeneSetResourcesButton")
+        for button in (self._select_button, self._detail_button, self._remove_button, self._refresh_button):
+            actions.addWidget(button)
+        actions.addStretch(1)
+        local_layout.addLayout(actions)
+        root.addWidget(local_card)
+
+        import_card, import_layout = _card("导入本地 GMT")
+        import_card.setObjectName("gseaGeneSetImportCard")
+        import_layout.addWidget(_muted("导入会复制 GMT 到项目本地 gene set repository，并写入 registry；不会修改原始文件。"))
+        self._import_button = _button("导入本地 GMT", "primaryButton", self.import_local_gmt)
+        self._import_button.setObjectName("importLocalGmtButton")
+        import_layout.addWidget(self._import_button, alignment=Qt.AlignLeft)
+        root.addWidget(import_card)
+
+        download_card, download_layout = _card("下载 / 配置常用基因集资源")
+        download_card.setObjectName("gseaGeneSetFutureSourcesCard")
+        self._future_table = _table(["资源", "本阶段状态"])
+        self._future_table.setObjectName("gseaGeneSetFutureResourcesTable")
+        _fill_table(
+            self._future_table,
+            [
+                ["GO BP", "后续支持下载"],
+                ["GO CC", "后续支持下载"],
+                ["GO MF", "后续支持下载"],
+                ["Reactome", "后续支持下载"],
+                ["KEGG", "后续支持在线获取并缓存 / 用户配置"],
+                ["MSigDB Hallmark", "请导入用户已下载的 MSigDB GMT，或在授权配置后支持"],
+                ["自定义 GMT", "使用“导入本地 GMT”"],
+            ],
+        )
+        self._future_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        download_layout.addWidget(self._future_table)
+        root.addWidget(download_card)
+
+        self._details = _read_only_report_view(130)
+        self._details.setObjectName("gseaGeneSetResourceDetails")
+        root.addWidget(self._details)
+        close_row = QHBoxLayout()
+        close_row.addStretch(1)
+        close_row.addWidget(_button("关闭", "secondaryButton", self.close))
+        root.addLayout(close_row)
+
+    def _render_resources(self) -> None:
+        if not self._resources:
+            _fill_table(
+                self._table,
+                [["暂无本地 GSEA 基因集资源。", "-", "-", "-", "-", "-", "empty", "0", "否", "导入本地 GMT"]],
+            )
+            return
+        rows = []
+        for resource in self._resources:
+            rows.append(
+                [
+                    str(resource.get("name") or resource.get("resource_id") or ""),
+                    str(resource.get("collection_type") or "Unknown"),
+                    str(resource.get("species") or "unknown"),
+                    str(resource.get("gene_id_type") or "unknown"),
+                    str(resource.get("source_name") or resource.get("source_type") or ""),
+                    str(resource.get("version") or resource.get("updated_at") or ""),
+                    str(resource.get("status") or ""),
+                    str(resource.get("gene_set_count") or 0),
+                    "是" if resource.get("selected_for_gsea") else "否",
+                    "选择 / 查看详情 / 移除 / 刷新状态",
+                ]
+            )
+        _fill_table(self._table, rows)
+        _set_table_widths(self._table, [150, 95, 80, 100, 130, 140, 90, 105, 90, 220])
+        self._table.horizontalHeader().setSectionResizeMode(9, QHeaderView.Stretch)
+
+    def _current_resource(self) -> dict[str, Any] | None:
+        if not self._resources:
+            return None
+        row = self._table.currentRow()
+        if row < 0:
+            row = 0
+        if row >= len(self._resources):
+            return None
+        return self._resources[row]
+
+    def _prompt_import_metadata(self, path: Path) -> dict[str, object] | None:
+        name, ok = QInputDialog.getText(self, "资源名称", "资源名称：", text=path.stem)
+        if not ok:
+            return None
+        collection, ok = QInputDialog.getItem(self, "Collection type", "Collection type：", ["Custom", "GO_BP", "GO_CC", "GO_MF", "Reactome", "KEGG", "Hallmark", "Unknown"], 0, False)
+        if not ok:
+            return None
+        species, ok = QInputDialog.getItem(self, "物种", "物种：", ["unknown", "human", "mouse", "other"], 0, False)
+        if not ok:
+            return None
+        gene_id_type, ok = QInputDialog.getItem(self, "Gene ID 类型", "Gene ID 类型：", ["unknown", "symbol", "entrez", "ensembl"], 0, False)
+        if not ok:
+            return None
+        source_name, _ = QInputDialog.getText(self, "来源备注", "来源备注（可选）：", text=path.name)
+        license_note, _ = QInputDialog.getText(self, "License note", "License note（可选）：", text="")
+        return {
+            "name": name.strip() or path.stem,
+            "collection_type": collection if collection in COLLECTION_TYPES else "Custom",
+            "species": species if species in SPECIES_VALUES else "unknown",
+            "gene_id_type": gene_id_type if gene_id_type in GENE_ID_TYPES else "unknown",
+            "source_name": source_name.strip() or path.name,
+            "license_note": license_note.strip(),
+        }
+
+
 class BioinformaticsReadinessDashboardWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
@@ -3114,6 +3332,7 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         super().__init__(parent)
         self._project_root: Path | None = None
         self._last_artifacts: dict[str, object] = {}
+        self._gene_set_manager_dialog: GseaGeneSetResourceManagerDialog | None = None
         self.setObjectName("bioinformaticsReadinessDashboardPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._build_ui()
@@ -3281,24 +3500,21 @@ class BioinformaticsReadinessDashboardWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
+        dialog = GseaGeneSetResourceManagerDialog(self._project_root, self)
+        dialog.selection_changed.connect(self._refresh_after_gene_set_resource_change)
+        self._gene_set_manager_dialog = dialog
+        dialog.show()
+        dialog.raise_()
         validation = validate_gene_set_registry(self._project_root)
         resources = list_local_gene_sets(self._project_root)
-        if resources:
-            resource_lines = [
-                f"{item.get('name') or item.get('resource_id')} · {item.get('collection_type')} · {item.get('species')} · {item.get('gene_id_type')} · {item.get('status')}"
-                for item in resources
-            ]
-            message = "已可用的本地资源：\n" + "\n".join(resource_lines)
-        else:
-            message = "暂无本地 GSEA 基因集资源。你可以导入本地 GMT，或在下一阶段配置 / 下载常用基因集资源。"
-        message += (
-            "\n\n导入本地 GMT：将在 GSEA 基因集资源管理器阶段支持。"
-            "\n下载 / 配置常用基因集资源：GO BP、GO CC、GO MF、Reactome、KEGG、MSigDB Hallmark、自定义 GMT。"
-            "\nB5.16 不会静默下载或默认内置 gene set。"
-        )
-        self._status_label.setText("已打开 GSEA 基因集资源管理器入口；完整导入、下载和缓存将在 B5.17 开发。")
-        QMessageBox.information(self, "GSEA 基因集资源管理器", message)
-        return {"validation": validation, "resources": resources, "message": message}
+        self._status_label.setText("已打开 GSEA 基因集资源管理器；可导入本地 GMT、选择本地资源或刷新状态。")
+        return {"validation": validation, "resources": resources, "dialog": dialog}
+
+    def _refresh_after_gene_set_resource_change(self) -> None:
+        if self._project_root is None:
+            return
+        artifacts = run_project_readiness(self._project_root)
+        self._render(artifacts)
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
