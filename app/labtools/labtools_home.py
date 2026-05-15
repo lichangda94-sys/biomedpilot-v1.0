@@ -4,6 +4,15 @@ try:
     from PySide6.QtCore import Signal, Qt
     from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
+    from app.labtools.imagej_bridge import (
+        ENGINE_STATUS_AVAILABLE,
+        ENGINE_STATUS_CONFIGURED_UNVERIFIED,
+        ENGINE_STATUS_FAILED,
+        imagej_fiji_display_path,
+        read_shared_imagej_fiji_status,
+    )
+    from app.labtools.labtools_tool_registry import LabToolsTool, labtools_tool_registry
+    from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -12,14 +21,25 @@ except Exception:  # pragma: no cover
 if QWidget is not None:
 
     class LabToolsHomeWidget(QWidget):
-        calculators_requested = Signal()
-        reagents_requested = Signal()
-        image_quant_requested = Signal()
-        templates_requested = Signal()
+        tool_requested = Signal(str)
+        general_calculators_requested = Signal()
+        reagent_records_requested = Signal()
+        imagej_fiji_requested = Signal()
+        cell_experiments_requested = Signal()
+        western_blot_requested = Signal()
+        pcr_qpcr_requested = Signal()
+        elisa_absorbance_requested = Signal()
 
-        def __init__(self) -> None:
+        # Backward-compatible aliases for older UI tests and callers.
+        calculators_requested = general_calculators_requested
+        reagents_requested = reagent_records_requested
+        image_quant_requested = imagej_fiji_requested
+        templates_requested = reagent_records_requested
+
+        def __init__(self, *, imagej_bridge: ImageJFijiBridge | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsHomePage")
+            self._imagej_bridge = imagej_bridge
             self.setStyleSheet(self._stylesheet())
             self._build_ui()
 
@@ -37,87 +57,147 @@ if QWidget is not None:
 
             title = QLabel("LabTools / 实验工具")
             title.setObjectName("labToolsTitle")
-            subtitle = QLabel("基础实验计算与记录入口。")
+            subtitle = QLabel("本地实验计算、实验记录辅助、图像 workflow 配置与结果整理工具。")
             subtitle.setObjectName("labToolsSubtitle")
             root.addWidget(title)
             root.addWidget(subtitle)
 
             grid = QGridLayout()
             grid.setSpacing(SPACING["md"])
-            grid.addWidget(
-                self._entry_card(
-                    "实验计算器",
-                    "稀释、摩尔浓度、细胞接种、qPCR、WB 上样",
-                    "可用",
-                    "进入实验计算器",
-                    self.calculators_requested.emit,
-                    object_name="labToolsCalculatorEntry",
-                ),
-                0,
-                0,
-            )
-            grid.addWidget(
-                self._entry_card(
-                    "试剂与配方",
-                    "本地常用配方与体积缩放",
-                    "可用",
-                    "进入试剂与配方",
-                    self.reagents_requested.emit,
-                    object_name="labToolsRecipeEntry",
-                ),
-                0,
-                1,
-            )
-            grid.addWidget(
-                self._entry_card(
-                    "图像定量",
-                    "荧光 ROI 与划痕阈值分析 MVP",
-                    "可用",
-                    "进入图像定量",
-                    self.image_quant_requested.emit,
-                    object_name="labToolsImageEntry",
-                ),
-                1,
-                0,
-            )
-            grid.addWidget(self._entry_card("实验模板", "开发中", "开发中", "查看状态", self.templates_requested.emit), 1, 1)
+            for index, tool in enumerate(labtools_tool_registry()):
+                grid.addWidget(self._entry_card(tool), index // 2, index % 2)
             root.addLayout(grid)
+            root.addWidget(
+                self._notice_card(
+                    "图像能力边界",
+                    "当前阶段仅支持 ImageJ/Fiji 本机引擎检测和 manual-review workflow 准备；未启用 WB/gel 真实分析、agarose gel、自动 ROI、细胞计数、条带识别、pathology workflow 或生产级真实图像算法。所有图像相关结果都需要人工复核。",
+                    "labToolsImageBoundaryNotice",
+                )
+            )
+            root.addWidget(self._engine_summary_card())
             root.addStretch(1)
             scroll.setWidget(content)
             outer.addWidget(scroll)
 
         def _entry_card(
             self,
-            title: str,
-            description: str,
-            status: str,
-            button_text: str,
-            callback,
-            *,
-            object_name: str = "labToolsPendingEntry",
+            tool: LabToolsTool,
         ) -> QFrame:
             frame = QFrame()
-            frame.setObjectName(object_name)
+            frame.setObjectName(tool.object_name)
             frame.setCursor(Qt.PointingHandCursor)
             layout = QVBoxLayout(frame)
             layout.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
             layout.setSpacing(SPACING["md"])
-            title_label = QLabel(title)
+            title_label = QLabel(tool.chinese_name)
             title_label.setObjectName("labToolsCardTitle")
+            status = self._display_status(tool)
             status_label = QLabel(status)
             status_label.setObjectName("labToolsStatusLabel")
-            description_label = QLabel(description)
+            description_label = QLabel(tool.description)
             description_label.setObjectName("labToolsDescription")
             description_label.setWordWrap(True)
-            button = QPushButton(button_text)
-            button.setObjectName("primaryButton" if status == "可用" else "secondaryButton")
-            button.clicked.connect(callback)
+            meta_label = QLabel(f"{tool.english_name} / {tool.category}")
+            meta_label.setObjectName("labToolsMeta")
+            meta_label.setWordWrap(True)
+            button = QPushButton(tool.button_text)
+            active_statuses = {
+                "可用",
+                "本地辅助",
+                "本地草稿",
+                "manual-review MVP",
+                "草稿中心",
+                "已开放 / 待确认使用逻辑",
+                "available / 已接入",
+                "available / configured",
+                "configured / 待验证",
+                "missing / manual-review",
+                "fallback/manual-review",
+            }
+            button.setObjectName("primaryButton" if status in active_statuses else "secondaryButton")
+            button.clicked.connect(lambda _checked=False, item=tool: self._emit_tool(item))
             layout.addWidget(status_label, alignment=Qt.AlignLeft)
             layout.addWidget(title_label)
+            layout.addWidget(meta_label)
             layout.addWidget(description_label)
             layout.addStretch(1)
             layout.addWidget(button, alignment=Qt.AlignLeft)
             return frame
+
+        def _display_status(self, tool: LabToolsTool) -> str:
+            if tool.tool_id == "imagej_fiji_engine":
+                return self._imagej_status_badge()
+            return tool.status
+
+        def _emit_tool(self, tool: LabToolsTool) -> None:
+            self.tool_requested.emit(tool.tool_id)
+            if tool.tool_id == "general_reagent_calculator":
+                self.general_calculators_requested.emit()
+            elif tool.tool_id == "imagej_fiji_engine":
+                self.imagej_fiji_requested.emit()
+            elif tool.tool_id == "western_blot":
+                self.western_blot_requested.emit()
+            elif tool.tool_id == "pcr_qpcr":
+                self.pcr_qpcr_requested.emit()
+            elif tool.tool_id == "elisa_absorbance":
+                self.elisa_absorbance_requested.emit()
+            elif tool.tool_id == "cell_experiments":
+                self.cell_experiments_requested.emit()
+
+        def _notice_card(self, title: str, body: str, object_name: str) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName(object_name)
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+            title_label = QLabel(title)
+            title_label.setObjectName("labToolsNoticeTitle")
+            body_label = QLabel(body)
+            body_label.setObjectName("labToolsNoticeBody")
+            body_label.setWordWrap(True)
+            layout.addWidget(title_label)
+            layout.addWidget(body_label)
+            return frame
+
+        def _engine_summary_card(self) -> QFrame:
+            status = read_shared_imagej_fiji_status(self._imagej_bridge)
+            frame = QFrame()
+            frame.setObjectName("labToolsImageJFijiSummary")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+            title = QLabel("本地引擎状态摘要")
+            title.setObjectName("labToolsNoticeTitle")
+            details = QLabel(
+                "\n".join(
+                    (
+                        f"ImageJ/Fiji 当前检测状态：{self._imagej_status_badge()}",
+                        f"路径：{imagej_fiji_display_path(status.configured_path_or_endpoint)}",
+                        f"版本：{status.detected_version or '未知'}",
+                        f"是否已验证：{'是' if status.status == ENGINE_STATUS_AVAILABLE else '否'}",
+                        status.last_error or "错误摘要：无",
+                    )
+                )
+            )
+            details.setObjectName("labToolsNoticeBody")
+            details.setWordWrap(True)
+            button = QPushButton("配置 ImageJ/Fiji")
+            button.setObjectName("secondaryButton")
+            button.clicked.connect(self.imagej_fiji_requested.emit)
+            layout.addWidget(title)
+            layout.addWidget(details)
+            layout.addWidget(button, alignment=Qt.AlignLeft)
+            return frame
+
+        def _imagej_status_badge(self) -> str:
+            status = read_shared_imagej_fiji_status(self._imagej_bridge).status
+            if status == ENGINE_STATUS_AVAILABLE:
+                return "available / configured"
+            if status == ENGINE_STATUS_CONFIGURED_UNVERIFIED:
+                return "configured / 待验证"
+            if status == ENGINE_STATUS_FAILED:
+                return "fallback/manual-review"
+            return "missing / manual-review"
 
         def _stylesheet(self) -> str:
             return f"""
@@ -130,11 +210,21 @@ if QWidget is not None:
                 border: 0;
                 background: {COLORS["background"]};
             }}
-            QFrame#labToolsCalculatorEntry, QFrame#labToolsRecipeEntry, QFrame#labToolsImageEntry, QFrame#labToolsPendingEntry {{
+            QFrame#labToolsGeneralCalculatorEntry, QFrame#labToolsImageJFijiEntry, QFrame#labToolsReagentRecordsEntry, QFrame#labToolsCellExperimentEntry, QFrame#labToolsWesternBlotEntry, QFrame#labToolsPcrQpcrEntry, QFrame#labToolsElisaAbsorbanceEntry, QFrame#labToolsPendingEntry {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
-                border-radius: {RADIUS["lg"]}px;
+                border-radius: {RADIUS["md"]}px;
                 min-height: 150px;
+            }}
+            QFrame#labToolsImageBoundaryNotice {{
+                background: #FFF4F2;
+                border: 1px solid #F3B4AA;
+                border-radius: {RADIUS["md"]}px;
+            }}
+            QFrame#labToolsImageJFijiSummary {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["md"]}px;
             }}
             QLabel#labToolsTitle {{
                 color: {COLORS["bio"]};
@@ -143,6 +233,10 @@ if QWidget is not None:
             }}
             QLabel#labToolsSubtitle, QLabel#labToolsDescription {{
                 color: {COLORS["muted"]};
+            }}
+            QLabel#labToolsMeta {{
+                color: {COLORS["muted"]};
+                font-size: {FONT_SIZE["secondary"]}px;
             }}
             QLabel#labToolsCardTitle {{
                 color: {COLORS["bio"]};
@@ -156,6 +250,14 @@ if QWidget is not None:
                 border-radius: {RADIUS["sm"]}px;
                 padding: 4px 8px;
                 font-weight: 700;
+            }}
+            QLabel#labToolsNoticeTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["card_title"]}px;
+                font-weight: 760;
+            }}
+            QLabel#labToolsNoticeBody {{
+                color: {COLORS["text"]};
             }}
             QPushButton#primaryButton {{
                 color: #FFFFFF;
@@ -172,6 +274,11 @@ if QWidget is not None:
                 border-radius: {RADIUS["sm"]}px;
                 padding: 8px 12px;
                 font-weight: 600;
+            }}
+            QPushButton:disabled {{
+                color: {COLORS["muted"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
             }}
             """
 
