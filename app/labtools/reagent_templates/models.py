@@ -17,11 +17,13 @@ COMPONENT_TYPES = (
     "powder",
     "commercial_reagent",
     "solvent",
+    "ph_record",
     "ph_adjustment",
     "self_prepared_template",
 )
 
 SUPPORTED_TEMPLATE_UNITS = ("L", "mL", "µL", "g", "mg", "µg", "M", "mM", "µM", "%", "X")
+SOLVENT_INITIAL_ADDITION_MODES = ("none", "percent_of_final", "fixed_amount", "note_only")
 
 
 class ReagentTemplateError(ValueError):
@@ -67,6 +69,35 @@ class CommercialReagentInfo:
 
 
 @dataclass(frozen=True)
+class PHRecord:
+    target_ph: str = ""
+    adjustment_note: str = ""
+    measured_ph: str = ""
+    include_in_steps: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "target_ph": self.target_ph,
+            "adjustment_note": self.adjustment_note,
+            "measured_ph": self.measured_ph,
+            "include_in_steps": self.include_in_steps,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Any) -> "PHRecord | None":
+        if payload in (None, "", {}):
+            return None
+        if not isinstance(payload, dict):
+            raise ReagentTemplateError("pH 记录必须是 JSON object。")
+        return cls(
+            target_ph=str(payload.get("target_ph") or payload.get("target_pH") or ""),
+            adjustment_note=str(payload.get("adjustment_note") or ""),
+            measured_ph=str(payload.get("measured_ph") or payload.get("measured_pH") or ""),
+            include_in_steps=bool(payload.get("include_in_steps", True)),
+        )
+
+
+@dataclass(frozen=True)
 class ReagentComponent:
     name: str
     component_type: str
@@ -79,6 +110,11 @@ class ReagentComponent:
     notes: str = ""
     referenced_template_id: str = ""
     commercial_info: CommercialReagentInfo | None = None
+    initial_addition_mode: str = "none"
+    initial_addition_percent: float = 0
+    initial_addition_amount: float = 0
+    initial_addition_unit: str = "mL"
+    initial_addition_note: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -93,6 +129,11 @@ class ReagentComponent:
             "notes": self.notes,
             "referenced_template_id": self.referenced_template_id,
             "commercial_info": self.commercial_info.to_dict() if self.commercial_info is not None else None,
+            "initial_addition_mode": self.initial_addition_mode,
+            "initial_addition_percent": self.initial_addition_percent,
+            "initial_addition_amount": self.initial_addition_amount,
+            "initial_addition_unit": self.initial_addition_unit,
+            "initial_addition_note": self.initial_addition_note,
         }
 
     @classmethod
@@ -112,6 +153,11 @@ class ReagentComponent:
             notes=str(payload.get("notes") or ""),
             referenced_template_id=str(payload.get("referenced_template_id") or ""),
             commercial_info=CommercialReagentInfo.from_dict(commercial_payload) if isinstance(commercial_payload, dict) else None,
+            initial_addition_mode=str(payload.get("initial_addition_mode") or "none"),
+            initial_addition_percent=float(payload.get("initial_addition_percent") or 0),
+            initial_addition_amount=float(payload.get("initial_addition_amount") or 0),
+            initial_addition_unit=str(payload.get("initial_addition_unit") or "mL"),
+            initial_addition_note=str(payload.get("initial_addition_note") or ""),
         )
 
 
@@ -124,6 +170,7 @@ class ReagentTemplate:
     default_strength: str = "1X"
     notes: str = ""
     components: tuple[ReagentComponent, ...] = ()
+    ph_record: PHRecord | None = None
     created_at: str = field(default_factory=utc_now)
     updated_at: str = field(default_factory=utc_now)
 
@@ -137,6 +184,7 @@ class ReagentTemplate:
         default_strength: str = "1X",
         notes: str = "",
         components: tuple[ReagentComponent, ...] = (),
+        ph_record: PHRecord | None = None,
     ) -> "ReagentTemplate":
         now = utc_now()
         return cls(
@@ -147,6 +195,7 @@ class ReagentTemplate:
             default_strength=default_strength,
             notes=notes,
             components=components,
+            ph_record=ph_record,
             created_at=now,
             updated_at=now,
         )
@@ -173,6 +222,7 @@ class ReagentTemplate:
             "default_strength": self.default_strength,
             "notes": self.notes,
             "components": [component.to_dict() for component in self.components],
+            "ph_record": self.ph_record.to_dict() if self.ph_record is not None else None,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -184,6 +234,9 @@ class ReagentTemplate:
         components = payload.get("components")
         if not isinstance(components, list):
             raise ReagentTemplateError("模板缺少 components 列表。")
+        parsed_components = tuple(ReagentComponent.from_dict(component) for component in components)
+        explicit_ph_record = PHRecord.from_dict(payload.get("ph_record"))
+        ph_record, reagent_components = _extract_legacy_ph_record(parsed_components, explicit_ph_record)
         return cls(
             template_id=str(payload.get("template_id") or new_template_id()),
             name=str(payload.get("name") or ""),
@@ -191,7 +244,8 @@ class ReagentTemplate:
             default_volume_unit=str(payload.get("default_volume_unit") or "mL"),
             default_strength=str(payload.get("default_strength") or "1X"),
             notes=str(payload.get("notes") or ""),
-            components=tuple(ReagentComponent.from_dict(component) for component in components),
+            components=reagent_components,
+            ph_record=ph_record,
             created_at=str(payload.get("created_at") or utc_now()),
             updated_at=str(payload.get("updated_at") or utc_now()),
         )
@@ -218,6 +272,8 @@ class PreparationComponentResult:
     is_subtemplate: bool = False
     referenced_template_id: str = ""
     is_auto_fill: bool = False
+    initial_addition_display: str = ""
+    initial_addition_detail: str = ""
     notes: str = ""
     warnings: tuple[str, ...] = ()
 
@@ -231,6 +287,7 @@ class PreparationTreeNode:
     suggested_volume: float
     suggested_volume_unit: str
     components: tuple[PreparationComponentResult, ...]
+    ph_record: PHRecord | None = None
     children: tuple["PreparationTreeNode", ...] = ()
 
 
@@ -249,6 +306,7 @@ class PreparationResult:
     tree: PreparationTreeNode
     warnings: tuple[str, ...]
     steps: tuple[str, ...]
+    ph_record: PHRecord | None = None
     ph_record_fields: tuple[str, ...] = ("目标 pH", "实测 pH", "pH 调节备注")
     review_notice: str = REAGENT_TEMPLATE_REVIEW_NOTICE
 
@@ -263,6 +321,12 @@ class PreparationResult:
             "一级配制清单",
         ]
         lines.extend(_component_line(component) for component in self.direct_components)
+        solvent_details = tuple(component for component in self.direct_components if component.initial_addition_detail)
+        if solvent_details:
+            lines.extend(["", "溶剂分阶段加入"])
+            lines.extend(f"- {component.name}: {component.initial_addition_detail}" for component in solvent_details)
+        if self.ph_record is not None:
+            lines.extend(["", "pH / 调节记录", _ph_record_line(self.ph_record)])
         if self.tree.children:
             lines.extend(["", "完整展开清单"])
             lines.extend(_tree_lines(self.tree))
@@ -290,6 +354,17 @@ def _component_line(component: PreparationComponentResult) -> str:
     return f"- {component.name}{tag_text}: {component.display_amount}{note_text}"
 
 
+def _ph_record_line(ph_record: PHRecord) -> str:
+    parts = []
+    if ph_record.target_ph:
+        parts.append(f"目标 pH: {ph_record.target_ph}")
+    if ph_record.measured_ph:
+        parts.append(f"实测 pH: {ph_record.measured_ph}")
+    if ph_record.adjustment_note:
+        parts.append(f"调节说明: {ph_record.adjustment_note}")
+    return "；".join(parts) if parts else "pH 记录待填写"
+
+
 def _tree_lines(node: PreparationTreeNode, depth: int = 0) -> list[str]:
     indent = "  " * depth
     lines = [f"{indent}- {node.template_name}: {_fmt(node.suggested_volume)} {node.suggested_volume_unit}"]
@@ -298,3 +373,23 @@ def _tree_lines(node: PreparationTreeNode, depth: int = 0) -> list[str]:
     for child in node.children:
         lines.extend(_tree_lines(child, depth + 1))
     return lines
+
+
+def _extract_legacy_ph_record(
+    components: tuple[ReagentComponent, ...], explicit_ph_record: PHRecord | None
+) -> tuple[PHRecord | None, tuple[ReagentComponent, ...]]:
+    if explicit_ph_record is not None:
+        return explicit_ph_record, tuple(component for component in components if component.component_type not in {"ph_record", "ph_adjustment"})
+    kept: list[ReagentComponent] = []
+    ph_record: PHRecord | None = None
+    for component in components:
+        if component.component_type in {"ph_record", "ph_adjustment"} or component.unit.strip().lower() == "ph":
+            if ph_record is None:
+                ph_record = PHRecord(
+                    target_ph=_fmt(component.base_amount),
+                    adjustment_note=component.notes,
+                    include_in_steps=True,
+                )
+            continue
+        kept.append(component)
+    return ph_record, tuple(kept)

@@ -7,6 +7,7 @@ import pytest
 from app.labtools.reagent_templates import (
     LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION,
     CommercialReagentInfo,
+    PHRecord,
     PreparationRequest,
     ReagentComponent,
     ReagentTemplate,
@@ -27,6 +28,8 @@ def _component(
     contributes_to_final_volume: bool = False,
     auto_fill: bool = False,
     referenced_template_id: str = "",
+    initial_addition_mode: str = "none",
+    initial_addition_percent: float = 0,
 ) -> ReagentComponent:
     return ReagentComponent(
         name=name,
@@ -38,6 +41,8 @@ def _component(
         contributes_to_final_volume=contributes_to_final_volume,
         auto_fill_to_final_volume=auto_fill,
         referenced_template_id=referenced_template_id,
+        initial_addition_mode=initial_addition_mode,
+        initial_addition_percent=initial_addition_percent,
     )
 
 
@@ -75,6 +80,36 @@ def _template_c() -> ReagentTemplate:
     )
 
 
+def _pbs_template() -> ReagentTemplate:
+    return ReagentTemplate.create(
+        name="1X PBS pH 7.4",
+        default_volume=1000,
+        default_volume_unit="mL",
+        default_strength="1X",
+        components=(
+            _component("NaCl", 8.0, "g", component_type="powder"),
+            _component("KCl", 0.2, "g", component_type="powder"),
+            _component("Na2HPO4", 1.44, "g", component_type="powder"),
+            _component("KH2PO4", 0.24, "g", component_type="powder"),
+            _component(
+                "ddH2O",
+                0,
+                "mL",
+                component_type="solvent",
+                contributes_to_final_volume=True,
+                auto_fill=True,
+                initial_addition_mode="percent_of_final",
+                initial_addition_percent=80,
+            ),
+        ),
+        ph_record=PHRecord(
+            target_ph="7.4",
+            adjustment_note="使用 HCl 或 NaOH 调整，需 pH meter 实测",
+            include_in_steps=True,
+        ),
+    )
+
+
 def test_reagent_template_model_serializes_schema_fields() -> None:
     template = _template_a()
     payload = template.to_dict()
@@ -86,6 +121,53 @@ def test_reagent_template_model_serializes_schema_fields() -> None:
     assert restored.default_strength == "1X"
     assert restored.components[2].commercial_info is not None
     assert restored.components[2].commercial_info.lot_number == "L001"
+
+
+def test_ph_record_and_staged_solvent_serialize_without_ph_as_component(tmp_path) -> None:
+    store = ReagentTemplateStore(tmp_path / "templates.json")
+    saved = store.upsert_template(_pbs_template())
+    loaded = store.load()[0]
+    payload = json.loads((tmp_path / "templates.json").read_text(encoding="utf-8"))
+
+    assert loaded.template_id == saved.template_id
+    assert loaded.ph_record is not None
+    assert loaded.ph_record.target_ph == "7.4"
+    assert loaded.ph_record.adjustment_note == "使用 HCl 或 NaOH 调整，需 pH meter 实测"
+    assert all(component.component_type not in {"ph_record", "ph_adjustment"} for component in loaded.components)
+    assert all(component.unit != "pH" for component in loaded.components)
+    assert payload["templates"][0]["ph_record"]["target_ph"] == "7.4"
+    solvent = next(component for component in loaded.components if component.name == "ddH2O")
+    assert solvent.initial_addition_mode == "percent_of_final"
+    assert solvent.initial_addition_percent == 80
+
+
+def test_legacy_ph_component_is_migrated_to_ph_record_on_read(tmp_path) -> None:
+    legacy = ReagentTemplate.create(
+        name="旧 pH 模板",
+        default_volume=1000,
+        components=(
+            _component("NaCl", 8, "g", component_type="powder"),
+            _component("pH 记录", 7.4, "mL", component_type="ph_adjustment", scale_with_volume=False),
+        ),
+    )
+    path = tmp_path / "legacy.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION,
+                "updated_at": "2026-05-15T00:00:00+00:00",
+                "templates": [legacy.to_dict()],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = ReagentTemplateStore(path).load()[0]
+
+    assert loaded.ph_record is not None
+    assert loaded.ph_record.target_ph == "7.4"
+    assert all(component.component_type != "ph_adjustment" for component in loaded.components)
 
 
 def test_reagent_template_store_saves_loads_copies_and_requires_delete_confirmation(tmp_path) -> None:
@@ -142,6 +224,78 @@ def test_preparation_scales_volume_fixed_amount_strength_and_overage() -> None:
     assert amounts["水"] == pytest.approx(72.6)
     assert "目标最终体积：75 mL" in result.as_text()
     assert "建议配制体积：82.5 mL" in result.as_text()
+
+
+@pytest.mark.parametrize(
+    ("target_volume", "overage", "expected"),
+    (
+        (
+            75,
+            0,
+            {
+                "suggested": 75,
+                "NaCl": 0.6,
+                "KCl": 0.015,
+                "Na2HPO4": 0.108,
+                "KH2PO4": 0.018,
+                "ddH2O": 75,
+                "initial": "60 mL",
+            },
+        ),
+        (
+            300,
+            0,
+            {
+                "suggested": 300,
+                "NaCl": 2.4,
+                "KCl": 0.06,
+                "Na2HPO4": 0.432,
+                "KH2PO4": 0.072,
+                "ddH2O": 300,
+                "initial": "240 mL",
+            },
+        ),
+        (
+            75,
+            10,
+            {
+                "suggested": 82.5,
+                "NaCl": 0.66,
+                "KCl": 0.0165,
+                "Na2HPO4": 0.1188,
+                "KH2PO4": 0.0198,
+                "ddH2O": 82.5,
+                "initial": "66 mL",
+            },
+        ),
+    ),
+)
+def test_pbs_regression_ph_record_and_staged_solvent_outputs(target_volume, overage, expected) -> None:
+    template = _pbs_template()
+    result = calculate_preparation(PreparationRequest(template.template_id, target_volume, "mL", "1X", overage), (template,))
+    amounts = {component.name: component.amount for component in result.direct_components}
+    text = result.as_text()
+
+    assert result.suggested_volume == pytest.approx(expected["suggested"])
+    for component_name in ("NaCl", "KCl", "Na2HPO4", "KH2PO4", "ddH2O"):
+        assert amounts[component_name] == pytest.approx(expected[component_name])
+    assert result.ph_record is not None
+    assert "pH / 调节记录" in text
+    assert "目标 pH: 7.4" in text
+    assert "pH 记录: 7.4 mL" not in text
+    assert "初始加入约 " + expected["initial"] in text
+    assert f"最终补足至 {expected['ddH2O']:g} mL" in text
+    assert f"最后用 ddH2O 补足至建议配制体积 {expected['suggested']:g} mL" in text
+
+
+def test_staged_solvent_1000_ml_initial_addition_is_800_ml() -> None:
+    template = _pbs_template()
+    result = calculate_preparation(PreparationRequest(template.template_id, 1000), (template,))
+    text = result.as_text()
+
+    assert "初始加入约 800 mL" in text
+    assert "最终补足至 1000 mL" in text
+    assert "调节或记录 pH 至目标 pH 7.4" in text
 
 
 def test_auto_fill_rejects_overfilled_volume_and_multiple_fillers(tmp_path) -> None:
@@ -215,8 +369,11 @@ def test_preparation_steps_are_generic_and_include_review_notice() -> None:
     text = result.as_text()
 
     assert "准备合适容器" in text
-    assert "按一级配制清单顺序加入各组分" in text
-    assert "记录目标 pH、实测 pH" in text
+    assert "按一级配制清单加入非补足组分" in text
+    assert "混匀，确保粉末或其他组分充分溶解" in text
+    assert "pH 记录字段" in text
+    assert "目标 pH" in text
+    assert "实测 pH" in text
     assert "补足至建议配制体积" in text
     assert "人工复核提示" in text
     for forbidden in ("自动 pH 预测", "自动推荐最佳配方", "无需人工复核"):

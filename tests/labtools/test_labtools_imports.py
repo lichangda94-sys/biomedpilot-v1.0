@@ -169,13 +169,20 @@ def test_labtools_calculator_workbench_saves_template_and_generates_preparation(
     widget.findChild(QLineEdit, "reagentComponentAmountField").setText("0")
     widget.findChild(QCheckBox, "reagentComponentContributesVolumeCheck").setChecked(False)
     widget.findChild(QCheckBox, "reagentComponentAutoFillCheck").setChecked(True)
+    widget.findChild(QComboBox, "reagentSolventInitialModeCombo").setCurrentText("percent_of_final")
+    widget.findChild(QLineEdit, "reagentSolventInitialPercentField").setText("80")
     widget.findChild(QPushButton, "reagentTemplateAddComponentButton").click()
+    widget.findChild(QCheckBox, "reagentPhRecordEnabledCheck").setChecked(True)
+    widget.findChild(QLineEdit, "reagentPhTargetField").setText("7.4")
+    widget.findChild(QLineEdit, "reagentPhAdjustmentNoteField").setText("使用 HCl 或 NaOH 调整，需 pH meter 实测")
     widget.findChild(QPushButton, "reagentTemplateSaveButton").click()
 
     saved = store.load()
     assert len(saved) == 1
     assert saved[0].name == "试剂 A"
     assert len(saved[0].components) == 2
+    assert saved[0].ph_record is not None
+    assert saved[0].ph_record.target_ph == "7.4"
 
     tabs.setCurrentIndex(2)
     widget.findChild(QPushButton, "preparationReloadTemplatesButton").click()
@@ -189,4 +196,9 @@ def test_labtools_calculator_workbench_saves_template_and_generates_preparation(
     assert "建议配制体积：82.5 mL" in result_text
     assert "- B: 8.25 mL" in result_text
     assert "- 水（溶剂补足）: 74.25 mL" in result_text
+    assert "pH / 调节记录" in result_text
+    assert "目标 pH: 7.4" in result_text
+    assert "7.4 mL" not in result_text
+    assert "初始加入约 66 mL" in result_text
+    assert "调节或记录 pH 至目标 pH 7.4" in result_text
     assert "人工复核提示" in result_text

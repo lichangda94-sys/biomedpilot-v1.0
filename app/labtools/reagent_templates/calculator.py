@@ -7,7 +7,9 @@ from app.labtools.calculators.calculator_models import CalculationError
 from app.labtools.calculators.unit_conversion import canonical_unit, format_number, l_to_volume, unit_kind, volume_to_l
 from app.labtools.reagent_templates.models import (
     COMPONENT_TYPES,
+    SOLVENT_INITIAL_ADDITION_MODES,
     SUPPORTED_TEMPLATE_UNITS,
+    PHRecord,
     PreparationComponentResult,
     PreparationRequest,
     PreparationResult,
@@ -32,6 +34,7 @@ def validate_template(template: ReagentTemplate, templates: tuple[ReagentTemplat
         raise ReagentTemplateError("每个模板最多只能有一个自动补足至最终体积的组分。")
     for component in template.components:
         _validate_component(component)
+    _validate_ph_record(template.ph_record)
     if templates:
         detect_template_cycles(templates)
 
@@ -97,6 +100,7 @@ def calculate_preparation(request: PreparationRequest, templates: tuple[ReagentT
         tree=root,
         warnings=warnings,
         steps=steps,
+        ph_record=root.ph_record,
     )
 
 
@@ -170,7 +174,10 @@ def _calculate_node(
                 unit=fill_unit,
                 display_amount=f"{format_number(fill_amount)} {fill_unit}",
                 is_auto_fill=True,
+                initial_addition_display=_initial_addition_display(auto_fill_component, suggested_l, fill_unit),
+                initial_addition_detail=_initial_addition_detail(auto_fill_component, suggested_l, fill_unit, fill_amount),
                 notes=auto_fill_component.notes or "自动补足至建议配制体积",
+                warnings=tuple(_initial_addition_warnings(auto_fill_component, suggested_l)),
             )
         )
 
@@ -182,6 +189,7 @@ def _calculate_node(
         suggested_volume=suggested_volume,
         suggested_volume_unit=target_unit,
         components=tuple(preliminary),
+        ph_record=template.ph_record,
         children=tuple(children),
     )
 
@@ -215,27 +223,28 @@ def _component_result(component: ReagentComponent, *, volume_factor: float, stre
 
 def _build_steps(root: PreparationTreeNode) -> tuple[str, ...]:
     has_child = bool(root.children)
-    has_auto_fill = any(component.is_auto_fill for component in root.components)
+    auto_fill = next((component for component in root.components if component.is_auto_fill), None)
+    staged = next((component for component in root.components if component.initial_addition_display), None)
     has_commercial = any(component.is_commercial for component in root.components)
     steps = [
         "准备合适容器并核对模板名称、日期、操作者和目标体积。",
-        "先加入部分溶剂或基础液体，保留补足空间。",
     ]
+    if staged is not None:
+        steps.append(f"先加入约 {staged.initial_addition_display} {staged.name}，保留最终补足空间。")
+    else:
+        steps.append("先加入部分溶剂或基础液体，保留补足空间。")
     if has_child:
         steps.append("需要时先按完整展开清单配制自配子试剂，并记录其批次或配制日期。")
     if has_commercial:
         steps.append("核对商品化试剂名称、浓度、批号、供应商和保存条件后再加入。")
+    steps.extend(["按一级配制清单加入非补足组分。", "混匀，确保粉末或其他组分充分溶解。"])
+    if root.ph_record is not None and root.ph_record.include_in_steps:
+        steps.append(_ph_step(root.ph_record))
+    if auto_fill is not None:
+        steps.append(f"最后用 {auto_fill.name} 补足至建议配制体积 {format_number(root.suggested_volume)} {root.suggested_volume_unit}。")
     steps.extend(
         [
-            "按一级配制清单顺序加入各组分并混匀。",
-            "需要时记录目标 pH、实测 pH 和 pH 调节备注；软件不预测酸碱加入量。",
-        ]
-    )
-    if has_auto_fill:
-        steps.append("用标记为自动补足的溶剂补足至建议配制体积。")
-    steps.extend(
-        [
-            "混匀后标记名称、日期、操作者、保存条件和人工复核状态。",
+            "标记名称、浓度/倍数、日期、操作者、保存条件和人工复核状态。",
             "本步骤为通用准备清单，不替代实验室 SOP、SDS 或试剂说明书。",
         ]
     )
@@ -256,13 +265,41 @@ def _validate_component(component: ReagentComponent) -> None:
         raise ReagentTemplateError("组分名称不能为空。")
     if component.component_type not in COMPONENT_TYPES:
         raise ReagentTemplateError(f"暂不支持组分类型：{component.component_type}。")
+    if component.component_type in {"ph_record", "ph_adjustment"}:
+        raise ReagentTemplateError("pH 调节记录请使用独立 pH 记录字段，不应作为普通组分保存。")
     if component.base_amount < 0 or not math.isfinite(component.base_amount):
         raise ReagentTemplateError("组分基准用量必须是非负数字。")
     unit = _canonical_template_unit(component.unit)
     if component.auto_fill_to_final_volume and unit_kind(unit) != "volume":
         raise ReagentTemplateError("自动补足组分必须使用体积单位。")
+    _validate_initial_addition(component)
     if component.component_type == "self_prepared_template" and not component.referenced_template_id.strip():
         raise ReagentTemplateError("自配试剂模板组分必须引用子模板。")
+
+
+def _validate_initial_addition(component: ReagentComponent) -> None:
+    if component.initial_addition_mode not in SOLVENT_INITIAL_ADDITION_MODES:
+        raise ReagentTemplateError(f"暂不支持初始溶剂加入模式：{component.initial_addition_mode}。")
+    if component.initial_addition_mode == "none":
+        return
+    if not component.auto_fill_to_final_volume:
+        raise ReagentTemplateError("初始溶剂加入字段只能用于自动补足溶剂。")
+    if component.initial_addition_mode == "percent_of_final":
+        if component.initial_addition_percent <= 0 or component.initial_addition_percent >= 100:
+            raise ReagentTemplateError("初始加入比例必须大于 0 且小于 100。")
+    if component.initial_addition_mode == "fixed_amount":
+        if component.initial_addition_amount <= 0:
+            raise ReagentTemplateError("固定初始加入量必须大于 0。")
+        unit = _canonical_template_unit(component.initial_addition_unit)
+        if unit_kind(unit) != "volume":
+            raise ReagentTemplateError("固定初始加入量必须使用体积单位。")
+
+
+def _validate_ph_record(ph_record: PHRecord | None) -> None:
+    if ph_record is None:
+        return
+    if not ph_record.target_ph.strip() and not ph_record.adjustment_note.strip() and not ph_record.measured_ph.strip():
+        raise ReagentTemplateError("pH 记录至少需要目标 pH、实测 pH 或调节说明之一。")
 
 
 def _canonical_template_unit(unit: str) -> str:
@@ -307,3 +344,44 @@ def _volume_amount_to_l(amount: float, unit: str, component_name: str) -> float:
     if unit_kind(_canonical_template_unit(unit)) != "volume":
         raise ReagentTemplateError(f"{component_name} 参与最终体积但单位不是体积单位。")
     return volume_to_l(amount, unit)
+
+
+def _initial_addition_display(component: ReagentComponent, suggested_l: float, output_unit: str) -> str:
+    if component.initial_addition_mode == "percent_of_final":
+        amount = l_to_volume(suggested_l * component.initial_addition_percent / 100, output_unit)
+        return f"{format_number(amount)} {output_unit}"
+    if component.initial_addition_mode == "fixed_amount":
+        unit = _canonical_template_unit(component.initial_addition_unit)
+        return f"{format_number(component.initial_addition_amount)} {unit}"
+    return ""
+
+
+def _initial_addition_detail(component: ReagentComponent, suggested_l: float, output_unit: str, fill_amount: float) -> str:
+    if component.initial_addition_mode == "percent_of_final":
+        initial = _initial_addition_display(component, suggested_l, output_unit)
+        return (
+            f"初始加入约 {initial}（{format_number(component.initial_addition_percent)}% 建议配制体积）；"
+            f"最终补足至 {format_number(fill_amount)} {output_unit}"
+        )
+    if component.initial_addition_mode == "fixed_amount":
+        initial = _initial_addition_display(component, suggested_l, output_unit)
+        return f"初始加入约 {initial}（固定量，不随目标体积缩放）；最终补足至 {format_number(fill_amount)} {output_unit}"
+    if component.initial_addition_mode == "note_only":
+        return component.initial_addition_note or "初始加入量按备注执行；最终补足至建议配制体积"
+    return ""
+
+
+def _initial_addition_warnings(component: ReagentComponent, suggested_l: float) -> list[str]:
+    warnings: list[str] = []
+    if component.initial_addition_mode == "fixed_amount":
+        warnings.append(f"{component.name} 使用固定初始加入量，不会随目标体积缩放，可能不适合小体积配制。")
+        fixed_l = volume_to_l(component.initial_addition_amount, component.initial_addition_unit)
+        if fixed_l > suggested_l:
+            warnings.append(f"{component.name} 固定初始加入量已超过建议配制体积。")
+    return warnings
+
+
+def _ph_step(ph_record: PHRecord) -> str:
+    target = f"至目标 pH {ph_record.target_ph}" if ph_record.target_ph else "并记录 pH"
+    note = ph_record.adjustment_note or "按实验室 SOP 调整，需 pH meter 实测。"
+    return f"调节或记录 pH {target}；{note}；软件不预测酸碱加入量。"
