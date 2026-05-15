@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import gzip
+import hashlib
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+from urllib.error import URLError
+from urllib.request import urlopen
 from uuid import uuid4
 
 
@@ -14,13 +19,21 @@ GENE_SET_REGISTRY = Path("user_data") / "bioinformatics" / "gene_sets" / "gene_s
 LEGACY_GENE_SET_REGISTRY = Path("manifests") / "gene_set_registry.json"
 GENE_SET_REPOSITORY = Path("user_data") / "bioinformatics" / "gene_sets"
 CUSTOM_GENE_SET_REPOSITORY = GENE_SET_REPOSITORY / "custom"
+DOWNLOADED_GENE_SET_REPOSITORY = GENE_SET_REPOSITORY / "downloaded"
 GENE_SET_REGISTRY_SCHEMA_VERSION = "biomedpilot.gene_set_registry.v1"
+
+REACTOME_GMT_ZIP_URL = "https://reactome.org/download/current/ReactomePathways.gmt.zip"
+GO_HUMAN_GAF_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
+KEGG_PATHWAY_LIST_URL = "https://rest.kegg.jp/list/pathway/hsa"
+KEGG_PATHWAY_LINK_URL = "https://rest.kegg.jp/link/pathway/hsa"
+DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 30
 
 RESOURCE_STATUSES = {"available", "missing", "invalid", "pending_download"}
 COLLECTION_TYPES = {"GO_BP", "GO_CC", "GO_MF", "Reactome", "KEGG", "Hallmark", "Custom", "Unknown"}
 GENE_ID_TYPES = {"symbol", "entrez", "ensembl", "unknown"}
-SPECIES_VALUES = {"human", "mouse", "other", "unknown"}
+SPECIES_VALUES = {"human", "mouse", "other", "unknown", "all_species"}
 SOURCE_TYPES = {"user_import", "downloaded", "configured", "bundled_stub"}
+Fetcher = Callable[[str, int], bytes]
 
 
 @dataclass(frozen=True)
@@ -51,6 +64,68 @@ def registry_path(project_root: str | Path) -> Path:
 
 def gene_set_repository_path(project_root: str | Path) -> Path:
     return Path(project_root).expanduser().resolve() / GENE_SET_REPOSITORY
+
+
+def list_downloadable_gene_set_resources(project_root: str | Path | None = None) -> list[dict[str, Any]]:
+    cached: dict[str, dict[str, Any]] = {}
+    if project_root is not None:
+        for resource in list_local_gene_sets(project_root):
+            cached[str(resource.get("resource_id") or "")] = resource
+    rows: list[dict[str, Any]] = []
+    for item in _downloadable_catalog():
+        resource = cached.get(str(item["resource_id"]))
+        status = "未下载"
+        version = ""
+        if resource:
+            raw_status = str(resource.get("status") or "")
+            status = {"available": "已缓存", "missing": "缺失", "invalid": "无效", "pending_download": "待下载"}.get(raw_status, raw_status)
+            version = str(resource.get("version") or resource.get("updated_at") or "")
+        rows.append({**item, "local_status": status, "local_version": version, "cached_resource": resource or {}})
+    return rows
+
+
+def download_gene_set_resource(
+    project_root: str | Path,
+    resource_id: str,
+    *,
+    species: str = "human",
+    gene_id_type: str = "symbol",
+    refresh: bool = False,
+    fetcher: Fetcher | None = None,
+    timeout: int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    normalized_id = str(resource_id)
+    cached = get_gene_set(root, normalized_id)
+    if cached and not refresh and str(cached.get("status") or "") == "available":
+        return {"resource": cached, "cached": True, "registry": _load_registry(root)}
+    if normalized_id == "reactome_pathways":
+        return _download_reactome_pathways(root, refresh=refresh, fetcher=fetcher, timeout=timeout)
+    if normalized_id in {"go_bp_human", "go_cc_human", "go_mf_human"}:
+        return _download_go_resource(root, normalized_id, species=species, gene_id_type=gene_id_type, refresh=refresh, fetcher=fetcher, timeout=timeout)
+    if normalized_id == "kegg_hsa_pathways":
+        return _download_kegg_pathways(root, refresh=refresh, fetcher=fetcher, timeout=timeout)
+    raise ValueError(f"Download is not implemented for gene set resource: {resource_id}")
+
+
+def refresh_downloaded_gene_set(
+    project_root: str | Path,
+    resource_id: str,
+    *,
+    species: str = "human",
+    gene_id_type: str = "symbol",
+    fetcher: Fetcher | None = None,
+    timeout: int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+) -> dict[str, Any]:
+    return download_gene_set_resource(project_root, resource_id, species=species, gene_id_type=gene_id_type, refresh=True, fetcher=fetcher, timeout=timeout)
+
+
+def validate_downloaded_gene_set(project_root: str | Path, resource_id: str) -> dict[str, Any]:
+    validation = validate_gene_set_registry(project_root)
+    resource = next((item for item in validation.get("resources", []) if isinstance(item, dict) and item.get("resource_id") == resource_id), None)
+    if resource is None:
+        raise ValueError(f"Unknown gene set resource: {resource_id}")
+    return resource
 
 
 def initialize_gene_set_registry(project_root: str | Path) -> dict[str, Any]:
@@ -296,6 +371,79 @@ def import_gmt_file(project_root: str | Path, source_path: str | Path, metadata:
     return {"resource": resource, "validation": validation.to_dict(), "registry": registry, "copied_path": str(target)}
 
 
+def build_gmt_from_mapping(gene_sets: dict[str, dict[str, object]]) -> str:
+    lines: list[str] = []
+    for name in sorted(gene_sets):
+        payload = gene_sets[name]
+        description = str(payload.get("description") or "na")
+        genes = sorted({str(gene).strip() for gene in payload.get("genes", []) if str(gene).strip()})
+        if not genes:
+            continue
+        lines.append("\t".join([name, description, *genes]))
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def register_downloaded_gene_set(
+    project_root: str | Path,
+    *,
+    resource_id: str,
+    name: str,
+    collection_type: str,
+    species: str,
+    gene_id_type: str,
+    source_name: str,
+    source_url: str,
+    license_note: str,
+    version: str,
+    local_path: str | Path,
+    validation: GmtValidationResult | None = None,
+) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    path = _resource_local_path(root, str(local_path))
+    if path is None:
+        raise ValueError("Downloaded gene set path must stay inside the Bioinformatics project.")
+    validation_result = validation or validate_gmt_file(path)
+    existing = get_gene_set(root, resource_id) or {}
+    now = _now()
+    try:
+        relative_path = str(path.relative_to(root))
+    except ValueError as exc:
+        raise ValueError("Downloaded gene set path must stay inside the Bioinformatics project.") from exc
+    resource = _normalize_resource(
+        {
+            "resource_id": resource_id,
+            "name": name,
+            "collection_type": collection_type,
+            "species": species,
+            "gene_id_type": gene_id_type,
+            "source_type": "downloaded",
+            "source_name": source_name,
+            "source_url": source_url,
+            "license_note": license_note,
+            "version": version,
+            "created_at": str(existing.get("created_at") or now),
+            "updated_at": now,
+            "downloaded_at": now,
+            "local_path": relative_path,
+            "status": validation_result.status,
+            "selected_for_gsea": bool(existing.get("selected_for_gsea")) and validation_result.status == "available",
+            "validation_summary": validation_result.validation_summary,
+            "gene_set_count": validation_result.gene_set_count,
+            "gene_count_preview": [dict(item) for item in validation_result.gene_count_preview],
+            "file_size": path.stat().st_size if path.exists() else 0,
+            "checksum": _sha256(path) if path.exists() else "",
+        }
+    )
+    registry = _load_registry(root)
+    resources = [_normalize_resource(item) for item in registry.get("resources", []) if isinstance(item, dict)]
+    resources = [item for item in resources if str(item.get("resource_id") or "") != resource_id]
+    resources.append(resource)
+    registry["resources"] = resources
+    registry["updated_at"] = now
+    _write_registry(root, registry)
+    return {"resource": resource, "registry": registry}
+
+
 def get_selected_gene_set_for_gsea(project_root: str | Path) -> dict[str, Any] | None:
     validate_gene_set_registry(project_root)
     return get_selected_gene_set(project_root)
@@ -361,6 +509,293 @@ def _load_registry(project_root: str | Path) -> dict[str, Any]:
     return payload
 
 
+def _downloadable_catalog() -> list[dict[str, Any]]:
+    return [
+        {
+            "resource_id": "reactome_pathways",
+            "name": "Reactome pathways",
+            "collection_type": "Reactome",
+            "species": "all_species",
+            "gene_id_type": "symbol",
+            "source_name": "Reactome",
+            "source_url": REACTOME_GMT_ZIP_URL,
+            "license_note": "User-triggered download from Reactome; record source and download date.",
+            "description": "下载 Reactome pathways 到本地缓存。",
+            "operation": "下载到本地 / 更新缓存",
+            "downloadable": True,
+        },
+        {
+            "resource_id": "go_bp_human",
+            "name": "GO Biological Process (GO BP)",
+            "collection_type": "GO_BP",
+            "species": "human",
+            "gene_id_type": "symbol",
+            "source_name": "Gene Ontology",
+            "source_url": GO_HUMAN_GAF_URL,
+            "license_note": "GO annotation data are used with CC BY 4.0 attribution.",
+            "description": "从 human GO annotation 生成 BP GMT。",
+            "operation": "下载到本地 / 更新缓存",
+            "downloadable": True,
+        },
+        {
+            "resource_id": "go_cc_human",
+            "name": "GO Cellular Component (GO CC)",
+            "collection_type": "GO_CC",
+            "species": "human",
+            "gene_id_type": "symbol",
+            "source_name": "Gene Ontology",
+            "source_url": GO_HUMAN_GAF_URL,
+            "license_note": "GO annotation data are used with CC BY 4.0 attribution.",
+            "description": "从 human GO annotation 生成 CC GMT。",
+            "operation": "下载到本地 / 更新缓存",
+            "downloadable": True,
+        },
+        {
+            "resource_id": "go_mf_human",
+            "name": "GO Molecular Function (GO MF)",
+            "collection_type": "GO_MF",
+            "species": "human",
+            "gene_id_type": "symbol",
+            "source_name": "Gene Ontology",
+            "source_url": GO_HUMAN_GAF_URL,
+            "license_note": "GO annotation data are used with CC BY 4.0 attribution.",
+            "description": "从 human GO annotation 生成 MF GMT。",
+            "operation": "下载到本地 / 更新缓存",
+            "downloadable": True,
+        },
+        {
+            "resource_id": "kegg_hsa_pathways",
+            "name": "KEGG human pathways",
+            "collection_type": "KEGG",
+            "species": "human",
+            "gene_id_type": "entrez",
+            "source_name": "KEGG REST",
+            "source_url": "https://rest.kegg.jp/",
+            "license_note": "KEGG REST API is for academic users and academic use; users must confirm their usage rights.",
+            "description": "在线获取并缓存 KEGG human pathways。",
+            "operation": "在线获取并缓存 / 更新缓存",
+            "downloadable": True,
+        },
+        {
+            "resource_id": "msigdb_hallmark_user_import",
+            "name": "MSigDB Hallmark",
+            "collection_type": "Hallmark",
+            "species": "unknown",
+            "gene_id_type": "unknown",
+            "source_name": "MSigDB",
+            "source_url": "https://www.gsea-msigdb.org/gsea/msigdb/",
+            "license_note": "请导入用户已下载的 MSigDB GMT，或未来支持授权配置后下载。",
+            "description": "本阶段不自动下载 MSigDB Hallmark。",
+            "operation": "导入 GMT",
+            "downloadable": False,
+        },
+        {
+            "resource_id": "custom_gmt_import",
+            "name": "Custom GMT",
+            "collection_type": "Custom",
+            "species": "unknown",
+            "gene_id_type": "unknown",
+            "source_name": "User import",
+            "source_url": "",
+            "license_note": "用户负责确认自定义 GMT 来源和使用权限。",
+            "description": "导入本地 GMT。",
+            "operation": "导入本地 GMT",
+            "downloadable": False,
+        },
+    ]
+
+
+def _download_reactome_pathways(root: Path, *, refresh: bool, fetcher: Fetcher | None, timeout: int) -> dict[str, Any]:
+    resource_id = "reactome_pathways"
+    data = _fetch_bytes(REACTOME_GMT_ZIP_URL, fetcher=fetcher, timeout=timeout)
+    repository = root / DOWNLOADED_GENE_SET_REPOSITORY / "reactome"
+    repository.mkdir(parents=True, exist_ok=True)
+    tmp_zip = repository / f".{resource_id}.zip.tmp"
+    tmp_gmt = repository / f".{resource_id}.gmt.tmp"
+    target = repository / f"{resource_id}.gmt"
+    try:
+        tmp_zip.write_bytes(data)
+        with zipfile.ZipFile(tmp_zip) as archive:
+            gmt_names = [name for name in archive.namelist() if name.lower().endswith(".gmt")]
+            if not gmt_names:
+                raise ValueError("Reactome zip did not contain a GMT file.")
+            tmp_gmt.write_bytes(archive.read(gmt_names[0]))
+        validation = validate_gmt_file(tmp_gmt)
+        if validation.status != "available":
+            raise ValueError(validation.validation_summary)
+        tmp_gmt.replace(target)
+        return register_downloaded_gene_set(
+            root,
+            resource_id=resource_id,
+            name="Reactome pathways",
+            collection_type="Reactome",
+            species="all_species",
+            gene_id_type="symbol",
+            source_name="Reactome",
+            source_url=REACTOME_GMT_ZIP_URL,
+            license_note="User-triggered download from Reactome; record source and download date.",
+            version=_date_version(),
+            local_path=target.relative_to(root),
+            validation=validation,
+        ) | {"cached": False, "refreshed": refresh}
+    finally:
+        _unlink_quietly(tmp_zip)
+        _unlink_quietly(tmp_gmt)
+
+
+def _download_go_resource(root: Path, resource_id: str, *, species: str, gene_id_type: str, refresh: bool, fetcher: Fetcher | None, timeout: int) -> dict[str, Any]:
+    if species != "human":
+        raise ValueError("B5.18 GO downloader supports human only.")
+    aspect_by_resource = {"go_bp_human": "P", "go_cc_human": "C", "go_mf_human": "F"}
+    collection_by_resource = {"go_bp_human": "GO_BP", "go_cc_human": "GO_CC", "go_mf_human": "GO_MF"}
+    name_by_resource = {
+        "go_bp_human": "GO Biological Process (GO BP)",
+        "go_cc_human": "GO Cellular Component (GO CC)",
+        "go_mf_human": "GO Molecular Function (GO MF)",
+    }
+    aspect = aspect_by_resource[resource_id]
+    data = _fetch_bytes(GO_HUMAN_GAF_URL, fetcher=fetcher, timeout=timeout)
+    text = _decode_maybe_gzip(data)
+    grouped = _go_gaf_gene_sets(text, aspect)
+    if not grouped:
+        raise ValueError(f"GO annotation did not produce any {collection_by_resource[resource_id]} gene sets.")
+    gmt_text = build_gmt_from_mapping(grouped)
+    repository = root / DOWNLOADED_GENE_SET_REPOSITORY / "go"
+    repository.mkdir(parents=True, exist_ok=True)
+    tmp = repository / f".{resource_id}.gmt.tmp"
+    target = repository / f"{resource_id}.gmt"
+    try:
+        tmp.write_text(gmt_text, encoding="utf-8")
+        validation = validate_gmt_file(tmp)
+        if validation.status != "available":
+            raise ValueError(validation.validation_summary)
+        tmp.replace(target)
+        return register_downloaded_gene_set(
+            root,
+            resource_id=resource_id,
+            name=name_by_resource[resource_id],
+            collection_type=collection_by_resource[resource_id],
+            species="human",
+            gene_id_type="symbol" if gene_id_type == "symbol" else gene_id_type,
+            source_name="Gene Ontology",
+            source_url=GO_HUMAN_GAF_URL,
+            license_note="GO annotation data are used with CC BY 4.0 attribution required.",
+            version=_date_version(),
+            local_path=target.relative_to(root),
+            validation=validation,
+        ) | {"cached": False, "refreshed": refresh}
+    finally:
+        _unlink_quietly(tmp)
+
+
+def _download_kegg_pathways(root: Path, *, refresh: bool, fetcher: Fetcher | None, timeout: int) -> dict[str, Any]:
+    pathway_text = _fetch_bytes(KEGG_PATHWAY_LIST_URL, fetcher=fetcher, timeout=timeout).decode("utf-8", errors="replace")
+    link_text = _fetch_bytes(KEGG_PATHWAY_LINK_URL, fetcher=fetcher, timeout=timeout).decode("utf-8", errors="replace")
+    grouped = _kegg_pathway_gene_sets(pathway_text, link_text)
+    if not grouped:
+        raise ValueError("KEGG REST responses did not produce any pathway gene sets.")
+    gmt_text = build_gmt_from_mapping(grouped)
+    repository = root / DOWNLOADED_GENE_SET_REPOSITORY / "kegg"
+    repository.mkdir(parents=True, exist_ok=True)
+    tmp = repository / ".kegg_hsa_pathways.gmt.tmp"
+    target = repository / "kegg_hsa_pathways.gmt"
+    try:
+        tmp.write_text(gmt_text, encoding="utf-8")
+        validation = validate_gmt_file(tmp)
+        if validation.status != "available":
+            raise ValueError(validation.validation_summary)
+        tmp.replace(target)
+        return register_downloaded_gene_set(
+            root,
+            resource_id="kegg_hsa_pathways",
+            name="KEGG human pathways",
+            collection_type="KEGG",
+            species="human",
+            gene_id_type="entrez",
+            source_name="KEGG REST",
+            source_url="https://rest.kegg.jp/",
+            license_note="KEGG REST API is for academic users and academic use; users must confirm their usage rights.",
+            version=_date_version(),
+            local_path=target.relative_to(root),
+            validation=validation,
+        ) | {"cached": False, "refreshed": refresh}
+    finally:
+        _unlink_quietly(tmp)
+
+
+def _fetch_bytes(url: str, *, fetcher: Fetcher | None, timeout: int) -> bytes:
+    if fetcher is not None:
+        return fetcher(url, timeout)
+    try:
+        with urlopen(url, timeout=timeout) as response:  # nosec B310 - user-triggered known scientific data URLs.
+            return response.read()
+    except URLError as exc:
+        raise RuntimeError(f"Failed to download gene set resource from {url}: {exc}") from exc
+
+
+def _decode_maybe_gzip(data: bytes) -> str:
+    if data[:2] == b"\x1f\x8b":
+        return gzip.decompress(data).decode("utf-8", errors="replace")
+    return data.decode("utf-8", errors="replace")
+
+
+def _go_gaf_gene_sets(text: str, aspect: str) -> dict[str, dict[str, object]]:
+    grouped: dict[str, dict[str, object]] = {}
+    for line in text.splitlines():
+        if not line or line.startswith("!"):
+            continue
+        parts = line.split("\t")
+        if len(parts) < 9:
+            continue
+        qualifier = parts[3]
+        if "NOT" in {item.strip() for item in qualifier.split("|") if item.strip()}:
+            continue
+        if parts[8] != aspect:
+            continue
+        gene_symbol = parts[2].strip()
+        go_id = parts[4].strip()
+        if not gene_symbol or not go_id:
+            continue
+        payload = grouped.setdefault(go_id, {"description": "Gene Ontology annotation", "genes": set()})
+        genes = payload["genes"]
+        if isinstance(genes, set):
+            genes.add(gene_symbol)
+    return grouped
+
+
+def _kegg_pathway_gene_sets(pathway_text: str, link_text: str) -> dict[str, dict[str, object]]:
+    names: dict[str, str] = {}
+    for line in pathway_text.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) != 2:
+            continue
+        pathway_id = _clean_kegg_pathway_id(parts[0])
+        names[pathway_id] = parts[1].strip()
+    grouped: dict[str, dict[str, object]] = {}
+    for line in link_text.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) != 2:
+            continue
+        left, right = parts
+        gene_id = left.replace("hsa:", "").strip()
+        pathway_id = _clean_kegg_pathway_id(right)
+        if not gene_id or not pathway_id:
+            continue
+        payload = grouped.setdefault(pathway_id, {"description": names.get(pathway_id, pathway_id), "genes": set()})
+        genes = payload["genes"]
+        if isinstance(genes, set):
+            genes.add(gene_id)
+    return grouped
+
+
+def _clean_kegg_pathway_id(value: str) -> str:
+    return value.replace("path:", "").strip()
+
+
 def _read_registry_payload(path: Path, root: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -382,7 +817,9 @@ def _write_registry(project_root: str | Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload["schema_version"] = GENE_SET_REGISTRY_SCHEMA_VERSION
     payload["project_root"] = str(root)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
 
 
 def _empty_registry(root: Path) -> dict[str, Any]:
@@ -416,6 +853,9 @@ def _normalize_resource(resource: dict[str, Any]) -> dict[str, Any]:
         "validation_summary": str(resource.get("validation_summary") or ""),
         "gene_set_count": _int_or_zero(resource.get("gene_set_count")),
         "gene_count_preview": [dict(item) for item in resource.get("gene_count_preview", []) or [] if isinstance(item, dict)],
+        "checksum": str(resource.get("checksum") or ""),
+        "file_size": _int_or_zero(resource.get("file_size")),
+        "downloaded_at": str(resource.get("downloaded_at") or ""),
     }
     if normalized["collection_type"] not in COLLECTION_TYPES:
         normalized["collection_type"] = "Unknown"
@@ -472,3 +912,22 @@ def _int_or_zero(value: object) -> int:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _date_version() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _unlink_quietly(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
