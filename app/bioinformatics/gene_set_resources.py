@@ -5,13 +5,14 @@ import re
 import shutil
 import gzip
 import hashlib
+import ssl
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 
@@ -27,6 +28,7 @@ GO_HUMAN_GAF_URL = "https://current.geneontology.org/annotations/goa_human.gaf.g
 KEGG_PATHWAY_LIST_URL = "https://rest.kegg.jp/list/pathway/hsa"
 KEGG_PATHWAY_LINK_URL = "https://rest.kegg.jp/link/pathway/hsa"
 DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 30
+DOWNLOAD_USER_AGENT = "BioMedPilot/0.1 gene-set-resource-manager"
 
 RESOURCE_STATUSES = {"available", "missing", "invalid", "pending_download"}
 COLLECTION_TYPES = {"GO_BP", "GO_CC", "GO_MF", "Reactome", "KEGG", "Hallmark", "Custom", "Unknown"}
@@ -726,11 +728,21 @@ def _download_kegg_pathways(root: Path, *, refresh: bool, fetcher: Fetcher | Non
 def _fetch_bytes(url: str, *, fetcher: Fetcher | None, timeout: int) -> bytes:
     if fetcher is not None:
         return fetcher(url, timeout)
+    request = Request(url, headers={"User-Agent": DOWNLOAD_USER_AGENT})
+    context = _ssl_context()
     try:
-        with urlopen(url, timeout=timeout) as response:  # nosec B310 - user-triggered known scientific data URLs.
+        with urlopen(request, timeout=timeout, context=context) as response:  # nosec B310 - user-triggered known scientific data URLs.
             return response.read()
     except URLError as exc:
         raise RuntimeError(f"Failed to download gene set resource from {url}: {exc}") from exc
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi  # type: ignore[import-not-found]
+    except Exception:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def _decode_maybe_gzip(data: bytes) -> str:

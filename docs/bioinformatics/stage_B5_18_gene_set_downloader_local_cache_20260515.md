@@ -146,6 +146,7 @@ After download or refresh, the local resource table refreshes and the resource c
 - Download failures surface as UI status text and keep current registry / selection untouched.
 - Missing cached files are marked `missing` by `validate_gene_set_registry()`.
 - Only available resources can be selected.
+- HTTPS downloads use the local `certifi` CA bundle when available and send a BioMedPilot User-Agent, which is required by the GO annotation endpoint in the tested Python 3.14 environment.
 
 ## Data Check Boundary
 
@@ -208,6 +209,18 @@ git diff --check
 Result: passed.
 
 `git diff --cached --check` should be run after staging the B5.18 files.
+
+Live network validation was also run after the committed stage implementation:
+
+```text
+Reactome pathways: 2855 gene sets, cached as available.
+GO BP: 11248 gene sets, cached as available.
+GO CC: 1840 gene sets, cached as available.
+GO MF: 4812 gene sets, cached as available.
+KEGG human pathways: 371 gene sets, cached as available.
+```
+
+Second calls for all five resources returned `cached=True` and reused the local repository without network fetches. Selecting `kegg_hsa_pathways` produced no GSEA gene set readiness blocking errors.
 
 ## Next Stage
 

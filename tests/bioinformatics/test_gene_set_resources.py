@@ -24,6 +24,7 @@ from app.bioinformatics.gene_set_resources import (
 )
 from app.bioinformatics.project_readiness import run_project_readiness
 from app.bioinformatics.project_workspace import create_bioinformatics_project
+import app.bioinformatics.gene_set_resources as gene_set_resources
 
 
 def _write_valid_gmt(path: Path) -> Path:
@@ -294,3 +295,36 @@ def test_downloaded_resource_missing_file_validates_missing_and_can_reselect_aft
     selected = get_selected_gene_set(project_root)
     assert selected is not None
     assert selected["resource_id"] == "kegg_hsa_pathways"
+
+
+def test_default_fetcher_sends_user_agent_and_uses_https_context(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self) -> bytes:
+            return b"ok"
+
+    def fake_urlopen(request, *, timeout, context):
+        captured["url"] = request.full_url
+        captured["user_agent"] = request.headers.get("User-agent")
+        captured["timeout"] = timeout
+        captured["context"] = context
+        return FakeResponse()
+
+    monkeypatch.setattr(gene_set_resources, "urlopen", fake_urlopen)
+
+    payload = gene_set_resources._fetch_bytes("https://example.test/resource.gmt", fetcher=None, timeout=12)
+
+    assert payload == b"ok"
+    assert captured["url"] == "https://example.test/resource.gmt"
+    assert captured["user_agent"] == gene_set_resources.DOWNLOAD_USER_AGENT
+    assert captured["timeout"] == 12
+    assert captured["context"] is not None
