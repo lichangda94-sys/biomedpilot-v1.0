@@ -23,14 +23,6 @@ try:
         export_wound_healing_analysis_package,
     )
     from app.labtools.image_analysis.analysis_task import ImageAnalysisTask, create_analysis_task
-    from app.labtools.image_analysis.local_engine_consumer import (
-        LABTOOLS_IMAGE_ANALYSIS_BOUNDARY,
-        check_labtools_imagej_fiji_status,
-        clear_labtools_imagej_fiji_path,
-        configure_labtools_imagej_fiji_path,
-        labtools_imagej_fiji_prompt,
-        load_labtools_imagej_fiji_status,
-    )
     from app.labtools.image_analysis.fluorescence import (
         FluorescenceAnalysisParameters,
         FluorescenceROI,
@@ -57,6 +49,8 @@ try:
     )
     from app.labtools.image_analysis.image_io import create_image_record
     from app.labtools.image_analysis.image_models import LabImageRecord
+    from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
+    from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -73,10 +67,11 @@ if QWidget is not None:
 
 
     class LabToolsImageAnalysisWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, *, imagej_bridge: ImageJFijiBridge | None = None) -> None:
             super().__init__()
             self.setObjectName("labToolsImageAnalysisWorkspace")
             self.setStyleSheet(self._stylesheet())
+            self._imagej_bridge = imagej_bridge
             self._image_records: list[LabImageRecord] = []
             self._tasks: list[ImageAnalysisTask] = []
             self._latest_export_kind = ""
@@ -102,7 +97,13 @@ if QWidget is not None:
             notice.setWordWrap(True)
             root.addWidget(title)
             root.addWidget(notice)
-            root.addWidget(self._build_imagej_fiji_card())
+            root.addWidget(
+                LabToolsImageJFijiStatusPanel(
+                    workflow_name="LabTools 图像分析 workflow",
+                    bridge=self._imagej_bridge,
+                    can_continue_without_engine=True,
+                )
+            )
             root.addWidget(self._build_import_card())
             root.addWidget(self._build_task_card_grid())
             root.addWidget(self._build_wound_healing_card())
@@ -154,49 +155,6 @@ if QWidget is not None:
             layout.addWidget(heading)
             layout.addLayout(row)
             layout.addWidget(self._image_summary)
-            return frame
-
-        def _build_imagej_fiji_card(self) -> QFrame:
-            frame = QFrame()
-            frame.setObjectName("labToolsCard")
-            layout = QVBoxLayout(frame)
-            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
-            layout.setSpacing(SPACING["sm"])
-            heading = QLabel("ImageJ/Fiji 本机引擎")
-            heading.setObjectName("imageCardTitle")
-            prompt = QLabel(labtools_imagej_fiji_prompt())
-            prompt.setObjectName("imageTaskStatus")
-            prompt.setWordWrap(True)
-            boundary = QLabel(LABTOOLS_IMAGE_ANALYSIS_BOUNDARY)
-            boundary.setObjectName("imageTaskStatus")
-            boundary.setWordWrap(True)
-            row = QHBoxLayout()
-            self._imagej_path_field = QLineEdit()
-            self._imagej_path_field.setObjectName("imageJPathField")
-            self._imagej_path_field.setPlaceholderText("选择或填写本机 Fiji.app、ImageJ.app 或可执行文件路径")
-            self._imagej_path_field.setMinimumHeight(CONTROL_HEIGHT["field"])
-            save = QPushButton("保存路径")
-            save.setObjectName("secondaryButton")
-            save.clicked.connect(self._handle_configure_imagej_fiji)
-            check = QPushButton("检测 ImageJ/Fiji")
-            check.setObjectName("secondaryButton")
-            check.clicked.connect(self._handle_check_imagej_fiji)
-            clear = QPushButton("清除")
-            clear.setObjectName("secondaryButton")
-            clear.clicked.connect(self._handle_clear_imagej_fiji)
-            row.addWidget(self._imagej_path_field, 1)
-            row.addWidget(save)
-            row.addWidget(check)
-            row.addWidget(clear)
-            self._imagej_status_label = QLabel("")
-            self._imagej_status_label.setObjectName("imageTaskStatus")
-            self._imagej_status_label.setWordWrap(True)
-            layout.addWidget(heading)
-            layout.addWidget(prompt)
-            layout.addWidget(boundary)
-            layout.addLayout(row)
-            layout.addWidget(self._imagej_status_label)
-            self._render_imagej_fiji_status(load_labtools_imagej_fiji_status())
             return frame
 
         def _build_task_card_grid(self) -> QFrame:
@@ -277,46 +235,6 @@ if QWidget is not None:
             support.setWordWrap(True)
             layout.addWidget(support)
             return frame
-
-        def _handle_configure_imagej_fiji(self) -> None:
-            try:
-                status = configure_labtools_imagej_fiji_path(self._imagej_path_field.text())
-            except ValueError as exc:
-                self._imagej_status_label.setText(f"ImageJ/Fiji 配置需要调整：{exc}")
-                return
-            self._render_imagej_fiji_status(status)
-
-        def _handle_check_imagej_fiji(self) -> None:
-            try:
-                status = check_labtools_imagej_fiji_status()
-            except ValueError as exc:
-                self._imagej_status_label.setText(f"ImageJ/Fiji 检测需要调整：{exc}")
-                return
-            self._render_imagej_fiji_status(status)
-
-        def _handle_clear_imagej_fiji(self) -> None:
-            try:
-                status = clear_labtools_imagej_fiji_path()
-            except ValueError as exc:
-                self._imagej_status_label.setText(f"ImageJ/Fiji 配置需要调整：{exc}")
-                return
-            self._render_imagej_fiji_status(status)
-
-        def _render_imagej_fiji_status(self, status) -> None:
-            if hasattr(self, "_imagej_path_field"):
-                self._imagej_path_field.setText(status.configured_path_or_endpoint)
-            status_text = status.status
-            detail = status.last_error or "未执行检测；可继续手动 ROI / manual-review 流程。"
-            self._imagej_status_label.setText(
-                "\n".join(
-                    [
-                        f"状态：{status_text}",
-                        f"版本：{status.detected_version}",
-                        f"路径：{status.configured_path_or_endpoint or '未配置'}",
-                        detail,
-                    ]
-                )
-            )
 
         def _build_wound_healing_card(self) -> QFrame:
             frame = QFrame()
@@ -584,7 +502,9 @@ if QWidget is not None:
             warnings = "\n".join(f"- {warning}" for warning in package.warnings) or "- 无"
             return "\n".join(
                 [
+                    "导出成功",
                     "ROI 结果导出完成",
+                    "软件状态：Developer Preview / testing",
                     f"分析类型：{package.analysis_type}",
                     f"导出目录：{package.output_dir}",
                     "",
@@ -594,23 +514,24 @@ if QWidget is not None:
                     f"- Markdown 片段：{package.markdown_path}",
                     f"- ROI overlay PNG：{package.overlay_path}",
                     "",
-                    "复核提示",
+                    "人工复核提示",
                     package.review_notice,
                     "",
                     "warning",
                     warnings,
                     "",
-                    "语义边界：导出文件为 manual-review / semi-quantitative 辅助结果，不构成自动算法结论、临床建议或实验 SOP。",
+                    "语义边界：导出文件为 manual ROI auxiliary analysis / manual-review / semi-quantitative 辅助结果，不构成自动算法结论、临床建议或实验 SOP。",
                 ]
             )
 
         def _export_cancelled_text(self) -> str:
             previous = self._latest_analysis_text or "当前分析结果仍保留在内存预览中。"
-            return "\n\n".join(["已取消导出；未写入任何文件。", previous])
+            return "\n\n".join(["已取消导出，当前分析结果仍保留；未写入任何文件。", previous])
 
         def _export_failed_text(self, message: str) -> str:
             previous = self._latest_analysis_text or "当前分析结果仍保留在内存预览中。"
-            return "\n\n".join(["导出需要调整", message, "当前分析结果保留如下", previous])
+            clean_message = (message or "未知导出错误").splitlines()[0]
+            return "\n\n".join(["导出需要调整", clean_message, "当前分析结果保留如下", previous])
 
         def _render_task_summary(self, task: ImageAnalysisTask) -> None:
             image_line = "无图片记录" if not task.image_records else f"{len(task.image_records)} 个图片记录"

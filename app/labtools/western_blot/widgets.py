@@ -6,11 +6,13 @@ try:
         QApplication,
         QCheckBox,
         QComboBox,
+        QFileDialog,
         QFrame,
         QGridLayout,
         QHBoxLayout,
         QLabel,
         QLineEdit,
+        QMessageBox,
         QPushButton,
         QTableWidget,
         QTableWidgetItem,
@@ -20,7 +22,9 @@ try:
     )
 
     from app.labtools.western_blot.calculator import calculate_wb_loading
-    from app.labtools.western_blot.models import WBLoadingCalculatorError, WBLoadingConfig, WBLoadingResult, WBSampleInput
+    from app.labtools.western_blot.exporter import wb_loading_record_csv, wb_loading_record_markdown
+    from app.labtools.western_blot.models import WBLoadingCalculatorError, WBLoadingConfig, WBLoadingRecord, WBLoadingResult, WBSampleInput
+    from app.labtools.western_blot.store import WBLoadingRecordStore
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
     QWidget = None  # type: ignore[assignment]
@@ -46,11 +50,14 @@ if QWidget is not None:
 
 
     class WesternBlotLoadingCalculatorWidget(QWidget):
-        def __init__(self) -> None:
+        def __init__(self, *, record_store: WBLoadingRecordStore | None = None) -> None:
             super().__init__()
             self.setObjectName("westernBlotLoadingCalculatorWidget")
             self.setStyleSheet(self._stylesheet())
+            self._record_store = record_store or WBLoadingRecordStore()
             self._current_result: WBLoadingResult | None = None
+            self._current_samples: tuple[WBSampleInput, ...] = ()
+            self._current_record: WBLoadingRecord | None = None
             self._build_ui()
 
         def _build_ui(self) -> None:
@@ -79,6 +86,8 @@ if QWidget is not None:
             root.addWidget(self._build_sample_card())
             root.addWidget(self._build_action_card())
             root.addWidget(self._build_result_card(), 1)
+            root.addWidget(self._build_record_card())
+            self._refresh_history()
 
         def _build_config_card(self) -> QFrame:
             card = self._card()
@@ -198,6 +207,74 @@ if QWidget is not None:
             layout.addWidget(self._lane_panel, 1, 2)
             return card
 
+        def _build_record_card(self) -> QFrame:
+            card = self._card()
+            layout = QGridLayout(card)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+
+            title = QLabel("本次上样记录保存与导出")
+            title.setObjectName("labToolsWesternBlotSectionTitle")
+            self._operator_name = _line_edit("", "可选")
+            self._operator_name.setObjectName("wbLoadingOperatorNameField")
+            self._project_name = _line_edit("", "可选")
+            self._project_name.setObjectName("wbLoadingProjectNameField")
+            self._record_notes = _line_edit("", "可选备注")
+            self._record_notes.setObjectName("wbLoadingRecordNotesField")
+            self._save_record_button = QPushButton("保存本次上样记录")
+            self._save_record_button.setObjectName("wbLoadingSaveRecordButton")
+            self._save_record_button.setEnabled(False)
+            self._save_record_button.clicked.connect(self._handle_save_record)
+            self._copy_markdown_button = QPushButton("复制结果 Markdown")
+            self._copy_markdown_button.setObjectName("wbLoadingCopyMarkdownButton")
+            self._copy_markdown_button.setEnabled(False)
+            self._copy_markdown_button.clicked.connect(self._copy_markdown)
+            self._export_markdown_button = QPushButton("导出 Markdown")
+            self._export_markdown_button.setObjectName("wbLoadingExportMarkdownButton")
+            self._export_markdown_button.setEnabled(False)
+            self._export_markdown_button.clicked.connect(self._export_markdown)
+            self._export_csv_button = QPushButton("导出 CSV")
+            self._export_csv_button.setObjectName("wbLoadingExportCsvButton")
+            self._export_csv_button.setEnabled(False)
+            self._export_csv_button.clicked.connect(self._export_csv)
+            self._record_status = QLabel("尚未保存。记录保存为本地 JSON，不联网、不上传。")
+            self._record_status.setObjectName("wbLoadingRecordStatusLabel")
+            self._record_status.setWordWrap(True)
+
+            self._history_table = QTableWidget(0, 6)
+            self._history_table.setObjectName("wbLoadingRecordHistoryTable")
+            self._history_table.setHorizontalHeaderLabels(("实验名称", "创建时间", "样本数", "Lane 数", "状态", "record_id"))
+            self._history_table.setMinimumHeight(120)
+            self._view_record_button = QPushButton("查看记录")
+            self._view_record_button.setObjectName("wbLoadingViewRecordButton")
+            self._view_record_button.clicked.connect(self._view_selected_record)
+            self._delete_record_button = QPushButton("删除记录")
+            self._delete_record_button.setObjectName("wbLoadingDeleteRecordButton")
+            self._delete_record_button.clicked.connect(self._delete_selected_record)
+            self._refresh_record_button = QPushButton("刷新历史记录")
+            self._refresh_record_button.setObjectName("wbLoadingRefreshRecordHistoryButton")
+            self._refresh_record_button.clicked.connect(self._refresh_history)
+
+            layout.addWidget(title, 0, 0, 1, 4)
+            layout.addWidget(QLabel("操作者"), 1, 0)
+            layout.addWidget(QLabel("项目"), 1, 1)
+            layout.addWidget(QLabel("备注"), 1, 2)
+            layout.addWidget(self._operator_name, 2, 0)
+            layout.addWidget(self._project_name, 2, 1)
+            layout.addWidget(self._record_notes, 2, 2, 1, 2)
+            for index, button in enumerate((self._save_record_button, self._copy_markdown_button, self._export_markdown_button, self._export_csv_button)):
+                layout.addWidget(button, 3, index)
+            layout.addWidget(self._record_status, 4, 0, 1, 4)
+            layout.addWidget(QLabel("历史上样记录"), 5, 0, 1, 4)
+            layout.addWidget(self._history_table, 6, 0, 1, 4)
+            history_actions = QHBoxLayout()
+            history_actions.addWidget(self._view_record_button)
+            history_actions.addWidget(self._delete_record_button)
+            history_actions.addWidget(self._refresh_record_button)
+            history_actions.addStretch(1)
+            layout.addLayout(history_actions, 7, 0, 1, 4)
+            return card
+
         def _add_sample_row(self) -> None:
             row = self._sample_table.rowCount()
             self._sample_table.insertRow(row)
@@ -207,19 +284,27 @@ if QWidget is not None:
 
         def _handle_calculate(self) -> None:
             try:
-                result = calculate_wb_loading(self._config_from_form(), self._samples_from_table())
+                samples = self._samples_from_table()
+                result = calculate_wb_loading(self._config_from_form(), samples)
             except (WBLoadingCalculatorError, ValueError) as exc:
                 self._current_result = None
+                self._current_samples = ()
+                self._current_record = None
                 self._copy_button.setEnabled(False)
+                self._set_record_actions_enabled(False)
                 self._result_panel.setText(str(exc))
                 self._detail_panel.setText(str(exc))
                 self._lane_panel.setText(str(exc))
                 return
             self._current_result = result
+            self._current_samples = samples
+            self._current_record = None
             self._copy_button.setEnabled(True)
+            self._set_record_actions_enabled(True)
             self._result_panel.setText(result.as_text())
             self._detail_panel.setText(self._detail_text(result))
             self._lane_panel.setText(self._lane_text(result))
+            self._record_status.setText("计算完成，可保存为本地 JSON 记录或导出 Markdown/CSV。")
 
         def _config_from_form(self) -> WBLoadingConfig:
             return WBLoadingConfig(
@@ -261,6 +346,128 @@ if QWidget is not None:
         def _copy_result(self) -> None:
             if self._current_result is not None:
                 QApplication.clipboard().setText(self._current_result.as_text())
+
+        def _handle_save_record(self) -> None:
+            try:
+                record = self._record_from_current_result()
+                saved = self._record_store.save_record(record)
+            except Exception as exc:
+                self._record_status.setText(str(exc))
+                return
+            self._current_record = saved
+            self._record_status.setText(f"已保存本次上样记录：{saved.record_id}")
+            self._refresh_history()
+
+        def _copy_markdown(self) -> None:
+            try:
+                QApplication.clipboard().setText(wb_loading_record_markdown(self._record_for_export()))
+            except Exception as exc:
+                self._record_status.setText(str(exc))
+
+        def _export_markdown(self) -> None:
+            try:
+                record = self._record_for_export()
+                path, _ = QFileDialog.getSaveFileName(self, "导出 Western Blot 上样记录 Markdown", f"{_safe_stem(record.experiment_name)}.md", "Markdown (*.md)")
+                if not path:
+                    return
+                saved = self._record_store.export_record_markdown(record, path)
+            except Exception as exc:
+                self._record_status.setText(str(exc))
+                return
+            self._record_status.setText(f"Markdown 已导出：{saved}")
+
+        def _export_csv(self) -> None:
+            try:
+                record = self._record_for_export()
+                path, _ = QFileDialog.getSaveFileName(self, "导出 Western Blot 上样记录 CSV", f"{_safe_stem(record.experiment_name)}.csv", "CSV (*.csv)")
+                if not path:
+                    return
+                saved = self._record_store.export_record_csv(record, path)
+            except Exception as exc:
+                self._record_status.setText(str(exc))
+                return
+            self._record_status.setText(f"CSV 已导出：{saved}")
+
+        def _record_from_current_result(self) -> WBLoadingRecord:
+            if self._current_result is None:
+                raise WBLoadingCalculatorError("请先计算上样体系。")
+            return WBLoadingRecord.from_result(
+                self._current_result,
+                self._current_samples,
+                operator_name=self._operator_name.text().strip(),
+                project_name=self._project_name.text().strip(),
+                notes=self._record_notes.text().strip(),
+            )
+
+        def _record_for_export(self) -> WBLoadingRecord:
+            return self._current_record or self._record_from_current_result()
+
+        def _set_record_actions_enabled(self, enabled: bool) -> None:
+            for button in (self._save_record_button, self._copy_markdown_button, self._export_markdown_button, self._export_csv_button):
+                button.setEnabled(enabled)
+
+        def _refresh_history(self) -> None:
+            try:
+                records = self._record_store.list_records()
+            except Exception as exc:
+                self._history_table.setRowCount(0)
+                self._record_status.setText(str(exc))
+                return
+            self._history_table.setRowCount(0)
+            for record in sorted(records, key=lambda item: item.created_at, reverse=True):
+                row_index = self._history_table.rowCount()
+                self._history_table.insertRow(row_index)
+                rows = record.result_snapshot.get("rows", [])
+                lanes = record.result_snapshot.get("lanes", [])
+                values = (
+                    record.experiment_name,
+                    record.created_at,
+                    str(len(rows) if isinstance(rows, list) else 0),
+                    str(len(lanes) if isinstance(lanes, list) else 0),
+                    record.summary_status,
+                    record.record_id,
+                )
+                for column, value in enumerate(values):
+                    self._history_table.setItem(row_index, column, QTableWidgetItem(value))
+
+        def _selected_record_id(self) -> str | None:
+            row = self._history_table.currentRow()
+            if row < 0:
+                return None
+            item = self._history_table.item(row, 5)
+            return item.text().strip() if item is not None else None
+
+        def _view_selected_record(self) -> None:
+            record_id = self._selected_record_id()
+            if not record_id:
+                self._record_status.setText("请先选择一条历史记录。")
+                return
+            try:
+                record = self._record_store.get_record(record_id)
+            except Exception as exc:
+                self._record_status.setText(str(exc))
+                return
+            self._current_record = record
+            self._result_panel.setText(wb_loading_record_markdown(record))
+            self._detail_panel.setText(wb_loading_record_csv(record))
+            self._lane_panel.setText("\n".join("\t".join(row) for row in record.lane_layout_snapshot))
+            self._record_status.setText(f"已载入记录：{record.record_id}")
+
+        def _delete_selected_record(self) -> None:
+            record_id = self._selected_record_id()
+            if not record_id:
+                self._record_status.setText("请先选择一条历史记录。")
+                return
+            answer = QMessageBox.question(self, "确认删除记录", "删除 Western Blot 上样记录前请确认。此操作只影响本地 JSON。")
+            if answer != QMessageBox.Yes:
+                return
+            try:
+                self._record_store.delete_record(record_id, confirmed=True)
+            except Exception as exc:
+                self._record_status.setText(str(exc))
+                return
+            self._record_status.setText("记录已删除。本地 JSON 已更新。")
+            self._refresh_history()
 
         def _detail_text(self, result: WBLoadingResult) -> str:
             lines = [
@@ -323,3 +530,8 @@ else:  # pragma: no cover
 
     class WesternBlotLoadingCalculatorWidget:  # type: ignore[no-redef]
         pass
+
+
+def _safe_stem(value: str) -> str:
+    cleaned = "".join(char if char.isalnum() or char in ("-", "_") else "_" for char in value.strip())
+    return cleaned or "western_blot_loading_record"

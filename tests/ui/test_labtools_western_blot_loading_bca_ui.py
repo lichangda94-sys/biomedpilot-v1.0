@@ -199,6 +199,35 @@ def test_wb_loading_ui_generates_lane_layout_and_marker_variants(qapp) -> None:
     assert "β-ME" in page.findChild(QTextEdit, "wbLoadingLaneLayoutPanel").toPlainText()
 
 
+def test_wb_loading_ui_saves_record_and_updates_history(qapp, tmp_path) -> None:
+    from PySide6.QtWidgets import QPushButton, QTableWidget, QTableWidgetItem, QTextEdit
+
+    from app.labtools.western_blot.store import WBLoadingRecordStore
+    from app.labtools.western_blot.widgets import WesternBlotLoadingCalculatorWidget
+
+    page = WesternBlotLoadingCalculatorWidget(record_store=WBLoadingRecordStore(tmp_path / "loading_records.json"))
+    table = page.findChild(QTableWidget, "proteinLoadingSampleTable")
+    table.setItem(0, 0, QTableWidgetItem("S1"))
+    table.setItem(0, 1, QTableWidgetItem("2"))
+
+    save_button = page.findChild(QPushButton, "wbLoadingSaveRecordButton")
+    copy_markdown = page.findChild(QPushButton, "wbLoadingCopyMarkdownButton")
+    assert not save_button.isEnabled()
+    assert not copy_markdown.isEnabled()
+
+    page.findChild(QPushButton, "proteinLoadingCalculateButton").click()
+
+    assert save_button.isEnabled()
+    assert copy_markdown.isEnabled()
+    save_button.click()
+
+    history = page.findChild(QTableWidget, "wbLoadingRecordHistoryTable")
+    assert history.rowCount() == 1
+    assert history.item(0, 0).text() == "WB loading"
+    assert history.item(0, 4).text() == "OK"
+    assert "已保存本次上样记录" in page.findChild(QTextEdit, "proteinLoadingResultPanel").toPlainText() or history.item(0, 5).text().startswith("wb_loading_")
+
+
 def test_loading_and_bca_ui_avoid_misleading_claims(qapp) -> None:
     _, page = _western_blot_page()
     text = _visible_text(page)

@@ -4,6 +4,7 @@ try:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import (
         QComboBox,
+        QFileDialog,
         QFrame,
         QGridLayout,
         QHBoxLayout,
@@ -30,6 +31,7 @@ try:
         RecipeExtractionDraft,
         RecipeSourceCard,
     )
+    from app.labtools.recipes.recipe_persistence import RECIPE_DRAFT_SAFETY_CATEGORY, load_user_recipe_store, save_user_recipe_store
     from app.labtools.recipes.user_recipe_store import UserRecipeStore
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -37,6 +39,7 @@ except Exception:  # pragma: no cover
 
 
 if QWidget is not None:
+    SAFETY_CATEGORY_TEXT = " / ".join(RECIPE_DRAFT_SAFETY_CATEGORY.values())
 
     def _line_edit(placeholder: str, text: str = "") -> QLineEdit:
         field = QLineEdit()
@@ -126,10 +129,14 @@ if QWidget is not None:
             layout.setContentsMargins(0, SPACING["sm"], 0, 0)
             layout.setSpacing(SPACING["md"])
             layout.addWidget(self._build_user_recipe_card())
+            layout.addWidget(self._build_user_recipe_persistence_card())
             self._user_recipe_summary = QTextEdit()
             self._user_recipe_summary.setObjectName("recipeResultPanel")
             self._user_recipe_summary.setReadOnly(True)
-            self._user_recipe_summary.setText("用户确认的配方仅保存在当前内存结构，不会自动写盘。")
+            self._user_recipe_summary.setText(
+                "用户确认的配方仅保存在当前内存结构；只有点击保存并选择 JSON 路径后才写盘。"
+                f"安全类别：{SAFETY_CATEGORY_TEXT}。"
+            )
             layout.addWidget(self._user_recipe_summary, 1)
             return tab
 
@@ -228,12 +235,44 @@ if QWidget is not None:
             grid.addWidget(self._draft_component_amount, 5, 1)
             grid.addWidget(self._draft_component_unit, 5, 2)
             grid.addWidget(confirm, 6, 0, 1, 3)
-            self._draft_status = QLabel("草稿确认后仅保存在当前内存结构，可导出为 JSON-compatible dict；不会自动写盘。")
+            self._draft_status = QLabel(
+                "草稿确认后仅保存在当前内存结构，可导出为 JSON-compatible dict；不会自动写盘。"
+                "使用前需按实验室 SOP、SDS 和试剂说明书人工核对浓度、pH、储存条件、有效期和危险性。"
+            )
             self._draft_status.setObjectName("recipeSupportLine")
             self._draft_status.setWordWrap(True)
             layout.addWidget(heading)
             layout.addLayout(grid)
             layout.addWidget(self._draft_status)
+            return frame
+
+        def _build_user_recipe_persistence_card(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("本地配方草稿持久化")
+            heading.setObjectName("recipeCardTitle")
+            support = QLabel(
+                "仅保存用户确认配方到本地 JSON；不自动保存、不联网、不调用 AI。"
+                f"安全类别：{SAFETY_CATEGORY_TEXT}；"
+                "载入后仍需人工核对 SOP、SDS、试剂说明书、浓度、pH、储存条件、有效期和危险性；"
+                "不构成安全操作规范，不自动适配所有实验。"
+            )
+            support.setObjectName("recipeSupportLine")
+            support.setWordWrap(True)
+            row = QHBoxLayout()
+            save_button = QPushButton("保存用户配方 JSON")
+            save_button.setObjectName("secondaryButton")
+            save_button.clicked.connect(self._handle_save_user_recipes)
+            load_button = QPushButton("载入用户配方 JSON")
+            load_button.setObjectName("secondaryButton")
+            load_button.clicked.connect(self._handle_load_user_recipes)
+            row.addWidget(save_button)
+            row.addWidget(load_button)
+            layout.addWidget(heading)
+            layout.addWidget(support)
+            layout.addLayout(row)
             return frame
 
         def _build_source_tab(self) -> QWidget:
@@ -359,7 +398,7 @@ if QWidget is not None:
             self._recipe_list.clear()
             selected_row = 0
             for index, recipe in enumerate(self._recipes):
-                item = QListWidgetItem(f"{recipe.name}\n{recipe.category}")
+                item = QListWidgetItem(f"{recipe.name}\n{recipe.category} · {recipe.version}")
                 item.setData(Qt.UserRole, recipe.recipe_id)
                 self._recipe_list.addItem(item)
                 if recipe.recipe_id == current_id:
@@ -373,12 +412,27 @@ if QWidget is not None:
                 return
             recipes = self._user_store.list_recipes()
             if not recipes:
-                self._user_recipe_summary.setText("尚未确认用户配方。用户草稿和来源摘录草稿均不会自动写盘。")
+                self._user_recipe_summary.setText(
+                    "尚未确认用户配方。用户草稿和来源摘录草稿均不会自动写盘。"
+                    f"\n安全类别：{SAFETY_CATEGORY_TEXT}。"
+                    "\n使用前需按实验室 SOP、SDS 和试剂说明书人工核对浓度、pH、储存条件、有效期和危险性。"
+                )
                 return
             lines = ["已确认用户配方"]
             for recipe in recipes:
                 source = recipe.source_title or recipe.source_label
-                lines.append(f"- {recipe.name}；来源：{source}")
+                lines.append(f"- {recipe.name}；版本：{recipe.version}；来源：{source}")
+            lines.extend(
+                [
+                    "",
+                    "本地持久化",
+                    "点击“保存用户配方 JSON”并选择路径后才写盘；保存时会进行基础安全范围检查并避免覆盖同名文件。",
+                    "",
+                    "安全类别",
+                    SAFETY_CATEGORY_TEXT,
+                    "使用前需确认浓度、pH、储存条件、有效期和危险性；不构成安全操作规范，不自动适配所有实验。",
+                ]
+            )
             lines.extend(["", "复核提示", RECIPE_REVIEW_NOTICE])
             self._user_recipe_summary.setText("\n".join(lines))
 
@@ -411,6 +465,14 @@ if QWidget is not None:
                 lines.append(f"- {component.name}{optional}：{format_number(component.amount)} {component.unit}；{component.role}")
             lines.extend(["", "注意事项", *[f"- {note}" for note in recipe.preparation_notes]])
             lines.extend(["", "安全提示", *[f"- {note}" for note in recipe.safety_notes]])
+            lines.extend(
+                [
+                    "",
+                    "安全类别",
+                    SAFETY_CATEGORY_TEXT,
+                    "使用前需确认浓度、pH、储存条件、有效期和危险性；不构成安全操作规范，不自动适配所有实验。",
+                ]
+            )
             lines.extend(["", "复核提示", recipe.review_notice])
             self._detail.setText("\n".join(lines))
             self._target_volume.setText(format_number(recipe.default_volume))
@@ -469,7 +531,7 @@ if QWidget is not None:
             except RecipeError as exc:
                 self._draft_status.setText(f"输入需要调整\n{exc}")
                 return
-            self._draft_status.setText(f"已确认用户配方：{recipe.name}。本阶段仅保存在内存结构，不自动写盘。")
+            self._draft_status.setText(f"已确认用户配方：{recipe.name}。当前仅保存在内存结构；如需持久化，请手动保存为本地 JSON。")
             self._current_recipe = recipe
             self._refresh_recipes()
 
@@ -563,9 +625,104 @@ if QWidget is not None:
             except RecipeError as exc:
                 self._source_status.setText(f"保存需要调整\n{exc}")
                 return
-            self._source_status.setText(f"已确认保存用户配方：{recipe.name}。仅保存在当前内存结构，不自动写盘。")
+            self._source_status.setText(f"已确认保存用户配方：{recipe.name}。当前仅保存在内存结构；如需持久化，请手动保存为本地 JSON。")
             self._current_recipe = recipe
             self._refresh_recipes()
+
+        def _handle_save_user_recipes(self) -> None:
+            recipes = self._user_store.list_recipes()
+            if not recipes:
+                self._user_recipe_summary.setText("尚未确认用户配方，未写入任何文件。")
+                return
+            path = self._select_user_recipe_save_path()
+            if not path:
+                self._user_recipe_summary.setText("已取消保存；未写入任何文件。")
+                return
+            try:
+                result = self._perform_save_user_recipes(path)
+            except RecipeError as exc:
+                self._user_recipe_summary.setText(f"保存需要调整\n{exc}")
+                return
+            self._user_recipe_summary.setText(
+                "\n".join(
+                    [
+                        "用户配方 JSON 已保存",
+                        f"路径：{result.path}",
+                        f"schema：{result.schema_version}",
+                        f"配方数：{result.recipe_count}",
+                        f"安全类别：{SAFETY_CATEGORY_TEXT}",
+                        "",
+                        "复核提示",
+                        result.review_notice,
+                    ]
+                )
+            )
+
+        def _handle_load_user_recipes(self) -> None:
+            path = self._select_user_recipe_load_path()
+            if not path:
+                self._user_recipe_summary.setText("已取消载入；当前用户配方未改变。")
+                return
+            try:
+                result = self._perform_load_user_recipes(path)
+            except RecipeError as exc:
+                self._user_recipe_summary.setText(f"载入需要调整\n{exc}")
+                return
+            import_result = getattr(self, "_last_recipe_import_result", None)
+            import_lines: list[str] = []
+            if import_result is not None:
+                import_lines.extend(
+                    [
+                        f"实际写入当前内存配方数：{import_result.imported_count}",
+                        f"recipe_id 冲突数：{import_result.conflict_count}",
+                    ]
+                )
+                versions = sorted({recipe.version for recipe in import_result.imported_recipes if recipe.version})
+                if versions:
+                    import_lines.append(f"载入版本：{', '.join(versions)}")
+                import_lines.extend(import_result.warnings)
+            self._refresh_recipes()
+            self._user_recipe_summary.setText(
+                "\n".join(
+                    [
+                        "用户配方 JSON 已载入",
+                        f"路径：{result.path}",
+                        f"schema：{result.schema_version}",
+                        f"载入配方数：{result.recipe_count}",
+                        f"安全类别：{SAFETY_CATEGORY_TEXT}",
+                        *import_lines,
+                        "",
+                        "复核提示",
+                        result.review_notice,
+                    ]
+                )
+            )
+
+        def _select_user_recipe_save_path(self) -> str:
+            path, _selected_filter = QFileDialog.getSaveFileName(
+                self,
+                "保存用户配方草稿 JSON",
+                "labtools_user_recipe_drafts.json",
+                "JSON Files (*.json)",
+            )
+            return path
+
+        def _select_user_recipe_load_path(self) -> str:
+            path, _selected_filter = QFileDialog.getOpenFileName(
+                self,
+                "载入用户配方草稿 JSON",
+                "",
+                "JSON Files (*.json)",
+            )
+            return path
+
+        def _perform_save_user_recipes(self, path: str):
+            return save_user_recipe_store(self._user_store.list_recipes(), path)
+
+        def _perform_load_user_recipes(self, path: str):
+            result = load_user_recipe_store(path)
+            self._last_recipe_import_result = self._user_store.import_recipes_with_summary(result.recipes)
+            return result
 
         def _stylesheet(self) -> str:
             return f"""

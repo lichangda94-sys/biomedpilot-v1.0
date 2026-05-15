@@ -229,7 +229,16 @@ def test_main_window_module_buttons_enter_existing_workspaces(qt_app) -> None:
         labtools_button = window._dashboard_page.findChild(QPushButton, "labToolsModuleButton")
         labtools_button.click()
         assert window.current_workspace_key() == "labtools"
-        assert window._labtools_page.page_keys() == ("home", "calculators", "recipes", "image_analysis", "pending")
+        assert window._labtools_page.page_keys() == (
+            "home",
+            "general_calculators",
+            "imagej_fiji",
+            "reagent_records",
+            "cell_experiments",
+            "western_blot",
+            "pcr_qpcr",
+            "elisa_absorbance",
+        )
     finally:
         _dispose_window(window)
 
