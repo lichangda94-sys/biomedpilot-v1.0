@@ -98,9 +98,12 @@ from app.bioinformatics.gene_set_resources import (
     GENE_ID_TYPES,
     SPECIES_VALUES,
     build_gsea_gene_set_readiness,
+    download_gene_set_resource,
     get_gene_set,
     import_gmt_file,
+    list_downloadable_gene_set_resources,
     list_local_gene_sets,
+    refresh_downloaded_gene_set,
     remove_gene_set,
     select_gene_set,
     validate_gene_set_registry,
@@ -3125,6 +3128,7 @@ class GseaGeneSetResourceManagerDialog(QDialog):
         super().__init__(parent)
         self._project_root = Path(project_root).expanduser().resolve()
         self._resources: list[dict[str, Any]] = []
+        self._downloadable_resources: list[dict[str, Any]] = []
         self.setObjectName("gseaGeneSetResourceManagerDialog")
         self.setWindowTitle("GSEA 基因集资源管理器")
         self.resize(980, 620)
@@ -3134,7 +3138,9 @@ class GseaGeneSetResourceManagerDialog(QDialog):
     def refresh_resources(self) -> dict[str, object]:
         validation = validate_gene_set_registry(self._project_root)
         self._resources = [dict(item) for item in validation.get("resources", []) if isinstance(item, dict)]
+        self._downloadable_resources = list_downloadable_gene_set_resources(self._project_root)
         self._render_resources()
+        self._render_downloadable_resources()
         if self._resources:
             self._status_label.setText(f"本地 GSEA 基因集资源：{len(self._resources)} 个。")
         else:
@@ -3195,6 +3201,47 @@ class GseaGeneSetResourceManagerDialog(QDialog):
         self._details.setPlainText(_json(detail))
         return detail
 
+    def download_selected_common_resource(self) -> dict[str, object] | None:
+        resource = self._current_downloadable_resource()
+        if resource is None:
+            self._status_label.setText("请先在常用资源表中选择一条可下载资源。")
+            return None
+        if not resource.get("downloadable"):
+            self._status_label.setText(str(resource.get("license_note") or "该资源本阶段不支持自动下载，请使用导入 GMT。"))
+            if str(resource.get("resource_id") or "") in {"msigdb_hallmark_user_import", "custom_gmt_import"}:
+                self.import_local_gmt()
+            return None
+        try:
+            result = download_gene_set_resource(self._project_root, str(resource.get("resource_id") or ""))
+        except Exception as exc:
+            self._status_label.setText(f"下载失败：{exc}。如果已有本地缓存，可继续使用已缓存资源。")
+            return None
+        self.refresh_resources()
+        self.selection_changed.emit()
+        downloaded = result.get("resource") if isinstance(result.get("resource"), dict) else {}
+        state = "已使用本地缓存" if result.get("cached") else "已下载并缓存"
+        self._status_label.setText(f"{state}：{downloaded.get('name') or resource.get('name')}。")
+        return result
+
+    def refresh_selected_common_resource(self) -> dict[str, object] | None:
+        resource = self._current_downloadable_resource()
+        if resource is None:
+            self._status_label.setText("请先在常用资源表中选择一条可更新资源。")
+            return None
+        if not resource.get("downloadable"):
+            self._status_label.setText(str(resource.get("license_note") or "该资源本阶段不支持自动下载。"))
+            return None
+        try:
+            result = refresh_downloaded_gene_set(self._project_root, str(resource.get("resource_id") or ""))
+        except Exception as exc:
+            self._status_label.setText(f"更新失败：{exc}。旧缓存和当前选择不会被破坏。")
+            return None
+        self.refresh_resources()
+        self.selection_changed.emit()
+        downloaded = result.get("resource") if isinstance(result.get("resource"), dict) else {}
+        self._status_label.setText(f"已更新缓存：{downloaded.get('name') or resource.get('name')}。")
+        return result
+
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
         title = QLabel("GSEA 基因集资源管理器")
@@ -3236,22 +3283,20 @@ class GseaGeneSetResourceManagerDialog(QDialog):
 
         download_card, download_layout = _card("下载 / 配置常用基因集资源")
         download_card.setObjectName("gseaGeneSetFutureSourcesCard")
-        self._future_table = _table(["资源", "本阶段状态"])
+        self._future_table = _table(["资源名称", "说明", "来源", "许可 / 使用提示", "本地状态", "本地版本 / 下载日期", "操作"])
         self._future_table.setObjectName("gseaGeneSetFutureResourcesTable")
-        _fill_table(
-            self._future_table,
-            [
-                ["GO BP", "后续支持下载"],
-                ["GO CC", "后续支持下载"],
-                ["GO MF", "后续支持下载"],
-                ["Reactome", "后续支持下载"],
-                ["KEGG", "后续支持在线获取并缓存 / 用户配置"],
-                ["MSigDB Hallmark", "请导入用户已下载的 MSigDB GMT，或在授权配置后支持"],
-                ["自定义 GMT", "使用“导入本地 GMT”"],
-            ],
-        )
-        self._future_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         download_layout.addWidget(self._future_table)
+        download_actions = QHBoxLayout()
+        self._download_button = _button("下载到本地 / 在线获取并缓存", "primaryButton", self.download_selected_common_resource)
+        self._download_button.setObjectName("downloadGeneSetResourceButton")
+        self._refresh_download_button = _button("更新缓存", "secondaryButton", self.refresh_selected_common_resource)
+        self._refresh_download_button.setObjectName("refreshDownloadedGeneSetResourceButton")
+        self._import_hallmark_button = _button("导入 GMT", "secondaryButton", self.import_local_gmt)
+        self._import_hallmark_button.setObjectName("importGeneSetFromFutureResourceButton")
+        for button in (self._download_button, self._refresh_download_button, self._import_hallmark_button):
+            download_actions.addWidget(button)
+        download_actions.addStretch(1)
+        download_layout.addLayout(download_actions)
         root.addWidget(download_card)
 
         self._details = _read_only_report_view(130)
@@ -3289,6 +3334,24 @@ class GseaGeneSetResourceManagerDialog(QDialog):
         _set_table_widths(self._table, [150, 95, 80, 100, 130, 140, 90, 105, 90, 220])
         self._table.horizontalHeader().setSectionResizeMode(9, QHeaderView.Stretch)
 
+    def _render_downloadable_resources(self) -> None:
+        rows = []
+        for item in self._downloadable_resources:
+            rows.append(
+                [
+                    str(item.get("name") or ""),
+                    str(item.get("description") or ""),
+                    str(item.get("source_name") or ""),
+                    str(item.get("license_note") or ""),
+                    str(item.get("local_status") or "未下载"),
+                    str(item.get("local_version") or ""),
+                    str(item.get("operation") or ""),
+                ]
+            )
+        _fill_table(self._future_table, rows)
+        _set_table_widths(self._future_table, [170, 220, 130, 330, 95, 140, 180])
+        self._future_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
     def _current_resource(self) -> dict[str, Any] | None:
         if not self._resources:
             return None
@@ -3298,6 +3361,16 @@ class GseaGeneSetResourceManagerDialog(QDialog):
         if row >= len(self._resources):
             return None
         return self._resources[row]
+
+    def _current_downloadable_resource(self) -> dict[str, Any] | None:
+        if not self._downloadable_resources:
+            return None
+        row = self._future_table.currentRow()
+        if row < 0:
+            row = 0
+        if row >= len(self._downloadable_resources):
+            return None
+        return self._downloadable_resources[row]
 
     def _prompt_import_metadata(self, path: Path) -> dict[str, object] | None:
         name, ok = QInputDialog.getText(self, "资源名称", "资源名称：", text=path.stem)
