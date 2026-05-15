@@ -8,7 +8,9 @@ import pytest
 from app.meta_analysis.pages.analysis_page import analysis_plan_builder_state_from_project
 from app.meta_analysis.services.analysis_plan_service import (
     ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION,
+    ANALYSIS_PLAN_M7_SCHEMA_VERSION,
     ANALYSIS_PLAN_MANIFEST_SCHEMA_VERSION,
+    ANALYSIS_PLAN_STATES,
     CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
     AnalysisPlanService,
 )
@@ -95,9 +97,17 @@ def test_generates_analysis_plan_draft_from_effect_rows_and_quality_summary(tmp_
 
     assert result.success is True
     assert payload["schema_version"] == ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION
+    assert payload["m7_schema_version"] == ANALYSIS_PLAN_M7_SCHEMA_VERSION
     assert payload["status"] == "draft"
+    assert payload["plan_state"] == "draft"
     assert payload["source_confirmed_protocol_id"]
     assert payload["meta_type"] == "treatment_comparative_meta"
+    assert payload["meta_profile"] == "treatment_comparative_meta"
+    assert payload["effect_measure_type"] == "OR"
+    assert payload["model_preference"] == "random_effect"
+    assert payload["heterogeneity_metrics"] == ["I2", "tau2", "Q"]
+    assert "minimum_study_count_check" in payload
+    assert payload["future_statistical_execution_eligible"] is False
     assert payload["model_default"] == "random_effects"
     assert payload["analysis_run_status"] == "not_started"
     assert payload["analysis_ready_dataset_created"] is False
@@ -109,6 +119,8 @@ def test_generates_analysis_plan_draft_from_effect_rows_and_quality_summary(tmp_
     assert "effect_measure_mixed" in payload["warnings"]
     assert any(str(item).startswith("effect_row_missing_required_fields:") for item in payload["warnings"])
     assert manifest["schema_version"] == ANALYSIS_PLAN_MANIFEST_SCHEMA_VERSION
+    assert manifest["m7_schema_version"] == ANALYSIS_PLAN_M7_SCHEMA_VERSION
+    assert manifest["plan_state"] == "draft"
     assert manifest["analysis_run_status"] == "not_started"
     assert manifest["analysis_ready_dataset_created"] is False
     assert (tmp_path / "quality" / "quality_assessment_summary_v1.json").exists()
@@ -123,8 +135,10 @@ def test_analysis_plan_warns_when_quality_is_not_completed_and_study_count_too_s
     draft = AnalysisPlanService().generate_draft(tmp_path).payload
 
     assert "quality_assessment_not_completed" in draft["warnings"]
+    assert "no_confirmed_extraction_rows" in draft["m7_readiness_warnings"]
     assert "study_count_less_than_10_publication_bias_not_recommended" in draft["warnings"]
     assert draft["publication_bias_plan"]["egger"] == "planned_if_study_count_at_least_10"
+    assert draft["m7_warning_labels_zh"]["too_few_studies_for_pooled_analysis"] == "当前纳入研究数量可能不足"
 
 
 def test_analysis_plan_defaults_for_meta_types(tmp_path: Path) -> None:
@@ -169,7 +183,10 @@ def test_confirmed_analysis_plan_requires_explicit_call_and_does_not_run_statist
     audit_events = audit.list_events(tmp_path)
 
     assert confirmed.payload["schema_version"] == CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION
+    assert confirmed.payload["m7_schema_version"] == ANALYSIS_PLAN_M7_SCHEMA_VERSION
     assert confirmed.payload["plan_state"] == "confirmed"
+    assert confirmed.payload["future_statistical_execution_eligible"] is True
+    assert confirmed.payload["model_preference"] == "random_effect"
     assert confirmed.payload["source_draft_id"] == draft.plan_id
     assert confirmed.payload["locked_for_analysis_run"] is True
     assert confirmed.payload["analysis_run_status"] == "not_started"
@@ -196,9 +213,13 @@ def test_analysis_plan_page_state_exposes_draft_first_boundaries(tmp_path: Path)
 
     assert state.draft_schema_version == ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION
     assert state.confirmed_schema_version == CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION
+    assert state.m7_schema_version == ANALYSIS_PLAN_M7_SCHEMA_VERSION
     assert state.confirmed_protocol_status == "confirmed"
     assert state.draft_status == "draft"
     assert state.confirmed_status == "not_confirmed"
+    assert state.plan_state == "draft"
+    assert state.effect_measure_type == "OR"
+    assert state.model_preference == "random_effect"
     assert state.included_candidate_count == 2
     assert state.excluded_candidate_count == 1
     assert state.primary_actions == ("生成分析计划草稿", "查看候选效应量", "确认分析计划", "暂不运行统计")
@@ -209,4 +230,94 @@ def test_analysis_plan_page_state_exposes_draft_first_boundaries(tmp_path: Path)
         "creates_final_analysis_result": False,
         "advances_prisma": False,
         "generates_medical_interpretation": False,
+        "future_statistical_execution_requires_confirmed_plan": True,
     }
+
+
+def test_m7_readiness_warnings_for_confirmed_extraction_quality_and_mixed_effects(tmp_path: Path) -> None:
+    seed_confirmed_protocol(tmp_path)
+    path = tmp_path / "extraction" / "extraction_effect_rows.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "effect_rows": [
+                    {
+                        "effect_row_id": "effect-internal-1",
+                        "study_unit_id": "unit-1",
+                        "study_unit_label": "Study One",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-1",
+                            "title": "Study One",
+                            "first_author": "Zhang",
+                            "year": "2025",
+                            "outcome": "Mortality",
+                            "effect_measure_type": "OR",
+                            "effect_estimate": "1.4",
+                            "ci_lower": "1.1",
+                            "ci_upper": "1.9",
+                        },
+                    },
+                    {
+                        "effect_row_id": "effect-internal-2",
+                        "study_unit_id": "unit-2",
+                        "study_unit_label": "Study Two",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-2",
+                            "title": "Study Two",
+                            "first_author": "Li",
+                            "year": "2024",
+                            "outcome": "Mortality",
+                            "effect_measure_type": "RR",
+                            "effect_estimate": "1.2",
+                        },
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = AnalysisPlanService()
+    readiness = service.analysis_plan_readiness(tmp_path)
+    draft = service.generate_draft(tmp_path).payload
+
+    assert readiness["included_study_count"] == 2
+    assert "mixed_effect_measure_types" in readiness["warning_codes"]
+    assert "missing_ci_or_standard_error_or_insufficient_fields" in readiness["warning_codes"]
+    assert "quality_assessment_incomplete" in readiness["warning_codes"]
+    assert draft["included_study_ids"] == ["study-1", "study-2"]
+    assert draft["m7_warning_labels_zh"]["quality_assessment_incomplete"] == "质量评价尚未全部确认"
+
+
+def test_m7_confirmed_plan_requirements_and_suggested_plan_not_executable(tmp_path: Path) -> None:
+    service = AnalysisPlanService()
+    assert "confirmed" in ANALYSIS_PLAN_STATES
+
+    suggested = {
+        "m7_schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+        "plan_state": "suggested",
+        "effect_measure_type": "OR",
+        "model_preference": "random_effect",
+    }
+    suggested_validation = service.validate_m7_plan(suggested, require_confirmed=True)
+
+    assert suggested_validation["future_statistical_execution_eligible"] is False
+    assert "confirmed_plan_required_for_future_executor" in suggested_validation["errors"]
+
+    confirmed = {
+        "m7_schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+        "plan_state": "confirmed",
+        "effect_measure_type": "OR",
+        "model_preference": "random_effect",
+        "m7_readiness_warnings": ["mixed_effect_measure_types"],
+    }
+    confirmed_validation = service.validate_m7_plan(confirmed, require_confirmed=True)
+
+    assert confirmed_validation["valid"] is True
+    assert confirmed_validation["future_statistical_execution_eligible"] is True
+    assert "mixed_effect_measure_types" in confirmed_validation["warnings"]

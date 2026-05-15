@@ -193,6 +193,13 @@ ATTACHMENT_STATUS_ZH: dict[str, str] = {
 FULLTEXT_ELIGIBILITY_TITLE_ZH = "全文筛选"
 FULLTEXT_ELIGIBILITY_DESCRIPTION_ZH = "根据标题摘要纳入或可能纳入记录，人工记录全文状态、全文排除原因和最终纳入研究。"
 FULLTEXT_STATUS_ZH: dict[str, str] = {
+    "not_required": "暂不需要全文",
+    "full_text_needed": "需要全文",
+    "full_text_uploaded": "已上传全文",
+    "full_text_pending_review": "全文待检查",
+    "full_text_confirmed": "全文已确认",
+    "full_text_unavailable": "全文不可获取",
+    "full_text_excluded": "全文已排除",
     "not_checked": "未检查",
     "available_online": "在线可获得",
     "local_pdf_linked": "已链接本地 PDF",

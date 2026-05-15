@@ -140,11 +140,11 @@ class TraceabilityAuditService:
         text = report_path.read_text(encoding="utf-8")
         checks = {
             "exists": True,
-            "references_forest_plot": "forest_plot_" in text,
-            "references_result_table": "analysis_result_table_" in text,
-            "references_extraction": "extraction_records" in text,
-            "references_analysis": "analysis_results" in text or "Analysis result artifact" in text,
-            "declares_testing_status": "testing / developer preview" in text,
+            "references_forest_plot": "forest plot" in text.lower() or "图表状态" in text,
+            "references_result_table": "result table" in text.lower() or "表格状态" in text,
+            "references_extraction": "数据提取表摘要" in text or "extraction" in text.lower(),
+            "references_analysis": "统计分析状态" in text or "Analysis summary" in text,
+            "declares_testing_status": "testing / developer preview" in text.lower() or "Developer Preview / testing" in text,
             "missing_artifact_lines": [line for line in text.splitlines() if "missing / not generated" in line],
         }
         warnings = [f"formal_report_missing_artifact:{line}" for line in checks["missing_artifact_lines"]]

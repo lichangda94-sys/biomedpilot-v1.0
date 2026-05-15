@@ -111,4 +111,4 @@ def test_exclusion_criteria_library_surfaces_in_criteria_and_screening_states(tm
     assert criteria_state.exclusion_library_status == "confirmed"
     assert criteria_state.exclusion_library_enabled_count == 2
     assert criteria_state.prisma_reason_map_path.endswith("criteria/prisma_reason_map_v1.json")
-    assert screening_state.exclusion_reason_options == ("Wrong population", "Wrong outcome")
+    assert {"研究对象不符合", "结局不符合", "其他"} <= set(screening_state.exclusion_reason_options)

@@ -19,17 +19,87 @@ TITLE_ABSTRACT_SCREENING_RECORD_SCHEMA_VERSION = "meta_title_abstract_screening_
 TITLE_ABSTRACT_SCREENING_DECISION_SCHEMA_VERSION = "meta_title_abstract_screening_decision.v2"
 TITLE_ABSTRACT_SCREENING_DECISION_LOG_SCHEMA_VERSION = "meta_title_abstract_screening_decision_log.v2"
 TITLE_ABSTRACT_SCREENING_SUGGESTION_SCHEMA_VERSION = "meta_title_abstract_screening_suggestion.v1"
+TITLE_ABSTRACT_SCREENING_SUMMARY_SCHEMA_VERSION = "meta_title_abstract_screening_summary.v1"
 
 DECISION_INCLUDE = "include"
 DECISION_EXCLUDE = "exclude"
 DECISION_UNCERTAIN = "uncertain"
+DECISION_NEED_FULL_TEXT = "need_full_text"
 DECISION_NEEDS_REVIEW = "needs_review"
 DECISION_NOT_SCREENED = "not_screened"
+DECISION_RESET_TO_UNSCREENED = "reset_to_unscreened"
+
+SUGGESTED_DECISION_STATES = {
+    DECISION_INCLUDE: "suggested_include",
+    DECISION_EXCLUDE: "suggested_exclude",
+    DECISION_UNCERTAIN: "suggested_uncertain",
+    DECISION_NEED_FULL_TEXT: "suggested_need_full_text",
+}
+
+FINAL_EVIDENCE_STATES = ("user_accepted", "user_edited", "user_rejected", "confirmed")
+
+EXCLUSION_REASON_LABELS_ZH = {
+    "population_mismatch": "研究对象不符合",
+    "intervention_or_exposure_mismatch": "干预/暴露不符合",
+    "comparator_mismatch": "对照不符合",
+    "outcome_mismatch": "结局不符合",
+    "study_type_mismatch": "研究类型不符合",
+    "duplicate": "重复文献",
+    "non_original_research": "非原始研究",
+    "full_text_unavailable": "全文不可获取",
+    "language_or_access_issue": "语言或获取限制",
+    "other": "其他",
+}
+
+EXCLUSION_REASON_ALIASES = {
+    "wrong_population": "population_mismatch",
+    "wrong population": "population_mismatch",
+    "研究对象不符": "population_mismatch",
+    "研究对象不符合": "population_mismatch",
+    "wrong_intervention_exposure": "intervention_or_exposure_mismatch",
+    "wrong_intervention_or_exposure": "intervention_or_exposure_mismatch",
+    "wrong intervention / exposure": "intervention_or_exposure_mismatch",
+    "干预或暴露不符": "intervention_or_exposure_mismatch",
+    "干预/暴露不符合": "intervention_or_exposure_mismatch",
+    "wrong_comparator": "comparator_mismatch",
+    "wrong comparator": "comparator_mismatch",
+    "对照不符": "comparator_mismatch",
+    "对照不符合": "comparator_mismatch",
+    "wrong_outcome": "outcome_mismatch",
+    "wrong outcome": "outcome_mismatch",
+    "结局不符": "outcome_mismatch",
+    "结局不符合": "outcome_mismatch",
+    "animal_study": "study_type_mismatch",
+    "cell_study": "study_type_mismatch",
+    "case_report": "study_type_mismatch",
+    "protocol_only": "study_type_mismatch",
+    "preprint_only": "study_type_mismatch",
+    "研究类型不符合": "study_type_mismatch",
+    "duplicate_publication": "duplicate",
+    "重复发表": "duplicate",
+    "重复文献": "duplicate",
+    "review": "non_original_research",
+    "meta_analysis": "non_original_research",
+    "non_original_article": "non_original_research",
+    "non-original article": "non_original_research",
+    "非原始研究": "non_original_research",
+    "full_text_unavailable": "full_text_unavailable",
+    "full text unavailable": "full_text_unavailable",
+    "全文不可得": "full_text_unavailable",
+    "全文不可获取": "full_text_unavailable",
+    "non_target_language": "language_or_access_issue",
+    "non-english / 非目标语言": "language_or_access_issue",
+    "非目标语言": "language_or_access_issue",
+    "语言或获取限制": "language_or_access_issue",
+    "other": "other",
+    "其他": "other",
+}
 
 LEGACY_DECISION_MAP = {
     DECISION_INCLUDE: "included",
     DECISION_EXCLUDE: "excluded",
     DECISION_UNCERTAIN: "maybe",
+    DECISION_NEED_FULL_TEXT: "maybe",
     DECISION_NEEDS_REVIEW: "pending",
     DECISION_NOT_SCREENED: "pending",
 }
@@ -83,6 +153,35 @@ class TitleAbstractDecisionResult:
     decision_counts: dict[str, int] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class ScreeningSummaryCounts:
+    imported_total: int
+    after_dedup_total: int
+    title_abstract_unscreened: int
+    title_abstract_included: int
+    title_abstract_excluded: int
+    title_abstract_uncertain: int
+    full_text_needed: int
+    full_text_included: int
+    full_text_excluded: int
+    output_path: str = ""
+
+    def to_dict(self) -> dict[str, int | str]:
+        return {
+            "schema_version": TITLE_ABSTRACT_SCREENING_SUMMARY_SCHEMA_VERSION,
+            "imported_total": self.imported_total,
+            "after_dedup_total": self.after_dedup_total,
+            "title_abstract_unscreened": self.title_abstract_unscreened,
+            "title_abstract_included": self.title_abstract_included,
+            "title_abstract_excluded": self.title_abstract_excluded,
+            "title_abstract_uncertain": self.title_abstract_uncertain,
+            "full_text_needed": self.full_text_needed,
+            "full_text_included": self.full_text_included,
+            "full_text_excluded": self.full_text_excluded,
+            "output_path": self.output_path,
+        }
+
+
 class TitleAbstractScreeningV2Service:
     def __init__(
         self,
@@ -110,6 +209,9 @@ class TitleAbstractScreeningV2Service:
 
     def suggestion_queue_path(self, project_dir: Path) -> Path:
         return project_dir.expanduser().resolve() / "screening" / "title_abstract_ai_suggestions_v2.json"
+
+    def summary_path(self, project_dir: Path) -> Path:
+        return project_dir.expanduser().resolve() / "screening" / "title_abstract_screening_summary_v1.json"
 
     def build_queue(self, project_dir: Path, *, project_id: str | None = None) -> TitleAbstractQueueBuildResult:
         project_dir = project_dir.expanduser().resolve()
@@ -190,9 +292,51 @@ class TitleAbstractScreeningV2Service:
             return self._decision_error(project_dir, project_id, record_id, normalized, "reviewer actor is required.")
         if normalized == DECISION_EXCLUDE and not (exclusion_reason_code.strip() or exclusion_reason_text.strip()):
             return self._decision_error(project_dir, project_id, record_id, normalized, "exclude decision requires a structured exclusion reason.")
+        reason_code = _normalize_exclusion_reason(exclusion_reason_code or exclusion_reason_text)
+        if normalized == DECISION_EXCLUDE and not reason_code:
+            return self._decision_error(project_dir, project_id, record_id, normalized, "unsupported exclusion reason.")
         queue_record = self._require_queue_record(project_dir, record_id)
         existing = self._load_decisions(project_dir)
         before = next((item for item in existing if str(item.get("record_id", "")) == record_id), {})
+        if normalized == DECISION_NOT_SCREENED:
+            decisions = [item for item in existing if str(item.get("record_id", "")) != record_id]
+            self._write_decision_logs(project_dir, project_id=project_id, decisions=decisions)
+            self._audit_log.record_event(
+                project_dir,
+                event_type="screening_decision",
+                project_id=project_id,
+                actor=actor.strip(),
+                target_type="title_abstract_screening",
+                target_id=record_id,
+                source_path=str(self.queue_path(project_dir).relative_to(project_dir)),
+                output_path=str(self.decisions_path(project_dir).relative_to(project_dir)),
+                summary="Title/abstract screening v2 decision reset to unscreened.",
+                details={"decision": normalized, "auto_decided": False},
+            )
+            self._governance.record_user_confirmation(
+                project_dir,
+                project_id=project_id,
+                action="edit",
+                actor=actor.strip(),
+                target_type="title_abstract_screening",
+                target_id=record_id,
+                before=dict(before),
+                after={"record_id": record_id, "decision": normalized, "evidence_state": "user_edited"},
+                source_suggestion_id=source_suggestion_id.strip(),
+                metadata={"decision": normalized, "stage": "title_abstract_screening"},
+            )
+            self.write_screening_summary(project_dir)
+            return TitleAbstractDecisionResult(
+                success=True,
+                project_id=project_id,
+                record_id=record_id,
+                decision=normalized,
+                decisions_path=str(self.decisions_path(project_dir)),
+                compatible_decisions_path=str(self.compatible_decisions_path(project_dir)),
+                message=f"Title/abstract screening decision reset: {record_id} -> not_screened.",
+                decision_counts=_decision_counts(decisions),
+            )
+        evidence_state = _evidence_state(source_suggestion_id=source_suggestion_id, notes=notes, exclusion_reason_code=reason_code)
         decision_payload = {
             "schema_version": TITLE_ABSTRACT_SCREENING_DECISION_SCHEMA_VERSION,
             "decision_id": f"tascr-{uuid4().hex[:12]}",
@@ -206,34 +350,25 @@ class TitleAbstractScreeningV2Service:
             "doi": str(queue_record.get("doi", "")),
             "pmid": str(queue_record.get("pmid", "")),
             "source_type": str(queue_record.get("source_type", "")),
+            "database_source": str(queue_record.get("database_source", "")),
+            "dedup_status": str(queue_record.get("dedup_status", "")),
             "decision": normalized,
             "legacy_decision": LEGACY_DECISION_MAP[normalized],
-            "screening_status": "reviewer_decided" if normalized in {DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN} else "needs_review",
-            "exclusion_reason_code": exclusion_reason_code.strip(),
-            "exclusion_reason_text": exclusion_reason_text.strip(),
+            "screening_status": "reviewer_decided" if normalized in {DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN, DECISION_NEED_FULL_TEXT} else "needs_review",
+            "exclusion_reason_code": reason_code,
+            "exclusion_reason_text": EXCLUSION_REASON_LABELS_ZH.get(reason_code, exclusion_reason_text.strip()),
             "notes": notes.strip(),
             "actor": actor.strip(),
             "source_suggestion_id": source_suggestion_id.strip(),
             "created_at": _now(),
             "auto_decided": False,
             "ai_suggestion_only": False,
+            "evidence_state": evidence_state,
+            "final_state_options": list(FINAL_EVIDENCE_STATES),
         }
         decisions = [item for item in existing if str(item.get("record_id", "")) != record_id]
         decisions.append(decision_payload)
-        decisions_path = self.decisions_path(project_dir)
-        _write_json(
-            decisions_path,
-            {
-                "schema_version": TITLE_ABSTRACT_SCREENING_DECISION_LOG_SCHEMA_VERSION,
-                "project_id": project_id,
-                "updated_at": _now(),
-                "stage": "title_abstract_screening",
-                "decision_counts": _decision_counts(decisions),
-                "screening_records": decisions,
-                "auto_screening_enabled": False,
-            },
-        )
-        self._write_compatible_decisions(project_dir, decisions)
+        decisions_path = self._write_decision_logs(project_dir, project_id=project_id, decisions=decisions)
         self._audit_log.record_event(
             project_dir,
             event_type="screening_decision",
@@ -251,9 +386,15 @@ class TitleAbstractScreeningV2Service:
                 "exclusion_reason_code": exclusion_reason_code.strip(),
                 "exclusion_reason_text": exclusion_reason_text.strip(),
                 "auto_decided": False,
+                "evidence_state": evidence_state,
             },
         )
-        governance_action = "confirm" if normalized in {DECISION_INCLUDE, DECISION_EXCLUDE, DECISION_UNCERTAIN} else "edit"
+        governance_action = {
+            "confirmed": "confirm",
+            "user_accepted": "accept",
+            "user_edited": "edit",
+            "user_rejected": "reject",
+        }[evidence_state]
         self._governance.record_user_confirmation(
             project_dir,
             project_id=project_id,
@@ -266,6 +407,7 @@ class TitleAbstractScreeningV2Service:
             source_suggestion_id=source_suggestion_id.strip(),
             metadata={"decision": normalized, "stage": "title_abstract_screening"},
         )
+        self.write_screening_summary(project_dir)
         return TitleAbstractDecisionResult(
             success=True,
             project_id=project_id,
@@ -292,6 +434,8 @@ class TitleAbstractScreeningV2Service:
         project_id = project_id or project_dir.name
         queue_record = self._require_queue_record(project_dir, record_id)
         normalized = _normalize_decision(suggested_decision)
+        if normalized not in SUGGESTED_DECISION_STATES:
+            raise ValueError("unsupported_title_abstract_screening_suggestion")
         suggestion = self._ai_suggestions.create_ai_suggestion(
             project_dir,
             project_id=project_id,
@@ -317,7 +461,8 @@ class TitleAbstractScreeningV2Service:
             "rationale": rationale,
             "confidence": max(0.0, min(1.0, float(confidence))),
             "created_at": suggestion.created_at,
-            "status": "suggested",
+            "status": SUGGESTED_DECISION_STATES[normalized],
+            "evidence_state": "suggested",
             "requires_user_accept_reject_edit": True,
             "writes_final_decision": False,
         }
@@ -333,6 +478,41 @@ class TitleAbstractScreeningV2Service:
             },
         )
         return row
+
+    def screening_summary(self, project_dir: Path) -> ScreeningSummaryCounts:
+        project_dir = project_dir.expanduser().resolve()
+        imported_total = len(self._library.list_records(project_dir))
+        dedup_payload = _load_json(self._dedup.deduplicated_set_path(project_dir))
+        queue_payload = self.load_queue(project_dir)
+        queue_records = [dict(item) for item in queue_payload.get("queue_records", []) if isinstance(item, dict)]
+        decisions = self._load_decisions(project_dir)
+        after_dedup_total = _after_dedup_count(dedup_payload, fallback=len(queue_records) or imported_total)
+        by_record = {str(item.get("record_id", "")): item for item in decisions if str(item.get("record_id", ""))}
+        counts = {DECISION_INCLUDE: 0, DECISION_EXCLUDE: 0, DECISION_UNCERTAIN: 0, DECISION_NEED_FULL_TEXT: 0}
+        for item in by_record.values():
+            decision = _normalize_decision(str(item.get("decision", DECISION_NOT_SCREENED)))
+            if decision in counts:
+                counts[decision] += 1
+        fulltext_included, fulltext_excluded = _fulltext_counts(project_dir)
+        total_for_screening = len(queue_records) or after_dedup_total
+        unscreened = max(total_for_screening - sum(counts.values()), 0)
+        return ScreeningSummaryCounts(
+            imported_total=imported_total,
+            after_dedup_total=after_dedup_total,
+            title_abstract_unscreened=unscreened,
+            title_abstract_included=counts[DECISION_INCLUDE],
+            title_abstract_excluded=counts[DECISION_EXCLUDE],
+            title_abstract_uncertain=counts[DECISION_UNCERTAIN],
+            full_text_needed=counts[DECISION_INCLUDE] + counts[DECISION_UNCERTAIN] + counts[DECISION_NEED_FULL_TEXT],
+            full_text_included=fulltext_included,
+            full_text_excluded=fulltext_excluded,
+            output_path=str(self.summary_path(project_dir)),
+        )
+
+    def write_screening_summary(self, project_dir: Path) -> ScreeningSummaryCounts:
+        summary = self.screening_summary(project_dir)
+        _write_json(self.summary_path(project_dir), summary.to_dict())
+        return summary
 
     def _load_screening_source(self, project_dir: Path) -> tuple[list[dict[str, Any]], str, Path | None, tuple[str, ...]]:
         deduplicated_path = self._dedup.deduplicated_set_path(project_dir)
@@ -381,6 +561,24 @@ class TitleAbstractScreeningV2Service:
             },
         )
 
+    def _write_decision_logs(self, project_dir: Path, *, project_id: str, decisions: list[dict[str, Any]]) -> Path:
+        decisions_path = self.decisions_path(project_dir)
+        _write_json(
+            decisions_path,
+            {
+                "schema_version": TITLE_ABSTRACT_SCREENING_DECISION_LOG_SCHEMA_VERSION,
+                "project_id": project_id,
+                "updated_at": _now(),
+                "stage": "title_abstract_screening",
+                "decision_counts": _decision_counts(decisions),
+                "screening_records": decisions,
+                "auto_screening_enabled": False,
+                "evidence_state_options": list(FINAL_EVIDENCE_STATES),
+            },
+        )
+        self._write_compatible_decisions(project_dir, decisions)
+        return decisions_path
+
     def _decision_error(self, project_dir: Path, project_id: str, record_id: str, decision: str, message: str) -> TitleAbstractDecisionResult:
         return TitleAbstractDecisionResult(
             success=False,
@@ -411,6 +609,7 @@ def _queue_record(record: dict[str, Any]) -> dict[str, Any]:
         "pmid": pmid,
         "source_type": _text(record.get("source_type") or record.get("source")),
         "database_source": _text(record.get("database_source") or record.get("source_database")),
+        "dedup_status": _text(record.get("dedup_status") or record.get("record_status") or "去重后待筛选"),
         "source_links": [link for link in (_doi_link(doi), _pmid_link(pmid)) if link],
         "decision": DECISION_NOT_SCREENED,
         "screening_status": "needs_review",
@@ -429,9 +628,15 @@ def _normalize_decision(decision: str) -> str:
         "exclude": DECISION_EXCLUDE,
         "maybe": DECISION_UNCERTAIN,
         "uncertain": DECISION_UNCERTAIN,
+        "need_full_text": DECISION_NEED_FULL_TEXT,
+        "needs_full_text": DECISION_NEED_FULL_TEXT,
+        "full_text_needed": DECISION_NEED_FULL_TEXT,
+        "需要全文": DECISION_NEED_FULL_TEXT,
         "pending": DECISION_NEEDS_REVIEW,
         "needs_review": DECISION_NEEDS_REVIEW,
+        "unscreened": DECISION_NOT_SCREENED,
         "not_screened": DECISION_NOT_SCREENED,
+        "reset_to_unscreened": DECISION_NOT_SCREENED,
     }
     if normalized not in aliases:
         raise ValueError("unsupported_title_abstract_screening_decision")
@@ -439,7 +644,7 @@ def _normalize_decision(decision: str) -> str:
 
 
 def _decision_counts(decisions: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {DECISION_INCLUDE: 0, DECISION_EXCLUDE: 0, DECISION_UNCERTAIN: 0, DECISION_NEEDS_REVIEW: 0, DECISION_NOT_SCREENED: 0, "total": len(decisions)}
+    counts = {DECISION_INCLUDE: 0, DECISION_EXCLUDE: 0, DECISION_UNCERTAIN: 0, DECISION_NEED_FULL_TEXT: 0, DECISION_NEEDS_REVIEW: 0, DECISION_NOT_SCREENED: 0, "total": len(decisions)}
     for item in decisions:
         decision = _normalize_decision(str(item.get("decision", DECISION_NEEDS_REVIEW)))
         counts[decision] = counts.get(decision, 0) + 1
@@ -462,6 +667,53 @@ def _records_from_payload(payload: Any) -> list[dict[str, Any]]:
         if isinstance(value, list):
             return [dict(item) for item in value if isinstance(item, dict)]
     return []
+
+
+def _normalize_exclusion_reason(reason: str) -> str:
+    value = reason.strip()
+    if not value:
+        return ""
+    normalized = "_".join(value.lower().replace("/", " ").replace("-", " ").split())
+    direct = normalized if normalized in EXCLUSION_REASON_LABELS_ZH else ""
+    if direct:
+        return direct
+    return EXCLUSION_REASON_ALIASES.get(normalized, EXCLUSION_REASON_ALIASES.get(value.lower(), ""))
+
+
+def _evidence_state(*, source_suggestion_id: str, notes: str, exclusion_reason_code: str) -> str:
+    if not source_suggestion_id.strip():
+        return "confirmed"
+    if notes.strip() or exclusion_reason_code.strip():
+        return "user_edited"
+    return "user_accepted"
+
+
+def _after_dedup_count(payload: dict[str, Any], *, fallback: int) -> int:
+    if payload:
+        for key in ("active_record_count", "deduplicated_count", "record_count"):
+            value = payload.get(key)
+            if isinstance(value, int):
+                return value
+        records = _records_from_payload(payload)
+        if records:
+            return len(records)
+    return fallback
+
+
+def _fulltext_counts(project_dir: Path) -> tuple[int, int]:
+    payload = _load_json(project_dir / "fulltext" / "fulltext_eligibility_decisions.json")
+    decisions = payload.get("decisions", []) if isinstance(payload, dict) else []
+    included = 0
+    excluded = 0
+    for item in decisions:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("eligibility_status", "")).lower()
+        if status in {"available_online", "local_pdf_linked", "local_pdf_copied", "included_for_extraction"}:
+            included += 1
+        if status in {"missing_full_text", "failed_to_access", "excluded_after_full_text_review"}:
+            excluded += 1
+    return included, excluded
 
 
 def _authors(record: dict[str, Any]) -> list[str]:

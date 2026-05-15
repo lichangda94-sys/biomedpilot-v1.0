@@ -21,6 +21,14 @@ FULLTEXT_EXCLUSION_REASONS = (
     "animal or in vitro study",
     "conference abstract only",
     "language restriction",
+    "full_text_unavailable",
+    "wrong_population",
+    "wrong_intervention_or_exposure",
+    "wrong_comparator",
+    "wrong_outcome",
+    "wrong_study_type",
+    "duplicate_after_full_text",
+    "insufficient_data",
     "other",
 )
 

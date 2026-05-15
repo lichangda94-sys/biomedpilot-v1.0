@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from app.meta_analysis.pages.extraction_page import initial_extraction_state
 from app.meta_analysis.pages.quality_page import initial_quality_state
 from app.meta_analysis.services.extraction_form_service import ExtractionFormService
 from app.meta_analysis.services.quality_service import QualityAssessmentService
+from app.meta_analysis.services.quality_service import (
+    NOS_DOMAINS,
+    QUALITY_M6_GOVERNANCE_STATES,
+    QUALITY_RATING_LABELS_ZH,
+)
 
 
 def valid_form_data() -> dict[str, object]:
@@ -92,3 +98,121 @@ def test_quality_domain_notes_suggestion_completeness_and_page_state(tmp_path: P
     assert summary["completeness_score"] == 0.5
     assert state.domain_note_support is True
     assert "QUADAS-2" in state.tool_options
+
+
+def test_m6_nos_quality_model_validation_and_domain_handling(tmp_path: Path) -> None:
+    service = QualityAssessmentService()
+
+    validation = service.validate_quality_assessment_model(
+        tool_name="NOS",
+        domains={"selection": "低风险/较好", "comparability": "不明确", "outcome_or_exposure": "高风险/较差"},
+        overall_rating="不明确",
+        state="draft",
+    )
+    invalid = service.validate_quality_assessment_model(
+        tool_name="NOS",
+        domains={"selection": "invalid", "unknown": "low_risk_or_good"},
+        overall_rating="invalid",
+        state="confirmed",
+    )
+    draft = service.create_nos_assessment_draft(
+        tmp_path,
+        study_id="study-1",
+        record_id="rec-1",
+        domains={"selection": "low_risk_or_good", "comparability": "unclear", "outcome_or_exposure": "high_risk_or_poor"},
+        domain_notes={"selection": "Representative cohort."},
+        reviewer_id="reviewer",
+    )
+
+    assert validation["validation_status"] == "valid"
+    assert invalid["validation_status"] == "invalid"
+    assert "unsupported_quality_domain:unknown" in invalid["errors"]
+    assert set(NOS_DOMAINS) == {"selection", "comparability", "outcome_or_exposure"}
+    assert QUALITY_RATING_LABELS_ZH["low_risk_or_good"] == "低风险/较好"
+    assert draft.record["tool_name"] == "NOS"
+    assert draft.record["domains"]["selection"] == "low_risk_or_good"
+    assert draft.record["domain_notes"]["selection"].startswith("Representative")
+
+
+def test_m6_quality_governance_suggested_is_not_confirmed_and_summary_counts(tmp_path: Path) -> None:
+    service = QualityAssessmentService()
+    _seed_confirmed_extraction_row(tmp_path)
+
+    suggested = service.create_nos_assessment_draft(
+        tmp_path,
+        study_id="study-1",
+        record_id="rec-1",
+        domains={"selection": "low_risk_or_good", "comparability": "unclear", "outcome_or_exposure": "not_assessed"},
+        overall_rating="unclear",
+        reviewer_id="model",
+        actor="model",
+        assessment_state="suggested",
+    )
+    summary_before = service.quality_m6_summary(tmp_path)
+    accepted = service.change_quality_assessment_state(tmp_path, assessment_id=suggested.assessment_id, state="user_accepted", actor="reviewer")
+    confirmed = service.confirm_quality_assessment_by_user(tmp_path, assessment_id=suggested.assessment_id, actor="reviewer")
+    summary_after = service.quality_m6_summary(tmp_path)
+
+    assert suggested.success
+    assert suggested.record["status"] == "suggested"
+    assert summary_before["studies_with_confirmed_quality"] == 0
+    assert accepted.record["status"] == "user_accepted"
+    assert confirmed.record["status"] == "confirmed"
+    assert summary_after["studies_pending_quality"] == 0
+    assert summary_after["studies_with_confirmed_quality"] == 1
+    assert summary_after["unclear"] == 1
+    assert "confirmed" in QUALITY_M6_GOVERNANCE_STATES
+
+
+def test_m6_quality_summary_counts_rating_buckets(tmp_path: Path) -> None:
+    service = QualityAssessmentService()
+    for index, rating in enumerate(("low_risk_or_good", "unclear", "high_risk_or_poor"), start=1):
+        result = service.create_nos_assessment_draft(
+            tmp_path,
+            study_id=f"study-{index}",
+            record_id=f"rec-{index}",
+            domains={"selection": rating, "comparability": rating, "outcome_or_exposure": rating},
+            overall_rating=rating,
+            reviewer_id="reviewer",
+        )
+        service.confirm_quality_assessment_by_user(tmp_path, assessment_id=result.assessment_id, actor="reviewer")
+
+    summary = service.quality_m6_summary(tmp_path, expected_study_ids=["study-1", "study-2", "study-3", "study-4"])
+
+    assert summary == {
+        "studies_pending_quality": 1,
+        "studies_with_draft_quality": 0,
+        "studies_with_confirmed_quality": 3,
+        "low_risk_or_good": 1,
+        "unclear": 1,
+        "high_risk_or_poor": 1,
+    }
+
+
+def _seed_confirmed_extraction_row(project_dir: Path) -> None:
+    path = project_dir / "extraction" / "extraction_effect_rows.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "effect_rows": [
+                    {
+                        "effect_row_id": "effect-internal-1",
+                        "record_id": "rec-1",
+                        "study_unit_id": "unit-1",
+                        "study_unit_label": "Study One",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-1",
+                            "title": "Confirmed extracted study",
+                            "first_author": "Zhang",
+                            "year": "2025",
+                            "study_design": "observational cohort",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )

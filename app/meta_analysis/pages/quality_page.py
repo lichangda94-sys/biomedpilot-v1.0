@@ -127,8 +127,18 @@ def quality_state_from_project(
 ) -> QualityFormFlowState:
     service = service or QualityAssessmentService()
     project_dir = project_dir.expanduser().resolve()
-    assessments = service.load_quality_assessments(project_dir)
-    assessed_by_study = {assessment.study_id: assessment for assessment in assessments}
+    assessments = service.load_quality_assessment_records_v1(project_dir)
+    assessed_by_study = {str(assessment.get("study_id", "")): assessment for assessment in assessments}
+    for assessment in service.load_quality_assessments(project_dir):
+        assessed_by_study.setdefault(
+            assessment.study_id,
+            {
+                "study_id": assessment.study_id,
+                "record_id": assessment.record_id,
+                "status": "assessed",
+                "overall_judgement": assessment.overall_judgement,
+            },
+        )
     included = _included_studies(project_dir)
     rows = []
     for item in included:
@@ -142,8 +152,8 @@ def quality_state_from_project(
                 title=str(item.get("title", "")),
                 study_design=study_design,
                 recommended_tool=service.recommended_tool_for_study(study_design=study_design, profile_type=profile_type),
-                assessment_status="assessed" if assessment else "needs_assessment",
-                overall_judgement=assessment.overall_judgement if assessment else "",
+                assessment_status=str(assessment.get("status", "assessed")) if assessment else "needs_assessment",
+                overall_judgement=str(assessment.get("overall_rating") or assessment.get("overall_judgement") or "") if assessment else "",
             )
         )
     tool_name = selected_tool or (rows[0].recommended_tool if rows else "NOS")
@@ -207,6 +217,29 @@ def quality_state_from_project(
 
 
 def _included_studies(project_dir: Path) -> list[dict[str, object]]:
+    extraction_effect_rows = project_dir / "extraction" / "extraction_effect_rows.json"
+    if extraction_effect_rows.exists():
+        try:
+            payload = json.loads(extraction_effect_rows.read_text(encoding="utf-8"))
+        except Exception:
+            payload = {}
+        rows = []
+        for item in payload.get("effect_rows", []):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("evidence_state", "")) != "confirmed" and str(item.get("extraction_status", "")) != "completed_by_user":
+                continue
+            structured = dict(item.get("m5_structured_fields", {}) if isinstance(item.get("m5_structured_fields"), dict) else {})
+            rows.append(
+                {
+                    "study_id": structured.get("study_id") or item.get("study_unit_label") or item.get("study_unit_id") or "",
+                    "record_id": item.get("record_id", ""),
+                    "title": structured.get("title", ""),
+                    "study_design": structured.get("study_design", ""),
+                }
+            )
+        if rows:
+            return rows
     final_path = project_dir / "fulltext" / "final_included_studies.json"
     if final_path.exists():
         try:

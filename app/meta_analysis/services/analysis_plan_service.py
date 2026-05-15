@@ -18,6 +18,20 @@ from app.meta_analysis.services.research_governance_service import MetaResearchG
 ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION = "meta_analysis_plan_draft.v1"
 CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION = "meta_confirmed_analysis_plan.v1"
 ANALYSIS_PLAN_MANIFEST_SCHEMA_VERSION = "meta_analysis_plan_manifest.v1"
+ANALYSIS_PLAN_M7_SCHEMA_VERSION = "meta_confirmed_analysis_plan_workspace.m7"
+ANALYSIS_PLAN_STATES = ("draft", "suggested", "user_edited", "confirmed", "needs_revision")
+ANALYSIS_PLAN_MODEL_PREFERENCES = ("fixed_effect", "random_effect", "both", "undecided")
+ANALYSIS_PLAN_HETEROGENEITY_METRICS = ("I2", "tau2", "Q")
+ANALYSIS_PLAN_EFFECT_MEASURE_TYPES = ("OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other")
+ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH = {
+    "no_confirmed_extraction_rows": "尚无已确认的数据提取行",
+    "too_few_studies_for_pooled_analysis": "当前纳入研究数量可能不足",
+    "missing_effect_measure": "部分研究缺少效应量字段",
+    "mixed_effect_measure_types": "效应量类型不一致",
+    "missing_ci_or_standard_error_or_insufficient_fields": "部分研究缺少效应量字段",
+    "quality_assessment_incomplete": "质量评价尚未全部确认",
+    "developer_preview_testing_only": "该计划仅用于测试阶段，不代表正式统计结论",
+}
 
 
 @dataclass(frozen=True)
@@ -77,6 +91,7 @@ class AnalysisPlanService:
         confirmed_protocol = self._pico_workspace.load_confirmed(project_dir)
         if confirmed_protocol is None:
             raise ValueError("confirmed_protocol_required_for_analysis_plan")
+        protocol_draft = self._pico_workspace.load_draft(project_dir)
         project_id = project_id or confirmed_protocol.confirmed_protocol_id or project_dir.name
         meta_type = str((overrides or {}).get("meta_type") or confirmed_protocol.confirmed_meta_type)
         schema = self._schema_registry.get_schema(project_dir, meta_type)
@@ -90,20 +105,32 @@ class AnalysisPlanService:
             schema_required_fields=tuple(schema.required_fields) if schema is not None else (),
         )
         defaults = _analysis_defaults_for_meta_type(meta_type, included=included, schema_defaults=dict(schema.analysis_defaults) if schema is not None else {})
+        m7 = self.analysis_plan_readiness(project_dir, rows=rows)
+        m7_fields = _m7_plan_fields(
+            confirmed_protocol=confirmed_protocol,
+            protocol_draft=protocol_draft,
+            meta_type=meta_type,
+            defaults=defaults,
+            readiness=m7,
+            overrides=overrides or {},
+            plan_state="draft",
+        )
         plan_id = f"aplan-draft-{uuid4().hex[:12]}"
         now = _now()
         draft = {
             "schema_version": ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION,
+            "m7_schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
             "analysis_plan_id": plan_id,
             "project_id": project_dir.name,
             "source_confirmed_protocol_id": confirmed_protocol.confirmed_protocol_id,
             "meta_type": meta_type,
+            **m7_fields,
             "effect_measure": str((overrides or {}).get("effect_measure") or defaults["effect_measure"]),
             "input_data_type": defaults["input_data_type"],
             "model_default": str((overrides or {}).get("model_default") or defaults["model_default"]),
             "fixed_effect_allowed": True,
             "random_effect_allowed": True,
-            "heterogeneity_metrics": ["Q", "I2", "tau2"],
+            "heterogeneity_metrics": list(ANALYSIS_PLAN_HETEROGENEITY_METRICS),
             "subgroup_plan": defaults["subgroup_plan"],
             "sensitivity_plan": defaults["sensitivity_plan"],
             "publication_bias_plan": defaults["publication_bias_plan"],
@@ -124,9 +151,12 @@ class AnalysisPlanService:
             "analysis_run_status": "not_started",
             "analysis_ready_dataset_created": False,
             "final_analysis_result_created": False,
+            "future_statistical_execution_eligible": False,
             "prisma_advanced": False,
             "medical_interpretation_status": "not_generated",
+            "testing_level_notice": "Developer Preview / testing only; confirmed plan does not represent a formal statistical conclusion.",
         }
+        draft["warnings"] = _dedupe([*warnings, *m7["warning_codes"], "developer_preview_testing_only"])
         output_path = self.draft_path(project_dir)
         _write_json(output_path, draft)
         audit = self._audit_log.record_event(
@@ -185,6 +215,22 @@ class AnalysisPlanService:
             "included_effect_row_candidates",
             "excluded_effect_row_candidates",
             "warnings",
+            "meta_profile",
+            "research_question",
+            "population",
+            "intervention_or_exposure",
+            "comparator",
+            "outcome",
+            "effect_measure_type",
+            "model_preference",
+            "heterogeneity_metrics",
+            "minimum_study_count_check",
+            "included_study_ids",
+            "included_study_refs",
+            "included_study_count",
+            "plan_state",
+            "m7_readiness_warnings",
+            "m7_warning_labels_zh",
         }
         after = dict(before)
         for key, value in updates.items():
@@ -192,9 +238,13 @@ class AnalysisPlanService:
                 after[key] = value
         after["updated_at"] = _now()
         after["status"] = "draft"
+        after["plan_state"] = _validate_plan_state(str(after.get("plan_state") or "user_edited"))
+        if after["plan_state"] == "confirmed":
+            after["plan_state"] = "user_edited"
         after["analysis_run_status"] = "not_started"
         after["analysis_ready_dataset_created"] = False
         after["final_analysis_result_created"] = False
+        after["future_statistical_execution_eligible"] = False
         after["prisma_advanced"] = False
         output_path = self.draft_path(project_dir)
         _write_json(output_path, after)
@@ -248,13 +298,35 @@ class AnalysisPlanService:
         primary_ids = [str(item) for item in (primary_effect_row_ids or _candidate_ids(included_candidates, "primary_effect_candidate")) if str(item)]
         secondary_ids = [str(item) for item in (secondary_effect_row_ids or _candidate_ids(included_candidates, "secondary_effect_candidate")) if str(item)]
         now = _now()
+        model = _normalize_model_preference(confirmed_model or str(draft.get("model_preference") or draft.get("model_default", "random_effects")))
+        confirmed_effect = (confirmed_effect_measure or str(draft.get("effect_measure", "") or draft.get("effect_measure_type", ""))).strip()
+        effect = _normalize_effect_measure(str(draft.get("effect_measure_type") or confirmed_effect))
         confirmed = {
             "schema_version": CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
+            "m7_schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
             "confirmed_analysis_plan_id": f"aplan-confirmed-{uuid4().hex[:12]}",
-            "plan_state": "confirmed",
             "source_draft_id": str(draft.get("analysis_plan_id", "")),
-            "confirmed_effect_measure": confirmed_effect_measure or str(draft.get("effect_measure", "")),
-            "confirmed_model": (confirmed_model or str(draft.get("model_default", "random_effects"))).strip(),
+            "meta_profile": str(draft.get("meta_profile") or draft.get("meta_type", "")),
+            "research_question": str(draft.get("research_question", "")),
+            "population": str(draft.get("population", "")),
+            "intervention_or_exposure": str(draft.get("intervention_or_exposure", "")),
+            "comparator": str(draft.get("comparator", "")),
+            "outcome": str(draft.get("outcome", "")),
+            "effect_measure_type": effect,
+            "model_preference": model,
+            "heterogeneity_metrics": _normalize_heterogeneity_metrics(draft.get("heterogeneity_metrics", ANALYSIS_PLAN_HETEROGENEITY_METRICS)),
+            "subgroup_plan": draft.get("subgroup_plan", {}),
+            "sensitivity_plan": draft.get("sensitivity_plan", {}),
+            "publication_bias_plan": draft.get("publication_bias_plan", {}),
+            "minimum_study_count_check": dict(draft.get("minimum_study_count_check", {})) if isinstance(draft.get("minimum_study_count_check"), dict) else {},
+            "included_study_ids": list(draft.get("included_study_ids", [])) if isinstance(draft.get("included_study_ids"), list) else [],
+            "included_study_refs": list(draft.get("included_study_refs", [])) if isinstance(draft.get("included_study_refs"), list) else [],
+            "included_study_count": int(draft.get("included_study_count", 0) or 0),
+            "plan_state": "confirmed",
+            "m7_readiness_warnings": list(draft.get("m7_readiness_warnings", [])) if isinstance(draft.get("m7_readiness_warnings"), list) else [],
+            "m7_warning_labels_zh": dict(draft.get("m7_warning_labels_zh", {})) if isinstance(draft.get("m7_warning_labels_zh"), dict) else {},
+            "confirmed_effect_measure": confirmed_effect or effect,
+            "confirmed_model": model,
             "confirmed_primary_effect_rows": primary_ids,
             "confirmed_secondary_effect_rows": secondary_ids,
             "confirmed_subgroup_plan": dict(draft.get("subgroup_plan", {})) if isinstance(draft.get("subgroup_plan"), dict) else {},
@@ -267,8 +339,10 @@ class AnalysisPlanService:
             "analysis_run_status": "not_started",
             "analysis_ready_dataset_created": False,
             "final_analysis_result_created": False,
+            "future_statistical_execution_eligible": True,
             "prisma_advanced": False,
             "medical_interpretation_status": "not_generated",
+            "testing_level_notice": "Developer Preview / testing only; confirmation only authorizes a future validated executor path.",
             "governance_refs": [],
             "audit_refs": [],
         }
@@ -311,6 +385,75 @@ class AnalysisPlanService:
 
     def load_confirmed(self, project_dir: Path) -> dict[str, Any]:
         return _load_json(self.confirmed_path(project_dir))
+
+    def analysis_plan_readiness(self, project_dir: Path, *, rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        project_dir = project_dir.expanduser().resolve()
+        source_rows = rows if rows is not None else self._manual_extraction.load_effect_rows(project_dir)
+        confirmed_rows = _confirmed_extraction_rows(source_rows)
+        study_refs = _included_study_refs(confirmed_rows)
+        study_ids = [str(item["study_id"]) for item in study_refs if str(item.get("study_id", "")).strip()]
+        effect_types = [_row_effect_measure_type(row) for row in confirmed_rows if _row_effect_measure_type(row)]
+        warning_codes: list[str] = []
+        if not confirmed_rows:
+            warning_codes.append("no_confirmed_extraction_rows")
+        if len(set(study_ids)) < 2:
+            warning_codes.append("too_few_studies_for_pooled_analysis")
+        if any(not _row_effect_measure_type(row) for row in confirmed_rows):
+            warning_codes.append("missing_effect_measure")
+        if len({item.upper() for item in effect_types}) > 1:
+            warning_codes.append("mixed_effect_measure_types")
+        if any(not _has_sufficient_m7_effect_fields(row) for row in confirmed_rows):
+            warning_codes.append("missing_ci_or_standard_error_or_insufficient_fields")
+        quality = self._quality_service.quality_m6_summary(project_dir, expected_study_ids=study_ids)
+        if study_ids and (quality.get("studies_pending_quality", 0) > 0 or quality.get("studies_with_confirmed_quality", 0) < len(set(study_ids))):
+            warning_codes.append("quality_assessment_incomplete")
+        return {
+            "schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+            "confirmed_extraction_row_count": len(confirmed_rows),
+            "included_study_count": len(set(study_ids)),
+            "included_study_ids": sorted(set(study_ids)),
+            "included_study_refs": study_refs,
+            "effect_measure_types": sorted({item for item in effect_types if item}),
+            "quality_summary": quality,
+            "warning_codes": _dedupe(warning_codes),
+            "warning_labels_zh": {
+                code: ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH[code]
+                for code in _dedupe([*warning_codes, "developer_preview_testing_only"])
+                if code in ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH
+            },
+        }
+
+    def validate_m7_plan(self, payload: dict[str, Any], *, require_confirmed: bool = False) -> dict[str, Any]:
+        errors: list[str] = []
+        warnings: list[str] = []
+        state = str(payload.get("plan_state") or payload.get("status") or "").strip()
+        if state not in ANALYSIS_PLAN_STATES:
+            errors.append("unsupported_analysis_plan_state")
+        if require_confirmed and state != "confirmed":
+            errors.append("confirmed_plan_required_for_future_executor")
+        model = str(payload.get("model_preference") or payload.get("confirmed_model") or "").strip()
+        if model and model not in ANALYSIS_PLAN_MODEL_PREFERENCES:
+            errors.append("unsupported_model_preference")
+        effect = str(payload.get("effect_measure_type") or payload.get("confirmed_effect_measure") or "").strip()
+        if effect and _normalize_effect_measure(effect) not in ANALYSIS_PLAN_EFFECT_MEASURE_TYPES:
+            errors.append("unsupported_effect_measure_type")
+        if require_confirmed and not effect:
+            errors.append("confirmed_plan_requires_effect_measure")
+        if require_confirmed and model == "undecided":
+            warnings.append("confirmed_plan_model_preference_undecided")
+        for code in payload.get("m7_readiness_warnings", []):
+            if code == "mixed_effect_measure_types":
+                warnings.append("mixed_effect_measure_types")
+        return {
+            "schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+            "valid": not errors,
+            "errors": _dedupe(errors),
+            "warnings": _dedupe(warnings),
+            "future_statistical_execution_eligible": self.is_m7_plan_eligible_for_future_statistics(payload),
+        }
+
+    def is_m7_plan_eligible_for_future_statistics(self, payload: dict[str, Any]) -> bool:
+        return str(payload.get("plan_state", "")).strip() == "confirmed"
 
     def _record_candidate_suggestions(
         self,
@@ -389,9 +532,13 @@ class AnalysisPlanService:
             "confirmed_path": str(self.confirmed_path(project_dir).relative_to(project_dir)),
             "draft_status": "draft" if draft else "missing",
             "confirmed_status": "confirmed" if confirmed else "not_confirmed",
+            "plan_state": str(confirmed.get("plan_state") or draft.get("plan_state") or "missing"),
+            "m7_schema_version": ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+            "included_study_count": int((confirmed or draft).get("included_study_count", 0) or 0) if (confirmed or draft) else 0,
             "analysis_run_status": "not_started",
             "analysis_ready_dataset_created": False,
             "final_analysis_result_created": False,
+            "future_statistical_execution_eligible": bool(confirmed and confirmed.get("plan_state") == "confirmed"),
             "prisma_advanced": False,
             "updated_at": _now(),
         }
@@ -409,6 +556,160 @@ class AnalysisPlanService:
         payload = _load_json(self.confirmed_versions_path(project_dir))
         versions = payload.get("versions", []) if isinstance(payload, dict) else []
         return len(versions) + 1 if isinstance(versions, list) else 1
+
+
+def _m7_plan_fields(
+    *,
+    confirmed_protocol: Any,
+    protocol_draft: Any,
+    meta_type: str,
+    defaults: dict[str, Any],
+    readiness: dict[str, Any],
+    overrides: dict[str, Any],
+    plan_state: str,
+) -> dict[str, Any]:
+    outcome = _first_string(getattr(confirmed_protocol, "confirmed_outcomes", ()))
+    research_question = str(getattr(protocol_draft, "research_question_original", "") or overrides.get("research_question") or "")
+    effect = _normalize_effect_measure(str(overrides.get("effect_measure_type") or overrides.get("effect_measure") or defaults.get("effect_measure") or "other"))
+    model = _normalize_model_preference(str(overrides.get("model_preference") or overrides.get("model_default") or defaults.get("model_default") or "undecided"))
+    included_count = int(readiness.get("included_study_count", 0) or 0)
+    return {
+        "meta_profile": str(overrides.get("meta_profile") or meta_type),
+        "research_question": research_question,
+        "population": str(overrides.get("population") or getattr(confirmed_protocol, "confirmed_population", "")),
+        "intervention_or_exposure": str(overrides.get("intervention_or_exposure") or getattr(confirmed_protocol, "confirmed_intervention_or_exposure", "")),
+        "comparator": str(overrides.get("comparator") or getattr(confirmed_protocol, "confirmed_comparator", "")),
+        "outcome": str(overrides.get("outcome") or outcome),
+        "effect_measure_type": effect,
+        "model_preference": model,
+        "heterogeneity_metrics": _normalize_heterogeneity_metrics(overrides.get("heterogeneity_metrics", ANALYSIS_PLAN_HETEROGENEITY_METRICS)),
+        "minimum_study_count_check": {
+            "included_study_count": included_count,
+            "minimum_for_pooled_analysis": 2,
+            "minimum_for_publication_bias": 10,
+            "pooled_analysis_count_warning": included_count < 2,
+            "publication_bias_count_warning": included_count < 10,
+        },
+        "included_study_ids": list(readiness.get("included_study_ids", [])) if isinstance(readiness.get("included_study_ids"), list) else [],
+        "included_study_refs": list(readiness.get("included_study_refs", [])) if isinstance(readiness.get("included_study_refs"), list) else [],
+        "included_study_count": included_count,
+        "plan_state": _validate_plan_state(plan_state),
+        "m7_readiness_warnings": list(readiness.get("warning_codes", [])) if isinstance(readiness.get("warning_codes"), list) else [],
+        "m7_warning_labels_zh": dict(readiness.get("warning_labels_zh", {})) if isinstance(readiness.get("warning_labels_zh"), dict) else {},
+    }
+
+
+def _confirmed_extraction_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in rows
+        if str(row.get("evidence_state", "")) == "confirmed" or str(row.get("extraction_status", "")) == "completed_by_user"
+    ]
+
+
+def _included_study_refs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    refs: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        structured = dict(row.get("m5_structured_fields", {})) if isinstance(row.get("m5_structured_fields"), dict) else {}
+        study_id = str(structured.get("study_id") or row.get("study_unit_label") or row.get("study_unit_id") or "").strip()
+        if not study_id:
+            continue
+        refs[study_id] = {
+            "study_id": study_id,
+            "title": str(structured.get("title", "")),
+            "first_author": str(structured.get("first_author", "")),
+            "year": str(structured.get("year", "")),
+            "outcome": str(structured.get("outcome") or row.get("outcome_name", "")),
+            "effect_measure_type": _row_effect_measure_type(row),
+        }
+    return [refs[key] for key in sorted(refs)]
+
+
+def _row_effect_measure_type(row: dict[str, Any]) -> str:
+    structured = dict(row.get("m5_structured_fields", {})) if isinstance(row.get("m5_structured_fields"), dict) else {}
+    reported = dict(row.get("reported_effect_size", {})) if isinstance(row.get("reported_effect_size"), dict) else {}
+    return _normalize_effect_measure(str(structured.get("effect_measure_type") or reported.get("effect_measure") or row.get("effect_measure") or ""))
+
+
+def _has_sufficient_m7_effect_fields(row: dict[str, Any]) -> bool:
+    structured = dict(row.get("m5_structured_fields", {})) if isinstance(row.get("m5_structured_fields"), dict) else {}
+    raw = dict(row.get("raw_group_data", {})) if isinstance(row.get("raw_group_data"), dict) else {}
+    reported = dict(row.get("reported_effect_size", {})) if isinstance(row.get("reported_effect_size"), dict) else {}
+    fields = {**raw, **reported, **structured}
+    has_effect = _has_value(fields.get("effect_estimate")) or _has_value(fields.get("effect_value")) or _has_value(fields.get("correlation_coefficient"))
+    has_ci = (_has_value(fields.get("ci_lower")) and _has_value(fields.get("ci_upper"))) or (_has_value(fields.get("ci_low")) and _has_value(fields.get("ci_high")))
+    has_se = _has_value(fields.get("standard_error"))
+    has_binary = all(_has_value(fields.get(key)) for key in ("events_case", "total_case", "events_control", "total_control")) or all(_has_value(fields.get(key)) for key in ("group_1_events", "group_1_n", "group_2_events", "group_2_n"))
+    has_continuous = all(_has_value(fields.get(key)) for key in ("mean_case", "sd_case", "sample_size_case", "mean_control", "sd_control", "sample_size_control"))
+    has_diagnostic = all(_has_value(fields.get(key)) for key in ("diagnostic_tp", "diagnostic_fp", "diagnostic_fn", "diagnostic_tn")) or all(_has_value(fields.get(key)) for key in ("tp", "fp", "fn", "tn"))
+    return bool((has_effect and (has_ci or has_se)) or has_binary or has_continuous or has_diagnostic)
+
+
+def _normalize_effect_measure(value: str) -> str:
+    normalized = str(value or "").strip()
+    aliases = {
+        "PREVALENCE": "proportion",
+        "PROP": "proportion",
+        "FISHER Z": "correlation",
+        "FISHER_Z": "correlation",
+        "DOR": "diagnostic_accuracy",
+    }
+    upper = normalized.upper()
+    if upper in {"OR", "RR", "HR", "MD", "SMD"}:
+        return upper
+    if upper in aliases:
+        return aliases[upper]
+    lower = normalized.lower()
+    if lower in {"proportion", "correlation", "diagnostic_accuracy", "other"}:
+        return lower
+    return normalized or "other"
+
+
+def _normalize_model_preference(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    aliases = {
+        "fixed": "fixed_effect",
+        "fixed_effects": "fixed_effect",
+        "fixed_effect": "fixed_effect",
+        "random": "random_effect",
+        "random_effects": "random_effect",
+        "random_effect": "random_effect",
+        "both": "both",
+        "undecided": "undecided",
+    }
+    return aliases.get(normalized, "undecided")
+
+
+def _normalize_heterogeneity_metrics(value: Any) -> list[str]:
+    items = value if isinstance(value, (list, tuple, set)) else [value]
+    normalized = []
+    aliases = {"i2": "I2", "i²": "I2", "tau2": "tau2", "tau²": "tau2", "q": "Q"}
+    for item in items:
+        metric = aliases.get(str(item).strip().lower(), str(item).strip())
+        if metric in ANALYSIS_PLAN_HETEROGENEITY_METRICS and metric not in normalized:
+            normalized.append(metric)
+    return normalized or list(ANALYSIS_PLAN_HETEROGENEITY_METRICS)
+
+
+def _validate_plan_state(value: str) -> str:
+    state = str(value or "").strip()
+    if state not in ANALYSIS_PLAN_STATES:
+        raise ValueError(f"unsupported_analysis_plan_state:{value}")
+    return state
+
+
+def _first_string(items: Any) -> str:
+    if isinstance(items, str):
+        return items
+    if isinstance(items, (list, tuple)):
+        for item in items:
+            if str(item).strip():
+                return str(item)
+    return ""
+
+
+def _has_value(value: Any) -> bool:
+    return value not in ("", None)
 
 
 def _split_effect_row_candidates(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
