@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 MODULE_DESCRIPTIONS = {
-    "通用试剂计算器": "浓度、质量、体积、摩尔量、稀释等基础实验计算。",
+    "通用试剂计算器": "浓度、质量、体积、摩尔量、稀释快速计算，以及用户自定义试剂模板、本次配制换算和子模板展开。",
     "ImageJ/Fiji 本地引擎": "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置。",
     "Western Blot 工具": "WB 上样计算、条带定量 workflow 占位。",
     "PCR/qPCR 工具": "PCR mix、qPCR 结果整理 workflow 占位。",

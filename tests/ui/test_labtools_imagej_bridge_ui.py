@@ -150,7 +150,10 @@ def test_non_image_labtools_workspace_is_not_blocked_by_missing_imagej(qapp) -> 
     tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
 
     assert tabs is not None
-    assert tabs.tabText(0) == "浓度换算"
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["快速计算", "我的试剂模板", "本次配制"]
+    quick_tabs = widget.findChild(QTabWidget, "labToolsQuickCalculatorTabs")
+    assert quick_tabs is not None
+    assert quick_tabs.tabText(0) == "浓度换算"
     assert "ImageJ/Fiji 本地后端状态" not in _visible_text(widget._stack.currentWidget())
 
 
@@ -187,7 +190,10 @@ def test_labtools_home_opens_calculator_and_imagej_config_pages(qapp) -> None:
     assert widget.current_page_key() == "general_calculators"
     tabs = widget.findChild(QTabWidget, "labToolsCalculatorTabs")
     assert tabs is not None
-    assert tabs.tabText(0) == "浓度换算"
+    assert [tabs.tabText(index) for index in range(tabs.count())] == ["快速计算", "我的试剂模板", "本次配制"]
+    quick_tabs = widget.findChild(QTabWidget, "labToolsQuickCalculatorTabs")
+    assert quick_tabs is not None
+    assert quick_tabs.tabText(0) == "浓度换算"
 
     widget.show_home()
     imagej_entry = widget.findChild(QFrame, "labToolsImageJFijiEntry")
