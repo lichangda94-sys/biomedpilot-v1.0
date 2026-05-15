@@ -5,8 +5,9 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN, TYPE_LABELS
+from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN, RECOGNITION_REPORT, RECOGNIZED_FILES, TYPE_LABELS
 from app.bioinformatics.project_readiness import load_readiness_artifacts
+from app.bioinformatics.standardization_confirmation import load_standardization_confirmation_artifacts
 
 
 STANDARDIZED_REGISTRY = Path("manifests") / "standardized_assets_registry.json"
@@ -100,6 +101,15 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
 def _load_current_recognition_run(root: Path) -> dict[str, object]:
     current_path = root / CURRENT_RECOGNITION_RUN
     if not current_path.exists():
+        legacy_report = _read_json(root / RECOGNITION_REPORT) if (root / RECOGNITION_REPORT).exists() else {}
+        legacy_files = _read_json(root / RECOGNIZED_FILES) if (root / RECOGNIZED_FILES).exists() else {}
+        if str(legacy_report.get("schema_version") or "") == "biomedpilot.recognition_report.v1":
+            return {
+                "current": None,
+                "recognition_report": legacy_report,
+                "recognized_files": legacy_files,
+                "warnings": ["未找到当前识别批次 recognized_data/current.json。已临时读取兼容识别报告，请重新设为当前结果后继续。"],
+            }
         return {
             "current": None,
             "recognition_report": {},
@@ -434,10 +444,14 @@ def load_standardization_artifacts(project_root: str | Path) -> dict[str, object
     root = Path(project_root).expanduser().resolve()
     registry_path = root / STANDARDIZED_REGISTRY
     manifest_path = root / ANALYSIS_READY_MANIFEST
+    confirmation = load_standardization_confirmation_artifacts(root)
     return {
         "registry": _read_json(registry_path) if registry_path.exists() else None,
         "analysis_ready_manifest": _read_json(manifest_path) if manifest_path.exists() else None,
         "data_processing_task_plan": _read_json(root / DATA_PROCESSING_TASK_PLAN) if (root / DATA_PROCESSING_TASK_PLAN).exists() else None,
+        "standardization_confirmation": confirmation.get("confirmation"),
+        "standardization_candidates": confirmation.get("candidates"),
+        "standardization_confirmation_path": confirmation.get("confirmation_path"),
         "registry_path": str(registry_path),
         "manifest_path": str(manifest_path),
         "data_processing_task_plan_path": str(root / DATA_PROCESSING_TASK_PLAN),

@@ -31,7 +31,7 @@ def test_prisma_numbers_collect_from_mock_project(tmp_path: Path) -> None:
     assert any(asset.data_type == "prisma_flow_summary" for asset in data_center.list_assets(project_dir.name))
 
 
-def test_formal_markdown_report_contains_analysis_and_artifact_paths(tmp_path: Path) -> None:
+def test_formal_markdown_report_contains_m8_draft_sections_without_raw_paths(tmp_path: Path) -> None:
     project_dir = seed_mock_project(tmp_path)
     task_center = TaskCenter(tmp_path / "tasks" / "tasks.json")
     data_center = DataCenter(tmp_path / "data" / "data_assets.json")
@@ -45,10 +45,14 @@ def test_formal_markdown_report_contains_analysis_and_artifact_paths(tmp_path: P
     report_path = builder.build_formal_markdown_report(project_dir)
     report_text = report_path.read_text(encoding="utf-8")
 
+    assert "报告标题" in report_text
+    assert "研究问题" in report_text
+    assert "PRISMA 流程摘要" in report_text
+    assert "统计分析结果尚未作为正式可发表结论生成" in report_text
     assert "Analysis summary" in report_text
-    assert "forest_plot_ares-test.png" in report_text
-    assert "analysis_result_table_ares-test.csv" in report_text
-    assert "full-text workflow incomplete" in report_text.lower()
+    assert "forest_plot_ares-test.png" not in report_text
+    assert "analysis_result_table_ares-test.csv" not in report_text
+    assert str(project_dir) not in report_text
     assert "missing / not generated" in report_text
     assert task_center.list_tasks()[0].task_type is TaskType.FORMAL_REPORT_EXPORT
     assert any(asset.data_type == "formal_meta_report" for asset in data_center.list_assets(project_dir.name))

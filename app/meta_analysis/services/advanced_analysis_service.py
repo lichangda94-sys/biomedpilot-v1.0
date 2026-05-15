@@ -24,6 +24,7 @@ from app.meta_analysis.models.advanced_analysis import (
 from app.meta_analysis.models.analysis_dataset import AnalysisReadyDataset, StudyAnalysisRow
 from app.meta_analysis.models.analysis_result import AnalysisResult, StudyMetaAnalysisResult
 from app.meta_analysis.models.figures import FigureArtifact, figure_artifact_to_dict, new_figure_id
+from app.meta_analysis.models.statistical_result_state import blocks_formal_report_claim, statistical_result_state_label_zh
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.figure_result_service import FigureResultService
@@ -273,6 +274,10 @@ class AdvancedAnalysisService:
                 "study_count": len(analysis_result.study_results),
                 "pooled_effect": analysis_result.pooled_effect,
                 "applicability_warnings": self._applicability_service.evaluate_advanced_method("funnel_plot", len(analysis_result.study_results)).warnings,
+                "result_state": analysis_result.result_state,
+                "result_state_label_zh": statistical_result_state_label_zh(analysis_result.result_state),
+                "testing_level": analysis_result.testing_level,
+                "blocks_formal_report_claim": blocks_formal_report_claim(analysis_result),
             },
         )
         self._figure_service.save_figure_artifact(project_dir, artifact)

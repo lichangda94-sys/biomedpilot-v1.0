@@ -10,11 +10,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
+from app.bioinformatics.geo_series_matrix_parser import parse_geo_series_matrix
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT, build_group_preview_report
 
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
 RECOGNITION_RUNS_DIR = Path("recognized_data") / "runs"
 CURRENT_RECOGNITION_RUN = Path("recognized_data") / "current.json"
+RECOGNIZED_FILES = Path("logs") / "recognition" / "recognized_files.json"
+RECOGNITION_REPORT_SCHEMA_VERSION = "biomedpilot.recognition_report.v1"
+RECOGNITION_ENGINE_VERSION = "developer-preview"
 
 TYPE_LABELS = {
     "expression_matrix": "表达矩阵",
@@ -79,6 +84,7 @@ class RecognitionClassification:
     detected_assets: tuple[dict[str, object], ...] = ()
     container_format: str = ""
     content_profile: dict[str, object] | None = None
+    file_level_details: dict[str, object] | None = None
 
 
 def run_project_recognition(project_root: str | Path) -> dict[str, object]:
@@ -146,6 +152,8 @@ def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[st
             "route_path": str(root / "recognized_data" / kind / path.name),
         }
         record.update(_semantic_record_fields(kind, content_profile))
+        if classification.file_level_details:
+            record.update(classification.file_level_details)
         records.append(record)
     warnings.extend(_recognition_warnings(records))
     group_preview = build_group_preview_report(root, records)
@@ -165,14 +173,16 @@ def load_recognition_report(project_root: str | Path) -> dict[str, object] | Non
     root = Path(project_root).expanduser().resolve()
     current = _load_current_run(root)
     if current is None:
-        return None
+        return _read_json_if_exists(root / RECOGNITION_REPORT)
     report_path = Path(str(current.get("recognition_report_path") or ""))
     if not report_path.is_absolute():
         report_path = root / report_path
     try:
-        return json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+        if report_path.exists():
+            return json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return None
+        pass
+    return _read_json_if_exists(root / RECOGNITION_REPORT)
 
 
 def list_recognition_runs(project_root: str | Path, *, include_legacy: bool = True) -> list[dict[str, object]]:
@@ -363,6 +373,15 @@ def _write_recognition_run(
         if isinstance(group_preview, dict):
             _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
         _write_json(root / RECOGNITION_REPORT, clean_report)
+        _write_json(
+            root / RECOGNIZED_FILES,
+            {
+                "schema_version": "biomedpilot.recognized_files.v1",
+                "generated_at": manifest["generated_at"],
+                "project_root": str(root),
+                "files": files,
+            },
+        )
     return manifest
 
 
@@ -483,6 +502,7 @@ def _classification(
     detected_assets: tuple[dict[str, object], ...] = (),
     container_format: str = "",
     content_profile: dict[str, object] | None = None,
+    file_level_details: dict[str, object] | None = None,
 ) -> RecognitionClassification:
     normalized_roles = tuple(dict.fromkeys(roles if roles is not None else (() if primary_type == "unknown" else (primary_type,))))
     return RecognitionClassification(
@@ -493,6 +513,7 @@ def _classification(
         detected_assets=detected_assets or tuple(_detected_asset(role, confidence=confidence, reason=reason) for role in normalized_roles),
         container_format=container_format,
         content_profile=content_profile,
+        file_level_details=file_level_details,
     )
 
 
@@ -507,124 +528,164 @@ def _classify_xlsx_table(path: Path) -> RecognitionClassification | None:
 
 
 def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
-    scan = _scan_geo_series_matrix(path)
-    if not scan.get("is_geo_series_matrix"):
+    profile = parse_geo_series_matrix(path)
+    organism = str(profile.get("organism") or _species_from_evidence(profile) or "").strip()
+    if organism:
+        if not profile.get("species"):
+            profile["species"] = organism
+        species_group = _species_group_from_organism(organism)
+        if species_group and not profile.get("species_group"):
+            profile["species_group"] = species_group
+    if (
+        not profile.get("series_accession")
+        and not profile.get("sample_metadata_fields")
+        and not profile.get("table_begin_line")
+        and not profile.get("platform_accessions")
+    ):
         return None
     assets: list[dict[str, object]] = []
     roles: list[str] = []
-    if scan.get("has_expression_matrix"):
+    parser_depth = str(profile.get("parser_depth") or "container_only")
+    sample_count = int(profile.get("sample_count") or 0)
+    sample_columns = [str(item) for item in profile.get("sample_columns", []) or []]
+    if profile.get("expression_matrix_presence"):
         roles.append("expression_matrix")
         assets.append(
             _detected_asset(
                 "expression_matrix",
                 confidence=0.9,
-                reason="GEO Series Matrix 表格包含 ID_REF 和 GSM 样本列。",
+                reason="已检测到 GEO Series Matrix 表达矩阵区域，可进入标准化阶段进一步确认。",
                 source_section="series_matrix_table",
                 source_format="geo_series_matrix",
                 input_eligible=True,
-                evidence=tuple(scan.get("expression_evidence", []) or ()),
+                evidence=(
+                    "ID_REF header" if str(profile.get("id_column") or "").upper() == "ID_REF" else f"id_column={profile.get('id_column') or ''}",
+                    f"sample_columns={len(sample_columns)}",
+                    f"expression_value_type_candidate={profile.get('expression_value_type_candidate') or 'unknown'}",
+                    f"gene_id_type_candidate={profile.get('gene_id_type_candidate') or 'unknown'}",
+                ),
                 location={
-                    "start_line": scan.get("table_begin_line"),
-                    "end_line": scan.get("table_end_line"),
-                    "header_line": scan.get("table_header_line"),
+                    "start_line": profile.get("table_begin_line"),
+                    "end_line": profile.get("table_end_line"),
+                    "header_line": profile.get("table_header_line"),
                 },
-                extra={"gsm_column_count": scan.get("gsm_column_count", 0)},
+                extra={
+                    "sample_count": sample_count,
+                    "matrix_dimensions": profile.get("expression_matrix_dimensions", {}),
+                    "expression_value_type_candidate": profile.get("expression_value_type_candidate"),
+                    "gene_id_type_candidate": profile.get("gene_id_type_candidate"),
+                    "requires_user_confirmation": True,
+                },
             )
         )
-    if scan.get("has_sample_metadata"):
+    if sample_count or profile.get("sample_metadata_fields"):
         roles.append("sample_metadata")
         assets.append(
             _detected_asset(
                 "sample_metadata",
                 confidence=0.86,
-                reason="GEO Series Matrix 包含样本标题、GSM 编号或样本 characteristics。",
+                reason="已解析 GEO Series Matrix 样本 accession、标题、source_name 或 characteristics metadata。",
                 source_section="sample_metadata",
                 source_format="geo_series_matrix",
                 input_eligible=True,
-                evidence=tuple(scan.get("sample_evidence", []) or ()),
-                location={
-                    "start_line": scan.get("sample_metadata_start_line"),
-                    "end_line": scan.get("sample_metadata_end_line"),
-                },
-                extra={"sample_count": scan.get("sample_count", 0)},
+                evidence=tuple(str(item) for item in profile.get("sample_metadata_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth},
             )
         )
-    platform_id = str(scan.get("platform_id") or "")
-    if platform_id:
+    platform_accessions = [str(item) for item in profile.get("platform_accessions", []) or []]
+    if platform_accessions:
         roles.append("platform_reference_hint")
         assets.append(
             _detected_asset(
                 "platform_reference_hint",
                 confidence=0.82,
-                reason="GEO Series Matrix 提供 GPL 平台编号，可用于后续平台注释匹配。",
+                reason="GEO Series Matrix 提供 GPL 平台编号；ID_REF 映射仍需在标准化阶段确认。",
                 source_section="series_metadata",
                 source_format="geo_series_matrix",
                 input_eligible=False,
-                evidence=tuple(scan.get("platform_evidence", []) or ()),
-                location={"line": scan.get("platform_line")},
-                extra={"platform_id": platform_id},
+                evidence=tuple(platform_accessions),
+                extra={"platform_id": platform_accessions[0], "platform_accessions": platform_accessions},
             )
         )
-    phenotype_hits = list(scan.get("phenotype_hits", []) or [])
-    if phenotype_hits:
+    phenotype_fields = [str(item) for item in profile.get("phenotype_candidate_fields", []) or []]
+    if phenotype_fields:
         roles.append("phenotype_metadata")
         assets.append(
             _detected_asset(
                 "phenotype_metadata",
                 confidence=0.72,
-                reason="样本 characteristics/source 中包含分组、组织、疾病或处理线索。",
+                reason="样本分组为候选推断，需用户确认后才能进行 DEG 分析。",
                 source_section="sample_metadata",
                 source_format="geo_series_matrix",
                 input_eligible=True,
-                evidence=tuple(phenotype_hits),
-                location={
-                    "start_line": scan.get("sample_metadata_start_line"),
-                    "end_line": scan.get("sample_metadata_end_line"),
-                },
+                evidence=tuple(phenotype_fields),
+                extra={"requires_user_confirmation": True, "phenotype_candidate_values_preview": profile.get("phenotype_candidate_values_preview", {})},
             )
         )
-    clinical_hits = list(scan.get("clinical_hits", []) or [])
-    if clinical_hits:
+    clinical_fields = [str(item) for item in profile.get("clinical_candidate_fields", []) or []]
+    if clinical_fields:
         roles.append("clinical_metadata")
         assets.append(
             _detected_asset(
                 "clinical_metadata",
                 confidence=0.7,
-                reason="样本 metadata 中包含年龄、性别、分期、分级、生存或状态线索。",
+                reason="样本 metadata 中包含年龄、性别、分期、分级、生存或状态候选线索。",
                 source_section="sample_metadata",
                 source_format="geo_series_matrix",
                 input_eligible=True,
-                evidence=tuple(clinical_hits),
-                location={
-                    "start_line": scan.get("sample_metadata_start_line"),
-                    "end_line": scan.get("sample_metadata_end_line"),
-                },
+                evidence=tuple(clinical_fields),
+                extra={"requires_user_confirmation": True},
             )
         )
     if not roles:
         return None
     role_labels = "、".join(TYPE_LABELS.get(role, role) for role in dict.fromkeys(roles))
+    depth_labels = {
+        "container_only": "已识别 GEO Series Matrix 容器",
+        "metadata_parsed": "已解析 Series/Sample metadata",
+        "matrix_detected": "检测到表达矩阵区域",
+        "matrix_previewed": "已解析表达矩阵结构预览",
+    }
+    if profile.get("expression_matrix_presence"):
+        reason = (
+            f"GEO Series Matrix 已解析，{depth_labels.get(parser_depth, parser_depth)}；检测到：{role_labels}。"
+            "表达值类型、ID_REF 映射和候选分组需用户确认。"
+        )
+    else:
+        reason = f"GEO Series Matrix 已解析，{depth_labels.get(parser_depth, parser_depth)}；尚未确认表达矩阵区域。"
+    file_level_keys = {
+        "file_format",
+        "container_type",
+        "parser_depth",
+        "series_accession",
+        "platform_accessions",
+        "sample_count",
+        "sample_accessions",
+        "sample_metadata_fields",
+        "phenotype_candidate_fields",
+        "phenotype_candidate_values_preview",
+        "expression_matrix_presence",
+        "expression_matrix_dimensions",
+        "id_column",
+        "sample_columns",
+        "expression_value_type_candidate",
+        "gene_id_type_candidate",
+        "species",
+        "species_group",
+        "species_evidence",
+        "warnings",
+        "requires_user_confirmation",
+        "can_enter_standardization",
+    }
     return _classification(
         "geo_series_matrix_container",
-        f"GEO Series Matrix 容器，检测到：{role_labels}。",
+        reason,
         0.9,
         roles=tuple(dict.fromkeys(roles)),
         detected_assets=tuple(assets),
         container_format="geo_series_matrix",
-        content_profile={
-            "format": "geo_series_matrix",
-            "series_accession": scan.get("series_accession") or "",
-            "platform_id": platform_id,
-            "sample_count": scan.get("sample_count", 0),
-            "table_begin_line": scan.get("table_begin_line"),
-            "table_end_line": scan.get("table_end_line"),
-            "table_header_line": scan.get("table_header_line"),
-            "table_data_row_count": scan.get("table_data_row_count", 0),
-            "gsm_column_count": scan.get("gsm_column_count", 0),
-            "organism": scan.get("organism") or "",
-            "species": scan.get("organism") or "",
-            "species_group": _species_group_from_organism(str(scan.get("organism") or "")),
-        },
+        content_profile=profile,
+        file_level_details={key: profile.get(key) for key in file_level_keys},
     )
 
 
@@ -747,62 +808,125 @@ def _classification_from_table_profile(
 
 
 def _classify_geo_soft(path: Path) -> RecognitionClassification | None:
-    scan = _scan_geo_soft(path)
-    if not scan["has_geo_header"]:
+    profile = parse_geo_family_soft(path)
+    if not profile.get("series_accession") and not profile.get("sample_count") and not profile.get("platform_count"):
         return None
     roles: list[str] = []
     assets: list[dict[str, object]] = []
-    if scan["has_expression_table"]:
+    sample_count = int(profile.get("sample_count") or 0)
+    parser_depth = str(profile.get("parser_depth") or "container_only")
+    if profile.get("expression_table_presence"):
         roles.append("expression_matrix")
         assets.append(
             _detected_asset(
                 "expression_matrix",
                 confidence=0.86,
-                reason="SOFT sample table 包含 ID_REF / VALUE 表达值。",
+                reason="SOFT sample table 包含 ID_REF / VALUE 表达候选；进入标准化前需要用户确认。",
                 source_section="sample_table",
                 source_format="geo_family_soft",
-                extra={"sample_count": scan["sample_count"], "value_description": scan["value_description"]},
+                input_eligible=True,
+                evidence=tuple(profile.get("gene_id_evidence", []) or ("ID_REF/VALUE sample table",)),
+                extra={
+                    "sample_count": sample_count,
+                    "parser_depth": parser_depth,
+                    "requires_user_confirmation": True,
+                    "expression_table_row_count": profile.get("expression_table_row_count", 0),
+                },
             )
         )
-    if scan["has_sample_metadata"]:
+    if sample_count or profile.get("sample_metadata_fields"):
         roles.append("sample_metadata")
         assets.append(
             _detected_asset(
                 "sample_metadata",
                 confidence=0.84,
-                reason="SOFT 包含 SAMPLE 块、样本标题或样本 characteristics。",
+                reason="已解析 SOFT SAMPLE 块、样本标题、source_name_ch1 或 characteristics_ch1。",
                 source_section="sample_metadata",
                 source_format="geo_family_soft",
-                extra={"sample_count": scan["sample_count"]},
+                input_eligible=True,
+                evidence=tuple(str(item) for item in profile.get("sample_metadata_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth},
             )
         )
-    if scan["has_platform_annotation"]:
+    if profile.get("phenotype_candidate_fields"):
+        roles.append("phenotype_metadata")
+        assets.append(
+            _detected_asset(
+                "phenotype_metadata",
+                confidence=0.78,
+                reason="SOFT SAMPLE metadata 中提取到 treatment、genotype、tissue、disease 或 cell line 等候选表型字段。",
+                source_section="sample_metadata",
+                source_format="geo_family_soft",
+                input_eligible=True,
+                evidence=tuple(str(item) for item in profile.get("phenotype_candidate_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth, "requires_user_confirmation": True},
+            )
+        )
+    if profile.get("platform_annotation_presence"):
         roles.append("platform_annotation")
         assets.append(
             _detected_asset(
                 "platform_annotation",
                 confidence=0.82,
-                reason="SOFT 包含 PLATFORM 块或 platform table。",
+                reason="已解析 SOFT PLATFORM 块，并检测平台注释表或平台注释字段。",
                 source_section="platform_table",
                 source_format="geo_family_soft",
+                input_eligible=True,
+                evidence=tuple(profile.get("gene_id_evidence", []) or profile.get("platform_accessions", []) or ("PLATFORM block",)),
+                extra={
+                    "platform_count": profile.get("platform_count", 0),
+                    "platform_annotation_presence": bool(profile.get("platform_annotation_presence")),
+                    "parser_depth": parser_depth,
+                },
             )
         )
-    if scan["has_clinical_metadata"]:
+    if profile.get("clinical_candidate_fields"):
         roles.append("clinical_metadata")
         assets.append(
             _detected_asset(
                 "clinical_metadata",
                 confidence=0.68,
-                reason="样本 characteristics 中包含年龄、性别、组织、肿瘤/正常等临床或分组线索。",
+                reason="SOFT SAMPLE characteristics 中包含年龄、性别、分期、状态等临床候选字段。",
                 source_section="sample_characteristics",
                 source_format="geo_family_soft",
-                extra={"sample_count": scan["sample_count"]},
+                input_eligible=True,
+                evidence=tuple(str(item) for item in profile.get("clinical_candidate_fields", []) or ()),
+                extra={"sample_count": sample_count, "parser_depth": parser_depth, "requires_user_confirmation": True},
             )
         )
     if not roles:
         return None
     role_labels = "、".join(TYPE_LABELS.get(role, role) for role in roles)
-    reason = f"GEO family SOFT 容器，检测到：{role_labels}。"
+    depth_labels = {
+        "container_only": "已识别 GEO SOFT 容器",
+        "metadata_parsed": "已解析样本/平台元数据",
+        "table_detected": "检测到平台或表达表格",
+        "table_parsed": "已解析表格结构",
+    }
+    if profile.get("expression_table_presence"):
+        reason = f"GEO family SOFT 容器，{depth_labels.get(parser_depth, parser_depth)}；检测到：{role_labels}；表达表格为候选输入，需用户确认。"
+    elif profile.get("sample_count") or profile.get("platform_annotation_presence"):
+        reason = f"GEO family SOFT 容器，{depth_labels.get(parser_depth, parser_depth)}；尚未确认表达矩阵。"
+    else:
+        reason = f"GEO family SOFT 容器，{depth_labels.get(parser_depth, parser_depth)}。"
+    file_level_keys = {
+        "file_format",
+        "container_type",
+        "parser_depth",
+        "sample_count",
+        "sample_block_count",
+        "platform_count",
+        "platform_block_presence",
+        "sample_metadata_fields",
+        "phenotype_candidate_fields",
+        "platform_annotation_presence",
+        "expression_table_presence",
+        "species_evidence",
+        "gene_id_evidence",
+        "warnings",
+        "can_enter_standardization",
+        "requires_user_confirmation",
+    }
     return _classification(
         "geo_soft_container",
         reason,
@@ -810,6 +934,8 @@ def _classify_geo_soft(path: Path) -> RecognitionClassification | None:
         roles=tuple(roles),
         detected_assets=tuple(assets),
         container_format="geo_family_soft",
+        content_profile=profile,
+        file_level_details={key: profile.get(key) for key in file_level_keys},
     )
 
 
@@ -1460,7 +1586,29 @@ def _is_geo_soft_path(path: Path) -> bool:
 
 def _is_geo_series_matrix_path(path: Path) -> bool:
     name = path.name.lower()
-    return name.endswith("_series_matrix.txt") or name.endswith("_series_matrix.txt.gz") or bool(re.search(r"gse\d+.*gpl\d+.*series_matrix\.txt(?:\.gz)?$", name))
+    suffixes = _suffixes_lower(path)
+    text_like = bool(suffixes and (suffixes[-1] == ".txt" or suffixes[-2:] == [".txt", ".gz"]))
+    return (
+        ("series_matrix" in name and (name.endswith(".txt") or name.endswith(".txt.gz")))
+        or name.endswith("_series_matrix.txt")
+        or name.endswith("_series_matrix.txt.gz")
+        or bool(re.search(r"gse\d+.*gpl\d+.*series_matrix\.txt(?:\.gz)?$", name))
+        or (text_like and _file_has_geo_series_matrix_marker(path))
+    )
+
+
+def _file_has_geo_series_matrix_marker(path: Path, *, max_lines: int = 200) -> bool:
+    try:
+        with _open_text(path) as handle:
+            for index, line in enumerate(handle):
+                if index >= max_lines:
+                    break
+                stripped = line.strip()
+                if stripped.startswith("!series_matrix_table_begin") or stripped.startswith("!Series_") or stripped.startswith("!Sample_"):
+                    return True
+    except OSError:
+        return False
+    return False
 
 
 def _is_tabular_text_path(path: Path) -> bool:
@@ -1488,6 +1636,22 @@ def _species_group_from_organism(organism: str) -> str:
         return "mouse"
     if normalized == "homo sapiens" or "human" in normalized:
         return "human"
+    return ""
+
+
+def _species_from_evidence(profile: dict[str, object]) -> str:
+    evidence = profile.get("species_evidence")
+    if not isinstance(evidence, list):
+        return ""
+    for confidence in ("high", "medium", "low"):
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("confidence") or "") != confidence:
+                continue
+            species = str(item.get("species") or "").strip()
+            if species:
+                return species
     return ""
 
 
@@ -1861,6 +2025,30 @@ def _type_counts(records: list[dict[str, object]]) -> dict[str, int]:
         for key in dict.fromkeys(key for key in keys if key):
             counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def _build_input_fingerprint(paths: list[Path]) -> dict[str, object]:
+    rows: list[dict[str, object]] = []
+    for path in paths:
+        candidate = path.expanduser()
+        try:
+            stat = candidate.stat()
+        except OSError:
+            rows.append({"path": str(candidate), "exists": False})
+            continue
+        rows.append(
+            {
+                "path": str(candidate.resolve()),
+                "exists": True,
+                "size_bytes": stat.st_size,
+                "mtime_ns": stat.st_mtime_ns,
+            }
+        )
+    return {
+        "schema_version": "bioinformatics_recognition_input_fingerprint.v1",
+        "file_count": len(rows),
+        "files": rows,
+    }
 
 
 def _now() -> str:

@@ -14,8 +14,15 @@ from app.meta_analysis.services.extraction_schema_registry_v1_service import (
     ExtractionSchemaRegistryV1Service,
 )
 from app.meta_analysis.services.formal_report_service import PRISMAService
+from app.meta_analysis.services.fulltext_management_service import (
+    FULLTEXT_STATUS_FULL_TEXT_CONFIRMED,
+    FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE,
+)
 from app.meta_analysis.services.manual_extraction_effect_row_service import (
     MANUAL_EXTRACTION_MANIFEST_SCHEMA_VERSION,
+    STRUCTURED_EXTRACTION_EFFECT_MEASURES,
+    STRUCTURED_EXTRACTION_EVIDENCE_STATES,
+    STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION,
     ManualExtractionEffectRowService,
 )
 from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
@@ -274,3 +281,159 @@ def test_manual_extraction_page_state_exposes_effect_row_workspace(tmp_path: Pat
     assert state.editor.dynamic_data_fields == ("tp", "fp", "fn", "tn")
     assert "完成本行提取" in state.primary_actions
     assert state.safety_flags["creates_analysis_ready_dataset"] is False
+
+
+def test_structured_extraction_creates_schema_row_from_confirmed_fulltext(tmp_path: Path) -> None:
+    _seed_fulltext_management(tmp_path, status=FULLTEXT_STATUS_FULL_TEXT_CONFIRMED)
+    service = ManualExtractionEffectRowService()
+
+    eligible = service.literature_records_for_extraction(tmp_path)
+    result = service.create_structured_extraction_row(
+        tmp_path,
+        record_id=eligible[0]["record_id"],
+        fields={
+            "study_id": "study-1",
+            "title": "Confirmed full text trial",
+            "first_author": "Zhang",
+            "year": "2025",
+            "country_or_region": "China",
+            "study_design": "RCT",
+            "population": "Adults",
+            "sample_size_total": "120",
+            "intervention_or_exposure": "Treatment",
+            "comparator": "Control",
+            "outcome": "Response",
+            "effect_measure_type": "OR",
+            "effect_estimate": "1.8",
+            "ci_lower": "1.1",
+            "ci_upper": "2.9",
+        },
+        actor="reviewer",
+    )
+    row = service.load_structured_extraction_table(tmp_path)[0]
+
+    assert eligible[0]["extraction_source"] == "full_text_confirmed"
+    assert result.success
+    assert row["m5_schema_version"] == STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION
+    assert row["m5_structured_fields"]["study_id"] == "study-1"
+    assert row["m5_structured_fields"]["effect_measure_type"] == "OR"
+    assert row["evidence_state"] == "draft"
+    assert row["m5_field_states"]["effect_estimate"] == "draft"
+    assert row["analysis_ready"] is False
+
+
+def test_structured_extraction_validation_rules() -> None:
+    service = ManualExtractionEffectRowService()
+
+    validation = service.validate_structured_extraction_fields(
+        {
+            "study_id": "study-1",
+            "outcome": "Response",
+            "effect_measure_type": "BAD",
+            "effect_estimate": "not-number",
+            "ci_lower": "3",
+            "ci_upper": "2",
+            "sample_size_total": "-1",
+        },
+        evidence_state="confirmed",
+    )
+
+    assert validation["validation_status"] == "invalid"
+    assert "效应量类型不支持：effect_measure_type" in validation["errors"]
+    assert "数值无效：effect_estimate" in validation["errors"]
+    assert "数值无效：ci_lower 不能大于 ci_upper" in validation["errors"]
+    assert "数值不能为负：sample_size_total" in validation["errors"]
+    assert set(STRUCTURED_EXTRACTION_EFFECT_MEASURES) >= {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"}
+
+
+def test_structured_extraction_suggestion_is_not_confirmed_until_user_confirms(tmp_path: Path) -> None:
+    service = ManualExtractionEffectRowService()
+
+    suggested = service.create_structured_extraction_row(
+        tmp_path,
+        fields={"study_id": "study-1", "outcome": "Response", "effect_measure_type": "RR", "effect_estimate": "1.2", "ci_lower": "1.0", "ci_upper": "1.5"},
+        evidence_state="suggested",
+        field_states={"effect_estimate": "suggested"},
+        actor="model",
+    )
+    row = service.load_structured_extraction_table(tmp_path)[0]
+
+    assert suggested.success
+    assert row["evidence_state"] == "suggested"
+    assert row["m5_field_states"]["effect_estimate"] == "suggested"
+    assert row["extraction_status"] == "draft"
+    assert "confirmed" in STRUCTURED_EXTRACTION_EVIDENCE_STATES
+    assert not any(event.target_type == "data_extraction_final" for event in MetaResearchGovernanceService().list_events(tmp_path))
+
+
+def test_structured_extraction_confirmation_requires_identity_and_effect(tmp_path: Path) -> None:
+    service = ManualExtractionEffectRowService()
+    incomplete = service.create_structured_extraction_row(tmp_path, fields={"study_id": "study-1"}, actor="reviewer")
+
+    blocked = service.confirm_structured_extraction_row(tmp_path, effect_row_id=incomplete.payload["effect_row_id"], actor="reviewer")
+    completed = service.update_structured_extraction_row(
+        tmp_path,
+        effect_row_id=incomplete.payload["effect_row_id"],
+        fields={"outcome": "Response", "effect_measure_type": "OR", "effect_estimate": "1.4", "ci_lower": "1.1", "ci_upper": "1.8"},
+        actor="reviewer",
+    )
+    confirmed = service.confirm_structured_extraction_row(tmp_path, effect_row_id=incomplete.payload["effect_row_id"], actor="reviewer")
+    row = service.load_structured_extraction_table(tmp_path)[0]
+
+    assert not blocked.success
+    assert "确认提取行需要至少一个结局或效应量字段。" in blocked.diagnostics["errors"]
+    assert completed.success
+    assert confirmed.success
+    assert confirmed.payload["evidence_state"] == "confirmed"
+    assert row["m5_field_states"]["effect_estimate"] == "confirmed"
+    assert row["extraction_status"] == "completed_by_user"
+    assert row["analysis_ready"] is False
+
+
+def test_structured_extraction_persistence_readback_and_unavailable_manual_source(tmp_path: Path) -> None:
+    _seed_fulltext_management(tmp_path, record_id="rec-unavailable", title="Unavailable full text", status=FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE)
+    service = ManualExtractionEffectRowService()
+
+    eligible = service.literature_records_for_extraction(tmp_path)
+    service.create_structured_extraction_row(
+        tmp_path,
+        record_id="rec-unavailable",
+        fields={"study_id": "study-unavailable", "title": "Unavailable full text", "outcome": "Mortality", "effect_measure_type": "other", "notes": "Manual extraction allowed by reviewer."},
+        actor="reviewer",
+    )
+    reloaded = ManualExtractionEffectRowService().load_structured_extraction_table(tmp_path)
+
+    assert eligible[0]["extraction_source"] == "manual_full_text_unavailable"
+    assert len(reloaded) == 1
+    assert reloaded[0]["m5_structured_fields"]["study_id"] == "study-unavailable"
+    assert reloaded[0]["m5_structured_fields"]["effect_measure_type"] == "other"
+
+
+def _seed_fulltext_management(
+    project_dir: Path,
+    *,
+    record_id: str = "rec-1",
+    title: str = "Confirmed full text trial",
+    status: str = FULLTEXT_STATUS_FULL_TEXT_CONFIRMED,
+) -> None:
+    path = project_dir / "fulltext" / "fulltext_management_registry_v1.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "meta_fulltext_management_registry.v1",
+                "records": [
+                    {
+                        "record_id": record_id,
+                        "title": title,
+                        "authors": "Zhang Wei",
+                        "first_author": "Zhang",
+                        "year": "2025",
+                        "journal": "Journal A",
+                        "fulltext_status": status,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )

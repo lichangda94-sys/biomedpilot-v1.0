@@ -30,6 +30,7 @@ class AcquisitionSummary:
     plan_path: Path
     record_path: Path
     handoff_path: Path
+    source_files: tuple[str, ...]
     registered_files: tuple[str, ...]
     copied_files: tuple[str, ...]
     referenced_paths: tuple[str, ...]
@@ -84,6 +85,7 @@ def register_acquisition(
         "strategy": strategy,
         "created_at": created_at,
         "status": "planned" if strategy == "plan_only" else "registered",
+        "source_files": registered_files,
         "registered_files": registered_files,
         "copied_files": copied_files,
         "referenced_paths": referenced_paths,
@@ -99,6 +101,7 @@ def register_acquisition(
         "created_at": created_at,
         "next_stage": "data_recognition" if strategy != "plan_only" and not warnings else "complete_acquisition_inputs",
         "raw_data_locations": _raw_locations(root),
+        "source_files": registered_files,
         "registered_files": registered_files,
         "copied_files": copied_files,
         "referenced_paths": referenced_paths,
@@ -172,6 +175,7 @@ def acquisition_summary_from_payload(
         plan_path=plan_path,
         record_path=record_path,
         handoff_path=handoff_path,
+        source_files=tuple(str(item) for item in record.get("source_files", record.get("registered_files", [])) or []),
         registered_files=tuple(str(item) for item in record.get("registered_files", []) or []),
         copied_files=tuple(str(item) for item in record.get("copied_files", []) or []),
         referenced_paths=tuple(str(item) for item in record.get("referenced_paths", []) or []),

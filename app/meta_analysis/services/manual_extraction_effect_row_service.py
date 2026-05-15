@@ -16,6 +16,11 @@ from app.meta_analysis.services.extraction_schema_registry_v1_service import (
     SURVIVAL_OUTCOME_META,
     ExtractionSchemaRegistryV1Service,
 )
+from app.meta_analysis.services.fulltext_management_service import (
+    FULLTEXT_STATUS_FULL_TEXT_CONFIRMED,
+    FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE,
+    FullTextManagementService,
+)
 from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
 from app.meta_analysis.services.research_governance_service import MetaResearchGovernanceService
 
@@ -26,6 +31,141 @@ EXTRACTION_EFFECT_ROW_SCHEMA_VERSION = "meta_extraction_effect_row.v1"
 EXTRACTION_EVIDENCE_REF_SCHEMA_VERSION = "meta_extraction_evidence_ref.v1"
 EXTRACTION_VALIDATION_REPORT_SCHEMA_VERSION = "meta_extraction_validation_report.v1"
 EXTRACTION_AUDIT_SCHEMA_VERSION = "meta_extraction_audit_event.v1"
+STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION = "meta_structured_extraction_table.v1"
+
+STRUCTURED_EXTRACTION_STUDY_FIELDS = (
+    "study_id",
+    "title",
+    "first_author",
+    "year",
+    "country_or_region",
+    "study_design",
+    "population",
+    "sample_size_total",
+    "sample_size_case",
+    "sample_size_control",
+    "intervention_or_exposure",
+    "comparator",
+    "outcome",
+    "follow_up_duration",
+    "notes",
+)
+STRUCTURED_EXTRACTION_EFFECT_FIELDS = (
+    "effect_measure_type",
+    "effect_estimate",
+    "ci_lower",
+    "ci_upper",
+    "standard_error",
+    "p_value",
+    "events_case",
+    "total_case",
+    "events_control",
+    "total_control",
+    "mean_case",
+    "sd_case",
+    "mean_control",
+    "sd_control",
+    "correlation_coefficient",
+    "diagnostic_tp",
+    "diagnostic_fp",
+    "diagnostic_fn",
+    "diagnostic_tn",
+)
+STRUCTURED_EXTRACTION_FIELDS = (*STRUCTURED_EXTRACTION_STUDY_FIELDS, *STRUCTURED_EXTRACTION_EFFECT_FIELDS)
+STRUCTURED_EXTRACTION_EFFECT_MEASURES = (
+    "OR",
+    "RR",
+    "HR",
+    "MD",
+    "SMD",
+    "proportion",
+    "correlation",
+    "diagnostic_accuracy",
+    "other",
+)
+STRUCTURED_EXTRACTION_EVIDENCE_STATES = (
+    "empty",
+    "draft",
+    "suggested",
+    "user_accepted",
+    "user_edited",
+    "confirmed",
+    "rejected",
+)
+STRUCTURED_EXTRACTION_NUMERIC_FIELDS = (
+    "year",
+    "sample_size_total",
+    "sample_size_case",
+    "sample_size_control",
+    "effect_estimate",
+    "ci_lower",
+    "ci_upper",
+    "standard_error",
+    "p_value",
+    "events_case",
+    "total_case",
+    "events_control",
+    "total_control",
+    "mean_case",
+    "sd_case",
+    "mean_control",
+    "sd_control",
+    "correlation_coefficient",
+    "diagnostic_tp",
+    "diagnostic_fp",
+    "diagnostic_fn",
+    "diagnostic_tn",
+)
+STRUCTURED_EXTRACTION_NON_NEGATIVE_FIELDS = (
+    "sample_size_total",
+    "sample_size_case",
+    "sample_size_control",
+    "events_case",
+    "total_case",
+    "events_control",
+    "total_control",
+    "diagnostic_tp",
+    "diagnostic_fp",
+    "diagnostic_fn",
+    "diagnostic_tn",
+)
+
+STRUCTURED_EXTRACTION_FIELD_LABELS_ZH = {
+    "study_id": "研究 ID",
+    "title": "题名",
+    "first_author": "第一作者",
+    "year": "年份",
+    "country_or_region": "国家/地区",
+    "study_design": "研究设计",
+    "population": "研究对象",
+    "sample_size_total": "总样本量",
+    "sample_size_case": "病例/干预组样本量",
+    "sample_size_control": "对照组样本量",
+    "intervention_or_exposure": "干预/暴露",
+    "comparator": "对照",
+    "outcome": "结局",
+    "follow_up_duration": "随访时间",
+    "notes": "备注",
+    "effect_measure_type": "效应量类型",
+    "effect_estimate": "效应值",
+    "ci_lower": "CI 下限",
+    "ci_upper": "CI 上限",
+    "standard_error": "标准误",
+    "p_value": "P 值",
+    "events_case": "病例/干预组事件数",
+    "total_case": "病例/干预组总数",
+    "events_control": "对照组事件数",
+    "total_control": "对照组总数",
+    "mean_case": "病例/干预组均值",
+    "sd_case": "病例/干预组 SD",
+    "mean_control": "对照组均值",
+    "sd_control": "对照组 SD",
+    "correlation_coefficient": "相关系数",
+    "diagnostic_tp": "诊断 TP",
+    "diagnostic_fp": "诊断 FP",
+    "diagnostic_fn": "诊断 FN",
+    "diagnostic_tn": "诊断 TN",
+}
 
 DATA_INPUT_MODES = (
     "raw_group_data",
@@ -141,10 +281,15 @@ class ManualExtractionEffectRowService:
         research_governance: MetaResearchGovernanceService | None = None,
         literature_library: LiteratureLibraryService | None = None,
         schema_registry: ExtractionSchemaRegistryV1Service | None = None,
+        fulltext_management: FullTextManagementService | None = None,
     ) -> None:
         self._audit_log = audit_log or MetaAuditLogService()
         self._governance = research_governance or MetaResearchGovernanceService(audit_log=self._audit_log)
         self._literature_library = literature_library or LiteratureLibraryService(audit_log=self._audit_log)
+        self._fulltext_management = fulltext_management or FullTextManagementService(
+            audit_log=self._audit_log,
+            research_governance=self._governance,
+        )
         self._schema_registry = schema_registry or ExtractionSchemaRegistryV1Service(
             audit_log=self._audit_log,
             research_governance=self._governance,
@@ -609,6 +754,182 @@ class ManualExtractionEffectRowService:
         self.validate_effect_rows(project_dir, project_id=project_dir.name)
         return ManualExtractionCsvResult(True, project_dir.name, str(csv_path), imported_count, diagnostics, "CSV imported as extraction drafts.")
 
+    def create_structured_extraction_row(
+        self,
+        project_dir: Path,
+        *,
+        fields: dict[str, Any],
+        actor: str = "reviewer",
+        field_states: dict[str, str] | None = None,
+        evidence_state: str = "draft",
+        record_id: str = "",
+    ) -> ManualExtractionWriteResult:
+        project_dir = project_dir.expanduser().resolve()
+        normalized = _structured_fields(fields)
+        field_states = _structured_field_states(normalized, field_states)
+        evidence_state = _validate_choice(evidence_state, STRUCTURED_EXTRACTION_EVIDENCE_STATES, "structured_extraction_evidence_state")
+        validation = self.validate_structured_extraction_fields(normalized, evidence_state=evidence_state)
+        record_id = record_id or str(normalized.get("record_id") or normalized.get("study_id") or f"structured-{uuid4().hex[:8]}")
+        unit_result = self.create_study_unit(
+            project_dir,
+            record_id=record_id,
+            study_unit_label=str(normalized.get("study_id") or normalized.get("title") or "结构化提取研究"),
+            actor=actor,
+            country_or_region=str(normalized.get("country_or_region", "")),
+            study_design=str(normalized.get("study_design", "")),
+            sample_size=normalized.get("sample_size_total"),
+            population_description=str(normalized.get("population", "")),
+        )
+        data_input_mode = _structured_data_input_mode(normalized)
+        effect_result = self.create_effect_row(
+            project_dir,
+            study_unit_id=str(unit_result.payload["study_unit_id"]),
+            actor=actor,
+            schema_meta_type=_structured_schema_meta_type(normalized),
+            data_input_mode=data_input_mode,
+            comparison_label=_comparison_label(normalized),
+            group_1_label="case/intervention",
+            group_2_label="control/comparator",
+            outcome_name=str(normalized.get("outcome", "")),
+            data_fields=_structured_data_fields(normalized),
+            evidence_note=str(normalized.get("notes", "")),
+            analysis_role="primary_effect_candidate",
+            extraction_status="draft",
+            analysis_eligibility="not_assessed",
+        )
+        updates = {
+            "m5_schema_version": STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION,
+            "m5_structured_fields": normalized,
+            "m5_field_states": field_states,
+            "evidence_state": evidence_state,
+            "diagnostics": validation["diagnostics"],
+            "warnings": validation["warnings"],
+        }
+        result = self._update_effect_row(
+            project_dir,
+            effect_row_id=str(effect_result.payload["effect_row_id"]),
+            updates=updates,
+            actor=actor,
+            workflow_action=evidence_state if evidence_state != "draft" else "draft_saved",
+            status_override=None,
+            governance_action="edit",
+            summary="Structured extraction row saved.",
+        )
+        payload = dict(result.payload)
+        payload["m5_validation"] = validation
+        return self._result(project_dir, "structured_extraction_row", str(payload["effect_row_id"]), self.effect_rows_path(project_dir), "Structured extraction row saved.", payload, validation)
+
+    def update_structured_extraction_row(
+        self,
+        project_dir: Path,
+        *,
+        effect_row_id: str,
+        fields: dict[str, Any],
+        actor: str = "reviewer",
+        field_states: dict[str, str] | None = None,
+        evidence_state: str = "user_edited",
+    ) -> ManualExtractionWriteResult:
+        current = _find_by_id(self.load_effect_rows(project_dir), "effect_row_id", effect_row_id)
+        if current is None:
+            raise ValueError(f"effect_row_not_found:{effect_row_id}")
+        previous_fields = dict(current.get("m5_structured_fields", {}) if isinstance(current.get("m5_structured_fields"), dict) else {})
+        previous_fields.update(_structured_fields(fields))
+        previous_states = dict(current.get("m5_field_states", {}) if isinstance(current.get("m5_field_states"), dict) else {})
+        merged_states = _structured_field_states(previous_fields, {**previous_states, **dict(field_states or {})}, default_state=evidence_state)
+        evidence_state = _validate_choice(evidence_state, STRUCTURED_EXTRACTION_EVIDENCE_STATES, "structured_extraction_evidence_state")
+        validation = self.validate_structured_extraction_fields(previous_fields, evidence_state=evidence_state)
+        result = self._update_effect_row(
+            project_dir,
+            effect_row_id=effect_row_id,
+            updates={
+                "m5_schema_version": STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION,
+                "m5_structured_fields": previous_fields,
+                "m5_field_states": merged_states,
+                "evidence_state": evidence_state,
+                "outcome_name": str(previous_fields.get("outcome", current.get("outcome_name", ""))),
+                **_structured_data_updates(previous_fields),
+            },
+            actor=actor,
+            workflow_action=evidence_state,
+            status_override=None,
+            governance_action="edit",
+            summary="Structured extraction row edited.",
+        )
+        payload = dict(result.payload)
+        payload["m5_validation"] = validation
+        return self._result(project_dir, "structured_extraction_row", effect_row_id, self.effect_rows_path(project_dir), "Structured extraction row edited.", payload, validation)
+
+    def confirm_structured_extraction_row(
+        self,
+        project_dir: Path,
+        *,
+        effect_row_id: str,
+        actor: str = "reviewer",
+    ) -> ManualExtractionWriteResult:
+        row = _find_by_id(self.load_effect_rows(project_dir), "effect_row_id", effect_row_id)
+        if row is None:
+            raise ValueError(f"effect_row_not_found:{effect_row_id}")
+        fields = dict(row.get("m5_structured_fields", {}) if isinstance(row.get("m5_structured_fields"), dict) else {})
+        validation = self.validate_structured_extraction_fields(fields, evidence_state="confirmed")
+        if validation["errors"]:
+            return self._failure_result(project_dir, "structured_extraction_row", effect_row_id, "Structured extraction row cannot be confirmed.", validation)
+        field_states = _structured_field_states(fields, dict(row.get("m5_field_states", {}) if isinstance(row.get("m5_field_states"), dict) else {}), default_state="confirmed")
+        field_states = {**field_states, **{field: ("empty" if not _has_value(fields.get(field)) else "confirmed") for field in STRUCTURED_EXTRACTION_FIELDS}}
+        result = self._update_effect_row(
+            project_dir,
+            effect_row_id=effect_row_id,
+            updates={"evidence_state": "confirmed", "m5_field_states": field_states, "m5_validation": validation, "completed_by_user": True},
+            actor=actor,
+            workflow_action="confirmed",
+            status_override="completed_by_user",
+            governance_action="confirm",
+            summary="Structured extraction row confirmed by user.",
+        )
+        payload = dict(result.payload)
+        payload["m5_validation"] = validation
+        return self._result(project_dir, "structured_extraction_row", effect_row_id, self.effect_rows_path(project_dir), "Structured extraction row confirmed by user.", payload, validation)
+
+    def load_structured_extraction_table(self, project_dir: Path) -> list[dict[str, Any]]:
+        rows = []
+        for row in self.load_effect_rows(project_dir):
+            if row.get("m5_schema_version") == STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION:
+                rows.append(dict(row))
+        return rows
+
+    def validate_structured_extraction_fields(self, fields: dict[str, Any], *, evidence_state: str = "draft") -> dict[str, Any]:
+        normalized = _structured_fields(fields)
+        diagnostics: list[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
+        for field in STRUCTURED_EXTRACTION_NUMERIC_FIELDS:
+            if _has_value(normalized.get(field)) and _optional_float(normalized.get(field)) is None:
+                errors.append(f"数值无效：{field}")
+        for field in STRUCTURED_EXTRACTION_NON_NEGATIVE_FIELDS:
+            value = _optional_float(normalized.get(field))
+            if value is not None and value < 0:
+                errors.append(f"数值不能为负：{field}")
+        low = _optional_float(normalized.get("ci_lower"))
+        high = _optional_float(normalized.get("ci_upper"))
+        if low is not None and high is not None and low > high:
+            errors.append("数值无效：ci_lower 不能大于 ci_upper")
+        effect_type = str(normalized.get("effect_measure_type", "")).strip()
+        if effect_type and effect_type not in STRUCTURED_EXTRACTION_EFFECT_MEASURES:
+            errors.append("效应量类型不支持：effect_measure_type")
+        if evidence_state == "confirmed":
+            if not _has_study_identity(normalized):
+                errors.append("确认提取行需要 study identity。")
+            if not _has_meaningful_effect(normalized):
+                errors.append("确认提取行需要至少一个结局或效应量字段。")
+        diagnostics.extend(errors)
+        return {
+            "schema_version": STRUCTURED_EXTRACTION_TABLE_SCHEMA_VERSION,
+            "validation_status": "invalid" if errors else "valid_with_warnings" if warnings else "valid",
+            "errors": errors,
+            "diagnostics": diagnostics,
+            "warnings": warnings,
+            "evidence_state": evidence_state,
+        }
+
     def load_study_units(self, project_dir: Path) -> list[dict[str, Any]]:
         return _items_from_payload(_load_json(self.study_units_path(project_dir)), "study_units")
 
@@ -646,11 +967,44 @@ class ManualExtractionEffectRowService:
         }
 
     def literature_records_for_extraction(self, project_dir: Path) -> list[dict[str, Any]]:
-        final_included = _load_json(project_dir.expanduser().resolve() / "fulltext" / "final_included_studies.json")
+        project_dir = project_dir.expanduser().resolve()
+        confirmed_fulltext = [
+            {
+                "record_id": record.record_id,
+                "title": record.title,
+                "authors": record.authors,
+                "first_author": _first_author_text(record.authors),
+                "year": record.year,
+                "journal": record.journal,
+                "fulltext_status": record.fulltext_status,
+                "extraction_source": "full_text_confirmed",
+            }
+            for record in self._fulltext_management.list_records(project_dir)
+            if record.fulltext_status == FULLTEXT_STATUS_FULL_TEXT_CONFIRMED
+        ]
+        if confirmed_fulltext:
+            return confirmed_fulltext
+        final_included = _load_json(project_dir / "fulltext" / "final_included_studies.json")
         rows = final_included.get("included_studies", []) if isinstance(final_included, dict) else []
         if isinstance(rows, list) and rows:
-            return [dict(item) for item in rows if isinstance(item, dict)]
-        return self._literature_library.list_records(project_dir)
+            return [{**dict(item), "extraction_source": "final_included_studies"} for item in rows if isinstance(item, dict)]
+        unavailable = [
+            {
+                "record_id": record.record_id,
+                "title": record.title,
+                "authors": record.authors,
+                "first_author": _first_author_text(record.authors),
+                "year": record.year,
+                "journal": record.journal,
+                "fulltext_status": record.fulltext_status,
+                "extraction_source": "manual_full_text_unavailable",
+            }
+            for record in self._fulltext_management.list_records(project_dir)
+            if record.fulltext_status == FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE
+        ]
+        if unavailable:
+            return unavailable
+        return [{**record, "extraction_source": "manual_library_fallback"} for record in self._literature_library.list_records(project_dir)]
 
     def _update_effect_row(
         self,
@@ -919,6 +1273,28 @@ class ManualExtractionEffectRowService:
             diagnostics=diagnostics or {},
         )
 
+    def _failure_result(
+        self,
+        project_dir: Path,
+        target_type: str,
+        target_id: str,
+        message: str,
+        diagnostics: dict[str, Any],
+    ) -> ManualExtractionWriteResult:
+        return ManualExtractionWriteResult(
+            success=False,
+            project_id=project_dir.expanduser().resolve().name,
+            target_id=target_id,
+            target_type=target_type,
+            output_path=str(self.effect_rows_path(project_dir)),
+            manifest_path=str(self.manifest_path(project_dir)),
+            validation_report_path=str(self.validation_report_path(project_dir)),
+            audit_path=str(self.extraction_audit_path(project_dir)),
+            message=message,
+            payload={},
+            diagnostics=diagnostics,
+        )
+
 
 def _merge_effect_row_updates(row: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
     merged = dict(row)
@@ -934,6 +1310,110 @@ def _merge_effect_row_updates(row: dict[str, Any], updates: dict[str, Any]) -> d
         else:
             merged[key] = value
     return merged
+
+
+def _structured_fields(fields: dict[str, Any]) -> dict[str, Any]:
+    return {field: fields.get(field, "") for field in STRUCTURED_EXTRACTION_FIELDS if _has_value(fields.get(field))}
+
+
+def _structured_field_states(
+    fields: dict[str, Any],
+    field_states: dict[str, str] | None,
+    *,
+    default_state: str = "draft",
+) -> dict[str, str]:
+    default_state = _validate_choice(default_state, STRUCTURED_EXTRACTION_EVIDENCE_STATES, "structured_extraction_evidence_state")
+    states = dict(field_states or {})
+    normalized: dict[str, str] = {}
+    for field in STRUCTURED_EXTRACTION_FIELDS:
+        state = str(states.get(field) or ("empty" if not _has_value(fields.get(field)) else default_state)).strip()
+        normalized[field] = state if state in STRUCTURED_EXTRACTION_EVIDENCE_STATES else default_state
+    return normalized
+
+
+def _structured_data_input_mode(fields: dict[str, Any]) -> str:
+    if any(_has_value(fields.get(field)) for field in ("effect_estimate", "ci_lower", "ci_upper", "standard_error", "p_value", "correlation_coefficient")):
+        return "reported_effect_size"
+    if any(_has_value(fields.get(field)) for field in ("events_case", "total_case", "events_control", "total_control", "mean_case", "sd_case", "mean_control", "sd_control", "diagnostic_tp", "diagnostic_fp", "diagnostic_fn", "diagnostic_tn")):
+        return "raw_group_data"
+    return "manual_note_only"
+
+
+def _structured_schema_meta_type(fields: dict[str, Any]) -> str:
+    effect_type = str(fields.get("effect_measure_type", "")).strip()
+    if effect_type == "diagnostic_accuracy" or any(_has_value(fields.get(field)) for field in ("diagnostic_tp", "diagnostic_fp", "diagnostic_fn", "diagnostic_tn")):
+        return DIAGNOSTIC_ACCURACY_META_V1
+    if effect_type in {"MD", "SMD"} or any(_has_value(fields.get(field)) for field in ("mean_case", "sd_case", "mean_control", "sd_control")):
+        return CONTINUOUS_OUTCOME_META
+    if effect_type == "HR":
+        return SURVIVAL_OUTCOME_META
+    return BINARY_OUTCOME_META
+
+
+def _structured_data_fields(fields: dict[str, Any]) -> dict[str, Any]:
+    data = {
+        "effect_measure": fields.get("effect_measure_type", ""),
+        "effect_value": fields.get("effect_estimate", ""),
+        "ci_low": fields.get("ci_lower", ""),
+        "ci_high": fields.get("ci_upper", ""),
+        "p_value": fields.get("p_value", ""),
+        "group_1_n": fields.get("total_case", fields.get("sample_size_case", "")),
+        "group_1_events": fields.get("events_case", ""),
+        "group_2_n": fields.get("total_control", fields.get("sample_size_control", "")),
+        "group_2_events": fields.get("events_control", ""),
+        "group_1_mean": fields.get("mean_case", ""),
+        "group_1_sd": fields.get("sd_case", ""),
+        "group_2_mean": fields.get("mean_control", ""),
+        "group_2_sd": fields.get("sd_control", ""),
+        "tp": fields.get("diagnostic_tp", ""),
+        "fp": fields.get("diagnostic_fp", ""),
+        "fn": fields.get("diagnostic_fn", ""),
+        "tn": fields.get("diagnostic_tn", ""),
+        "manual_note": fields.get("notes", ""),
+    }
+    return {key: value for key, value in data.items() if _has_value(value)}
+
+
+def _structured_data_updates(fields: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_meta_type": _structured_schema_meta_type(fields),
+        "data_input_mode": _structured_data_input_mode(fields),
+        "comparison_label": _comparison_label(fields),
+        "raw_group_data": _pick(_structured_data_fields(fields), RAW_GROUP_FIELDS),
+        "reported_effect_size": _pick(_structured_data_fields(fields), REPORTED_EFFECT_FIELDS),
+        "manual_note": str(fields.get("notes", "")),
+    }
+
+
+def _comparison_label(fields: dict[str, Any]) -> str:
+    left = str(fields.get("intervention_or_exposure", "")).strip()
+    right = str(fields.get("comparator", "")).strip()
+    if left and right:
+        return f"{left} vs {right}"
+    return left or right
+
+
+def _has_study_identity(fields: dict[str, Any]) -> bool:
+    if _has_value(fields.get("study_id")):
+        return True
+    return _has_value(fields.get("title")) or (_has_value(fields.get("first_author")) and _has_value(fields.get("year")))
+
+
+def _has_meaningful_effect(fields: dict[str, Any]) -> bool:
+    if _has_value(fields.get("outcome")) and any(_has_value(fields.get(field)) for field in STRUCTURED_EXTRACTION_EFFECT_FIELDS):
+        return True
+    return any(_has_value(fields.get(field)) for field in ("events_case", "events_control", "mean_case", "mean_control", "diagnostic_tp", "diagnostic_tn", "effect_estimate", "correlation_coefficient"))
+
+
+def _first_author_text(authors: object) -> str:
+    if isinstance(authors, (list, tuple)):
+        return str(authors[0]) if authors else ""
+    text = str(authors or "").strip()
+    if "," in text:
+        return text.split(",", 1)[0].strip()
+    if "；" in text:
+        return text.split("；", 1)[0].strip()
+    return text
 
 
 def _numeric_diagnostics(mode: str, raw: dict[str, Any], reported: dict[str, Any]) -> list[str]:

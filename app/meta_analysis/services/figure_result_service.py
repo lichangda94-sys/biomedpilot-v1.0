@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.meta_analysis.models.analysis_result import AnalysisResult
+from app.meta_analysis.models.statistical_result_state import blocks_formal_report_claim, statistical_result_state_label_zh
 from app.meta_analysis.models.figures import (
     FigureArtifact,
     figure_artifact_from_dict,
@@ -60,6 +61,10 @@ class FigureResultService:
                 "study_count": len(result.study_results),
                 "i_squared": result.i_squared,
                 "tau_squared": result.tau_squared,
+                "result_state": result.result_state,
+                "result_state_label_zh": statistical_result_state_label_zh(result.result_state),
+                "testing_level": result.testing_level,
+                "blocks_formal_report_claim": blocks_formal_report_claim(result),
             },
         )
         self.save_figure_artifact(project_dir, artifact)

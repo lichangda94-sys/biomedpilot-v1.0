@@ -28,7 +28,7 @@ QUALITY_TOOL_REGISTRY: dict[str, QualityToolDefinition] = {
     "NOS": QualityToolDefinition(
         tool_name="NOS",
         domains=("selection", "comparability", "outcome_or_exposure"),
-        judgement_options=("low risk", "moderate risk", "high risk", "unclear"),
+        judgement_options=("low_risk_or_good", "unclear", "high_risk_or_poor", "not_assessed"),
         recommended_profiles=("BIOMARKER_PREVALENCE_ASSOCIATION_META", "PROGNOSTIC_FACTOR_META"),
         output_summary_fields=("overall_judgement", "selection", "comparability", "outcome_or_exposure"),
     ),

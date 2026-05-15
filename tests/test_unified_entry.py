@@ -9,6 +9,7 @@ def test_dashboard_model_loads() -> None:
     assert "Bioinformatics Analysis" in dashboard.product_subtitle
     assert dashboard.bioinformatics_features
     assert dashboard.meta_analysis_features
+    assert dashboard.labtools_features
 
 
 def test_unified_entry_console_smoke() -> None:
@@ -16,3 +17,10 @@ def test_unified_entry_console_smoke() -> None:
 
     assert callable(main)
 
+
+def test_unified_entry_ignores_launchservices_psn_argument() -> None:
+    from app.main import parse_args
+
+    args = parse_args(["-psn_0_12345", "--smoke-test"])
+
+    assert args.smoke_test is True

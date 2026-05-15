@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import json
 import plistlib
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,8 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert result.mode == "local-python-launcher"
     assert result.app_version == "0.1.0-internal-beta"
     assert result.code_signed is (sys.platform == "darwin")
+    if shutil.which("codesign"):
+        assert result.signing_status == "ad_hoc_signed"
     assert result.app_path.exists()
     assert result.launcher_path.exists()
     assert result.build_info_path.exists()
@@ -82,6 +85,8 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
+    if shutil.which("codesign"):
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
 
 
 def test_packaged_launcher_ignores_launchservices_process_serial_number(tmp_path) -> None:

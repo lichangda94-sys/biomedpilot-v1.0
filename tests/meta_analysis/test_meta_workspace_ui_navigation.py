@@ -13,7 +13,7 @@ from app.meta_analysis.project_workspace import META_PROJECT_DIRECTORIES, create
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QComboBox, QFrame, QLabel, QLineEdit, QPlainTextEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QFrame, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -35,6 +35,10 @@ def _visible_text(widget) -> str:
             value = child.text()
             if value:
                 texts.append(value)
+    for child in widget.findChildren(QListWidget):
+        if child.isVisibleTo(widget):
+            for index in range(child.count()):
+                texts.append(child.item(index).text())
     return "\n".join(texts)
 
 
@@ -99,9 +103,362 @@ def test_meta_workspace_widget_mounts_project_sidebar_and_home(qt_app, tmp_path:
         "metaLiteratureAcquisitionPage",
         "metaTitleAbstractScreeningPage",
         "metaManualExtractionPage",
-        "metaStatisticsAnalysisPage",
+        "metaAnalysisPlanPage",
         "metaReportExportPage",
     } <= mounted_pages
+
+
+def test_meta_screening_workspace_renders_chinese_user_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
+    from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("Screening Workspace", tmp_path)
+    LiteratureLibraryService().import_records(
+        summary.project_root,
+        project_id="screening-workspace",
+        source_type="nbib",
+        source_name="PubMed",
+        raw_records=[
+            {
+                "record_id": "lit-screen-1",
+                "title": "Trial of treatment for hypertension",
+                "abstract": "Adults with hypertension were randomized to treatment or usual care.",
+                "authors": ["Zhang Wei", "Li Ming"],
+                "journal": "Journal A",
+                "year": "2024",
+                "database_source": "PubMed",
+            }
+        ],
+    )
+    TitleAbstractScreeningV2Service().build_queue(summary.project_root, project_id="screening-workspace")
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("screening_review")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "文献筛选" in visible
+    assert "标题摘要筛选" in visible
+    assert "当前文献库" in visible
+    assert "当前 PRISMA 计数" in visible
+    assert "排除原因" in visible
+    assert "下一步：全文管理" in visible
+    assert {"未筛选", "纳入", "排除", "不确定", "需要全文", "重置为未筛选"} <= set(combos["metaScreeningWorkspaceDecisionSelector"])
+    assert {"研究对象不符合", "干预/暴露不符合", "对照不符合", "结局不符合", "研究类型不符合", "重复文献", "非原始研究", "全文不可获取", "语言或获取限制", "其他"} <= set(combos["metaScreeningWorkspaceReasonSelector"])
+    assert str(summary.project_root) not in visible
+    assert "title_abstract_queue_v2.json" not in visible
+    assert "manifest" not in visible
+    assert "raw JSON" not in visible
+
+
+def test_meta_fulltext_management_workspace_renders_chinese_user_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("全文管理 Meta", tmp_path, research_topic="降压治疗")
+    screening_path = summary.project_root / "screening" / "screening_decisions.json"
+    screening_path.parent.mkdir(parents=True, exist_ok=True)
+    screening_path.write_text(
+        json.dumps(
+            {
+                "screening_records": [
+                    {
+                        "record_id": "ft-rec-1",
+                        "decision": "need_full_text",
+                        "title": "Full text needed trial",
+                        "authors": ["Zhang Wei"],
+                        "journal": "Journal A",
+                        "year": "2025",
+                        "database_source": "PubMed",
+                    },
+                    {
+                        "record_id": "ft-rec-2",
+                        "decision": "include",
+                        "title": "Included trial",
+                        "authors": ["Li Ming"],
+                        "journal": "Journal B",
+                        "year": "2024",
+                        "database_source": "Embase",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    pdf = summary.project_root / "uploaded.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%test\n")
+    service = FullTextManagementService()
+    service.build_registry_from_screening(summary.project_root, project_id="fulltext-workspace")
+    service.attach_pdf(summary.project_root, record_id="ft-rec-1", source_file_path=str(pdf), actor="reviewer")
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("screening_review")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "全文管理" in visible
+    assert "全文筛选" in visible
+    assert "全文状态" in visible
+    assert "上传全文" in visible
+    assert "标记无法获取" in visible
+    assert "全文确认" in visible
+    assert "下一步：数据提取" in visible
+    assert "已登记全文文件" in visible
+    assert {"暂不需要全文", "需要全文", "已上传全文", "全文待检查", "全文已确认", "全文不可获取", "全文已排除"} <= set(combos["metaFulltextStatusSelector"])
+    assert {"全文不可获取", "研究对象不符合", "干预/暴露不符合", "对照不符合", "结局不符合", "研究类型不符合", "全文阶段发现重复", "数据不足", "其他"} <= set(combos["metaFulltextReasonSelector"])
+    assert str(summary.project_root) not in visible
+    assert "fulltext_management_registry_v1.json" not in visible
+    assert "manifest" not in visible
+    assert "raw JSON" not in visible
+    assert "ft-rec-1" not in visible
+
+
+def test_meta_extraction_workspace_renders_structured_table_without_raw_internals(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("数据提取 Meta", tmp_path, research_topic="降压治疗")
+    registry_path = summary.project_root / "fulltext" / "fulltext_management_registry_v1.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "meta_fulltext_management_registry.v1",
+                "records": [
+                    {
+                        "record_id": "extract-rec-1",
+                        "title": "Confirmed extraction trial",
+                        "authors": "Zhang Wei",
+                        "year": "2025",
+                        "journal": "Journal A",
+                        "fulltext_status": "full_text_confirmed",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("manual_extraction")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "数据提取" in visible
+    assert "研究基本信息" in visible
+    assert "PICO/PECO" in visible
+    assert "效应量数据" in visible
+    assert "统计字段" in visible
+    assert "提取状态" in visible
+    assert "用户确认" in visible
+    assert "下一步：质量评价" in visible
+    assert "Confirmed extraction trial" in visible
+    assert {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"} <= set(combos["metaExtractionEffectMeasureSelector"])
+    assert {"空", "草稿", "建议", "用户接受", "用户编辑", "已确认", "已拒绝"} <= set(combos["metaExtractionEvidenceStateSelector"])
+    assert str(summary.project_root) not in visible
+    assert "extraction_manifest.json" not in visible
+    assert "raw JSON" not in visible
+    assert "extract-rec-1" not in visible
+
+
+def test_meta_quality_workspace_renders_chinese_nos_controls_without_raw_internals(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("质量评价 Meta", tmp_path, research_topic="队列研究")
+    extraction_path = summary.project_root / "extraction" / "extraction_effect_rows.json"
+    extraction_path.parent.mkdir(parents=True, exist_ok=True)
+    extraction_path.write_text(
+        json.dumps(
+            {
+                "effect_rows": [
+                    {
+                        "effect_row_id": "effect-internal-1",
+                        "record_id": "quality-rec-1",
+                        "study_unit_id": "unit-internal-1",
+                        "study_unit_label": "Study One",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-quality-1",
+                            "title": "Quality cohort study",
+                            "first_author": "Zhang",
+                            "year": "2025",
+                            "study_design": "observational cohort",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("manual_extraction")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "质量评价" in visible
+    assert "偏倚风险" in visible
+    assert "评价工具" in visible
+    assert "评价维度" in visible
+    assert "评价理由" in visible
+    assert "总体判断" in visible
+    assert "已确认" in visible
+    assert "下一步：分析计划" in visible
+    assert "Quality cohort study" in visible
+    assert any(item.startswith("NOS") for item in combos["metaQualityToolSelector"])
+    assert {"未评价", "低风险/较好", "不明确", "高风险/较差"} <= set(combos["metaQualityOverallSelector"])
+    assert {"草稿", "建议", "用户接受", "用户编辑", "已确认", "已拒绝"} <= set(combos["metaQualityStateSelector"])
+    assert str(summary.project_root) not in visible
+    assert "quality_assessment_records_v1.json" not in visible
+    assert "raw JSON" not in visible
+    assert "quality-rec-1" not in visible
+    assert "effect-internal-1" not in visible
+
+
+def test_meta_analysis_plan_workspace_renders_chinese_confirmation_controls_without_raw_internals(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("分析计划 Meta", tmp_path, research_topic="治疗研究")
+    pico = PICOWorkspaceService()
+    pico.generate_draft(summary.project_root, "糖皮质激素治疗成人肺炎是否降低死亡率", pico_mode="pico")
+    pico.confirm_protocol(
+        summary.project_root,
+        actor="reviewer",
+        confirmed_meta_type="treatment_comparative_meta",
+        overrides={
+            "confirmed_population": "成人肺炎患者",
+            "confirmed_intervention_or_exposure": "糖皮质激素",
+            "confirmed_comparator": "常规治疗",
+            "confirmed_outcomes": ("死亡率",),
+            "confirmed_study_design": "randomized trial",
+        },
+    )
+    extraction_path = summary.project_root / "extraction" / "extraction_effect_rows.json"
+    extraction_path.parent.mkdir(parents=True, exist_ok=True)
+    extraction_path.write_text(
+        json.dumps(
+            {
+                "effect_rows": [
+                    {
+                        "effect_row_id": "effect-internal-plan-1",
+                        "record_id": "plan-rec-1",
+                        "study_unit_id": "unit-internal-plan-1",
+                        "study_unit_label": "Plan Study",
+                        "extraction_status": "completed_by_user",
+                        "evidence_state": "confirmed",
+                        "m5_structured_fields": {
+                            "study_id": "study-plan-1",
+                            "title": "Plan trial",
+                            "first_author": "Wang",
+                            "year": "2026",
+                            "outcome": "死亡率",
+                            "effect_measure_type": "OR",
+                            "effect_estimate": "1.2",
+                            "ci_lower": "1.0",
+                            "ci_upper": "1.5",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("statistics_analysis")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+    combos = {
+        child.objectName(): [child.itemText(index) for index in range(child.count())]
+        for child in current.findChildren(QComboBox)
+    }
+
+    assert "分析计划" in visible
+    assert "研究类型" in visible
+    assert "效应量类型" in visible
+    assert "固定效应" in visible
+    assert "随机效应" in visible
+    assert "异质性" in visible
+    assert "亚组分析" in visible
+    assert "敏感性分析" in visible
+    assert "发表偏倚" in visible
+    assert "纳入研究数量" in visible
+    assert "确认分析计划" in visible
+    assert "下一步：结果与报告" in visible
+    assert "效应量标准化预检查" in visible
+    assert "Pairwise executor" in visible
+    assert "统计结果审核" in visible
+    assert "刷新效应量标准化预检查" in visible
+    assert "运行 pairwise executor" in visible
+    assert "接受进入报告草稿" in visible
+    assert "标记需要修订" in visible
+    assert "不纳入报告" in visible
+    assert "申请报告就绪" in visible
+    assert current.findChild(QCheckBox, "metaResultWarningAcknowledgement") is not None
+    assert {"OR", "RR", "HR", "MD", "SMD", "proportion", "correlation", "diagnostic_accuracy", "other"} <= set(combos["metaAnalysisPlanEffectMeasureSelector"])
+    assert {"固定效应", "随机效应", "固定效应 + 随机效应", "暂不决定"} <= set(combos["metaAnalysisPlanModelPreferenceSelector"])
+    assert str(summary.project_root) not in visible
+    assert "analysis_plan_manifest_v1.json" not in visible
+    assert "raw JSON" not in visible
+    assert "plan-rec-1" not in visible
+    assert "effect-internal-plan-1" not in visible
+    assert "unit-internal-plan-1" not in visible
+
+
+def test_meta_report_workspace_renders_m8_draft_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    summary = create_meta_analysis_project("报告草稿 Meta", tmp_path, research_topic="报告草稿")
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("report_export")
+    widget.show()
+    qt_app.processEvents()
+    current = _current_step_widget(widget)
+    visible = _visible_text(current)
+
+    assert "报告导出" in visible
+    assert "生成报告草稿" in visible
+    assert "打开报告位置" in visible
+    assert "报告状态" in visible
+    assert "缺失内容提示" in visible
+    assert "统计分析结果尚未作为正式可发表结论生成" in visible
+    assert str(summary.project_root) not in visible
+    assert "formal_meta_report.md" not in visible
+    assert "raw JSON" not in visible
 
 
 def test_meta_workspace_blocks_pico_entry_until_project_exists(qt_app) -> None:

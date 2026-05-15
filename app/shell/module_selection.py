@@ -38,6 +38,7 @@ class ModuleEntryCard(QFrame):
 class ModuleSelectionWidget(QWidget):
     open_bioinformatics_requested = Signal()
     open_meta_analysis_requested = Signal()
+    open_labtools_requested = Signal()
     logout_requested = Signal()
 
     def __init__(
@@ -47,6 +48,7 @@ class ModuleSelectionWidget(QWidget):
         session: LocalSession | None = None,
         on_open_bioinformatics: Callable[[], None] | None = None,
         on_open_meta_analysis: Callable[[], None] | None = None,
+        on_open_labtools: Callable[[], None] | None = None,
         on_logout: Callable[[], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
@@ -60,6 +62,8 @@ class ModuleSelectionWidget(QWidget):
             self.open_bioinformatics_requested.connect(on_open_bioinformatics)
         if on_open_meta_analysis is not None:
             self.open_meta_analysis_requested.connect(on_open_meta_analysis)
+        if on_open_labtools is not None:
+            self.open_labtools_requested.connect(on_open_labtools)
         if on_logout is not None:
             self.logout_requested.connect(on_logout)
         self.set_session(session)
@@ -120,6 +124,17 @@ class ModuleSelectionWidget(QWidget):
                 object_name="metaModuleButton",
                 icon_key="meta_analysis",
                 callback=self.open_meta_analysis_requested.emit,
+            )
+        )
+        module_row.addWidget(
+            self._module_card(
+                title="实验工具模块",
+                english_title="LabTools Module",
+                description="本地实验计算器、试剂配方草稿和 manual ROI 图像辅助分析；细胞计数、灰度/墨值和实验模板仍为开发中。",
+                button_text="进入实验工具模块",
+                object_name="labToolsModuleButton",
+                icon_key="labtools",
+                callback=self.open_labtools_requested.emit,
             )
         )
 

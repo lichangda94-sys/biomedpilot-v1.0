@@ -329,6 +329,7 @@ def _nav_stage_label(title: str) -> str:
 try:
     from PySide6.QtWidgets import (
         QApplication,
+        QCheckBox,
         QComboBox,
         QFileDialog,
         QFrame,
@@ -350,7 +351,7 @@ try:
     )
     from PySide6.QtCore import Qt
 except Exception:  # pragma: no cover
-    QApplication = QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
+    QApplication = QCheckBox = QComboBox = QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QListWidget = QListWidgetItem = QMessageBox = QPlainTextEdit = QPushButton = QScrollArea = QStackedWidget = QTableWidget = QTableWidgetItem = QTextEdit = QVBoxLayout = QWidget = None
     Qt = None
 
 
@@ -367,7 +368,18 @@ if QWidget is not None:
         DedupReviewV2Service,
     )
     from app.meta_analysis.services.ai_assisted_extraction_queue_service import AIAssistedExtractionQueueService
-    from app.meta_analysis.services.analysis_plan_service import AnalysisPlanService
+    from app.meta_analysis.services.analysis_plan_service import (
+        ANALYSIS_PLAN_EFFECT_MEASURE_TYPES,
+        ANALYSIS_PLAN_MODEL_PREFERENCES,
+        ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH,
+        AnalysisPlanService,
+    )
+    from app.meta_analysis.models.result_review import result_review_label_zh
+    from app.meta_analysis.models.statistical_result_state import (
+        STATISTICAL_RESULT_STATE_NOT_RUN,
+        statistical_result_state_label_zh,
+    )
+    from app.meta_analysis.services.effect_size_normalization_service import EffectSizeNormalizationService
     from app.meta_analysis.services.exclusion_criteria_library_service import (
         FULL_TEXT_STAGE,
         TITLE_ABSTRACT_STAGE,
@@ -377,18 +389,44 @@ if QWidget is not None:
     from app.meta_analysis.services.formal_report_service import FormalMarkdownReportBuilder, PRISMAService
     from app.meta_analysis.services.fulltext_eligibility_service import FullTextEligibilityService
     from app.meta_analysis.services.fulltext_management_service import (
+        FULLTEXT_EXCLUSION_REASON_LABELS_ZH,
+        FULLTEXT_EXCLUSION_REASONS_M4C,
         FULLTEXT_MANAGEMENT_STATUSES,
+        FULLTEXT_STATUS_FULL_TEXT_CONFIRMED,
+        FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE,
+        FULLTEXT_STATUS_LABELS_ZH,
         FullTextManagementService,
     )
     from app.meta_analysis.services.fulltext_parsing_service import FullTextParsingService
     from app.meta_analysis.services.literature_library_service import LiteratureLibraryService
     from app.meta_analysis.services.manual_extraction_effect_row_service import ManualExtractionEffectRowService
+    from app.meta_analysis.services.manual_extraction_effect_row_service import (
+        STRUCTURED_EXTRACTION_EFFECT_MEASURES,
+        STRUCTURED_EXTRACTION_EVIDENCE_STATES,
+        STRUCTURED_EXTRACTION_FIELD_LABELS_ZH,
+    )
     from app.meta_analysis.services.meta_statistics_engine_service import MetaStatisticsEngineService
     from app.meta_analysis.services.multisource_literature_import_service import MultiSourceLiteratureImportService
+    from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
     from app.meta_analysis.services.pico_workspace_service import PICOWorkspaceService
     from app.meta_analysis.services.publication_export_service import PublicationExportService
     from app.meta_analysis.services.quality_service import QualityAssessmentService
-    from app.meta_analysis.services.title_abstract_screening_v2_service import TitleAbstractScreeningV2Service
+    from app.meta_analysis.services.quality_service import (
+        NOS_DOMAIN_LABELS_ZH,
+        NOS_DOMAINS,
+        QUALITY_M6_STATE_LABELS_ZH,
+        QUALITY_RATING_LABELS_ZH,
+    )
+    from app.meta_analysis.services.result_review_service import StatisticalResultReviewService
+    from app.meta_analysis.services.title_abstract_screening_v2_service import (
+        DECISION_EXCLUDE,
+        DECISION_INCLUDE,
+        DECISION_NEED_FULL_TEXT,
+        DECISION_NOT_SCREENED,
+        DECISION_UNCERTAIN,
+        EXCLUSION_REASON_LABELS_ZH,
+        TitleAbstractScreeningV2Service,
+    )
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -640,7 +678,7 @@ if QWidget is not None:
             if step.route_key == "manual_extraction":
                 return _manual_extraction_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("statistics_analysis"))
             if step.route_key == "statistics_analysis":
-                return _statistics_analysis_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
+                return _analysis_plan_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("report_export"))
             if step.route_key == "report_export":
                 return _report_export_page(project_dir, on_refresh=self._rebuild_pages, on_next=lambda: self.show_step("workflow_home"))
             return _placeholder_step_page(step)
@@ -1485,19 +1523,24 @@ if QWidget is not None:
 
     def _dedup_review_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         service = DedupReviewV2Service()
+        screening_service = TitleAbstractScreeningV2Service()
         queue = service.load_queue(project_dir)
         groups = list(queue.groups)
         decisions_payload = _load_json_object(service.decisions_path(project_dir))
         decisions = _items_from_payload(decisions_payload, "decisions")
         decisions_by_group = {str(item.get("group_id", "")): str(item.get("decision", "")) for item in decisions}
         deduplicated_payload = _load_json_object(service.deduplicated_set_path(project_dir))
-        screening_queue = TitleAbstractScreeningV2Service().load_queue(project_dir)
+        screening_queue = screening_service.load_queue(project_dir)
+        screening_records = _items_from_payload(screening_queue, "queue_records")
+        screening_decisions = _items_from_payload(_load_json_object(screening_service.decisions_path(project_dir)), "screening_records")
+        screening_decisions_by_record = {str(item.get("record_id", "")): item for item in screening_decisions}
+        screening_summary = screening_service.screening_summary(project_dir)
         prisma_summary = PRISMAService().collect_literature_acquisition_summary(project_dir)
         frame = QFrame()
         frame.setObjectName("metaTitleAbstractScreeningPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("去重与筛选", "人工检查重复文献，准备标题摘要筛选队列。", "人工复核"))
+        layout.addWidget(_page_header("文献筛选", "去重后逐篇完成标题摘要筛选；AI/规则只作为 suggestion。", "人工复核"))
         risk_counts: dict[str, int] = {}
         for group in groups:
             risk_counts[group.risk_level] = risk_counts.get(group.risk_level, 0) + 1
@@ -1527,7 +1570,7 @@ if QWidget is not None:
         generate_deduped.setObjectName("metaPrimaryButton")
         build_screening_queue = QPushButton("创建标题摘要筛选队列")
         build_screening_queue.setObjectName("metaPrimaryButton")
-        next_button = QPushButton("下一步：数据提取与质量评价")
+        next_button = QPushButton("下一步：全文管理")
         next_button.setObjectName("metaSecondaryButton")
         action_row = QHBoxLayout()
         action_row.addWidget(build_queue)
@@ -1592,6 +1635,94 @@ if QWidget is not None:
         right_layout.addWidget(log_detail)
         content_row.addWidget(right_panel, 2)
         layout.addLayout(content_row)
+
+        screening_card = _card("标题摘要筛选")
+        screening_card.setObjectName("metaScreeningWorkspaceCard")
+        screening_layout = screening_card.layout()
+        screening_layout.addWidget(
+            _info_card(
+                "当前 PRISMA 计数",
+                [
+                    f"导入文献数：{screening_summary.imported_total}",
+                    f"去重后文献数：{screening_summary.after_dedup_total}",
+                    f"标题摘要筛选未筛选：{screening_summary.title_abstract_unscreened}",
+                    f"标题摘要筛选纳入：{screening_summary.title_abstract_included}",
+                    f"标题摘要筛选排除：{screening_summary.title_abstract_excluded}",
+                    f"不确定：{screening_summary.title_abstract_uncertain}",
+                    f"需要全文：{screening_summary.full_text_needed}",
+                    f"全文筛选纳入：{screening_summary.full_text_included}",
+                    f"全文筛选排除：{screening_summary.full_text_excluded}",
+                ],
+                object_name="metaScreeningPrismaCounts",
+            )
+        )
+        screening_content = QHBoxLayout()
+        screening_record_list = QListWidget()
+        screening_record_list.setObjectName("metaScreeningWorkspaceRecordList")
+        screening_record_list.setMinimumWidth(360)
+        for record in screening_records:
+            decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
+            decision_label = _screening_decision_label(str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED))
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(record.get("title") or "Untitled"),
+                        " · ".join(
+                            part
+                            for part in (
+                                _first_author(record),
+                                str(record.get("year") or ""),
+                                str(record.get("journal") or ""),
+                                decision_label,
+                            )
+                            if part
+                        ),
+                    ]
+                )
+            )
+            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
+            screening_record_list.addItem(item)
+        screening_content.addWidget(screening_record_list, 1)
+        screening_panel = _card("当前文献库")
+        screening_panel_layout = screening_panel.layout()
+        screening_detail = QTextEdit()
+        screening_detail.setObjectName("metaScreeningWorkspaceRecordDetail")
+        screening_detail.setReadOnly(True)
+        screening_decision = QComboBox()
+        screening_decision.setObjectName("metaScreeningWorkspaceDecisionSelector")
+        for label, value in (
+            ("未筛选", DECISION_NOT_SCREENED),
+            ("纳入", DECISION_INCLUDE),
+            ("排除", DECISION_EXCLUDE),
+            ("不确定", DECISION_UNCERTAIN),
+            ("需要全文", DECISION_NEED_FULL_TEXT),
+            ("重置为未筛选", "reset_to_unscreened"),
+        ):
+            screening_decision.addItem(label, value)
+        screening_reason = QComboBox()
+        screening_reason.setObjectName("metaScreeningWorkspaceReasonSelector")
+        screening_reason.addItem("排除原因", "")
+        for code, label in EXCLUSION_REASON_LABELS_ZH.items():
+            screening_reason.addItem(label, code)
+        screening_notes = QPlainTextEdit()
+        screening_notes.setObjectName("metaScreeningWorkspaceNotes")
+        screening_notes.setPlaceholderText("筛选备注；AI/规则建议需人工接受或编辑后才生效")
+        screening_notes.setMaximumHeight(86)
+        save_screening_decision = QPushButton("保存筛选决定")
+        save_screening_decision.setObjectName("metaPrimaryButton")
+        screening_panel_layout.addWidget(QLabel("文献信息"))
+        screening_panel_layout.addWidget(screening_detail)
+        screening_panel_layout.addWidget(QLabel("筛选决策"))
+        screening_panel_layout.addWidget(screening_decision)
+        screening_panel_layout.addWidget(QLabel("排除原因"))
+        screening_panel_layout.addWidget(screening_reason)
+        screening_panel_layout.addWidget(screening_notes)
+        screening_panel_layout.addWidget(save_screening_decision)
+        screening_content.addWidget(screening_panel, 2)
+        screening_layout.addLayout(screening_content)
+        screening_layout.addWidget(QLabel("下一步：全文管理"))
+        layout.addWidget(screening_card)
+        layout.addWidget(_fulltext_management_page(project_dir, on_refresh=on_refresh, on_next=on_next))
         layout.addWidget(_developer_details(f"queue_path={service.review_queue_path(project_dir)}\ndecisions_path={service.decisions_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -1659,19 +1790,56 @@ if QWidget is not None:
             if not service.deduplicated_set_path(project_dir).exists() and groups and not skipped_all:
                 _show_message("请先生成去重后文献库，或将重复组标记为稍后处理。")
                 return
-            result = TitleAbstractScreeningV2Service().build_queue(project_dir, project_id=project_dir.name)
+            result = screening_service.build_queue(project_dir, project_id=project_dir.name)
             _show_message(f"筛选队列已创建：{result.record_count} 篇。")
+            on_refresh()
+
+        def selected_screening_record_id() -> str:
+            item = screening_record_list.currentItem()
+            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+
+        def refresh_screening_detail(index: int = 0) -> None:
+            if index < 0 or index >= len(screening_records):
+                screening_detail.setPlainText("暂无待筛选文献。")
+                return
+            record = screening_records[index]
+            decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
+            screening_detail.setPlainText(_screening_record_user_detail(record, decision_payload))
+
+        def do_save_screening_decision() -> None:
+            record_id = selected_screening_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            selected_decision = str(screening_decision.currentData() or DECISION_NOT_SCREENED)
+            selected_reason = str(screening_reason.currentData() or "")
+            if selected_decision == DECISION_EXCLUDE and not selected_reason:
+                _show_message("排除必须选择排除原因")
+                return
+            result = screening_service.save_decision(
+                project_dir,
+                record_id=record_id,
+                decision=selected_decision,
+                actor="reviewer",
+                exclusion_reason_code=selected_reason,
+                notes=screening_notes.toPlainText(),
+            )
+            _show_message(result.message)
             on_refresh()
 
         group_list.currentRowChanged.connect(refresh_group_detail)
         record_selector.currentIndexChanged.connect(update_preview)
+        screening_record_list.currentRowChanged.connect(refresh_screening_detail)
         build_queue.clicked.connect(do_build_queue)
         save_decision.clicked.connect(do_save_decision)
         generate_deduped.clicked.connect(do_generate_deduped)
         build_screening_queue.clicked.connect(do_build_screening_queue)
+        save_screening_decision.clicked.connect(do_save_screening_decision)
         next_button.clicked.connect(on_next)
         group_list.setCurrentRow(0 if groups else -1)
         refresh_group_detail(group_list.currentRow())
+        screening_record_list.setCurrentRow(0 if screening_records else -1)
+        refresh_screening_detail(screening_record_list.currentRow())
         return frame
 
 
@@ -1857,24 +2025,44 @@ if QWidget is not None:
     def _fulltext_management_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         management = FullTextManagementService()
         eligibility = FullTextEligibilityService()
-        parser = FullTextParsingService()
         records = list(management.list_records(project_dir))
         candidates = list(eligibility.build_candidates_from_screening(project_dir))
         decisions = list(eligibility.load_eligibility_decisions(project_dir))
+        candidates_by_id = {candidate.record_id: candidate for candidate in candidates}
+        summary = management.summary_counts(project_dir)
         frame = QFrame()
         frame.setObjectName("metaFulltextManagementPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("全文管理与全文筛选", "PDF/链接/解析状态和人工全文资格决定。", "人工决定"))
-        layout.addWidget(_info_card("全文摘要", [f"管理记录：{len(records)}", f"全文候选：{len(candidates)}", f"资格决定：{len(decisions)}", "不自动提取数据，不推进定量分析。"], object_name="metaFulltextSummary"))
+        layout.addWidget(_page_header("全文管理", "全文筛选、全文状态、上传全文和用户确认。", "Developer Preview / testing"))
+        layout.addWidget(
+            _info_card(
+                "全文状态",
+                [
+                    f"当前全文候选：{len(candidates)}",
+                    f"全文管理记录：{len(records)}",
+                    f"全文筛选决定：{len(decisions)}",
+                    f"需要全文：{summary['full_text_needed']}",
+                    f"已上传全文：{summary['full_text_uploaded']}",
+                    f"全文待检查：{summary['full_text_pending_review']}",
+                    f"全文已确认：{summary['full_text_confirmed']}",
+                    f"全文不可获取：{summary['full_text_unavailable']}",
+                    f"全文已排除：{summary['full_text_excluded']}",
+                    f"可进入提取：{summary['ready_for_extraction']}",
+                    "全文解析或模型提示只作为 suggested，不会自动成为确认提取证据。",
+                ],
+                object_name="metaFulltextSummary",
+            )
+        )
         buttons = QHBoxLayout()
         build_registry = QPushButton("建立全文队列")
-        attach_pdf = QPushButton("绑定 PDF")
-        parse_pdf = QPushButton("解析全文")
+        attach_pdf = QPushButton("上传全文")
+        mark_unavailable = QPushButton("标记无法获取")
+        confirm_fulltext = QPushButton("全文确认")
         save_status = QPushButton("保存全文状态")
         save_eligibility = QPushButton("保存全文筛选")
         next_button = QPushButton("下一步：数据提取")
-        for button in (build_registry, attach_pdf, parse_pdf, save_status, save_eligibility, next_button):
+        for button in (build_registry, attach_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_registry.setObjectName("metaPrimaryButton")
@@ -1886,26 +2074,53 @@ if QWidget is not None:
         for record in source_records:
             record_id = getattr(record, "record_id", "")
             title = getattr(record, "title", "")
+            candidate = candidates_by_id.get(record_id)
+            author_year = _author_year_text(getattr(record, "authors", "") or getattr(candidate, "authors", ""), getattr(record, "year", "") or getattr(candidate, "year", ""))
+            journal = getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录"
+            screening_decision = getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"
             status = getattr(record, "fulltext_status", getattr(record, "eligibility_status", ""))
-            item = QListWidgetItem(f"{title or record_id}\n{record_id} · {status}")
+            status_label = FULLTEXT_STATUS_LABELS_ZH.get(status, status or "未记录")
+            file_label = management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件"
+            exclusion_reason = getattr(record, "fulltext_exclusion_reason", "") or getattr(record, "unavailable_reason", "") or getattr(candidate, "exclusion_reason", "")
+            reason_label = FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(exclusion_reason, "无全文排除原因")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        title or "未命名文献",
+                        f"{author_year} · {journal}",
+                        f"标题摘要决定：{_screening_decision_label(screening_decision)} · 全文状态：{status_label}",
+                        f"{file_label} · 排除原因：{reason_label}",
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, record_id)
             record_list.addItem(item)
         layout.addWidget(record_list)
-        form = _card("人工状态")
+        form = _card("人工全文状态")
         form_layout = form.layout()
         fulltext_status = QComboBox()
+        fulltext_status.setObjectName("metaFulltextStatusSelector")
         for status in FULLTEXT_MANAGEMENT_STATUSES:
-            fulltext_status.addItem(status, status)
+            fulltext_status.addItem(FULLTEXT_STATUS_LABELS_ZH.get(status, status), status)
         eligibility_status = QComboBox()
+        eligibility_status.setObjectName("metaFulltextEligibilitySelector")
         for status in ("available_online", "local_pdf_linked", "local_pdf_copied", "missing_full_text", "manual_review_required", "excluded_after_full_text_review", "included_for_extraction"):
             eligibility_status.addItem(status, status)
-        fulltext_reason = QLineEdit()
-        fulltext_reason.setPlaceholderText("全文不可得或排除理由")
+        fulltext_reason = QComboBox()
+        fulltext_reason.setObjectName("metaFulltextReasonSelector")
+        for reason in FULLTEXT_EXCLUSION_REASONS_M4C:
+            fulltext_reason.addItem(FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(reason, reason), reason)
+        notes = QLineEdit()
+        notes.setPlaceholderText("备注（可选，不作为确认提取证据）")
+        form_layout.addWidget(QLabel("全文状态"))
         form_layout.addWidget(fulltext_status)
+        form_layout.addWidget(QLabel("全文筛选"))
         form_layout.addWidget(eligibility_status)
+        form_layout.addWidget(QLabel("排除原因"))
         form_layout.addWidget(fulltext_reason)
+        form_layout.addWidget(notes)
         layout.addWidget(form)
-        layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nparsed_dir={parser.parsed_dir(project_dir)}"))
+        layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nrecords={len(records)}\ncandidates={len(candidates)}"))
         layout.addStretch(1)
 
         def selected_record_id() -> str:
@@ -1924,20 +2139,26 @@ if QWidget is not None:
                 return
             filename, _ = QFileDialog.getOpenFileName(frame, "选择 PDF", str(project_dir), "PDF (*.pdf);;All files (*)")
             if filename:
-                result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer")
+                result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer", notes=notes.text())
                 _show_message(result.message)
                 on_refresh()
 
-        def do_parse_pdf() -> None:
+        def do_mark_unavailable() -> None:
             record_id = selected_record_id()
             if not record_id:
                 _show_message("请选择文献")
                 return
-            try:
-                result = parser.parse_record(project_dir, record_id=record_id)
-                _show_message(result.message)
-            except Exception as exc:
-                _show_message(str(exc))
+            result = management.mark_unavailable(project_dir, record_id=record_id, reason=str(fulltext_reason.currentData()), actor="reviewer", notes=notes.text())
+            _show_message(result.message)
+            on_refresh()
+
+        def do_confirm_fulltext() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            result = management.update_status(project_dir, record_id=record_id, status=FULLTEXT_STATUS_FULL_TEXT_CONFIRMED, actor="reviewer", notes=notes.text())
+            _show_message(result.message)
             on_refresh()
 
         def do_save_status() -> None:
@@ -1945,7 +2166,11 @@ if QWidget is not None:
             if not record_id:
                 _show_message("请选择文献")
                 return
-            result = management.update_status(project_dir, record_id=record_id, status=str(fulltext_status.currentData()), actor="reviewer", notes=fulltext_reason.text())
+            status = str(fulltext_status.currentData())
+            if status == FULLTEXT_STATUS_FULL_TEXT_UNAVAILABLE:
+                result = management.mark_unavailable(project_dir, record_id=record_id, reason=str(fulltext_reason.currentData()), actor="reviewer", notes=notes.text())
+            else:
+                result = management.update_status(project_dir, record_id=record_id, status=status, actor="reviewer", notes=notes.text())
             _show_message(result.message)
             on_refresh()
 
@@ -1959,14 +2184,15 @@ if QWidget is not None:
                 record_id=record_id,
                 eligibility_status=str(eligibility_status.currentData()),
                 reviewer_id="reviewer",
-                exclusion_reason=fulltext_reason.text(),
+                exclusion_reason=str(fulltext_reason.currentData()),
             )
             _show_message(result.message)
             on_refresh()
 
         build_registry.clicked.connect(do_build_registry)
         attach_pdf.clicked.connect(do_attach_pdf)
-        parse_pdf.clicked.connect(do_parse_pdf)
+        mark_unavailable.clicked.connect(do_mark_unavailable)
+        confirm_fulltext.clicked.connect(do_confirm_fulltext)
         save_status.clicked.connect(do_save_status)
         save_eligibility.clicked.connect(do_save_eligibility)
         next_button.clicked.connect(on_next)
@@ -1975,27 +2201,42 @@ if QWidget is not None:
 
     def _manual_extraction_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         service = ManualExtractionEffectRowService()
-        library = LiteratureLibraryService()
-        records = library.list_records(project_dir)
+        records = service.literature_records_for_extraction(project_dir)
         units = service.load_study_units(project_dir)
         rows = service.load_effect_rows(project_dir)
+        structured_rows = service.load_structured_extraction_table(project_dir)
         validation = _load_json_object(service.validation_report_path(project_dir))
         frame = QFrame()
         frame.setObjectName("metaManualExtractionPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("数据提取与质量评价", "逐篇文献提取数据，并由用户完成质量评价。", "草稿"))
-        layout.addWidget(_info_card("提取概览", [f"文献：{len(records)}", f"study unit：{len(units)}", f"effect row：{len(rows)}", f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}", "completed_by_user 不等于 analysis-ready。"], object_name="metaExtractionSummary"))
+        layout.addWidget(_page_header("数据提取", "结构化录入研究基本信息、PICO/PECO、效应量数据和统计字段。", "人工确认"))
+        layout.addWidget(
+            _info_card(
+                "提取状态",
+                [
+                    f"可提取文献：{len(records)}",
+                    f"study unit：{len(units)}",
+                    f"effect row：{len(rows)}",
+                    f"结构化提取行：{len(structured_rows)}",
+                    f"缺失关键字段：{validation.get('missing_required_fields_count', 0)}",
+                    "用户确认不会运行正式统计分析。",
+                ],
+                object_name="metaExtractionSummary",
+            )
+        )
         action_row = QHBoxLayout()
         create_unit = QPushButton("新建 study unit")
         create_row = QPushButton("新建提取行")
+        save_structured = QPushButton("保存结构化草稿")
         complete_row = QPushButton("完成本行提取")
+        confirm_structured = QPushButton("用户确认")
         mark_missing = QPushButton("标记缺失数据")
         export_template = QPushButton("导出空模板 CSV")
         export_current = QPushButton("导出当前 CSV")
         import_csv = QPushButton("导入 CSV 草稿")
-        next_button = QPushButton("下一步：统计分析")
-        for button in (create_unit, create_row, complete_row, mark_missing, export_template, export_current, import_csv, next_button):
+        next_button = QPushButton("下一步：质量评价")
+        for button in (create_unit, create_row, save_structured, complete_row, confirm_structured, mark_missing, export_template, export_current, import_csv, next_button):
             button.setObjectName("metaSecondaryButton")
             action_row.addWidget(button)
         create_unit.setObjectName("metaPrimaryButton")
@@ -2005,25 +2246,127 @@ if QWidget is not None:
         record_list = QListWidget()
         record_list.setObjectName("metaExtractionRecordList")
         for record in records:
-            item = QListWidgetItem(f"{record.get('first_author') or record.get('title') or record.get('record_id')} · {record.get('year', '')}")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(record.get("title") or "未命名文献"),
+                        " · ".join(part for part in (str(record.get("first_author") or ""), str(record.get("year") or ""), _extraction_source_label(str(record.get("extraction_source") or ""))) if part),
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
             record_list.addItem(item)
         unit_list = QListWidget()
         unit_list.setObjectName("metaStudyUnitList")
         for unit in units:
-            item = QListWidgetItem(f"{unit.get('study_unit_label') or unit.get('study_unit_id')}\n{unit.get('record_id', '')}")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(unit.get("study_unit_label") or "未命名 study unit"),
+                        " · ".join(part for part in (str(unit.get("study_design") or ""), str(unit.get("country_or_region") or "")) if part),
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(unit.get("study_unit_id", "")))
             unit_list.addItem(item)
         row_list = QListWidget()
         row_list.setObjectName("metaEffectRowList")
         for row in rows:
-            item = QListWidgetItem(f"{row.get('outcome_name') or row.get('effect_row_id')}\n{row.get('data_input_mode', '')} · {row.get('validation_status', '')}")
+            structured = dict(row.get("m5_structured_fields", {}) if isinstance(row.get("m5_structured_fields"), dict) else {})
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        str(structured.get("outcome") or row.get("outcome_name") or "待填写结局"),
+                        f"{structured.get('effect_measure_type') or row.get('data_input_mode', '')} · {_evidence_state_label(str(row.get('evidence_state') or row.get('extraction_status') or 'draft'))}",
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(row.get("effect_row_id", "")))
             row_list.addItem(item)
         lists.addWidget(record_list)
         lists.addWidget(unit_list)
         lists.addWidget(row_list)
         layout.addLayout(lists)
+
+        structured_card = _card("结构化提取表")
+        structured_layout = structured_card.layout()
+        structured_layout.addWidget(QLabel("研究基本信息"))
+        study_id_input = QLineEdit()
+        title_input = QLineEdit()
+        first_author_input = QLineEdit()
+        year_input = QLineEdit()
+        country_input = QLineEdit()
+        design_input = QLineEdit()
+        population_input = QLineEdit()
+        sample_total_input = QLineEdit()
+        for field_name, widget in (
+            ("study_id", study_id_input),
+            ("title", title_input),
+            ("first_author", first_author_input),
+            ("year", year_input),
+            ("country_or_region", country_input),
+            ("study_design", design_input),
+            ("population", population_input),
+            ("sample_size_total", sample_total_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        structured_layout.addWidget(QLabel("PICO/PECO"))
+        intervention_input = QLineEdit()
+        comparator_input = QLineEdit()
+        outcome_input = QLineEdit()
+        follow_up_input = QLineEdit()
+        for field_name, widget in (
+            ("intervention_or_exposure", intervention_input),
+            ("comparator", comparator_input),
+            ("outcome", outcome_input),
+            ("follow_up_duration", follow_up_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        structured_layout.addWidget(QLabel("效应量数据"))
+        effect_type = QComboBox()
+        effect_type.setObjectName("metaExtractionEffectMeasureSelector")
+        for measure in STRUCTURED_EXTRACTION_EFFECT_MEASURES:
+            effect_type.addItem(measure, measure)
+        structured_layout.addWidget(effect_type)
+        effect_estimate_input = QLineEdit()
+        ci_lower_input = QLineEdit()
+        ci_upper_input = QLineEdit()
+        for field_name, widget in (
+            ("effect_estimate", effect_estimate_input),
+            ("ci_lower", ci_lower_input),
+            ("ci_upper", ci_upper_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        structured_layout.addWidget(QLabel("统计字段"))
+        events_case_input = QLineEdit()
+        total_case_input = QLineEdit()
+        events_control_input = QLineEdit()
+        total_control_input = QLineEdit()
+        notes_input = QLineEdit()
+        for field_name, widget in (
+            ("events_case", events_case_input),
+            ("total_case", total_case_input),
+            ("events_control", events_control_input),
+            ("total_control", total_control_input),
+            ("notes", notes_input),
+        ):
+            widget.setObjectName(f"metaExtraction_{field_name}")
+            widget.setPlaceholderText(STRUCTURED_EXTRACTION_FIELD_LABELS_ZH[field_name])
+            structured_layout.addWidget(widget)
+        evidence_state = QComboBox()
+        evidence_state.setObjectName("metaExtractionEvidenceStateSelector")
+        for state in STRUCTURED_EXTRACTION_EVIDENCE_STATES:
+            evidence_state.addItem(_evidence_state_label(state), state)
+        structured_layout.addWidget(QLabel("提取状态"))
+        structured_layout.addWidget(evidence_state)
+        layout.addWidget(structured_card)
+        layout.addWidget(_quality_assessment_page(project_dir, on_refresh=on_refresh, on_next=on_next))
         layout.addWidget(_developer_details(f"manifest={service.manifest_path(project_dir)}\nvalidation={service.validation_report_path(project_dir)}"))
         layout.addStretch(1)
 
@@ -2064,12 +2407,58 @@ if QWidget is not None:
             _show_message(result.message)
             on_refresh()
 
+        def structured_fields() -> dict[str, object]:
+            return {
+                "study_id": study_id_input.text(),
+                "title": title_input.text(),
+                "first_author": first_author_input.text(),
+                "year": year_input.text(),
+                "country_or_region": country_input.text(),
+                "study_design": design_input.text(),
+                "population": population_input.text(),
+                "sample_size_total": sample_total_input.text(),
+                "intervention_or_exposure": intervention_input.text(),
+                "comparator": comparator_input.text(),
+                "outcome": outcome_input.text(),
+                "follow_up_duration": follow_up_input.text(),
+                "effect_measure_type": str(effect_type.currentData()),
+                "effect_estimate": effect_estimate_input.text(),
+                "ci_lower": ci_lower_input.text(),
+                "ci_upper": ci_upper_input.text(),
+                "events_case": events_case_input.text(),
+                "total_case": total_case_input.text(),
+                "events_control": events_control_input.text(),
+                "total_control": total_control_input.text(),
+                "notes": notes_input.text(),
+            }
+
+        def do_save_structured() -> None:
+            record_id = selected_record_id()
+            result = service.create_structured_extraction_row(
+                project_dir,
+                fields=structured_fields(),
+                actor="reviewer",
+                evidence_state=str(evidence_state.currentData()),
+                record_id=record_id,
+            )
+            _show_message(result.message)
+            on_refresh()
+
         def do_complete_row() -> None:
             row_id = selected_row_id()
             if not row_id:
                 _show_message("请选择 effect row")
                 return
             result = service.complete_effect_row(project_dir, effect_row_id=row_id, actor="reviewer")
+            _show_message(result.message)
+            on_refresh()
+
+        def do_confirm_structured() -> None:
+            row_id = selected_row_id()
+            if not row_id:
+                _show_message("请选择提取行")
+                return
+            result = service.confirm_structured_extraction_row(project_dir, effect_row_id=row_id, actor="reviewer")
             _show_message(result.message)
             on_refresh()
 
@@ -2091,7 +2480,9 @@ if QWidget is not None:
 
         create_unit.clicked.connect(do_create_unit)
         create_row.clicked.connect(do_create_row)
+        save_structured.clicked.connect(do_save_structured)
         complete_row.clicked.connect(do_complete_row)
+        confirm_structured.clicked.connect(do_confirm_structured)
         mark_missing.clicked.connect(do_mark_missing)
         export_template.clicked.connect(lambda: _show_message(service.export_empty_template_csv(project_dir, actor="reviewer").message))
         export_current.clicked.connect(lambda: _show_message(service.export_current_csv(project_dir, actor="reviewer").message))
@@ -2167,27 +2558,107 @@ if QWidget is not None:
         service = QualityAssessmentService()
         registry = service.tool_registry_v1()
         records = service.load_quality_assessment_records_v1(project_dir)
-        suggestions = service.recommend_quality_tools()
+        study_rows = _quality_study_rows_for_workspace(project_dir)
+        summary = service.quality_m6_summary(project_dir, expected_study_ids=[row["study_id"] for row in study_rows])
         frame = QFrame()
         frame.setObjectName("metaQualityAssessmentPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("质量评价", "工具推荐和人工 domain rating；GRADE 仅 placeholder。", "人工评分"))
-        layout.addWidget(_info_card("质量评价摘要", [f"工具数：{registry.get('tool_count', 0)}", f"评分记录：{len(records)}", "不自动评分，不自动 GRADE，不运行统计。"], object_name="metaQualitySummary"))
+        layout.addWidget(_page_header("质量评价", "NOS 优先的人工偏倚风险评价；其他工具保持 staged/testing。", "人工确认"))
+        layout.addWidget(
+            _info_card(
+                "质量评价摘要",
+                [
+                    f"工具数：{registry.get('tool_count', 0)}",
+                    f"待评价研究：{summary['studies_pending_quality']}",
+                    f"草稿质量评价：{summary['studies_with_draft_quality']}",
+                    f"已确认质量评价：{summary['studies_with_confirmed_quality']}",
+                    f"低风险/较好：{summary['low_risk_or_good']}",
+                    f"不明确：{summary['unclear']}",
+                    f"高风险/较差：{summary['high_risk_or_poor']}",
+                    "不自动评分，不自动 GRADE，不运行统计。",
+                ],
+                object_name="metaQualitySummary",
+            )
+        )
+        study_list = QListWidget()
+        study_list.setObjectName("metaQualityStudyList")
+        if study_rows:
+            for row in study_rows:
+                item = QListWidgetItem(
+                    "\n".join(
+                        [
+                            str(row.get("title") or row.get("study_id") or "未命名研究"),
+                            " · ".join(part for part in (str(row.get("first_author") or ""), str(row.get("year") or ""), str(row.get("study_design") or "")) if part),
+                        ]
+                    )
+                )
+                item.setData(Qt.ItemDataRole.UserRole, dict(row))
+                study_list.addItem(item)
+        else:
+            study_list.addItem(QListWidgetItem("暂无可评价研究；请先完成数据提取确认。"))
+        layout.addWidget(study_list)
+        layout.addWidget(QLabel("评价工具"))
         tool_selector = QComboBox()
-        for suggestion in suggestions:
-            tool_selector.addItem(f"{suggestion.get('tool_name')} · suggested", str(suggestion.get("tool_name", "")))
+        tool_selector.setObjectName("metaQualityToolSelector")
+        for tool_name in service.list_quality_tools():
+            suffix = " · staged/testing" if tool_name != "NOS" else " · NOS"
+            tool_selector.addItem(f"{tool_name}{suffix}", tool_name)
+        tool_selector.setCurrentText("NOS · NOS")
+        layout.addWidget(tool_selector)
         assessment_list = QListWidget()
         assessment_list.setObjectName("metaQualityAssessmentList")
         for record in records:
-            item = QListWidgetItem(f"{record.get('tool_name')} · {record.get('status')}\n{record.get('assessment_id')}")
+            item = QListWidgetItem(
+                "\n".join(
+                    [
+                        f"{record.get('tool_name')} · {_quality_state_label(str(record.get('status') or 'draft'))}",
+                        f"总体判断：{_quality_rating_label(str(record.get('overall_rating') or record.get('overall_judgement') or ''))}",
+                    ]
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole, str(record.get("assessment_id", "")))
             assessment_list.addItem(item)
-        layout.addWidget(tool_selector)
         layout.addWidget(assessment_list)
+        form = _card("偏倚风险")
+        form_layout = form.layout()
+        domain_selectors: dict[str, QComboBox] = {}
+        domain_notes: dict[str, QLineEdit] = {}
+        for domain in NOS_DOMAINS:
+            form_layout.addWidget(QLabel(f"评价维度：{NOS_DOMAIN_LABELS_ZH.get(domain, domain)}"))
+            selector = QComboBox()
+            selector.setObjectName(f"metaQualityDomain_{domain}")
+            for rating in ("not_assessed", "low_risk_or_good", "unclear", "high_risk_or_poor"):
+                selector.addItem(QUALITY_RATING_LABELS_ZH.get(rating, rating), rating)
+            domain_selectors[domain] = selector
+            form_layout.addWidget(selector)
+            note = QLineEdit()
+            note.setObjectName(f"metaQualityDomainNote_{domain}")
+            note.setPlaceholderText("评价理由")
+            domain_notes[domain] = note
+            form_layout.addWidget(QLabel("评价理由"))
+            form_layout.addWidget(note)
+        overall = QComboBox()
+        overall.setObjectName("metaQualityOverallSelector")
+        for rating in ("not_assessed", "low_risk_or_good", "unclear", "high_risk_or_poor"):
+            overall.addItem(QUALITY_RATING_LABELS_ZH.get(rating, rating), rating)
+        state_selector = QComboBox()
+        state_selector.setObjectName("metaQualityStateSelector")
+        for state in ("draft", "suggested", "user_accepted", "user_edited", "confirmed", "rejected"):
+            state_selector.addItem(QUALITY_M6_STATE_LABELS_ZH.get(state, state), state)
+        notes = QPlainTextEdit()
+        notes.setObjectName("metaQualityNotes")
+        notes.setPlaceholderText("评价理由 / 备注；AI 或规则建议必须由用户确认后才生效")
+        notes.setMaximumHeight(90)
+        form_layout.addWidget(QLabel("总体判断"))
+        form_layout.addWidget(overall)
+        form_layout.addWidget(QLabel("已确认"))
+        form_layout.addWidget(state_selector)
+        form_layout.addWidget(notes)
+        layout.addWidget(form)
         actions = QHBoxLayout()
         save_draft = QPushButton("保存评分草稿")
-        complete = QPushButton("完成质量评价")
+        complete = QPushButton("已确认")
         export_csv = QPushButton("导出 CSV")
         next_button = QPushButton("下一步：分析计划")
         for button in (save_draft, complete, export_csv, next_button):
@@ -2208,13 +2679,20 @@ if QWidget is not None:
             if not tool_name:
                 _show_message("暂无推荐工具")
                 return
+            selected = _selected_quality_study()
+            state = str(state_selector.currentData() or "draft")
             result = service.create_quality_assessment_draft(
                 project_dir,
-                study_id="study-ui-draft",
-                record_id="record-ui-draft",
+                study_id=str(selected.get("study_id") or "study-ui-draft"),
+                record_id=str(selected.get("record_id") or "record-ui-draft"),
                 tool_name=tool_name,
+                domains={domain: str(selector.currentData()) for domain, selector in domain_selectors.items()},
+                domain_notes={domain: note.text() for domain, note in domain_notes.items()},
+                overall_rating=str(overall.currentData()),
+                notes=notes.toPlainText(),
                 reviewer_id="reviewer",
                 actor="reviewer",
+                assessment_state=state,
             )
             _show_message(result.message)
             on_refresh()
@@ -2224,9 +2702,14 @@ if QWidget is not None:
             if not assessment_id:
                 _show_message("请选择质量评价记录")
                 return
-            result = service.complete_quality_assessment_by_user(project_dir, assessment_id=assessment_id, actor="reviewer")
+            result = service.confirm_quality_assessment_by_user(project_dir, assessment_id=assessment_id, actor="reviewer")
             _show_message(result.message)
             on_refresh()
+
+        def _selected_quality_study() -> dict[str, object]:
+            item = study_list.currentItem()
+            data = item.data(Qt.ItemDataRole.UserRole) if item is not None else {}
+            return dict(data) if isinstance(data, dict) else {}
 
         save_draft.clicked.connect(do_save_draft)
         complete.clicked.connect(do_complete)
@@ -2239,29 +2722,142 @@ if QWidget is not None:
         service = AnalysisPlanService()
         draft = service.load_draft(project_dir)
         confirmed = service.load_confirmed(project_dir)
+        active_plan = confirmed or draft
+        readiness = service.analysis_plan_readiness(project_dir)
+        warning_labels = dict(active_plan.get("m7_warning_labels_zh", {})) if isinstance(active_plan.get("m7_warning_labels_zh"), dict) else dict(readiness.get("warning_labels_zh", {}))
         frame = QFrame()
         frame.setObjectName("metaAnalysisPlanPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("分析计划", "从 confirmed protocol、提取行、质量评价生成草稿。", "需要人工确认"))
-        layout.addWidget(_info_card("当前状态", [f"draft：{bool(draft)}", f"confirmed：{bool(confirmed)}", f"warnings：{len(draft.get('warnings', [])) if draft else 0}", "确认前不得运行统计。"], object_name="metaAnalysisPlanSummary"))
-        preview = QTextEdit()
-        preview.setObjectName("metaAnalysisPlanPreview")
-        preview.setReadOnly(True)
-        preview.setPlainText(json.dumps({"draft": draft, "confirmed": confirmed}, ensure_ascii=False, indent=2)[:12000])
-        layout.addWidget(preview)
+        layout.addWidget(_page_header("分析计划", "确认研究类型、效应量、模型、异质性、亚组/敏感性/发表偏倚计划。", "Developer Preview / testing"))
+        layout.addWidget(
+            _info_card(
+                "当前状态",
+                [
+                    f"计划状态：{_analysis_plan_state_label(str(active_plan.get('plan_state') or active_plan.get('status') or '未生成'))}",
+                    f"纳入研究数量：{int(active_plan.get('included_study_count', readiness.get('included_study_count', 0)) or 0)}",
+                    "确认分析计划不会运行正式统计分析。",
+                    "该计划仅用于测试阶段，不代表正式统计结论。",
+                ],
+                object_name="metaAnalysisPlanSummary",
+            )
+        )
+        form = _card("分析计划")
+        form_layout = form.layout()
+        form_layout.addWidget(_kv_label("研究类型", str(active_plan.get("meta_profile") or active_plan.get("meta_type") or "待生成")))
+        form_layout.addWidget(_kv_label("纳入研究数量", str(active_plan.get("included_study_count", readiness.get("included_study_count", 0)))))
+        research_question = QLineEdit()
+        research_question.setObjectName("metaAnalysisPlanResearchQuestionInput")
+        research_question.setPlaceholderText("研究问题")
+        research_question.setText(str(active_plan.get("research_question", "")))
+        form_layout.addWidget(research_question)
+        population = QLineEdit()
+        population.setObjectName("metaAnalysisPlanPopulationInput")
+        population.setPlaceholderText("Population / 研究对象")
+        population.setText(str(active_plan.get("population", "")))
+        form_layout.addWidget(population)
+        intervention = QLineEdit()
+        intervention.setObjectName("metaAnalysisPlanInterventionInput")
+        intervention.setPlaceholderText("Intervention / Exposure / 干预或暴露")
+        intervention.setText(str(active_plan.get("intervention_or_exposure", "")))
+        form_layout.addWidget(intervention)
+        comparator = QLineEdit()
+        comparator.setObjectName("metaAnalysisPlanComparatorInput")
+        comparator.setPlaceholderText("Comparator / 对照")
+        comparator.setText(str(active_plan.get("comparator", "")))
+        form_layout.addWidget(comparator)
+        outcome = QLineEdit()
+        outcome.setObjectName("metaAnalysisPlanOutcomeInput")
+        outcome.setPlaceholderText("Outcome / 结局")
+        outcome.setText(str(active_plan.get("outcome", "")))
+        form_layout.addWidget(outcome)
+        effect_type = QComboBox()
+        effect_type.setObjectName("metaAnalysisPlanEffectMeasureSelector")
+        for item in ANALYSIS_PLAN_EFFECT_MEASURE_TYPES:
+            effect_type.addItem(item, item)
+        selected_effect = str(active_plan.get("effect_measure_type") or active_plan.get("effect_measure") or "OR")
+        effect_index = effect_type.findData(selected_effect)
+        if effect_index >= 0:
+            effect_type.setCurrentIndex(effect_index)
+        form_layout.addWidget(_kv_label("效应量类型", "OR / RR / HR / MD / SMD / proportion / correlation / diagnostic_accuracy / other"))
+        form_layout.addWidget(effect_type)
+        model_preference = QComboBox()
+        model_preference.setObjectName("metaAnalysisPlanModelPreferenceSelector")
+        model_labels = {
+            "fixed_effect": "固定效应",
+            "random_effect": "随机效应",
+            "both": "固定效应 + 随机效应",
+            "undecided": "暂不决定",
+        }
+        for item in ANALYSIS_PLAN_MODEL_PREFERENCES:
+            model_preference.addItem(model_labels[item], item)
+        selected_model = str(active_plan.get("model_preference") or "random_effect")
+        model_index = model_preference.findData(selected_model)
+        if model_index >= 0:
+            model_preference.setCurrentIndex(model_index)
+        form_layout.addWidget(_kv_label("固定效应", "可在模型偏好中选择"))
+        form_layout.addWidget(_kv_label("随机效应", "可在模型偏好中选择"))
+        form_layout.addWidget(model_preference)
+        form_layout.addWidget(_kv_label("异质性", "I2 / tau2 / Q"))
+        subgroup_plan = QPlainTextEdit()
+        subgroup_plan.setObjectName("metaAnalysisPlanSubgroupInput")
+        subgroup_plan.setPlaceholderText("亚组分析")
+        subgroup_plan.setPlainText(_plan_text(active_plan.get("subgroup_plan", "")))
+        form_layout.addWidget(_kv_label("亚组分析", "按研究问题人工填写或确认"))
+        form_layout.addWidget(subgroup_plan)
+        sensitivity_plan = QPlainTextEdit()
+        sensitivity_plan.setObjectName("metaAnalysisPlanSensitivityInput")
+        sensitivity_plan.setPlaceholderText("敏感性分析")
+        sensitivity_plan.setPlainText(_plan_text(active_plan.get("sensitivity_plan", "")))
+        form_layout.addWidget(_kv_label("敏感性分析", "按研究问题人工填写或确认"))
+        form_layout.addWidget(sensitivity_plan)
+        publication_bias_plan = QPlainTextEdit()
+        publication_bias_plan.setObjectName("metaAnalysisPlanPublicationBiasInput")
+        publication_bias_plan.setPlaceholderText("发表偏倚")
+        publication_bias_plan.setPlainText(_plan_text(active_plan.get("publication_bias_plan", "")))
+        form_layout.addWidget(_kv_label("发表偏倚", "研究数量充足时再考虑；当前只记录计划"))
+        form_layout.addWidget(publication_bias_plan)
+        layout.addWidget(form)
+        layout.addWidget(
+            _info_card(
+                "准备度提示",
+                list(warning_labels.values())
+                or [ANALYSIS_PLAN_READINESS_WARNING_LABELS_ZH["developer_preview_testing_only"]],
+                object_name="metaAnalysisPlanWarnings",
+            )
+        )
         buttons = QHBoxLayout()
         generate = QPushButton("生成分析计划草稿")
+        save_draft = QPushButton("保存计划编辑")
         confirm = QPushButton("确认分析计划")
-        next_button = QPushButton("下一步：统计分析")
-        for button in (generate, confirm, next_button):
+        next_button = QPushButton("下一步：结果与报告")
+        for button in (generate, save_draft, confirm, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         generate.setObjectName("metaPrimaryButton")
         buttons.addStretch(1)
         layout.addLayout(buttons)
-        layout.addWidget(_developer_details(f"draft={service.draft_path(project_dir)}\nconfirmed={service.confirmed_path(project_dir)}"))
+        layout.addWidget(_m10_m13_statistics_controls(project_dir, on_refresh=on_refresh))
+        layout.addWidget(_developer_details(f"draft={service.draft_path(project_dir)}\nconfirmed={service.confirmed_path(project_dir)}\nmanifest={service.manifest_path(project_dir)}"))
         layout.addStretch(1)
+
+        def _ui_updates(plan_state: str = "user_edited") -> dict[str, object]:
+            return {
+                "research_question": research_question.text().strip(),
+                "population": population.text().strip(),
+                "intervention_or_exposure": intervention.text().strip(),
+                "comparator": comparator.text().strip(),
+                "outcome": outcome.text().strip(),
+                "effect_measure": str(effect_type.currentData()),
+                "effect_measure_type": str(effect_type.currentData()),
+                "model_default": str(model_preference.currentData()),
+                "model_preference": str(model_preference.currentData()),
+                "heterogeneity_metrics": ["I2", "tau2", "Q"],
+                "subgroup_plan": {"user_plan": subgroup_plan.toPlainText().strip(), "status": "user_edited"},
+                "sensitivity_plan": {"user_plan": sensitivity_plan.toPlainText().strip(), "status": "user_edited"},
+                "publication_bias_plan": {"user_plan": publication_bias_plan.toPlainText().strip(), "status": "user_edited"},
+                "plan_state": plan_state,
+            }
 
         def do_generate() -> None:
             try:
@@ -2271,8 +2867,21 @@ if QWidget is not None:
                 _show_message(str(exc))
             on_refresh()
 
+        def do_save_draft() -> None:
+            try:
+                if not service.load_draft(project_dir):
+                    service.generate_draft(project_dir, actor="reviewer")
+                result = service.edit_draft(project_dir, actor="reviewer", updates=_ui_updates())
+                _show_message(result.message)
+            except Exception as exc:
+                _show_message(str(exc))
+            on_refresh()
+
         def do_confirm() -> None:
             try:
+                if not service.load_draft(project_dir):
+                    service.generate_draft(project_dir, actor="reviewer")
+                service.edit_draft(project_dir, actor="reviewer", updates=_ui_updates())
                 result = service.confirm_plan(project_dir, actor="reviewer")
                 _show_message(result.message)
             except Exception as exc:
@@ -2280,9 +2889,204 @@ if QWidget is not None:
             on_refresh()
 
         generate.clicked.connect(do_generate)
+        save_draft.clicked.connect(do_save_draft)
         confirm.clicked.connect(do_confirm)
         next_button.clicked.connect(on_next)
         return frame
+
+
+    def _m10_m13_statistics_controls(project_dir: Path, *, on_refresh: Callable[[], None]) -> QFrame:
+        plan_service = AnalysisPlanService()
+        normalization_service = EffectSizeNormalizationService()
+        pairwise_service = PairwiseMetaExecutorService(analysis_plan_service=plan_service, normalization_service=normalization_service)
+        review_service = StatisticalResultReviewService(pairwise_executor=pairwise_service)
+        normalized_effects = normalization_service.normalize_extraction_rows(project_dir)
+        normalization_summary = normalization_service.summarize_normalization(normalized_effects)
+        latest_result = pairwise_service.load_latest_result(project_dir)
+        review = review_service.load_review(project_dir)
+        panel = _card("M10-M13 统计结果路径")
+        panel.setObjectName("metaM10M13StatisticsPanel")
+        layout = panel.layout()
+        layout.addWidget(
+            _info_card(
+                "效应量标准化预检查",
+                [
+                    f"总提取行：{normalization_summary.total_rows}",
+                    f"confirmed 行：{normalization_summary.confirmed_rows}",
+                    f"可用于后续统计的研究数：{normalization_summary.normalized_ready}",
+                    f"需要用户检查：{normalization_summary.needs_user_review}",
+                    f"字段不完整：{normalization_summary.incomplete}",
+                    f"无效或不支持：{normalization_summary.invalid + normalization_summary.unsupported_effect_type}",
+                    "标准化输入只用于 executor 预检查，不生成 computed 或 report_ready 结果。",
+                ],
+                object_name="metaEffectSizeNormalizationPreview",
+            )
+        )
+        layout.addWidget(
+            _info_card(
+                "Pairwise executor",
+                _pairwise_workspace_result_lines(latest_result),
+                object_name="metaPairwiseExecutorPreview",
+            )
+        )
+        layout.addWidget(
+            _info_card(
+                "统计结果审核",
+                [
+                    f"审核状态：{result_review_label_zh(review.review_state)}",
+                    f"当前统计状态：{statistical_result_state_label_zh(review.result_state or (latest_result.result_state if latest_result else STATISTICAL_RESULT_STATE_NOT_RUN))}",
+                    f"已确认查看警告：{'是' if review.review_warnings_acknowledged else '否'}",
+                    f"申请报告就绪：{'是' if review.report_ready_requested else '否'}",
+                    f"报告就绪：{'是' if review.report_ready_granted else '否'}",
+                    f"阻止进入报告的原因：{'；'.join(review.report_ready_blockers) if review.report_ready_blockers else '无'}",
+                    "report_ready 只代表可进入当前草稿报告流程，不代表正式发表、临床、监管或 production 结论。",
+                ],
+                object_name="metaResultReviewPreview",
+            )
+        )
+        feedback = QLabel("")
+        feedback.setObjectName("metaStatisticsFeedback")
+        feedback.setWordWrap(True)
+        layout.addWidget(feedback)
+        review_notes = QLineEdit()
+        review_notes.setObjectName("metaResultReviewNotesInput")
+        review_notes.setPlaceholderText("审核备注（可选）")
+        warning_ack = QCheckBox("已确认查看警告")
+        warning_ack.setObjectName("metaResultWarningAcknowledgement")
+        warning_ack.setChecked(bool(review.review_warnings_acknowledged))
+        layout.addWidget(review_notes)
+        layout.addWidget(warning_ack)
+        buttons = QHBoxLayout()
+        refresh_normalization = QPushButton("刷新效应量标准化预检查")
+        run = QPushButton("运行 pairwise executor")
+        accept = QPushButton("接受进入报告草稿")
+        needs_revision = QPushButton("标记需要修订")
+        reject = QPushButton("不纳入报告")
+        report_ready = QPushButton("申请报告就绪")
+        for button in (refresh_normalization, accept, needs_revision, reject, report_ready):
+            button.setObjectName("metaSecondaryButton")
+            buttons.addWidget(button)
+        run.setObjectName("metaPrimaryButton")
+        buttons.insertWidget(1, run)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        layout.addWidget(_developer_details(f"pairwise_result={pairwise_service.latest_result_path(project_dir)}\nreview={review_service.review_path(project_dir)}"))
+
+        def latest_for_review():
+            result = pairwise_service.load_latest_result(project_dir)
+            if result is None:
+                raise ValueError("请先运行 pairwise executor。")
+            return result
+
+        def set_transition_feedback(prefix: str, transition) -> None:
+            blockers = "；".join(transition.blockers) if transition.blockers else "无"
+            feedback.setText(f"{prefix}：{'已完成' if transition.success else '未完成'}；阻止进入报告的原因：{blockers}")
+
+        def do_refresh_normalization() -> None:
+            _show_message("已刷新效应量标准化预检查。")
+            on_refresh()
+
+        def do_run_pairwise() -> None:
+            try:
+                result = pairwise_service.execute(project_dir, actor="reviewer")
+                if result.validation_errors:
+                    feedback.setText("输入校验失败：" + "；".join(result.validation_errors))
+                else:
+                    feedback.setText("pairwise executor 已完成计算；结果仍为 Developer Preview / testing，需用户审核。")
+            except Exception as exc:
+                feedback.setText(f"pairwise executor 运行失败：{exc}")
+            on_refresh()
+
+        def do_accept() -> None:
+            try:
+                transition = review_service.accept_for_report(
+                    project_dir,
+                    latest_for_review(),
+                    reviewer_role="reviewer",
+                    review_notes=review_notes.text(),
+                    warnings_acknowledged=warning_ack.isChecked(),
+                )
+                set_transition_feedback("接受进入报告草稿", transition)
+            except Exception as exc:
+                feedback.setText(f"统计结果审核失败：{exc}")
+            on_refresh()
+
+        def do_needs_revision() -> None:
+            try:
+                transition = review_service.mark_needs_revision(project_dir, latest_for_review(), reviewer_role="reviewer", review_notes=review_notes.text())
+                set_transition_feedback("标记需要修订", transition)
+            except Exception as exc:
+                feedback.setText(f"统计结果审核失败：{exc}")
+            on_refresh()
+
+        def do_reject() -> None:
+            try:
+                transition = review_service.reject_for_report(project_dir, latest_for_review(), reviewer_role="reviewer", review_notes=review_notes.text())
+                set_transition_feedback("不纳入报告", transition)
+            except Exception as exc:
+                feedback.setText(f"统计结果审核失败：{exc}")
+            on_refresh()
+
+        def do_report_ready() -> None:
+            try:
+                requested = review_service.request_report_ready(project_dir, latest_for_review(), reviewer_role="reviewer")
+                latest = pairwise_service.load_latest_result(project_dir)
+                granted = review_service.grant_report_ready(project_dir, latest, reviewer_role="reviewer") if requested.success else requested
+                set_transition_feedback("申请报告就绪", granted)
+            except Exception as exc:
+                feedback.setText(f"申请报告就绪失败：{exc}")
+            on_refresh()
+
+        refresh_normalization.clicked.connect(do_refresh_normalization)
+        run.clicked.connect(do_run_pairwise)
+        accept.clicked.connect(do_accept)
+        needs_revision.clicked.connect(do_needs_revision)
+        reject.clicked.connect(do_reject)
+        report_ready.clicked.connect(do_report_ready)
+        return panel
+
+
+    def _pairwise_workspace_result_lines(result) -> list[str]:
+        if result is None:
+            return [
+                "当前统计状态：尚未运行正式统计分析",
+                "模型：未运行",
+                "纳入研究数：0",
+                "合并效应量：缺失",
+                "95% CI：缺失",
+                "异质性 I²：缺失",
+                "测试阶段提示：尚未运行 M12 pairwise executor。",
+                "需要用户审核后才能进入报告。",
+            ]
+        payload = result.to_dict()
+        heterogeneity = payload.get("heterogeneity_summary", {})
+        i2 = heterogeneity.get("i_squared") if isinstance(heterogeneity, dict) else None
+        ci = "缺失"
+        if payload.get("pooled_ci_lower") is not None and payload.get("pooled_ci_upper") is not None:
+            ci = f"{_format_number(payload.get('pooled_ci_lower'))} - {_format_number(payload.get('pooled_ci_upper'))}"
+        errors = "；".join(str(item) for item in payload.get("validation_errors", []) if str(item)) if isinstance(payload.get("validation_errors"), list) else ""
+        warnings = "；".join(str(item) for item in payload.get("warnings", []) if str(item)) if isinstance(payload.get("warnings"), list) else ""
+        return [
+            f"当前统计状态：{statistical_result_state_label_zh(str(payload.get('result_state', 'not_run')))}",
+            f"模型：{payload.get('model_used') or '未运行'}",
+            f"纳入研究数：{len(payload.get('included_studies', [])) if isinstance(payload.get('included_studies'), list) else 0}",
+            f"合并效应量：{_format_number(payload.get('pooled_effect'))}",
+            f"95% CI：{ci}",
+            f"异质性 I²：{_format_number(i2)}",
+            f"校验错误：{errors or '无'}",
+            f"警告：{warnings or '无'}",
+            "测试阶段提示：M12 为 Developer Preview / testing MVP，不生成正式医学结论。",
+            "需要用户审核后才能进入报告。",
+        ]
+
+
+    def _format_number(value: object) -> str:
+        if value is None:
+            return "缺失"
+        try:
+            return f"{float(value):.6g}"
+        except (TypeError, ValueError):
+            return "缺失"
 
 
     def _statistics_analysis_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
@@ -2415,19 +3219,32 @@ if QWidget is not None:
         frame.setObjectName("metaReportExportPage")
         layout = QVBoxLayout(frame)
         layout.setSpacing(12)
-        layout.addWidget(_page_header("报告导出", "生成 draft/testing 报告；discussion/conclusion 需人工编辑。", "draft"))
-        layout.addWidget(_info_card("报告状态", [f"Markdown：{'已存在' if report_path.exists() else '暂无'}", "不会自动生成强 conclusion。", "数字来自真实流程和 PRISMA summary。"], object_name="metaReportSummary"))
+        layout.addWidget(_page_header("报告导出", "生成中文 draft/testing 报告；明确区分确认、草稿、建议、缺失和未来统计占位。", "draft"))
+        missing_hint = "缺失内容提示：生成报告后会在 Markdown 末尾列出。"
+        layout.addWidget(
+            _info_card(
+                "报告状态",
+                [
+                    f"Markdown 草稿：{'已存在' if report_path.exists() else '暂无'}",
+                    "不会自动生成 pooled effect、p value、forest plot、funnel plot 或医学结论。",
+                    "统计分析结果尚未作为正式可发表结论生成。",
+                    missing_hint,
+                ],
+                object_name="metaReportSummary",
+            )
+        )
         preview = QTextEdit()
         preview.setObjectName("metaReportPreview")
         preview.setReadOnly(True)
         preview.setPlainText(report_path.read_text(encoding="utf-8")[:12000] if report_path.exists() else "暂无报告草稿。")
         layout.addWidget(preview)
         buttons = QHBoxLayout()
-        build_md = QPushButton("生成 Markdown 草稿")
+        build_md = QPushButton("生成报告草稿")
+        show_location = QPushButton("打开报告位置")
         export_html = QPushButton("导出 HTML")
         export_docx = QPushButton("导出 DOCX")
         next_button = QPushButton("返回项目首页")
-        for button in (build_md, export_html, export_docx, next_button):
+        for button in (build_md, show_location, export_html, export_docx, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_md.setObjectName("metaPrimaryButton")
@@ -2437,9 +3254,12 @@ if QWidget is not None:
         layout.addStretch(1)
 
         def do_build_md() -> None:
-            path = FormalMarkdownReportBuilder().build_formal_markdown_report(project_dir)
+            path = FormalMarkdownReportBuilder().build_draft_markdown_report(project_dir)
             _show_message(f"已生成：{path.name}")
             on_refresh()
+
+        def do_show_location() -> None:
+            _show_message("报告位置：项目 reports 目录。未自动打开外部应用。")
 
         def do_export_html() -> None:
             result = PublicationExportService().export_html_report(project_dir)
@@ -2452,6 +3272,7 @@ if QWidget is not None:
             on_refresh()
 
         build_md.clicked.connect(do_build_md)
+        show_location.clicked.connect(do_show_location)
         export_html.clicked.connect(do_export_html)
         export_docx.clicked.connect(do_export_docx)
         next_button.clicked.connect(on_next)
@@ -2663,6 +3484,30 @@ if QWidget is not None:
         widget.setObjectName("metaWarningText")
         widget.setWordWrap(True)
         return widget
+
+
+    def _analysis_plan_state_label(value: str) -> str:
+        labels = {
+            "draft": "草稿",
+            "suggested": "建议",
+            "user_edited": "用户编辑",
+            "confirmed": "已确认",
+            "needs_revision": "需要修订",
+            "missing": "未生成",
+            "未生成": "未生成",
+        }
+        return labels.get(value, value or "未生成")
+
+
+    def _plan_text(value: object) -> str:
+        if isinstance(value, dict):
+            for key in ("user_plan", "description", "status"):
+                if str(value.get(key, "")).strip():
+                    return str(value.get(key))
+            return "；".join(f"{key}: {item}" for key, item in value.items() if str(item).strip())
+        if isinstance(value, (list, tuple)):
+            return "；".join(str(item) for item in value if str(item).strip())
+        return str(value or "")
 
 
     def _default_meta_type(candidates: tuple[dict[str, object], ...]) -> str:
@@ -3049,6 +3894,130 @@ if QWidget is not None:
                 f"导入批次：{record.get('import_batch_id') or record.get('batch_id') or ''}",
                 f"当前筛选状态：{record.get('screening_status', '')}",
                 f"用户备注：{user_note}",
+            ]
+        )
+
+
+    def _screening_decision_label(decision: str) -> str:
+        return {
+            "not_screened": "未筛选",
+            "pending": "未筛选",
+            "include": "纳入",
+            "included": "纳入",
+            "exclude": "排除",
+            "excluded": "排除",
+            "uncertain": "不确定",
+            "maybe": "不确定",
+            "need_full_text": "需要全文",
+            "needs_review": "需要复核",
+        }.get(decision, decision or "未筛选")
+
+
+    def _author_year_text(authors: object, year: object) -> str:
+        author_text = ""
+        if isinstance(authors, (list, tuple)):
+            author_text = "、".join(str(item).strip() for item in authors if str(item).strip())
+        else:
+            author_text = str(authors or "").strip()
+        year_text = str(year or "").strip()
+        if author_text and year_text:
+            return f"{author_text} · {year_text}"
+        return author_text or year_text or "作者/年份未记录"
+
+
+    def _extraction_source_label(source: str) -> str:
+        return {
+            "full_text_confirmed": "全文已确认",
+            "final_included_studies": "全文筛选纳入",
+            "manual_full_text_unavailable": "全文不可获取：人工提取",
+            "manual_library_fallback": "文献库人工提取",
+        }.get(source, source or "来源未标记")
+
+
+    def _evidence_state_label(state: str) -> str:
+        return {
+            "empty": "空",
+            "draft": "草稿",
+            "suggested": "建议",
+            "user_accepted": "用户接受",
+            "user_edited": "用户编辑",
+            "confirmed": "已确认",
+            "rejected": "已拒绝",
+            "completed_by_user": "用户已完成",
+            "missing_data": "缺失数据",
+            "not_started": "未开始",
+        }.get(state, state or "草稿")
+
+
+    def _quality_rating_label(rating: str) -> str:
+        return QUALITY_RATING_LABELS_ZH.get(rating, rating or "未评价")
+
+
+    def _quality_state_label(state: str) -> str:
+        return QUALITY_M6_STATE_LABELS_ZH.get(state, "已确认" if state == "completed_by_user" else state or "草稿")
+
+
+    def _quality_study_rows_for_workspace(project_dir: Path) -> list[dict[str, object]]:
+        rows: list[dict[str, object]] = []
+        payload = _load_json_object(project_dir / "extraction" / "extraction_effect_rows.json")
+        for item in _items_from_payload(payload, "effect_rows"):
+            if str(item.get("evidence_state", "")) != "confirmed" and str(item.get("extraction_status", "")) != "completed_by_user":
+                continue
+            structured = dict(item.get("m5_structured_fields", {}) if isinstance(item.get("m5_structured_fields"), dict) else {})
+            rows.append(
+                {
+                    "study_id": structured.get("study_id") or item.get("study_unit_label") or item.get("study_unit_id") or "",
+                    "record_id": item.get("record_id", ""),
+                    "title": structured.get("title") or item.get("study_unit_label") or "",
+                    "first_author": structured.get("first_author", ""),
+                    "year": structured.get("year", ""),
+                    "study_design": structured.get("study_design", ""),
+                }
+            )
+        if rows:
+            return rows
+        final = _load_json_object(project_dir / "fulltext" / "final_included_studies.json")
+        for item in _items_from_payload(final, "included_studies"):
+            rows.append(
+                {
+                    "study_id": item.get("study_id") or item.get("record_id") or "",
+                    "record_id": item.get("record_id", ""),
+                    "title": item.get("title", ""),
+                    "first_author": item.get("first_author", ""),
+                    "year": item.get("year", ""),
+                    "study_design": item.get("study_design", ""),
+                }
+            )
+        return rows
+
+
+    def _first_author(record: dict[str, object]) -> str:
+        first = str(record.get("first_author") or "").strip()
+        if first:
+            return first
+        authors = record.get("authors")
+        if isinstance(authors, list) and authors:
+            return str(authors[0])
+        authors_text = str(record.get("authors_text") or "").strip()
+        return authors_text.split(";")[0].strip() if authors_text else ""
+
+
+    def _screening_record_user_detail(record: dict[str, object], decision_payload: dict[str, object]) -> str:
+        decision = str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED)
+        reason_code = str(decision_payload.get("exclusion_reason_code") or "")
+        abstract = " ".join(str(record.get("abstract") or "").split())
+        abstract_snippet = abstract if len(abstract) <= 320 else abstract[:319].rstrip() + "..."
+        return "\n".join(
+            [
+                f"title：{record.get('title', '')}",
+                f"作者：{_first_author(record)}",
+                f"年份：{record.get('year', '')}",
+                f"期刊：{record.get('journal', '')}",
+                f"来源数据库：{record.get('database_source') or record.get('source_type') or '未知'}",
+                f"摘要片段：{abstract_snippet or '暂无摘要'}",
+                f"去重状态：{record.get('dedup_status') or '去重后待筛选'}",
+                f"当前筛选状态：{_screening_decision_label(decision)}",
+                f"排除原因：{EXCLUSION_REASON_LABELS_ZH.get(reason_code, str(decision_payload.get('exclusion_reason_text') or '暂无'))}",
             ]
         )
 

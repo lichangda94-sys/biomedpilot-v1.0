@@ -113,7 +113,8 @@ def test_analysis_page_and_formal_report_reference_advanced_addons(tmp_path: Pat
     assert "funnel_plot_path" in state.advanced_analysis_fields
     assert "publication bias basic" in state.description
     assert "Advanced analysis add-ons summary" in report_text
-    assert "funnel_plot_ares-test.png" in report_text
+    assert "funnel_plot_ares-test.png" not in report_text
+    assert "future" in report_text.lower() or "未来" in report_text
 
 
 def binary_row(

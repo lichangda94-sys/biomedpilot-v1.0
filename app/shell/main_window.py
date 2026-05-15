@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from app.app_identity import APP_NAME, icon_asset_statuses, icon_asset_summary, load_app_icon
 from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
+from app.labtools.workspace import LabToolsWorkspaceWidget
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
 from app.shell.login import BioMedPilotLoginWidget, LocalSession
@@ -51,11 +52,13 @@ class MainWindow(QMainWindow):
         self._dashboard_page = self._build_dashboard_page()
         self._bioinformatics_page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
         self._meta_analysis_page = MetaAnalysisWorkspaceWidget(on_back=self.show_dashboard)
+        self._labtools_page = LabToolsWorkspaceWidget(on_back=self.show_dashboard)
         self._settings_page = self._build_settings_page()
         self._testing_page = self._build_testing_page()
         self._stack.addWidget(self._dashboard_page)
         self._stack.addWidget(self._bioinformatics_page)
         self._stack.addWidget(self._meta_analysis_page)
+        self._stack.addWidget(self._labtools_page)
         self._stack.addWidget(self._settings_page)
         self._stack.addWidget(self._testing_page)
 
@@ -68,6 +71,7 @@ class MainWindow(QMainWindow):
                 on_dashboard=self.show_dashboard,
                 on_bioinformatics=self.show_bioinformatics,
                 on_meta_analysis=self.show_meta_analysis,
+                on_labtools=self.show_labtools,
                 on_settings=self.show_settings,
                 on_testing=self.show_testing_mode,
             )
@@ -104,6 +108,10 @@ class MainWindow(QMainWindow):
         self._stack.setCurrentWidget(self._meta_analysis_page)
         self.setWindowTitle("BioMedPilot / Meta 分析")
 
+    def show_labtools(self) -> None:
+        self._stack.setCurrentWidget(self._labtools_page)
+        self.setWindowTitle("BioMedPilot / 实验工具")
+
     def show_settings(self) -> None:
         self._stack.setCurrentWidget(self._settings_page)
         self.setWindowTitle("BioMedPilot / 设置中心")
@@ -133,6 +141,8 @@ class MainWindow(QMainWindow):
             return "bioinformatics"
         if current is self._meta_analysis_page:
             return "meta_analysis"
+        if current is self._labtools_page:
+            return "labtools"
         if current is self._settings_page:
             return "settings"
         if current is self._testing_page:
@@ -145,6 +155,7 @@ class MainWindow(QMainWindow):
             session=self._session,
             on_open_bioinformatics=self.show_bioinformatics,
             on_open_meta_analysis=self.show_meta_analysis,
+            on_open_labtools=self.show_labtools,
             on_logout=self.logout,
         )
 

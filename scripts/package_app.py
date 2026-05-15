@@ -58,6 +58,7 @@ class PackagingResult:
     app_version: str
     git_head: str
     code_signed: bool
+    signing_status: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
@@ -101,6 +102,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     )
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
     code_signed = _ad_hoc_codesign(app_path)
+    signing_status = "ad_hoc_signed" if code_signed else "codesign_unavailable"
 
     return PackagingResult(
         app_path=app_path,
@@ -112,6 +114,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         app_version=APP_VERSION,
         git_head=git_head,
         code_signed=code_signed,
+        signing_status=signing_status,
     )
 
 
@@ -146,6 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
     print(f"python={result.python_executable}")
+    print(f"signing_status={result.signing_status}")
     print(f"build_info={result.build_info_path}")
     print(f"code_signed={str(result.code_signed).lower()}")
     print("standalone=false")

@@ -7,10 +7,18 @@ from pathlib import Path
 from app.meta_analysis.extraction.schema_registry import list_extraction_schema_profiles
 from app.meta_analysis.models.analysis_dataset import AnalysisReadyDataset
 from app.meta_analysis.models.analysis_result import AnalysisResult
+from app.meta_analysis.models.statistical_result_state import (
+    STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+    STATISTICAL_RESULT_STATE_NOT_RUN,
+    blocks_formal_report_claim,
+    statistical_result_state_label_zh,
+)
+from app.meta_analysis.services.effect_size_normalization_service import EffectSizeNormalizationService
 from app.meta_analysis.models.extraction import OutcomeDataType
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_plan_service import (
     ANALYSIS_PLAN_DRAFT_SCHEMA_VERSION,
+    ANALYSIS_PLAN_M7_SCHEMA_VERSION,
     CONFIRMED_ANALYSIS_PLAN_SCHEMA_VERSION,
     AnalysisPlanService,
 )
@@ -24,6 +32,9 @@ from app.meta_analysis.services.meta_statistics_engine_service import (
     META_STATISTICS_STANDARDIZED_RESULT_SCHEMA_VERSION,
     MetaStatisticsEngineService,
 )
+from app.meta_analysis.services.pairwise_meta_executor_service import PairwiseMetaExecutorService
+from app.meta_analysis.models.result_review import RESULT_REVIEW_PANEL_LABELS_ZH, result_review_label_zh
+from app.meta_analysis.services.result_review_service import StatisticalResultReviewService
 from app.meta_analysis.ui_text import (
     ANALYSIS_BLOCKED_METHOD_ZH,
     ANALYSIS_DESCRIPTION_ZH,
@@ -139,6 +150,10 @@ class AnalysisSetupPageState:
     applicability_warnings_path: str
     preflight_summary: dict[str, object]
     run_result_summary: dict[str, object]
+    result_state_summary: dict[str, object]
+    effect_size_normalization_summary: dict[str, object]
+    pairwise_executor_summary: dict[str, object]
+    result_review_summary: dict[str, object]
     advanced_method_status: dict[str, str]
     warnings: tuple[str, ...]
     errors: tuple[str, ...]
@@ -155,6 +170,24 @@ class AnalysisSetupPageState:
     section_labels_zh: dict[str, str] | None = None
     model_option_labels_zh: tuple[str, ...] = ()
     advanced_method_status_zh: dict[str, str] | None = None
+    effect_size_normalization_labels_zh: tuple[str, ...] = (
+        "效应量标准化预检查",
+        "可用于后续统计的研究数",
+        "需要用户检查",
+        "字段不完整",
+        "不支持的效应量类型",
+    )
+    pairwise_executor_labels_zh: tuple[str, ...] = (
+        "统计执行状态",
+        "模型",
+        "纳入研究数",
+        "合并效应量",
+        "95% CI",
+        "异质性 I²",
+        "测试阶段提示",
+        "需要用户审核后才能进入报告",
+    )
+    result_review_labels_zh: tuple[str, ...] = RESULT_REVIEW_PANEL_LABELS_ZH
     developer_info_title_zh: str = DEVELOPER_INFO_TITLE_ZH
 
 
@@ -172,17 +205,23 @@ class AnalysisPlanBuilderPageState:
     confirmed_protocol_status: str
     draft_status: str
     confirmed_status: str
+    m7_schema_version: str
+    plan_state: str
     meta_type: str
     effect_measure: str
+    effect_measure_type: str
     model_default: str
+    model_preference: str
+    included_study_count: int
     included_candidate_count: int
     excluded_candidate_count: int
     warnings: tuple[str, ...]
+    readiness_warnings_zh: tuple[str, ...]
     primary_actions: tuple[str, ...]
     safety_flags: dict[str, bool]
     title_zh: str = "分析计划"
     status_label_zh: str = "内部测试"
-    description_zh: str = "从 confirmed protocol、提取行和质量评价摘要生成分析计划草稿；确认后仍不运行统计。"
+    description_zh: str = "确认研究类型、效应量、模型、异质性、亚组/敏感性/发表偏倚计划；确认后仍不运行统计。"
 
 
 @dataclass(frozen=True)
@@ -203,6 +242,8 @@ class MetaStatisticsEnginePageState:
     manifest_path: str
     input_validation_status: str
     result_status: str
+    result_state: str
+    result_state_label_zh: str
     warnings: tuple[str, ...]
     primary_actions: tuple[str, ...]
     safety_flags: dict[str, bool]
@@ -253,6 +294,9 @@ def analysis_setup_state_from_project(
     warnings_path = project_dir / "analysis" / "applicability_warnings.json"
     preflight_summary = _analysis_alias_summary(dataset_path, "dataset")
     run_result_summary = _analysis_alias_summary(result_path, "result")
+    normalization_summary = _effect_size_normalization_summary(project_dir)
+    pairwise_summary = _pairwise_executor_summary(project_dir)
+    review_summary = _result_review_summary(project_dir)
     if not plan_path.exists():
         warnings.append("analysis_plan_missing")
     if not dataset_path.exists():
@@ -278,6 +322,14 @@ def analysis_setup_state_from_project(
         applicability_warnings_path=str(warnings_path),
         preflight_summary=preflight_summary,
         run_result_summary=run_result_summary,
+        result_state_summary={
+            "state": run_result_summary.get("result_state", STATISTICAL_RESULT_STATE_NOT_RUN),
+            "label_zh": run_result_summary.get("result_state_label_zh", statistical_result_state_label_zh(STATISTICAL_RESULT_STATE_NOT_RUN)),
+            "blocks_formal_report_claim": run_result_summary.get("blocks_formal_report_claim", True),
+        },
+        effect_size_normalization_summary=normalization_summary,
+        pairwise_executor_summary=pairwise_summary,
+        result_review_summary=review_summary,
         advanced_method_status={
             "network_meta": BLOCKED_ADVANCED_METHODS["network_meta"],
             "hsroc": BLOCKED_ADVANCED_METHODS["hsroc"],
@@ -334,12 +386,22 @@ def analysis_plan_builder_state_from_project(
         confirmed_protocol_status="confirmed" if confirmed_protocol_path.exists() else "missing",
         draft_status=str(draft.get("status", "missing")) if draft else "missing",
         confirmed_status="confirmed" if confirmed else "not_confirmed",
+        m7_schema_version=ANALYSIS_PLAN_M7_SCHEMA_VERSION,
+        plan_state=str((confirmed or draft).get("plan_state", "missing")) if (confirmed or draft) else "missing",
         meta_type=str(draft.get("meta_type", "")) if draft else "",
         effect_measure=str(draft.get("effect_measure", "")) if draft else "",
+        effect_measure_type=str((confirmed or draft).get("effect_measure_type", "")) if (confirmed or draft) else "",
         model_default=str(draft.get("model_default", "")) if draft else "",
+        model_preference=str((confirmed or draft).get("model_preference", "")) if (confirmed or draft) else "",
+        included_study_count=int((confirmed or draft).get("included_study_count", 0) or 0) if (confirmed or draft) else 0,
         included_candidate_count=len(draft.get("included_effect_row_candidates", [])) if isinstance(draft.get("included_effect_row_candidates"), list) else 0,
         excluded_candidate_count=len(draft.get("excluded_effect_row_candidates", [])) if isinstance(draft.get("excluded_effect_row_candidates"), list) else 0,
         warnings=tuple(_dedupe([*warnings, *(str(item) for item in draft.get("warnings", []) if item)])) if draft else tuple(warnings),
+        readiness_warnings_zh=tuple(
+            dict((confirmed or draft).get("m7_warning_labels_zh", {})).values()
+        )
+        if isinstance((confirmed or draft).get("m7_warning_labels_zh", {}) if (confirmed or draft) else {}, dict)
+        else (),
         primary_actions=("生成分析计划草稿", "查看候选效应量", "确认分析计划", "暂不运行统计"),
         safety_flags={
             "auto_confirms_analysis_plan": False,
@@ -348,6 +410,7 @@ def analysis_plan_builder_state_from_project(
             "creates_final_analysis_result": False,
             "advances_prisma": False,
             "generates_medical_interpretation": False,
+            "future_statistical_execution_requires_confirmed_plan": True,
         },
         status_label_zh=f"{APP_VERSION} · {INTERNAL_BETA_STATUS_ZH}",
     )
@@ -387,6 +450,8 @@ def meta_statistics_engine_state_from_project(
         manifest_path=str(stats_service.manifest_path(project_dir)),
         input_validation_status=str(diagnostics.get("input_validation_status", "")),
         result_status=str(result.get("result_status", "testing_result_generated" if result else "not_started")),
+        result_state=str(result.get("result_state", "testing_level" if result else STATISTICAL_RESULT_STATE_NOT_RUN)),
+        result_state_label_zh=statistical_result_state_label_zh(str(result.get("result_state", "testing_level" if result else STATISTICAL_RESULT_STATE_NOT_RUN))),
         warnings=tuple(_dedupe(warnings)),
         primary_actions=("运行统计分析", "查看分析计划", "查看输入校验", "查看统计结果"),
         safety_flags={
@@ -410,14 +475,124 @@ def _analysis_alias_summary(path: Path, payload_key: str) -> dict[str, object]:
         inner = {}
     return {
         "status": "available",
-        "path": str(path),
         "id": str(inner.get("dataset_id") or inner.get("result_id") or ""),
         "outcome_name": str(inner.get("outcome_name", "")),
         "effect_measure": str(inner.get("effect_measure", "")),
         "model": str(inner.get("model", "")),
+        "result_state": str(inner.get("result_state") or payload.get("result_state") or STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN),
+        "result_state_label_zh": statistical_result_state_label_zh(str(inner.get("result_state") or payload.get("result_state") or STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN)),
+        "blocks_formal_report_claim": blocks_formal_report_claim(inner) if payload_key == "result" else True,
         "warnings": inner.get("warnings", []),
         "errors": inner.get("validation_errors", []),
     }
+
+
+def _effect_size_normalization_summary(project_dir: Path) -> dict[str, object]:
+    try:
+        effects = EffectSizeNormalizationService().normalize_extraction_rows(project_dir)
+        summary = EffectSizeNormalizationService().summarize_normalization(effects).to_dict()
+    except Exception:
+        summary = {
+            "total_rows": 0,
+            "confirmed_rows": 0,
+            "normalized_ready": 0,
+            "incomplete": 0,
+            "invalid": 0,
+            "needs_user_review": 0,
+            "unsupported_effect_type": 0,
+            "warnings": [],
+            "result_state": STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+        }
+    return {
+        "title_zh": "效应量标准化预检查",
+        "ready_label_zh": "可用于后续统计的研究数",
+        "needs_review_label_zh": "需要用户检查",
+        "incomplete_label_zh": "字段不完整",
+        "unsupported_label_zh": "不支持的效应量类型",
+        "normalized_ready": int(summary.get("normalized_ready", 0) or 0),
+        "needs_user_review": int(summary.get("needs_user_review", 0) or 0),
+        "incomplete": int(summary.get("incomplete", 0) or 0),
+        "unsupported_effect_type": int(summary.get("unsupported_effect_type", 0) or 0),
+        "creates_computed_result": False,
+        "result_state": STATISTICAL_RESULT_STATE_CONFIGURED_NOT_RUN,
+    }
+
+
+def _pairwise_executor_summary(project_dir: Path) -> dict[str, object]:
+    result = PairwiseMetaExecutorService().load_latest_result(project_dir)
+    if result is None:
+        return {
+            "title_zh": "统计执行状态",
+            "state_label_zh": statistical_result_state_label_zh(STATISTICAL_RESULT_STATE_NOT_RUN),
+            "result_state": STATISTICAL_RESULT_STATE_NOT_RUN,
+            "model_label_zh": "模型",
+            "model_used": "未运行",
+            "included_label_zh": "纳入研究数",
+            "included_count": 0,
+            "pooled_label_zh": "合并效应量",
+            "pooled_effect": "缺失",
+            "ci_label_zh": "95% CI",
+            "confidence_interval": "缺失",
+            "i2_label_zh": "异质性 I²",
+            "i_squared": "缺失",
+            "testing_notice_zh": "测试阶段提示：尚未运行 M12 pairwise executor。",
+            "review_notice_zh": "需要用户审核后才能进入报告。",
+            "blocks_formal_report_claim": True,
+        }
+    payload = result.to_dict()
+    ci = "缺失"
+    if payload.get("pooled_ci_lower") is not None and payload.get("pooled_ci_upper") is not None:
+        ci = f"{_format_optional_float(payload.get('pooled_ci_lower'))} - {_format_optional_float(payload.get('pooled_ci_upper'))}"
+    heterogeneity = payload.get("heterogeneity_summary", {})
+    i2 = heterogeneity.get("i_squared") if isinstance(heterogeneity, dict) else None
+    return {
+        "title_zh": "统计执行状态",
+        "state_label_zh": statistical_result_state_label_zh(str(payload.get("result_state", STATISTICAL_RESULT_STATE_NOT_RUN))),
+        "result_state": str(payload.get("result_state", STATISTICAL_RESULT_STATE_NOT_RUN)),
+        "model_label_zh": "模型",
+        "model_used": str(payload.get("model_used", "")) or "未运行",
+        "included_label_zh": "纳入研究数",
+        "included_count": len(payload.get("included_studies", [])) if isinstance(payload.get("included_studies"), list) else 0,
+        "pooled_label_zh": "合并效应量",
+        "pooled_effect": _format_optional_float(payload.get("pooled_effect")),
+        "ci_label_zh": "95% CI",
+        "confidence_interval": ci,
+        "i2_label_zh": "异质性 I²",
+        "i_squared": _format_optional_float(i2),
+        "testing_notice_zh": "测试阶段提示：M12 为 Developer Preview / testing MVP，不生成正式医学结论。",
+        "review_notice_zh": "需要用户审核后才能进入报告。",
+        "blocks_formal_report_claim": blocks_formal_report_claim(payload),
+}
+
+
+def _result_review_summary(project_dir: Path) -> dict[str, object]:
+    service = StatisticalResultReviewService()
+    review = service.load_review(project_dir)
+    return {
+        "title_zh": "统计结果审核",
+        "review_state": review.review_state,
+        "review_state_label_zh": result_review_label_zh(review.review_state),
+        "result_state": review.result_state or STATISTICAL_RESULT_STATE_NOT_RUN,
+        "warnings_acknowledged_label_zh": "已确认查看警告",
+        "review_warnings_acknowledged": review.review_warnings_acknowledged,
+        "report_ready_requested_label_zh": "申请报告就绪",
+        "report_ready_requested": review.report_ready_requested,
+        "report_ready_label_zh": "报告就绪",
+        "report_ready_granted": review.report_ready_granted,
+        "blockers_label_zh": "阻止进入报告的原因",
+        "report_ready_blockers": "；".join(review.report_ready_blockers) if review.report_ready_blockers else "无",
+        "review_notes_present": bool(review.review_notes.strip()),
+        "warnings_visible": list(review.warnings_visible),
+    }
+
+
+def _format_optional_float(value: object) -> str:
+    if value is None:
+        return "缺失"
+    try:
+        return f"{float(value):.6g}"
+    except (TypeError, ValueError):
+        return "缺失"
 
 
 def _available_subgroup_options(available_outcomes: tuple[dict[str, object], ...]) -> tuple[str, ...]:
@@ -443,9 +618,9 @@ def _dedupe(items: list[str]) -> list[str]:
 
 
 try:
-    from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFileDialog, QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover
-    QFileDialog = QFrame = QHBoxLayout = QLabel = QLineEdit = QPushButton = QVBoxLayout = QWidget = None
+    QFileDialog = QCheckBox = QFrame = QHBoxLayout = QLabel = QLineEdit = QPushButton = QVBoxLayout = QWidget = None
 
 
 if QWidget is not None:
@@ -468,6 +643,8 @@ if QWidget is not None:
             self._figure_service = figure_service or FigureResultService(analysis_run_service=self._run_service)
             self._analysis_plan_service = AnalysisPlanService()
             self._statistics_engine_service = MetaStatisticsEngineService()
+            self._pairwise_executor_service = PairwiseMetaExecutorService()
+            self._result_review_service = StatisticalResultReviewService(pairwise_executor=self._pairwise_executor_service)
             self._state = initial_analysis_state()
 
             root = QVBoxLayout(self)
@@ -528,14 +705,53 @@ if QWidget is not None:
             view_validation_button.clicked.connect(self._view_statistics_validation)
             view_result_button = QPushButton("查看统计结果")
             view_result_button.clicked.connect(self._view_statistics_result)
+            view_pairwise_button = QPushButton("查看 M12 执行状态")
+            view_pairwise_button.clicked.connect(self._view_pairwise_executor_result)
             stats_buttons.addWidget(run_stats_button)
             stats_buttons.addWidget(view_plan_button)
             stats_buttons.addWidget(view_validation_button)
             stats_buttons.addWidget(view_result_button)
+            stats_buttons.addWidget(view_pairwise_button)
             root.addLayout(stats_buttons)
             self._statistics_engine_label = QLabel("请先确认分析计划。")
             self._statistics_engine_label.setWordWrap(True)
             root.addWidget(self._statistics_engine_label)
+
+            normalization_title = QLabel("效应量标准化预检查")
+            normalization_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(normalization_title)
+            self._normalization_summary_label = QLabel("可用于后续统计的研究数、需要用户检查、字段不完整和不支持的效应量类型会显示在这里。")
+            self._normalization_summary_label.setWordWrap(True)
+            root.addWidget(self._normalization_summary_label)
+            self._pairwise_executor_label = QLabel("统计执行状态、模型、纳入研究数、合并效应量、95% CI、异质性 I² 和测试阶段提示会显示在这里。")
+            self._pairwise_executor_label.setWordWrap(True)
+            root.addWidget(self._pairwise_executor_label)
+
+            review_title = QLabel("统计结果审核")
+            review_title.setStyleSheet("font-size: 16px; font-weight: 700;")
+            root.addWidget(review_title)
+            self._review_status_label = QLabel("审核状态：尚未审核。报告就绪需要明确审核、确认查看警告，并申请报告就绪。")
+            self._review_status_label.setWordWrap(True)
+            root.addWidget(self._review_status_label)
+            self._review_warning_ack = QCheckBox("已确认查看警告")
+            root.addWidget(self._review_warning_ack)
+            self._review_notes_input = QLineEdit()
+            self._review_notes_input.setPlaceholderText("审核备注")
+            root.addWidget(self._review_notes_input)
+            review_buttons = QHBoxLayout()
+            accept_review_button = QPushButton("接受进入报告草稿")
+            accept_review_button.clicked.connect(self._accept_pairwise_for_report)
+            needs_revision_button = QPushButton("标记需要修订")
+            needs_revision_button.clicked.connect(self._mark_pairwise_needs_revision)
+            reject_review_button = QPushButton("不纳入报告")
+            reject_review_button.clicked.connect(self._reject_pairwise_for_report)
+            request_ready_button = QPushButton("申请报告就绪")
+            request_ready_button.clicked.connect(self._request_pairwise_report_ready)
+            review_buttons.addWidget(accept_review_button)
+            review_buttons.addWidget(needs_revision_button)
+            review_buttons.addWidget(reject_review_button)
+            review_buttons.addWidget(request_ready_button)
+            root.addLayout(review_buttons)
 
             dataset_title = QLabel("Analysis-ready Dataset（测试中）")
             dataset_title.setStyleSheet("font-size: 16px; font-weight: 700;")
@@ -699,14 +915,15 @@ if QWidget is not None:
                 self._statistics_engine_label.setText(
                     f"Run ID：{result.analysis_run_id}\n"
                     f"Result ID：{result.result_id}\n"
+                    f"结果状态：{statistical_result_state_label_zh(str(output.get('result_state', 'testing_level')))}\n"
                     f"Effect measure：{output.get('effect_measure', '')}\n"
                     f"Model：{output.get('model', '')}\n"
                     f"Pooled effect：{output.get('pooled_effect', '')}\n"
                     f"95% CI：{output.get('ci_low', '')} - {output.get('ci_high', '')}\n"
                     f"I²：{output.get('i_squared', '')}\n"
-                    f"输出：{result.result_path}\n"
                     "testing-level；未生成医学结论。"
                 )
+                self._refresh_normalization_summary(project_dir)
                 self._error_label.setText("")
             except Exception as exc:
                 self._statistics_engine_label.setText("请先确认分析计划。")
@@ -717,8 +934,7 @@ if QWidget is not None:
             path = project_dir / "analysis" / "analysis_plan_confirmed_v1.json"
             payload = _load_json(path)
             self._statistics_engine_label.setText(
-                f"Confirmed plan：{path}\n"
-                f"Plan ID：{payload.get('confirmed_analysis_plan_id', '')}\n"
+                f"分析计划状态：{'已确认' if payload else '缺失'}\n"
                 f"Effect measure：{payload.get('confirmed_effect_measure', '')}\n"
                 f"Model：{payload.get('confirmed_model', '')}\n"
                 f"Locked：{payload.get('locked_for_analysis_run', False)}"
@@ -730,7 +946,7 @@ if QWidget is not None:
             self._statistics_engine_label.setText(
                 f"Input validation：{state.input_validation_status or 'not_started'}\n"
                 f"Warnings：{', '.join(state.warnings) or '无'}\n"
-                f"Manifest：{state.manifest_path}"
+                f"结果状态：{state.result_state_label_zh}"
             )
 
         def _view_statistics_result(self) -> None:
@@ -738,11 +954,112 @@ if QWidget is not None:
             state = meta_statistics_engine_state_from_project(project_dir, service=self._statistics_engine_service)
             result = self._statistics_engine_service.load_standardized_result(project_dir, state.latest_run_id) if state.latest_run_id else {}
             self._statistics_engine_label.setText(
-                f"Result：{state.result_path or 'not_started'}\n"
                 f"Status：{state.result_status}\n"
+                f"结果状态：{state.result_state_label_zh}\n"
                 f"Pooled effect：{result.get('pooled_effect', '')}\n"
                 f"Testing：{result.get('testing_level_notice', '')}"
             )
+            self._refresh_normalization_summary(project_dir)
+            self._refresh_pairwise_executor_summary(project_dir)
+
+        def _view_pairwise_executor_result(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            self._refresh_pairwise_executor_summary(project_dir)
+            self._refresh_result_review_summary(project_dir)
+
+        def _refresh_normalization_summary(self, project_dir: Path) -> None:
+            summary = _effect_size_normalization_summary(project_dir)
+            self._normalization_summary_label.setText(
+                f"{summary['title_zh']}\n"
+                f"{summary['ready_label_zh']}：{summary['normalized_ready']}\n"
+                f"{summary['needs_review_label_zh']}：{summary['needs_user_review']}\n"
+                f"{summary['incomplete_label_zh']}：{summary['incomplete']}\n"
+                f"{summary['unsupported_label_zh']}：{summary['unsupported_effect_type']}\n"
+                "标准化输入仅用于后续执行器预检查，不生成 computed 或 report_ready 结果。"
+            )
+
+        def _refresh_pairwise_executor_summary(self, project_dir: Path) -> None:
+            summary = _pairwise_executor_summary(project_dir)
+            self._pairwise_executor_label.setText(
+                f"{summary['title_zh']}：{summary['state_label_zh']}\n"
+                f"{summary['model_label_zh']}：{summary['model_used']}\n"
+                f"{summary['included_label_zh']}：{summary['included_count']}\n"
+                f"{summary['pooled_label_zh']}：{summary['pooled_effect']}\n"
+                f"{summary['ci_label_zh']}：{summary['confidence_interval']}\n"
+                f"{summary['i2_label_zh']}：{summary['i_squared']}\n"
+                f"{summary['testing_notice_zh']}\n"
+                f"{summary['review_notice_zh']}"
+            )
+
+        def _refresh_result_review_summary(self, project_dir: Path) -> None:
+            summary = _result_review_summary(project_dir)
+            self._review_status_label.setText(
+                f"{summary['title_zh']}：{summary['review_state_label_zh']}\n"
+                f"{summary['warnings_acknowledged_label_zh']}：{'是' if summary['review_warnings_acknowledged'] else '否'}\n"
+                f"{summary['report_ready_requested_label_zh']}：{'是' if summary['report_ready_requested'] else '否'}\n"
+                f"{summary['report_ready_label_zh']}：{'是' if summary['report_ready_granted'] else '否'}\n"
+                f"{summary['blockers_label_zh']}：{summary['report_ready_blockers']}"
+            )
+
+        def _latest_pairwise_result_for_review(self) -> object:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            result = self._pairwise_executor_service.load_latest_result(project_dir)
+            if result is None:
+                raise ValueError("pairwise_result_missing")
+            return result
+
+        def _accept_pairwise_for_report(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                transition = self._result_review_service.accept_for_report(
+                    project_dir,
+                    self._latest_pairwise_result_for_review(),
+                    reviewer_role="reviewer",
+                    review_notes=self._review_notes_input.text(),
+                    warnings_acknowledged=self._review_warning_ack.isChecked(),
+                )
+                self._review_status_label.setText(
+                    f"统计结果审核：{transition.review.review_state}\n"
+                    f"阻止进入报告的原因：{'；'.join(transition.blockers) or '无'}"
+                )
+                self._refresh_pairwise_executor_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"统计结果审核失败：{exc}")
+
+        def _mark_pairwise_needs_revision(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                self._result_review_service.mark_needs_revision(project_dir, self._latest_pairwise_result_for_review(), reviewer_role="reviewer", review_notes=self._review_notes_input.text())
+                self._refresh_result_review_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"统计结果审核失败：{exc}")
+
+        def _reject_pairwise_for_report(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                self._result_review_service.reject_for_report(project_dir, self._latest_pairwise_result_for_review(), reviewer_role="reviewer", review_notes=self._review_notes_input.text())
+                self._refresh_result_review_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"统计结果审核失败：{exc}")
+
+        def _request_pairwise_report_ready(self) -> None:
+            project_dir = Path(self._project_dir_input.text()).expanduser()
+            try:
+                result = self._latest_pairwise_result_for_review()
+                requested = self._result_review_service.request_report_ready(project_dir, result, reviewer_role="reviewer")
+                latest = self._pairwise_executor_service.load_latest_result(project_dir)
+                granted = self._result_review_service.grant_report_ready(project_dir, latest, reviewer_role="reviewer") if requested.success else requested
+                self._review_status_label.setText(
+                    f"报告就绪状态：{'报告就绪' if granted.success else '未就绪'}\n"
+                    f"阻止进入报告的原因：{'；'.join(granted.blockers) or '无'}"
+                )
+                self._refresh_pairwise_executor_summary(project_dir)
+                self._error_label.setText("")
+            except Exception as exc:
+                self._error_label.setText(f"申请报告就绪失败：{exc}")
 
         def _build_dataset(self) -> None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
@@ -780,6 +1097,7 @@ if QWidget is not None:
                 self._analysis_result_label.setText(
                     f"Result ID：{result.result_id}\n"
                     f"Dataset ID：{result.dataset_id}\n"
+                    f"结果状态：{statistical_result_state_label_zh(result.result_state)}\n"
                     f"Model：{result.model}\n"
                     f"Pooled effect：{result.pooled_effect:.6g}\n"
                     f"95% CI：{result.ci_lower:.6g} - {result.ci_upper:.6g}\n"
@@ -788,7 +1106,7 @@ if QWidget is not None:
                     f"I²：{result.i_squared:.6g}\n"
                     f"tau²：{result.tau_squared:.6g}\n"
                     f"Warnings：{', '.join(result.warnings) or '无'}\n"
-                    f"输出：{output_path}"
+                    "测试级结果，不可作为正式统计结论。"
                 )
                 self._error_label.setText("")
             except Exception as exc:
@@ -799,7 +1117,7 @@ if QWidget is not None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
             try:
                 artifact = self._figure_service.generate_forest_plot(project_dir, self._analysis_result_id_input.text().strip())
-                self._artifact_label.setText(f"Forest plot：{artifact.file_path}")
+                self._artifact_label.setText(f"Forest plot：已生成 testing-level artifact；类型 {artifact.figure_type}")
                 self._error_label.setText("")
             except Exception as exc:
                 self._artifact_label.setText("没有生成 forest plot。")
@@ -809,7 +1127,7 @@ if QWidget is not None:
             project_dir = Path(self._project_dir_input.text()).expanduser()
             try:
                 output_path = self._figure_service.export_result_table_csv(project_dir, self._analysis_result_id_input.text().strip())
-                self._artifact_label.setText(f"Result table：{output_path}")
+                self._artifact_label.setText("Result table：已导出 testing-level 结果表，不代表正式统计结论。")
                 self._error_label.setText("")
             except Exception as exc:
                 self._artifact_label.setText("没有导出 result table。")

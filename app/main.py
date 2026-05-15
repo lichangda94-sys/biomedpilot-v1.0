@@ -5,14 +5,15 @@ import argparse
 
 from app.shell.dashboard import build_dashboard_model
 from app.shared.environment.checks import check_local_environment
-from app.shared.qt_lifecycle import cleanup_qt_top_level_widgets
 from app.version import app_version_summary
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch BioMedPilot.")
     parser.add_argument("--smoke-test", action="store_true", help="Load startup state and exit without opening the GUI event loop.")
-    return parser.parse_args(argv)
+    normalized_argv = list(sys.argv[1:] if argv is None else argv)
+    filtered_argv = [arg for arg in normalized_argv if not arg.startswith("-psn_")]
+    return parser.parse_args(filtered_argv)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -55,11 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     apply_app_identity(qt_app)
     window = MainWindow()
     window.show()
-    try:
-        return qt_app.exec()
-    finally:
-        window.close()
-        cleanup_qt_top_level_widgets(qt_app)
+    return qt_app.exec()
 
 
 if __name__ == "__main__":

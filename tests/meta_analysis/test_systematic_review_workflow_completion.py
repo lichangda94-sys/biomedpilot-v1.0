@@ -92,4 +92,5 @@ def test_formal_report_references_fulltext_and_quality_outputs(tmp_path: Path) -
 
     assert "Full-text registry" in text
     assert "Quality assessment summary" in text
-    assert "quality_assessment_table.csv" in text
+    assert "quality_assessment_table.csv" not in text
+    assert "报告正文不展示原始清单路径" in text

@@ -12,6 +12,7 @@ from app.meta_analysis.models.analysis_dataset import (
     now_utc,
 )
 from app.meta_analysis.models.analysis_result import AnalysisResult, analysis_result_to_dict
+from app.meta_analysis.models.statistical_result_state import blocks_formal_report_claim
 from app.meta_analysis.services.analysis_dataset_service import AnalysisDatasetService
 from app.meta_analysis.services.analysis_run_service import AnalysisRunService
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
@@ -283,6 +284,9 @@ class AnalysisSetupService:
                 "project_id": result.project_id,
                 "data_type": "analysis_result",
                 "schema_version": "analysis_result_alias.v1",
+                "result_state": result.result_state,
+                "testing_level": result.testing_level,
+                "blocks_formal_report_claim": blocks_formal_report_claim(result),
                 "result": analysis_result_to_dict(result),
             },
         )
@@ -291,7 +295,7 @@ class AnalysisSetupService:
             data_type="analysis_result_alias",
             source_path=str(project_dir / "analysis" / "analysis_results.json"),
             output_path=str(output_path),
-            status="available",
+            status="testing",
         )
         return output_path
 

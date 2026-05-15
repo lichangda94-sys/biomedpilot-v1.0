@@ -11,6 +11,14 @@ from app.bioinformatics.standardized_asset_selection import resolve_standardized
 
 DEG_TASK_PLAN = Path("manifests") / "analysis_tasks" / "deg_task_plan.json"
 DEG_TASK_PLAN_SCHEMA_VERSION = "bioinformatics_deg_task_plan.v1"
+DEG_PREFLIGHT_MANIFEST = Path("analysis") / "deg" / "preflight" / "deg_preflight_manifest.json"
+
+
+class DegPreflightResult:
+    def __init__(self, *, status: str, manifest_path: Path, manifest: dict[str, object]) -> None:
+        self.status = status
+        self.manifest_path = manifest_path
+        self.manifest = manifest
 
 
 def deg_task_plan_path(project_root: str | Path) -> Path:
@@ -23,6 +31,87 @@ def load_deg_task_plan(project_root: str | Path) -> dict[str, object] | None:
         return None
     payload = _read_json(path)
     return payload if payload.get("schema_version") == DEG_TASK_PLAN_SCHEMA_VERSION else None
+
+
+def build_deg_preflight(
+    project_root: str | Path,
+    *,
+    method: str = "DEG executor not connected",
+    log2fc_threshold: float = 1.0,
+    p_value_threshold: float = 0.05,
+    fdr_threshold: float = 0.05,
+) -> DegPreflightResult:
+    from app.bioinformatics.comparison_config import (
+        comparison_sample_match_status,
+        expression_samples_from_recognition_report,
+        load_confirmed_comparison_config,
+    )
+    from app.bioinformatics.project_recognition import load_recognition_report
+    from app.bioinformatics.project_standardization import load_standardization_artifacts
+
+    root = Path(project_root).expanduser().resolve()
+    recognition = load_recognition_report(root) or {}
+    artifacts = load_standardization_artifacts(root)
+    registry = artifacts.get("registry")
+    assets = [item for item in (registry or {}).get("assets", []) or [] if isinstance(item, dict)] if isinstance(registry, dict) else []
+    expression_assets = [item for item in assets if str(item.get("asset_type") or "") in {"raw_count_matrix", "count_matrix", "expression_matrix", "normalized_expression_matrix"}]
+    metadata_assets = [item for item in assets if str(item.get("asset_type") or "") in {"sample_metadata", "phenotype_metadata"}]
+    comparison = load_confirmed_comparison_config(root)
+    expression_samples = expression_samples_from_recognition_report(recognition if isinstance(recognition, dict) else {})
+    match = comparison_sample_match_status(comparison, expression_samples)
+
+    checks: list[dict[str, object]] = []
+    checks.append(_check("expression_matrix", bool(expression_assets), "已找到可用于校验的表达矩阵。", "缺 count matrix 或可用表达矩阵。"))
+    checks.append(_check("sample_metadata", bool(metadata_assets or comparison is not None), "样本信息可由样本表或用户确认的比较组设置构建。", "缺 sample metadata，且无法从用户确认的比较组设置构建样本信息。"))
+    checks.append(_check("group_design", comparison is not None, "分组设计已确认。", "缺分组设计，请先确认分组与比较设计。"))
+    checks.append(_check("sample_name_match", str(match.get("sample_id_match_status") or "not_checked") != "mismatch", "样本名匹配未发现阻塞。", "样本名在表达矩阵和分组中不匹配。"))
+    blockers = [str(item["message_zh"]) for item in checks if item.get("status") == "blocked"]
+    warnings = ["当前版本尚未执行真实差异分析；preflight 只保存配置草稿和输入校验。"]
+    status = "blocked" if blockers else "passed"
+    path = root / DEG_PREFLIGHT_MANIFEST
+    manifest = {
+        "schema_version": "biomedpilot.deg_preflight_manifest.v1",
+        "generated_at": _now(),
+        "status": status,
+        "status_label_zh": _preflight_status_label(status),
+        "semantic_boundary": "input_preflight_only_not_deg_result",
+        "not_a_result": True,
+        "execution": "not_run",
+        "project_root": str(root),
+        "manifest_path": str(path),
+        "config_draft": {
+            "method": method,
+            "log2fc_threshold": log2fc_threshold,
+            "p_value_threshold": p_value_threshold,
+            "fdr_threshold": fdr_threshold,
+            "note": "仅配置草稿和输入校验；未运行真实差异分析。",
+        },
+        "checks": checks,
+        "blockers": blockers,
+        "warnings": warnings,
+        "developer_diagnostics": {
+            "expression_assets": expression_assets,
+            "metadata_assets": metadata_assets,
+            "comparison_sample_match": match,
+            "standardization_registry_path": artifacts.get("registry_path") or "",
+        },
+    }
+    _atomic_write_json(path, manifest)
+    return DegPreflightResult(
+        status=status,
+        manifest_path=path,
+        manifest=manifest,
+    )
+
+
+def load_deg_preflight_manifest(project_root: str | Path) -> dict[str, object] | None:
+    path = Path(project_root).expanduser().resolve() / DEG_PREFLIGHT_MANIFEST
+    if not path.is_file():
+        return None
+    manifest = _read_json(path)
+    if manifest.get("schema_version") != "biomedpilot.deg_preflight_manifest.v1":
+        return None
+    return manifest
 
 
 def build_deg_task_plan_context(project_root: str | Path) -> dict[str, object]:
@@ -98,6 +187,48 @@ def save_deg_task_plan(
     }
     _atomic_write_json(root / DEG_TASK_PLAN, payload)
     return payload
+
+
+def _preflight_status(status: str) -> str:
+    if status in {"passed", "warning", "blocked"}:
+        return status
+    if status == "passed_with_warnings":
+        return "warning"
+    if status == "failed":
+        return "blocked"
+    return status or "draft"
+
+
+def _preflight_status_label(status: str) -> str:
+    return {
+        "passed": "通过",
+        "warning": "警告",
+        "blocked": "阻塞",
+        "draft": "草稿",
+    }.get(status, status or "未知")
+
+
+def _check(check_id: str, passed: bool, ok_message: str, blocked_message: str) -> dict[str, object]:
+    return {
+        "check_id": check_id,
+        "status": "passed" if passed else "blocked",
+        "message_zh": ok_message if passed else blocked_message,
+    }
+
+
+def _preflight_checks(manifest: dict[str, object]) -> list[dict[str, object]]:
+    if isinstance(manifest.get("checks"), list):
+        return [item for item in manifest["checks"] if isinstance(item, dict)]  # type: ignore[index]
+    checks: list[dict[str, object]] = []
+    errors = [str(item) for item in manifest.get("errors", []) or [] if str(item)]
+    warnings = [str(item) for item in manifest.get("warnings", []) or [] if str(item)]
+    if errors:
+        checks.append({"check_id": "blockers", "status": "blocked", "message_zh": "；".join(errors)})
+    if warnings:
+        checks.append({"check_id": "warnings", "status": "warning", "message_zh": "；".join(warnings)})
+    if not checks:
+        checks.append({"check_id": "inputs", "status": "passed", "message_zh": "preflight 输入检查通过。"})
+    return checks
 
 
 def _comparison_payload(comparison: dict[str, object]) -> dict[str, object]:

@@ -17,11 +17,11 @@ def test_internal_beta_formal_report_contains_hardened_sections(tmp_path: Path) 
     report_text = report_path.read_text(encoding="utf-8")
 
     for heading in (
-        "## Protocol summary",
-        "## Study selection",
-        "## PRISMA summary",
-        "## Quality assessment",
-        "## Statistical methods",
+        "## 研究问题 / Protocol summary",
+        "## 去重结果 / Study selection",
+        "## PRISMA 流程摘要 / PRISMA summary",
+        "## 质量评价摘要 / Quality assessment summary",
+        "## 分析计划 / Statistical methods",
         "## Figures",
         "## Tables",
         "## Applicability warnings",
@@ -30,6 +30,7 @@ def test_internal_beta_formal_report_contains_hardened_sections(tmp_path: Path) 
         assert heading in report_text
     assert "Developer Preview / testing" in report_text
     assert "not a production journal submission" in report_text
+    assert str(project_dir) not in report_text
     assert "formal PRISMA 2020" in (project_dir / "reports" / "prisma_flow.svg").read_text(encoding="utf-8")
 
 

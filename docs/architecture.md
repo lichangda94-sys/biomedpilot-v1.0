@@ -39,6 +39,13 @@ BioMedPilot local tools and local models follow the principle:
   configuration, diagnostics, and troubleshooting.
 - ImageJ/Fiji is the preferred local image-analysis backend for future
   ImageJ-assisted/manual-review image workflows.
+- Integration now contains the shared ImageJ/Fiji detection foundation under
+  `app/shared/local_engines/`: stable status serialization, local config
+  storage, common macOS path probing, executable validation, and a
+  non-destructive macro smoke test.
+- This foundation is availability infrastructure only. It does not add WB/gel
+  grayscale, cell counting, automatic ROI, pathology analysis, or any concrete
+  image-analysis workflow.
 - Ollama/local LLM is a local environment capability. It must not consume cloud
   AI credits and must not be gated by membership/payment entitlement.
 - Cloud AI is separate and may later use account login, membership, AI credits,
