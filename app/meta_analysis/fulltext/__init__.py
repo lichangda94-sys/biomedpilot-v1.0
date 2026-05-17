@@ -11,6 +11,15 @@ from app.meta_analysis.fulltext.ocr_models import (
     OcrSource,
     ocr_document_from_dict,
 )
+from app.meta_analysis.fulltext.paddleocr_subprocess_runner import (
+    PADDLEOCR_WORKER_MODE_IMAGE,
+    PADDLEOCR_WORKER_MODE_PDF,
+    PADDLEOCR_WORKER_MODULE,
+    PaddleOcrRuntimeConfig,
+    PaddleOcrSubprocessError,
+    PaddleOcrSubprocessRunner,
+    build_paddleocr_worker_command,
+)
 from app.meta_analysis.fulltext.pdf_ocr_worker import PdfOcrWorker
 from app.meta_analysis.fulltext.image_ocr_worker import ImageOcrWorker
 
@@ -19,6 +28,9 @@ __all__ = [
     "OCR_STATUS_COMPLETED",
     "OCR_STATUS_FAILED",
     "OCR_STATUS_PENDING_RUNTIME",
+    "PADDLEOCR_WORKER_MODE_IMAGE",
+    "PADDLEOCR_WORKER_MODE_PDF",
+    "PADDLEOCR_WORKER_MODULE",
     "ImageOcrWorker",
     "OcrBlock",
     "OcrDocumentResult",
@@ -26,7 +38,11 @@ __all__ = [
     "OcrExportResult",
     "OcrPageResult",
     "OcrSource",
+    "PaddleOcrRuntimeConfig",
+    "PaddleOcrSubprocessError",
+    "PaddleOcrSubprocessRunner",
     "PdfOcrWorker",
+    "build_paddleocr_worker_command",
     "ocr_document_from_dict",
     "write_ocr_outputs",
 ]
