@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from labtools.calculators.calculator_models import CalculationError, CalculationResult
+from labtools.calculators.result_formatting import format_measurement
 from labtools.calculators.unit_conversion import (
     canonical_unit,
     format_number,
@@ -59,16 +60,19 @@ def calculate_solution_preparation(
         )
 
     mass_value = g_to_mass(mass_g, target_mass_unit)
+    mass_display = format_measurement(mass_value, target_mass_unit)
+    solvent_display = format_measurement(volume_value, source_volume_unit)
     return CalculationResult(
         title="溶液配制计算",
         input_summary=tuple(input_summary),
         formula=formula,
         result_lines=(
-            f"需要称量质量：{format_number(mass_value)} {target_mass_unit}",
-            f"需要溶剂补足体积：{format_number(volume_value)} {source_volume_unit}",
+            f"需要称量质量：{mass_display.text}",
+            f"需要溶剂补足体积：{solvent_display.text}",
         ),
         result_value=mass_value,
         result_unit=target_mass_unit,
+        warnings=tuple(dict.fromkeys(mass_display.warnings + solvent_display.warnings)),
         record_inputs={
             "concentration": concentration_value,
             "concentration_unit": source_concentration_unit,

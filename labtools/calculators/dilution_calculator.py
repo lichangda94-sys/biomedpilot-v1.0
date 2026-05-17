@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from labtools.calculators.calculator_models import CalculationError, CalculationResult
 from labtools.calculators.concentration_calculator import convert_concentration
+from labtools.calculators.result_formatting import format_measurement
 from labtools.calculators.unit_conversion import (
     canonical_unit,
     format_number,
@@ -56,6 +57,8 @@ def calculate_dilution(
     solvent_volume_l = target_volume_l - stock_volume_l
     stock_volume = l_to_volume(stock_volume_l, output_unit)
     solvent_volume = l_to_volume(solvent_volume_l, output_unit)
+    stock_volume_display = format_measurement(stock_volume, output_unit)
+    solvent_volume_display = format_measurement(solvent_volume, output_unit)
 
     stock_summary = f"{format_number(stock_value)} {source_stock_unit}"
     if source_stock_unit != source_target_unit:
@@ -70,9 +73,26 @@ def calculate_dilution(
         ),
         formula=("C1V1 = C2V2", "V1 = C2 x V2 / C1", "溶剂体积 = 目标体积 - 所需原液体积"),
         result_lines=(
-            f"所需原液体积：{format_number(stock_volume)} {output_unit}",
-            f"所需溶剂体积：{format_number(solvent_volume)} {output_unit}",
+            f"所需原液体积：{stock_volume_display.text}",
+            f"所需溶剂体积：{solvent_volume_display.text}",
         ),
         result_value=stock_volume,
         result_unit=output_unit,
+        warnings=tuple(dict.fromkeys(stock_volume_display.warnings + solvent_volume_display.warnings)),
+        record_inputs={
+            "stock_concentration": stock_value,
+            "stock_unit": source_stock_unit,
+            "target_concentration": target_value,
+            "target_unit": source_target_unit,
+            "target_volume": target_volume_value,
+            "volume_unit": source_volume_unit,
+            "molecular_weight_g_per_mol": molecular_weight,
+            "output_volume_unit": output_unit,
+        },
+        record_outputs={
+            "stock_volume": stock_volume,
+            "stock_volume_unit": output_unit,
+            "solvent_volume": solvent_volume,
+            "solvent_volume_unit": output_unit,
+        },
     )

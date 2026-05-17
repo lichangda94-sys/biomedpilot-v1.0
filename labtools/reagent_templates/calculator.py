@@ -13,6 +13,7 @@ from labtools.reagent_templates.models import (
     PreparationComponentResult,
     PreparationRequest,
     PreparationResult,
+    PreparationStageGroup,
     PreparationTreeNode,
     ReagentComponent,
     ReagentTemplate,
@@ -71,8 +72,7 @@ def calculate_preparation(request: PreparationRequest, templates: tuple[ReagentT
         raise ReagentTemplateError("请选择有效试剂模板。")
     if request.target_volume <= 0:
         raise ReagentTemplateError("本次目标体积必须大于 0。")
-    if request.overage_percent < 0:
-        raise ReagentTemplateError("损耗系数不能为负数。")
+    effective_overage_percent = _resolve_request_overage_percent(request)
     for template in templates:
         validate_template(template)
     detect_template_cycles(templates)
@@ -83,7 +83,7 @@ def calculate_preparation(request: PreparationRequest, templates: tuple[ReagentT
         target_volume=request.target_volume,
         target_volume_unit=request.target_volume_unit,
         target_strength=request.target_strength,
-        overage_percent=request.overage_percent,
+        overage_percent=effective_overage_percent,
         expand_subtemplates=request.expand_subtemplates,
         stack=(),
     )
@@ -98,8 +98,9 @@ def calculate_preparation(request: PreparationRequest, templates: tuple[ReagentT
         suggested_volume=root.suggested_volume,
         suggested_volume_unit=root.suggested_volume_unit,
         target_strength=request.target_strength,
-        overage_percent=request.overage_percent,
+        overage_percent=effective_overage_percent,
         direct_components=root.components,
+        direct_stage_groups=root.stage_groups,
         tree=root,
         warnings=warnings,
         steps=steps,
@@ -133,11 +134,16 @@ def _calculate_node(
     volume_total_l = 0.0
     auto_fill_component: ReagentComponent | None = None
 
-    for component in template.components:
+    for index, component in enumerate(template.components, start=1):
         if component.auto_fill_to_final_volume:
             auto_fill_component = component
             continue
-        result = _component_result(component, volume_factor=volume_factor, strength_factor=strength_factor)
+        result = _component_result(
+            component,
+            volume_factor=volume_factor,
+            strength_factor=strength_factor,
+            default_order=index,
+        )
         preliminary.append(result)
         if component.contributes_to_final_volume and result.amount is not None:
             volume_total_l += _volume_amount_to_l(result.amount, result.unit, component.name)
@@ -176,6 +182,8 @@ def _calculate_node(
                 amount=fill_amount,
                 unit=fill_unit,
                 display_amount=f"{format_number(fill_amount)} {fill_unit}",
+                addition_order=_effective_addition_order(auto_fill_component, len(template.components)),
+                stage_label=auto_fill_component.stage_label,
                 is_auto_fill=True,
                 initial_addition_display=_initial_addition_display(auto_fill_component, suggested_l, fill_unit),
                 initial_addition_detail=_initial_addition_detail(auto_fill_component, suggested_l, fill_unit, fill_amount),
@@ -183,6 +191,7 @@ def _calculate_node(
                 warnings=tuple(_initial_addition_warnings(auto_fill_component, suggested_l)),
             )
         )
+    stage_groups = _build_stage_groups(tuple(preliminary))
 
     return PreparationTreeNode(
         template_id=template.template_id,
@@ -192,12 +201,19 @@ def _calculate_node(
         suggested_volume=suggested_volume,
         suggested_volume_unit=target_unit,
         components=tuple(preliminary),
+        stage_groups=stage_groups,
         ph_record=template.ph_record,
         children=tuple(children),
     )
 
 
-def _component_result(component: ReagentComponent, *, volume_factor: float, strength_factor: float) -> PreparationComponentResult:
+def _component_result(
+    component: ReagentComponent,
+    *,
+    volume_factor: float,
+    strength_factor: float,
+    default_order: int,
+) -> PreparationComponentResult:
     component = component.normalized_for_storage()
     factor = 1.0
     if component.scale_with_volume:
@@ -217,6 +233,8 @@ def _component_result(component: ReagentComponent, *, volume_factor: float, stre
         amount=amount,
         unit=unit,
         display_amount=f"{format_number(amount)} {unit}",
+        addition_order=_effective_addition_order(component, default_order),
+        stage_label=component.stage_label,
         is_commercial=component.component_type == "commercial_reagent",
         is_subtemplate=component.component_type == "self_prepared_template" and bool(component.referenced_template_id),
         referenced_template_id=component.referenced_template_id,
@@ -246,6 +264,12 @@ def _build_steps(root: PreparationTreeNode) -> tuple[str, ...]:
         steps.append(_ph_step(root.ph_record))
     if auto_fill is not None:
         steps.append(f"最后用 {auto_fill.name} 补足至建议配制体积 {format_number(root.suggested_volume)} {root.suggested_volume_unit}。")
+    if root.stage_groups:
+        steps.append("按 addition_order 分阶段执行，避免把模板内不同阶段的组分混在一起。")
+        for group in root.stage_groups:
+            label = group.stage_label or f"阶段 {group.addition_order}"
+            component_names = "、".join(component.name for component in group.components)
+            steps.append(f"阶段 {group.addition_order}：{label}；组分：{component_names}。")
     steps.extend(
         [
             "标记名称、浓度/倍数、日期、操作者、保存条件和人工复核状态。",
@@ -279,6 +303,8 @@ def _validate_component(component: ReagentComponent) -> None:
     _validate_initial_addition(component)
     if component.component_type == "self_prepared_template" and not component.referenced_template_id.strip():
         raise ReagentTemplateError("自配试剂模板组分必须引用子模板。")
+    if component.addition_order < 0:
+        raise ReagentTemplateError("addition_order 不能为负数。")
 
 
 def _validate_initial_addition(component: ReagentComponent) -> None:
@@ -389,3 +415,35 @@ def _ph_step(ph_record: PHRecord) -> str:
     target = f"至目标 pH {ph_record.target_ph}" if ph_record.target_ph else "并记录 pH"
     note = ph_record.adjustment_note or "按实验室 SOP 调整，需 pH meter 实测。"
     return f"调节或记录 pH {target}；{note}；软件不预测酸碱加入量。"
+
+
+def _effective_addition_order(component: ReagentComponent, default_order: int) -> int:
+    return component.addition_order if component.addition_order > 0 else default_order
+
+
+def _build_stage_groups(components: tuple[PreparationComponentResult, ...]) -> tuple[PreparationStageGroup, ...]:
+    grouped: dict[tuple[int, str], list[PreparationComponentResult]] = {}
+    for component in components:
+        key = (component.addition_order, component.stage_label)
+        grouped.setdefault(key, []).append(component)
+    return tuple(
+        PreparationStageGroup(addition_order=order, stage_label=stage_label, components=tuple(items))
+        for (order, stage_label), items in sorted(grouped.items(), key=lambda item: item[0][0])
+    )
+
+
+def _resolve_request_overage_percent(request: PreparationRequest) -> float:
+    if request.loss_mode not in {"none", "percent", "fixed_amount"}:
+        raise ReagentTemplateError("loss_mode 必须是 none、percent 或 fixed_amount。")
+    if request.overage_percent < 0 or request.loss_percent < 0 or request.loss_fixed_amount < 0:
+        raise ReagentTemplateError("损耗系数不能为负数。")
+    if request.loss_mode == "percent":
+        return request.loss_percent if request.loss_percent > 0 else request.overage_percent
+    if request.loss_mode == "fixed_amount":
+        fixed_unit = _canonical_template_unit(request.loss_fixed_unit)
+        if unit_kind(fixed_unit) != "volume":
+            raise ReagentTemplateError("固定损耗量必须使用体积单位。")
+        target_l = volume_to_l(request.target_volume, request.target_volume_unit)
+        fixed_l = volume_to_l(request.loss_fixed_amount, fixed_unit)
+        return 0.0 if target_l == 0 else fixed_l / target_l * 100
+    return request.overage_percent

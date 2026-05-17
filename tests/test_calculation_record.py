@@ -31,5 +31,6 @@ def test_calculation_result_can_generate_record() -> None:
     payload = record.to_dict()
 
     assert payload["calculator_type"] == "称量质量"
-    assert payload["outputs"]["output_1"] == "所需质量：1 mg"
+    assert payload["outputs"]["required_mass"] == 1.0
+    assert payload["outputs"]["mass_unit"] == "mg"
     assert payload["review_notice"] == "请人工复核计算结果后再用于实验。"

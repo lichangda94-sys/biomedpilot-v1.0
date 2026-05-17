@@ -11,8 +11,11 @@ from labtools.calculators import (
     DilutionResult,
     MassMolarityInput,
     MassMolarityResult,
+    LOW_MASS_WARNING,
+    LOW_VOLUME_WARNING,
     QpcrMixInput,
     QpcrMixResult,
+    TINY_VALUE_WARNING,
     WesternBlotLoadingInput,
     WesternBlotLoadingResult,
     calculate_cell_seeding,
@@ -30,6 +33,9 @@ from labtools.calculators import (
     format_cell_seeding_copy_text,
     format_dilution_copy_text,
     format_mass_molarity_copy_text,
+    solve_concentration_bridge,
+    solve_dilution_equation,
+    solve_solution_preparation_formula,
 )
 from labtools.shared.version import APP_VERSION as __version__
 
@@ -64,8 +70,11 @@ __all__ = [
     "DilutionResult",
     "MassMolarityInput",
     "MassMolarityResult",
+    "LOW_MASS_WARNING",
+    "LOW_VOLUME_WARNING",
     "QpcrMixInput",
     "QpcrMixResult",
+    "TINY_VALUE_WARNING",
     "WesternBlotLoadingInput",
     "WesternBlotLoadingResult",
     "calculate_cell_seeding",
@@ -83,5 +92,8 @@ __all__ = [
     "format_cell_seeding_copy_text",
     "format_dilution_copy_text",
     "format_mass_molarity_copy_text",
+    "solve_concentration_bridge",
+    "solve_dilution_equation",
+    "solve_solution_preparation_formula",
     "smoke_test",
 ]
