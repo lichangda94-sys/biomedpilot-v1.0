@@ -13,8 +13,12 @@ from app.shared.local_engines import (
     ENGINE_STATUS_NOT_CONFIGURED,
     PADDLEOCR_ENGINE_ID,
     PADDLEOCR_RUNTIME_MANIFEST_SCHEMA_VERSION,
+    PADDLEOCR_WORKER_MODE_IMAGE,
+    PADDLEOCR_WORKER_MODE_PDF,
+    PADDLEOCR_WORKER_MODULE,
     LocalEngineConfigStore,
     PaddleOCRBridge,
+    build_paddleocr_worker_command,
     default_paddleocr_runtime_root,
     detect_paddleocr_runtime_status,
     load_paddleocr_runtime_manifest,
@@ -102,6 +106,26 @@ def test_detector_does_not_open_network_socket(tmp_path: Path, monkeypatch: pyte
 
     assert status.status == ENGINE_STATUS_NOT_CONFIGURED
     assert "用户触发" in paddleocr_install_guide_text()
+
+
+def test_worker_command_contract_is_shell_safe_and_mode_checked(tmp_path: Path) -> None:
+    command = build_paddleocr_worker_command(
+        tmp_path / "venv with space" / "python",
+        input_path=tmp_path / "文献.pdf",
+        mode=PADDLEOCR_WORKER_MODE_PDF,
+        record_id="rec-1",
+        attachment_id="att-1",
+        lang="ch",
+    )
+
+    assert command[:3] == [str(tmp_path / "venv with space" / "python"), "-m", PADDLEOCR_WORKER_MODULE]
+    assert "--mode" in command
+    assert PADDLEOCR_WORKER_MODE_IMAGE in {"image", PADDLEOCR_WORKER_MODE_IMAGE}
+    assert str(tmp_path / "文献.pdf") in command
+    assert "att-1" in command
+
+    with pytest.raises(ValueError, match="unsupported"):
+        build_paddleocr_worker_command("python", input_path="x", mode="audio", record_id="rec-1")
 
 
 def _manifest(python_executable: str, *, smoke_status: str) -> dict[str, object]:

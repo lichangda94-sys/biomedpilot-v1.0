@@ -36,6 +36,13 @@ from app.shared.local_engines.paddleocr_runtime import (
     paddleocr_runtime_manifest_from_dict,
     paddleocr_runtime_manifest_path,
 )
+from app.shared.local_engines.paddleocr_worker_contract import (
+    PADDLEOCR_WORKER_MODE_IMAGE,
+    PADDLEOCR_WORKER_MODE_PDF,
+    PADDLEOCR_WORKER_MODES,
+    PADDLEOCR_WORKER_MODULE,
+    build_paddleocr_worker_command,
+)
 
 __all__ = [
     "ENGINE_STATUS_AVAILABLE",
@@ -49,6 +56,10 @@ __all__ = [
     "PADDLEOCR_ENGINE_TYPE",
     "PADDLEOCR_RECOMMENDED_VERSION",
     "PADDLEOCR_RUNTIME_MANIFEST_SCHEMA_VERSION",
+    "PADDLEOCR_WORKER_MODE_IMAGE",
+    "PADDLEOCR_WORKER_MODE_PDF",
+    "PADDLEOCR_WORKER_MODES",
+    "PADDLEOCR_WORKER_MODULE",
     "EngineStatus",
     "ImageJFijiBridge",
     "LocalEngineConfig",
@@ -56,6 +67,7 @@ __all__ = [
     "PaddleOCRBridge",
     "PaddleOCRModelAsset",
     "PaddleOCRRuntimeManifest",
+    "build_paddleocr_worker_command",
     "default_imagej_fiji_status",
     "default_paddleocr_runtime_root",
     "default_paddleocr_status",
