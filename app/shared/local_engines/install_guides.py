@@ -4,8 +4,9 @@ from __future__ import annotations
 IMAGEJ_FIJI_INSTALL_GUIDE = "\n".join(
     (
         "ImageJ/Fiji 图像分析引擎用于本机辅助图像分析。",
-        "请从 Fiji/ImageJ 官方渠道安装，并在需要图像分析 workflow 时选择本机 Fiji.app、ImageJ.app 或可执行文件路径。",
-        "BioMedPilot 不会静默下载、静默安装、上传图片或在未由用户触发 workflow 时运行 macro。",
+        "请从 Fiji/ImageJ 官方渠道安装，或在用户触发图像分析 workflow 后由 BioMedPilot 下载官方 Fiji runtime 并写入 runtime_manifest.json。",
+        "推荐 runtime 位置：macOS ~/Library/Application Support/BioMedPilot/engines/image_analysis/imagej_fiji/；Windows %LOCALAPPDATA%\\BioMedPilot\\engines\\image_analysis\\imagej_fiji\\。",
+        "BioMedPilot 不会静默下载、静默安装、上传图片或在未由用户触发 workflow 时运行 macro；下载包必须通过官方 .sha256 校验。",
         "官方入口：https://fiji.sc/ 和 https://imagej.net/software/fiji/",
     )
 )

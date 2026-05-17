@@ -16,12 +16,18 @@ from app.shared.local_engines.engine_status import (
     utc_now,
 )
 from app.shared.local_engines.install_guides import imagej_fiji_install_guide_text
+from app.shared.local_engines.imagej_fiji_runner_contract import build_imagej_fiji_macro_command
+from app.shared.local_engines.imagej_fiji_runtime import (
+    IMAGEJ_FIJI_ENGINE_ID,
+    IMAGEJ_FIJI_ENGINE_NAME,
+    IMAGEJ_FIJI_ENGINE_TYPE,
+    IMAGEJ_FIJI_RECOMMENDED_VERSION,
+    default_imagej_fiji_runtime_root,
+    imagej_fiji_runtime_manifest_path,
+    load_imagej_fiji_runtime_manifest,
+)
 
 
-IMAGEJ_FIJI_ENGINE_ID = "imagej_fiji"
-IMAGEJ_FIJI_ENGINE_NAME = "ImageJ/Fiji 图像分析引擎"
-IMAGEJ_FIJI_ENGINE_TYPE = "local_image_analysis_backend"
-IMAGEJ_FIJI_RECOMMENDED_VERSION = "Fiji Stable / ImageJ 1.x or 2.x"
 DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS = 20
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -80,13 +86,20 @@ def detect_imagej_fiji_status(
 ) -> EngineStatus:
     candidate_path = str(configured_path or "").strip()
     if not candidate_path:
+        runtime_status = detect_imagej_fiji_runtime_status(runner=runner, timeout_seconds=timeout_seconds)
+        if runtime_status.status != ENGINE_STATUS_NOT_CONFIGURED:
+            return runtime_status
         detected = detect_common_imagej_fiji_paths()
         if not detected:
             return default_imagej_fiji_status(
                 ENGINE_STATUS_NOT_CONFIGURED,
-                last_error="未找到 Fiji/ImageJ，请在需要图像分析 workflow 时自动检测或选择本机路径。",
+                configured_path=str(default_imagej_fiji_runtime_root()),
+                last_error="未找到 Fiji/ImageJ runtime manifest 或本机安装路径，请在需要图像分析 workflow 时由用户触发下载、自动检测或选择本机路径。",
             )
         candidate_path = detected[0]
+    runtime_root = Path(candidate_path).expanduser()
+    if imagej_fiji_runtime_manifest_path(runtime_root).exists():
+        return detect_imagej_fiji_runtime_status(runtime_root=runtime_root, runner=runner, timeout_seconds=timeout_seconds)
     try:
         executable = resolve_imagej_fiji_executable(candidate_path)
     except ValueError as exc:
@@ -94,6 +107,49 @@ def detect_imagej_fiji_status(
     return run_imagej_fiji_smoke_test(
         executable,
         configured_path=candidate_path,
+        runner=runner,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def detect_imagej_fiji_runtime_status(
+    runtime_root: str | Path | None = None,
+    *,
+    runner: Runner = subprocess.run,
+    timeout_seconds: int = DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
+) -> EngineStatus:
+    root = Path(runtime_root).expanduser() if runtime_root is not None else default_imagej_fiji_runtime_root()
+    manifest_path = imagej_fiji_runtime_manifest_path(root)
+    if not manifest_path.exists():
+        return default_imagej_fiji_status(
+            ENGINE_STATUS_NOT_CONFIGURED,
+            configured_path=str(root),
+            last_error="未找到 ImageJ/Fiji runtime manifest。请在需要图像分析 workflow 时由用户触发下载或选择 runtime。",
+        )
+    try:
+        manifest = load_imagej_fiji_runtime_manifest(root)
+    except ValueError as exc:
+        return _failed_status(str(root), f"ImageJ/Fiji runtime manifest 无效：{exc}")
+    executable_path = Path(manifest.executable_path).expanduser()
+    if not executable_path.exists() or not executable_path.is_file():
+        return _failed_status(str(root), "ImageJ/Fiji runtime 可执行文件不存在。", detected_version=manifest.engine_version or UNKNOWN_VERSION)
+    if manifest.smoke_test_status == "ok":
+        return EngineStatus(
+            engine_id=IMAGEJ_FIJI_ENGINE_ID,
+            engine_name=IMAGEJ_FIJI_ENGINE_NAME,
+            engine_type=IMAGEJ_FIJI_ENGINE_TYPE,
+            configured_path_or_endpoint=str(root),
+            detected_version=manifest.engine_version or UNKNOWN_VERSION,
+            recommended_version=IMAGEJ_FIJI_RECOMMENDED_VERSION,
+            status=ENGINE_STATUS_AVAILABLE,
+            last_check_at=utc_now(),
+            last_error="",
+            smoke_test_result="status=ok",
+            install_guide_url_or_text=imagej_fiji_install_guide_text(),
+        )
+    return run_imagej_fiji_smoke_test(
+        executable_path,
+        configured_path=root,
         runner=runner,
         timeout_seconds=timeout_seconds,
     )
@@ -113,16 +169,14 @@ def run_imagej_fiji_smoke_test(
         macro_path = temp_path / "biomedpilot_imagej_fiji_smoke.ijm"
         output_path = temp_path / "smoke_result.txt"
         macro_path.write_text(_smoke_macro_text(), encoding="utf-8")
-        command = (
-            str(executable_path),
-            "--headless",
-            "-macro",
-            str(macro_path),
-            str(output_path),
+        command = build_imagej_fiji_macro_command(
+            executable_path,
+            macro_path=macro_path,
+            argument=output_path,
         )
         try:
             completed = runner(
-                list(command),
+                command,
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,

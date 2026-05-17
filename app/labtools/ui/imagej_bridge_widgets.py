@@ -104,10 +104,19 @@ if QWidget is not None:
             self._validate_button = QPushButton("运行验证")
             self._validate_button.setObjectName("imageJFijiValidateButton")
             self._validate_button.clicked.connect(self._handle_validate)
+            self._download_runtime_button = QPushButton("下载 runtime")
+            self._download_runtime_button.setObjectName("imageJFijiDownloadRuntimeButton")
+            self._download_runtime_button.clicked.connect(self._handle_download_runtime)
             self._guide_button = QPushButton("安装指南")
             self._guide_button.setObjectName("imageJFijiInstallGuideButton")
             self._guide_button.clicked.connect(self._handle_guide)
-            for button in (self._auto_detect_button, self._choose_path_button, self._validate_button, self._guide_button):
+            for button in (
+                self._auto_detect_button,
+                self._choose_path_button,
+                self._validate_button,
+                self._download_runtime_button,
+                self._guide_button,
+            ):
                 actions.addWidget(button)
             actions.addStretch(1)
             layout.addLayout(actions)
@@ -172,6 +181,28 @@ if QWidget is not None:
             except ValueError as exc:
                 self._prompt_panel.setText(str(exc))
             self.refresh_status()
+
+        def _handle_download_runtime(self) -> None:
+            try:
+                result = self._bridge.prepare_runtime(
+                    allow_network_download=True,
+                    runner=self._runner,
+                )
+            except Exception as exc:
+                self.refresh_status()
+                self._prompt_panel.setText(f"ImageJ/Fiji runtime 准备失败：{exc}")
+            else:
+                self.refresh_status()
+                self._prompt_panel.setText(
+                    "\n".join(
+                        (
+                            "ImageJ/Fiji runtime 已准备。",
+                            f"runtime：{result.runtime_root}",
+                            f"manifest：{result.manifest_path}",
+                            f"smoke test：{result.smoke_test_status}",
+                        )
+                    )
+                )
 
         def _handle_guide(self) -> None:
             self._prompt_panel.setText(imagej_fiji_install_guide_text())

@@ -61,6 +61,7 @@ def test_image_related_entry_shows_missing_imagej_setup_prompt_without_crash(qap
     assert "BioMedPilot 不会静默下载" in text
     assert widget.findChild(QPushButton, "imageJFijiAutoDetectButton") is not None
     assert widget.findChild(QPushButton, "imageJFijiChoosePathButton") is not None
+    assert widget.findChild(QPushButton, "imageJFijiDownloadRuntimeButton") is not None
     assert widget.findChild(QPushButton, "imageJFijiInstallGuideButton") is not None
 
 
