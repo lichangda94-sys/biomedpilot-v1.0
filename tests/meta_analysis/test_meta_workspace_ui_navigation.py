@@ -225,6 +225,7 @@ def test_meta_fulltext_management_workspace_renders_chinese_user_controls_withou
     assert "全文筛选" in visible
     assert "全文状态" in visible
     assert "上传全文" in visible
+    assert "OCR 识别 PDF" in visible
     assert "标记无法获取" in visible
     assert "全文确认" in visible
     assert "下一步：数据提取" in visible

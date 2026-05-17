@@ -2119,6 +2119,7 @@ if QWidget is not None:
     def _fulltext_management_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         management = FullTextManagementService()
         eligibility = FullTextEligibilityService()
+        parser = FullTextParsingService(fulltext_management=management)
         records = list(management.list_records(project_dir))
         candidates = list(eligibility.build_candidates_from_screening(project_dir))
         decisions = list(eligibility.load_eligibility_decisions(project_dir))
@@ -2151,12 +2152,13 @@ if QWidget is not None:
         buttons = QHBoxLayout()
         build_registry = QPushButton("建立全文队列")
         attach_pdf = QPushButton("上传全文")
+        ocr_pdf = QPushButton("OCR 识别 PDF")
         mark_unavailable = QPushButton("标记无法获取")
         confirm_fulltext = QPushButton("全文确认")
         save_status = QPushButton("保存全文状态")
         save_eligibility = QPushButton("保存全文筛选")
         next_button = QPushButton("下一步：数据提取")
-        for button in (build_registry, attach_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
+        for button in (build_registry, attach_pdf, ocr_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_registry.setObjectName("metaPrimaryButton")
@@ -2259,6 +2261,22 @@ if QWidget is not None:
                 _show_message(result.message)
                 on_refresh()
 
+        def do_ocr_pdf() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            record = management.get_record(project_dir, record_id)
+            if record is None or not record.pdf_path:
+                _show_message("请先上传或登记本地 PDF")
+                return
+            result = parser.parse_record(project_dir, record_id=record_id, use_ocr=True)
+            if result.success:
+                _show_message(f"OCR 已完成：{Path(result.extracted_text_path).name}；原始 JSON 已写入 fulltext/ocr。")
+            else:
+                _show_message(f"OCR 未完成：{result.diagnostics.get('error_code', result.parse_status)}")
+            on_refresh()
+
         def do_mark_unavailable() -> None:
             record_id = selected_record_id()
             if not record_id:
@@ -2307,6 +2325,7 @@ if QWidget is not None:
 
         build_registry.clicked.connect(do_build_registry)
         attach_pdf.clicked.connect(do_attach_pdf)
+        ocr_pdf.clicked.connect(do_ocr_pdf)
         mark_unavailable.clicked.connect(do_mark_unavailable)
         confirm_fulltext.clicked.connect(do_confirm_fulltext)
         save_status.clicked.connect(do_save_status)

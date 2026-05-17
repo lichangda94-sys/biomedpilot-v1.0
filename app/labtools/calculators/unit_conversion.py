@@ -55,6 +55,14 @@ CELL_DENSITY_UNITS: dict[str, float] = {
     "cells/µL": 1000.0,
 }
 
+QUICK_CALCULATOR_FIELD_TYPES = (
+    "concentration",
+    "volume",
+    "mass",
+    "amount",
+    "molecular_weight",
+)
+
 UNIT_ALIASES = {
     "ug": "µg",
     "μg": "µg",
@@ -239,8 +247,11 @@ def mol_to_amount(value_mol: float, unit: str) -> float:
     return value_mol / AMOUNT_UNITS[canonical]
 
 
-def supported_concentration_units() -> tuple[str, ...]:
-    return tuple(MOLARITY_UNITS) + tuple(MASS_CONCENTRATION_UNITS) + tuple(RELATIVE_CONCENTRATION_UNITS)
+def supported_concentration_units(*, include_molar: bool = True) -> tuple[str, ...]:
+    units = tuple(MASS_CONCENTRATION_UNITS) + tuple(RELATIVE_CONCENTRATION_UNITS)
+    if include_molar:
+        return units + tuple(MOLARITY_UNITS)
+    return units
 
 
 def supported_mass_units() -> tuple[str, ...]:
@@ -257,3 +268,22 @@ def supported_cell_density_units() -> tuple[str, ...]:
 
 def supported_amount_units() -> tuple[str, ...]:
     return tuple(AMOUNT_UNITS)
+
+
+def supported_molecular_weight_units() -> tuple[str, ...]:
+    return ("g/mol",)
+
+
+def supported_quick_calculator_units(field_type: str, *, use_molar_calculation: bool = False) -> tuple[str, ...]:
+    normalized = str(field_type or "").strip()
+    if normalized == "concentration":
+        return supported_concentration_units(include_molar=use_molar_calculation)
+    if normalized == "volume":
+        return supported_volume_units()
+    if normalized == "mass":
+        return supported_mass_units()
+    if normalized == "amount":
+        return supported_amount_units()
+    if normalized == "molecular_weight":
+        return supported_molecular_weight_units() if use_molar_calculation else ()
+    raise CalculationError(f"暂不支持快速计算字段类型：{field_type}。")

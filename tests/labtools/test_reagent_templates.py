@@ -5,8 +5,10 @@ import json
 import pytest
 
 from app.labtools.reagent_templates import (
+    COMPONENT_TYPE_DESCRIPTIONS,
     LABTOOLS_PREPARATION_RECORD_SCHEMA_VERSION,
     LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION,
+    UI_COMPONENT_TYPES,
     CommercialReagentInfo,
     PHRecord,
     PreparationRecord,
@@ -18,6 +20,7 @@ from app.labtools.reagent_templates import (
     ReagentTemplateError,
     ReagentTemplateStore,
     calculate_preparation,
+    normalize_component_type,
 )
 
 
@@ -86,6 +89,49 @@ def _template_c() -> ReagentTemplate:
             _component("C water", 0, "mL", component_type="solvent", auto_fill=True),
         ),
     )
+
+
+def test_component_type_ui_contract_aliases_normalize_to_storage_types() -> None:
+    assert "commercial_or_existing_reagent" in UI_COMPONENT_TYPES
+    assert "auto_fill_solvent" in UI_COMPONENT_TYPES
+    assert "只计算加入量" in COMPONENT_TYPE_DESCRIPTIONS["commercial_or_existing_reagent"]
+    assert normalize_component_type("commercial_or_existing_reagent") == "commercial_reagent"
+    assert normalize_component_type("auto_fill_solvent") == "solvent"
+
+    template = ReagentTemplate.create(
+        name="Alias template",
+        default_volume=10,
+        components=(
+            ReagentComponent(
+                name="已有 stock",
+                component_type="commercial_or_existing_reagent",
+                base_amount=1,
+                unit="mL",
+                contributes_to_final_volume=True,
+            ),
+            ReagentComponent(
+                name="备注项",
+                component_type="other",
+                base_amount=0,
+                unit="mL",
+            ),
+            ReagentComponent(
+                name="ddH2O",
+                component_type="auto_fill_solvent",
+                base_amount=0,
+                unit="mL",
+                contributes_to_final_volume=True,
+                auto_fill_to_final_volume=True,
+            ),
+        ),
+    )
+
+    result = calculate_preparation(PreparationRequest(template_id=template.template_id, target_volume=10), (template,))
+
+    assert result.direct_components[0].component_type == "commercial_reagent"
+    assert result.direct_components[0].is_commercial is True
+    assert result.direct_components[1].component_type == "other"
+    assert result.direct_components[2].component_type == "solvent"
 
 
 def _pbs_template() -> ReagentTemplate:

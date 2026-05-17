@@ -22,7 +22,7 @@ DEFAULT_APP_NAME = "BioMedPilot"
 INTEGRATION_PREVIEW_APP_NAME = "BioMedPilot Integration Preview"
 INTEGRATION_PREVIEW_EXECUTABLE_NAME = "BioMedPilotIntegrationPreview"
 INTEGRATION_PREVIEW_DISPLAY_NAME = "BioMedPilot Integration Preview / 医研智析"
-COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
+COPY_DIRS = ("app", "assets", "biomedpilot_ocr_worker", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
 STORAGE_DIRS = ("projects", "data", "tasks", "reports", "test_feedback")
 IGNORE_NAMES = {
@@ -30,6 +30,8 @@ IGNORE_NAMES = {
     ".pytest_cache",
     ".DS_Store",
 }
+BACKUP_SUFFIXES = (".bak", ".orig", ".rej")
+LOCAL_CONFLICT_COPY_MARKERS = (" 2.", " 3.")
 
 
 @dataclass(frozen=True)
@@ -169,6 +171,8 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env.setdefault("QT_QPA_PLATFORM", "offscreen")
         subprocess.run([str(result.launcher_path), "--smoke-test"], env=env, check=True)
+        signing_status = _ad_hoc_sign_app(result.app_path)
+        print(f"post_smoke_signing_status={signing_status}")
     return 0
 
 
@@ -192,11 +196,19 @@ def _copy_ignore(directory: str, names: list[str]) -> set[str]:
     ignored: set[str] = set()
     for name in names:
         path = Path(directory) / name
-        if name in IGNORE_NAMES or name.endswith(".pyc"):
+        if name in IGNORE_NAMES or name.endswith(".pyc") or _is_local_backup_or_conflict_copy(name):
             ignored.add(name)
         elif path.is_dir() and name in {"dist", "build", ".git", ".venv", ".venv-meta"}:
             ignored.add(name)
     return ignored
+
+
+def _is_local_backup_or_conflict_copy(name: str) -> bool:
+    if name.endswith(BACKUP_SUFFIXES):
+        return True
+    if name.endswith(" 2") or name.endswith(" 3"):
+        return True
+    return any(marker in name for marker in LOCAL_CONFLICT_COPY_MARKERS)
 
 
 def _create_project_storage(storage_root: Path) -> None:
@@ -282,6 +294,9 @@ exec "$PYTHON_BIN" -m app.main "$@"
 
 
 def _ad_hoc_sign_app(app_path: Path) -> str:
+    xattr = shutil.which("xattr")
+    if xattr:
+        subprocess.run([xattr, "-cr", str(app_path)], check=True, text=True, capture_output=True)
     codesign = shutil.which("codesign")
     if not codesign:
         return "codesign_unavailable"

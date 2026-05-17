@@ -33,6 +33,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert result.build_info_path.exists()
     assert os.access(result.launcher_path, os.X_OK)
     assert (result.resource_root / "app" / "main.py").exists()
+    assert (result.resource_root / "biomedpilot_ocr_worker" / "__main__.py").exists()
     assert (result.resource_root / "config" / "bioinformatics" / "analysis_defaults.yaml").exists()
     assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
@@ -99,7 +100,9 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "BioMedPilot / 医研智析" in completed.stdout
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
+    assert "workspace_entries=3" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
+    assert "labtools_features=" in completed.stdout
     if shutil.which("codesign"):
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
 

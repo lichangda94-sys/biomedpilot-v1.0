@@ -28,9 +28,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"launch_mode={version.launch_mode}")
         print(f"app_root={version.app_root}")
         print(f"git_head={version.git_head}")
-        print(f"workspace_entries=2")
+        workspace_count = sum(
+            1
+            for features in (
+                dashboard.bioinformatics_features,
+                dashboard.meta_analysis_features,
+                dashboard.labtools_features,
+            )
+            if features
+        )
+        print(f"workspace_entries={workspace_count}")
         print(f"bioinformatics_features={len(dashboard.bioinformatics_features)}")
         print(f"meta_analysis_features={len(dashboard.meta_analysis_features)}")
+        print(f"labtools_features={len(dashboard.labtools_features)}")
         print(f"pyside6_available={environment.pyside6_available}")
         return 0
 

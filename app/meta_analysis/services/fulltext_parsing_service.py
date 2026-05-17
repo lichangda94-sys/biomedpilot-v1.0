@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from app.meta_analysis.fulltext import MetaOcrRuntimeService, PdfOcrWorker
 from app.meta_analysis.services.audit_log_service import MetaAuditLogService
 from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
 from app.meta_analysis.services.fulltext_service import FullTextService
@@ -47,17 +48,24 @@ class FullTextParsingService:
         fulltext_service: FullTextService | None = None,
         audit_log: MetaAuditLogService | None = None,
         research_governance: MetaResearchGovernanceService | None = None,
+        ocr_runner: object | None = None,
+        ocr_runtime_service: MetaOcrRuntimeService | None = None,
     ) -> None:
         self._audit_log = audit_log or MetaAuditLogService()
         self._governance = research_governance or MetaResearchGovernanceService(audit_log=self._audit_log)
         self._management = fulltext_management or FullTextManagementService(audit_log=self._audit_log, research_governance=self._governance)
         self._fulltext = fulltext_service or FullTextService(audit_log=self._audit_log)
+        self._ocr_runner = ocr_runner
+        self._ocr_runtime_service = ocr_runtime_service or MetaOcrRuntimeService()
 
     def parsed_dir(self, project_dir: Path) -> Path:
         return project_dir.expanduser().resolve() / "fulltext" / "parsed_fulltext"
 
     def extracted_text_dir(self, project_dir: Path) -> Path:
         return project_dir.expanduser().resolve() / "fulltext" / "extracted_text"
+
+    def ocr_dir(self, project_dir: Path) -> Path:
+        return project_dir.expanduser().resolve() / "fulltext" / "ocr"
 
     def section_dir(self, project_dir: Path, record_id: str) -> Path:
         return self.parsed_dir(project_dir) / _safe_id(record_id) / "sections"
@@ -68,18 +76,20 @@ class FullTextParsingService:
     def manifest_path(self, project_dir: Path) -> Path:
         return project_dir.expanduser().resolve() / "fulltext" / "fulltext_parse_manifest_v1.json"
 
-    def parse_record(self, project_dir: Path, *, record_id: str) -> FullTextParseResult:
+    def parse_record(self, project_dir: Path, *, record_id: str, use_ocr: bool = False) -> FullTextParseResult:
         project_dir = project_dir.expanduser().resolve()
         pdf_path = self._pdf_path_for_record(project_dir, record_id)
         if not pdf_path:
             return self._write_failure(project_dir, record_id=record_id, pdf_path="", error_code="missing_pdf_path")
-        return self.parse_pdf_file(project_dir, record_id=record_id, pdf_path=pdf_path)
+        return self.parse_pdf_file(project_dir, record_id=record_id, pdf_path=pdf_path, use_ocr=use_ocr)
 
-    def parse_pdf_file(self, project_dir: Path, *, record_id: str, pdf_path: str) -> FullTextParseResult:
+    def parse_pdf_file(self, project_dir: Path, *, record_id: str, pdf_path: str, use_ocr: bool = False) -> FullTextParseResult:
         project_dir = project_dir.expanduser().resolve()
         source = Path(pdf_path).expanduser().resolve()
         if not source.exists() or not source.is_file():
             return self._write_failure(project_dir, record_id=record_id, pdf_path=str(source), error_code="pdf_file_missing")
+        if use_ocr:
+            return self._parse_pdf_file_with_ocr(project_dir, record_id=record_id, source=source)
         extracted = _extract_text(source)
         text = extracted["text"]
         diagnostics = dict(extracted["diagnostics"])
@@ -145,11 +155,133 @@ class FullTextParsingService:
             message=f"Full-text parsing completed with status {parsed['parse_status']}.",
         )
 
-    def _write_failure(self, project_dir: Path, *, record_id: str, pdf_path: str, error_code: str) -> FullTextParseResult:
+    def _parse_pdf_file_with_ocr(self, project_dir: Path, *, record_id: str, source: Path) -> FullTextParseResult:
+        runtime_status = None if self._ocr_runner is not None else self._ocr_runtime_service.status()
+        runner = self._ocr_runner or self._ocr_runtime_service.runner()
+        if runner is None:
+            return self._write_failure(
+                project_dir,
+                record_id=record_id,
+                pdf_path=str(source),
+                error_code=f"ocr_runtime_unavailable:{runtime_status.status}",
+                extra_diagnostics={
+                    "parser": "paddleocr_local",
+                    "runtime_status": runtime_status.status,
+                    "runtime_message": runtime_status.message,
+                    "runtime_manifest_path": runtime_status.manifest_path,
+                },
+            )
+        worker_result = PdfOcrWorker(runner=runner).process_pdf(
+            project_dir,
+            record_id=record_id,
+            pdf_path=source,
+            lang="auto",
+            output_dir=self.ocr_dir(project_dir),
+        )
+        diagnostics: dict[str, Any] = {
+            "parser": "paddleocr_local",
+            "ocr_status": worker_result.status,
+            "ocr_text_path": _relative_or_absolute(Path(worker_result.text_path), project_dir),
+            "ocr_json_path": _relative_or_absolute(Path(worker_result.json_path), project_dir),
+            "runtime_status": runtime_status.status if runtime_status is not None else "injected_runner",
+            "runtime_manifest_path": runtime_status.manifest_path if runtime_status is not None else "",
+        }
+        if not worker_result.success:
+            return self._write_failure(
+                project_dir,
+                record_id=record_id,
+                pdf_path=str(source),
+                error_code="ocr_parse_failed",
+                extra_diagnostics=diagnostics,
+            )
+        text_path = Path(worker_result.text_path)
+        text = text_path.read_text(encoding="utf-8") if text_path.exists() else ""
+        if not text.strip():
+            diagnostics["warnings"] = ["no_extractable_text"]
+        parsed = {
+            "schema_version": FULLTEXT_PARSE_RESULT_SCHEMA_VERSION,
+            "project_id": project_dir.name,
+            "parse_id": f"ftparse-{uuid4().hex[:12]}",
+            "record_id": record_id,
+            "pdf_path": str(source),
+            "parse_status": "parsed" if text.strip() else "parse_failed",
+            "parser_level": "ocr_testing",
+            "created_at": _now(),
+            "page_count": 0,
+            "title_guess": _title_guess(text),
+            "doi_candidates": _doi_candidates(text),
+            "pmid_candidates": _pmid_candidates(text),
+            "sections": _section_summary(text),
+            "diagnostics": diagnostics,
+            "safety_note": "OCR parsed text is auxiliary only and does not write final extraction, screening, quality, or analysis artifacts.",
+        }
+        output_path = self.result_path(project_dir, record_id)
+        extracted_text_path = self.extracted_text_dir(project_dir) / f"{_safe_id(record_id)}.txt"
+        section_paths = _write_sections(self.section_dir(project_dir, record_id), parsed["sections"])
+        _write_text(extracted_text_path, text)
+        _write_json(
+            output_path,
+            {
+                **parsed,
+                "extracted_text_path": str(extracted_text_path.relative_to(project_dir)),
+                "section_paths": {key: str(Path(value).relative_to(project_dir)) for key, value in section_paths.items()},
+            },
+        )
+        manifest_path = self._update_manifest(project_dir, output_payload=_load_json(output_path))
+        self._audit_log.record_event(
+            project_dir,
+            event_type="record_parsed",
+            project_id=project_dir.name,
+            target_type="fulltext_parse_result",
+            target_id=record_id,
+            source_path=str(source),
+            output_path=str(output_path.relative_to(project_dir)),
+            summary=f"Full-text PDF OCR completed with status {parsed['parse_status']}.",
+            details={"parse_status": parsed["parse_status"], "parser_level": "ocr_testing", "ocr_status": worker_result.status},
+        )
+        self._governance.record_draft_created(
+            project_dir,
+            project_id=project_dir.name,
+            target_type="fulltext_parsing",
+            target_id=record_id,
+            after={"parse_status": parsed["parse_status"], "output_path": str(output_path.relative_to(project_dir))},
+            metadata={"writes_final_extraction": False, "parser_level": "ocr_testing"},
+        )
+        return FullTextParseResult(
+            success=parsed["parse_status"] == "parsed",
+            project_id=project_dir.name,
+            record_id=record_id,
+            pdf_path=str(source),
+            output_path=str(output_path),
+            extracted_text_path=str(extracted_text_path),
+            manifest_path=str(manifest_path),
+            parse_status=str(parsed["parse_status"]),
+            page_count=0,
+            title_guess=str(parsed["title_guess"]),
+            doi_candidates=tuple(parsed["doi_candidates"]),
+            pmid_candidates=tuple(parsed["pmid_candidates"]),
+            section_paths={key: str(value) for key, value in section_paths.items()},
+            diagnostics=diagnostics,
+            message=f"Full-text OCR completed with status {parsed['parse_status']}.",
+        )
+
+    def _write_failure(
+        self,
+        project_dir: Path,
+        *,
+        record_id: str,
+        pdf_path: str,
+        error_code: str,
+        extra_diagnostics: dict[str, Any] | None = None,
+    ) -> FullTextParseResult:
         project_dir = project_dir.expanduser().resolve()
         output_path = self.result_path(project_dir, record_id)
         text_path = self.extracted_text_dir(project_dir) / f"{_safe_id(record_id)}.txt"
         diagnostics = {"error_code": error_code, "warnings": [error_code], "page_count": 0, "parser": "none"}
+        if extra_diagnostics:
+            diagnostics.update(extra_diagnostics)
+            diagnostics["error_code"] = error_code
+            diagnostics["warnings"] = [*diagnostics.get("warnings", []), error_code]
         payload = {
             "schema_version": FULLTEXT_PARSE_RESULT_SCHEMA_VERSION,
             "project_id": project_dir.name,
@@ -344,6 +476,13 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+
+def _relative_or_absolute(path: Path, project_dir: Path) -> str:
+    try:
+        return str(path.expanduser().resolve().relative_to(project_dir.expanduser().resolve()))
+    except ValueError:
+        return str(path)
 
 
 def _now() -> str:

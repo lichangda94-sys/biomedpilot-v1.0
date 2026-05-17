@@ -13,6 +13,7 @@ from app.labtools.calculators.unit_conversion import (
     molarity_to_m,
     parse_number,
     relative_base_to_concentration,
+    supported_quick_calculator_units,
     volume_to_l,
 )
 
@@ -57,3 +58,25 @@ def test_parse_number_reports_friendly_errors() -> None:
 def test_unknown_unit_reports_friendly_error() -> None:
     with pytest.raises(CalculationError, match="暂不支持单位"):
         canonical_unit("ppm")
+
+
+def test_quick_calculator_unit_schema_respects_molar_mode() -> None:
+    concentration_units = supported_quick_calculator_units("concentration", use_molar_calculation=False)
+    assert "mg/mL" in concentration_units
+    assert "fold" in concentration_units
+    assert "mM" not in concentration_units
+
+    molar_units = supported_quick_calculator_units("concentration", use_molar_calculation=True)
+    assert "mM" in molar_units
+    assert "pM" in molar_units
+
+    assert supported_quick_calculator_units("molecular_weight", use_molar_calculation=False) == ()
+    assert supported_quick_calculator_units("molecular_weight", use_molar_calculation=True) == ("g/mol",)
+    assert supported_quick_calculator_units("volume") == ("L", "mL", "µL", "nL")
+    assert supported_quick_calculator_units("mass") == ("g", "mg", "µg", "ng")
+    assert supported_quick_calculator_units("amount") == ("mol", "mmol", "µmol", "nmol", "pmol")
+
+
+def test_quick_calculator_unit_schema_rejects_unknown_field_type() -> None:
+    with pytest.raises(CalculationError, match="字段类型"):
+        supported_quick_calculator_units("temperature")

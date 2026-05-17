@@ -21,7 +21,31 @@ COMPONENT_TYPES = (
     "ph_record",
     "ph_adjustment",
     "self_prepared_template",
+    "other",
 )
+
+UI_COMPONENT_TYPES = (
+    "powder",
+    "liquid",
+    "commercial_or_existing_reagent",
+    "self_prepared_template",
+    "auto_fill_solvent",
+    "ph_record",
+    "other",
+)
+
+COMPONENT_TYPE_ALIASES = {
+    "commercial_or_existing_reagent": "commercial_reagent",
+    "existing_reagent": "commercial_reagent",
+    "auto_fill_solvent": "solvent",
+}
+
+COMPONENT_TYPE_DESCRIPTIONS = {
+    "commercial_or_existing_reagent": "实验室已有的商品化试剂或已配好试剂，只计算加入量，不展开内部配方。",
+    "self_prepared_template": "本次需要按引用模板配制此子试剂，可展开内部组分；如果实验室已有该 stock，请选择商品化或已有试剂。",
+    "auto_fill_solvent": "自动补足至建议配制体积的溶剂或基础液体。",
+    "ph_record": "pH 仅作为独立记录保存，不作为普通组分参与体积或质量换算。",
+}
 
 SUPPORTED_TEMPLATE_UNITS = ("L", "mL", "µL", "g", "mg", "µg", "M", "mM", "µM", "%", "X")
 SOLVENT_INITIAL_ADDITION_MODES = ("none", "percent_of_final", "fixed_amount", "note_only")
@@ -38,6 +62,11 @@ def utc_now() -> str:
 
 def new_template_id() -> str:
     return f"reagent_template_{uuid4().hex[:12]}"
+
+
+def normalize_component_type(component_type: str) -> str:
+    text = str(component_type or "").strip()
+    return COMPONENT_TYPE_ALIASES.get(text, text)
 
 
 @dataclass(frozen=True)
@@ -121,9 +150,11 @@ class ReagentComponent:
     stage_label: str = ""
 
     def normalized_for_storage(self) -> "ReagentComponent":
-        if self.component_type in REFERENCE_COMPONENT_TYPES:
-            return self
-        return replace(self, referenced_template_id="")
+        component_type = normalize_component_type(self.component_type)
+        updated = replace(self, component_type=component_type)
+        if component_type in REFERENCE_COMPONENT_TYPES:
+            return updated
+        return replace(updated, referenced_template_id="")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -154,7 +185,7 @@ class ReagentComponent:
         commercial_payload = payload.get("commercial_info")
         return cls(
             name=str(payload.get("name") or ""),
-            component_type=str(payload.get("component_type") or ""),
+            component_type=normalize_component_type(str(payload.get("component_type") or "")),
             base_amount=float(payload.get("base_amount") or 0),
             unit=str(payload.get("unit") or ""),
             scale_with_volume=bool(payload.get("scale_with_volume", True)),
