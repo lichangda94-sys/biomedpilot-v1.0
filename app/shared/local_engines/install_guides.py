@@ -25,3 +25,17 @@ def imagej_fiji_setup_prompt_text(*, workflow_name: str = "图像分析 workflow
             "可用操作：自动检测、选择本机路径、查看安装指南，或继续 fallback/manual-review 流程。",
         )
     )
+
+
+PADDLEOCR_INSTALL_GUIDE = "\n".join(
+    (
+        "PaddleOCR 本地 OCR 引擎用于将用户导入的 PDF / 图片转换为本地 .txt 和 .ocr.json。",
+        "BioMedPilot 应在用户触发 OCR 功能后创建或选择独立 runtime，不会静默下载模型、上传全文或把 OCR 结果直接写入 Meta 提取字段。",
+        "推荐 runtime 位置：macOS ~/Library/Application Support/BioMedPilot/engines/ocr/paddleocr/；Windows %LOCALAPPDATA%\\BioMedPilot\\engines\\ocr\\paddleocr\\。",
+        "运行时资产、模型、wheel、缓存和用户全文不应进入 Git。",
+    )
+)
+
+
+def paddleocr_install_guide_text() -> str:
+    return PADDLEOCR_INSTALL_GUIDE

@@ -17,7 +17,25 @@ from app.shared.local_engines.imagej_fiji_detector import (
     parse_imagej_fiji_version_output,
     resolve_imagej_fiji_executable,
 )
-from app.shared.local_engines.install_guides import imagej_fiji_install_guide_text, imagej_fiji_setup_prompt_text
+from app.shared.local_engines.install_guides import imagej_fiji_install_guide_text, imagej_fiji_setup_prompt_text, paddleocr_install_guide_text
+from app.shared.local_engines.paddleocr_bridge import PaddleOCRBridge
+from app.shared.local_engines.paddleocr_detector import (
+    PADDLEOCR_ENGINE_NAME,
+    PADDLEOCR_ENGINE_TYPE,
+    PADDLEOCR_RECOMMENDED_VERSION,
+    default_paddleocr_status,
+    detect_paddleocr_runtime_status,
+)
+from app.shared.local_engines.paddleocr_runtime import (
+    PADDLEOCR_ENGINE_ID,
+    PADDLEOCR_RUNTIME_MANIFEST_SCHEMA_VERSION,
+    PaddleOCRModelAsset,
+    PaddleOCRRuntimeManifest,
+    default_paddleocr_runtime_root,
+    load_paddleocr_runtime_manifest,
+    paddleocr_runtime_manifest_from_dict,
+    paddleocr_runtime_manifest_path,
+)
 
 __all__ = [
     "ENGINE_STATUS_AVAILABLE",
@@ -26,17 +44,32 @@ __all__ = [
     "ENGINE_STATUS_NOT_CONFIGURED",
     "ENGINE_STATUS_UNSUPPORTED_VERSION",
     "IMAGEJ_FIJI_ENGINE_ID",
+    "PADDLEOCR_ENGINE_ID",
+    "PADDLEOCR_ENGINE_NAME",
+    "PADDLEOCR_ENGINE_TYPE",
+    "PADDLEOCR_RECOMMENDED_VERSION",
+    "PADDLEOCR_RUNTIME_MANIFEST_SCHEMA_VERSION",
     "EngineStatus",
     "ImageJFijiBridge",
     "LocalEngineConfig",
     "LocalEngineConfigStore",
+    "PaddleOCRBridge",
+    "PaddleOCRModelAsset",
+    "PaddleOCRRuntimeManifest",
     "default_imagej_fiji_status",
+    "default_paddleocr_runtime_root",
+    "default_paddleocr_status",
     "detect_common_imagej_fiji_paths",
     "detect_imagej_fiji_status",
+    "detect_paddleocr_runtime_status",
     "engine_status_from_dict",
     "imagej_fiji_install_guide_text",
     "imagej_fiji_setup_prompt_text",
+    "load_paddleocr_runtime_manifest",
     "local_engine_config_from_dict",
+    "paddleocr_install_guide_text",
+    "paddleocr_runtime_manifest_from_dict",
+    "paddleocr_runtime_manifest_path",
     "parse_imagej_fiji_version_output",
     "resolve_imagej_fiji_executable",
 ]
