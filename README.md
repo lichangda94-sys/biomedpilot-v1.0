@@ -16,6 +16,7 @@ The current package includes:
 - Concentration calculation helpers
 - Dilution calculation helpers
 - Solution preparation helpers
+- Formula-driven quick calculator solvers and UI-safe unit schema helpers
 - Calculation record serialization helpers
 - qPCR mix calculator
 - Cell seeding calculator
@@ -58,10 +59,10 @@ pytest
 python -m labtools --smoke-test
 ```
 
-Current known validation status for the initial public package:
+Current known validation status:
 
 ```text
-pytest: 124 passed
+pytest: 141 passed
 python -m labtools --smoke-test: passed
 ```
 

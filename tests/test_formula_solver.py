@@ -25,6 +25,42 @@ def test_solve_concentration_bridge_can_solve_molecular_weight() -> None:
     assert "分子量：1,000.00 g/mol" in result.as_text()
 
 
+def test_solve_concentration_bridge_can_solve_mass_and_molar_concentration() -> None:
+    mass_result = solve_concentration_bridge(
+        mass_concentration=None,
+        mass_unit="mg/mL",
+        molar_concentration=1,
+        molar_unit="mM",
+        molecular_weight=1000,
+    )
+    assert mass_result.result_value == pytest.approx(1)
+    assert mass_result.result_unit == "mg/mL"
+    assert mass_result.record_inputs["solve_for"] == "mass_concentration"
+
+    molar_result = solve_concentration_bridge(
+        mass_concentration=1,
+        mass_unit="mg/mL",
+        molar_concentration=None,
+        molar_unit="mM",
+        molecular_weight=1000,
+    )
+    assert molar_result.result_value == pytest.approx(1)
+    assert molar_result.result_unit == "mM"
+    assert molar_result.record_inputs["solve_for"] == "molar_concentration"
+
+
+def test_solve_concentration_bridge_rejects_filled_explicit_unknown() -> None:
+    with pytest.raises(CalculationError, match="应清空该字段"):
+        solve_concentration_bridge(
+            mass_concentration=1,
+            mass_unit="mg/mL",
+            molar_concentration=1,
+            molar_unit="mM",
+            molecular_weight=1000,
+            unknown_field="molecular_weight",
+        )
+
+
 def test_solve_dilution_equation_can_solve_stock_volume() -> None:
     result = solve_dilution_equation(
         stock_concentration=15,
@@ -40,6 +76,47 @@ def test_solve_dilution_equation_can_solve_stock_volume() -> None:
     assert result.result_value == pytest.approx(2)
     assert result.result_unit == "mL"
     assert "15 mM × 2 mL = 1 mM × 30 mL" in result.as_text()
+
+
+def test_solve_dilution_equation_can_solve_each_equation_field() -> None:
+    stock_concentration = solve_dilution_equation(
+        stock_concentration=None,
+        stock_unit="mM",
+        stock_volume=2,
+        stock_volume_unit="mL",
+        target_concentration=1,
+        target_unit="mM",
+        final_volume=30,
+        final_volume_unit="mL",
+    )
+    assert stock_concentration.result_value == pytest.approx(15)
+    assert stock_concentration.result_unit == "mM"
+
+    target_concentration = solve_dilution_equation(
+        stock_concentration=15,
+        stock_unit="mM",
+        stock_volume=2,
+        stock_volume_unit="mL",
+        target_concentration=None,
+        target_unit="mM",
+        final_volume=30,
+        final_volume_unit="mL",
+    )
+    assert target_concentration.result_value == pytest.approx(1)
+    assert target_concentration.result_unit == "mM"
+
+    final_volume = solve_dilution_equation(
+        stock_concentration=15,
+        stock_unit="mM",
+        stock_volume=2,
+        stock_volume_unit="mL",
+        target_concentration=1,
+        target_unit="mM",
+        final_volume=None,
+        final_volume_unit="mL",
+    )
+    assert final_volume.result_value == pytest.approx(30)
+    assert final_volume.result_unit == "mL"
 
 
 def test_solve_dilution_equation_rejects_multiple_unknowns() -> None:
@@ -72,6 +149,56 @@ def test_solve_solution_preparation_formula_supports_fixed_amount_mode_and_warni
     assert any(warning in result.warnings for warning in (LOW_MASS_WARNING, TINY_VALUE_WARNING))
     assert "0.00282 µg" in result.as_text()
     assert "约 2.82 ng" in result.as_text()
+
+
+def test_solve_solution_preparation_formula_solves_mass_concentration_mode_fields() -> None:
+    mass = solve_solution_preparation_formula(
+        mass=None,
+        mass_unit="mg",
+        concentration=10,
+        concentration_unit="mg/mL",
+        volume=1,
+        volume_unit="mL",
+    )
+    assert mass.result_value == pytest.approx(10)
+    assert mass.result_unit == "mg"
+
+    concentration = solve_solution_preparation_formula(
+        mass=10,
+        mass_unit="mg",
+        concentration=None,
+        concentration_unit="mg/mL",
+        volume=1,
+        volume_unit="mL",
+    )
+    assert concentration.result_value == pytest.approx(10)
+    assert concentration.result_unit == "mg/mL"
+
+    volume = solve_solution_preparation_formula(
+        mass=10,
+        mass_unit="mg",
+        concentration=10,
+        concentration_unit="mg/mL",
+        volume=None,
+        volume_unit="mL",
+    )
+    assert volume.result_value == pytest.approx(1)
+    assert volume.result_unit == "mL"
+
+
+def test_solve_solution_preparation_formula_can_solve_molecular_weight() -> None:
+    result = solve_solution_preparation_formula(
+        mass=0.00282029,
+        mass_unit="µg",
+        concentration=11,
+        concentration_unit="nM",
+        volume=1,
+        volume_unit="mL",
+        molecular_weight=None,
+    )
+
+    assert result.result_value == pytest.approx(256.39, rel=1e-5)
+    assert result.result_unit == "g/mol"
 
 
 def test_solve_solution_preparation_formula_warns_on_low_volume() -> None:

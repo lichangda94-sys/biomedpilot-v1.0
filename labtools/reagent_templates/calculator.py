@@ -18,6 +18,7 @@ from labtools.reagent_templates.models import (
     ReagentComponent,
     ReagentTemplate,
     ReagentTemplateError,
+    normalize_component_type,
 )
 
 
@@ -289,11 +290,13 @@ def _collect_warnings(node: PreparationTreeNode) -> list[str]:
 
 
 def _validate_component(component: ReagentComponent) -> None:
+    component = component.normalized_for_storage()
     if not component.name.strip():
         raise ReagentTemplateError("组分名称不能为空。")
-    if component.component_type not in COMPONENT_TYPES:
+    component_type = normalize_component_type(component.component_type)
+    if component_type not in COMPONENT_TYPES:
         raise ReagentTemplateError(f"暂不支持组分类型：{component.component_type}。")
-    if component.component_type in {"ph_record", "ph_adjustment"}:
+    if component_type in {"ph_record", "ph_adjustment"}:
         raise ReagentTemplateError("pH 调节记录请使用独立 pH 记录字段，不应作为普通组分保存。")
     if component.base_amount < 0 or not math.isfinite(component.base_amount):
         raise ReagentTemplateError("组分基准用量必须是非负数字。")
@@ -301,7 +304,7 @@ def _validate_component(component: ReagentComponent) -> None:
     if component.auto_fill_to_final_volume and unit_kind(unit) != "volume":
         raise ReagentTemplateError("自动补足组分必须使用体积单位。")
     _validate_initial_addition(component)
-    if component.component_type == "self_prepared_template" and not component.referenced_template_id.strip():
+    if component_type == "self_prepared_template" and not component.referenced_template_id.strip():
         raise ReagentTemplateError("自配试剂模板组分必须引用子模板。")
     if component.addition_order < 0:
         raise ReagentTemplateError("addition_order 不能为负数。")

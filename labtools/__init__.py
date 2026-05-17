@@ -15,6 +15,7 @@ from labtools.calculators import (
     LOW_VOLUME_WARNING,
     QpcrMixInput,
     QpcrMixResult,
+    QUICK_CALCULATOR_FIELD_TYPES,
     TINY_VALUE_WARNING,
     WesternBlotLoadingInput,
     WesternBlotLoadingResult,
@@ -36,6 +37,12 @@ from labtools.calculators import (
     solve_concentration_bridge,
     solve_dilution_equation,
     solve_solution_preparation_formula,
+    supported_amount_units,
+    supported_concentration_units,
+    supported_mass_units,
+    supported_molecular_weight_units,
+    supported_quick_calculator_units,
+    supported_volume_units,
 )
 from labtools.shared.version import APP_VERSION as __version__
 
@@ -74,6 +81,7 @@ __all__ = [
     "LOW_VOLUME_WARNING",
     "QpcrMixInput",
     "QpcrMixResult",
+    "QUICK_CALCULATOR_FIELD_TYPES",
     "TINY_VALUE_WARNING",
     "WesternBlotLoadingInput",
     "WesternBlotLoadingResult",
@@ -95,5 +103,11 @@ __all__ = [
     "solve_concentration_bridge",
     "solve_dilution_equation",
     "solve_solution_preparation_formula",
+    "supported_amount_units",
+    "supported_concentration_units",
+    "supported_mass_units",
+    "supported_molecular_weight_units",
+    "supported_quick_calculator_units",
+    "supported_volume_units",
     "smoke_test",
 ]

@@ -22,7 +22,7 @@ python -m labtools --smoke-test
 最近公开包验证结果：
 
 ```text
-pytest: 124 passed
+pytest: 141 passed
 python -m labtools --smoke-test: passed
 ```
 
@@ -34,6 +34,8 @@ python -m labtools --smoke-test: passed
 - 浓度计算
 - 稀释计算
 - 溶液配制计算
+- 公式驱动动态求解器
+- 快速计算 UI 单位白名单辅助
 - 计算记录模型
 - 试剂模板 models / calculator / store
 - Western Blot loading calculator
