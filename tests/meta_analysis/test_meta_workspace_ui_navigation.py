@@ -13,7 +13,7 @@ from app.meta_analysis.project_workspace import META_PROJECT_DIRECTORIES, create
 from app.meta_analysis.workspace import meta_workspace_layout_state
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QFrame, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QFrame, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QTableWidget, QTextEdit
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -158,6 +158,16 @@ def test_meta_screening_workspace_renders_chinese_user_controls_without_raw_path
     assert "manifest" not in visible
     assert "raw JSON" not in visible
 
+    table = current.findChild(QTableWidget, "metaScreeningWorkspaceRecordTable")
+    detail = current.findChild(QTextEdit, "metaScreeningWorkspaceRecordDetail")
+    ai_detail = current.findChild(QTextEdit, "metaScreeningWorkspaceAISuggestion")
+    assert table is not None
+    assert detail is not None
+    assert ai_detail is not None
+    assert table.rowCount() == 1
+    assert "请选择左侧文献" in detail.toPlainText()
+    assert "暂无 AI 建议" in ai_detail.toPlainText()
+
 
 def test_meta_fulltext_management_workspace_renders_chinese_user_controls_without_raw_paths(qt_app, tmp_path: Path) -> None:
     from app.meta_analysis.services.fulltext_management_service import FullTextManagementService
@@ -218,7 +228,6 @@ def test_meta_fulltext_management_workspace_renders_chinese_user_controls_withou
     assert "标记无法获取" in visible
     assert "全文确认" in visible
     assert "下一步：数据提取" in visible
-    assert "已登记全文文件" in visible
     assert {"暂不需要全文", "需要全文", "已上传全文", "全文待检查", "全文已确认", "全文不可获取", "全文已排除"} <= set(combos["metaFulltextStatusSelector"])
     assert {"全文不可获取", "研究对象不符合", "干预/暴露不符合", "对照不符合", "结局不符合", "研究类型不符合", "全文阶段发现重复", "数据不足", "其他"} <= set(combos["metaFulltextReasonSelector"])
     assert str(summary.project_root) not in visible
@@ -226,6 +235,17 @@ def test_meta_fulltext_management_workspace_renders_chinese_user_controls_withou
     assert "manifest" not in visible
     assert "raw JSON" not in visible
     assert "ft-rec-1" not in visible
+
+    table = current.findChild(QTableWidget, "metaFulltextRecordTable")
+    detail = current.findChild(QTextEdit, "metaFulltextRecordDetail")
+    assert table is not None
+    assert detail is not None
+    assert table.rowCount() == 2
+    assert "请选择一篇文献" in detail.toPlainText()
+    table.selectRow(0)
+    table.cellClicked.emit(0, 0)
+    qt_app.processEvents()
+    assert "已登记全文文件" in detail.toPlainText()
 
 
 def test_meta_extraction_workspace_renders_structured_table_without_raw_internals(qt_app, tmp_path: Path) -> None:
@@ -551,6 +571,7 @@ def test_meta_workspace_pico_protocol_round_trip_updates_status(qt_app, tmp_path
     generate = next(button for button in current.findChildren(QPushButton) if button.text() == "生成 PICO 草稿")
     generate.click()
     qt_app.processEvents()
+    assert widget.current_page_key() == "pico_workspace"
 
     draft_state = {step.step_id: step.status for step in meta_workflow_integration_state_from_project(summary.project_root).steps}
     assert draft_state["pico_workspace"] == "草稿"
@@ -567,12 +588,14 @@ def test_meta_workspace_pico_protocol_round_trip_updates_status(qt_app, tmp_path
     save = next(button for button in current.findChildren(QPushButton) if button.text() == "保存草稿编辑")
     save.click()
     qt_app.processEvents()
+    assert widget.current_page_key() == "pico_workspace"
 
     widget.show_step("pico_workspace")
     current = _current_step_widget(widget)
     confirm = next(button for button in current.findChildren(QPushButton) if button.text() == "确认研究问题")
     confirm.click()
     qt_app.processEvents()
+    assert widget.current_page_key() == "pico_workspace"
 
     confirmed_path = summary.project_root / "protocol" / "pico_workspace_confirmed.json"
     protocol_manifest = summary.project_root / "protocol" / "pico_workspace_manifest.json"
@@ -591,3 +614,95 @@ def test_meta_workspace_pico_protocol_round_trip_updates_status(qt_app, tmp_path
     widget.show_step("search_strategy")
     visible = _visible_text(widget)
     assert "下一阶段将基于该方案生成检索策略" in visible
+
+
+def test_meta_search_workspace_actions_keep_current_step_and_start_with_empty_candidate_detail(qt_app, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.meta_analysis.workspace as workspace
+    from app.meta_analysis.search.pubmed_search_service import PubMedSearchExecution, PubMedSearchResult
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    class FakePubMedSearchService:
+        def search_pubmed(self, query: str, *, max_results: int = 20, timeout_seconds: float = 10.0) -> PubMedSearchExecution:
+            return PubMedSearchExecution(
+                success=True,
+                query_used=query,
+                executed_at="2026-05-17T00:00:00+00:00",
+                result_count=24,
+                returned_count=2,
+                records=(
+                    PubMedSearchResult(
+                        pmid="111",
+                        doi="10.1000/demo111",
+                        title="Candidate one",
+                        journal="Journal A",
+                        year="2024",
+                        publication_date="2024",
+                        authors=("Author A",),
+                        abstract="Abstract one.",
+                        snippet="Abstract one.",
+                        url="https://pubmed.ncbi.nlm.nih.gov/111/",
+                        query_used=query,
+                    ),
+                    PubMedSearchResult(
+                        pmid="222",
+                        doi="10.1000/demo222",
+                        title="Candidate two",
+                        journal="Journal B",
+                        year="2025",
+                        publication_date="2025",
+                        authors=("Author B",),
+                        abstract="Abstract two.",
+                        snippet="Abstract two.",
+                        url="https://pubmed.ncbi.nlm.nih.gov/222/",
+                        query_used=query,
+                    ),
+                ),
+            )
+
+    monkeypatch.setattr(workspace, "PubMedSearchService", FakePubMedSearchService)
+    monkeypatch.setattr(workspace, "_show_message", lambda _text: None)
+
+    summary = create_meta_analysis_project("Search Stay", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(summary.project_root)
+    widget.show_step("pico_workspace")
+
+    question = widget.findChild(QPlainTextEdit, "metaPicoQuestionInput")
+    mode = widget.findChild(QComboBox, "metaPicoModeSelector")
+    assert question is not None
+    assert mode is not None
+    question.setPlainText("高血压患者降压药与常规治疗相比对卒中风险的影响")
+    mode.setCurrentIndex(mode.findData("pico"))
+    current = _current_step_widget(widget)
+    next(button for button in current.findChildren(QPushButton) if button.text() == "生成 PICO 草稿").click()
+    qt_app.processEvents()
+    next(button for button in _current_step_widget(widget).findChildren(QPushButton) if button.text() == "确认研究问题").click()
+    qt_app.processEvents()
+
+    widget.show_step("search_strategy")
+    current = _current_step_widget(widget)
+    next(button for button in current.findChildren(QPushButton) if button.text() == "生成检索策略").click()
+    qt_app.processEvents()
+    assert widget.current_page_key() == "search_strategy"
+
+    current = _current_step_widget(widget)
+    next(button for button in current.findChildren(QPushButton) if button.text() == "确认当前检索式").click()
+    qt_app.processEvents()
+    assert widget.current_page_key() == "search_strategy"
+
+    current = _current_step_widget(widget)
+    execute = current.findChild(QPushButton, "metaPubMedExecuteButton")
+    assert execute is not None
+    execute.click()
+    qt_app.processEvents()
+    assert widget.current_page_key() == "search_strategy"
+
+    current = _current_step_widget(widget)
+    table = current.findChild(QTableWidget, "metaPubMedCandidateTable")
+    detail = current.findChild(QTextEdit, "metaPubMedCandidateDetail")
+    visible = _visible_text(current)
+    assert table is not None
+    assert detail is not None
+    assert table.rowCount() == 2
+    assert "检索总数 24 条" in visible
+    assert "请选择一条候选文献" in detail.toPlainText()

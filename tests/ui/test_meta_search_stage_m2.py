@@ -9,7 +9,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QListWidget, QPushButton, QTextEdit
+    from PySide6.QtWidgets import QApplication, QLabel, QListWidget, QPushButton, QTableWidget, QTextEdit
 except Exception as exc:  # pragma: no cover
     QApplication = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
@@ -167,7 +167,7 @@ def test_non_pubmed_database_hides_online_execution_button(qt_app, tmp_path: Pat
     database_list.setCurrentRow(1)
     qt_app.processEvents()
 
-    assert "当前版本支持检索式生成与本地导入，不执行联网检索" in _visible_text(current)
+    assert "当前走手动检索流程：复制检索式 -> 打开官网 -> 人工检索 -> 导入结果文件" in _visible_text(current)
     assert not execute_button.isVisibleTo(current)
 
 
@@ -199,10 +199,14 @@ def test_pubmed_candidates_can_be_selected_and_added_to_library(qt_app, tmp_path
 
     widget.show_step("search_strategy")
     current = _current_step_widget(widget)
-    candidates = current.findChild(QListWidget, "metaPubMedCandidateList")
+    candidates = current.findChild(QTableWidget, "metaPubMedCandidateTable")
+    detail = current.findChild(QTextEdit, "metaPubMedCandidateDetail")
     assert candidates is not None
-    assert candidates.count() == 2
-    candidates.item(0).setSelected(True)
+    assert detail is not None
+    assert candidates.rowCount() == 2
+    assert "请选择一条候选文献" in detail.toPlainText()
+    candidates.selectRow(0)
+    candidates.cellClicked.emit(0, 0)
     _button(current, "选择加入文献库").click()
     qt_app.processEvents()
 
