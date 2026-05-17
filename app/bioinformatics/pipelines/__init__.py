@@ -1,2 +1,0 @@
-"""Bioinformatics pipeline namespace."""
-

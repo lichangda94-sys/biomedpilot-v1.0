@@ -1,1 +1,0 @@
-META_ANALYSIS_MAINLINE_CONTRACT_VERSION = "meta_analysis_mainline_shell.v1"

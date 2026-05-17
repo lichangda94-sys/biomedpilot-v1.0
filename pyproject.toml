@@ -3,15 +3,14 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "biomedpilot"
+name = "biomedpilot-labtools"
 version = "0.1.0"
-description = "Unified Bioinformatics and Meta Analysis desktop shell."
+description = "Reusable laboratory calculators and template helpers extracted from BioMedPilot LabTools."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "PySide6>=6.7,<7",
-    "Pillow>=11.0,<13",
-]
+license = {text = "Apache-2.0"}
+authors = [{name = "BioMedPilot"}]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
@@ -19,7 +18,19 @@ dev = [
 ]
 
 [project.scripts]
-biomedpilot = "app.main:main"
+labtools = "labtools.__main__:main"
+
+[tool.setuptools]
+packages = [
+    "labtools",
+    "labtools.calculators",
+    "labtools.reagent_templates",
+    "labtools.western_blot",
+    "labtools.shared",
+    "labtools.pcr_qpcr",
+    "labtools.elisa",
+    "labtools.cell_culture",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

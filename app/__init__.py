@@ -1,2 +1,0 @@
-"""BioMedPilot unified application package."""
-

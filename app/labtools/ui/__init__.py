@@ -1,1 +1,0 @@
-"""PySide widgets for LabTools."""

@@ -1,1 +1,0 @@
-"""LabTools tests."""

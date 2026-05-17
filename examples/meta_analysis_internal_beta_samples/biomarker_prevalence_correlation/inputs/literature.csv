@@ -1,4 +1,0 @@
-record_id,title,authors,journal,year,doi,pmid,abstract,keywords
-rec-bio-1,Biomarker prevalence in disease cohort,Chen Y;Patel R,Biomarker Methods,2020,10.1000/test.bio1,20000001,Observational cohort reporting biomarker prevalence.,biomarker;prevalence
-rec-bio-2,Biomarker expression correlation with clinical score,Nguyen T;Brown A,Translational Testing,2021,10.1000/test.bio2,20000002,Observational cohort reporting correlation with clinical score.,biomarker;correlation
-rec-bio-3,Biomarker prevalence in validation cohort,Li H;Martin P,Biomarker Methods,2022,10.1000/test.bio3,20000003,Validation cohort reporting prevalence.,biomarker;prevalence

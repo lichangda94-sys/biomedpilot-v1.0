@@ -1,2 +1,0 @@
-"""Bioinformatics report namespace."""
-

@@ -1,5 +1,0 @@
-# Base dependencies for repo-root CLI, GEO processing, and smoke tests.
-GEOparse==2.0.4
-numpy==2.4.4
-pandas==3.0.2
-requests==2.33.1

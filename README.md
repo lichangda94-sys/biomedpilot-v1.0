@@ -1,68 +1,46 @@
-# BioMedPilot / 医研智析
+# BioMedPilot-LabTools
 
-BioMedPilot is a unified desktop shell for two independent analysis workspaces:
+`BioMedPilot-LabTools` is the open-source extraction of the reusable LabTools
+calculation layer from the private BioMedPilot project.
 
-- Bioinformatics Analysis / 生信分析
-- Meta Analysis / 医学 Meta 分析
+Current public scope:
 
-The current merge keeps both original projects as isolated legacy snapshots under
-`app/bioinformatics/legacy/` and `app/meta_analysis/legacy/`. New shared shell,
-project, task, data, report, settings, environment, and testing surfaces live in
-`app/shared/` and `app/shell/`.
+- general concentration, dilution, and solution-preparation calculators
+- qPCR mix helpers
+- cell seeding helpers
+- reagent template models, validation, calculation, and local JSON store
+- Western Blot loading, protein-loading, BCA, and SDS-PAGE gel-template logic
 
-## Run
+Excluded from this initial import:
 
-```bash
-python -m app.main
-```
+- BioMedPilot application shell and desktop UI
+- AI-assisted logic, cloud or membership features, payment or license services
+- private prompts, user data, local cache, and build artifacts
 
-or:
-
-```bash
-python scripts/run_app.py
-```
-
-If `PySide6` is unavailable, the launcher prints a console smoke summary instead
-of opening the desktop window.
-
-For automated startup checks without entering the GUI event loop:
+## Setup
 
 ```bash
-python -m app.main --smoke-test
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
 ## Test
 
 ```bash
-python scripts/run_tests.py
+pytest
+python -m labtools --smoke-test
 ```
 
-The unified smoke suite can also be run with:
-
-```bash
-python -m pytest -q
-```
-
-Legacy project tests are preserved in their source snapshots. Run them in
-isolated subprocesses with the source snapshot first on `PYTHONPATH` when doing
-full migration validation.
-
-## Package
-
-The current package step is a local macOS `.app` launcher. It does not download
-dependencies and is not a fully standalone installer. It copies the BioMedPilot
-project files into `dist/BioMedPilot.app` and launches them with the Python
-executable used at build time.
-
-```bash
-python3 scripts/package_app.py --smoke-test
-```
-
-Open the generated app from:
+## Package Layout
 
 ```text
-dist/BioMedPilot.app
+labtools/
+  calculators/
+  reagent_templates/
+  western_blot/
+  shared/
+  pcr_qpcr/
+  elisa/
+  cell_culture/
 ```
-
-For a portable standalone app, the next packaging phase should use PyInstaller
-or py2app after dependency installation is explicitly approved.
