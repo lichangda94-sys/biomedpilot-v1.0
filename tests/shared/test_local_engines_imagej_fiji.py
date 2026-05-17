@@ -29,6 +29,7 @@ from app.shared.local_engines import (
     imagej_fiji_install_guide_text,
     imagej_fiji_runtime_manifest_from_dict,
     imagej_fiji_setup_prompt_text,
+    infer_imagej_fiji_bundled_java_home,
     load_imagej_fiji_runtime_manifest,
     prepare_imagej_fiji_runtime,
     parse_imagej_fiji_version_output,
@@ -55,7 +56,7 @@ def _successful_runner(command, **kwargs):
 
 def _write_fake_fiji_archive(tmp_path: Path) -> Path:
     archive_path = tmp_path / "fiji-test.zip"
-    info = zipfile.ZipInfo("Fiji.app/Contents/MacOS/ImageJ-macosx")
+    info = zipfile.ZipInfo("Fiji/Fiji.app/Contents/MacOS/fiji-macos-arm64")
     info.external_attr = 0o755 << 16
     with zipfile.ZipFile(archive_path, "w") as archive:
         archive.writestr(info, "#!/bin/sh\nexit 0\n")
@@ -66,6 +67,11 @@ def test_missing_path_returns_not_configured_when_no_common_path(monkeypatch) ->
     import app.shared.local_engines.imagej_fiji_detector as detector
 
     monkeypatch.setattr(detector, "detect_common_imagej_fiji_paths", lambda: ())
+    monkeypatch.setattr(
+        detector,
+        "detect_imagej_fiji_runtime_status",
+        lambda *args, **kwargs: detector.default_imagej_fiji_status(ENGINE_STATUS_NOT_CONFIGURED),
+    )
 
     status = detect_imagej_fiji_status()
 
@@ -173,6 +179,7 @@ def test_runtime_manifest_round_trip_and_status(tmp_path: Path) -> None:
         architecture="arm64",
         executable_path=str(executable),
         app_root=str(tmp_path),
+        java_home=str(tmp_path / "java-home"),
         detected_version="2.14.0",
         smoke_test_status="ok",
     )
@@ -184,6 +191,7 @@ def test_runtime_manifest_round_trip_and_status(tmp_path: Path) -> None:
     assert loaded.to_dict()["schema_version"] == IMAGEJ_FIJI_RUNTIME_MANIFEST_SCHEMA_VERSION
     assert status.status == ENGINE_STATUS_AVAILABLE
     assert status.detected_version == "2.14.0"
+    assert loaded.java_home == str(tmp_path / "java-home")
     assert imagej_fiji_runtime_manifest_from_dict(loaded.to_dict()).to_dict() == loaded.to_dict()
 
 
@@ -225,6 +233,7 @@ def test_prepare_runtime_downloads_verifies_extracts_and_writes_manifest(tmp_pat
     assert result.smoke_test_status == "ok"
     assert status.status == ENGINE_STATUS_AVAILABLE
     assert manifest.archive_url == asset.url
+    assert manifest.java_home == ""
 
 
 def test_extract_zip_safely_rejects_zip_slip(tmp_path: Path) -> None:
@@ -241,15 +250,30 @@ def test_macro_command_contract_is_shell_safe(tmp_path: Path) -> None:
         tmp_path / "Fiji App" / "ImageJ-macosx",
         macro_path=tmp_path / "macro with space.ijm",
         argument=tmp_path / "result.txt",
+        java_home=tmp_path / "java home",
     )
 
     assert command == [
         str(tmp_path / "Fiji App" / "ImageJ-macosx"),
+        f"--java-home={tmp_path / 'java home'}",
         "--headless",
         "-macro",
         str(tmp_path / "macro with space.ijm"),
         str(tmp_path / "result.txt"),
     ]
+
+
+def test_infers_bundled_java_home_from_official_fiji_layout(tmp_path: Path) -> None:
+    executable = tmp_path / "Fiji" / "Fiji.app" / "Contents" / "MacOS" / "fiji-macos-arm64"
+    java = tmp_path / "Fiji" / "java" / "macos-arm64" / "zulu" / "zulu-21.jdk" / "Contents" / "Home" / "bin" / "java"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("#!/bin/sh\n", encoding="utf-8")
+    executable.chmod(0o755)
+    java.parent.mkdir(parents=True)
+    java.write_text("#!/bin/sh\n", encoding="utf-8")
+    java.chmod(0o755)
+
+    assert infer_imagej_fiji_bundled_java_home(executable) == str(java.parent.parent)
 
 
 def test_version_parser_and_prompt_text_are_user_readable() -> None:

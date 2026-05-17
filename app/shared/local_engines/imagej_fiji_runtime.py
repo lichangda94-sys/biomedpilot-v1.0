@@ -47,6 +47,7 @@ class ImageJFijiRuntimeManifest:
     architecture: str = ""
     archive_url: str = ""
     archive_sha256: str = ""
+    java_home: str = ""
     detected_version: str = ""
     smoke_test_status: str = "unknown"
     smoke_test_result_path: str = ""
@@ -69,6 +70,7 @@ class ImageJFijiRuntimeManifest:
             "distribution": self.distribution,
             "archive": {"url": self.archive_url, "sha256": self.archive_sha256},
             "application": {"root": self.app_root, "executable": self.executable_path},
+            "java": {"home": self.java_home},
             "version": {"detected": self.detected_version},
             "smoke_test": {"status": self.smoke_test_status, "result_path": self.smoke_test_result_path},
         }
@@ -124,6 +126,7 @@ def imagej_fiji_runtime_manifest_from_dict(payload: Any) -> ImageJFijiRuntimeMan
 
     archive_payload = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
     application_payload = payload.get("application") if isinstance(payload.get("application"), dict) else {}
+    java_payload = payload.get("java") if isinstance(payload.get("java"), dict) else {}
     version_payload = payload.get("version") if isinstance(payload.get("version"), dict) else {}
     smoke_payload = payload.get("smoke_test") if isinstance(payload.get("smoke_test"), dict) else {}
 
@@ -146,6 +149,7 @@ def imagej_fiji_runtime_manifest_from_dict(payload: Any) -> ImageJFijiRuntimeMan
         app_root=app_root,
         archive_url=str(archive_payload.get("url") or ""),
         archive_sha256=str(archive_payload.get("sha256") or ""),
+        java_home=str(java_payload.get("home") or ""),
         detected_version=str(version_payload.get("detected") or ""),
         smoke_test_status=str(smoke_payload.get("status") or "unknown"),
         smoke_test_result_path=str(smoke_payload.get("result_path") or ""),

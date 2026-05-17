@@ -13,6 +13,7 @@ from app.shared.local_engines.engine_status import ENGINE_STATUS_AVAILABLE, UNKN
 from app.shared.local_engines.imagej_fiji_detector import (
     DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
     detect_imagej_fiji_version,
+    infer_imagej_fiji_bundled_java_home,
     resolve_imagej_fiji_executable,
     run_imagej_fiji_smoke_test,
 )
@@ -88,7 +89,13 @@ def prepare_imagej_fiji_runtime(
 
     extract_zip_safely(archive_path, payload_root)
     app_root, executable_path = locate_imagej_fiji_runtime_executable(payload_root)
-    detected_version = detect_imagej_fiji_version(executable_path, runner=runner, timeout_seconds=timeout_seconds)
+    java_home = infer_imagej_fiji_bundled_java_home(executable_path)
+    detected_version = detect_imagej_fiji_version(
+        executable_path,
+        runner=runner,
+        timeout_seconds=timeout_seconds,
+        java_home=java_home,
+    )
     smoke_status = "unknown"
     if run_smoke_test:
         status = run_imagej_fiji_smoke_test(
@@ -96,6 +103,7 @@ def prepare_imagej_fiji_runtime(
             configured_path=app_root,
             runner=runner,
             timeout_seconds=timeout_seconds,
+            java_home=java_home,
         )
         smoke_status = "ok" if status.status == ENGINE_STATUS_AVAILABLE else "failed"
 
@@ -108,6 +116,7 @@ def prepare_imagej_fiji_runtime(
         app_root=str(app_root),
         archive_url=selected_asset.url,
         archive_sha256=actual_sha256,
+        java_home=java_home,
         detected_version="" if detected_version == UNKNOWN_VERSION else detected_version,
         smoke_test_status=smoke_status,
         created_at=utc_now(),
@@ -130,6 +139,7 @@ def run_imagej_fiji_macro(
     macro_path: str | Path,
     argument: str | Path = "",
     headless: bool = True,
+    java_home: str | Path = "",
     runner: Runner = subprocess.run,
     timeout_seconds: int = DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
 ) -> subprocess.CompletedProcess[str]:
@@ -138,6 +148,7 @@ def run_imagej_fiji_macro(
         macro_path=macro_path,
         argument=argument,
         headless=headless,
+        java_home=java_home,
     )
     return runner(command, capture_output=True, text=True, timeout=timeout_seconds)
 
@@ -158,6 +169,13 @@ def locate_imagej_fiji_runtime_executable(runtime_payload_root: str | Path) -> t
         "ImageJ.exe",
         "ImageJ",
         "Fiji",
+        "fiji",
+        "fiji-macos-arm64",
+        "fiji-macos-x64",
+        "fiji-macos",
+        "jaunch-macos-arm64",
+        "jaunch-macos-x64",
+        "jaunch-macos",
     }
     for candidate in sorted(path for path in root.rglob("*") if path.name in names):
         try:

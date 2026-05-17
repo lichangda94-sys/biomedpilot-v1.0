@@ -68,6 +68,12 @@ def resolve_imagej_fiji_executable(configured_path: str | Path) -> Path:
             Path("Contents/MacOS/ImageJ-macosx"),
             Path("Contents/MacOS/ImageJ"),
             Path("Contents/MacOS/Fiji"),
+            Path("Contents/MacOS/fiji-macos-arm64"),
+            Path("Contents/MacOS/fiji-macos-x64"),
+            Path("Contents/MacOS/fiji-macos"),
+            Path("Contents/MacOS/jaunch-macos-arm64"),
+            Path("Contents/MacOS/jaunch-macos-x64"),
+            Path("Contents/MacOS/jaunch-macos"),
         ):
             candidate = path / relative
             if _is_executable_file(candidate):
@@ -152,6 +158,7 @@ def detect_imagej_fiji_runtime_status(
         configured_path=root,
         runner=runner,
         timeout_seconds=timeout_seconds,
+        java_home=manifest.java_home or infer_imagej_fiji_bundled_java_home(executable_path),
     )
 
 
@@ -161,9 +168,16 @@ def run_imagej_fiji_smoke_test(
     configured_path: str | Path = "",
     runner: Runner = subprocess.run,
     timeout_seconds: int = DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
+    java_home: str | Path = "",
 ) -> EngineStatus:
     executable_path = Path(executable)
-    version = detect_imagej_fiji_version(executable_path, runner=runner, timeout_seconds=timeout_seconds)
+    runtime_java_home = str(java_home or infer_imagej_fiji_bundled_java_home(executable_path))
+    version = detect_imagej_fiji_version(
+        executable_path,
+        runner=runner,
+        timeout_seconds=timeout_seconds,
+        java_home=runtime_java_home,
+    )
     with tempfile.TemporaryDirectory(prefix="biomedpilot_imagej_fiji_") as temp_dir:
         temp_path = Path(temp_dir)
         macro_path = temp_path / "biomedpilot_imagej_fiji_smoke.ijm"
@@ -173,6 +187,7 @@ def run_imagej_fiji_smoke_test(
             executable_path,
             macro_path=macro_path,
             argument=output_path,
+            java_home=runtime_java_home,
         )
         try:
             completed = runner(
@@ -235,9 +250,14 @@ def detect_imagej_fiji_version(
     *,
     runner: Runner = subprocess.run,
     timeout_seconds: int = DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
+    java_home: str | Path = "",
 ) -> str:
+    command = [str(executable)]
+    if str(java_home):
+        command.append(f"--java-home={java_home}")
+    command.append("--version")
     try:
-        completed = runner([str(executable), "--version"], capture_output=True, text=True, timeout=timeout_seconds)
+        completed = runner(command, capture_output=True, text=True, timeout=timeout_seconds)
     except (subprocess.TimeoutExpired, OSError):
         return UNKNOWN_VERSION
     return parse_imagej_fiji_version_output("\n".join(part for part in (completed.stdout, completed.stderr) if part))
@@ -280,6 +300,19 @@ def _failed_status(
 
 def _is_executable_file(path: Path) -> bool:
     return path.is_file() and os.access(path, os.X_OK)
+
+
+def infer_imagej_fiji_bundled_java_home(executable: str | Path) -> str:
+    executable_path = Path(executable).expanduser()
+    for parent in executable_path.parents:
+        java_root = parent / "java"
+        if not java_root.is_dir():
+            continue
+        for java_binary in sorted(java_root.rglob("bin/java")):
+            home = java_binary.parent.parent
+            if java_binary.is_file() and os.access(java_binary, os.X_OK):
+                return str(home)
+    return ""
 
 
 def _smoke_macro_text() -> str:
