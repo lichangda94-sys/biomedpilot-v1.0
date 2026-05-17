@@ -133,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env.setdefault("QT_QPA_PLATFORM", "offscreen")
         subprocess.run([str(result.launcher_path), "--smoke-test"], env=env, check=True)
+        _ad_hoc_sign_app(result.app_path)
     return 0
 
 
