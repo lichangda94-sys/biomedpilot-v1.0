@@ -4,11 +4,15 @@ import pytest
 
 from app.labtools.calculators.calculator_models import CalculationError
 from app.labtools.calculators.unit_conversion import (
+    amount_to_mol,
     canonical_unit,
+    concentration_to_relative_base,
     mass_concentration_to_g_per_l,
     mass_to_g,
+    mol_to_amount,
     molarity_to_m,
     parse_number,
+    relative_base_to_concentration,
     volume_to_l,
 )
 
@@ -21,16 +25,24 @@ def test_supported_unit_aliases_are_canonicalized() -> None:
     assert canonical_unit("ug/mL") == "µg/mL"
     assert canonical_unit("ug/uL") == "µg/µL"
     assert canonical_unit("cells/uL") == "cells/µL"
+    assert canonical_unit("x") == "X"
+    assert canonical_unit("umol") == "µmol"
 
 
 def test_mass_volume_and_concentration_convert_to_base_units() -> None:
     assert mass_to_g(2, "mg") == pytest.approx(0.002)
     assert volume_to_l(500, "µL") == pytest.approx(0.0005)
+    assert volume_to_l(500, "nL") == pytest.approx(5e-7)
     assert molarity_to_m(250, "µM") == pytest.approx(0.00025)
     assert mass_concentration_to_g_per_l(1, "mg/mL") == pytest.approx(1.0)
+    assert mass_concentration_to_g_per_l(1, "g/L") == pytest.approx(1.0)
     assert mass_concentration_to_g_per_l(1, "µg/µL") == pytest.approx(1.0)
     assert mass_concentration_to_g_per_l(1, "ng/mL") == pytest.approx(1e-6)
     assert mass_concentration_to_g_per_l(1, "ng/µL") == pytest.approx(0.001)
+    assert concentration_to_relative_base(10, "%") == pytest.approx(0.1)
+    assert relative_base_to_concentration(2, "fold") == pytest.approx(2)
+    assert amount_to_mol(1, "µmol") == pytest.approx(1e-6)
+    assert mol_to_amount(1e-9, "nmol") == pytest.approx(1)
 
 
 def test_parse_number_reports_friendly_errors() -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.labtools.calculators.calculator_models import CalculationError, CalculationResult
+from app.labtools.calculators.result_formatting import format_measurement
 from app.labtools.calculators.unit_conversion import (
     canonical_unit,
     format_number,
@@ -58,13 +59,22 @@ def convert_concentration(
     summary = [f"输入浓度：{format_number(concentration_value)} {source_unit}", f"目标单位：{target_unit}"]
     if molecular_weight_value is not None:
         summary.append(f"分子量：{format_number(molecular_weight_value)} g/mol")
+    converted_display = format_measurement(converted, target_unit)
     return CalculationResult(
         title="浓度单位换算",
         input_summary=tuple(summary),
         formula=formula,
-        result_lines=(f"换算结果：{format_number(converted)} {target_unit}",),
+        result_lines=(f"换算结果：{converted_display.text}",),
         result_value=converted,
         result_unit=target_unit,
+        warnings=converted_display.warnings,
+        record_inputs={
+            "value": concentration_value,
+            "from_unit": source_unit,
+            "to_unit": target_unit,
+            "molecular_weight_g_per_mol": molecular_weight_value,
+        },
+        record_outputs={"converted_value": converted, "converted_unit": target_unit},
     )
 
 
@@ -92,6 +102,7 @@ def calculate_molar_concentration(
     moles = mass_g / molecular_weight_value
     molarity_m = moles / volume_l
     converted = m_to_molarity(molarity_m, target_unit)
+    converted_display = format_measurement(converted, target_unit)
     return CalculationResult(
         title="由质量和体积计算摩尔浓度",
         input_summary=(
@@ -100,9 +111,19 @@ def calculate_molar_concentration(
             f"分子量：{format_number(molecular_weight_value)} g/mol",
         ),
         formula=("物质的量 n = 质量 / 分子量", "摩尔浓度 C = n / 体积"),
-        result_lines=(f"摩尔浓度：{format_number(converted)} {target_unit}",),
+        result_lines=(f"摩尔浓度：{converted_display.text}",),
         result_value=converted,
         result_unit=target_unit,
+        warnings=converted_display.warnings,
+        record_inputs={
+            "mass": mass_value,
+            "mass_unit": source_mass_unit,
+            "volume": volume_value,
+            "volume_unit": source_volume_unit,
+            "molecular_weight_g_per_mol": molecular_weight_value,
+            "output_unit": target_unit,
+        },
+        record_outputs={"molar_concentration": converted, "molar_unit": target_unit, "moles": moles},
     )
 
 
@@ -131,6 +152,7 @@ def calculate_mass_for_molar_solution(
     volume_l = volume_to_l(volume_value, source_volume_unit)
     mass_g = concentration_m * volume_l * molecular_weight_value
     converted = g_to_mass(mass_g, target_unit)
+    converted_display = format_measurement(converted, target_unit)
     return CalculationResult(
         title="由摩尔浓度和体积计算称量质量",
         input_summary=(
@@ -139,7 +161,17 @@ def calculate_mass_for_molar_solution(
             f"分子量：{format_number(molecular_weight_value)} g/mol",
         ),
         formula=("质量 = 摩尔浓度 x 体积 x 分子量", f"{source_concentration_unit} -> M；{source_volume_unit} -> L；g -> {target_unit}"),
-        result_lines=(f"所需质量：{format_number(converted)} {target_unit}",),
+        result_lines=(f"所需质量：{converted_display.text}",),
         result_value=converted,
         result_unit=target_unit,
+        warnings=converted_display.warnings,
+        record_inputs={
+            "concentration": concentration_value,
+            "concentration_unit": source_concentration_unit,
+            "target_volume": volume_value,
+            "volume_unit": source_volume_unit,
+            "molecular_weight_g_per_mol": molecular_weight_value,
+            "output_mass_unit": target_unit,
+        },
+        record_outputs={"required_mass": converted, "mass_unit": target_unit},
     )

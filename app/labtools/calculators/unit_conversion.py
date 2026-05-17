@@ -16,6 +16,7 @@ VOLUME_UNITS: dict[str, float] = {
     "L": 1.0,
     "mL": 1e-3,
     "µL": 1e-6,
+    "nL": 1e-9,
 }
 
 MOLARITY_UNITS: dict[str, float] = {
@@ -23,14 +24,30 @@ MOLARITY_UNITS: dict[str, float] = {
     "mM": 1e-3,
     "µM": 1e-6,
     "nM": 1e-9,
+    "pM": 1e-12,
 }
 
 MASS_CONCENTRATION_UNITS: dict[str, float] = {
+    "g/L": 1.0,
     "mg/mL": 1.0,
     "µg/µL": 1.0,
     "µg/mL": 1e-3,
     "ng/mL": 1e-6,
     "ng/µL": 1e-3,
+}
+
+RELATIVE_CONCENTRATION_UNITS: dict[str, float] = {
+    "%": 0.01,
+    "X": 1.0,
+    "fold": 1.0,
+}
+
+AMOUNT_UNITS: dict[str, float] = {
+    "mol": 1.0,
+    "mmol": 1e-3,
+    "µmol": 1e-6,
+    "nmol": 1e-9,
+    "pmol": 1e-12,
 }
 
 CELL_DENSITY_UNITS: dict[str, float] = {
@@ -47,6 +64,8 @@ UNIT_ALIASES = {
     "uM": "µM",
     "um": "µM",
     "μM": "µM",
+    "pmol": "pmol",
+    "pm": "pM",
     "ug/mL": "µg/mL",
     "μg/mL": "µg/mL",
     "ug/uL": "µg/µL",
@@ -56,10 +75,16 @@ UNIT_ALIASES = {
     "μg/μL": "µg/µL",
     "ng/uL": "ng/µL",
     "ng/μL": "ng/µL",
+    "nL": "nL",
+    "ul": "µL",
+    "umol": "µmol",
+    "μmol": "µmol",
     "cells/uL": "cells/µL",
     "cells/μL": "cells/µL",
     "cell/mL": "cells/mL",
     "cells/ml": "cells/mL",
+    "x": "X",
+    "×": "X",
 }
 
 
@@ -73,6 +98,8 @@ def canonical_unit(unit: str) -> str:
         or canonical in VOLUME_UNITS
         or canonical in MOLARITY_UNITS
         or canonical in MASS_CONCENTRATION_UNITS
+        or canonical in RELATIVE_CONCENTRATION_UNITS
+        or canonical in AMOUNT_UNITS
         or canonical in CELL_DENSITY_UNITS
     ):
         return canonical
@@ -115,6 +142,10 @@ def unit_kind(unit: str) -> str:
         return "molarity"
     if canonical in MASS_CONCENTRATION_UNITS:
         return "mass_concentration"
+    if canonical in RELATIVE_CONCENTRATION_UNITS:
+        return "relative_concentration"
+    if canonical in AMOUNT_UNITS:
+        return "amount"
     if canonical in CELL_DENSITY_UNITS:
         return "cell_density"
     raise CalculationError(f"暂不支持单位：{unit}。")
@@ -180,8 +211,36 @@ def g_per_l_to_mass_concentration(value_g_per_l: float, unit: str) -> float:
     return value_g_per_l / MASS_CONCENTRATION_UNITS[canonical]
 
 
+def concentration_to_relative_base(value: float, unit: str) -> float:
+    canonical = canonical_unit(unit)
+    if canonical not in RELATIVE_CONCENTRATION_UNITS:
+        raise CalculationError(f"{canonical} 不是比例浓度单位。")
+    return value * RELATIVE_CONCENTRATION_UNITS[canonical]
+
+
+def relative_base_to_concentration(value_base: float, unit: str) -> float:
+    canonical = canonical_unit(unit)
+    if canonical not in RELATIVE_CONCENTRATION_UNITS:
+        raise CalculationError(f"{canonical} 不是比例浓度单位。")
+    return value_base / RELATIVE_CONCENTRATION_UNITS[canonical]
+
+
+def amount_to_mol(value: float, unit: str) -> float:
+    canonical = canonical_unit(unit)
+    if canonical not in AMOUNT_UNITS:
+        raise CalculationError(f"{canonical} 不是物质的量单位。")
+    return value * AMOUNT_UNITS[canonical]
+
+
+def mol_to_amount(value_mol: float, unit: str) -> float:
+    canonical = canonical_unit(unit)
+    if canonical not in AMOUNT_UNITS:
+        raise CalculationError(f"{canonical} 不是物质的量单位。")
+    return value_mol / AMOUNT_UNITS[canonical]
+
+
 def supported_concentration_units() -> tuple[str, ...]:
-    return tuple(MOLARITY_UNITS) + tuple(MASS_CONCENTRATION_UNITS)
+    return tuple(MOLARITY_UNITS) + tuple(MASS_CONCENTRATION_UNITS) + tuple(RELATIVE_CONCENTRATION_UNITS)
 
 
 def supported_mass_units() -> tuple[str, ...]:
@@ -194,3 +253,7 @@ def supported_volume_units() -> tuple[str, ...]:
 
 def supported_cell_density_units() -> tuple[str, ...]:
     return tuple(CELL_DENSITY_UNITS)
+
+
+def supported_amount_units() -> tuple[str, ...]:
+    return tuple(AMOUNT_UNITS)

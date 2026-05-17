@@ -5,9 +5,13 @@ import json
 import pytest
 
 from app.labtools.reagent_templates import (
+    LABTOOLS_PREPARATION_RECORD_SCHEMA_VERSION,
     LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION,
     CommercialReagentInfo,
     PHRecord,
+    PreparationRecord,
+    PreparationRecordError,
+    PreparationRecordStore,
     PreparationRequest,
     ReagentComponent,
     ReagentTemplate,
@@ -30,6 +34,8 @@ def _component(
     referenced_template_id: str = "",
     initial_addition_mode: str = "none",
     initial_addition_percent: float = 0,
+    addition_order: int = 0,
+    stage_label: str = "",
 ) -> ReagentComponent:
     return ReagentComponent(
         name=name,
@@ -43,6 +49,8 @@ def _component(
         referenced_template_id=referenced_template_id,
         initial_addition_mode=initial_addition_mode,
         initial_addition_percent=initial_addition_percent,
+        addition_order=addition_order,
+        stage_label=stage_label,
     )
 
 
@@ -488,3 +496,81 @@ def test_preparation_steps_are_generic_and_include_review_notice() -> None:
     assert "人工复核提示" in text
     for forbidden in ("自动 pH 预测", "自动推荐最佳配方", "无需人工复核"):
         assert forbidden not in text
+
+
+def test_addition_order_and_stage_label_group_components_by_stage() -> None:
+    template = ReagentTemplate.create(
+        name="阶段模板",
+        default_volume=100,
+        components=(
+            _component("ddH2O", 0, "mL", component_type="solvent", auto_fill=True, contributes_to_final_volume=True, addition_order=1, stage_label="初始加入溶剂"),
+            _component("NaCl", 5, "g", component_type="powder", addition_order=2, stage_label="加入并溶解粉末组分"),
+            _component("KCl", 1, "g", component_type="powder", addition_order=2, stage_label="加入并溶解粉末组分"),
+            _component("敏感添加剂", 10, "µg", component_type="powder", scale_with_volume=False, addition_order=5, stage_label="最后加入"),
+        ),
+    )
+
+    result = calculate_preparation(PreparationRequest(template.template_id, 100), (template,))
+
+    assert [group.addition_order for group in result.direct_stage_groups] == [1, 2, 5]
+    assert result.direct_stage_groups[1].stage_label == "加入并溶解粉末组分"
+    assert [component.name for component in result.direct_stage_groups[1].components] == ["NaCl", "KCl"]
+    text = result.as_text()
+    assert "阶段 2：加入并溶解粉末组分" in text
+    assert "阶段 5：最后加入" in text
+
+
+def test_preparation_request_supports_fixed_loss_amount() -> None:
+    template = _pbs_template()
+    result = calculate_preparation(
+        PreparationRequest(
+            template.template_id,
+            75,
+            "mL",
+            "1X",
+            loss_mode="fixed_amount",
+            loss_fixed_amount=5,
+            loss_fixed_unit="mL",
+        ),
+        (template,),
+    )
+
+    assert result.suggested_volume == pytest.approx(80)
+    amounts = {component.name: component.amount for component in result.direct_components}
+    assert amounts["ddH2O"] == pytest.approx(80)
+
+
+def test_preparation_record_store_saves_and_reloads_records(tmp_path) -> None:
+    template = _pbs_template()
+    request = PreparationRequest(
+        template.template_id,
+        75,
+        "mL",
+        "1X",
+        loss_mode="fixed_amount",
+        loss_fixed_amount=5,
+        loss_fixed_unit="mL",
+        operator_name="Tester",
+        notes="batch A",
+    )
+    result = calculate_preparation(request, (template,))
+    record = PreparationRecord.from_result(result, template, request)
+    store = PreparationRecordStore(tmp_path / "preparation_records.json")
+
+    saved = store.save_record(record)
+    reloaded = PreparationRecordStore(tmp_path / "preparation_records.json").get_record(saved.record_id)
+
+    assert saved.schema_version == LABTOOLS_PREPARATION_RECORD_SCHEMA_VERSION
+    assert reloaded.template_name == "1X PBS pH 7.4"
+    assert reloaded.request_snapshot["loss_mode"] == "fixed_amount"
+    assert reloaded.primary_components[0]["name"] == "NaCl"
+    assert reloaded.staged_steps
+    assert reloaded.summary_status in {"OK", "Warning"}
+
+
+def test_preparation_record_store_rejects_bad_json(tmp_path) -> None:
+    path = tmp_path / "preparation_records.json"
+    path.write_text("{bad json", encoding="utf-8")
+
+    with pytest.raises(PreparationRecordError, match="不是有效 JSON"):
+        PreparationRecordStore(path).list_records()
