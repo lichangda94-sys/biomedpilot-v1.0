@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -73,6 +74,26 @@ def test_subprocess_runner_accepts_json_after_log_lines(tmp_path: Path) -> None:
     )
 
     assert result.source.media_type == "image/png"
+
+
+def test_subprocess_runner_adds_configured_pythonpath(tmp_path: Path) -> None:
+    python = _fake_python(tmp_path)
+    image = tmp_path / "figure.png"
+    image.write_bytes(b"image")
+    worker_source = tmp_path / "worker-source"
+    captured: dict[str, object] = {}
+
+    def fake_runner(command, **kwargs):
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(_payload(str(image), media_type="image/png"), ensure_ascii=False), stderr="")
+
+    PaddleOcrSubprocessRunner(
+        PaddleOcrRuntimeConfig(python_executable=str(python), pythonpath_entries=(str(worker_source),)),
+        runner=fake_runner,
+    ).run_image_ocr(image, record_id="fig-1")
+
+    env = captured["kwargs"]["env"]
+    assert env["PYTHONPATH"].split(os.pathsep)[0] == str(worker_source)
 
 
 def test_subprocess_runner_failure_modes_are_structured(tmp_path: Path) -> None:

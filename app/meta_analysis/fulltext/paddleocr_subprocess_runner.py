@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,7 @@ class PaddleOcrRuntimeConfig:
     python_executable: str
     worker_module: str = PADDLEOCR_WORKER_MODULE
     timeout_seconds: int = 300
+    pythonpath_entries: tuple[str, ...] = ()
 
 
 class PaddleOcrSubprocessRunner:
@@ -56,7 +58,7 @@ class PaddleOcrSubprocessRunner:
             raise PaddleOcrSubprocessError("paddleocr_runtime_python_missing")
         command = self.build_command(input_path, mode=mode, record_id=record_id, attachment_id=attachment_id, lang=lang)
         try:
-            completed = self._runner(command, capture_output=True, text=True, timeout=self._config.timeout_seconds)
+            completed = self._runner(command, capture_output=True, text=True, timeout=self._config.timeout_seconds, env=self._subprocess_env())
         except subprocess.TimeoutExpired as exc:
             raise PaddleOcrSubprocessError("paddleocr_worker_timeout") from exc
         except OSError as exc:
@@ -68,6 +70,15 @@ class PaddleOcrSubprocessRunner:
             return ocr_document_from_dict(payload)
         except (json.JSONDecodeError, ValueError) as exc:
             raise PaddleOcrSubprocessError("paddleocr_worker_invalid_json") from exc
+
+    def _subprocess_env(self) -> dict[str, str] | None:
+        entries = tuple(item for item in self._config.pythonpath_entries if str(item).strip())
+        if not entries:
+            return None
+        env = dict(os.environ)
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = os.pathsep.join([*entries, existing] if existing else list(entries))
+        return env
 
 
 def build_paddleocr_worker_command(

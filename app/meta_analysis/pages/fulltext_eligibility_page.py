@@ -79,7 +79,7 @@ def initial_fulltext_eligibility_state(project_dir: Path | None = None) -> FullT
         output_summary="输出：fulltext_eligibility_decisions.json、fulltext_exclusion_report.csv、final_included_studies.json，并保留旧 fulltext_screening_decisions.json 兼容。",
         next_step="下一步：Extraction。只有 included_for_extraction 或已绑定本地 PDF 的记录应进入提取。",
         empty_state="没有 full-text 候选记录。请先完成 title/abstract screening，并将记录标记为 included 或 maybe。",
-        warning_summary="missing full text、failed access 或 excluded after full-text review 必须记录可读 exclusion reason；本页不下载 PDF、不做 OCR。",
+        warning_summary="missing full text、failed access 或 excluded after full-text review 必须记录可读 exclusion reason；本页不下载 PDF，OCR 仅用于用户触发的本地全文文本获取。",
         candidate_count=0,
         candidates=(),
         status_options=FULLTEXT_ELIGIBILITY_STATUSES,
@@ -95,7 +95,7 @@ def initial_fulltext_eligibility_state(project_dir: Path | None = None) -> FullT
         criteria_hints=(),
         warnings=(),
         testing_limitations=(
-            "不自动下载 PDF、不做 OCR、不做机构代理登录或版权受限全文访问。",
+            "不自动下载 PDF；OCR 仅用于用户触发的本地全文文本获取，不自动提取、不自动筛选。",
             "Full-text eligibility 是人工 workflow；不会自动删除文献。",
             "Developer Preview：final included studies 用于后续 extraction 测试链路，不代表投稿级最终纳入清单。",
         ),

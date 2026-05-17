@@ -5,9 +5,11 @@ from pathlib import Path
 
 from app.meta_analysis.fulltext import (
     OCR_RESULT_SCHEMA_VERSION,
+    OCR_RUNTIME_MANIFEST_SCHEMA_VERSION,
     OCR_STATUS_COMPLETED,
     OCR_STATUS_PENDING_RUNTIME,
     ImageOcrWorker,
+    MetaOcrRuntimeService,
     OcrBlock,
     OcrDocumentResult,
     OcrEngineInfo,
@@ -77,6 +79,36 @@ def test_missing_image_exports_failure_json(tmp_path: Path) -> None:
     assert not result.success
     assert payload["source"]["media_type"] == "image/png"
     assert payload["errors"] == ["image_file_missing"]
+
+
+def test_meta_ocr_runtime_service_resolves_standard_manifest(tmp_path: Path) -> None:
+    python = tmp_path / "runtime" / "bin" / "python"
+    python.parent.mkdir(parents=True, exist_ok=True)
+    python.write_text("#!/bin/sh\n", encoding="utf-8")
+    manifest = tmp_path / "runtime" / "runtime_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": OCR_RUNTIME_MANIFEST_SCHEMA_VERSION,
+                "engine_id": "paddleocr_local",
+                "packages": {"paddleocr": "3.5.0"},
+                "python": {"executable": str(python), "version": "3.12.13"},
+                "runtime_id": "runtime-test",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = MetaOcrRuntimeService(runtime_root=tmp_path / "runtime")
+    status = service.status()
+    runner = service.runner()
+
+    assert status.available
+    assert status.status == "available"
+    assert status.python_executable == str(python)
+    assert status.engine_version == "3.5.0"
+    assert status.runtime_manifest_id == "runtime-test"
+    assert runner is not None
 
 
 def _document(path: Path, *, record_id: str, attachment_id: str, media_type: str) -> OcrDocumentResult:
