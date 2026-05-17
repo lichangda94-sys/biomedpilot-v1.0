@@ -19,7 +19,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
 
 DEFAULT_APP_NAME = "BioMedPilot"
-COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
+COPY_DIRS = ("app", "assets", "biomedpilot_ocr_worker", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
 STORAGE_DIRS = ("projects", "data", "tasks", "reports", "test_feedback")
 IGNORE_NAMES = {
@@ -85,6 +85,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
     _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
+    _ad_hoc_sign_app(app_path)
 
     return PackagingResult(
         app_path=app_path,
@@ -223,6 +224,15 @@ exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+
+
+def _ad_hoc_sign_app(app_path: Path) -> None:
+    if sys.platform != "darwin":
+        return
+    codesign = shutil.which("codesign")
+    if not codesign:
+        return
+    subprocess.run([codesign, "--force", "--deep", "--sign", "-", str(app_path)], check=True, text=True, capture_output=True)
 
 
 def _git_head(repo_root: Path) -> str:
