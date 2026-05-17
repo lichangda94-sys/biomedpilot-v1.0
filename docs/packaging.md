@@ -22,6 +22,24 @@ Output:
 dist/BioMedPilot.app
 ```
 
+For a scoped ReleaseBuild Integration Preview package, keep the preview bundle
+separate from the generic desktop app:
+
+```bash
+python3 scripts/package_app.py --integration-preview --smoke-test
+```
+
+Output:
+
+```text
+dist/BioMedPilot Integration Preview.app
+```
+
+The preview bundle uses `CFBundleName=BioMedPilot Integration Preview` and the
+space-free launcher executable `CFBundleExecutable=BioMedPilotIntegrationPreview`.
+This keeps Finder-visible naming explicit while avoiding accidental overwrite of
+`BioMedPilot.app` or `BioMedPilot Dev.app`.
+
 The launcher bundle now writes a build marker at:
 
 ```text

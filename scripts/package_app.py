@@ -19,6 +19,9 @@ if str(REPO_ROOT) not in sys.path:
 from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
 
 DEFAULT_APP_NAME = "BioMedPilot"
+INTEGRATION_PREVIEW_APP_NAME = "BioMedPilot Integration Preview"
+INTEGRATION_PREVIEW_EXECUTABLE_NAME = "BioMedPilotIntegrationPreview"
+INTEGRATION_PREVIEW_DISPLAY_NAME = "BioMedPilot Integration Preview / 医研智析"
 COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
 STORAGE_DIRS = ("projects", "data", "tasks", "reports", "test_feedback")
@@ -34,6 +37,8 @@ class PackagingOptions:
     repo_root: Path
     output_dir: Path
     app_name: str = DEFAULT_APP_NAME
+    executable_name: str | None = None
+    display_name: str | None = None
     python_executable: str = sys.executable
     clean: bool = True
 
@@ -49,18 +54,21 @@ class PackagingResult:
     app_version: str
     git_head: str
     signing_status: str
+    executable_name: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     repo_root = options.repo_root.resolve()
     _validate_repo_root(repo_root)
+    executable_name = _bundle_executable_name(options)
+    display_name = options.display_name or "BioMedPilot / 医研智析"
 
     app_path = options.output_dir.resolve() / f"{options.app_name}.app"
     contents_dir = app_path / "Contents"
     macos_dir = contents_dir / "MacOS"
     resources_dir = contents_dir / "Resources"
     resource_root = resources_dir / "app"
-    launcher_path = macos_dir / options.app_name
+    launcher_path = macos_dir / executable_name
 
     if app_path.exists() and options.clean:
         shutil.rmtree(app_path)
@@ -81,8 +89,21 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _create_project_storage(resource_root / "project_storage")
     git_head = _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
-    _write_build_info(build_info_path, repo_root=repo_root, git_head=git_head)
-    _write_info_plist(contents_dir / "Info.plist", app_name=options.app_name, git_head=git_head)
+    _write_build_info(
+        build_info_path,
+        repo_root=repo_root,
+        git_head=git_head,
+        app_name=options.app_name,
+        executable_name=executable_name,
+        display_name=display_name,
+    )
+    _write_info_plist(
+        contents_dir / "Info.plist",
+        app_name=options.app_name,
+        executable_name=executable_name,
+        display_name=display_name,
+        git_head=git_head,
+    )
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
     signing_status = _ad_hoc_sign_app(app_path)
 
@@ -96,6 +117,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         app_version=APP_VERSION,
         git_head=git_head,
         signing_status=signing_status,
+        executable_name=executable_name,
     )
 
 
@@ -103,6 +125,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a local BioMedPilot macOS .app launcher without network downloads.")
     parser.add_argument("--output-dir", default="dist", help="Directory where the .app bundle will be written.")
     parser.add_argument("--app-name", default=DEFAULT_APP_NAME, help="Application bundle name.")
+    parser.add_argument("--executable-name", default=None, help="CFBundleExecutable and Contents/MacOS launcher name.")
+    parser.add_argument("--display-name", default=None, help="CFBundleDisplayName shown by macOS.")
+    parser.add_argument(
+        "--integration-preview",
+        action="store_true",
+        help="Build the ReleaseBuild Integration Preview bundle without overwriting BioMedPilot.app.",
+    )
     parser.add_argument("--python", default=sys.executable, help="Python executable used by the launcher.")
     parser.add_argument("--no-clean", action="store_true", help="Do not remove an existing bundle before rebuilding.")
     parser.add_argument("--smoke-test", action="store_true", help="Run the generated app launcher with --smoke-test after packaging.")
@@ -111,11 +140,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    app_name = INTEGRATION_PREVIEW_APP_NAME if args.integration_preview else args.app_name
+    executable_name = INTEGRATION_PREVIEW_EXECUTABLE_NAME if args.integration_preview else args.executable_name
+    display_name = INTEGRATION_PREVIEW_DISPLAY_NAME if args.integration_preview else args.display_name
     result = build_launcher_app(
         PackagingOptions(
             repo_root=REPO_ROOT,
             output_dir=REPO_ROOT / args.output_dir,
-            app_name=args.app_name,
+            app_name=app_name,
+            executable_name=executable_name,
+            display_name=display_name,
             python_executable=args.python,
             clean=not args.no_clean,
         )
@@ -124,6 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"app_version={result.app_version}")
     print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
+    print(f"executable={result.executable_name}")
     print(f"python={result.python_executable}")
     print(f"signing_status={result.signing_status}")
     print(f"build_info={result.build_info_path}")
@@ -144,6 +179,15 @@ def _validate_repo_root(repo_root: Path) -> None:
         raise FileNotFoundError(f"BioMedPilot project root is incomplete: {', '.join(missing)}")
 
 
+def _bundle_executable_name(options: PackagingOptions) -> str:
+    executable_name = options.executable_name or options.app_name
+    if not executable_name.strip():
+        raise ValueError("CFBundleExecutable must not be empty.")
+    if "/" in executable_name or "\0" in executable_name:
+        raise ValueError("CFBundleExecutable must be a file name, not a path.")
+    return executable_name
+
+
 def _copy_ignore(directory: str, names: list[str]) -> set[str]:
     ignored: set[str] = set()
     for name in names:
@@ -162,9 +206,19 @@ def _create_project_storage(storage_root: Path) -> None:
         (target / ".gitkeep").write_text("", encoding="utf-8")
 
 
-def _write_build_info(path: Path, *, repo_root: Path, git_head: str) -> None:
+def _write_build_info(
+    path: Path,
+    *,
+    repo_root: Path,
+    git_head: str,
+    app_name: str,
+    executable_name: str,
+    display_name: str,
+) -> None:
     payload = {
-        "app_name": DEFAULT_APP_NAME,
+        "app_name": app_name,
+        "display_name": display_name,
+        "executable_name": executable_name,
         "version": APP_VERSION,
         "bundle_version": APP_BUNDLE_VERSION,
         "channel": APP_CHANNEL,
@@ -176,15 +230,22 @@ def _write_build_info(path: Path, *, repo_root: Path, git_head: str) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_info_plist(path: Path, *, app_name: str, git_head: str) -> None:
+def _write_info_plist(
+    path: Path,
+    *,
+    app_name: str,
+    executable_name: str,
+    display_name: str,
+    git_head: str,
+) -> None:
     payload = {
         "CFBundleName": app_name,
-        "CFBundleDisplayName": "BioMedPilot / 医研智析",
+        "CFBundleDisplayName": display_name,
         "CFBundleIdentifier": "local.biomedpilot.desktop",
         "CFBundleVersion": APP_BUNDLE_VERSION,
         "CFBundleShortVersionString": APP_BUNDLE_VERSION,
         "CFBundlePackageType": "APPL",
-        "CFBundleExecutable": app_name,
+        "CFBundleExecutable": executable_name,
         "LSMinimumSystemVersion": "12.0",
         "NSHighResolutionCapable": True,
         "BioMedPilotVersion": APP_VERSION,
