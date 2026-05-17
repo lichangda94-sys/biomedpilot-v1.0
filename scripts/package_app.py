@@ -230,6 +230,9 @@ exec "$PYTHON_BIN" -m app.main "$@"
 def _ad_hoc_sign_app(app_path: Path) -> None:
     if sys.platform != "darwin":
         return
+    xattr = shutil.which("xattr")
+    if xattr:
+        subprocess.run([xattr, "-cr", str(app_path)], check=True, text=True, capture_output=True)
     codesign = shutil.which("codesign")
     if not codesign:
         return
