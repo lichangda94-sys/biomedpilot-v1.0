@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 MODULE_DESCRIPTIONS = {
-    "通用试剂计算器": "浓度、质量、体积、摩尔量、稀释快速计算，以及用户自定义试剂模板、本次配制换算和子模板展开。",
+    "通用试剂制备": "用于常用试剂快速计算、模板管理和本次制备清单生成。",
     "ImageJ/Fiji 本地引擎": "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置。",
     "Western Blot 工具": "Western Blot 上样体系计算器可用；ImageJ-assisted 条带定量 workflow 仍为 planned / 未启用；不启用 WB 图像分析、条带识别、灰度定量或自动 ROI。",
     "PCR/qPCR 工具": "PCR mix、qPCR 结果整理 workflow 占位。",
@@ -17,7 +17,7 @@ MODULE_DESCRIPTIONS = {
 }
 
 ENTRY_OBJECTS = {
-    "通用试剂计算器": "labToolsGeneralCalculatorEntry",
+    "通用试剂制备": "labToolsGeneralCalculatorEntry",
     "ImageJ/Fiji 本地引擎": "labToolsImageJFijiEntry",
     "Western Blot 工具": "labToolsWesternBlotEntry",
     "PCR/qPCR 工具": "labToolsPcrQpcrEntry",
@@ -108,7 +108,9 @@ def test_general_calculator_is_not_described_as_all_experiment_calculation(qapp)
     assert frame is not None
     text = _visible_text(frame)
 
-    assert "通用试剂计算器" in text
+    assert "通用试剂制备" in text
+    assert "进入通用试剂制备" in text
+    assert "打开计算器" not in text
     assert "全部实验计算" not in text
     assert "承载全部实验" not in text
 

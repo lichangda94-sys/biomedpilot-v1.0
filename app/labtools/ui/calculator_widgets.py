@@ -1021,9 +1021,9 @@ if QWidget is not None:
             root = QVBoxLayout(self)
             root.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
             root.setSpacing(SPACING["md"])
-            title = QLabel("本次配制")
+            title = QLabel("本次制备")
             title.setObjectName("labToolsSectionTitle")
-            note = QLabel("选择本地模板后输入本次目标体积、目标倍数和损耗系数，生成本次配制清单。")
+            note = QLabel("选择本地模板后输入本次目标体积、目标倍数和损耗设置，生成本次制备清单。")
             note.setObjectName("labToolsCalculatorNotice")
             note.setWordWrap(True)
             root.addWidget(title)
@@ -1064,7 +1064,7 @@ if QWidget is not None:
             reload_button = QPushButton("重新读取模板")
             reload_button.setObjectName("preparationReloadTemplatesButton")
             reload_button.clicked.connect(self.refresh_templates)
-            calculate_button = QPushButton("生成本次配制清单")
+            calculate_button = QPushButton("生成制备清单")
             calculate_button.setObjectName("preparationCalculateButton")
             calculate_button.clicked.connect(self._handle_calculate)
             actions.addWidget(reload_button)
@@ -1076,7 +1076,7 @@ if QWidget is not None:
             self._result.setObjectName("preparationResultPanel")
             self._result.setReadOnly(True)
             self._result.setMinimumHeight(320)
-            self._result.setText("尚未生成配制清单。模板保存为本地 JSON，生成结果不联网、不上传。")
+            self._result.setText("尚未生成制备清单。模板保存为本地 JSON，生成结果不联网、不上传。")
             root.addWidget(self._result, 1)
 
         def refresh_templates(self) -> None:
@@ -1113,9 +1113,20 @@ if QWidget is not None:
                 self._result.setText("输入需要调整\n目标体积和损耗系数必须是有效数字。")
                 return
             except ReagentTemplateError as exc:
-                self._result.setText(f"配制需要调整\n{exc}")
+                self._result.setText(f"制备需要调整\n{exc}")
                 return
             self._result.setText(result.as_text())
+
+
+    class ReagentPreparationWorkflowWidget(QWidget):
+        def __init__(self, store: ReagentTemplateStore | None = None) -> None:
+            super().__init__()
+            self.setObjectName("labToolsReagentPreparationFlow")
+            root = QVBoxLayout(self)
+            root.setContentsMargins(0, 0, 0, 0)
+            root.setSpacing(SPACING["lg"])
+            root.addWidget(ReagentTemplateManagerWidget(store))
+            root.addWidget(ReagentPreparationWidget(store))
 
 
     class LabToolsCalculatorWidget(QWidget):
@@ -1131,11 +1142,11 @@ if QWidget is not None:
             self._record_summary = QLabel("最近一次计算：暂无")
             self._record_summary.setObjectName("labToolsRecordSummary")
             self._record_summary.setWordWrap(True)
-            title = QLabel("通用试剂计算器")
+            title = QLabel("通用试剂制备")
             title.setObjectName("labToolsCalculatorTitle")
             subtitle = QLabel(
-                "本地通用试剂模板与分层配制计算工作台：保留浓度换算、C1V1 稀释和溶液配制快速计算，"
-                "并支持用户自定义试剂模板、本次配制换算、子模板展开与本地 JSON 保存。结果仅供实验前核对，不替代实验 SOP。"
+                "本地通用试剂制备工作台：保留公式驱动快速计算，"
+                "并支持用户自定义试剂模板、本次制备换算、子模板展开与本地 JSON 保存；不替代实验 SOP。"
             )
             subtitle.setObjectName("labToolsCalculatorNotice")
             subtitle.setWordWrap(True)
@@ -1149,8 +1160,7 @@ if QWidget is not None:
             tabs = QTabWidget()
             tabs.setObjectName("labToolsCalculatorTabs")
             tabs.addTab(QuickCalculationWidget(on_record=self._set_latest_record), "快速计算")
-            tabs.addTab(ReagentTemplateManagerWidget(self._reagent_template_store), "我的试剂模板")
-            tabs.addTab(ReagentPreparationWidget(self._reagent_template_store), "本次配制")
+            tabs.addTab(ReagentPreparationWorkflowWidget(self._reagent_template_store), "试剂制备")
             root.addWidget(tabs)
 
         def latest_record(self) -> CalculationRecord | None:

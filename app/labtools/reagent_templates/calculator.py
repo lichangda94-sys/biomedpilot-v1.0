@@ -90,7 +90,7 @@ def calculate_preparation(request: PreparationRequest, templates: tuple[ReagentT
     warnings = tuple(_collect_warnings(root))
     steps = _build_steps(root)
     return PreparationResult(
-        title=f"{root.template_name} 本次配制清单",
+        title=f"{root.template_name} 本次制备清单",
         template_id=root.template_id,
         template_name=root.template_name,
         target_volume=request.target_volume,

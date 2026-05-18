@@ -9,8 +9,7 @@ from uuid import uuid4
 LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION = "labtools_reagent_template_store.v1"
 LABTOOLS_PREPARATION_RECORD_SCHEMA_VERSION = "labtools_preparation_record.v1"
 REAGENT_TEMPLATE_REVIEW_NOTICE = (
-    "本结果基于用户录入模板自动换算，仅用于实验准备辅助。"
-    "请根据实验室 SOP、试剂说明书和安全规范人工复核。"
+    "请先核对 SOP、试剂纯度、pH、温度和安全要求。"
 )
 
 COMPONENT_TYPES = (

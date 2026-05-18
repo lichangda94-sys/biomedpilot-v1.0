@@ -37,19 +37,19 @@ def test_labtools_feature_descriptions_keep_testing_and_draft_boundaries() -> No
     features = {feature.name: feature for feature in labtools_features()}
 
     assert set(features) == {
-        "通用试剂计算器",
+        "通用试剂制备",
         "ImageJ/Fiji 本地引擎",
         "Western Blot 工具",
         "PCR/qPCR 工具",
         "ELISA/吸光度工具",
         "细胞实验工具",
     }
-    assert features["通用试剂计算器"].status is FeatureStatus.TESTING
+    assert features["通用试剂制备"].status is FeatureStatus.TESTING
     assert features["ImageJ/Fiji 本地引擎"].status is FeatureStatus.TESTING
     assert features["Western Blot 工具"].status is FeatureStatus.TESTING
     assert all(features[name].status is FeatureStatus.UNAVAILABLE for name in ("PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"))
-    assert "浓度、质量、体积、摩尔量、稀释" in features["通用试剂计算器"].description
-    assert "不替代实验 SOP" in features["通用试剂计算器"].description
+    assert "常用试剂快速计算" in features["通用试剂制备"].description
+    assert "模板管理" in features["通用试剂制备"].description
     assert "ImageJ/Fiji 检测与路径配置" in features["ImageJ/Fiji 本地引擎"].description
     assert "不是图像分析结果工具" in features["ImageJ/Fiji 本地引擎"].description
     assert "上样体系计算器可用" in features["Western Blot 工具"].description
@@ -63,12 +63,12 @@ def test_labtools_home_status_cards_are_specific_not_broad_production_claims(qap
     widget = LabToolsHomeWidget()
     text = _visible_text(widget)
 
-    for title in ("通用试剂计算器", "ImageJ/Fiji 本地引擎", "Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
+    for title in ("通用试剂制备", "ImageJ/Fiji 本地引擎", "Western Blot 工具", "PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
         assert title in text
     assert "available / 已接入" in text
     assert text.count("planned / 未启用") >= 3
     assert "available / 可用" in text
-    assert "用户自定义试剂模板、本次配制换算和子模板展开" in text
+    assert "用于常用试剂快速计算、模板管理和本次制备清单生成" in text
     assert "图像能力边界" in text
     assert "本地引擎状态摘要" in text
     assert "未启用 WB/gel 真实分析" in text

@@ -25,17 +25,17 @@ class LabToolsTool:
 LABTOOLS_TOOLS: tuple[LabToolsTool, ...] = (
     LabToolsTool(
         tool_id="general_reagent_calculator",
-        chinese_name="通用试剂计算器",
-        english_name="General Reagent Calculator",
+        chinese_name="通用试剂制备",
+        english_name="General Reagent Preparation",
         category="本地计算",
         status="available / 已接入",
         entry_page="general_calculators",
         is_available=True,
         requires_imagej_fiji=False,
         is_planned_only=False,
-        description="浓度、质量、体积、摩尔量、稀释快速计算，以及用户自定义试剂模板、本次配制换算和子模板展开。",
+        description="用于常用试剂快速计算、模板管理和本次制备清单生成。",
         boundary_statement="只做用户录入模板的本地换算和通用步骤整理，不提供内置配方库，不生成实验方案建议，不替代实验 SOP。",
-        button_text="打开计算器",
+        button_text="进入通用试剂制备",
         object_name="labToolsGeneralCalculatorEntry",
     ),
     LabToolsTool(
