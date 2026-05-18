@@ -49,6 +49,11 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     promotion = _jsonl(REVIEW_BATCHES / "meta" / "meta_shared_promotion_review_batch.jsonl")
     priority = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_review_batch_top_300.jsonl")
     conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_mapping_conflicts_top_200.jsonl")
+    symptom_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_symptom_clinical_feature_candidates.jsonl")
+    tcm_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_tcm_future_scope_candidates.jsonl")
+    event_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_event_adverse_outcome_candidates.jsonl")
+    condition_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_condition_candidate_only.jsonl")
+    manual_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_conflicts_still_require_manual_review.jsonl")
     disambiguation = _jsonl(REVIEW_BATCHES / "meta" / "meta_disambiguation_top_200.jsonl")
     english = _jsonl(REVIEW_BATCHES / "meta" / "meta_english_mapping_top_300.jsonl")
     auto_reject = _jsonl(REVIEW_BATCHES / "meta" / "meta_auto_reject_candidates.jsonl")
@@ -60,6 +65,8 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert len(promotion) == 4
     assert len(priority) == 300
     assert len(conflicts) == 200
+    assert len(symptom_conflicts) + len(tcm_conflicts) + len(event_conflicts) + len(condition_conflicts) + len(manual_conflicts) == len(conflicts)
+    assert len(manual_conflicts) < len(conflicts)
     assert len(disambiguation) == 200
     assert len(english) == 300
     assert summary["approved_runtime_total"] == 11  # type: ignore[index]
@@ -108,6 +115,22 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert all("priority_score" in row for row in priority)
     assert all(row["recommended_status"] == "rejected" for row in auto_reject)
 
+    routed_conflict_rows = symptom_conflicts + tcm_conflicts + event_conflicts + condition_conflicts + manual_conflicts
+    original_conflict_terms = {row["normalized_zh_term"] for row in conflicts}
+    routed_conflict_terms = {
+        row["normalized_zh_term"]
+        for row in routed_conflict_rows
+    }
+    assert routed_conflict_terms == original_conflict_terms
+    assert all(row["source_conflict_types"] == ["disease", "symptom"] for row in routed_conflict_rows)
+    assert all(row["source_candidate_mappings"] == [] for row in routed_conflict_rows)
+    assert {row["review_bucket"] for row in symptom_conflicts} == {"symptom_clinical_feature_candidate"}
+    assert {row["review_bucket"] for row in tcm_conflicts} == {"tcm_future_scope"}
+    assert {row["review_bucket"] for row in event_conflicts} == {"event_adverse_outcome_candidate"}
+    assert {row["review_bucket"] for row in condition_conflicts} == {"condition_candidate_only"}
+    assert {row["recommended_action"] for row in manual_conflicts} == {"manual_disambiguation_required"}
+    assert {row["normalized_zh_term"] for row in manual_conflicts} == {"疱疹", "结石", "肥胖", "脚气", "镇静", "风团"}
+
 
 def test_discussion_reports_exist() -> None:
     discussion = REVIEW_BATCHES / "reports" / "vocabulary_review_batches_for_discussion.md"
@@ -116,5 +139,8 @@ def test_discussion_reports_exist() -> None:
 
     assert "GEO core missing" in discussion.read_text(encoding="utf-8")
     assert "Meta approved runtime 11" in discussion.read_text(encoding="utf-8")
-    assert "Top Batch Files" in optimization.read_text(encoding="utf-8")
+    optimization_text = optimization.read_text(encoding="utf-8")
+    assert "Top Batch Files" in optimization_text
+    assert "no longer treat every empty-mapping disease/symptom overlap" in optimization_text
+    assert "meta_conflicts_still_require_manual_review.jsonl" in optimization_text
     assert "blocked_from_shared_promotion" in correction.read_text(encoding="utf-8")
