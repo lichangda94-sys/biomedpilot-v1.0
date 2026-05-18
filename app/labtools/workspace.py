@@ -23,7 +23,7 @@ try:
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
-    from app.labtools.ui.image_analysis_widgets import fluorescence_workbench_widget, scratch_area_workbench_widget, transwell_workbench_widget
+    from app.labtools.ui.cell_experiment_widgets import LabToolsCellExperimentPage as CellExperimentPageWidget
     from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
     from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
@@ -240,57 +240,8 @@ if QWidget is not None:
             }}
             """
 
-    class LabToolsCellExperimentPage(QWidget):
-        def __init__(self) -> None:
-            super().__init__()
-            self.setObjectName("labToolsCellExperimentPage")
-            self.setStyleSheet(self._stylesheet())
-            root = QVBoxLayout(self)
-            root.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
-            root.setSpacing(SPACING["lg"])
-
-            title = QLabel("细胞实验工具")
-            title.setObjectName("labToolsCellExperimentTitle")
-            description = QLabel("细胞实验图像分析入口骨架：划痕实验、Transwell 和荧光图像分析均使用 LabTools 实验图像分析工作台，不暴露普通用户直接操作 ImageJ 或 Fiji 的主界面。")
-            description.setObjectName("labToolsCellExperimentDescription")
-            description.setWordWrap(True)
-            boundary = QLabel("本阶段只生成任务、Macro 模板映射和 RunRequest；不执行真实图像识别、不统计真实细胞数、不生成正式实验结论。")
-            boundary.setObjectName("labToolsCellExperimentBoundary")
-            boundary.setWordWrap(True)
-            root.addWidget(title)
-            root.addWidget(description)
-            root.addWidget(boundary)
-
-            tabs = QTabWidget()
-            tabs.setObjectName("cellExperimentImageAnalysisTabs")
-            tabs.addTab(scratch_area_workbench_widget(), "划痕实验图像分析")
-            tabs.addTab(transwell_workbench_widget(), "Transwell 图像分析")
-            tabs.addTab(fluorescence_workbench_widget(), "荧光图像分析")
-            root.addWidget(tabs, 1)
-
-        def _stylesheet(self) -> str:
-            return f"""
-            QWidget#labToolsCellExperimentPage {{
-                background: {COLORS["background"]};
-                color: {COLORS["text"]};
-                font-size: {FONT_SIZE["body"]}px;
-            }}
-            QLabel#labToolsCellExperimentTitle {{
-                color: {COLORS["bio"]};
-                font-size: {FONT_SIZE["page_title"]}px;
-                font-weight: 760;
-            }}
-            QLabel#labToolsCellExperimentDescription {{
-                color: {COLORS["muted"]};
-            }}
-            QLabel#labToolsCellExperimentBoundary {{
-                color: {COLORS["text"]};
-                background: {COLORS["surface"]};
-                border: 1px solid {COLORS["border"]};
-                border-radius: {RADIUS["sm"]}px;
-                padding: 8px 10px;
-            }}
-            """
+    class LabToolsCellExperimentPage(CellExperimentPageWidget):
+        pass
 
     class LabToolsWesternBlotScaffoldPage(QWidget):
         SECTION_STATUS = "待确认使用逻辑 / 规划中 / 暂未开放"

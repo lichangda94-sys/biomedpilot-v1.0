@@ -65,7 +65,7 @@ def test_cell_experiment_page_has_three_image_analysis_entries(qapp) -> None:
     assert [tabs.tabText(index) for index in range(tabs.count())] == [
         "划痕实验图像分析",
         "Transwell 图像分析",
-        "荧光图像分析",
+        "荧光 / 染色图像分析",
     ]
     assert "识别划痕区域" in text
     assert "统计细胞数" in text
