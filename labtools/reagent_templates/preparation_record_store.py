@@ -11,7 +11,7 @@ from labtools.shared.storage import default_storage_root
 
 
 def default_preparation_record_store_path() -> Path:
-    return default_storage_root() / "labtools" / "reagent_templates" / "preparation_records.json"
+    return default_storage_root() / "labtools" / "reagent_preparation_history.json"
 
 
 @dataclass

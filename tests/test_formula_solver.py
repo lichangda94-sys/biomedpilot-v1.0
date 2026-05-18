@@ -3,9 +3,13 @@ from __future__ import annotations
 import pytest
 
 from labtools.calculators.formula_solver import (
+    calculate_serial_dilution,
+    convert_mass_concentration_unit,
     solve_concentration_bridge,
     solve_dilution_equation,
+    solve_percent_solution,
     solve_solution_preparation_formula,
+    solve_stock_working_solution,
 )
 from labtools.calculators.result_formatting import LOW_MASS_WARNING, LOW_VOLUME_WARNING, TINY_VALUE_WARNING
 from labtools.calculators.calculator_models import CalculationError
@@ -76,6 +80,87 @@ def test_solve_dilution_equation_can_solve_stock_volume() -> None:
     assert result.result_value == pytest.approx(2)
     assert result.result_unit == "mL"
     assert "15 mM × 2 mL = 1 mM × 30 mL" in result.as_text()
+
+
+def test_mass_concentration_unit_conversion_does_not_require_mw_or_volume() -> None:
+    result = convert_mass_concentration_unit(value=1, from_unit="mg/mL", to_unit="µg/mL")
+
+    assert result.result_value == pytest.approx(1000)
+    assert result.result_unit == "µg/mL"
+    assert "不需要 MW、体积或质量输入" in result.as_text()
+
+
+def test_stock_working_solution_outputs_stock_and_diluent_volume() -> None:
+    result = solve_stock_working_solution(stock_strength=10, target_strength=1, final_volume=100, final_volume_unit="mL")
+
+    assert result.record_outputs["stock_volume"] == pytest.approx(10)
+    assert result.record_outputs["diluent_volume"] == pytest.approx(90)
+    assert "加入 stock：10 mL" in result.as_text()
+
+    with pytest.raises(CalculationError, match="不能从低倍数配高倍数"):
+        solve_stock_working_solution(stock_strength=1, target_strength=10, final_volume=100, final_volume_unit="mL")
+
+
+def test_percent_solution_supports_wv_vv_and_ww_semantics() -> None:
+    wv = solve_percent_solution(
+        percent=1,
+        percent_type="w/v",
+        solute_amount=None,
+        solute_unit="g",
+        total_amount=100,
+        total_unit="mL",
+        unknown_field="solute_amount",
+    )
+    assert wv.result_value == pytest.approx(1)
+    assert "称取 1 g，定容至 100 mL" in wv.as_text()
+
+    vv = solve_percent_solution(
+        percent=70,
+        percent_type="v/v",
+        solute_amount=None,
+        solute_unit="mL",
+        total_amount=100,
+        total_unit="mL",
+        unknown_field="solute_amount",
+    )
+    assert vv.result_value == pytest.approx(70)
+
+    ww = solve_percent_solution(
+        percent=5,
+        percent_type="w/w",
+        solute_amount=None,
+        solute_unit="g",
+        total_amount=100,
+        total_unit="g",
+        unknown_field="solute_amount",
+    )
+    assert ww.result_value == pytest.approx(5)
+
+
+def test_serial_dilution_outputs_each_level_and_low_transfer_warning() -> None:
+    result = calculate_serial_dilution(
+        initial_concentration=100,
+        concentration_unit="µM",
+        dilution_factor=10,
+        levels=3,
+        final_volume=1,
+        final_volume_unit="mL",
+    )
+
+    steps = result.record_outputs["steps"]
+    assert [step["concentration"] for step in steps] == pytest.approx([10, 1, 0.1])
+    assert steps[0]["transfer_volume"] == pytest.approx(0.1)
+    assert "第 3 级：0.1 µM" in result.as_text()
+
+    tiny = calculate_serial_dilution(
+        initial_concentration=100,
+        concentration_unit="µM",
+        dilution_factor=10000,
+        levels=1,
+        final_volume=1,
+        final_volume_unit="mL",
+    )
+    assert "移液器下限" in tiny.warnings[0]
 
 
 def test_solve_dilution_equation_can_solve_each_equation_field() -> None:

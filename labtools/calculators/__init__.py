@@ -9,9 +9,13 @@ from labtools.calculators.calculation_record import CalculationRecord
 from labtools.calculators.cell_seeding_calculator import calculate_cell_seeding
 from labtools.calculators.dilution_calculator import calculate_dilution
 from labtools.calculators.formula_solver import (
+    calculate_serial_dilution,
+    convert_mass_concentration_unit,
     solve_concentration_bridge,
     solve_dilution_equation,
+    solve_percent_solution,
     solve_solution_preparation_formula,
+    solve_stock_working_solution,
 )
 from labtools.calculators.qpcr_mix_calculator import calculate_qpcr_mix
 from labtools.calculators.result_formatting import LOW_MASS_WARNING, LOW_VOLUME_WARNING, TINY_VALUE_WARNING
@@ -77,14 +81,18 @@ __all__ = [
     "calculate_qpcr_mix",
     "calculate_qpcr_mix_v1",
     "calculate_solution_preparation",
+    "calculate_serial_dilution",
     "calculate_western_blot_loading_v1",
     "convert_concentration",
+    "convert_mass_concentration_unit",
     "format_cell_seeding_copy_text",
     "format_dilution_copy_text",
     "format_mass_molarity_copy_text",
     "solve_concentration_bridge",
     "solve_dilution_equation",
+    "solve_percent_solution",
     "solve_solution_preparation_formula",
+    "solve_stock_working_solution",
     "supported_amount_units",
     "supported_concentration_units",
     "supported_mass_units",

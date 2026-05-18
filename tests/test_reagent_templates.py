@@ -330,8 +330,8 @@ def test_preparation_scales_volume_fixed_amount_strength_and_overage() -> None:
     assert amounts["固定粉末"] == pytest.approx(5)
     assert amounts["按倍数组分"] == pytest.approx(1.65)
     assert amounts["水"] == pytest.approx(72.6)
-    assert "目标最终体积：75 mL" in result.as_text()
-    assert "建议配制体积：82.5 mL" in result.as_text()
+    assert "目标体积：75 mL" in result.as_text()
+    assert "建议实际制备体积：82.5 mL" in result.as_text()
 
 
 @pytest.mark.parametrize(
@@ -534,7 +534,8 @@ def test_preparation_steps_are_generic_and_include_review_notice() -> None:
     assert "目标 pH:" not in text
     assert "实测 pH:" not in text
     assert "补足至建议配制体积" in text
-    assert "人工复核提示" in text
+    assert "人工核对提示" in text
+    assert "请先核对 SOP、试剂纯度、pH、温度和安全要求。" in text
     for forbidden in ("自动 pH 预测", "自动推荐最佳配方", "无需人工复核"):
         assert forbidden not in text
 
@@ -607,6 +608,18 @@ def test_preparation_record_store_saves_and_reloads_records(tmp_path) -> None:
     assert reloaded.primary_components[0]["name"] == "NaCl"
     assert reloaded.staged_steps
     assert reloaded.summary_status in {"OK", "Warning"}
+    assert reloaded.review_notice == "请先核对 SOP、试剂纯度、pH、温度和安全要求。"
+
+    text = reloaded.as_text()
+    assert "本次制备摘要" in text
+    assert "组分换算清单" in text
+    assert "制备步骤" in text
+    assert "人工核对提示" in text
+    exported = reloaded.export_text(tmp_path)
+    assert exported.suffix == ".txt"
+    exported_text = exported.read_text(encoding="utf-8")
+    assert "历史记录 ID" in exported_text
+    assert "请先核对 SOP、试剂纯度、pH、温度和安全要求。" in exported_text
 
 
 def test_preparation_record_store_rejects_bad_json(tmp_path) -> None:

@@ -5,6 +5,7 @@ from labtools.calculators.result_formatting import format_measurement
 from labtools.calculators.unit_conversion import (
     canonical_unit,
     concentration_to_relative_base,
+    format_number,
     g_per_l_to_mass_concentration,
     g_to_mass,
     l_to_volume,
@@ -18,6 +19,9 @@ from labtools.calculators.unit_conversion import (
     validate_molecular_weight,
     volume_to_l,
 )
+
+
+REAGENT_PREPARATION_REVIEW_NOTICE = "请先核对 SOP、试剂纯度、pH、温度和安全要求。"
 
 
 def solve_concentration_bridge(
@@ -129,6 +133,32 @@ def solve_concentration_bridge(
             "target_unit": "g/mol",
         },
         record_outputs={"molecular_weight_g_per_mol": solved_mw},
+    )
+
+
+def convert_mass_concentration_unit(
+    *,
+    value: object,
+    from_unit: str,
+    to_unit: str,
+) -> CalculationResult:
+    source_unit = canonical_unit(from_unit)
+    target_unit = canonical_unit(to_unit)
+    if unit_kind(source_unit) != "mass_concentration" or unit_kind(target_unit) != "mass_concentration":
+        raise CalculationError("质量浓度单位换算只支持质量浓度单位，不需要分子量。")
+    source_value = _known_number(value, "质量浓度", allow_zero=True)
+    target_value = g_per_l_to_mass_concentration(mass_concentration_to_g_per_l(source_value, source_unit), target_unit)
+    display = format_measurement(target_value, target_unit)
+    return CalculationResult(
+        title="质量浓度单位换算",
+        input_summary=(f"输入质量浓度：{format_measurement(source_value, source_unit).text}", f"目标单位：{target_unit}"),
+        formula=("质量浓度单位换算：先统一为 g/L，再换算为目标单位。", "本模块不需要 MW、体积或质量输入。"),
+        result_lines=(f"换算结果：{display.text}",),
+        result_value=target_value,
+        result_unit=target_unit,
+        warnings=display.warnings,
+        record_inputs={"value": source_value, "from_unit": source_unit, "to_unit": target_unit},
+        record_outputs={"value": target_value, "unit": target_unit},
     )
 
 
@@ -286,6 +316,52 @@ def solve_dilution_equation(
     )
 
 
+def solve_stock_working_solution(
+    *,
+    stock_strength: object,
+    final_volume: object,
+    final_volume_unit: str,
+    target_strength: object = 1,
+    output_volume_unit: str | None = None,
+) -> CalculationResult:
+    stock = _known_number(stock_strength, "stock 倍数", allow_zero=False)
+    target = _known_number(target_strength, "目标倍数", allow_zero=False)
+    if stock <= target:
+        raise CalculationError("stock_strength 必须大于 target_strength，不能从低倍数配高倍数。")
+    final_unit = canonical_unit(final_volume_unit)
+    output_unit = canonical_unit(output_volume_unit or final_unit)
+    if unit_kind(final_unit) != "volume" or unit_kind(output_unit) != "volume":
+        raise CalculationError("终体积和输出单位必须是体积单位。")
+    final_l = volume_to_l(_known_number(final_volume, "终体积", allow_zero=False), final_unit)
+    stock_l = final_l * target / stock
+    diluent_l = final_l - stock_l
+    stock_volume = l_to_volume(stock_l, output_unit)
+    diluent_volume = l_to_volume(diluent_l, output_unit)
+    stock_display = format_measurement(stock_volume, output_unit)
+    diluent_display = format_measurement(diluent_volume, output_unit)
+    return CalculationResult(
+        title="X 倍 stock / working solution 换算",
+        input_summary=(
+            f"stock 倍数：{format_number(stock)}X",
+            f"目标倍数：{format_number(target)}X",
+            f"终体积：{format_measurement(l_to_volume(final_l, final_unit), final_unit).text}",
+        ),
+        formula=("stock_volume = final_volume × target_strength / stock_strength", "diluent_volume = final_volume - stock_volume"),
+        result_lines=(f"加入 stock：{stock_display.text}", f"加入稀释液：{diluent_display.text}"),
+        result_value=stock_volume,
+        result_unit=output_unit,
+        warnings=tuple(dict.fromkeys(stock_display.warnings + diluent_display.warnings)),
+        record_inputs={
+            "stock_strength": stock,
+            "target_strength": target,
+            "final_volume": l_to_volume(final_l, final_unit),
+            "final_volume_unit": final_unit,
+            "output_volume_unit": output_unit,
+        },
+        record_outputs={"stock_volume": stock_volume, "diluent_volume": diluent_volume, "volume_unit": output_unit},
+    )
+
+
 def solve_solution_preparation_formula(
     *,
     mass: object | None,
@@ -429,6 +505,165 @@ def solve_solution_preparation_formula(
     )
 
 
+def solve_percent_solution(
+    *,
+    percent: object | None,
+    percent_type: str,
+    solute_amount: object | None,
+    solute_unit: str,
+    total_amount: object | None,
+    total_unit: str,
+    unknown_field: str | None = None,
+) -> CalculationResult:
+    percent_mode = _canonical_percent_type(percent_type)
+    unknown = _resolve_unknown(
+        {"percent": percent, "solute_amount": solute_amount, "total_amount": total_amount},
+        unknown_field=unknown_field,
+        field_labels={"percent": "百分比", "solute_amount": "溶质量/溶质体积", "total_amount": "终体积/总质量"},
+    )
+    solute_unit = canonical_unit(solute_unit)
+    total_unit = canonical_unit(total_unit)
+    _validate_percent_units(percent_mode, solute_unit, total_unit)
+
+    percent_value = _known_number(percent, "百分比", allow_zero=False) if unknown != "percent" else None
+    solute_base = _percent_amount_to_base(solute_amount, solute_unit, percent_mode, "溶质量/溶质体积") if unknown != "solute_amount" else None
+    total_base = _percent_amount_to_base(total_amount, total_unit, percent_mode, "终体积/总质量") if unknown != "total_amount" else None
+
+    if unknown == "solute_amount":
+        assert percent_value is not None and total_base is not None
+        solute_base = percent_value / 100 * total_base
+    elif unknown == "total_amount":
+        assert percent_value is not None and solute_base is not None
+        total_base = solute_base * 100 / percent_value
+    else:
+        assert solute_base is not None and total_base is not None
+        percent_value = solute_base / total_base * 100
+
+    assert percent_value is not None and solute_base is not None and total_base is not None
+    solute_display_value = _percent_base_to_amount(solute_base, solute_unit, percent_mode)
+    total_display_value = _percent_base_to_amount(total_base, total_unit, percent_mode)
+    solute_display = format_measurement(solute_display_value, solute_unit)
+    total_display = format_measurement(total_display_value, total_unit)
+    semantic_line = _percent_semantic_line(percent_mode, solute_display.text, total_display.text)
+    solved_value = {"percent": percent_value, "solute_amount": solute_display_value, "total_amount": total_display_value}[unknown]
+    solved_unit = {"percent": "%", "solute_amount": solute_unit, "total_amount": total_unit}[unknown]
+    return CalculationResult(
+        title="百分比浓度动态求解",
+        input_summary=(f"百分比类型：{percent_mode}", f"求解字段：{unknown}"),
+        formula=("% w/v: g / 100 mL；% v/v: mL / 100 mL；% w/w: g / 100 g",),
+        result_lines=(
+            f"百分比：{format_number(percent_value)}%",
+            f"溶质用量：{solute_display.text}",
+            f"总量/定容：{total_display.text}",
+            semantic_line,
+        ),
+        result_value=solved_value,
+        result_unit=solved_unit,
+        warnings=tuple(dict.fromkeys(solute_display.warnings + total_display.warnings)),
+        record_inputs={
+            "percent": percent,
+            "percent_type": percent_mode,
+            "solute_amount": solute_amount,
+            "solute_unit": solute_unit,
+            "total_amount": total_amount,
+            "total_unit": total_unit,
+            "solve_for": unknown,
+        },
+        record_outputs={
+            "percent": percent_value,
+            "solute_amount": solute_display_value,
+            "solute_unit": solute_unit,
+            "total_amount": total_display_value,
+            "total_unit": total_unit,
+        },
+    )
+
+
+def calculate_serial_dilution(
+    *,
+    initial_concentration: object,
+    concentration_unit: str,
+    dilution_factor: object,
+    levels: object,
+    final_volume: object,
+    final_volume_unit: str,
+    transfer_volume: object | None = None,
+    transfer_volume_unit: str | None = None,
+) -> CalculationResult:
+    unit = canonical_unit(concentration_unit)
+    if unit_kind(unit) not in {"mass_concentration", "molarity", "relative_concentration"}:
+        raise CalculationError("初始浓度必须使用浓度或倍数单位。")
+    factor = _known_number(dilution_factor, "稀释倍数", allow_zero=False)
+    if factor <= 1:
+        raise CalculationError("稀释倍数必须大于 1。")
+    raw_levels = _known_number(levels, "稀释级数", allow_zero=False)
+    level_count = int(raw_levels)
+    if level_count != raw_levels:
+        raise CalculationError("稀释级数必须是整数。")
+    volume_unit = canonical_unit(final_volume_unit)
+    if unit_kind(volume_unit) != "volume":
+        raise CalculationError("每级终体积必须使用体积单位。")
+    final_l = volume_to_l(_known_number(final_volume, "每级终体积", allow_zero=False), volume_unit)
+    if transfer_volume in (None, ""):
+        transfer_l = final_l / factor
+        transfer_unit = volume_unit
+    else:
+        transfer_unit = canonical_unit(transfer_volume_unit or volume_unit)
+        if unit_kind(transfer_unit) != "volume":
+            raise CalculationError("转移体积必须使用体积单位。")
+        transfer_l = volume_to_l(_known_number(transfer_volume, "转移体积", allow_zero=False), transfer_unit)
+    diluent_l = final_l - transfer_l
+    if diluent_l < -1e-12:
+        raise CalculationError("转移体积不能大于每级终体积。")
+
+    initial = _known_number(initial_concentration, "初始浓度", allow_zero=False)
+    rows: list[dict[str, object]] = []
+    result_lines: list[str] = []
+    for level in range(1, level_count + 1):
+        concentration = initial / (factor**level)
+        transfer_display = l_to_volume(transfer_l, transfer_unit)
+        diluent_display = l_to_volume(max(0.0, diluent_l), transfer_unit)
+        rows.append(
+            {
+                "level": level,
+                "concentration": concentration,
+                "concentration_unit": unit,
+                "transfer_volume": transfer_display,
+                "diluent_volume": diluent_display,
+                "volume_unit": transfer_unit,
+            }
+        )
+        result_lines.append(
+            f"第 {level} 级：{format_measurement(concentration, unit).text}；转移 {format_measurement(transfer_display, transfer_unit).text}，加入稀释液 {format_measurement(diluent_display, transfer_unit).text}"
+        )
+    warnings = ("转移体积低于 1 µL，请核对移液器下限或调整终体积。",) if transfer_l < 1e-6 else ()
+    return CalculationResult(
+        title="连续稀释 / 梯度稀释",
+        input_summary=(
+            f"初始浓度：{format_measurement(initial, unit).text}",
+            f"稀释倍数：{format_number(factor)}",
+            f"稀释级数：{level_count}",
+            f"每级终体积：{format_measurement(l_to_volume(final_l, volume_unit), volume_unit).text}",
+        ),
+        formula=("第 n 级理论浓度 = 初始浓度 / 稀释倍数^n", "默认转移体积 = 每级终体积 / 稀释倍数。"),
+        result_lines=tuple(result_lines),
+        result_value=None,
+        result_unit=unit,
+        warnings=warnings,
+        record_inputs={
+            "initial_concentration": initial,
+            "concentration_unit": unit,
+            "dilution_factor": factor,
+            "levels": level_count,
+            "final_volume": l_to_volume(final_l, volume_unit),
+            "final_volume_unit": volume_unit,
+            "transfer_volume": None if transfer_volume in (None, "") else l_to_volume(transfer_l, transfer_unit),
+            "transfer_volume_unit": transfer_unit,
+        },
+        record_outputs={"steps": rows},
+    )
+
+
 def _resolve_unknown(
     values: dict[str, object | None],
     *,
@@ -458,6 +693,50 @@ def _known_number(value: object | None, field_name: str, *, allow_zero: bool) ->
     if value in (None, ""):
         raise CalculationError(f"请填写{field_name}。")
     return parse_number(value, field_name, allow_zero=allow_zero)
+
+
+def _canonical_percent_type(percent_type: str) -> str:
+    text = str(percent_type or "").strip().lower().replace(" ", "")
+    aliases = {"w/v": "w/v", "%w/v": "w/v", "wv": "w/v", "v/v": "v/v", "%v/v": "v/v", "vv": "v/v", "w/w": "w/w", "%w/w": "w/w", "ww": "w/w"}
+    if text not in aliases:
+        raise CalculationError("百分比类型必须是 w/v、v/v 或 w/w。")
+    return aliases[text]
+
+
+def _validate_percent_units(percent_mode: str, solute_unit: str, total_unit: str) -> None:
+    solute_kind = unit_kind(solute_unit)
+    total_kind = unit_kind(total_unit)
+    if percent_mode == "w/v" and (solute_kind != "mass" or total_kind != "volume"):
+        raise CalculationError("% w/v 需要质量溶质单位和体积定容单位。")
+    if percent_mode == "v/v" and (solute_kind != "volume" or total_kind != "volume"):
+        raise CalculationError("% v/v 需要体积溶质单位和体积定容单位。")
+    if percent_mode == "w/w" and (solute_kind != "mass" or total_kind != "mass"):
+        raise CalculationError("% w/w 需要质量溶质单位和总质量单位。")
+
+
+def _percent_amount_to_base(value: object | None, unit: str, percent_mode: str, field_name: str) -> float:
+    number = _known_number(value, field_name, allow_zero=False)
+    if percent_mode == "v/v":
+        return volume_to_l(number, unit) * 1000
+    if percent_mode == "w/v" and unit_kind(unit) == "volume":
+        return volume_to_l(number, unit) * 1000
+    return mass_to_g(number, unit)
+
+
+def _percent_base_to_amount(value_base: float, unit: str, percent_mode: str) -> float:
+    if percent_mode == "v/v":
+        return l_to_volume(value_base / 1000, unit)
+    if percent_mode == "w/v" and unit_kind(unit) == "volume":
+        return l_to_volume(value_base / 1000, unit)
+    return g_to_mass(value_base, unit)
+
+
+def _percent_semantic_line(percent_mode: str, solute_text: str, total_text: str) -> str:
+    if percent_mode == "w/v":
+        return f"实验语义：称取 {solute_text}，定容至 {total_text}。"
+    if percent_mode == "v/v":
+        return f"实验语义：量取 {solute_text}，定容至 {total_text}。"
+    return f"实验语义：称取 {solute_text}，补足或混合至总质量 {total_text}。"
 
 
 def _solver_concentration_kind(stock_unit: str, target_unit: str, molecular_weight: object | None) -> str:

@@ -9,8 +9,7 @@ from uuid import uuid4
 LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION = "labtools_reagent_template_store.v1"
 LABTOOLS_PREPARATION_RECORD_SCHEMA_VERSION = "labtools_preparation_record.v1"
 REAGENT_TEMPLATE_REVIEW_NOTICE = (
-    "本结果基于用户录入模板自动换算，仅用于实验准备辅助。"
-    "请根据实验室 SOP、试剂说明书和安全规范人工复核。"
+    "请先核对 SOP、试剂纯度、pH、温度和安全要求。"
 )
 
 COMPONENT_TYPES = (
@@ -372,25 +371,34 @@ class PreparationResult:
     warnings: tuple[str, ...]
     steps: tuple[str, ...]
     ph_record: PHRecord | None = None
+    template_default_volume: float = 0
+    template_default_volume_unit: str = "mL"
+    generated_at: str = field(default_factory=utc_now)
+    history_id: str = ""
     ph_record_fields: tuple[str, ...] = ("目标 pH", "实测 pH", "pH 调节备注")
     review_notice: str = REAGENT_TEMPLATE_REVIEW_NOTICE
 
     def as_text(self) -> str:
         lines = [
-            self.title,
-            f"目标试剂名称：{self.template_name}",
-            f"目标最终体积：{_fmt(self.target_volume)} {self.target_volume_unit}",
-            f"建议配制体积：{_fmt(self.suggested_volume)} {self.suggested_volume_unit}",
-            f"目标倍数/浓度：{self.target_strength}",
+            "本次制备摘要",
+            f"试剂名称：{self.template_name}",
+            f"使用模板：{self.template_name}",
+            f"模板基准体积：{_fmt(self.template_default_volume)} {self.template_default_volume_unit}",
+            f"目标体积：{_fmt(self.target_volume)} {self.target_volume_unit}",
+            f"损耗设置：{_fmt(self.overage_percent)}%",
+            f"建议实际制备体积：{_fmt(self.suggested_volume)} {self.suggested_volume_unit}",
+            f"子模板展开：{'是' if self.tree.children else '否'}",
+            f"生成时间：{self.generated_at}",
+            f"历史记录 ID：{self.history_id or '未保存'}",
             "",
-            "一级配制清单",
+            "组分换算清单",
         ]
-        lines.extend(_component_line(component) for component in self.direct_components)
         if self.direct_stage_groups:
-            lines.extend(["", "按阶段分组"])
             for group in self.direct_stage_groups:
                 lines.append(_stage_heading(group))
                 lines.extend(_component_line(component) for component in group.components)
+        else:
+            lines.extend(_component_line(component) for component in self.direct_components)
         solvent_details = tuple(component for component in self.direct_components if component.initial_addition_detail)
         if solvent_details:
             lines.extend(["", "溶剂分阶段加入"])
@@ -410,7 +418,9 @@ class PreparationResult:
             lines.extend(["", "警告信息", *self.warnings])
         if _ph_record_has_content(self.ph_record):
             lines.extend(["", "pH 记录字段", *self.ph_record_fields])
-        lines.extend(["", "配制步骤", *self.steps, "", "人工复核提示", self.review_notice])
+        lines.extend(["", "制备步骤"])
+        lines.extend(f"{index}. {step}" for index, step in enumerate(self.steps, start=1))
+        lines.extend(["", "人工核对提示", self.review_notice])
         return "\n".join(lines)
 
 
