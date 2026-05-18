@@ -8,17 +8,15 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 MODULE_DESCRIPTIONS = {
-    "通用试剂计算器": "浓度、质量、体积、摩尔量、稀释快速计算，以及用户自定义试剂模板、本次配制换算和子模板展开。",
-    "ImageJ/Fiji 本地引擎": "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置。",
-    "Western Blot 工具": "Western Blot 上样体系计算器可用；ImageJ-assisted 条带定量 workflow 仍为 planned / 未启用；不启用 WB 图像分析、条带识别、灰度定量或自动 ROI。",
+    "通用试剂制备": "用于常用试剂快速计算、模板管理和本次制备清单生成。",
+    "Western Blot 工具": "Western Blot 流程工作台可用，覆盖样品准备、BCA、上样计算、配胶与 Lane 布局及关键流程记录。",
     "PCR/qPCR 工具": "PCR mix、qPCR 结果整理 workflow 占位。",
     "ELISA/吸光度工具": "标准曲线、OD 数据整理 workflow 占位。",
     "细胞实验工具": "细胞接种、处理分组、实验记录 workflow 占位。",
 }
 
 ENTRY_OBJECTS = {
-    "通用试剂计算器": "labToolsGeneralCalculatorEntry",
-    "ImageJ/Fiji 本地引擎": "labToolsImageJFijiEntry",
+    "通用试剂制备": "labToolsGeneralCalculatorEntry",
     "Western Blot 工具": "labToolsWesternBlotEntry",
     "PCR/qPCR 工具": "labToolsPcrQpcrEntry",
     "ELISA/吸光度工具": "labToolsElisaAbsorbanceEntry",
@@ -49,7 +47,7 @@ def _visible_text(widget) -> str:
     return "\n".join(part for part in parts if part)
 
 
-def test_labtools_home_exposes_six_top_level_module_entries(qapp) -> None:
+def test_labtools_home_exposes_five_top_level_module_entries(qapp) -> None:
     from PySide6.QtWidgets import QFrame
 
     from app.labtools.labtools_home import LabToolsHomeWidget
@@ -62,7 +60,7 @@ def test_labtools_home_exposes_six_top_level_module_entries(qapp) -> None:
         assert tool.chinese_name in text
         assert tool.english_name in text
         assert widget.findChild(QFrame, tool.object_name) is not None
-    assert len(labtools_tool_registry()) == 6
+    assert len(labtools_tool_registry()) == 5
 
 
 def test_labtools_home_module_descriptions_match_architecture_copy(qapp) -> None:
@@ -108,7 +106,9 @@ def test_general_calculator_is_not_described_as_all_experiment_calculation(qapp)
     assert frame is not None
     text = _visible_text(frame)
 
-    assert "通用试剂计算器" in text
+    assert "通用试剂制备" in text
+    assert "进入通用试剂制备" in text
+    assert "打开计算器" not in text
     assert "全部实验计算" not in text
     assert "承载全部实验" not in text
 
@@ -117,8 +117,16 @@ def test_planned_tool_detail_pages_keep_logic_card_and_boundaries(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
+    widget.show_cell_experiments()
+    cell_text = _visible_text(widget._stack.currentWidget())
+    assert widget.current_page_key() == "cell_experiments"
+    assert "细胞实验工具" in cell_text
+    assert "划痕实验图像分析" in cell_text
+    assert "Transwell 图像分析" in cell_text
+    assert "荧光图像分析" in cell_text
+    assert "本阶段只生成任务、Macro 模板映射和 RunRequest" in cell_text
+
     planned_routes = (
-        (widget.show_cell_experiments, "cell_experiments", "细胞实验工具"),
         (widget.show_pcr_qpcr, "pcr_qpcr", "PCR/qPCR 工具"),
         (widget.show_elisa_absorbance, "elisa_absorbance", "ELISA/吸光度工具"),
     )
@@ -143,8 +151,8 @@ def test_western_blot_available_page_keeps_image_analysis_disabled(qapp) -> None
     text = _visible_text(widget._stack.currentWidget())
 
     assert widget.current_page_key() == "western_blot"
-    assert "Western Blot 上样计算器：available / 可用" in text
-    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in text
+    assert "Western Blot 流程工作台：available / 可用" in text
+    assert "结果与灰度分析：placeholder / 未启用" in text
     assert "不启用 WB 图像分析、条带识别、灰度定量、自动 ROI" in text
 
 

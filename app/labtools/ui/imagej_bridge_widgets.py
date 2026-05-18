@@ -57,9 +57,9 @@ if QWidget is not None:
             layout.setContentsMargins(SPACING["md"], SPACING["md"], SPACING["md"], SPACING["md"])
             layout.setSpacing(SPACING["sm"])
 
-            title = QLabel("ImageJ/Fiji 本地后端状态")
+            title = QLabel("ImageJ 本地后端状态")
             title.setObjectName("imageJFijiStatusTitle")
-            summary = QLabel("LabTools 只读取共享本地工具状态；不会静默下载、静默安装或上传图片。")
+            summary = QLabel("LabTools 优先使用轻量 ImageJ；Fiji 仅作为增强路径保留。不会静默下载、静默安装或上传图片。")
             summary.setObjectName("imageJFijiStatusSummary")
             summary.setWordWrap(True)
             layout.addWidget(title)
@@ -104,10 +104,19 @@ if QWidget is not None:
             self._validate_button = QPushButton("运行验证")
             self._validate_button.setObjectName("imageJFijiValidateButton")
             self._validate_button.clicked.connect(self._handle_validate)
+            self._download_runtime_button = QPushButton("下载 Fiji runtime")
+            self._download_runtime_button.setObjectName("imageJFijiDownloadRuntimeButton")
+            self._download_runtime_button.clicked.connect(self._handle_download_runtime)
             self._guide_button = QPushButton("安装指南")
             self._guide_button.setObjectName("imageJFijiInstallGuideButton")
             self._guide_button.clicked.connect(self._handle_guide)
-            for button in (self._auto_detect_button, self._choose_path_button, self._validate_button, self._guide_button):
+            for button in (
+                self._auto_detect_button,
+                self._choose_path_button,
+                self._validate_button,
+                self._download_runtime_button,
+                self._guide_button,
+            ):
                 actions.addWidget(button)
             actions.addStretch(1)
             layout.addLayout(actions)
@@ -116,7 +125,7 @@ if QWidget is not None:
             if status.status == ENGINE_STATUS_AVAILABLE:
                 return "\n".join(
                     (
-                        f"{self._workflow_name} 可调用本机 ImageJ/Fiji。",
+                        f"{self._workflow_name} 可调用本机 ImageJ 外部引擎。",
                         "这只表示共享本地后端通过 smoke test，不表示任何具体图像分析算法已经实现。",
                         "后续结果仍需人工复核。",
                     )
@@ -131,8 +140,8 @@ if QWidget is not None:
             if status.status == ENGINE_STATUS_FAILED:
                 return "\n".join(
                     (
-                        f"{self._workflow_name} 的 ImageJ/Fiji 验证失败。",
-                        status.last_error or "请检查本机路径和 ImageJ/Fiji 安装。",
+                        f"{self._workflow_name} 的 ImageJ 外部引擎验证失败。",
+                        status.last_error or "请检查本机 ImageJ.app、ij.jar、可执行入口或 Fiji 增强路径。",
                         "可重新选择路径、查看安装指南，或继续使用已开放的 manual/testing MVP。",
                     )
                 )
@@ -150,8 +159,8 @@ if QWidget is not None:
             detected = detect_common_imagej_fiji_paths()
             if not detected:
                 self._prompt_panel.setText(
-                    "未在常见路径发现 ImageJ/Fiji。\n"
-                    "BioMedPilot 不会静默下载或安装。请手动选择本机路径、查看安装指南，或继续 manual/testing MVP。"
+                    "未在常见路径发现 ImageJ。\n"
+                    "BioMedPilot 不会静默下载或安装。请手动选择 ImageJ.app、ij.jar、可执行入口，或选择 Fiji 增强路径。"
                 )
                 self.refresh_status()
                 return
@@ -159,7 +168,7 @@ if QWidget is not None:
             self.refresh_status()
 
         def _handle_choose_path(self) -> None:
-            path, _ = QFileDialog.getOpenFileName(self, "选择 ImageJ/Fiji 可执行文件", "", "All files (*)")
+            path, _ = QFileDialog.getOpenFileName(self, "选择 ImageJ 可执行文件或 ij.jar", "", "All files (*)")
             if not path:
                 path = QFileDialog.getExistingDirectory(self, "选择 ImageJ.app / Fiji.app")
             if path:
@@ -172,6 +181,28 @@ if QWidget is not None:
             except ValueError as exc:
                 self._prompt_panel.setText(str(exc))
             self.refresh_status()
+
+        def _handle_download_runtime(self) -> None:
+            try:
+                result = self._bridge.prepare_runtime(
+                    allow_network_download=True,
+                    runner=self._runner,
+                )
+            except Exception as exc:
+                self.refresh_status()
+                self._prompt_panel.setText(f"Fiji 增强 runtime 准备失败：{exc}")
+            else:
+                self.refresh_status()
+                self._prompt_panel.setText(
+                    "\n".join(
+                        (
+                            "Fiji 增强 runtime 已准备。",
+                            f"runtime：{result.runtime_root}",
+                            f"manifest：{result.manifest_path}",
+                            f"smoke test：{result.smoke_test_status}",
+                        )
+                    )
+                )
 
         def _handle_guide(self) -> None:
             self._prompt_panel.setText(imagej_fiji_install_guide_text())

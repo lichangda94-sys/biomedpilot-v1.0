@@ -8,7 +8,13 @@ from app.labtools.calculators.concentration_calculator import (
 from app.labtools.calculators.calculation_record import CalculationRecord
 from app.labtools.calculators.cell_seeding_calculator import calculate_cell_seeding
 from app.labtools.calculators.dilution_calculator import calculate_dilution
+from app.labtools.calculators.formula_solver import (
+    solve_concentration_bridge,
+    solve_dilution_equation,
+    solve_solution_preparation_formula,
+)
 from app.labtools.calculators.qpcr_mix_calculator import calculate_qpcr_mix
+from app.labtools.calculators.result_formatting import LOW_MASS_WARNING, LOW_VOLUME_WARNING, TINY_VALUE_WARNING
 from app.labtools.calculators.solution_preparation_calculator import calculate_solution_preparation
 from app.labtools.calculators.calculator_models import CalculationError, CalculationResult
 from app.labtools.calculators.experiment_calculator_center import (
@@ -44,8 +50,11 @@ __all__ = [
     "DilutionResult",
     "MassMolarityInput",
     "MassMolarityResult",
+    "LOW_MASS_WARNING",
+    "LOW_VOLUME_WARNING",
     "QpcrMixInput",
     "QpcrMixResult",
+    "TINY_VALUE_WARNING",
     "WesternBlotLoadingInput",
     "WesternBlotLoadingResult",
     "calculate_cell_seeding",
@@ -63,4 +72,7 @@ __all__ = [
     "format_cell_seeding_copy_text",
     "format_dilution_copy_text",
     "format_mass_molarity_copy_text",
+    "solve_concentration_bridge",
+    "solve_dilution_equation",
+    "solve_solution_preparation_formula",
 ]

@@ -34,6 +34,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert result.build_info_path.exists()
     assert os.access(result.launcher_path, os.X_OK)
     assert (result.resource_root / "app" / "main.py").exists()
+    assert (result.resource_root / "biomedpilot_ocr_worker" / "__main__.py").exists()
     assert (result.resource_root / "config" / "bioinformatics" / "analysis_defaults.yaml").exists()
     assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
@@ -63,6 +64,35 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
 
 
+def test_integration_preview_package_uses_stable_launcher_name(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilot Integration Preview",
+            executable_name="BioMedPilotIntegrationPreview",
+            display_name="BioMedPilot Integration Preview / 医研智析",
+            python_executable=sys.executable,
+        )
+    )
+
+    assert result.app_path.name == "BioMedPilot Integration Preview.app"
+    assert result.executable_name == "BioMedPilotIntegrationPreview"
+    assert result.launcher_path.name == "BioMedPilotIntegrationPreview"
+    assert result.launcher_path.exists()
+
+    build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
+    assert build_info["app_name"] == "BioMedPilot Integration Preview"
+    assert build_info["display_name"] == "BioMedPilot Integration Preview / 医研智析"
+    assert build_info["executable_name"] == "BioMedPilotIntegrationPreview"
+
+    with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
+        info = plistlib.load(handle)
+    assert info["CFBundleName"] == "BioMedPilot Integration Preview"
+    assert info["CFBundleDisplayName"] == "BioMedPilot Integration Preview / 医研智析"
+    assert info["CFBundleExecutable"] == "BioMedPilotIntegrationPreview"
+
+
 def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     result = build_launcher_app(
         PackagingOptions(
@@ -84,7 +114,9 @@ def test_packaged_launcher_runs_smoke_test(tmp_path) -> None:
     assert "BioMedPilot / 医研智析" in completed.stdout
     assert "app_version=0.1.0-internal-beta" in completed.stdout
     assert "launch_mode=packaged-local-python" in completed.stdout
+    assert "workspace_entries=3" in completed.stdout
     assert "bioinformatics_features=5" in completed.stdout
+    assert "labtools_features=" in completed.stdout
     if shutil.which("codesign"):
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
 

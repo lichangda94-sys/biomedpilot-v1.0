@@ -65,8 +65,9 @@ def test_western_blot_page_can_enter_sds_page_gel_tool(qapp) -> None:
     assert button is not None
     button.click()
     tabs = page.findChild(QTabWidget, "westernBlotTabs")
-    assert tabs.currentIndex() == 1
-    assert "SDS-PAGE 配胶模板与批量配制" in _visible_text(page)
+    assert tabs.tabText(tabs.currentIndex()) == "配胶与 Lane 布局"
+    assert "配胶与 Lane 布局" in _visible_text(page)
+    assert "Lane / 上样孔布局" in _visible_text(page)
 
 
 def test_sds_page_template_form_contains_required_fields_and_combos(qapp) -> None:
@@ -111,7 +112,8 @@ def test_sds_page_calculation_shows_total_amount_with_overage(qapp) -> None:
     assert "总量含余量" in result_text
     assert "25.75 mL" in result_text
     assert "10.3 mL" in result_text
-    assert "结果为实验辅助计算草稿，使用前请按试剂盒说明书和实验室 SOP 人工核对" in result_text
+    assert "请先核对 SOP、试剂纯度、pH、温度和安全要求。" in result_text
+    assert "Lane 布局摘要" in result_text
     assert page.findChild(QPushButton, "sdsPageTemplateJsonExportButton").isEnabled()
     assert page.findChild(QPushButton, "sdsPageXlsxExportButton").isEnabled()
 

@@ -112,6 +112,7 @@ def test_labtools_status_labels_and_prompt_are_contextual() -> None:
 
     prompt = imagej_fiji_context_prompt(workflow_name="Western Blot 灰度分析 workflow", can_continue_without_engine=False)
 
-    assert "需要本机 ImageJ/Fiji" in prompt
+    assert "需要本机 ImageJ" in prompt
+    assert "Fiji 仅作为增强引擎保留" in prompt
     assert "自动检测" in prompt
     assert "选择本机路径" in prompt

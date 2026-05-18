@@ -54,4 +54,5 @@ class AIGatewayConfig:
             "meta_analysis": ["meta_"],
         }
     )
+    role_model_mapping: dict[str, str] = field(default_factory=dict)
     provider_configs: dict[str, dict[str, object]] = field(default_factory=dict)

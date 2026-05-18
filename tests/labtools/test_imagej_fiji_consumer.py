@@ -46,5 +46,6 @@ def test_labtools_imagej_fiji_consumer_text_keeps_algorithm_boundary() -> None:
     prompt = labtools_imagej_fiji_prompt()
 
     assert "LabTools 图像定量 workflow" in prompt
-    assert "ImageJ/Fiji" in prompt
+    assert "需要本机 ImageJ" in prompt
+    assert "Fiji 仅作为增强引擎保留" in prompt
     assert "不内置自动 ROI、细胞计数、条带识别或生产级图像算法" in LABTOOLS_IMAGE_ANALYSIS_BOUNDARY

@@ -18,6 +18,8 @@ DIRECT_OLLAMA_PATTERNS = (
 
 EXPECTED_DIRECT_OLLAMA_FILES = {
     "app/shared/ai_gateway/providers/ollama_provider.py",
+    "app/shared/local_engines/ollama_llm_engine.py",
+    "app/shared/local_engines/ollama_llm_registry.py",
     "app/bioinformatics/legacy/geo_tool/geo_text_processor.py",
     "app/bioinformatics/legacy/geo_tool/bootstrap_geo_tool.sh",
     "archive/legacy_sources/bioinformatics_project/geo_tool/geo_text_processor.py",
@@ -26,6 +28,8 @@ EXPECTED_DIRECT_OLLAMA_FILES = {
 
 ACTIVE_APP_DIRECT_OLLAMA_FILES = {
     "app/shared/ai_gateway/providers/ollama_provider.py",
+    "app/shared/local_engines/ollama_llm_engine.py",
+    "app/shared/local_engines/ollama_llm_registry.py",
 }
 
 LEGACY_APP_DIRECT_OLLAMA_FILES = {
@@ -48,9 +52,14 @@ def test_active_direct_ollama_calls_remain_isolated_from_meta_analysis_and_gatew
     active_app_direct_calls = _direct_ollama_files(REPO_ROOT / "app") - LEGACY_APP_DIRECT_OLLAMA_FILES
 
     assert active_app_direct_calls == ACTIVE_APP_DIRECT_OLLAMA_FILES
+    assert _direct_ollama_files(REPO_ROOT / "app" / "bioinformatics") == LEGACY_APP_DIRECT_OLLAMA_FILES
     assert _direct_ollama_files(REPO_ROOT / "app" / "meta_analysis") == set()
     assert _direct_ollama_files(REPO_ROOT / "app" / "shared" / "ai_gateway") == {
         "app/shared/ai_gateway/providers/ollama_provider.py"
+    }
+    assert _direct_ollama_files(REPO_ROOT / "app" / "shared" / "local_engines") == {
+        "app/shared/local_engines/ollama_llm_engine.py",
+        "app/shared/local_engines/ollama_llm_registry.py",
     }
 
 
@@ -69,12 +78,23 @@ def test_ollama_existing_call_audit_includes_required_sections() -> None:
         assert heading in documented
 
 
-def test_no_qwen_or_ollama_chat_integration_exists() -> None:
+def test_no_ollama_chat_integration_exists_and_qwen_stays_in_role_registry() -> None:
     scanned_roots = [REPO_ROOT / "app", REPO_ROOT / "scripts", REPO_ROOT / "config"]
     text = "\n".join(path.read_text(encoding="utf-8", errors="ignore") for root in scanned_roots if root.exists() for path in _text_files(root))
 
-    assert "qwen" not in text.lower()
     assert "/api/chat" not in text
+    qwen_files = {
+        path.relative_to(REPO_ROOT).as_posix()
+        for root in scanned_roots
+        if root.exists()
+        for path in _text_files(root)
+        if "qwen" in path.read_text(encoding="utf-8", errors="ignore").lower()
+    }
+    assert qwen_files <= {
+        "app/shared/ai_gateway/config.py",
+        "app/shared/local_engines/ollama_llm_engine.py",
+        "app/shared/local_engines/ollama_llm_registry.py",
+    }
 
 
 def _direct_ollama_files(*roots: Path) -> set[str]:

@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -20,7 +20,10 @@ if str(REPO_ROOT) not in sys.path:
 from app.version import APP_BUNDLE_VERSION, APP_CHANNEL, APP_VERSION, BUILD_INFO_FILENAME
 
 DEFAULT_APP_NAME = "BioMedPilot"
-COPY_DIRS = ("app", "assets", "config", "docs", "examples", "reporting", "scripts")
+INTEGRATION_PREVIEW_APP_NAME = "BioMedPilot Integration Preview"
+INTEGRATION_PREVIEW_EXECUTABLE_NAME = "BioMedPilotIntegrationPreview"
+INTEGRATION_PREVIEW_DISPLAY_NAME = "BioMedPilot Integration Preview / 医研智析"
+COPY_DIRS = ("app", "assets", "biomedpilot_ocr_worker", "config", "docs", "examples", "reporting", "scripts")
 COPY_FILES = ("README.md", "pyproject.toml", "requirements.txt")
 PACKAGE_RESOURCE_FILES = (
     "data/medical_terms/mini_medical_terms_index.json",
@@ -35,6 +38,8 @@ IGNORE_NAMES = {
     ".pytest_cache",
     ".DS_Store",
 }
+BACKUP_SUFFIXES = (".bak", ".orig", ".rej")
+LOCAL_CONFLICT_COPY_MARKERS = (" 2.", " 3.")
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,8 @@ class PackagingOptions:
     repo_root: Path
     output_dir: Path
     app_name: str = DEFAULT_APP_NAME
+    executable_name: str | None = None
+    display_name: str | None = None
     python_executable: str = sys.executable
     package_git_head: str | None = None
     clean: bool = True
@@ -59,18 +66,20 @@ class PackagingResult:
     git_head: str
     code_signed: bool
     signing_status: str
+    executable_name: str
 
 
 def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     repo_root = options.repo_root.resolve()
     _validate_repo_root(repo_root)
+    executable_name = _bundle_executable_name(options)
+    display_name = options.display_name or options.app_name
 
     app_path = options.output_dir.resolve() / f"{options.app_name}.app"
     contents_dir = app_path / "Contents"
     macos_dir = contents_dir / "MacOS"
     resources_dir = contents_dir / "Resources"
     resource_root = resources_dir / "app"
-    executable_name = _executable_name(options.app_name)
     launcher_path = macos_dir / executable_name
 
     if app_path.exists() and options.clean:
@@ -93,16 +102,24 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
     _create_project_storage(resource_root / "project_storage")
     git_head = options.package_git_head or _git_head(repo_root) or "unknown"
     build_info_path = resource_root / BUILD_INFO_FILENAME
-    _write_build_info(build_info_path, repo_root=repo_root, app_name=options.app_name, git_head=git_head)
+    _write_build_info(
+        build_info_path,
+        repo_root=repo_root,
+        git_head=git_head,
+        app_name=options.app_name,
+        executable_name=executable_name,
+        display_name=display_name,
+    )
     _write_info_plist(
         contents_dir / "Info.plist",
         app_name=options.app_name,
         executable_name=executable_name,
+        display_name=display_name,
         git_head=git_head,
     )
     _write_launcher(launcher_path, app_name=options.app_name, python_executable=options.python_executable)
-    code_signed = _ad_hoc_codesign(app_path)
-    signing_status = "ad_hoc_signed" if code_signed else "codesign_unavailable"
+    signing_status = _ad_hoc_sign_app(app_path)
+    code_signed = signing_status == "ad_hoc_signed"
 
     return PackagingResult(
         app_path=app_path,
@@ -115,6 +132,7 @@ def build_launcher_app(options: PackagingOptions) -> PackagingResult:
         git_head=git_head,
         code_signed=code_signed,
         signing_status=signing_status,
+        executable_name=executable_name,
     )
 
 
@@ -122,6 +140,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a local BioMedPilot macOS .app launcher without network downloads.")
     parser.add_argument("--output-dir", default="dist", help="Directory where the .app bundle will be written.")
     parser.add_argument("--app-name", default=DEFAULT_APP_NAME, help="Application bundle name.")
+    parser.add_argument("--executable-name", default=None, help="CFBundleExecutable and Contents/MacOS launcher name.")
+    parser.add_argument("--display-name", default=None, help="CFBundleDisplayName shown by macOS.")
+    parser.add_argument(
+        "--integration-preview",
+        action="store_true",
+        help="Build the ReleaseBuild Integration Preview bundle without overwriting BioMedPilot.app.",
+    )
     parser.add_argument("--python", default=sys.executable, help="Python executable used by the launcher.")
     parser.add_argument(
         "--package-git-head",
@@ -134,11 +159,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    app_name = INTEGRATION_PREVIEW_APP_NAME if args.integration_preview else args.app_name
+    executable_name = INTEGRATION_PREVIEW_EXECUTABLE_NAME if args.integration_preview else args.executable_name
+    display_name = INTEGRATION_PREVIEW_DISPLAY_NAME if args.integration_preview else args.display_name
     result = build_launcher_app(
         PackagingOptions(
             repo_root=REPO_ROOT,
             output_dir=REPO_ROOT / args.output_dir,
-            app_name=args.app_name,
+            app_name=app_name,
+            executable_name=executable_name,
+            display_name=display_name,
             python_executable=args.python,
             package_git_head=args.package_git_head,
             clean=not args.no_clean,
@@ -148,6 +178,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"app_version={result.app_version}")
     print(f"git_head={result.git_head}")
     print(f"mode={result.mode}")
+    print(f"executable={result.executable_name}")
     print(f"python={result.python_executable}")
     print(f"signing_status={result.signing_status}")
     print(f"build_info={result.build_info_path}")
@@ -159,6 +190,8 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env.setdefault("QT_QPA_PLATFORM", "offscreen")
         subprocess.run([str(result.launcher_path), "--smoke-test"], env=env, check=True)
+        signing_status = _ad_hoc_sign_app(result.app_path)
+        print(f"post_smoke_signing_status={signing_status}")
     return 0
 
 
@@ -169,15 +202,36 @@ def _validate_repo_root(repo_root: Path) -> None:
         raise FileNotFoundError(f"BioMedPilot project root is incomplete: {', '.join(missing)}")
 
 
+def _bundle_executable_name(options: PackagingOptions) -> str:
+    executable_name = options.executable_name or _default_executable_name(options.app_name)
+    if not executable_name.strip():
+        raise ValueError("CFBundleExecutable must not be empty.")
+    if "/" in executable_name or "\0" in executable_name:
+        raise ValueError("CFBundleExecutable must be a file name, not a path.")
+    return executable_name
+
+
+def _default_executable_name(app_name: str) -> str:
+    return DEFAULT_APP_NAME
+
+
 def _copy_ignore(directory: str, names: list[str]) -> set[str]:
     ignored: set[str] = set()
     for name in names:
         path = Path(directory) / name
-        if name in IGNORE_NAMES or name.endswith(".pyc"):
+        if name in IGNORE_NAMES or name.endswith(".pyc") or _is_local_backup_or_conflict_copy(name):
             ignored.add(name)
         elif path.is_dir() and name in {"dist", "build", ".git", ".venv", ".venv-meta"}:
             ignored.add(name)
     return ignored
+
+
+def _is_local_backup_or_conflict_copy(name: str) -> bool:
+    if name.endswith(BACKUP_SUFFIXES):
+        return True
+    if name.endswith(" 2") or name.endswith(" 3"):
+        return True
+    return any(marker in name for marker in LOCAL_CONFLICT_COPY_MARKERS)
 
 
 def _copy_package_resources(repo_root: Path, resource_root: Path) -> None:
@@ -201,9 +255,19 @@ def _create_project_storage(storage_root: Path) -> None:
         (target / ".gitkeep").write_text("", encoding="utf-8")
 
 
-def _write_build_info(path: Path, *, repo_root: Path, app_name: str, git_head: str) -> None:
+def _write_build_info(
+    path: Path,
+    *,
+    repo_root: Path,
+    git_head: str,
+    app_name: str,
+    executable_name: str,
+    display_name: str,
+) -> None:
     payload = {
         "app_name": app_name,
+        "display_name": display_name,
+        "executable_name": executable_name,
         "version": APP_VERSION,
         "bundle_version": APP_BUNDLE_VERSION,
         "channel": APP_CHANNEL,
@@ -215,10 +279,17 @@ def _write_build_info(path: Path, *, repo_root: Path, app_name: str, git_head: s
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_info_plist(path: Path, *, app_name: str, executable_name: str, git_head: str) -> None:
+def _write_info_plist(
+    path: Path,
+    *,
+    app_name: str,
+    executable_name: str,
+    display_name: str,
+    git_head: str,
+) -> None:
     payload = {
         "CFBundleName": app_name,
-        "CFBundleDisplayName": app_name,
+        "CFBundleDisplayName": display_name,
         "CFBundleIdentifier": _bundle_identifier(app_name),
         "CFBundleVersion": APP_BUNDLE_VERSION,
         "CFBundleShortVersionString": APP_BUNDLE_VERSION,
@@ -232,6 +303,16 @@ def _write_info_plist(path: Path, *, app_name: str, executable_name: str, git_he
     }
     with path.open("wb") as handle:
         plistlib.dump(payload, handle)
+
+
+def _bundle_identifier(app_name: str) -> str:
+    if app_name == DEFAULT_APP_NAME:
+        return "local.biomedpilot.desktop"
+    raw = app_name.strip().lower()
+    if raw.startswith("biomedpilot "):
+        raw = raw[len("biomedpilot ") :]
+    slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
+    return f"local.biomedpilot.{slug or 'desktop'}"
 
 
 def _write_launcher(path: Path, *, app_name: str, python_executable: str) -> None:
@@ -280,27 +361,20 @@ exec "$PYTHON_BIN" -m app.main "$@"
     path.chmod(0o755)
 
 
-def _ad_hoc_codesign(app_path: Path) -> bool:
-    if sys.platform != "darwin":
-        return False
-    if shutil.which("codesign") is None:
-        return False
-    subprocess.run(["codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", str(app_path)], check=True)
-    return True
-
-
-def _executable_name(app_name: str) -> str:
-    return DEFAULT_APP_NAME
-
-
-def _bundle_identifier(app_name: str) -> str:
-    if app_name == DEFAULT_APP_NAME:
-        return "local.biomedpilot.desktop"
-    raw = app_name.strip().lower()
-    if raw.startswith("biomedpilot "):
-        raw = raw[len("biomedpilot ") :]
-    slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
-    return f"local.biomedpilot.{slug or 'desktop'}"
+def _ad_hoc_sign_app(app_path: Path) -> str:
+    xattr = shutil.which("xattr")
+    if xattr:
+        subprocess.run([xattr, "-cr", str(app_path)], check=True, text=True, capture_output=True)
+    codesign = shutil.which("codesign")
+    if not codesign:
+        return "codesign_unavailable"
+    subprocess.run(
+        [codesign, "--force", "--deep", "--sign", "-", str(app_path)],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return "ad_hoc_signed"
 
 
 def _git_head(repo_root: Path) -> str:

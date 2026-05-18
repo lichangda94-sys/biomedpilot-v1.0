@@ -4,7 +4,7 @@ import hashlib
 import json
 import time
 
-from app.shared.ai_gateway import AIGateway, AIGatewayConfig, AIGatewayRequest
+from app.shared.ai_gateway import AIGateway, AIGatewayConfig, AIGatewayRequest, resolve_task_role_model
 from app.shared.query_intelligence.query_intelligence_models import (
     LocalModelCallResult,
     LocalModelConfig,
@@ -93,6 +93,16 @@ def call_ai_gateway_json(
     started = time.monotonic()
     try:
         gateway = ai_gateway or _gateway_from_local_model_config(config)
+        gateway_config = getattr(gateway, "config", AIGatewayConfig(default_provider=config.provider))
+        routing = resolve_task_role_model(gateway_config, task_type, fallback_model=model)
+        if not routing.available:
+            return LocalModelCallResult(
+                status="role_mapping_missing_fallback_registry",
+                model_name=model,
+                ai_role=routing.role_id,
+                error_message=routing.warning or "AI Gateway role mapping is missing.",
+                elapsed_seconds=time.monotonic() - started,
+            )
         response = gateway.generate(
             AIGatewayRequest(
                 module=module,
@@ -102,9 +112,10 @@ def call_ai_gateway_json(
                     "target_context": target_context,
                     "target_database": target_database,
                     "timeout_seconds": timeout_seconds,
+                    "ai_role": routing.role_id,
                 },
                 requires_network=config.provider == "ollama",
-                metadata={"model": model, "output_format": "json"},
+                metadata={"model": routing.model_name, "ai_role": routing.role_id, "output_format": "json"},
             )
         )
     except Exception as exc:
@@ -119,7 +130,8 @@ def call_ai_gateway_json(
     if response.status != "success" or response.fallback_used:
         return LocalModelCallResult(
             status="called_failed_fallback_registry",
-            model_name=model,
+            model_name=response.model_name or routing.model_name,
+            ai_role=routing.role_id,
             raw_output="",
             error_message=response.error_message or f"AI Gateway returned {response.status}.",
             elapsed_seconds=time.monotonic() - started,
@@ -129,7 +141,8 @@ def call_ai_gateway_json(
     except json.JSONDecodeError as exc:
         return LocalModelCallResult(
             status="invalid_model_output_fallback_registry",
-            model_name=model,
+            model_name=response.model_name or routing.model_name,
+            ai_role=routing.role_id,
             raw_output="",
             error_message=str(exc),
             elapsed_seconds=time.monotonic() - started,
@@ -137,14 +150,16 @@ def call_ai_gateway_json(
     if not isinstance(parsed, dict):
         return LocalModelCallResult(
             status="invalid_model_output_fallback_registry",
-            model_name=model,
+            model_name=response.model_name or routing.model_name,
+            ai_role=routing.role_id,
             raw_output="",
             error_message="Ollama returned JSON, but the root value is not an object.",
             elapsed_seconds=time.monotonic() - started,
         )
     return LocalModelCallResult(
         status="called_success",
-        model_name=model,
+        model_name=response.model_name or routing.model_name,
+        ai_role=routing.role_id,
         raw_output="",
         parsed_json=parsed,
         elapsed_seconds=time.monotonic() - started,
@@ -189,23 +204,25 @@ def generate_search_translation_candidates(
     if call_result.status != "called_success" or call_result.parsed_json is None:
         return _empty_translation(
             original_question,
-            config.medical_model,
+            call_result.model_name or config.medical_model,
             call_result.status,
             call_result.error_message or "Ollama call failed.",
+            ai_role=call_result.ai_role,
         )
     schema_error = _validate_translation_schema(call_result.parsed_json)
     if schema_error:
         return _empty_translation(
             original_question,
-            config.medical_model,
+            call_result.model_name or config.medical_model,
             "invalid_model_output_fallback_registry",
             schema_error,
+            ai_role=call_result.ai_role,
         )
     parsed = call_result.parsed_json
     output_summary = _json_output_summary(parsed)
     return LocalModelSearchTranslation(
         original_question=original_question,
-        model_name=config.medical_model,
+        model_name=call_result.model_name or config.medical_model,
         status="called_success",
         raw_output="",
         parsed_json=parsed,
@@ -222,6 +239,7 @@ def generate_search_translation_candidates(
         rejected_terms=[],
         warnings=[str(item) for item in [*parsed.get("uncertainty", []), *parsed.get("notes", [])] if str(item).strip()],
         provider_name=config.provider,
+        ai_role=call_result.ai_role,
         gateway_status="success",
         fallback_used=False,
         output_char_count=output_summary["char_count"],
@@ -262,6 +280,7 @@ def _empty_translation(
     warning: str,
     *,
     raw_output: str = "",
+    ai_role: str = "",
 ) -> LocalModelSearchTranslation:
     return LocalModelSearchTranslation(
         original_question=original_question,
@@ -277,6 +296,7 @@ def _empty_translation(
         rejected_terms=[],
         warnings=[warning] if warning else [],
         provider_name="",
+        ai_role=ai_role,
         gateway_status=status,
         fallback_used=True,
         output_char_count=0,

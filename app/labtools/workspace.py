@@ -19,10 +19,11 @@ def labtools_features() -> list[FeatureItem]:
 
 
 try:
-    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
 
     from app.labtools.labtools_home import LabToolsHomeWidget
     from app.labtools.ui.calculator_widgets import LabToolsCalculatorWidget
+    from app.labtools.ui.cell_experiment_widgets import LabToolsCellExperimentPage as CellExperimentPageWidget
     from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
     from app.labtools.ui.western_blot_widgets import LabToolsWesternBlotWidget
     from app.ui_style_tokens import COLORS, FONT_SIZE, RADIUS, SPACING
@@ -87,9 +88,9 @@ if QWidget is not None:
             root.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
             root.setSpacing(SPACING["lg"])
 
-            title = QLabel("ImageJ/Fiji 本地引擎配置")
+            title = QLabel("ImageJ 本地引擎配置")
             title.setObjectName("labToolsImageJConfigTitle")
-            description = QLabel("用于图像 workflow 的本地 ImageJ/Fiji 检测、路径配置和验证状态查看。BioMedPilot 不会自动下载、联网安装或上传图片。")
+            description = QLabel("用于图像 workflow 的本地 ImageJ 检测、路径配置和验证状态查看；可选保留 Fiji 增强路径。BioMedPilot 不会自动下载、联网安装或上传图片。")
             description.setObjectName("labToolsImageJConfigDescription")
             description.setWordWrap(True)
             boundary = QLabel("检测失败时可继续 manual-review workflow 准备；当前不启用 WB/gel 真实分析、自动 ROI、细胞计数、条带识别或生产级图像算法。")
@@ -167,7 +168,7 @@ if QWidget is not None:
             logic_card.setWordWrap(True)
             root.addWidget(logic_card)
             if tool.requires_imagej_fiji:
-                imagej_note = QLabel("本工具后续图像 workflow 可能读取 ImageJ/Fiji 本地引擎状态；当前不会运行真实图像分析。")
+                imagej_note = QLabel("本工具后续图像 workflow 可能读取 ImageJ 本地引擎状态；Fiji 仅用于后续插件型 macro。当前不会运行真实图像分析。")
                 imagej_note.setObjectName("labToolsPlannedToolImageJNote")
                 imagej_note.setWordWrap(True)
                 root.addWidget(imagej_note)
@@ -238,6 +239,9 @@ if QWidget is not None:
                 padding: 8px 10px;
             }}
             """
+
+    class LabToolsCellExperimentPage(CellExperimentPageWidget):
+        pass
 
     class LabToolsWesternBlotScaffoldPage(QWidget):
         SECTION_STATUS = "待确认使用逻辑 / 规划中 / 暂未开放"
@@ -467,6 +471,10 @@ if QWidget is not None:
             home = QPushButton("工具首页")
             home.clicked.connect(self.show_home)
             header_layout.addWidget(home)
+            engine_settings = QPushButton("外部引擎设置")
+            engine_settings.setObjectName("labToolsExternalEngineSettingsButton")
+            engine_settings.clicked.connect(self.show_imagej_fiji)
+            header_layout.addWidget(engine_settings)
             if self._on_back is not None:
                 back = QPushButton("返回模块首页")
                 back.clicked.connect(self._on_back)
@@ -503,7 +511,7 @@ if QWidget is not None:
                 ),
                 status_text="已开放能力待重新归类 / 待确认使用逻辑",
             )
-            self._cell_experiments_page = self._planned_tool_pages["cell_experiments"]
+            self._cell_experiments_page = LabToolsCellExperimentPage()
             self._western_blot_page = LabToolsWesternBlotWidget()
             self._pcr_qpcr_page = self._planned_tool_pages["pcr_qpcr"]
             self._elisa_absorbance_page = self._planned_tool_pages["elisa_absorbance"]

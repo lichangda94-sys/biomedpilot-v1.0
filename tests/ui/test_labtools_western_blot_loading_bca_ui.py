@@ -57,12 +57,10 @@ def test_western_blot_page_can_enter_protein_loading_and_bca_tools(qapp) -> None
     tabs = page.findChild(QTabWidget, "westernBlotTabs")
 
     page.findChild(QPushButton, "openProteinLoadingToolButton").click()
-    assert tabs.currentIndex() == 2
-    assert tabs.tabText(2) == "蛋白上样体系"
+    assert tabs.tabText(tabs.currentIndex()) == "蛋白上样计算"
 
     page.findChild(QPushButton, "openBcaAssayToolButton").click()
-    assert tabs.currentIndex() == 3
-    assert tabs.tabText(3) == "BCA 蛋白浓度测定"
+    assert tabs.tabText(tabs.currentIndex()) == "BCA 蛋白浓度测定"
 
 
 def test_protein_loading_ui_supports_multi_sample_rows_and_reducer_notice(qapp) -> None:
@@ -118,6 +116,11 @@ def test_bca_ui_displays_plate_matrix_annotation_and_result_entries(qapp) -> Non
         "Unused",
     ]
     assert page.findChild(QPushButton, "bcaApplyBatchAnnotationButton") is not None
+    assert page.findChild(QPushButton, "bcaApplySelectedAnnotationButton") is not None
+    assert page.findChild(QPushButton, "bcaSetBlankButton") is not None
+    assert page.findChild(QPushButton, "bcaSetStandardButton") is not None
+    assert page.findChild(QPushButton, "bcaSetSampleButton") is not None
+    assert page.findChild(QPushButton, "bcaSetUnusedButton") is not None
     assert page.findChild(QPushButton, "bcaCopyResultButton") is not None
     assert not page.findChild(QPushButton, "bcaCopyResultButton").isEnabled()
 

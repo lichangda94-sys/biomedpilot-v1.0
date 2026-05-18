@@ -7,9 +7,9 @@ from uuid import uuid4
 
 
 LABTOOLS_REAGENT_TEMPLATE_STORE_SCHEMA_VERSION = "labtools_reagent_template_store.v1"
+LABTOOLS_PREPARATION_RECORD_SCHEMA_VERSION = "labtools_preparation_record.v1"
 REAGENT_TEMPLATE_REVIEW_NOTICE = (
-    "本结果基于用户录入模板自动换算，仅用于实验准备辅助。"
-    "请根据实验室 SOP、试剂说明书和安全规范人工复核。"
+    "请先核对 SOP、试剂纯度、pH、温度和安全要求。"
 )
 
 COMPONENT_TYPES = (
@@ -20,7 +20,31 @@ COMPONENT_TYPES = (
     "ph_record",
     "ph_adjustment",
     "self_prepared_template",
+    "other",
 )
+
+UI_COMPONENT_TYPES = (
+    "powder",
+    "liquid",
+    "commercial_or_existing_reagent",
+    "self_prepared_template",
+    "auto_fill_solvent",
+    "ph_record",
+    "other",
+)
+
+COMPONENT_TYPE_ALIASES = {
+    "commercial_or_existing_reagent": "commercial_reagent",
+    "existing_reagent": "commercial_reagent",
+    "auto_fill_solvent": "solvent",
+}
+
+COMPONENT_TYPE_DESCRIPTIONS = {
+    "commercial_or_existing_reagent": "实验室已有的商品化试剂或已配好试剂，只计算加入量，不展开内部配方。",
+    "self_prepared_template": "本次需要按引用模板配制此子试剂，可展开内部组分；如果实验室已有该 stock，请选择商品化或已有试剂。",
+    "auto_fill_solvent": "自动补足至建议配制体积的溶剂或基础液体。",
+    "ph_record": "pH 仅作为独立记录保存，不作为普通组分参与体积或质量换算。",
+}
 
 SUPPORTED_TEMPLATE_UNITS = ("L", "mL", "µL", "g", "mg", "µg", "M", "mM", "µM", "%", "X")
 SOLVENT_INITIAL_ADDITION_MODES = ("none", "percent_of_final", "fixed_amount", "note_only")
@@ -37,6 +61,11 @@ def utc_now() -> str:
 
 def new_template_id() -> str:
     return f"reagent_template_{uuid4().hex[:12]}"
+
+
+def normalize_component_type(component_type: str) -> str:
+    text = str(component_type or "").strip()
+    return COMPONENT_TYPE_ALIASES.get(text, text)
 
 
 @dataclass(frozen=True)
@@ -116,11 +145,15 @@ class ReagentComponent:
     initial_addition_amount: float = 0
     initial_addition_unit: str = "mL"
     initial_addition_note: str = ""
+    addition_order: int = 0
+    stage_label: str = ""
 
     def normalized_for_storage(self) -> "ReagentComponent":
-        if self.component_type in REFERENCE_COMPONENT_TYPES:
-            return self
-        return replace(self, referenced_template_id="")
+        component_type = normalize_component_type(self.component_type)
+        updated = replace(self, component_type=component_type)
+        if component_type in REFERENCE_COMPONENT_TYPES:
+            return updated
+        return replace(updated, referenced_template_id="")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -140,6 +173,8 @@ class ReagentComponent:
             "initial_addition_amount": self.initial_addition_amount,
             "initial_addition_unit": self.initial_addition_unit,
             "initial_addition_note": self.initial_addition_note,
+            "addition_order": self.addition_order,
+            "stage_label": self.stage_label,
         }
 
     @classmethod
@@ -149,7 +184,7 @@ class ReagentComponent:
         commercial_payload = payload.get("commercial_info")
         return cls(
             name=str(payload.get("name") or ""),
-            component_type=str(payload.get("component_type") or ""),
+            component_type=normalize_component_type(str(payload.get("component_type") or "")),
             base_amount=float(payload.get("base_amount") or 0),
             unit=str(payload.get("unit") or ""),
             scale_with_volume=bool(payload.get("scale_with_volume", True)),
@@ -164,6 +199,8 @@ class ReagentComponent:
             initial_addition_amount=float(payload.get("initial_addition_amount") or 0),
             initial_addition_unit=str(payload.get("initial_addition_unit") or "mL"),
             initial_addition_note=str(payload.get("initial_addition_note") or ""),
+            addition_order=int(payload.get("addition_order") or 0),
+            stage_label=str(payload.get("stage_label") or ""),
         ).normalized_for_storage()
 
 
@@ -268,7 +305,13 @@ class PreparationRequest:
     target_volume_unit: str = "mL"
     target_strength: str = "1X"
     overage_percent: float = 0
+    loss_mode: str = "none"
+    loss_percent: float = 0
+    loss_fixed_amount: float = 0
+    loss_fixed_unit: str = "mL"
     expand_subtemplates: bool = False
+    operator_name: str = ""
+    notes: str = ""
 
 
 @dataclass(frozen=True)
@@ -278,6 +321,8 @@ class PreparationComponentResult:
     amount: float | None
     unit: str
     display_amount: str
+    addition_order: int = 0
+    stage_label: str = ""
     is_commercial: bool = False
     is_subtemplate: bool = False
     referenced_template_id: str = ""
@@ -289,6 +334,13 @@ class PreparationComponentResult:
 
 
 @dataclass(frozen=True)
+class PreparationStageGroup:
+    addition_order: int
+    stage_label: str
+    components: tuple[PreparationComponentResult, ...]
+
+
+@dataclass(frozen=True)
 class PreparationTreeNode:
     template_id: str
     template_name: str
@@ -297,6 +349,7 @@ class PreparationTreeNode:
     suggested_volume: float
     suggested_volume_unit: str
     components: tuple[PreparationComponentResult, ...]
+    stage_groups: tuple[PreparationStageGroup, ...] = ()
     ph_record: PHRecord | None = None
     children: tuple["PreparationTreeNode", ...] = ()
 
@@ -313,6 +366,7 @@ class PreparationResult:
     target_strength: str
     overage_percent: float
     direct_components: tuple[PreparationComponentResult, ...]
+    direct_stage_groups: tuple[PreparationStageGroup, ...]
     tree: PreparationTreeNode
     warnings: tuple[str, ...]
     steps: tuple[str, ...]
@@ -331,6 +385,11 @@ class PreparationResult:
             "一级配制清单",
         ]
         lines.extend(_component_line(component) for component in self.direct_components)
+        if self.direct_stage_groups:
+            lines.extend(["", "按阶段分组"])
+            for group in self.direct_stage_groups:
+                lines.append(_stage_heading(group))
+                lines.extend(_component_line(component) for component in group.components)
         solvent_details = tuple(component for component in self.direct_components if component.initial_addition_detail)
         if solvent_details:
             lines.extend(["", "溶剂分阶段加入"])
@@ -372,6 +431,11 @@ def _component_line(component: PreparationComponentResult) -> str:
     return f"- {component.name}{tag_text}: {component.display_amount}{note_text}"
 
 
+def _stage_heading(group: PreparationStageGroup) -> str:
+    label = group.stage_label or f"阶段 {group.addition_order}"
+    return f"阶段 {group.addition_order}：{label}"
+
+
 def _ph_record_line(ph_record: PHRecord) -> str:
     parts = []
     if ph_record.target_ph:
@@ -392,8 +456,14 @@ def _ph_record_has_content(ph_record: PHRecord | None) -> bool:
 def _tree_lines(node: PreparationTreeNode, depth: int = 0) -> list[str]:
     indent = "  " * depth
     lines = [f"{indent}- {node.template_name}: {_fmt(node.suggested_volume)} {node.suggested_volume_unit}"]
-    for component in node.components:
-        lines.append(f"{indent}  {_component_line(component)}")
+    if node.stage_groups:
+        for group in node.stage_groups:
+            lines.append(f"{indent}  {_stage_heading(group)}")
+            for component in group.components:
+                lines.append(f"{indent}    {_component_line(component)}")
+    else:
+        for component in node.components:
+            lines.append(f"{indent}  {_component_line(component)}")
     if depth > 0 and _ph_record_has_content(node.ph_record):
         lines.append(f"{indent}  - 子模板 pH：{_ph_record_line(node.ph_record)}")
     for child in node.children:

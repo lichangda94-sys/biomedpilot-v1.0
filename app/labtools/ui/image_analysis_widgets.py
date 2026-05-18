@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 try:
+    from pathlib import Path
+
     from PySide6.QtWidgets import (
+        QCheckBox,
         QComboBox,
         QFileDialog,
         QFrame,
@@ -10,6 +13,9 @@ try:
         QLabel,
         QLineEdit,
         QPushButton,
+        QTableWidget,
+        QTableWidgetItem,
+        QTabWidget,
         QTextEdit,
         QVBoxLayout,
         QWidget,
@@ -19,6 +25,10 @@ try:
         IMAGE_REVIEW_NOTICE,
         TASK_TYPES,
         ImageAnalysisError,
+        ImageAnalysisTaskStore,
+        ImageAnalysisTaskWorkspace,
+        MacroTemplate,
+        default_macro_for_analysis,
         export_fluorescence_analysis_package,
         export_wound_healing_analysis_package,
     )
@@ -621,7 +631,441 @@ if QWidget is not None:
             }}
             """
 
+    class ImageAnalysisWorkbenchWidget(QWidget):
+        def __init__(
+            self,
+            *,
+            experiment_module: str,
+            analysis_type: str,
+            title: str,
+            primary_actions: tuple[str, ...],
+            parameter_defaults: dict[str, str | bool],
+            task_store: ImageAnalysisTaskStore | None = None,
+        ) -> None:
+            super().__init__()
+            self.setObjectName("imageAnalysisWorkbench")
+            self.setStyleSheet(self._stylesheet())
+            self._experiment_module = experiment_module
+            self._analysis_type = analysis_type
+            self._title = title
+            self._primary_actions = primary_actions
+            self._parameter_defaults = parameter_defaults
+            self._task_store = task_store or ImageAnalysisTaskStore()
+            self._image_paths: list[str] = []
+            self._latest_workspace: ImageAnalysisTaskWorkspace | None = None
+            self._macro_template = default_macro_for_analysis(experiment_module, analysis_type)
+            self._parameter_widgets: dict[str, QLineEdit | QCheckBox | QComboBox] = {}
+            self._build_ui()
+
+        def latest_workspace(self) -> ImageAnalysisTaskWorkspace | None:
+            return self._latest_workspace
+
+        def set_image_paths_for_testing(self, paths: tuple[str, ...]) -> None:
+            self._image_paths = [str(path) for path in paths]
+            self._refresh_image_table()
+            self._refresh_preview()
+
+        def _build_ui(self) -> None:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(0, SPACING["md"], 0, 0)
+            root.setSpacing(SPACING["md"])
+
+            title = QLabel(self._title)
+            title.setObjectName("labToolsSectionTitle")
+            subtitle = QLabel("实验图像分析工作台：导入图片、检查预览、设置实验参数、生成运行请求并保存任务。")
+            subtitle.setObjectName("imageTaskStatus")
+            subtitle.setWordWrap(True)
+            engine_notice = QLabel(
+                "图像分析引擎未准备好。请在外部引擎设置中完成 ImageJ 配置；需要插件型 macro 时再配置 Fiji 增强路径。当前页面仍可用于导入图片、保存任务和准备分析参数。"
+            )
+            engine_notice.setObjectName("imageWorkbenchEngineStatus")
+            engine_notice.setWordWrap(True)
+            review = QLabel("自动图像识别和测量结果仅用于辅助分析，请人工复核 ROI、阈值和输出结果。")
+            review.setObjectName("imageNotice")
+            review.setWordWrap(True)
+            root.addWidget(title)
+            root.addWidget(subtitle)
+            root.addWidget(engine_notice)
+            root.addWidget(review)
+
+            workbench_row = QHBoxLayout()
+            workbench_row.addWidget(self._build_image_list_panel(), 2)
+            workbench_row.addWidget(self._build_preview_panel(), 3)
+            workbench_row.addWidget(self._build_parameter_panel(), 2)
+            root.addLayout(workbench_row, 3)
+
+            self._result_panel = QTextEdit()
+            self._result_panel.setObjectName("imageWorkbenchResultPanel")
+            self._result_panel.setReadOnly(True)
+            self._result_panel.setMinimumHeight(150)
+            self._result_panel.setText(self._empty_result_text())
+            root.addWidget(self._result_panel, 2)
+            root.addWidget(self._build_diagnostics_panel())
+
+        def _build_image_list_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("图片列表 / 样本列表")
+            heading.setObjectName("imageCardTitle")
+            self._image_table = QTableWidget(0, 4)
+            self._image_table.setObjectName("imageWorkbenchImageTable")
+            self._image_table.setHorizontalHeaderLabels(("文件名", "分组", "时间点", "导入状态"))
+            self._image_table.setMinimumHeight(180)
+            button_row = QHBoxLayout()
+            add_files = QPushButton("导入图片")
+            add_files.setObjectName("imageWorkbenchImportFilesButton")
+            add_files.clicked.connect(self._handle_import_files)
+            add_folder = QPushButton("导入文件夹")
+            add_folder.setObjectName("imageWorkbenchImportFolderButton")
+            add_folder.clicked.connect(self._handle_import_folder)
+            remove = QPushButton("移除图片")
+            remove.setObjectName("imageWorkbenchRemoveImageButton")
+            remove.clicked.connect(self._handle_remove_selected_image)
+            for button in (add_files, add_folder, remove):
+                button_row.addWidget(button)
+            layout.addWidget(heading)
+            layout.addWidget(self._image_table)
+            layout.addLayout(button_row)
+            return frame
+
+        def _build_preview_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("图片预览与标注区")
+            heading.setObjectName("imageCardTitle")
+            self._preview = QTextEdit()
+            self._preview.setObjectName("imageWorkbenchPreviewPanel")
+            self._preview.setReadOnly(True)
+            self._preview.setMinimumHeight(240)
+            self._preview.setText("尚未选择图片。第一版显示文件路径和 ROI / lane / mask / cell count overlay 占位，不提供通用图片编辑器。")
+            layout.addWidget(heading)
+            layout.addWidget(self._preview, 1)
+            return frame
+
+        def _build_parameter_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("实验参数与操作")
+            heading.setObjectName("imageCardTitle")
+            layout.addWidget(heading)
+            form = QGridLayout()
+            for index, (name, default) in enumerate(self._parameter_defaults.items()):
+                form.addWidget(QLabel(name), index, 0)
+                if isinstance(default, bool):
+                    widget = QCheckBox("是")
+                    widget.setChecked(default)
+                elif name == "输出格式":
+                    widget = QComboBox()
+                    widget.addItems(("CSV", "TXT"))
+                    widget.setCurrentText(str(default))
+                else:
+                    widget = QLineEdit(str(default))
+                widget.setObjectName(f"imageWorkbenchParameter_{index}")
+                self._parameter_widgets[name] = widget
+                form.addWidget(widget, index, 1)
+            layout.addLayout(form)
+            for action in self._primary_actions:
+                button = QPushButton(action)
+                button.setObjectName("imageWorkbenchPrimaryActionButton" if action != "导出结果，占位" else "imageWorkbenchExportPlaceholderButton")
+                if action == "导出结果，占位":
+                    button.clicked.connect(lambda: self._result_panel.setText(self._placeholder_export_text()))
+                else:
+                    button.clicked.connect(lambda _checked=False, action_text=action: self._handle_generate_run_request(action_text))
+                layout.addWidget(button)
+            return frame
+
+        def _build_diagnostics_panel(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("labToolsCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            heading = QLabel("高级诊断区（默认折叠）")
+            heading.setObjectName("imageCardTitle")
+            self._diagnostics = QTextEdit()
+            self._diagnostics.setObjectName("imageWorkbenchDiagnosticsPanel")
+            self._diagnostics.setReadOnly(True)
+            self._diagnostics.setMinimumHeight(100)
+            self._diagnostics.setText(self._diagnostic_text(self._macro_template))
+            layout.addWidget(heading)
+            layout.addWidget(self._diagnostics)
+            return frame
+
+        def _handle_import_files(self) -> None:
+            paths, _selected_filter = QFileDialog.getOpenFileNames(
+                self,
+                "导入实验图像",
+                "",
+                "Image Files (*.png *.jpg *.jpeg *.tif *.tiff *.bmp *.gif)",
+            )
+            if paths:
+                self._image_paths.extend(paths)
+                self._refresh_image_table()
+                self._refresh_preview()
+
+        def _handle_import_folder(self) -> None:
+            directory = QFileDialog.getExistingDirectory(self, "导入实验图像文件夹")
+            if not directory:
+                return
+            supported = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif"}
+            paths = [str(path) for path in sorted(Path(directory).iterdir()) if path.suffix.lower() in supported and path.is_file()]
+            self._image_paths.extend(paths)
+            self._refresh_image_table()
+            self._refresh_preview()
+
+        def _handle_remove_selected_image(self) -> None:
+            row = self._image_table.currentRow()
+            if 0 <= row < len(self._image_paths):
+                self._image_paths.pop(row)
+                self._refresh_image_table()
+                self._refresh_preview()
+
+        def _refresh_image_table(self) -> None:
+            self._image_table.setRowCount(len(self._image_paths))
+            for row, path_text in enumerate(self._image_paths):
+                path = Path(path_text)
+                values = (path.name, self._parameter_value("分组"), self._parameter_value("时间点"), "已引用")
+                for column, value in enumerate(values):
+                    self._image_table.setItem(row, column, QTableWidgetItem(str(value)))
+
+        def _refresh_preview(self) -> None:
+            if not self._image_paths:
+                self._preview.setText("尚未选择图片。第一版显示文件路径和 ROI / lane / mask / cell count overlay 占位，不提供通用图片编辑器。")
+                return
+            current = Path(self._image_paths[0])
+            self._preview.setText(
+                "\n".join(
+                    [
+                        f"当前图片：{current.name}",
+                        f"原始路径：{current}",
+                        "",
+                        "预览占位：后续显示缩略图、ROI、lane、mask 或 cell count overlay。",
+                    ]
+                )
+            )
+
+        def _collect_parameters(self, action_text: str) -> dict[str, str | bool]:
+            parameters: dict[str, str | bool] = {"requested_action": action_text}
+            for name, widget in self._parameter_widgets.items():
+                if isinstance(widget, QCheckBox):
+                    parameters[name] = widget.isChecked()
+                elif isinstance(widget, QComboBox):
+                    parameters[name] = widget.currentText()
+                else:
+                    parameters[name] = widget.text().strip()
+            return parameters
+
+        def _parameter_value(self, name: str) -> str:
+            widget = self._parameter_widgets.get(name)
+            if isinstance(widget, QLineEdit):
+                return widget.text().strip()
+            return ""
+
+        def _handle_generate_run_request(self, action_text: str) -> None:
+            if not self._image_paths:
+                self._result_panel.setText("请先导入图片或文件夹，再生成分析任务。")
+                return
+            try:
+                workspace = self._task_store.create_workspace(
+                    task_name=self._title,
+                    experiment_module=self._experiment_module,
+                    analysis_type=self._analysis_type,
+                    image_paths=tuple(self._image_paths),
+                    import_mode="reference_original_path",
+                    parameters=self._collect_parameters(action_text),
+                )
+                workspace = self._task_store.create_run_request(workspace)
+            except ImageAnalysisError as exc:
+                self._result_panel.setText(str(exc))
+                return
+            self._latest_workspace = workspace
+            self._result_panel.setText(self._workspace_result_text(workspace))
+            self._diagnostics.setText(self._diagnostic_text(workspace.macro_template, workspace))
+
+        def _workspace_result_text(self, workspace: ImageAnalysisTaskWorkspace) -> str:
+            return "\n".join(
+                [
+                    "RunRequest 已生成",
+                    f"任务状态：{workspace.task.status}",
+                    f"任务目录：{workspace.task_dir}",
+                    f"输出目录：{workspace.output_dir}",
+                    f"RunRequest：{workspace.run_request_path}",
+                    "",
+                    "预期结果文件",
+                    "- outputs/results.csv",
+                    "- outputs/summary.txt",
+                    "- logs/run_log.txt",
+                    "- review/manual_review.json",
+                    "",
+                    "尚未生成真实图像分析结果。请在外部引擎配置完成并实现对应 Macro 后运行分析。",
+                    "",
+                    "人工复核提示",
+                    "自动图像识别和测量结果仅用于辅助分析，请人工复核 ROI、阈值和输出结果。",
+                ]
+            )
+
+        def _empty_result_text(self) -> str:
+            return "\n".join(
+                [
+                    "尚未生成 RunRequest。",
+                    "结果区将显示任务状态、输出目录、预期结果文件、日志路径和人工复核提示。",
+                    "尚未生成真实图像分析结果。请在外部引擎配置完成并实现对应 Macro 后运行分析。",
+                ]
+            )
+
+        def _placeholder_export_text(self) -> str:
+            return "导出结果，占位：本阶段未生成真实图像分析结果，因此不会写出正式结果文件。"
+
+        def _diagnostic_text(self, macro: MacroTemplate, workspace: ImageAnalysisTaskWorkspace | None = None) -> str:
+            lines = [
+                f"Macro ID：{macro.macro_id}",
+                f"Macro 路径：{macro.macro_file_path}",
+                "外部引擎 key：imagej",
+                f"最低引擎要求：{macro.minimum_engine_requirement}",
+            ]
+            if workspace is not None:
+                lines.extend(
+                    [
+                        f"RunRequest 路径：{workspace.run_request_path}",
+                        f"输出目录：{workspace.output_dir}",
+                        "最近一次错误信息：无；外部引擎未就绪时仍只保存请求，不执行。",
+                    ]
+                )
+            return "\n".join(lines)
+
+        def _stylesheet(self) -> str:
+            return f"""
+            QWidget#imageAnalysisWorkbench {{
+                background: {COLORS["background"]};
+                color: {COLORS["text"]};
+                font-size: {FONT_SIZE["body"]}px;
+            }}
+            QLabel#labToolsSectionTitle {{
+                color: {COLORS["bio"]};
+                font-size: {FONT_SIZE["page_title"]}px;
+                font-weight: 760;
+            }}
+            QLabel#imageNotice, QLabel#imageWorkbenchEngineStatus {{
+                color: {COLORS["text"]};
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 10px;
+            }}
+            QLabel#imageCardTitle, QLabel#imageTaskTitle {{
+                color: {COLORS["bio"]};
+                font-weight: 700;
+            }}
+            QLabel#imageTaskStatus {{
+                color: {COLORS["muted"]};
+            }}
+            QFrame#labToolsCard {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+            }}
+            QTextEdit#imageWorkbenchPreviewPanel, QTextEdit#imageWorkbenchResultPanel, QTextEdit#imageWorkbenchDiagnosticsPanel, QTableWidget#imageWorkbenchImageTable, QLineEdit, QComboBox {{
+                background: {COLORS["surface"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px;
+            }}
+            QPushButton#imageWorkbenchPrimaryActionButton {{
+                color: #FFFFFF;
+                background: {COLORS["bio"]};
+                border: 1px solid {COLORS["bio"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 12px;
+                font-weight: 700;
+            }}
+            QPushButton#imageWorkbenchImportFilesButton, QPushButton#imageWorkbenchImportFolderButton, QPushButton#imageWorkbenchRemoveImageButton, QPushButton#imageWorkbenchExportPlaceholderButton {{
+                color: {COLORS["bio"]};
+                background: {COLORS["bio_soft"]};
+                border: 1px solid {COLORS["border"]};
+                border-radius: {RADIUS["sm"]}px;
+                padding: 8px 12px;
+                font-weight: 600;
+            }}
+            """
+
+    def wb_grayscale_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+        return ImageAnalysisWorkbenchWidget(
+            experiment_module="western_blot",
+            analysis_type="wb_grayscale",
+            title="Western Blot 结果与灰度分析",
+            primary_actions=("识别 Lane", "识别 Band", "测量灰度值", "生成分析任务", "导出结果，占位"),
+            parameter_defaults={
+                "lane 数量": "10",
+                "是否反转图像": False,
+                "是否转换 8-bit": True,
+                "背景扣除方式": "rolling ball，占位",
+                "目标蛋白名称": "",
+                "内参蛋白名称": "",
+                "是否计算目标/内参比值": True,
+                "输出格式": "CSV",
+            },
+        )
+
+    def scratch_area_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+        return ImageAnalysisWorkbenchWidget(
+            experiment_module="cell_experiment",
+            analysis_type="scratch_area",
+            title="划痕实验图像分析",
+            primary_actions=("识别划痕区域", "计算划痕面积", "生成分析任务", "导出结果，占位"),
+            parameter_defaults={
+                "时间点": "0 h",
+                "分组": "",
+                "是否转换 8-bit": True,
+                "阈值模式": "用户阈值，占位",
+                "最小划痕区域面积": "占位",
+                "是否计算愈合率": True,
+                "输出格式": "CSV",
+            },
+        )
+
+    def transwell_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+        return ImageAnalysisWorkbenchWidget(
+            experiment_module="cell_experiment",
+            analysis_type="transwell_count",
+            title="Transwell 图像分析",
+            primary_actions=("识别细胞区域", "统计细胞数", "生成分析任务", "导出结果，占位"),
+            parameter_defaults={
+                "分组": "",
+                "是否转换 8-bit": True,
+                "是否反转图像": False,
+                "阈值模式": "用户阈值，占位",
+                "最小颗粒面积": "占位",
+                "最大颗粒面积": "占位",
+                "输出指标": "细胞数",
+                "输出格式": "CSV",
+            },
+        )
+
+    def fluorescence_workbench_widget() -> ImageAnalysisWorkbenchWidget:
+        return ImageAnalysisWorkbenchWidget(
+            experiment_module="cell_experiment",
+            analysis_type="fluorescence_intensity",
+            title="荧光图像分析",
+            primary_actions=("设置 ROI", "测量荧光强度", "生成分析任务", "导出结果，占位"),
+            parameter_defaults={
+                "通道": "Green",
+                "是否背景扣除": True,
+                "背景扣除半径": "占位",
+                "ROI 模式": "全图",
+                "输出指标": "mean intensity",
+                "输出格式": "CSV",
+            },
+        )
+
 else:  # pragma: no cover
 
     class LabToolsImageAnalysisWidget:  # type: ignore[no-redef]
+        pass
+
+    class ImageAnalysisWorkbenchWidget:  # type: ignore[no-redef]
         pass

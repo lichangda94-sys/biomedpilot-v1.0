@@ -30,6 +30,7 @@ class LocalModelConfig:
 class LocalModelCallResult:
     status: str
     model_name: str
+    ai_role: str = ""
     raw_output: str = ""
     parsed_json: dict[str, Any] | None = None
     error_message: str | None = None
@@ -51,6 +52,7 @@ class LocalModelSearchTranslation:
     rejected_terms: list[str]
     warnings: list[str]
     provider_name: str = ""
+    ai_role: str = ""
     gateway_status: str = ""
     fallback_used: bool = False
     output_char_count: int = 0
@@ -94,6 +96,13 @@ class SearchTranslationDraft:
     exclusion_type_terms: list[str] = field(default_factory=list)
     quality_assessment_terms: list[str] = field(default_factory=list)
     pubmed_query_terms: list[str] = field(default_factory=list)
+    source: str = "rule_based"
+    ai_provider: str = "disabled"
+    ai_role: str = ""
+    model_name: str = ""
+    generated_at: str = ""
+    user_confirmation_required: bool = True
+    accepted_by_user: bool = False
 
 
 @dataclass(frozen=True)

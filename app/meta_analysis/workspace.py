@@ -629,6 +629,7 @@ if QWidget is not None:
             }
 
         def _rebuild_pages(self) -> None:
+            current_page_key = self.current_page_key() or self._layout_state.default_page_key
             while self._page_stack.count():
                 widget = self._page_stack.widget(0)
                 self._page_stack.removeWidget(widget)
@@ -644,7 +645,10 @@ if QWidget is not None:
                 self._navigation_list.addItem(item)
                 self._page_stack.addWidget(_scroll_page(self._page_for_step(step, state)))
                 self._page_keys.append(step.route_key)
-            self._navigation_list.setCurrentRow(0)
+            if current_page_key in self._page_keys:
+                self._navigation_list.setCurrentRow(self._page_keys.index(current_page_key))
+            else:
+                self._navigation_list.setCurrentRow(0)
 
         def _project_dir_for_state(self) -> Path:
             return self._current_project_dir or (default_storage_root() / "projects" / "__meta_empty_state__" / "meta_analysis")
@@ -822,6 +826,7 @@ if QWidget is not None:
         question = QPlainTextEdit()
         question.setObjectName("metaPicoQuestionInput")
         question.setPlaceholderText("例如：高血压患者降压药对卒中风险的影响")
+        question.setMaximumHeight(96)
         if draft:
             question.setPlainText(draft.research_question_original)
         input_layout.addWidget(question)
@@ -1062,27 +1067,33 @@ if QWidget is not None:
         layout.addWidget(workbench)
 
         preview = _latest_pubmed_preview_payload(project_dir)
+        execution_report = _load_json_object(project_dir / "protocol" / "search_execution_report.json")
         candidate_card = _card("PubMed 候选文献")
         candidate_layout = candidate_card.layout()
-        candidate_summary = QLabel(_pubmed_preview_summary(preview))
+        candidate_summary = QLabel(_pubmed_preview_summary(preview, execution_report=execution_report))
         candidate_summary.setObjectName("metaMutedText")
         candidate_summary.setWordWrap(True)
         candidate_layout.addWidget(candidate_summary)
-        candidate_list = QListWidget()
-        candidate_list.setObjectName("metaPubMedCandidateList")
-        candidate_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        candidate_table = QTableWidget()
+        candidate_table.setObjectName("metaPubMedCandidateTable")
+        candidate_table.setColumnCount(8)
+        candidate_table.setHorizontalHeaderLabels(["序号", "PMID", "年份", "第一作者", "标题", "期刊", "摘要", "处理状态"])
+        candidate_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        candidate_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+        candidate_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        candidate_table.setAlternatingRowColors(True)
         candidate_detail = QTextEdit()
         candidate_detail.setObjectName("metaPubMedCandidateDetail")
         candidate_detail.setReadOnly(True)
+        candidate_detail.setPlainText("请选择一条候选文献以查看英文标题和摘要。")
         user_note = QPlainTextEdit()
         user_note.setObjectName("metaPubMedCandidateUserNote")
         user_note.setPlaceholderText("用户备注，仅显示在当前界面，不参与检索、识别或去重。")
         user_note.setMaximumHeight(70)
-        for candidate in _items_from_payload(preview, "candidates"):
-            item = QListWidgetItem(_candidate_row_text(candidate))
-            item.setData(Qt.ItemDataRole.UserRole, str(candidate.get("candidate_id", "")))
-            item.setToolTip(_candidate_detail_text(candidate))
-            candidate_list.addItem(item)
+        candidate_page_info = QLabel(_pubmed_page_info_text(preview, execution_report=execution_report))
+        candidate_page_info.setObjectName("metaMutedText")
+        candidate_page_info.setWordWrap(True)
+        candidate_layout.addWidget(candidate_page_info)
         candidate_actions = QHBoxLayout()
         select_all = QPushButton("全选")
         clear_selection = QPushButton("取消全选")
@@ -1093,7 +1104,7 @@ if QWidget is not None:
             candidate_actions.addWidget(button)
         candidate_actions.addStretch(1)
         candidate_layout.addLayout(candidate_actions)
-        candidate_layout.addWidget(candidate_list)
+        candidate_layout.addWidget(candidate_table)
         candidate_layout.addWidget(candidate_detail)
         candidate_layout.addWidget(user_note)
         layout.addWidget(candidate_card)
@@ -1172,7 +1183,13 @@ if QWidget is not None:
             except Exception as exc:
                 _show_message(str(exc))
                 return
-            _show_message(f"已导出：{txt_path.name} / {md_path.name} / {json_path.name}")
+            _show_message(
+                "已导出到项目目录："
+                + "；".join(
+                    str(path.relative_to(project_dir))
+                    for path in (txt_path, md_path, json_path)
+                )
+            )
 
         def do_copy_query() -> None:
             clipboard = QApplication.clipboard() if QApplication is not None else None
@@ -1196,18 +1213,44 @@ if QWidget is not None:
             _show_message(f"PubMed testing-level 检索完成：候选 {len(preview.candidates)} 条。")
             on_refresh()
 
-        def update_candidate_detail() -> None:
-            item = candidate_list.currentItem()
-            if item is None:
-                candidate_detail.setPlainText("暂无候选文献。")
+        preview_candidates = _items_from_payload(preview, "candidates")
+        row_candidates: list[dict[str, object]] = []
+
+        def populate_candidate_table() -> None:
+            row_candidates.clear()
+            row_candidates.extend(preview_candidates)
+            candidate_table.setRowCount(len(row_candidates))
+            for row, candidate in enumerate(row_candidates):
+                values = [
+                    str(row + 1),
+                    str(candidate.get("pmid") or "-"),
+                    str(candidate.get("year") or "-"),
+                    _first_author(candidate) or "-",
+                    str(candidate.get("title") or "Untitled"),
+                    str(candidate.get("journal") or "-"),
+                    "有摘要" if str(candidate.get("abstract") or "").strip() else "无摘要",
+                    _pubmed_candidate_status_label(candidate),
+                ]
+                for col, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    if col == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, str(candidate.get("candidate_id", "")))
+                    candidate_table.setItem(row, col, item)
+
+        def update_candidate_detail(row: int = -1, _col: int = 0) -> None:
+            if row < 0 or row >= len(row_candidates):
+                candidate_detail.setPlainText("请选择一条候选文献以查看英文标题和摘要。")
                 return
-            candidate_id = str(item.data(Qt.ItemDataRole.UserRole))
-            candidate = next((item for item in _items_from_payload(preview, "candidates") if str(item.get("candidate_id", "")) == candidate_id), {})
-            candidate_detail.setPlainText(_candidate_detail_text(candidate))
+            candidate_detail.setPlainText(_candidate_detail_text(row_candidates[row]))
 
         def do_import_selected() -> None:
             preview_id = str(preview.get("preview_id", ""))
-            selected_ids = tuple(str(item.data(Qt.ItemDataRole.UserRole)) for item in candidate_list.selectedItems())
+            selected_rows = _selected_table_rows(candidate_table)
+            selected_ids = tuple(
+                str(row_candidates[row].get("candidate_id", ""))
+                for row in selected_rows
+                if 0 <= row < len(row_candidates)
+            )
             if not preview_id or not selected_ids:
                 _show_message("请先选择候选文献。")
                 return
@@ -1221,7 +1264,8 @@ if QWidget is not None:
             on_refresh()
 
         def do_ignore_batch() -> None:
-            candidate_list.clearSelection()
+            candidate_table.clearSelection()
+            candidate_detail.setPlainText("请选择一条候选文献以查看英文标题和摘要。")
             _show_message("已忽略当前候选批次；未写入文献库。")
 
         database_list.currentRowChanged.connect(update_editor)
@@ -1233,13 +1277,13 @@ if QWidget is not None:
         copy_query.clicked.connect(do_copy_query)
         pubmed_execute.clicked.connect(do_pubmed_execute)
         next_button.clicked.connect(on_next)
-        select_all.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, True))
-        clear_selection.clicked.connect(lambda: _set_all_list_items_selected(candidate_list, False))
+        select_all.clicked.connect(candidate_table.selectAll)
+        clear_selection.clicked.connect(candidate_table.clearSelection)
         import_selected.clicked.connect(do_import_selected)
         ignore_batch.clicked.connect(do_ignore_batch)
-        candidate_list.currentRowChanged.connect(lambda _row: update_candidate_detail())
+        candidate_table.cellClicked.connect(update_candidate_detail)
         database_list.setCurrentRow(0)
-        update_candidate_detail()
+        populate_candidate_table()
         return frame
 
 
@@ -1657,37 +1701,25 @@ if QWidget is not None:
             )
         )
         screening_content = QHBoxLayout()
-        screening_record_list = QListWidget()
-        screening_record_list.setObjectName("metaScreeningWorkspaceRecordList")
-        screening_record_list.setMinimumWidth(360)
-        for record in screening_records:
-            decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
-            decision_label = _screening_decision_label(str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED))
-            item = QListWidgetItem(
-                "\n".join(
-                    [
-                        str(record.get("title") or "Untitled"),
-                        " · ".join(
-                            part
-                            for part in (
-                                _first_author(record),
-                                str(record.get("year") or ""),
-                                str(record.get("journal") or ""),
-                                decision_label,
-                            )
-                            if part
-                        ),
-                    ]
-                )
-            )
-            item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
-            screening_record_list.addItem(item)
-        screening_content.addWidget(screening_record_list, 1)
+        screening_table = QTableWidget()
+        screening_table.setObjectName("metaScreeningWorkspaceRecordTable")
+        screening_table.setMinimumWidth(520)
+        screening_table.setColumnCount(8)
+        screening_table.setHorizontalHeaderLabels(["序号", "标题", "第一作者", "年份", "期刊", "摘要", "AI 建议", "人工状态"])
+        screening_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        screening_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        screening_table.setAlternatingRowColors(True)
+        screening_content.addWidget(screening_table, 2)
         screening_panel = _card("当前文献库")
         screening_panel_layout = screening_panel.layout()
         screening_detail = QTextEdit()
         screening_detail.setObjectName("metaScreeningWorkspaceRecordDetail")
         screening_detail.setReadOnly(True)
+        screening_detail.setPlainText("请选择左侧文献以查看标题、摘要、AI 建议和人工决策区。")
+        ai_suggestion = QTextEdit()
+        ai_suggestion.setObjectName("metaScreeningWorkspaceAISuggestion")
+        ai_suggestion.setReadOnly(True)
+        ai_suggestion.setPlainText("暂无 AI 建议。")
         screening_decision = QComboBox()
         screening_decision.setObjectName("metaScreeningWorkspaceDecisionSelector")
         for label, value in (
@@ -1708,15 +1740,27 @@ if QWidget is not None:
         screening_notes.setObjectName("metaScreeningWorkspaceNotes")
         screening_notes.setPlaceholderText("筛选备注；AI/规则建议需人工接受或编辑后才生效")
         screening_notes.setMaximumHeight(86)
+        quick_actions = QHBoxLayout()
+        include_button = QPushButton("纳入")
+        exclude_button = QPushButton("排除")
+        uncertain_button = QPushButton("不确定")
+        fulltext_button = QPushButton("需要全文")
+        next_unscreened_button = QPushButton("保存并下一篇")
+        for button in (include_button, exclude_button, uncertain_button, fulltext_button, next_unscreened_button):
+            button.setObjectName("metaSecondaryButton")
+            quick_actions.addWidget(button)
         save_screening_decision = QPushButton("保存筛选决定")
         save_screening_decision.setObjectName("metaPrimaryButton")
         screening_panel_layout.addWidget(QLabel("文献信息"))
         screening_panel_layout.addWidget(screening_detail)
+        screening_panel_layout.addWidget(QLabel("AI 建议"))
+        screening_panel_layout.addWidget(ai_suggestion)
         screening_panel_layout.addWidget(QLabel("筛选决策"))
         screening_panel_layout.addWidget(screening_decision)
         screening_panel_layout.addWidget(QLabel("排除原因"))
         screening_panel_layout.addWidget(screening_reason)
         screening_panel_layout.addWidget(screening_notes)
+        screening_panel_layout.addLayout(quick_actions)
         screening_panel_layout.addWidget(save_screening_decision)
         screening_content.addWidget(screening_panel, 2)
         screening_layout.addLayout(screening_content)
@@ -1794,28 +1838,59 @@ if QWidget is not None:
             _show_message(f"筛选队列已创建：{result.record_count} 篇。")
             on_refresh()
 
-        def selected_screening_record_id() -> str:
-            item = screening_record_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+        screening_rows: list[dict[str, object]] = []
 
-        def refresh_screening_detail(index: int = 0) -> None:
-            if index < 0 or index >= len(screening_records):
-                screening_detail.setPlainText("暂无待筛选文献。")
+        def populate_screening_table() -> None:
+            screening_rows.clear()
+            screening_rows.extend(screening_records)
+            screening_table.setRowCount(len(screening_rows))
+            for row, record in enumerate(screening_rows):
+                decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
+                ai_payload = _screening_ai_suggestion_payload(project_dir, str(record.get("record_id", "")))
+                values = [
+                    str(row + 1),
+                    str(record.get("title") or "Untitled"),
+                    _first_author(record) or "-",
+                    str(record.get("year") or "-"),
+                    str(record.get("journal") or "-"),
+                    "有摘要" if str(record.get("abstract") or "").strip() else "无摘要",
+                    _screening_ai_suggestion_label(ai_payload),
+                    _screening_decision_label(str(decision_payload.get("decision") or record.get("decision") or DECISION_NOT_SCREENED)),
+                ]
+                for col, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    if col == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, str(record.get("record_id", "")))
+                    screening_table.setItem(row, col, item)
+
+        def selected_screening_row() -> int:
+            rows = _selected_table_rows(screening_table)
+            return rows[0] if rows else -1
+
+        def selected_screening_record_id() -> str:
+            row = selected_screening_row()
+            return str(screening_rows[row].get("record_id", "")) if 0 <= row < len(screening_rows) else ""
+
+        def refresh_screening_detail(index: int = -1, _col: int = 0) -> None:
+            if index < 0 or index >= len(screening_rows):
+                screening_detail.setPlainText("请选择左侧文献以查看标题、摘要、AI 建议和人工决策区。")
+                ai_suggestion.setPlainText("暂无 AI 建议。")
                 return
-            record = screening_records[index]
+            record = screening_rows[index]
             decision_payload = screening_decisions_by_record.get(str(record.get("record_id", "")), {})
             screening_detail.setPlainText(_screening_record_user_detail(record, decision_payload))
+            ai_suggestion.setPlainText(_screening_ai_suggestion_text(project_dir, str(record.get("record_id", ""))))
 
-        def do_save_screening_decision() -> None:
+        def do_save_screening_decision(*, refresh: bool = True) -> bool:
             record_id = selected_screening_record_id()
             if not record_id:
                 _show_message("请选择文献")
-                return
+                return False
             selected_decision = str(screening_decision.currentData() or DECISION_NOT_SCREENED)
             selected_reason = str(screening_reason.currentData() or "")
             if selected_decision == DECISION_EXCLUDE and not selected_reason:
                 _show_message("排除必须选择排除原因")
-                return
+                return False
             result = screening_service.save_decision(
                 project_dir,
                 record_id=record_id,
@@ -1825,21 +1900,40 @@ if QWidget is not None:
                 notes=screening_notes.toPlainText(),
             )
             _show_message(result.message)
+            if refresh:
+                on_refresh()
+            return result.success
+
+        def do_quick_screening(decision: str, *, advance: bool = False) -> None:
+            screening_decision.setCurrentIndex(max(0, screening_decision.findData(decision)))
+            if not advance:
+                do_save_screening_decision()
+                return
+            if not do_save_screening_decision(refresh=False):
+                return
+            next_row = _next_unscreened_screening_row(screening_rows, screening_decisions_by_record, after_row=selected_screening_row())
             on_refresh()
+            if next_row < 0:
+                return
 
         group_list.currentRowChanged.connect(refresh_group_detail)
         record_selector.currentIndexChanged.connect(update_preview)
-        screening_record_list.currentRowChanged.connect(refresh_screening_detail)
+        screening_table.cellClicked.connect(refresh_screening_detail)
         build_queue.clicked.connect(do_build_queue)
         save_decision.clicked.connect(do_save_decision)
         generate_deduped.clicked.connect(do_generate_deduped)
         build_screening_queue.clicked.connect(do_build_screening_queue)
         save_screening_decision.clicked.connect(do_save_screening_decision)
+        include_button.clicked.connect(lambda: do_quick_screening(DECISION_INCLUDE))
+        exclude_button.clicked.connect(lambda: do_quick_screening(DECISION_EXCLUDE))
+        uncertain_button.clicked.connect(lambda: do_quick_screening(DECISION_UNCERTAIN))
+        fulltext_button.clicked.connect(lambda: do_quick_screening(DECISION_NEED_FULL_TEXT))
+        next_unscreened_button.clicked.connect(lambda: do_quick_screening(str(screening_decision.currentData() or DECISION_NOT_SCREENED), advance=True))
         next_button.clicked.connect(on_next)
         group_list.setCurrentRow(0 if groups else -1)
         refresh_group_detail(group_list.currentRow())
-        screening_record_list.setCurrentRow(0 if screening_records else -1)
-        refresh_screening_detail(screening_record_list.currentRow())
+        populate_screening_table()
+        refresh_screening_detail()
         return frame
 
 
@@ -2025,6 +2119,7 @@ if QWidget is not None:
     def _fulltext_management_page(project_dir: Path, *, on_refresh: Callable[[], None], on_next: Callable[[], None]) -> QFrame:
         management = FullTextManagementService()
         eligibility = FullTextEligibilityService()
+        parser = FullTextParsingService(fulltext_management=management)
         records = list(management.list_records(project_dir))
         candidates = list(eligibility.build_candidates_from_screening(project_dir))
         decisions = list(eligibility.load_eligibility_decisions(project_dir))
@@ -2057,47 +2152,33 @@ if QWidget is not None:
         buttons = QHBoxLayout()
         build_registry = QPushButton("建立全文队列")
         attach_pdf = QPushButton("上传全文")
+        ocr_pdf = QPushButton("OCR 识别 PDF")
         mark_unavailable = QPushButton("标记无法获取")
         confirm_fulltext = QPushButton("全文确认")
         save_status = QPushButton("保存全文状态")
         save_eligibility = QPushButton("保存全文筛选")
         next_button = QPushButton("下一步：数据提取")
-        for button in (build_registry, attach_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
+        for button in (build_registry, attach_pdf, ocr_pdf, mark_unavailable, confirm_fulltext, save_status, save_eligibility, next_button):
             button.setObjectName("metaSecondaryButton")
             buttons.addWidget(button)
         build_registry.setObjectName("metaPrimaryButton")
         buttons.addStretch(1)
         layout.addLayout(buttons)
-        record_list = QListWidget()
-        record_list.setObjectName("metaFulltextRecordList")
+        record_table = QTableWidget()
+        record_table.setObjectName("metaFulltextRecordTable")
+        record_table.setColumnCount(7)
+        record_table.setHorizontalHeaderLabels(["标题", "第一作者", "年份", "期刊", "初筛状态", "全文状态", "PDF 文件"])
+        record_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        record_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        record_table.setAlternatingRowColors(True)
         source_records = records or candidates
-        for record in source_records:
-            record_id = getattr(record, "record_id", "")
-            title = getattr(record, "title", "")
-            candidate = candidates_by_id.get(record_id)
-            author_year = _author_year_text(getattr(record, "authors", "") or getattr(candidate, "authors", ""), getattr(record, "year", "") or getattr(candidate, "year", ""))
-            journal = getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录"
-            screening_decision = getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"
-            status = getattr(record, "fulltext_status", getattr(record, "eligibility_status", ""))
-            status_label = FULLTEXT_STATUS_LABELS_ZH.get(status, status or "未记录")
-            file_label = management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件"
-            exclusion_reason = getattr(record, "fulltext_exclusion_reason", "") or getattr(record, "unavailable_reason", "") or getattr(candidate, "exclusion_reason", "")
-            reason_label = FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(exclusion_reason, "无全文排除原因")
-            item = QListWidgetItem(
-                "\n".join(
-                    [
-                        title or "未命名文献",
-                        f"{author_year} · {journal}",
-                        f"标题摘要决定：{_screening_decision_label(screening_decision)} · 全文状态：{status_label}",
-                        f"{file_label} · 排除原因：{reason_label}",
-                    ]
-                )
-            )
-            item.setData(Qt.ItemDataRole.UserRole, record_id)
-            record_list.addItem(item)
-        layout.addWidget(record_list)
+        layout.addWidget(record_table)
         form = _card("人工全文状态")
         form_layout = form.layout()
+        fulltext_detail = QTextEdit()
+        fulltext_detail.setObjectName("metaFulltextRecordDetail")
+        fulltext_detail.setReadOnly(True)
+        fulltext_detail.setPlainText("请选择一篇文献后再上传 PDF 或修改全文状态。")
         fulltext_status = QComboBox()
         fulltext_status.setObjectName("metaFulltextStatusSelector")
         for status in FULLTEXT_MANAGEMENT_STATUSES:
@@ -2112,6 +2193,8 @@ if QWidget is not None:
             fulltext_reason.addItem(FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(reason, reason), reason)
         notes = QLineEdit()
         notes.setPlaceholderText("备注（可选，不作为确认提取证据）")
+        form_layout.addWidget(QLabel("当前文献"))
+        form_layout.addWidget(fulltext_detail)
         form_layout.addWidget(QLabel("全文状态"))
         form_layout.addWidget(fulltext_status)
         form_layout.addWidget(QLabel("全文筛选"))
@@ -2123,9 +2206,44 @@ if QWidget is not None:
         layout.addWidget(_developer_details(f"management={management.registry_path(project_dir)}\nrecords={len(records)}\ncandidates={len(candidates)}"))
         layout.addStretch(1)
 
+        fulltext_rows = list(source_records)
+
+        def populate_fulltext_table() -> None:
+            record_table.setRowCount(len(fulltext_rows))
+            for row, record in enumerate(fulltext_rows):
+                record_id = getattr(record, "record_id", "")
+                candidate = candidates_by_id.get(record_id)
+                values = [
+                    getattr(record, "title", "") or "未命名文献",
+                    _first_author({"first_author": getattr(record, "first_author", ""), "authors": getattr(record, "authors", "") or getattr(candidate, "authors", "")}) or "-",
+                    str(getattr(record, "year", "") or getattr(candidate, "year", "") or "-"),
+                    getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录",
+                    _screening_decision_label(getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"),
+                    FULLTEXT_STATUS_LABELS_ZH.get(getattr(record, "fulltext_status", getattr(record, "eligibility_status", "")), getattr(record, "fulltext_status", getattr(record, "eligibility_status", "")) or "未记录"),
+                    management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件",
+                ]
+                for col, value in enumerate(values):
+                    item = QTableWidgetItem(str(value))
+                    if col == 0:
+                        item.setData(Qt.ItemDataRole.UserRole, record_id)
+                    record_table.setItem(row, col, item)
+
         def selected_record_id() -> str:
-            item = record_list.currentItem()
-            return str(item.data(Qt.ItemDataRole.UserRole)) if item is not None else ""
+            rows = _selected_table_rows(record_table)
+            if not rows:
+                return ""
+            row = rows[0]
+            if row < 0 or row >= len(fulltext_rows):
+                return ""
+            return str(getattr(fulltext_rows[row], "record_id", ""))
+
+        def update_fulltext_detail(row: int = -1, _col: int = 0) -> None:
+            if row < 0 or row >= len(fulltext_rows):
+                fulltext_detail.setPlainText("请选择一篇文献后再上传 PDF 或修改全文状态。")
+                return
+            record = fulltext_rows[row]
+            candidate = candidates_by_id.get(getattr(record, "record_id", ""))
+            fulltext_detail.setPlainText(_fulltext_record_detail_text(record, candidate=candidate, management=management))
 
         def do_build_registry() -> None:
             result = management.build_registry_from_screening(project_dir, project_id=project_dir.name)
@@ -2142,6 +2260,22 @@ if QWidget is not None:
                 result = management.attach_pdf(project_dir, record_id=record_id, source_file_path=filename, actor="reviewer", notes=notes.text())
                 _show_message(result.message)
                 on_refresh()
+
+        def do_ocr_pdf() -> None:
+            record_id = selected_record_id()
+            if not record_id:
+                _show_message("请选择文献")
+                return
+            record = management.get_record(project_dir, record_id)
+            if record is None or not record.pdf_path:
+                _show_message("请先上传或登记本地 PDF")
+                return
+            result = parser.parse_record(project_dir, record_id=record_id, use_ocr=True)
+            if result.success:
+                _show_message(f"OCR 已完成：{Path(result.extracted_text_path).name}；原始 JSON 已写入 fulltext/ocr。")
+            else:
+                _show_message(f"OCR 未完成：{result.diagnostics.get('error_code', result.parse_status)}")
+            on_refresh()
 
         def do_mark_unavailable() -> None:
             record_id = selected_record_id()
@@ -2191,11 +2325,14 @@ if QWidget is not None:
 
         build_registry.clicked.connect(do_build_registry)
         attach_pdf.clicked.connect(do_attach_pdf)
+        ocr_pdf.clicked.connect(do_ocr_pdf)
         mark_unavailable.clicked.connect(do_mark_unavailable)
         confirm_fulltext.clicked.connect(do_confirm_fulltext)
         save_status.clicked.connect(do_save_status)
         save_eligibility.clicked.connect(do_save_eligibility)
         next_button.clicked.connect(on_next)
+        record_table.cellClicked.connect(update_fulltext_detail)
+        populate_fulltext_table()
         return frame
 
 
@@ -3600,7 +3737,17 @@ if QWidget is not None:
     def _database_manual_notice(database: str) -> str:
         if database == "pubmed":
             return "PubMed 检索式确认后可执行 testing-level 在线检索；结果仍需人工复核。"
-        return "当前版本支持检索式生成与本地导入，不执行联网检索。"
+        manual_registry = {
+            "wos": ("Web of Science", "https://www.webofscience.com", "plain text / tab-delimited"),
+            "embase": ("Embase", "https://www.embase.com", "RIS"),
+            "cochrane": ("Cochrane Library", "https://www.cochranelibrary.com", "RIS"),
+            "cnki": ("CNKI", "https://www.cnki.net", "CNKI 本地导出"),
+            "wanfang": ("万方", "https://www.wanfangdata.com.cn", "本地导出"),
+            "vip": ("维普", "https://www.cqvip.com", "本地导出"),
+        }
+        label, url, formats = manual_registry.get(database, (_database_label(database), "", "本地导出"))
+        url_text = f"官网：{url}" if url else "官网入口：请按机构权限访问"
+        return f"{label} 当前走手动检索流程：复制检索式 -> 打开官网 -> 人工检索 -> 导入结果文件。{url_text}；建议导入格式：{formats}。"
 
 
     def _write_pubmed_execution_report(project_dir: Path, execution) -> Path:
@@ -3617,12 +3764,27 @@ if QWidget is not None:
         return _load_json_object(preview_paths[-1])
 
 
-    def _pubmed_preview_summary(preview: dict[str, object]) -> str:
+    def _pubmed_preview_summary(preview: dict[str, object], *, execution_report: dict[str, object] | None = None) -> str:
         if not preview:
             return "尚无 PubMed 候选文献。请先确认 PubMed 检索式并执行 testing-level 检索。"
         candidates = _items_from_payload(preview, "candidates")
         with_abstract = len([item for item in candidates if str(item.get("abstract", "")).strip()])
-        return f"候选 {len(candidates)} 条；有摘要 {with_abstract} 条；preview={preview.get('preview_id', '')}"
+        total_count = int((execution_report or {}).get("result_count") or len(candidates) or 0)
+        fetched_count = int((execution_report or {}).get("returned_count") or len(candidates) or 0)
+        return (
+            f"检索总数 {total_count} 条；当前已保存候选 {len(candidates)} 条；"
+            f"当前批次返回 {fetched_count} 条；有摘要 {with_abstract} 条；preview={preview.get('preview_id', '')}"
+        )
+
+
+    def _pubmed_page_info_text(preview: dict[str, object], *, execution_report: dict[str, object] | None = None) -> str:
+        if not preview:
+            return "默认不显示详情；请先执行 PubMed 检索并手动选择需要查看或导入的候选文献。"
+        total_count = int((execution_report or {}).get("result_count") or len(_items_from_payload(preview, "candidates")) or 0)
+        page_size = int((execution_report or {}).get("returned_count") or len(_items_from_payload(preview, "candidates")) or 0)
+        if total_count > page_size > 0:
+            return f"当前工作台已保留第 1 批 {page_size} 条候选结果；总召回 {total_count} 条。默认只展示已保存候选，导入只作用于已选中行。"
+        return "候选文献按行展示；未点击任何行前，右侧详情面板保持空状态。"
 
 
     def _candidate_row_text(candidate: dict[str, object]) -> str:
@@ -3647,7 +3809,7 @@ if QWidget is not None:
 
     def _candidate_detail_text(candidate: dict[str, object]) -> str:
         if not candidate:
-            return "暂无候选文献。"
+            return "请选择一条候选文献以查看英文标题和摘要。"
         authors = candidate.get("authors", [])
         authors_text = "；".join(str(item) for item in authors) if isinstance(authors, list) else str(authors or "")
         return "\n".join(
@@ -3663,6 +3825,20 @@ if QWidget is not None:
                 "用户备注：仅用于人工查看，不参与内部识别、检索和去重逻辑。",
             ]
         )
+
+
+    def _pubmed_candidate_status_label(candidate: dict[str, object]) -> str:
+        decision = str(candidate.get("user_decision") or "pending")
+        return {
+            "selected": "已选中待导入",
+            "rejected": "已忽略",
+            "pending": "待处理",
+        }.get(decision, decision or "待处理")
+
+
+    def _selected_table_rows(table: QTableWidget) -> list[int]:
+        rows = {item.row() for item in table.selectedItems()}
+        return sorted(rows)
 
 
     def _set_all_list_items_selected(widget: QListWidget, selected: bool) -> None:
@@ -4018,6 +4194,85 @@ if QWidget is not None:
                 f"去重状态：{record.get('dedup_status') or '去重后待筛选'}",
                 f"当前筛选状态：{_screening_decision_label(decision)}",
                 f"排除原因：{EXCLUSION_REASON_LABELS_ZH.get(reason_code, str(decision_payload.get('exclusion_reason_text') or '暂无'))}",
+            ]
+        )
+
+
+    def _screening_ai_suggestion_payload(project_dir: Path, record_id: str) -> dict[str, object]:
+        payload = _load_json_object(TitleAbstractScreeningV2Service().suggestion_queue_path(project_dir))
+        suggestions = _items_from_payload(payload, "suggestions")
+        for suggestion in reversed(suggestions):
+            if str(suggestion.get("record_id", "")) == record_id:
+                return suggestion
+        return {}
+
+
+    def _screening_ai_suggestion_label(payload: dict[str, object]) -> str:
+        if not payload:
+            return "暂无"
+        decision = _screening_decision_label(str(payload.get("suggested_decision") or ""))
+        confidence = payload.get("confidence")
+        if isinstance(confidence, (int, float)):
+            return f"{decision}（{confidence:.0%}）"
+        return decision
+
+
+    def _screening_ai_suggestion_text(project_dir: Path, record_id: str) -> str:
+        payload = _screening_ai_suggestion_payload(project_dir, record_id)
+        if not payload:
+            return "暂无 AI 建议。AI 建议不会自动写入人工筛选结果。"
+        return "\n".join(
+            [
+                f"建议结果：{_screening_decision_label(str(payload.get('suggested_decision') or ''))}",
+                f"置信度：{payload.get('confidence', '')}",
+                f"命中依据：{payload.get('rationale') or '未记录'}",
+                "说明：只有人工决定会进入正式筛选记录和 PRISMA 计数。",
+            ]
+        )
+
+
+    def _next_unscreened_screening_row(
+        records: list[dict[str, object]],
+        decisions_by_record: dict[str, dict[str, object]],
+        *,
+        after_row: int,
+    ) -> int:
+        if not records:
+            return -1
+        start = max(after_row + 1, 0)
+        for row in range(start, len(records)):
+            record_id = str(records[row].get("record_id", ""))
+            decision = str(decisions_by_record.get(record_id, {}).get("decision") or records[row].get("decision") or DECISION_NOT_SCREENED)
+            if decision in {DECISION_NOT_SCREENED, "", "pending"}:
+                return row
+        return -1
+
+
+    def _fulltext_record_detail_text(record: object, *, candidate: object | None, management: FullTextManagementService) -> str:
+        record_id = getattr(record, "record_id", "")
+        title = getattr(record, "title", "") or getattr(candidate, "title", "") or "未命名文献"
+        authors = getattr(record, "authors", "") or getattr(candidate, "authors", "")
+        year = getattr(record, "year", "") or getattr(candidate, "year", "")
+        journal = getattr(record, "journal", "") or getattr(candidate, "journal", "") or "期刊未记录"
+        screening = getattr(record, "source_screening_decision", "") or getattr(candidate, "screening_decision", "") or "未记录"
+        status = getattr(record, "fulltext_status", getattr(record, "eligibility_status", "")) or "未记录"
+        exclusion_reason = (
+            getattr(record, "fulltext_exclusion_reason", "")
+            or getattr(record, "unavailable_reason", "")
+            or getattr(candidate, "exclusion_reason", "")
+            or ""
+        )
+        file_label = management.safe_file_label(record) if hasattr(record, "pdf_path") else "未登记全文文件"
+        return "\n".join(
+            [
+                f"标题：{title}",
+                f"作者/年份：{_author_year_text(authors, year)}",
+                f"期刊：{journal}",
+                f"标题摘要决定：{_screening_decision_label(screening)}",
+                f"全文状态：{FULLTEXT_STATUS_LABELS_ZH.get(status, status)}",
+                f"PDF 文件：{file_label}",
+                f"全文排除原因：{FULLTEXT_EXCLUSION_REASON_LABELS_ZH.get(exclusion_reason, exclusion_reason or '暂无')}",
+                f"记录 ID：{record_id}",
             ]
         )
 

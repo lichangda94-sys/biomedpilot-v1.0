@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import time
+from dataclasses import replace
+
 from app.shared.ai_gateway.config import load_ai_gateway_config
 from app.shared.ai_gateway.logging.ai_audit_logger import AIAuditLogger
 from app.shared.ai_gateway.models import AIGatewayConfig, AIGatewayRequest, AIGatewayResponse
@@ -26,6 +29,7 @@ class AIGateway:
 
     def generate(self, request: AIGatewayRequest) -> AIGatewayResponse:
         response: AIGatewayResponse | None = None
+        started = time.monotonic()
         try:
             validation_error = self._validate_request(request)
             if validation_error:
@@ -56,6 +60,7 @@ class AIGateway:
             return response
         finally:
             if response is not None:
+                response = _response_with_duration(response, time.monotonic() - started)
                 try:
                     self.audit_logger.write(request, response, self.config)
                 except Exception:
@@ -105,3 +110,9 @@ class AIGateway:
             error_message=error_message,
             metadata={"reason": "safe_fallback"},
         )
+
+
+def _response_with_duration(response: AIGatewayResponse, duration_seconds: float) -> AIGatewayResponse:
+    metadata = dict(response.metadata)
+    metadata.setdefault("duration_seconds", round(max(duration_seconds, 0.0), 6))
+    return replace(response, metadata=metadata)

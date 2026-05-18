@@ -38,6 +38,8 @@ Findings:
 | shared | `app/shared/query_intelligence/local_model_bridge.py` | `call_ai_gateway_json()` | active Gateway caller when explicitly enabled and module/task are provided | `AIGateway.generate()` |
 | shared | `app/shared/query_intelligence/local_model_bridge.py` | `generate_search_translation_candidates()` | active wrapper around AI Gateway response parsing | builds prompt and requires JSON |
 | shared AI Gateway | `app/shared/ai_gateway/providers/ollama_provider.py` | `OllamaProvider.detect_ollama_status()`, `OllamaProvider.generate()` | formal Gateway provider, disabled by default | HTTP GET `/api/tags`, POST `/api/generate` against `http://localhost:11434` only when enabled |
+| shared local engines | `app/shared/local_engines/ollama_llm_engine.py` | `detect_ollama_llm_engine()`, `fetch_ollama_installed_models()`, `run_ollama_model_smoke_test()` | external engine detection and smoke-test layer only | HTTP GET `/api/tags`, POST `/api/generate` against configured local Ollama endpoint; no business output consumption |
+| shared local engines | `app/shared/local_engines/ollama_llm_registry.py` | role registry constants | static registry for local Ollama model roles | records default local endpoint and role-to-model metadata; no HTTP call |
 | shared | `app/shared/query_intelligence/query_intelligence_service.py` | `analyze_medical_question()` | active status reporting only | detects Ollama availability, no model call |
 | shared | `app/shared/query_intelligence/query_intelligence_service.py` | `build_search_translation_draft()` | active conditional caller | calls shared local model bridge only when `use_local_model=True` and `LocalModelConfig.enabled=True` |
 | shared | `app/shared/query_intelligence/query_intelligence_models.py` | `LocalModelConfig`, `LocalModelCallResult`, `LocalModelSearchTranslation` | active config/result models | defaults to disabled Ollama config |
@@ -73,6 +75,8 @@ Tests covering existing behavior:
 With AI-2C, active direct Ollama-capable code must remain limited to:
 
 - `app/shared/ai_gateway/providers/ollama_provider.py`
+- `app/shared/local_engines/ollama_llm_engine.py`
+- `app/shared/local_engines/ollama_llm_registry.py`
 - `app/bioinformatics/download/geo_text_summary_service.py`
 - `app/bioinformatics/workflow_pages.py`
 
@@ -85,7 +89,7 @@ The migration guard test intentionally fails if:
 
 - Meta Analysis adds a direct Ollama call.
 - AI Gateway adds a direct Ollama call outside `app/shared/ai_gateway/providers/ollama_provider.py`.
-- new active `app/` code calls `/api/generate`, `/api/tags`, `ollama run`, or checks `shutil.which("ollama")` without updating the audit and migration plan.
+- new active `app/` code calls `/api/generate`, `/api/tags`, `ollama run`, or checks `shutil.which("ollama")` outside the reviewed AI Gateway provider or shared local-engine detection layer without updating the audit and migration plan.
 
 ## Current Behavior
 
