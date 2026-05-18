@@ -1,0 +1,63 @@
+{
+  "schema_version": "biomedpilot.bioinformatics_species_terms.v1",
+  "scope": "bioinformatics_geo_core",
+  "target_contexts": [
+    "bioinformatics"
+  ],
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "terms": [
+    {
+      "concept_id": "bio_species:homo_sapiens",
+      "preferred_label": "Homo sapiens",
+      "synonyms": [
+        "human"
+      ],
+      "ncbi_taxon_id": "9606",
+      "term_type": "species",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "dataset_filter",
+        "species_detection",
+        "metadata_normalization"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_species:mus_musculus",
+      "preferred_label": "Mus musculus",
+      "synonyms": [
+        "mouse"
+      ],
+      "ncbi_taxon_id": "10090",
+      "term_type": "species",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "dataset_filter",
+        "species_detection",
+        "metadata_normalization"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "mouse is retained only as a synonym of Mus musculus, not as an independent concept."
+    },
+    {
+      "concept_id": "bio_species:rattus_norvegicus",
+      "preferred_label": "Rattus norvegicus",
+      "synonyms": [
+        "rat"
+      ],
+      "ncbi_taxon_id": "10116",
+      "term_type": "species",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "dataset_filter",
+        "species_detection",
+        "metadata_normalization"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    }
+  ]
+}

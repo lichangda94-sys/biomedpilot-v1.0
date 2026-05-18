@@ -1,0 +1,212 @@
+{
+  "schema_version": "biomedpilot.bioinformatics_data_type_terms.v1",
+  "scope": "bioinformatics_geo_core",
+  "target_contexts": [
+    "bioinformatics"
+  ],
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "terms": [
+    {
+      "concept_id": "bio_data_format:count_matrix",
+      "preferred_label": "count matrix",
+      "synonyms": [
+        "counts matrix",
+        "gene count matrix"
+      ],
+      "term_type": "data_format",
+      "data_category": "expression_matrix",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_format:raw_counts",
+      "preferred_label": "raw counts",
+      "synonyms": [
+        "raw count",
+        "integer counts"
+      ],
+      "term_type": "data_format",
+      "data_category": "raw_counts",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_format:tpm",
+      "preferred_label": "TPM",
+      "synonyms": [
+        "transcripts per million"
+      ],
+      "term_type": "data_format",
+      "data_category": "normalized_expression",
+      "is_raw_counts": false,
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "TPM is normalized expression and must not be treated as raw counts."
+    },
+    {
+      "concept_id": "bio_data_format:fpkm",
+      "preferred_label": "FPKM",
+      "synonyms": [
+        "fragments per kilobase million"
+      ],
+      "term_type": "data_format",
+      "data_category": "normalized_expression",
+      "is_raw_counts": false,
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "FPKM is normalized expression and must not be treated as raw counts."
+    },
+    {
+      "concept_id": "bio_data_format:rpkm",
+      "preferred_label": "RPKM",
+      "synonyms": [
+        "reads per kilobase million"
+      ],
+      "term_type": "data_format",
+      "data_category": "normalized_expression",
+      "is_raw_counts": false,
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "RPKM is normalized expression and must not be treated as raw counts."
+    },
+    {
+      "concept_id": "bio_data_format:cpm",
+      "preferred_label": "CPM",
+      "synonyms": [
+        "counts per million"
+      ],
+      "term_type": "data_format",
+      "data_category": "normalized_expression",
+      "is_raw_counts": false,
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "CPM is normalized expression and must not be treated as raw counts."
+    },
+    {
+      "concept_id": "bio_data_format:gene_symbol",
+      "preferred_label": "gene symbol",
+      "synonyms": [
+        "gene symbols"
+      ],
+      "term_type": "data_format",
+      "data_category": "gene_identifier",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_format:ensembl_id",
+      "preferred_label": "Ensembl ID",
+      "synonyms": [
+        "Ensembl gene ID",
+        "Ensembl identifier"
+      ],
+      "term_type": "data_format",
+      "data_category": "gene_identifier",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_format:probe_id",
+      "preferred_label": "probe ID",
+      "synonyms": [
+        "probe identifier",
+        "microarray probe ID"
+      ],
+      "term_type": "data_format",
+      "data_category": "platform_identifier",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_format:series_matrix",
+      "preferred_label": "series matrix",
+      "synonyms": [
+        "series matrix file",
+        "GEO series matrix"
+      ],
+      "term_type": "data_format",
+      "data_category": "geo_matrix_file",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_format:sample_metadata",
+      "preferred_label": "sample metadata",
+      "synonyms": [
+        "sample annotation",
+        "phenotype metadata"
+      ],
+      "term_type": "data_format",
+      "data_category": "metadata",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "data_type_detection",
+        "analysis_readiness_check",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    }
+  ]
+}

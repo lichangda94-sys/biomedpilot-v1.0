@@ -38,6 +38,8 @@ def test_bioinformatics_audit_outputs_cover_required_scopes() -> None:
 
     geo_categories = {item["category"] for item in geo["items"]}  # type: ignore[index]
     assert {"omics_assay", "species", "sample_status", "data_format", "platform_term", "stop_term"} <= geo_categories
+    assert set(item["status"] for item in geo["items"]) <= {"complete", "partial", "missing", "needs_review", "approved-with-note"}  # type: ignore[index]
+    assert geo["summary"]["missing"] == 0  # type: ignore[index]
     assert geo["scope_note"].startswith("Core GEO term audit only")  # type: ignore[index]
 
 

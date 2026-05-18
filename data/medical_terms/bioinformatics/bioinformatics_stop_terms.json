@@ -1,0 +1,38 @@
+{
+  "schema_version": "biomedpilot.bioinformatics_stop_terms.v1",
+  "scope": "bioinformatics_geo_core",
+  "target_contexts": [
+    "bioinformatics"
+  ],
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "terms": [
+    {
+      "term": "dataset",
+      "term_type": "scoped_stop_term",
+      "scope_context": "geo_query_parsing",
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "reason": "Generic GEO request word; useful for parsing but not a biological query concept."
+    },
+    {
+      "term": "sample",
+      "term_type": "scoped_stop_term",
+      "scope_context": "geo_query_parsing",
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "reason": "Generic GEO metadata word; useful for parsing but not a biological query concept."
+    },
+    {
+      "term": "series",
+      "term_type": "scoped_stop_term",
+      "scope_context": "geo_query_parsing",
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "reason": "Generic GEO series word; useful for parsing but not a biological query concept."
+    }
+  ]
+}

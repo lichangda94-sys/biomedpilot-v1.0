@@ -1,0 +1,29 @@
+{
+  "schema_version": "biomedpilot.bioinformatics_dataset_registry_terms.v1",
+  "scope": "bioinformatics_geo_core",
+  "target_contexts": [
+    "bioinformatics"
+  ],
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "terms": [
+    {
+      "concept_id": "bio_dataset_registry:platform_annotation",
+      "preferred_label": "platform annotation",
+      "synonyms": [
+        "platform annotation file",
+        "GPL annotation",
+        "probe annotation"
+      ],
+      "term_type": "platform_term",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "dataset_registry",
+        "platform_metadata_detection",
+        "asset_classification"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    }
+  ]
+}

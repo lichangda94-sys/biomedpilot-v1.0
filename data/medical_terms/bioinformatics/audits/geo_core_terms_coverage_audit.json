@@ -3,10 +3,11 @@
   "generated_at": "2026-05-18",
   "summary": {
     "total": 54,
-    "complete": 26,
+    "complete": 46,
     "partial": 0,
-    "missing": 28,
-    "needs_review": 0
+    "missing": 0,
+    "needs_review": 0,
+    "approved_with_note": 8
   },
   "items": [
     {
@@ -82,9 +83,12 @@
     {
       "term": "Homo sapiens",
       "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_species_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "human",
@@ -96,23 +100,32 @@
     {
       "term": "Mus musculus",
       "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_species_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "mouse",
       "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered as a synonym of Mus musculus in bioinformatics_species_terms.json; no independent mouse concept is created.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "Rattus norvegicus",
       "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_species_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "rat",
@@ -138,9 +151,12 @@
     {
       "term": "adjacent normal",
       "category": "sample_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "case",
@@ -222,30 +238,42 @@
     {
       "term": "untreated",
       "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "vehicle",
       "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "sham",
       "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "resistant",
       "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "sensitive",
@@ -257,334 +285,194 @@
     {
       "term": "wild type",
       "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "mutant",
       "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "knockdown",
       "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "overexpression",
       "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "count matrix",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "raw counts",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "TPM",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "FPKM",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "RPKM",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "CPM",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "gene symbol",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "Ensembl ID",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "probe ID",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "series matrix",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "sample metadata",
       "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "platform annotation",
       "category": "platform_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "complete",
+      "covered": true,
+      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_dataset_registry_terms.json as a Bioinformatics-only GEO core term.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_dataset_registry_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "dataset",
       "category": "stop_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json, not as a query concept.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_stop_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "sample",
       "category": "stop_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json, not as a query concept.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_stop_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     },
     {
       "term": "series",
       "category": "stop_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+      "status": "approved-with-note",
+      "covered": true,
+      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json, not as a query concept.",
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_stop_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
     }
   ],
-  "scope_note": "Core GEO term audit only; long-tail GEO vocabulary is future scope.",
-  "future_candidates": [
-    {
-      "term": "Homo sapiens",
-      "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "Mus musculus",
-      "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "mouse",
-      "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "Rattus norvegicus",
-      "category": "species",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "adjacent normal",
-      "category": "sample_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "untreated",
-      "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "vehicle",
-      "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "sham",
-      "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "resistant",
-      "category": "treatment_status",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "wild type",
-      "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "mutant",
-      "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "knockdown",
-      "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "overexpression",
-      "category": "grouping_modifier",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "count matrix",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "raw counts",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "TPM",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "FPKM",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "RPKM",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "CPM",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "gene symbol",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "Ensembl ID",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "probe ID",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "series matrix",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "sample metadata",
-      "category": "data_format",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "platform annotation",
-      "category": "platform_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "dataset",
-      "category": "stop_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "sample",
-      "category": "stop_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    },
-    {
-      "term": "series",
-      "category": "stop_term",
-      "status": "missing",
-      "covered": false,
-      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
-    }
-  ]
+  "scope_note": "Core GEO term audit only; long-tail GEO vocabulary is future scope. Stage GEO-core-fix covers previous missing terms using Bioinformatics-only vocabulary files.",
+  "future_candidates": []
 }
