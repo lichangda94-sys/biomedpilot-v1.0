@@ -29,6 +29,7 @@ from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
 from app.shared.ui import card_title_qss, page_title_qss, surface_card_qss
+from app.shared.local_engines.external_engine_manager_page import ExternalEngineManagerPage
 
 
 class MainWindow(QMainWindow):
@@ -234,6 +235,7 @@ class MainWindow(QMainWindow):
         note.setWordWrap(True)
         root.addWidget(note)
         root.addWidget(self._icon_asset_status_card(detailed=True))
+        root.addWidget(ExternalEngineManagerPage())
         rows = [
             ("默认项目路径", profile.default_project_path),
             ("语言", profile.language),
