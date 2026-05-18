@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-05-18",
+  "geo_missing_total": 28,
+  "geo_must_add": 15,
+  "geo_should_add": 10,
+  "geo_candidate_only": 3,
+  "geo_manual_review": 4,
+  "gtex_needs_review_total": 5,
+  "tcga_status": "complete",
+  "notes": [
+    "GEO missing terms are classified for Bioinformatics-specific review, not shared-core promotion.",
+    "GTEx broad body terms retain manual review markers."
+  ]
+}

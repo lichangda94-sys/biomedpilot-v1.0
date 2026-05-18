@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-05-18",
+  "raw_candidates_total": 88629,
+  "normalized_candidates_total": 47357,
+  "review_queue_total": 47362,
+  "approved_runtime_total": 11,
+  "shared_promotion_total": 4,
+  "priority_review_top_n": 300,
+  "mapping_conflicts_top_n": 200,
+  "disambiguation_top_n": 200,
+  "english_mapping_top_n": 300,
+  "auto_reject_total": 35,
+  "evidence_only_optimized_total": 1385,
+  "future_scope_optimized_total": 7,
+  "manual_review_recommended_order": [
+    "geo_core_missing_review_batch",
+    "gtex_needs_review_batch",
+    "meta_approved_runtime_review_batch",
+    "meta_shared_promotion_review_batch",
+    "meta_mapping_conflicts_top_200",
+    "meta_disambiguation_top_200",
+    "meta_english_mapping_top_300",
+    "meta_priority_review_batch_top_300"
+  ]
+}
