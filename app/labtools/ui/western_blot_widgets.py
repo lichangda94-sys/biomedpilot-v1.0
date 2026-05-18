@@ -68,6 +68,7 @@ try:
         save_sds_page_gel_calculation_xlsx,
         save_sds_page_gel_template_json,
     )
+    from app.labtools.ui.image_analysis_widgets import wb_grayscale_workbench_widget
     from app.labtools.western_blot.widgets import WesternBlotLoadingCalculatorWidget
     from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
@@ -614,21 +615,7 @@ if QWidget is not None:
             return tab
 
         def _build_result_placeholder_tab(self) -> QWidget:
-            tab = QWidget()
-            layout = QVBoxLayout(tab)
-            layout.setContentsMargins(0, SPACING["md"], 0, 0)
-            layout.setSpacing(SPACING["md"])
-            title = QLabel("结果与灰度分析")
-            title.setObjectName("labToolsWesternBlotSectionTitle")
-            body = QLabel(
-                "本页仅保留占位，用于后续单独讨论 WB/gel grayscale、条带 ROI、背景扣除和结果导出。当前不启用自动条带识别、自动 ROI、灰度定量或结果解释。"
-            )
-            body.setObjectName("labToolsWesternBlotBoundary")
-            body.setWordWrap(True)
-            layout.addWidget(title)
-            layout.addWidget(body)
-            layout.addStretch(1)
-            return tab
+            return wb_grayscale_workbench_widget()
 
         def _add_loading_sample_row(self) -> None:
             row = self._loading_sample_table.rowCount()

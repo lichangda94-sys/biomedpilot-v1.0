@@ -117,8 +117,16 @@ def test_planned_tool_detail_pages_keep_logic_card_and_boundaries(qapp) -> None:
     from app.labtools.workspace import LabToolsWorkspaceWidget
 
     widget = LabToolsWorkspaceWidget()
+    widget.show_cell_experiments()
+    cell_text = _visible_text(widget._stack.currentWidget())
+    assert widget.current_page_key() == "cell_experiments"
+    assert "细胞实验工具" in cell_text
+    assert "划痕实验图像分析" in cell_text
+    assert "Transwell 图像分析" in cell_text
+    assert "荧光图像分析" in cell_text
+    assert "本阶段只生成任务、Macro 模板映射和 RunRequest" in cell_text
+
     planned_routes = (
-        (widget.show_cell_experiments, "cell_experiments", "细胞实验工具"),
         (widget.show_pcr_qpcr, "pcr_qpcr", "PCR/qPCR 工具"),
         (widget.show_elisa_absorbance, "elisa_absorbance", "ELISA/吸光度工具"),
     )
