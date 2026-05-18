@@ -1,0 +1,47 @@
+[
+  {
+    "concept_id": "meta_outcome:recurrence",
+    "zh_terms": [
+      "复发"
+    ],
+    "preferred_label_en": "recurrence",
+    "synonyms_en": [
+      "relapse",
+      "disease recurrence"
+    ],
+    "mesh_terms": [
+      "Recurrence"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "disease recurrence",
+      "recurrence",
+      "relapse"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "复发",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  }
+]

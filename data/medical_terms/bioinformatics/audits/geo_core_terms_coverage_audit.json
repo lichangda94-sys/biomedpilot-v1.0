@@ -1,0 +1,590 @@
+{
+  "schema_version": "geo_core_terms_coverage_audit.v1",
+  "generated_at": "2026-05-18",
+  "summary": {
+    "total": 54,
+    "complete": 26,
+    "partial": 0,
+    "missing": 28,
+    "needs_review": 0
+  },
+  "items": [
+    {
+      "term": "RNA-seq",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "bulk RNA-seq",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "single-cell RNA-seq",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "scRNA-seq",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "microarray",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "expression profiling",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "transcriptome profiling",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "methylation profiling",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "miRNA profiling",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "proteomics",
+      "category": "omics_assay",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "Homo sapiens",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "human",
+      "category": "species",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "Mus musculus",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "mouse",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "Rattus norvegicus",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "rat",
+      "category": "species",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "tumor",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "normal",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "adjacent normal",
+      "category": "sample_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "case",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "control",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "primary",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "metastatic",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "recurrent",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "cell line",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "tissue",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "blood",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "serum",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "plasma",
+      "category": "sample_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "treated",
+      "category": "treatment_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "untreated",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "vehicle",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sham",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "resistant",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sensitive",
+      "category": "treatment_status",
+      "status": "complete",
+      "covered": true,
+      "review_notes": ""
+    },
+    {
+      "term": "wild type",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "mutant",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "knockdown",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "overexpression",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "count matrix",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "raw counts",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "TPM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "FPKM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "RPKM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "CPM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "gene symbol",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "Ensembl ID",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "probe ID",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "series matrix",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sample metadata",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "platform annotation",
+      "category": "platform_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "dataset",
+      "category": "stop_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sample",
+      "category": "stop_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "series",
+      "category": "stop_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    }
+  ],
+  "scope_note": "Core GEO term audit only; long-tail GEO vocabulary is future scope.",
+  "future_candidates": [
+    {
+      "term": "Homo sapiens",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "Mus musculus",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "mouse",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "Rattus norvegicus",
+      "category": "species",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "adjacent normal",
+      "category": "sample_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "untreated",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "vehicle",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sham",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "resistant",
+      "category": "treatment_status",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "wild type",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "mutant",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "knockdown",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "overexpression",
+      "category": "grouping_modifier",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "count matrix",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "raw counts",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "TPM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "FPKM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "RPKM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "CPM",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "gene symbol",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "Ensembl ID",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "probe ID",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "series matrix",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sample metadata",
+      "category": "data_format",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "platform annotation",
+      "category": "platform_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "dataset",
+      "category": "stop_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "sample",
+      "category": "stop_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    },
+    {
+      "term": "series",
+      "category": "stop_term",
+      "status": "missing",
+      "covered": false,
+      "review_notes": "Keep as GEO core future candidate; do not claim full GEO coverage."
+    }
+  ]
+}

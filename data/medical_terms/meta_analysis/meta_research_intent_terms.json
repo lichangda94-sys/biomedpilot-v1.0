@@ -1,0 +1,92 @@
+[
+  {
+    "concept_id": "meta_research_intent:risk",
+    "zh_terms": [
+      "风险"
+    ],
+    "preferred_label_en": "risk",
+    "synonyms_en": [
+      "risk factor",
+      "risk association"
+    ],
+    "mesh_terms": [],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "risk",
+      "risk association",
+      "risk factor"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": false,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease",
+      "exposure"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "风险",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  },
+  {
+    "concept_id": "meta_research_intent:risk_factor",
+    "zh_terms": [
+      "危险因素"
+    ],
+    "preferred_label_en": "risk factor",
+    "synonyms_en": [
+      "risk factors",
+      "risk association"
+    ],
+    "mesh_terms": [
+      "Risk Factors"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "risk association",
+      "risk factor",
+      "risk factors"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": false,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease",
+      "exposure"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "危险因素",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  }
+]
