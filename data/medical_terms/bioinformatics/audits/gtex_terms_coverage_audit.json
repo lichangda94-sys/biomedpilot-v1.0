@@ -6,7 +6,9 @@
     "complete": 18,
     "partial": 0,
     "missing": 0,
-    "needs_review": 5
+    "needs_review": 0,
+    "approved_with_subtype_mapping": 3,
+    "complete_with_note": 2
   },
   "items": [
     {
@@ -407,9 +409,21 @@
       ],
       "tissue_covered": true,
       "zh_mapping_covered": true,
-      "body_generic_conflict": true,
-      "status": "needs_review",
-      "review_notes": "Broad body term requires context-aware matching."
+      "body_generic_conflict": false,
+      "status": "approved_with_subtype_mapping",
+      "review_notes": "Skin is retained as a low-weight parent term and requires concrete GTEx skin subtype mapping.",
+      "gtex_subtype_mappings": [
+        "Skin - Not Sun Exposed (Suprapubic)",
+        "Skin - Sun Exposed (Lower leg)"
+      ],
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_tissue_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "term_role": "parent_tissue",
+      "requires_subtype_mapping": true,
+      "low_weight_zh_entry_terms": [
+        "皮肤"
+      ]
     },
     {
       "gtex_tissue": "Stomach",
@@ -454,9 +468,21 @@
       ],
       "tissue_covered": true,
       "zh_mapping_covered": true,
-      "body_generic_conflict": true,
-      "status": "needs_review",
-      "review_notes": "Broad body term requires context-aware matching."
+      "body_generic_conflict": false,
+      "status": "approved_with_subtype_mapping",
+      "review_notes": "Heart is retained as a low-weight parent term and requires concrete GTEx heart subtype mapping.",
+      "gtex_subtype_mappings": [
+        "Heart - Atrial Appendage",
+        "Heart - Left Ventricle"
+      ],
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_tissue_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "term_role": "parent_tissue",
+      "requires_subtype_mapping": true,
+      "low_weight_zh_entry_terms": [
+        "心脏"
+      ]
     },
     {
       "gtex_tissue": "Adipose Tissue",
@@ -487,7 +513,7 @@
     },
     {
       "gtex_tissue": "Muscle",
-      "zh_term": "肌肉",
+      "zh_term": "骨骼肌",
       "tissue_type": "tissue",
       "mapped_concept_ids": [
         "mini:insulin_resistance",
@@ -496,9 +522,18 @@
       ],
       "tissue_covered": true,
       "zh_mapping_covered": true,
-      "body_generic_conflict": true,
-      "status": "needs_review",
-      "review_notes": "Broad body term requires context-aware matching."
+      "body_generic_conflict": false,
+      "status": "complete_with_note",
+      "review_notes": "Muscle standard mapping is Muscle - Skeletal with preferred Chinese term 骨骼肌; broad 肌肉 remains low-weight only.",
+      "standard_gtex_tissue": "Muscle - Skeletal",
+      "low_weight_zh_entry_terms": [
+        "肌肉"
+      ],
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_tissue_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "term_role": "specific_gtex_tissue",
+      "requires_subtype_mapping": false
     },
     {
       "gtex_tissue": "Brain",
@@ -614,20 +649,42 @@
       ],
       "tissue_covered": true,
       "zh_mapping_covered": true,
-      "body_generic_conflict": true,
-      "status": "needs_review",
-      "review_notes": "Broad body term requires context-aware matching."
+      "body_generic_conflict": false,
+      "status": "approved_with_subtype_mapping",
+      "review_notes": "Artery is retained as a low-weight parent term and must not cover all artery subtypes without subtype mapping.",
+      "gtex_subtype_mappings": [
+        "Artery - Aorta",
+        "Artery - Coronary",
+        "Artery - Tibial"
+      ],
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_tissue_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "term_role": "parent_tissue",
+      "requires_subtype_mapping": true,
+      "low_weight_zh_entry_terms": [
+        "动脉"
+      ]
     },
     {
       "gtex_tissue": "Nerve",
-      "zh_term": "神经",
+      "zh_term": "胫神经",
       "tissue_type": "tissue",
       "mapped_concept_ids": [],
       "tissue_covered": true,
       "zh_mapping_covered": true,
-      "body_generic_conflict": true,
-      "status": "needs_review",
-      "review_notes": "Broad body term requires context-aware matching."
+      "body_generic_conflict": false,
+      "status": "complete_with_note",
+      "review_notes": "Nerve standard mapping is Nerve - Tibial with preferred Chinese term 胫神经; broad 神经 remains low-weight only.",
+      "standard_gtex_tissue": "Nerve - Tibial",
+      "low_weight_zh_entry_terms": [
+        "神经"
+      ],
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_tissue_terms.json",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "term_role": "specific_gtex_tissue",
+      "requires_subtype_mapping": false
     },
     {
       "gtex_tissue": "Pituitary",
@@ -676,5 +733,6 @@
       "status": "complete",
       "review_notes": ""
     }
-  ]
+  ],
+  "scope_note": "GTEx fixed tissue audit uses shared vocabulary plus Bioinformatics-only subtype mapping for broad parent terms."
 }

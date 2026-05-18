@@ -1,0 +1,147 @@
+{
+  "schema_version": "biomedpilot.bioinformatics_tissue_terms.v1",
+  "scope": "bioinformatics_gtex_tissue_mapping",
+  "target_contexts": [
+    "bioinformatics"
+  ],
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "terms": [
+    {
+      "concept_id": "bio_gtex_tissue:skin_parent",
+      "preferred_label": "Skin",
+      "preferred_zh": "皮肤",
+      "zh_entry_terms": [
+        {
+          "term": "皮肤",
+          "weight": "low",
+          "entry_type": "parent_entry"
+        }
+      ],
+      "term_type": "gtex_parent_tissue",
+      "requires_subtype_mapping": true,
+      "gtex_subtype_mappings": [
+        {
+          "gtex_tissue": "Skin - Not Sun Exposed (Suprapubic)",
+          "preferred_zh": "非日晒皮肤(耻骨上)"
+        },
+        {
+          "gtex_tissue": "Skin - Sun Exposed (Lower leg)",
+          "preferred_zh": "日晒皮肤(小腿)"
+        }
+      ],
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "Broad Skin is a parent entry and must not override concrete GTEx skin subtypes."
+    },
+    {
+      "concept_id": "bio_gtex_tissue:heart_parent",
+      "preferred_label": "Heart",
+      "preferred_zh": "心脏",
+      "zh_entry_terms": [
+        {
+          "term": "心脏",
+          "weight": "low",
+          "entry_type": "parent_entry"
+        }
+      ],
+      "term_type": "gtex_parent_tissue",
+      "requires_subtype_mapping": true,
+      "gtex_subtype_mappings": [
+        {
+          "gtex_tissue": "Heart - Atrial Appendage",
+          "preferred_zh": "心房耳"
+        },
+        {
+          "gtex_tissue": "Heart - Left Ventricle",
+          "preferred_zh": "左心室"
+        }
+      ],
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "Broad Heart is a parent entry and must not override concrete GTEx heart subtypes."
+    },
+    {
+      "concept_id": "bio_gtex_tissue:artery_parent",
+      "preferred_label": "Artery",
+      "preferred_zh": "动脉",
+      "zh_entry_terms": [
+        {
+          "term": "动脉",
+          "weight": "low",
+          "entry_type": "parent_entry"
+        }
+      ],
+      "term_type": "gtex_parent_tissue",
+      "requires_subtype_mapping": true,
+      "gtex_subtype_mappings": [
+        {
+          "gtex_tissue": "Artery - Aorta",
+          "preferred_zh": "主动脉"
+        },
+        {
+          "gtex_tissue": "Artery - Coronary",
+          "preferred_zh": "冠状动脉"
+        },
+        {
+          "gtex_tissue": "Artery - Tibial",
+          "preferred_zh": "胫动脉"
+        }
+      ],
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "Broad Artery is a parent entry and must not override all artery subtypes."
+    },
+    {
+      "concept_id": "bio_gtex_tissue:muscle_skeletal",
+      "preferred_label": "Muscle - Skeletal",
+      "preferred_zh": "骨骼肌",
+      "zh_entry_terms": [
+        {
+          "term": "骨骼肌",
+          "weight": "high",
+          "entry_type": "specific_gtex_tissue"
+        },
+        {
+          "term": "肌肉",
+          "weight": "low",
+          "entry_type": "broad_entry"
+        }
+      ],
+      "term_type": "gtex_specific_tissue",
+      "requires_subtype_mapping": false,
+      "gtex_tissue": "Muscle - Skeletal",
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "Muscle uses the concrete GTEx tissue Muscle - Skeletal; broad 肌肉 remains a low-weight entry only."
+    },
+    {
+      "concept_id": "bio_gtex_tissue:nerve_tibial",
+      "preferred_label": "Nerve - Tibial",
+      "preferred_zh": "胫神经",
+      "zh_entry_terms": [
+        {
+          "term": "胫神经",
+          "weight": "high",
+          "entry_type": "specific_gtex_tissue"
+        },
+        {
+          "term": "神经",
+          "weight": "low",
+          "entry_type": "broad_entry"
+        }
+      ],
+      "term_type": "gtex_specific_tissue",
+      "requires_subtype_mapping": false,
+      "gtex_tissue": "Nerve - Tibial",
+      "standalone_search_allowed": false,
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "Nerve uses the concrete GTEx tissue Nerve - Tibial; broad 神经 remains a low-weight entry only."
+    }
+  ]
+}

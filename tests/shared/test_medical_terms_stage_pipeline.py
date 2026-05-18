@@ -34,7 +34,9 @@ def test_bioinformatics_audit_outputs_cover_required_scopes() -> None:
 
     gtex_tissues = {item["gtex_tissue"] for item in gtex["items"]}  # type: ignore[index]
     assert {"Thyroid", "Whole Blood", "Adipose Tissue", "Adrenal Gland"} <= gtex_tissues
-    assert any(item["body_generic_conflict"] for item in gtex["items"])  # type: ignore[index]
+    assert gtex["summary"]["needs_review"] == 0  # type: ignore[index]
+    assert gtex["summary"]["approved_with_subtype_mapping"] == 3  # type: ignore[index]
+    assert gtex["summary"]["complete_with_note"] == 2  # type: ignore[index]
 
     geo_categories = {item["category"] for item in geo["items"]}  # type: ignore[index]
     assert {"omics_assay", "species", "sample_status", "data_format", "platform_term", "stop_term"} <= geo_categories
