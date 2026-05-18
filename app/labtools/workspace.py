@@ -88,9 +88,9 @@ if QWidget is not None:
             root.setContentsMargins(SPACING["xl"], SPACING["xl"], SPACING["xl"], SPACING["xl"])
             root.setSpacing(SPACING["lg"])
 
-            title = QLabel("ImageJ/Fiji 本地引擎配置")
+            title = QLabel("ImageJ 本地引擎配置")
             title.setObjectName("labToolsImageJConfigTitle")
-            description = QLabel("用于图像 workflow 的本地 ImageJ/Fiji 检测、路径配置和验证状态查看。BioMedPilot 不会自动下载、联网安装或上传图片。")
+            description = QLabel("用于图像 workflow 的本地 ImageJ 检测、路径配置和验证状态查看；可选保留 Fiji 增强路径。BioMedPilot 不会自动下载、联网安装或上传图片。")
             description.setObjectName("labToolsImageJConfigDescription")
             description.setWordWrap(True)
             boundary = QLabel("检测失败时可继续 manual-review workflow 准备；当前不启用 WB/gel 真实分析、自动 ROI、细胞计数、条带识别或生产级图像算法。")
@@ -168,7 +168,7 @@ if QWidget is not None:
             logic_card.setWordWrap(True)
             root.addWidget(logic_card)
             if tool.requires_imagej_fiji:
-                imagej_note = QLabel("本工具后续图像 workflow 可能读取 ImageJ/Fiji 本地引擎状态；当前不会运行真实图像分析。")
+                imagej_note = QLabel("本工具后续图像 workflow 可能读取 ImageJ 本地引擎状态；Fiji 仅用于后续插件型 macro。当前不会运行真实图像分析。")
                 imagej_note.setObjectName("labToolsPlannedToolImageJNote")
                 imagej_note.setWordWrap(True)
                 root.addWidget(imagej_note)
@@ -251,7 +251,7 @@ if QWidget is not None:
 
             title = QLabel("细胞实验工具")
             title.setObjectName("labToolsCellExperimentTitle")
-            description = QLabel("细胞实验图像分析入口骨架：划痕实验、Transwell 和荧光图像分析均使用 LabTools 实验图像分析工作台，不暴露普通用户直接操作 ImageJ/Fiji 的主界面。")
+            description = QLabel("细胞实验图像分析入口骨架：划痕实验、Transwell 和荧光图像分析均使用 LabTools 实验图像分析工作台，不暴露普通用户直接操作 ImageJ 或 Fiji 的主界面。")
             description.setObjectName("labToolsCellExperimentDescription")
             description.setWordWrap(True)
             boundary = QLabel("本阶段只生成任务、Macro 模板映射和 RunRequest；不执行真实图像识别、不统计真实细胞数、不生成正式实验结论。")

@@ -49,14 +49,16 @@ def default_imagej_fiji_status(status: str = ENGINE_STATUS_NOT_CONFIGURED, *, co
 def detect_common_imagej_fiji_paths(home: str | Path | None = None) -> tuple[str, ...]:
     home_path = Path(home).expanduser() if home is not None else Path.home()
     candidates = (
-        Path("/Applications/Fiji.app"),
         Path("/Applications/ImageJ.app"),
-        home_path / "Applications" / "Fiji.app",
+        Path("/Applications/Fiji.app"),
         home_path / "Applications" / "ImageJ.app",
-        home_path / "Fiji.app",
+        home_path / "Applications" / "Fiji.app",
         home_path / "ImageJ.app",
-        home_path / "Fiji" / "ImageJ-macosx",
+        home_path / "Fiji.app",
         home_path / "ImageJ" / "ImageJ-macosx",
+        home_path / "ImageJ" / "ij.jar",
+        home_path / "ij.jar",
+        home_path / "Fiji" / "ImageJ-macosx",
     )
     return tuple(str(path) for path in candidates if path.exists())
 
@@ -67,6 +69,8 @@ def resolve_imagej_fiji_executable(configured_path: str | Path) -> Path:
         for relative in (
             Path("Contents/MacOS/ImageJ-macosx"),
             Path("Contents/MacOS/ImageJ"),
+            Path("Contents/Java/ij.jar"),
+            Path("Contents/Resources/Java/ij.jar"),
             Path("Contents/MacOS/Fiji"),
             Path("Contents/MacOS/fiji-macos-arm64"),
             Path("Contents/MacOS/fiji-macos-x64"),
@@ -76,10 +80,10 @@ def resolve_imagej_fiji_executable(configured_path: str | Path) -> Path:
             Path("Contents/MacOS/jaunch-macos"),
         ):
             candidate = path / relative
-            if _is_executable_file(candidate):
+            if _is_supported_imagej_entry(candidate):
                 return candidate
         raise ValueError("Fiji/ImageJ app 内未找到可执行文件")
-    if _is_executable_file(path):
+    if _is_supported_imagej_entry(path):
         return path
     raise ValueError("Fiji/ImageJ 路径无效或不可执行")
 
@@ -252,10 +256,14 @@ def detect_imagej_fiji_version(
     timeout_seconds: int = DEFAULT_IMAGEJ_FIJI_TIMEOUT_SECONDS,
     java_home: str | Path = "",
 ) -> str:
-    command = [str(executable)]
-    if str(java_home):
-        command.append(f"--java-home={java_home}")
-    command.append("--version")
+    executable_path = Path(executable)
+    if executable_path.suffix.lower() == ".jar":
+        command = [_java_executable(java_home), "-jar", str(executable_path), "--version"]
+    else:
+        command = [str(executable_path)]
+        if str(java_home):
+            command.append(f"--java-home={java_home}")
+        command.append("--version")
     try:
         completed = runner(command, capture_output=True, text=True, timeout=timeout_seconds)
     except (subprocess.TimeoutExpired, OSError):
@@ -300,6 +308,16 @@ def _failed_status(
 
 def _is_executable_file(path: Path) -> bool:
     return path.is_file() and os.access(path, os.X_OK)
+
+
+def _is_supported_imagej_entry(path: Path) -> bool:
+    return _is_executable_file(path) or (path.is_file() and path.name.lower() == "ij.jar")
+
+
+def _java_executable(java_home: str | Path = "") -> str:
+    if str(java_home):
+        return str(Path(java_home) / "bin" / "java")
+    return "java"
 
 
 def infer_imagej_fiji_bundled_java_home(executable: str | Path) -> str:

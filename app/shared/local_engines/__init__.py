@@ -29,7 +29,12 @@ from app.shared.local_engines.imagej_fiji_installer import (
     run_imagej_fiji_macro,
     sha256_file,
 )
-from app.shared.local_engines.imagej_fiji_runner_contract import build_imagej_fiji_macro_command
+from app.shared.local_engines.imagej_fiji_runner_contract import (
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI,
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ,
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENTS,
+    build_imagej_fiji_macro_command,
+)
 from app.shared.local_engines.imagej_fiji_runtime import (
     IMAGEJ_FIJI_DOWNLOAD_BASE_URL,
     IMAGEJ_FIJI_ENGINE_NAME,
@@ -85,6 +90,9 @@ __all__ = [
     "IMAGEJ_FIJI_ENGINE_TYPE",
     "IMAGEJ_FIJI_RECOMMENDED_VERSION",
     "IMAGEJ_FIJI_RUNTIME_MANIFEST_SCHEMA_VERSION",
+    "IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI",
+    "IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ",
+    "IMAGE_ANALYSIS_ENGINE_REQUIREMENTS",
     "PADDLEOCR_ENGINE_ID",
     "PADDLEOCR_ENGINE_NAME",
     "PADDLEOCR_ENGINE_TYPE",

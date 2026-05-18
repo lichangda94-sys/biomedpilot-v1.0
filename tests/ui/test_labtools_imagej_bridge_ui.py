@@ -55,9 +55,10 @@ def test_image_related_entry_shows_missing_imagej_setup_prompt_without_crash(qap
     widget = LabToolsImageAnalysisWidget(imagej_bridge=_bridge(tmp_path))
     text = _visible_text(widget)
 
-    assert "ImageJ/Fiji 本地后端状态" in text
+    assert "ImageJ 本地后端状态" in text
     assert "未配置" in text
-    assert "需要本机 ImageJ/Fiji" in text
+    assert "需要本机 ImageJ" in text
+    assert "Fiji 仅作为增强引擎保留" in text
     assert "BioMedPilot 不会静默下载" in text
     assert widget.findChild(QPushButton, "imageJFijiAutoDetectButton") is not None
     assert widget.findChild(QPushButton, "imageJFijiChoosePathButton") is not None
@@ -122,9 +123,9 @@ def test_western_blot_grayscale_area_is_placeholder_not_imagej_status(qapp, tmp_
     text = _visible_text(widget)
 
     assert "结果与灰度分析" in text
-    assert "ImageJ/Fiji 本地后端状态" not in text
+    assert "ImageJ 本地后端状态" not in text
     assert "Western Blot 灰度分析 workflow" not in text
-    assert "需要本机 ImageJ/Fiji" not in text
+    assert "需要本机 ImageJ" not in text
     assert "自动条带识别" in text
     assert "WB 灰度分析已完成" not in text
     assert "自动 ROI 已完成" not in text
@@ -156,7 +157,7 @@ def test_non_image_labtools_workspace_is_not_blocked_by_missing_imagej(qapp) -> 
     quick_tabs = widget.findChild(QTabWidget, "labToolsQuickCalculatorTabs")
     assert quick_tabs is not None
     assert quick_tabs.tabText(0) == "浓度换算"
-    assert "ImageJ/Fiji 本地后端状态" not in _visible_text(widget._stack.currentWidget())
+    assert "ImageJ 本地后端状态" not in _visible_text(widget._stack.currentWidget())
 
 
 def test_labtools_home_is_workbench_not_imagej_only_page(qapp) -> None:
@@ -173,10 +174,10 @@ def test_labtools_home_is_workbench_not_imagej_only_page(qapp) -> None:
         "细胞实验工具",
     ):
         assert entry in text
-    assert "ImageJ/Fiji 本地引擎" not in text
+    assert "ImageJ 本地引擎" not in text
     assert "图像能力边界" not in text
     assert "本地引擎状态摘要" not in text
-    assert "ImageJ/Fiji 本地后端状态" not in text
+    assert "ImageJ 本地后端状态" not in text
 
 
 def test_labtools_home_opens_calculator_and_header_opens_imagej_config_pages(qapp) -> None:
@@ -203,8 +204,9 @@ def test_labtools_home_opens_calculator_and_header_opens_imagej_config_pages(qap
     widget.findChild(QPushButton, "labToolsExternalEngineSettingsButton").click()
     assert widget.current_page_key() == "imagej_fiji"
     text = _visible_text(widget._stack.currentWidget())
-    assert "ImageJ/Fiji 本地引擎配置" in text
-    assert "ImageJ/Fiji 本地后端状态" in text
+    assert "ImageJ 本地引擎配置" in text
+    assert "ImageJ 本地后端状态" in text
+    assert "Fiji 增强路径" in text
     assert widget.findChild(QPushButton, "imageJFijiAutoDetectButton") is not None
 
 

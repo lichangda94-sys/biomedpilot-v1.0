@@ -676,7 +676,7 @@ if QWidget is not None:
             subtitle.setObjectName("imageTaskStatus")
             subtitle.setWordWrap(True)
             engine_notice = QLabel(
-                "图像分析引擎未准备好。请在外部引擎设置中完成 ImageJ/Fiji 配置。当前页面仍可用于导入图片、保存任务和准备分析参数。"
+                "图像分析引擎未准备好。请在外部引擎设置中完成 ImageJ 配置；需要插件型 macro 时再配置 Fiji 增强路径。当前页面仍可用于导入图片、保存任务和准备分析参数。"
             )
             engine_notice.setObjectName("imageWorkbenchEngineStatus")
             engine_notice.setWordWrap(True)
@@ -925,7 +925,8 @@ if QWidget is not None:
             lines = [
                 f"Macro ID：{macro.macro_id}",
                 f"Macro 路径：{macro.macro_file_path}",
-                "外部引擎 key：imagej_fiji",
+                "外部引擎 key：imagej",
+                f"最低引擎要求：{macro.minimum_engine_requirement}",
             ]
             if workspace is not None:
                 lines.extend(

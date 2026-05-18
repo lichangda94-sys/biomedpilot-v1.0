@@ -46,6 +46,8 @@ def test_western_blot_result_tab_shows_image_analysis_workbench(qapp) -> None:
     assert "图片预览与标注区" in text
     assert "实验参数与操作" in text
     assert "Macro ID：wb_grayscale_basic" in text
+    assert "外部引擎 key：imagej" in text
+    assert "最低引擎要求：imagej" in text
     assert "图像分析引擎未准备好" in text
     assert "运行 ImageJ macro" not in text
 

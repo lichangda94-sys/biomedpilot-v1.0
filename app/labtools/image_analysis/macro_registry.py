@@ -5,15 +5,14 @@ from pathlib import Path
 from typing import Any
 
 from app.labtools.image_analysis.image_models import ImageAnalysisError, utc_timestamp
+from app.shared.local_engines import (
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI,
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ,
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENTS,
+)
 
 
 MACRO_REGISTRY_SCHEMA_VERSION = "labtools_image_analysis_macro_registry.v1"
-IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ = "imagej"
-IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI = "fiji"
-IMAGE_ANALYSIS_ENGINE_REQUIREMENTS = (
-    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ,
-    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI,
-)
 
 
 @dataclass(frozen=True)

@@ -122,7 +122,8 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     widget.show_image_analysis()
     assert widget.current_page_key() == "imagej_fiji"
     image_labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
-    assert "ImageJ/Fiji 本地引擎配置" in image_labels
+    assert "ImageJ 本地引擎配置" in image_labels
+    assert "Fiji 增强路径" in image_labels
     assert "manual-review workflow 准备" in image_labels
     widget.show_templates()
     assert widget.current_page_key() == "reagent_records"

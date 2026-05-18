@@ -20,6 +20,8 @@ from app.shared.local_engines import (
     ImageJFijiRuntimeManifest,
     ImageJFijiBridge,
     LocalEngineConfigStore,
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI,
+    IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ,
     build_imagej_fiji_macro_command,
     default_imagej_fiji_runtime_root,
     detect_imagej_fiji_status,
@@ -43,6 +45,12 @@ def _fake_executable(tmp_path: Path) -> Path:
     path = tmp_path / "fake_imagej"
     path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     path.chmod(0o755)
+    return path
+
+
+def _fake_ij_jar(tmp_path: Path) -> Path:
+    path = tmp_path / "ij.jar"
+    path.write_bytes(b"fake jar")
     return path
 
 
@@ -96,6 +104,14 @@ def test_mocked_valid_path_returns_available(tmp_path) -> None:
     assert status.available
     assert status.detected_version == "2.14.0"
     assert status.smoke_test_result == "status=ok"
+
+
+def test_lightweight_ij_jar_path_returns_available_with_java_runner(tmp_path) -> None:
+    status = detect_imagej_fiji_status(configured_path=_fake_ij_jar(tmp_path), runner=_successful_runner)
+
+    assert status.status == ENGINE_STATUS_AVAILABLE
+    assert status.available
+    assert status.detected_version == "2.14.0"
 
 
 def test_no_network_call_is_made_for_detection(tmp_path, monkeypatch) -> None:
@@ -261,6 +277,26 @@ def test_macro_command_contract_is_shell_safe(tmp_path: Path) -> None:
         str(tmp_path / "macro with space.ijm"),
         str(tmp_path / "result.txt"),
     ]
+
+
+def test_ij_jar_macro_command_uses_java_batch_mode(tmp_path: Path) -> None:
+    command = build_imagej_fiji_macro_command(
+        tmp_path / "ij.jar",
+        macro_path=tmp_path / "macro.ijm",
+        argument=tmp_path / "result.txt",
+        java_home=tmp_path / "jdk",
+    )
+
+    assert command == [
+        str(tmp_path / "jdk" / "bin" / "java"),
+        "-jar",
+        str(tmp_path / "ij.jar"),
+        "-batch",
+        str(tmp_path / "macro.ijm"),
+        str(tmp_path / "result.txt"),
+    ]
+    assert IMAGE_ANALYSIS_ENGINE_REQUIREMENT_IMAGEJ == "imagej"
+    assert IMAGE_ANALYSIS_ENGINE_REQUIREMENT_FIJI == "fiji"
 
 
 def test_infers_bundled_java_home_from_official_fiji_layout(tmp_path: Path) -> None:

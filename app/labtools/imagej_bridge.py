@@ -29,7 +29,7 @@ def imagej_fiji_display_path(value: str | None) -> str:
 
 
 def read_shared_imagej_fiji_status(bridge: ImageJFijiBridge | None = None) -> EngineStatus:
-    """Read ImageJ/Fiji state from the shared local-engine config layer."""
+    """Read ImageJ state, with optional Fiji support, from the shared local-engine config layer."""
 
     engine_bridge = bridge or ImageJFijiBridge()
     try:
@@ -46,7 +46,7 @@ def read_shared_imagej_fiji_status(bridge: ImageJFijiBridge | None = None) -> En
         )
     return default_imagej_fiji_status(
         ENGINE_STATUS_NOT_CONFIGURED,
-        last_error="尚未配置 ImageJ/Fiji。本地手动 ROI MVP 可继续使用；ImageJ/Fiji workflow 需要单独配置。",
+        last_error="尚未配置 ImageJ。本地手动 ROI MVP 可继续使用；需要 macro 执行时请配置 ImageJ.app、ij.jar、可执行入口或增强 Fiji 路径。",
     )
 
 
