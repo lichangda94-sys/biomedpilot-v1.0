@@ -16,6 +16,7 @@
         "probe annotation"
       ],
       "term_type": "platform_term",
+      "concept_type": "platform_annotation",
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
         "dataset_registry",

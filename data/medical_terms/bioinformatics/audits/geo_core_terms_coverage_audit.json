@@ -15,70 +15,110 @@
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "bulk RNA-seq",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "single-cell RNA-seq",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "scRNA-seq",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "microarray",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "expression profiling",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "transcriptome profiling",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "methylation profiling",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "miRNA profiling",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "proteomics",
       "category": "omics_assay",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_terms.json",
+      "concept_type": "omics_assay"
     },
     {
       "term": "Homo sapiens",
@@ -88,14 +128,19 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_species_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "species"
     },
     {
       "term": "human",
       "category": "species",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "Covered as a synonym of Homo sapiens in bioinformatics_species_terms.json.",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
+      "concept_type": "species"
     },
     {
       "term": "Mus musculus",
@@ -105,7 +150,8 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_species_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "species"
     },
     {
       "term": "mouse",
@@ -115,7 +161,8 @@
       "review_notes": "Covered as a synonym of Mus musculus in bioinformatics_species_terms.json; no independent mouse concept is created.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "species"
     },
     {
       "term": "Rattus norvegicus",
@@ -125,28 +172,39 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_species_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "species"
     },
     {
       "term": "rat",
       "category": "species",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "Covered as a synonym of Rattus norvegicus in bioinformatics_species_terms.json.",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "source_file": "data/medical_terms/bioinformatics/bioinformatics_species_terms.json",
+      "concept_type": "species"
     },
     {
       "term": "tumor",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "normal",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "adjacent normal",
@@ -156,84 +214,119 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status",
+      "standalone_search_allowed": false
     },
     {
       "term": "case",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "control",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "primary",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "metastatic",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "recurrent",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "cell line",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "tissue",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "blood",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "serum",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "plasma",
       "category": "sample_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "sample_status"
     },
     {
       "term": "treated",
       "category": "treatment_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "treatment_status"
     },
     {
       "term": "untreated",
@@ -243,7 +336,9 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "treatment_status",
+      "standalone_search_allowed": false
     },
     {
       "term": "vehicle",
@@ -253,7 +348,9 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "treatment_status",
+      "standalone_search_allowed": false
     },
     {
       "term": "sham",
@@ -263,7 +360,9 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "treatment_status",
+      "standalone_search_allowed": false
     },
     {
       "term": "resistant",
@@ -273,14 +372,19 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "treatment_status",
+      "standalone_search_allowed": false
     },
     {
       "term": "sensitive",
       "category": "treatment_status",
       "status": "complete",
       "covered": true,
-      "review_notes": ""
+      "review_notes": "",
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "concept_type": "treatment_status"
     },
     {
       "term": "wild type",
@@ -290,7 +394,9 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "grouping_term",
+      "standalone_search_allowed": false
     },
     {
       "term": "mutant",
@@ -300,7 +406,9 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "grouping_term",
+      "standalone_search_allowed": false
     },
     {
       "term": "knockdown",
@@ -310,7 +418,9 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "grouping_term",
+      "standalone_search_allowed": false
     },
     {
       "term": "overexpression",
@@ -320,27 +430,40 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_grouping_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "grouping_term",
+      "standalone_search_allowed": false
     },
     {
       "term": "count matrix",
       "category": "data_format",
       "status": "complete",
       "covered": true,
-      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as an expression matrix; eligible as a DESeq2/edgeR candidate when counts are raw/integer.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "expression_matrix",
+      "differential_expression_candidate_tools": [
+        "DESeq2",
+        "edgeR"
+      ]
     },
     {
       "term": "raw counts",
       "category": "data_format",
       "status": "complete",
       "covered": true,
-      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as raw count data; eligible as a DESeq2/edgeR candidate.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "raw_count_matrix",
+      "is_raw_counts": true,
+      "differential_expression_candidate_tools": [
+        "DESeq2",
+        "edgeR"
+      ]
     },
     {
       "term": "TPM",
@@ -350,7 +473,9 @@
       "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "normalized_expression",
+      "is_raw_counts": false
     },
     {
       "term": "FPKM",
@@ -360,7 +485,9 @@
       "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "normalized_expression",
+      "is_raw_counts": false
     },
     {
       "term": "RPKM",
@@ -370,7 +497,9 @@
       "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "normalized_expression",
+      "is_raw_counts": false
     },
     {
       "term": "CPM",
@@ -380,7 +509,9 @@
       "review_notes": "Covered in bioinformatics_data_type_terms.json as normalized expression; must not be treated as raw counts.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "normalized_expression",
+      "is_raw_counts": false
     },
     {
       "term": "gene symbol",
@@ -390,7 +521,8 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "gene_identifier"
     },
     {
       "term": "Ensembl ID",
@@ -400,7 +532,8 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "gene_identifier"
     },
     {
       "term": "probe ID",
@@ -410,27 +543,32 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "platform_identifier"
     },
     {
       "term": "series matrix",
       "category": "data_format",
       "status": "complete",
       "covered": true,
-      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as a GEO file type; not an expression matrix by itself.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "geo_file_type",
+      "is_expression_matrix": false
     },
     {
       "term": "sample metadata",
       "category": "data_format",
       "status": "complete",
       "covered": true,
-      "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json as a Bioinformatics-only GEO core term.",
+      "review_notes": "Covered in bioinformatics_data_type_terms.json as GEO sample metadata; not an expression matrix by itself.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "geo_metadata",
+      "is_expression_matrix": false
     },
     {
       "term": "platform annotation",
@@ -440,37 +578,62 @@
       "review_notes": "Covered in data/medical_terms/bioinformatics/bioinformatics_dataset_registry_terms.json as a Bioinformatics-only GEO core term.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_dataset_registry_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "concept_type": "platform_annotation"
     },
     {
       "term": "dataset",
       "category": "stop_term",
       "status": "approved-with-note",
       "covered": true,
-      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json, not as a query concept.",
+      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json; blocks free topic expansion only and does not block GEO structure detection.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_stop_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "term_role": "scoped_stop_term",
+      "stop_scope": "free_topic_expansion",
+      "global_stop_word": false,
+      "does_not_block": [
+        "sample_metadata_detection",
+        "geo_record_type_detection",
+        "file_type_detection"
+      ]
     },
     {
       "term": "sample",
       "category": "stop_term",
       "status": "approved-with-note",
       "covered": true,
-      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json, not as a query concept.",
+      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json; blocks free topic expansion only and does not block GEO structure detection.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_stop_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "term_role": "scoped_stop_term",
+      "stop_scope": "free_topic_expansion",
+      "global_stop_word": false,
+      "does_not_block": [
+        "sample_metadata_detection",
+        "geo_record_type_detection",
+        "file_type_detection"
+      ]
     },
     {
       "term": "series",
       "category": "stop_term",
       "status": "approved-with-note",
       "covered": true,
-      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json, not as a query concept.",
+      "review_notes": "Covered as a scoped GEO stop term in bioinformatics_stop_terms.json; blocks free topic expansion only and does not block GEO structure detection.",
       "source_file": "data/medical_terms/bioinformatics/bioinformatics_stop_terms.json",
       "shared_core_allowed": false,
-      "meta_scope_allowed": false
+      "meta_scope_allowed": false,
+      "term_role": "scoped_stop_term",
+      "stop_scope": "free_topic_expansion",
+      "global_stop_word": false,
+      "does_not_block": [
+        "sample_metadata_detection",
+        "geo_record_type_detection",
+        "file_type_detection"
+      ]
     }
   ],
   "scope_note": "Core GEO term audit only; long-tail GEO vocabulary is future scope. Stage GEO-core-fix covers previous missing terms using Bioinformatics-only vocabulary files.",

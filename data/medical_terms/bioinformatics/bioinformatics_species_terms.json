@@ -11,7 +11,10 @@
       "concept_id": "bio_species:homo_sapiens",
       "preferred_label": "Homo sapiens",
       "synonyms": [
-        "human"
+        "human",
+        "humans",
+        "人",
+        "人类"
       ],
       "ncbi_taxon_id": "9606",
       "term_type": "species",
@@ -28,7 +31,9 @@
       "concept_id": "bio_species:mus_musculus",
       "preferred_label": "Mus musculus",
       "synonyms": [
-        "mouse"
+        "mouse",
+        "mice",
+        "小鼠"
       ],
       "ncbi_taxon_id": "10090",
       "term_type": "species",
@@ -46,7 +51,9 @@
       "concept_id": "bio_species:rattus_norvegicus",
       "preferred_label": "Rattus norvegicus",
       "synonyms": [
-        "rat"
+        "rat",
+        "rats",
+        "大鼠"
       ],
       "ncbi_taxon_id": "10116",
       "term_type": "species",

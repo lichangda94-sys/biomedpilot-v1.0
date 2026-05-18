@@ -34,7 +34,9 @@ def test_geo_core_species_terms_are_bioinformatics_only() -> None:
     all_ids = {term["concept_id"] for term in terms}
 
     assert {"bio_species:homo_sapiens", "bio_species:mus_musculus", "bio_species:rattus_norvegicus"} <= all_ids
-    assert "mouse" in by_id["bio_species:mus_musculus"]["synonyms"]
+    assert {"human", "humans", "人", "人类"} <= set(by_id["bio_species:homo_sapiens"]["synonyms"])
+    assert {"mouse", "mice", "小鼠"} <= set(by_id["bio_species:mus_musculus"]["synonyms"])
+    assert {"rat", "rats", "大鼠"} <= set(by_id["bio_species:rattus_norvegicus"]["synonyms"])
     assert all(term["concept_id"] != "bio_species:mouse" for term in terms)
     assert all(term["shared_core_allowed"] is False for term in terms)
     assert all(term["meta_scope_allowed"] is False for term in terms)
@@ -54,11 +56,24 @@ def test_geo_core_data_type_terms_separate_normalized_expression_from_raw_counts
     terms = _terms("bioinformatics_data_type_terms.json")
     by_label = {term["preferred_label"]: term for term in terms}
 
+    assert by_label["count matrix"]["concept_type"] == "expression_matrix"
+    assert set(by_label["count matrix"]["differential_expression_candidate_tools"]) == {"DESeq2", "edgeR"}
+    assert by_label["raw counts"]["concept_type"] == "raw_count_matrix"
     assert by_label["raw counts"]["data_category"] == "raw_counts"
+    assert by_label["raw counts"]["is_raw_counts"] is True
+    assert set(by_label["raw counts"]["differential_expression_candidate_tools"]) == {"DESeq2", "edgeR"}
     for label in ["TPM", "FPKM", "RPKM", "CPM"]:
+        assert by_label[label]["concept_type"] == "normalized_expression"
         assert by_label[label]["data_category"] == "normalized_expression"
         assert by_label[label]["is_raw_counts"] is False
         assert "raw counts" not in by_label[label].get("synonyms", [])
+    assert by_label["gene symbol"]["concept_type"] == "gene_identifier"
+    assert by_label["Ensembl ID"]["concept_type"] == "gene_identifier"
+    assert by_label["probe ID"]["concept_type"] == "platform_identifier"
+    assert by_label["series matrix"]["concept_type"] == "geo_file_type"
+    assert by_label["series matrix"]["is_expression_matrix"] is False
+    assert by_label["sample metadata"]["concept_type"] == "geo_metadata"
+    assert by_label["sample metadata"]["is_expression_matrix"] is False
     assert all(term["shared_core_allowed"] is False for term in terms)
     assert all(term["meta_scope_allowed"] is False for term in terms)
 
@@ -70,6 +85,10 @@ def test_geo_core_dataset_registry_and_stop_terms_are_scoped() -> None:
     assert {term["preferred_label"] for term in registry} == {"platform annotation"}
     assert {term["term"] for term in stop_terms} == {"dataset", "sample", "series"}
     assert all(term["term_type"] == "scoped_stop_term" for term in stop_terms)
+    assert all(term["stop_scope"] == "free_topic_expansion" for term in stop_terms)
+    assert all(term["global_stop_word"] is False for term in stop_terms)
+    for term in stop_terms:
+        assert {"sample_metadata_detection", "geo_record_type_detection", "file_type_detection"} <= set(term["does_not_block"])
     assert all(term["standalone_search_allowed"] is False for term in stop_terms)
     assert all(term["shared_core_allowed"] is False for term in stop_terms)
     assert all(term["meta_scope_allowed"] is False for term in stop_terms)
@@ -83,9 +102,20 @@ def test_geo_core_audit_has_no_missing_terms_after_bioinformatics_fix() -> None:
     assert not audit["future_candidates"]  # type: ignore[index]
     by_term = {item["term"]: item for item in audit["items"]}  # type: ignore[index]
     assert by_term["mouse"]["status"] == "approved-with-note"
+    assert by_term["mouse"]["source_file"] == "data/medical_terms/bioinformatics/bioinformatics_species_terms.json"
     for term in ["TPM", "FPKM", "RPKM", "CPM", "dataset", "sample", "series"]:
         assert by_term[term]["status"] == "approved-with-note"
+    for term in ["TPM", "FPKM", "RPKM", "CPM"]:
+        assert by_term[term]["concept_type"] == "normalized_expression"
+        assert by_term[term]["is_raw_counts"] is False
+    for term in ["dataset", "sample", "series"]:
+        assert by_term[term]["term_role"] == "scoped_stop_term"
+        assert by_term[term]["stop_scope"] == "free_topic_expansion"
+        assert by_term[term]["global_stop_word"] is False
+        assert {"sample_metadata_detection", "geo_record_type_detection", "file_type_detection"} <= set(by_term[term]["does_not_block"])
     assert all(item["covered"] is True for item in audit["items"])  # type: ignore[index]
+    assert all(item["shared_core_allowed"] is False for item in audit["items"])  # type: ignore[index]
+    assert all(item["meta_scope_allowed"] is False for item in audit["items"])  # type: ignore[index]
 
 
 def test_geo_core_terms_are_loadable_only_for_bioinformatics_scope() -> None:

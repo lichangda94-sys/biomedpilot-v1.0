@@ -15,7 +15,12 @@
         "gene count matrix"
       ],
       "term_type": "data_format",
+      "concept_type": "expression_matrix",
       "data_category": "expression_matrix",
+      "differential_expression_candidate_tools": [
+        "DESeq2",
+        "edgeR"
+      ],
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
         "data_type_detection",
@@ -33,7 +38,13 @@
         "integer counts"
       ],
       "term_type": "data_format",
+      "concept_type": "raw_count_matrix",
       "data_category": "raw_counts",
+      "is_raw_counts": true,
+      "differential_expression_candidate_tools": [
+        "DESeq2",
+        "edgeR"
+      ],
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
         "data_type_detection",
@@ -50,6 +61,7 @@
         "transcripts per million"
       ],
       "term_type": "data_format",
+      "concept_type": "normalized_expression",
       "data_category": "normalized_expression",
       "is_raw_counts": false,
       "standalone_search_allowed": false,
@@ -69,6 +81,7 @@
         "fragments per kilobase million"
       ],
       "term_type": "data_format",
+      "concept_type": "normalized_expression",
       "data_category": "normalized_expression",
       "is_raw_counts": false,
       "standalone_search_allowed": false,
@@ -88,6 +101,7 @@
         "reads per kilobase million"
       ],
       "term_type": "data_format",
+      "concept_type": "normalized_expression",
       "data_category": "normalized_expression",
       "is_raw_counts": false,
       "standalone_search_allowed": false,
@@ -107,6 +121,7 @@
         "counts per million"
       ],
       "term_type": "data_format",
+      "concept_type": "normalized_expression",
       "data_category": "normalized_expression",
       "is_raw_counts": false,
       "standalone_search_allowed": false,
@@ -126,6 +141,7 @@
         "gene symbols"
       ],
       "term_type": "data_format",
+      "concept_type": "gene_identifier",
       "data_category": "gene_identifier",
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
@@ -144,6 +160,7 @@
         "Ensembl identifier"
       ],
       "term_type": "data_format",
+      "concept_type": "gene_identifier",
       "data_category": "gene_identifier",
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
@@ -162,6 +179,7 @@
         "microarray probe ID"
       ],
       "term_type": "data_format",
+      "concept_type": "platform_identifier",
       "data_category": "platform_identifier",
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
@@ -180,11 +198,13 @@
         "GEO series matrix"
       ],
       "term_type": "data_format",
+      "concept_type": "geo_file_type",
       "data_category": "geo_matrix_file",
+      "is_expression_matrix": false,
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
-        "data_type_detection",
-        "analysis_readiness_check",
+        "file_type_detection",
+        "geo_record_type_detection",
         "asset_classification"
       ],
       "shared_core_allowed": false,
@@ -198,11 +218,13 @@
         "phenotype metadata"
       ],
       "term_type": "data_format",
+      "concept_type": "geo_metadata",
       "data_category": "metadata",
+      "is_expression_matrix": false,
       "standalone_search_allowed": false,
       "bioinformatics_usage": [
-        "data_type_detection",
-        "analysis_readiness_check",
+        "sample_metadata_detection",
+        "geo_record_type_detection",
         "asset_classification"
       ],
       "shared_core_allowed": false,

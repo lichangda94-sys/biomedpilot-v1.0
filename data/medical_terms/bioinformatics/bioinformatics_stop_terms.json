@@ -11,6 +11,13 @@
       "term": "dataset",
       "term_type": "scoped_stop_term",
       "scope_context": "geo_query_parsing",
+      "stop_scope": "free_topic_expansion",
+      "global_stop_word": false,
+      "does_not_block": [
+        "sample_metadata_detection",
+        "geo_record_type_detection",
+        "file_type_detection"
+      ],
       "standalone_search_allowed": false,
       "shared_core_allowed": false,
       "meta_scope_allowed": false,
@@ -20,6 +27,13 @@
       "term": "sample",
       "term_type": "scoped_stop_term",
       "scope_context": "geo_query_parsing",
+      "stop_scope": "free_topic_expansion",
+      "global_stop_word": false,
+      "does_not_block": [
+        "sample_metadata_detection",
+        "geo_record_type_detection",
+        "file_type_detection"
+      ],
       "standalone_search_allowed": false,
       "shared_core_allowed": false,
       "meta_scope_allowed": false,
@@ -29,6 +43,13 @@
       "term": "series",
       "term_type": "scoped_stop_term",
       "scope_context": "geo_query_parsing",
+      "stop_scope": "free_topic_expansion",
+      "global_stop_word": false,
+      "does_not_block": [
+        "sample_metadata_detection",
+        "geo_record_type_detection",
+        "file_type_detection"
+      ],
       "standalone_search_allowed": false,
       "shared_core_allowed": false,
       "meta_scope_allowed": false,
