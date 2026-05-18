@@ -8,6 +8,11 @@ from app.shared.ai_gateway.models import AIGatewayConfig
 
 
 DEFAULT_CONFIG_PATH = Path("config") / "ai_gateway_config.json"
+DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING = {
+    "general_3b": "qwen2.5:3b",
+    "translator": "translategemma:latest",
+    "medical": "medgemma:4b",
+}
 
 
 def load_ai_gateway_config(config_path: str | Path | None = None) -> AIGatewayConfig:
@@ -38,6 +43,7 @@ def desktop_local_ollama_config(
     default_model: str,
     timeout_seconds: int = 20,
     audit_log_path: str | None = None,
+    role_model_mapping: dict[str, str] | None = None,
 ) -> AIGatewayConfig:
     defaults = AIGatewayConfig()
     clean_base_url = base_url.strip()
@@ -59,6 +65,7 @@ def desktop_local_ollama_config(
         default_provider="ollama" if enabled else "disabled",
         audit_log_path=audit_log_path or defaults.audit_log_path,
         allowed_task_prefixes=defaults.allowed_task_prefixes,
+        role_model_mapping=_safe_role_model_mapping(role_model_mapping) if enabled else {},
         provider_configs={"ollama": provider_config},
     )
 
@@ -91,6 +98,7 @@ def _config_from_mapping(payload: dict[str, object]) -> AIGatewayConfig:
         default_provider=_str_value(payload, "default_provider", defaults.default_provider),
         audit_log_path=_str_value(payload, "audit_log_path", defaults.audit_log_path),
         allowed_task_prefixes=allowed_task_prefixes or defaults.allowed_task_prefixes,
+        role_model_mapping=_parse_role_model_mapping(payload.get("role_model_mapping")),
         provider_configs=provider_configs,
     )
 
@@ -130,3 +138,14 @@ def _parse_provider_configs(value: object) -> dict[str, dict[str, object]]:
         if isinstance(provider_name, str) and isinstance(provider_config, dict):
             parsed[provider_name] = dict(provider_config)
     return parsed
+
+
+def _safe_role_model_mapping(value: dict[str, str] | None) -> dict[str, str]:
+    source = value or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING
+    return {str(role): str(model).strip() for role, model in source.items() if str(role).strip() and str(model).strip()}
+
+
+def _parse_role_model_mapping(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(role): str(model).strip() for role, model in value.items() if str(role).strip() and str(model).strip()}
