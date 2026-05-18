@@ -40,7 +40,7 @@ def test_western_blot_module_entry_exists(qapp) -> None:
 
     assert widget.findChild(QFrame, "labToolsWesternBlotEntry") is not None
     assert "Western Blot 工具" in text
-    assert "Western Blot 上样体系计算器可用" in text
+    assert "Western Blot 流程工作台可用" in text
     assert "available / 可用" in text
 
 
@@ -52,9 +52,36 @@ def test_western_blot_entry_opens_available_tool_page(qapp) -> None:
     text = _visible_text(widget._stack.currentWidget())
 
     assert widget.current_page_key() == "western_blot"
-    assert "Western Blot 上样计算器：available / 可用" in text
-    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in text
-    assert "当前 L4 仅支持上样体系计算" in text
+    assert "Western Blot 流程工作台：available / 可用" in text
+    assert "结果与灰度分析：placeholder / 未启用" in text
+    assert "配胶与 Lane 布局" in text
+
+
+def test_western_blot_tabs_follow_flow_workbench_order(qapp) -> None:
+    from PySide6.QtWidgets import QTabWidget
+
+    from app.labtools.workspace import LabToolsWorkspaceWidget
+
+    widget = LabToolsWorkspaceWidget()
+    widget.show_western_blot()
+    tabs = widget._stack.currentWidget().findChild(QTabWidget, "westernBlotTabs")
+
+    assert [tabs.tabText(index) for index in range(tabs.count())] == [
+        "流程工作台",
+        "蛋白样品准备",
+        "BCA 蛋白浓度测定",
+        "蛋白上样计算",
+        "配胶与 Lane 布局",
+        "电泳记录",
+        "电转记录",
+        "封闭记录",
+        "一抗孵育记录",
+        "一抗后洗膜记录",
+        "二抗孵育记录",
+        "二抗后洗膜记录",
+        "显影/成像记录",
+        "结果与灰度分析",
+    ]
 
 
 def test_western_blot_page_keeps_algorithm_boundaries(qapp) -> None:
@@ -78,9 +105,9 @@ def test_wb_grayscale_is_planned_not_completed(qapp) -> None:
     widget.show_western_blot()
     text = _visible_text(widget._stack.currentWidget())
 
-    assert "planned / 未启用" in text
+    assert "placeholder / 未启用" in text
     assert "不启用 WB 图像分析" in text
-    assert "当前不会运行真实图像分析" in text
+    assert "结果解释" in text
     for forbidden in (
         "SDS-PAGE 配胶已完成",
         "胶浓度自动推导已完成",

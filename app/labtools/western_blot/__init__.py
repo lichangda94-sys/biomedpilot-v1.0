@@ -74,6 +74,17 @@ from app.labtools.western_blot.store import (
     WBLoadingRecordStore,
     default_wb_loading_record_store_path,
 )
+from app.labtools.western_blot.workflow_records import (
+    WB_RECORD_STEP_FIELDS,
+    WB_REVIEW_NOTICE,
+    WB_WORKFLOW_RECORD_SCHEMA_VERSION,
+    WB_WORKFLOW_STEPS,
+    WB_WORKFLOW_STORE_SCHEMA_VERSION,
+    WBWorkflowRecord,
+    WBWorkflowRecordError,
+    WBWorkflowRecordStore,
+    default_wb_workflow_store_path,
+)
 
 __all__ = [
     "GEL_REVIEW_NOTICE",
@@ -138,4 +149,13 @@ __all__ = [
     "WB_LOADING_RECORD_STORE_SCHEMA_VERSION",
     "WBLoadingRecordStore",
     "default_wb_loading_record_store_path",
+    "WB_RECORD_STEP_FIELDS",
+    "WB_REVIEW_NOTICE",
+    "WB_WORKFLOW_RECORD_SCHEMA_VERSION",
+    "WB_WORKFLOW_STEPS",
+    "WB_WORKFLOW_STORE_SCHEMA_VERSION",
+    "WBWorkflowRecord",
+    "WBWorkflowRecordError",
+    "WBWorkflowRecordStore",
+    "default_wb_workflow_store_path",
 ]

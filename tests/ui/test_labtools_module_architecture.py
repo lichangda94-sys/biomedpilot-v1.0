@@ -9,8 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 MODULE_DESCRIPTIONS = {
     "通用试剂制备": "用于常用试剂快速计算、模板管理和本次制备清单生成。",
-    "ImageJ/Fiji 本地引擎": "用于图像 workflow 的本地 ImageJ/Fiji 检测与路径配置。",
-    "Western Blot 工具": "Western Blot 上样体系计算器可用；ImageJ-assisted 条带定量 workflow 仍为 planned / 未启用；不启用 WB 图像分析、条带识别、灰度定量或自动 ROI。",
+    "Western Blot 工具": "Western Blot 流程工作台可用，覆盖样品准备、BCA、上样计算、配胶与 Lane 布局及关键流程记录。",
     "PCR/qPCR 工具": "PCR mix、qPCR 结果整理 workflow 占位。",
     "ELISA/吸光度工具": "标准曲线、OD 数据整理 workflow 占位。",
     "细胞实验工具": "细胞接种、处理分组、实验记录 workflow 占位。",
@@ -18,7 +17,6 @@ MODULE_DESCRIPTIONS = {
 
 ENTRY_OBJECTS = {
     "通用试剂制备": "labToolsGeneralCalculatorEntry",
-    "ImageJ/Fiji 本地引擎": "labToolsImageJFijiEntry",
     "Western Blot 工具": "labToolsWesternBlotEntry",
     "PCR/qPCR 工具": "labToolsPcrQpcrEntry",
     "ELISA/吸光度工具": "labToolsElisaAbsorbanceEntry",
@@ -49,7 +47,7 @@ def _visible_text(widget) -> str:
     return "\n".join(part for part in parts if part)
 
 
-def test_labtools_home_exposes_six_top_level_module_entries(qapp) -> None:
+def test_labtools_home_exposes_five_top_level_module_entries(qapp) -> None:
     from PySide6.QtWidgets import QFrame
 
     from app.labtools.labtools_home import LabToolsHomeWidget
@@ -62,7 +60,7 @@ def test_labtools_home_exposes_six_top_level_module_entries(qapp) -> None:
         assert tool.chinese_name in text
         assert tool.english_name in text
         assert widget.findChild(QFrame, tool.object_name) is not None
-    assert len(labtools_tool_registry()) == 6
+    assert len(labtools_tool_registry()) == 5
 
 
 def test_labtools_home_module_descriptions_match_architecture_copy(qapp) -> None:
@@ -145,8 +143,8 @@ def test_western_blot_available_page_keeps_image_analysis_disabled(qapp) -> None
     text = _visible_text(widget._stack.currentWidget())
 
     assert widget.current_page_key() == "western_blot"
-    assert "Western Blot 上样计算器：available / 可用" in text
-    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in text
+    assert "Western Blot 流程工作台：available / 可用" in text
+    assert "结果与灰度分析：placeholder / 未启用" in text
     assert "不启用 WB 图像分析、条带识别、灰度定量、自动 ROI" in text
 
 

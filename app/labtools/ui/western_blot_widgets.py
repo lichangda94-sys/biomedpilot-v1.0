@@ -52,6 +52,13 @@ try:
         SdsPageGelTemplate,
         SdsPageGelTemplateError,
         SdsPageGelTemplateStore,
+        WB_RECORD_STEP_FIELDS,
+        WB_REVIEW_NOTICE,
+        WB_WORKFLOW_STEPS,
+        WBWorkflowRecord,
+        WBWorkflowRecordError,
+        WBWorkflowRecordStore,
+        annotate_well,
         analyze_bca_assay,
         annotate_well_range,
         calculate_protein_loading,
@@ -62,7 +69,6 @@ try:
         save_sds_page_gel_template_json,
     )
     from app.labtools.western_blot.widgets import WesternBlotLoadingCalculatorWidget
-    from app.labtools.ui.imagej_bridge_widgets import LabToolsImageJFijiStatusPanel
     from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
 except Exception:  # pragma: no cover
@@ -96,11 +102,15 @@ if QWidget is not None:
             self.setStyleSheet(self._stylesheet())
             self._imagej_bridge = imagej_bridge
             self._template_store = SdsPageGelTemplateStore()
+            self._workflow_record_store = WBWorkflowRecordStore()
             self._current_template: SdsPageGelTemplate | None = None
             self._current_result: SdsPageGelCalculationResult | None = None
             self._current_loading_result: ProteinLoadingResult | None = None
             self._current_bca_result: BcaAnalysisResult | None = None
             self._bca_annotations: dict[str, BcaWellAnnotation] = {}
+            self._bca_selected_wells: set[str] = set()
+            self._record_forms: dict[str, dict[str, object]] = {}
+            self._loading_widget = WesternBlotLoadingCalculatorWidget()
             self._build_ui()
 
         def _build_ui(self) -> None:
@@ -121,13 +131,13 @@ if QWidget is not None:
             description = QLabel("用于蛋白样品准备、蛋白浓度测定入口、Western Blot 上样体系、SDS-PAGE 配胶、电泳/转膜参数和抗体孵育流程记录。")
             description.setObjectName("labToolsWesternBlotDescription")
             description.setWordWrap(True)
-            notice = QLabel(f"{GEL_TEMPLATE_CONTEXT_NOTICE}。{GEL_REVIEW_NOTICE}。")
+            notice = QLabel(f"{GEL_TEMPLATE_CONTEXT_NOTICE}。{WB_REVIEW_NOTICE}")
             notice.setObjectName("labToolsWesternBlotBoundary")
             notice.setWordWrap(True)
             l4_status = QLabel(
-                "Western Blot 上样计算器：available / 可用\n"
-                "ImageJ-assisted 条带定量 workflow：planned / 未启用\n"
-                "当前 L4 仅支持上样体系计算，不启用 WB 图像分析、条带识别、灰度定量、自动 ROI；当前不会运行真实图像分析。"
+                "Western Blot 流程工作台：available / 可用\n"
+                "结果与灰度分析：placeholder / 未启用\n"
+                "当前不启用 WB 图像分析、条带识别、灰度定量、自动 ROI 或结果解释。"
             )
             l4_status.setObjectName("labToolsWesternBlotL4Status")
             l4_status.setWordWrap(True)
@@ -138,10 +148,16 @@ if QWidget is not None:
 
             self._tabs = QTabWidget()
             self._tabs.setObjectName("westernBlotTabs")
-            self._tabs.addTab(self._build_sections_tab(), "模块分区")
-            self._tabs.addTab(self._build_sds_page_tool_tab(), "SDS-PAGE 配胶模板")
-            self._tabs.addTab(self._build_protein_loading_tab(), "蛋白上样体系")
+            self._tabs.addTab(self._build_sections_tab(), "流程工作台")
+            self._tabs.addTab(self._build_workflow_record_tab("sample_preparation"), "蛋白样品准备")
             self._tabs.addTab(self._build_bca_assay_tab(), "BCA 蛋白浓度测定")
+            self._tabs.addTab(self._build_protein_loading_tab(), "蛋白上样计算")
+            self._tabs.addTab(self._build_sds_page_tool_tab(), "配胶与 Lane 布局")
+            for step_id, step_label in WB_WORKFLOW_STEPS:
+                if step_id in {"sample_preparation", "bca_assay", "protein_loading", "gel_lane_layout", "result_analysis"}:
+                    continue
+                self._tabs.addTab(self._build_workflow_record_tab(step_id), step_label)
+            self._tabs.addTab(self._build_result_placeholder_tab(), "结果与灰度分析")
             layout.addWidget(self._tabs, 1)
 
             scroll.setWidget(content)
@@ -152,40 +168,28 @@ if QWidget is not None:
             layout = QGridLayout(tab)
             layout.setContentsMargins(0, SPACING["md"], 0, 0)
             layout.setSpacing(SPACING["md"])
-            sections = (
-                (
-                    "蛋白样品准备",
-                    "用于记录蛋白提取、裂解液/抑制剂草稿、样本分组和实验室自定义流程。当前为流程模板入口，不自动生成唯一实验方案。",
-                    (),
-                ),
-                (
-                    "蛋白浓度测定",
-                    "提供 BCA 蛋白浓度测定辅助计算入口；Bradford、NanoDrop 后续仍需单独确认逻辑。",
-                    (),
-                ),
-                (
-                    "上样与胶",
-                    "用于蛋白上样体系计算、loading buffer、还原剂、SDS-PAGE 配胶模板和批量配制计算。",
-                    ("蛋白上样体系计算", "SDS-PAGE 配胶模板与批量配制"),
-                ),
-                (
-                    "电泳 / 转膜 / 抗体孵育流程",
-                    "用于记录电泳参数、电转参数、封闭、一抗、二抗和洗膜步骤模板。用户可录入试剂盒说明书或实验室成熟流程。",
-                    (),
-                ),
-                (
-                    "结果与灰度分析",
-                    "用于后续 WB/gel grayscale、条带 ROI、背景扣除、target/loading control ratio 和结果导出。开发前需单独确认图像分析逻辑。",
-                    (),
-                ),
-            )
-            for index, (section_title, section_description, planned_entries) in enumerate(sections):
-                card = self._section_card(section_title, section_description, planned_entries)
+            descriptions = {
+                "sample_preparation": "记录样品来源、裂解、分组、保存条件和实验室 SOP 文字。",
+                "bca_assay": "保留 96 孔板 OD 矩阵粘贴、Blank/Standard/Sample/Unused 标注和标准曲线草稿计算。",
+                "protein_loading": "按目标蛋白量、样品浓度和横向 lane layout 分阶段生成上样计算结果。",
+                "gel_lane_layout": "维护 Lane / Stacking gel / Resolving gel 三层结构，可导入上样结果中的 lane。",
+                "electrophoresis": "记录电泳 buffer、电压、时间和异常情况。",
+                "transfer": "记录膜、transfer buffer、转膜方式、电压/电流/时间和异常情况。",
+                "blocking": "记录 blocking buffer、体积、时间、温度和备注。",
+                "primary_antibody": "记录一抗名称、厂家、货号、lot、稀释比例和孵育条件。",
+                "primary_wash": "记录一抗后洗膜 buffer、Tween、时间、次数和体积。",
+                "secondary_antibody": "记录二抗名称、识别对象、标记类型、厂家、货号和孵育条件。",
+                "secondary_wash": "记录二抗后洗膜 buffer、Tween、时间、次数和体积。",
+                "imaging": "记录显影方式、试剂、设备、曝光时间、通道和图像文件路径。",
+                "result_analysis": "仅保留结果与灰度分析占位；后续单独讨论，不启用自动条带识别、自动 ROI、灰度定量。",
+            }
+            for index, (step_id, step_label) in enumerate(WB_WORKFLOW_STEPS):
+                card = self._section_card(step_id, step_label, descriptions[step_id])
                 layout.addWidget(card, index // 2, index % 2)
             return tab
 
         def _build_protein_loading_tab(self) -> QWidget:
-            return WesternBlotLoadingCalculatorWidget()
+            return self._loading_widget
 
         def _build_bca_assay_tab(self) -> QWidget:
             tab = QWidget()
@@ -209,6 +213,7 @@ if QWidget is not None:
             self._bca_plate_table.setHorizontalHeaderLabels([str(column) for column in BCA_COLUMNS])
             self._bca_plate_table.setVerticalHeaderLabels(list(BCA_ROWS))
             self._bca_plate_table.setMinimumHeight(240)
+            self._bca_plate_table.cellClicked.connect(self._handle_bca_well_clicked)
             self._bca_matrix_paste = QTextEdit()
             self._bca_matrix_paste.setObjectName("bcaOdMatrixPasteArea")
             self._bca_matrix_paste.setPlaceholderText("粘贴 8×12 OD 矩阵，支持 Excel/tab 格式、A-H 行名和 1-12 列号。")
@@ -247,6 +252,23 @@ if QWidget is not None:
             apply_button = QPushButton("批量标注选区")
             apply_button.setObjectName("bcaApplyBatchAnnotationButton")
             apply_button.clicked.connect(self._handle_bca_apply_annotation)
+            self._bca_selected_well_label = QLabel("当前孔位：未选择")
+            self._bca_selected_well_label.setObjectName("bcaSelectedWellLabel")
+            apply_selected_button = QPushButton("标注当前孔位")
+            apply_selected_button.setObjectName("bcaApplySelectedAnnotationButton")
+            apply_selected_button.clicked.connect(lambda: self._handle_bca_apply_selected_annotation())
+            blank_button = QPushButton("Blank")
+            blank_button.setObjectName("bcaSetBlankButton")
+            blank_button.clicked.connect(lambda: self._handle_bca_apply_selected_annotation("Blank"))
+            standard_button = QPushButton("Standard")
+            standard_button.setObjectName("bcaSetStandardButton")
+            standard_button.clicked.connect(lambda: self._handle_bca_apply_selected_annotation("Standard"))
+            sample_button = QPushButton("Sample")
+            sample_button.setObjectName("bcaSetSampleButton")
+            sample_button.clicked.connect(lambda: self._handle_bca_apply_selected_annotation("Sample"))
+            unused_button = QPushButton("Unused")
+            unused_button.setObjectName("bcaSetUnusedButton")
+            unused_button.clicked.connect(lambda: self._handle_bca_apply_selected_annotation("Unused"))
             fields = (
                 ("孔类型", self._bca_annotation_type),
                 ("起始孔位", self._bca_range_start),
@@ -262,6 +284,13 @@ if QWidget is not None:
                 annotation_layout.addWidget(widget, index // 4 * 2 + 1, index % 4)
             annotation_layout.addWidget(self._bca_blank_subtraction, 4, 0, 1, 2)
             annotation_layout.addWidget(apply_button, 4, 2, alignment=Qt.AlignLeft)
+            annotation_layout.addWidget(self._bca_selected_well_label, 5, 0, 1, 2)
+            annotation_layout.addWidget(apply_selected_button, 5, 2, alignment=Qt.AlignLeft)
+            quick_row = QHBoxLayout()
+            for button in (blank_button, standard_button, sample_button, unused_button):
+                quick_row.addWidget(button)
+            quick_row.addStretch(1)
+            annotation_layout.addLayout(quick_row, 6, 0, 1, 4)
             layout.addWidget(annotation_card)
 
             action = self._card()
@@ -305,16 +334,17 @@ if QWidget is not None:
             layout.setContentsMargins(0, SPACING["md"], 0, 0)
             layout.setSpacing(SPACING["md"])
 
-            intro = QLabel("SDS-PAGE 配胶模板与批量配制计算器")
+            intro = QLabel("配胶与 Lane 布局")
             intro.setObjectName("labToolsWesternBlotSectionTitle")
             boundary = QLabel(
-                "基于用户录入的试剂盒/实验室模板进行批量换算；不内置通用配方、不进行自动配方推荐、不自动推导胶浓度、不生成配置步骤。"
+                "基于用户录入的试剂盒/实验室模板进行批量换算；包含 Lane / Stacking gel / Resolving gel 三层结构，不内置通用配方、不进行自动配方推荐、不自动推导胶浓度、不生成配置步骤。"
             )
             boundary.setObjectName("labToolsWesternBlotDescription")
             boundary.setWordWrap(True)
             layout.addWidget(intro)
             layout.addWidget(boundary)
             layout.addWidget(self._build_template_card())
+            layout.addWidget(self._build_lane_layout_card())
             layout.addWidget(self._build_section_input_card("分离胶", "resolving"))
             layout.addWidget(self._build_section_input_card("浓缩胶", "stacking"))
             layout.addWidget(self._build_action_card())
@@ -360,6 +390,39 @@ if QWidget is not None:
             for index, (label, widget) in enumerate(fields):
                 layout.addWidget(QLabel(label), index // 3 * 2, index % 3)
                 layout.addWidget(widget, index // 3 * 2 + 1, index % 3)
+            self._well_count.currentTextChanged.connect(lambda _text: self._refresh_lane_layout(blank=True))
+            return frame
+
+        def _build_lane_layout_card(self) -> QFrame:
+            frame = self._card()
+            frame.setObjectName("sdsPageLaneLayoutCard")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            layout.setSpacing(SPACING["sm"])
+            heading = QLabel("Lane / 上样孔布局")
+            heading.setObjectName("labToolsWesternBlotSectionTitle")
+            layers = QLabel("三层结构：Lane / 上样孔布局；Stacking gel；Resolving gel")
+            layers.setObjectName("labToolsWesternBlotDescription")
+            layers.setWordWrap(True)
+            self._lane_layout_table = QTableWidget(0, 3)
+            self._lane_layout_table.setObjectName("gelLaneLayoutTable")
+            self._lane_layout_table.setHorizontalHeaderLabels(("Lane 编号", "样品名", "总上样体积"))
+            self._lane_layout_table.setMinimumHeight(150)
+            button_row = QHBoxLayout()
+            blank_button = QPushButton("生成空白 Lane 布局")
+            blank_button.setObjectName("refreshBlankLaneLayoutButton")
+            blank_button.clicked.connect(lambda: self._refresh_lane_layout(blank=True))
+            import_button = QPushButton("从上样计算导入 Lane")
+            import_button.setObjectName("importLoadingLaneLayoutButton")
+            import_button.clicked.connect(self._import_loading_lane_layout)
+            button_row.addWidget(blank_button)
+            button_row.addWidget(import_button)
+            button_row.addStretch(1)
+            layout.addWidget(heading)
+            layout.addWidget(layers)
+            layout.addWidget(self._lane_layout_table)
+            layout.addLayout(button_row)
+            self._refresh_lane_layout(blank=True)
             return frame
 
         def _build_section_input_card(self, title: str, prefix: str) -> QFrame:
@@ -431,7 +494,7 @@ if QWidget is not None:
             layout.addLayout(row)
             return frame
 
-        def _section_card(self, title: str, description: str, planned_entries: tuple[str, ...]) -> QFrame:
+        def _section_card(self, step_id: str, title: str, description: str) -> QFrame:
             frame = self._card()
             frame.setObjectName("labToolsWesternBlotSectionCard")
             layout = QVBoxLayout(frame)
@@ -447,43 +510,125 @@ if QWidget is not None:
             layout.addWidget(status)
             layout.addWidget(section_title)
             layout.addWidget(section_description)
-            if planned_entries and title != "上样与胶":
-                planned_label = QLabel("planned 子入口\n" + "\n".join(f"- {entry}: {SECTION_STATUS}" for entry in planned_entries))
+            if step_id == "result_analysis":
+                planned_label = QLabel("placeholder / 未启用：不启用自动条带识别、自动 ROI、灰度定量或结果解释。")
                 planned_label.setObjectName("labToolsWesternBlotPlannedEntries")
                 planned_label.setWordWrap(True)
                 layout.addWidget(planned_label)
-            if title == "蛋白浓度测定":
-                status_label = QLabel("已开放子入口\n- BCA 蛋白浓度测定: 已实现 / 辅助计算草稿\n- Bradford / NanoDrop: 待确认使用逻辑 / 规划中 / 暂未开放")
-                status_label.setObjectName("labToolsWesternBlotPlannedEntries")
-                status_label.setWordWrap(True)
-                layout.addWidget(status_label)
-                open_bca = QPushButton("打开 BCA 蛋白浓度测定")
-                open_bca.setObjectName("openBcaAssayToolButton")
-                open_bca.clicked.connect(lambda: self._tabs.setCurrentIndex(3))
-                layout.addWidget(open_bca, alignment=Qt.AlignLeft)
-            if title == "上样与胶":
-                status_label = QLabel("已开放子入口\n- 蛋白上样体系计算: 已实现 / 辅助计算草稿\n- SDS-PAGE 配胶模板与批量配制: 已实现 / 用户模板换算")
-                status_label.setObjectName("labToolsWesternBlotPlannedEntries")
-                status_label.setWordWrap(True)
-                layout.addWidget(status_label)
-                open_loading = QPushButton("打开蛋白上样体系计算器")
-                open_loading.setObjectName("openProteinLoadingToolButton")
-                open_loading.clicked.connect(lambda: self._tabs.setCurrentIndex(2))
-                open_tool = QPushButton("打开 SDS-PAGE 配胶工具")
-                open_tool.setObjectName("openSdsPageGelToolButton")
-                open_tool.clicked.connect(lambda: self._tabs.setCurrentIndex(1))
-                layout.addWidget(open_loading, alignment=Qt.AlignLeft)
-                layout.addWidget(open_tool, alignment=Qt.AlignLeft)
-            if title == "结果与灰度分析":
-                layout.addWidget(
-                    LabToolsImageJFijiStatusPanel(
-                        workflow_name="Western Blot 灰度分析 workflow",
-                        bridge=self._imagej_bridge,
-                        can_continue_without_engine=False,
-                    )
-                )
+            button = QPushButton(f"进入 {title}")
+            button.setObjectName(f"wbWorkflowStepButton_{step_id}")
+            button.clicked.connect(lambda _checked=False, label=title: self._tabs.setCurrentIndex(self._tab_index_by_label(label)))
+            layout.addWidget(button, alignment=Qt.AlignLeft)
+            if step_id == "bca_assay":
+                button.setObjectName("openBcaAssayToolButton")
+            elif step_id == "protein_loading":
+                button.setObjectName("openProteinLoadingToolButton")
+            elif step_id == "gel_lane_layout":
+                button.setObjectName("openSdsPageGelToolButton")
             layout.addStretch(1)
             return frame
+
+        def _tab_index_by_label(self, label: str) -> int:
+            for index in range(self._tabs.count()):
+                if self._tabs.tabText(index) == label:
+                    return index
+            return 0
+
+        def _build_workflow_record_tab(self, step_id: str) -> QWidget:
+            label = dict(WB_WORKFLOW_STEPS)[step_id]
+            tab = QWidget()
+            layout = QVBoxLayout(tab)
+            layout.setContentsMargins(0, SPACING["md"], 0, 0)
+            layout.setSpacing(SPACING["md"])
+
+            intro = QLabel(label)
+            intro.setObjectName("labToolsWesternBlotSectionTitle")
+            notice = QLabel(f"{WB_REVIEW_NOTICE} 本页保存结构化字段、SOP 文本和自由文本实验记录。")
+            notice.setObjectName("labToolsWesternBlotDescription")
+            notice.setWordWrap(True)
+            layout.addWidget(intro)
+            layout.addWidget(notice)
+
+            form_card = self._card()
+            form_layout = QGridLayout(form_card)
+            form_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            field_widgets: dict[str, QLineEdit] = {}
+            fields = WB_RECORD_STEP_FIELDS.get(step_id, ("实验日期", "操作者", "项目", "备注"))
+            for index, field_name in enumerate(fields):
+                widget = _line_edit(field_name)
+                widget.setObjectName(f"wbRecordField_{step_id}_{index}")
+                field_widgets[field_name] = widget
+                form_layout.addWidget(QLabel(field_name), index // 3 * 2, index % 3)
+                form_layout.addWidget(widget, index // 3 * 2 + 1, index % 3)
+            layout.addWidget(form_card)
+
+            text_card = self._card()
+            text_layout = QGridLayout(text_card)
+            text_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            sop_text = QTextEdit()
+            sop_text.setObjectName(f"wbRecordSopText_{step_id}")
+            sop_text.setPlaceholderText("粘贴或记录实验室 SOP / 试剂盒说明书摘要。")
+            free_text = QTextEdit()
+            free_text.setObjectName(f"wbRecordFreeText_{step_id}")
+            free_text.setPlaceholderText("记录本次实验实际观察、偏差、异常和人工复核点。")
+            for panel in (sop_text, free_text):
+                panel.setMinimumHeight(120)
+            text_layout.addWidget(QLabel("SOP 文本 / 模板"), 0, 0)
+            text_layout.addWidget(QLabel("自由文本实验记录"), 0, 1)
+            text_layout.addWidget(sop_text, 1, 0)
+            text_layout.addWidget(free_text, 1, 1)
+            layout.addWidget(text_card)
+
+            action_card = self._card()
+            action_layout = QHBoxLayout(action_card)
+            action_layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+            save_button = QPushButton("保存当前记录")
+            save_button.setObjectName(f"wbRecordSaveButton_{step_id}")
+            save_button.clicked.connect(lambda _checked=False, sid=step_id: self._save_workflow_record(sid))
+            save_template_button = QPushButton("保存 SOP 模板")
+            save_template_button.setObjectName(f"wbRecordSaveSopTemplateButton_{step_id}")
+            save_template_button.clicked.connect(lambda _checked=False, sid=step_id: self._save_workflow_record(sid))
+            load_button = QPushButton("载入上次记录")
+            load_button.setObjectName(f"wbRecordLoadLastButton_{step_id}")
+            load_button.clicked.connect(lambda _checked=False, sid=step_id: self._load_latest_workflow_record(sid))
+            export_button = QPushButton("导出文本")
+            export_button.setObjectName(f"wbRecordExportTextButton_{step_id}")
+            export_button.clicked.connect(lambda _checked=False, sid=step_id: self._export_workflow_record_text(sid))
+            status = QLabel("尚未保存。")
+            status.setObjectName(f"wbRecordStatus_{step_id}")
+            status.setWordWrap(True)
+            for widget in (save_button, save_template_button, load_button, export_button):
+                action_layout.addWidget(widget)
+            action_layout.addStretch(1)
+            layout.addWidget(action_card)
+            layout.addWidget(status)
+            layout.addStretch(1)
+
+            self._record_forms[step_id] = {
+                "label": label,
+                "fields": field_widgets,
+                "sop": sop_text,
+                "free": free_text,
+                "status": status,
+            }
+            return tab
+
+        def _build_result_placeholder_tab(self) -> QWidget:
+            tab = QWidget()
+            layout = QVBoxLayout(tab)
+            layout.setContentsMargins(0, SPACING["md"], 0, 0)
+            layout.setSpacing(SPACING["md"])
+            title = QLabel("结果与灰度分析")
+            title.setObjectName("labToolsWesternBlotSectionTitle")
+            body = QLabel(
+                "本页仅保留占位，用于后续单独讨论 WB/gel grayscale、条带 ROI、背景扣除和结果导出。当前不启用自动条带识别、自动 ROI、灰度定量或结果解释。"
+            )
+            body.setObjectName("labToolsWesternBlotBoundary")
+            body.setWordWrap(True)
+            layout.addWidget(title)
+            layout.addWidget(body)
+            layout.addStretch(1)
+            return tab
 
         def _add_loading_sample_row(self) -> None:
             row = self._loading_sample_table.rowCount()
@@ -535,6 +680,57 @@ if QWidget is not None:
         def _copy_loading_result(self) -> None:
             if self._current_loading_result is not None:
                 QApplication.clipboard().setText(self._current_loading_result.copy_text())
+
+        def _handle_bca_well_clicked(self, row: int, column: int) -> None:
+            well = f"{BCA_ROWS[row]}{BCA_COLUMNS[column]}"
+            if well in self._bca_selected_wells:
+                self._bca_selected_wells.remove(well)
+            else:
+                self._bca_selected_wells.add(well)
+            self._refresh_bca_selected_label()
+
+        def _refresh_bca_selected_label(self) -> None:
+            wells = ", ".join(sorted(self._bca_selected_wells, key=self._well_sort_key))
+            self._bca_selected_well_label.setText(f"当前孔位：{wells or '未选择'}")
+
+        def _well_sort_key(self, well: str) -> tuple[int, int]:
+            row = BCA_ROWS.index(well[0]) if well and well[0] in BCA_ROWS else 999
+            try:
+                column = int(well[1:])
+            except ValueError:
+                column = 999
+            return row, column
+
+        def _handle_bca_apply_selected_annotation(self, well_type: str | None = None) -> None:
+            selected_wells = set(self._bca_selected_wells)
+            if not selected_wells:
+                current = self._bca_plate_table.currentIndex()
+                if current.isValid():
+                    selected_wells.add(f"{BCA_ROWS[current.row()]}{BCA_COLUMNS[current.column()]}")
+            if not selected_wells:
+                self._bca_raw_result.setText("请先点击 96 孔板中的孔位。")
+                return
+            try:
+                standard_text = self._bca_standard_concentration.text().strip()
+                standard_concentration = float(standard_text) if standard_text else None
+                target_type = well_type or self._bca_annotation_type.currentText()
+                for well in selected_wells:
+                    self._bca_annotations = annotate_well(
+                        self._bca_annotations,
+                        well,
+                        target_type,
+                        name=self._bca_annotation_name.text().strip(),
+                        standard_concentration=standard_concentration,
+                        concentration_unit=self._bca_concentration_unit.currentText(),
+                        dilution_factor=float(self._bca_dilution_factor.text()),
+                        note=self._bca_annotation_note.text().strip(),
+                    )
+            except (BcaAssayError, ValueError) as exc:
+                self._bca_raw_result.setText(str(exc))
+                return
+            self._bca_annotation_type.setCurrentText(well_type or self._bca_annotation_type.currentText())
+            wells = ", ".join(sorted(selected_wells, key=self._well_sort_key))
+            self._bca_raw_result.setText(f"已标注孔位：{wells}")
 
         def _handle_bca_parse_matrix(self) -> None:
             try:
@@ -634,6 +830,109 @@ if QWidget is not None:
                 )
             lines.append(result.review_notice)
             return "\n".join(lines)
+
+        def _refresh_lane_layout(self, *, blank: bool) -> None:
+            if not hasattr(self, "_lane_layout_table") or not hasattr(self, "_well_count"):
+                return
+            lane_count = int(self._well_count.currentText().split()[0])
+            self._lane_layout_table.setRowCount(lane_count)
+            for row in range(lane_count):
+                lane_label = f"Lane {row + 1}"
+                if blank or self._lane_layout_table.item(row, 0) is None:
+                    self._lane_layout_table.setItem(row, 0, QTableWidgetItem(lane_label))
+                    self._lane_layout_table.setItem(row, 1, QTableWidgetItem(""))
+                    self._lane_layout_table.setItem(row, 2, QTableWidgetItem(""))
+
+        def _import_loading_lane_layout(self) -> None:
+            result = getattr(self._loading_widget, "_current_result", None)
+            if result is None:
+                self._refresh_lane_layout(blank=True)
+                return
+            lanes = result.lanes
+            self._lane_layout_table.setRowCount(len(lanes))
+            for row, lane in enumerate(lanes):
+                sample_name = lane.sample_name or lane.lane_label
+                if lane.result_row is not None:
+                    total_volume = f"{lane.result_row.final_volume_ul:g} µL"
+                elif lane.marker_volume_ul:
+                    total_volume = f"{lane.marker_volume_ul:g} µL"
+                else:
+                    total_volume = ""
+                self._lane_layout_table.setItem(row, 0, QTableWidgetItem(lane.lane_label))
+                self._lane_layout_table.setItem(row, 1, QTableWidgetItem(sample_name))
+                self._lane_layout_table.setItem(row, 2, QTableWidgetItem(total_volume))
+
+        def _lane_layout_summary(self) -> list[str]:
+            if not hasattr(self, "_lane_layout_table"):
+                return ["尚未生成 Lane 布局。"]
+            lines = ["Lane 编号\t样品名\t总上样体积"]
+            for row in range(self._lane_layout_table.rowCount()):
+                values = []
+                for column in range(3):
+                    item = self._lane_layout_table.item(row, column)
+                    values.append(item.text().strip() if item is not None else "")
+                lines.append("\t".join(values))
+            return lines
+
+        def _save_workflow_record(self, step_id: str) -> None:
+            form = self._record_forms[step_id]
+            fields = {name: widget.text().strip() for name, widget in form["fields"].items() if isinstance(widget, QLineEdit)}
+            sop_text = form["sop"].toPlainText().strip() if isinstance(form["sop"], QTextEdit) else ""
+            free_text = form["free"].toPlainText().strip() if isinstance(form["free"], QTextEdit) else ""
+            try:
+                saved = self._workflow_record_store.save_record(
+                    WBWorkflowRecord(
+                        step_id=step_id,
+                        step_label=str(form["label"]),
+                        fields=fields,
+                        sop_text=sop_text,
+                        free_text=free_text,
+                    )
+                )
+            except WBWorkflowRecordError as exc:
+                self._record_status(step_id).setText(str(exc))
+                return
+            self._record_status(step_id).setText(f"已保存：{saved.record_id}")
+
+        def _load_latest_workflow_record(self, step_id: str) -> None:
+            try:
+                record = self._workflow_record_store.latest_for_step(step_id)
+            except WBWorkflowRecordError as exc:
+                self._record_status(step_id).setText(str(exc))
+                return
+            if record is None:
+                self._record_status(step_id).setText("没有可载入的历史记录。")
+                return
+            form = self._record_forms[step_id]
+            for name, widget in form["fields"].items():
+                if isinstance(widget, QLineEdit):
+                    widget.setText(record.fields.get(name, ""))
+            if isinstance(form["sop"], QTextEdit):
+                form["sop"].setText(record.sop_text)
+            if isinstance(form["free"], QTextEdit):
+                form["free"].setText(record.free_text)
+            self._record_status(step_id).setText(f"已载入：{record.record_id}")
+
+        def _export_workflow_record_text(self, step_id: str) -> None:
+            form = self._record_forms[step_id]
+            fields = {name: widget.text().strip() for name, widget in form["fields"].items() if isinstance(widget, QLineEdit)}
+            record = WBWorkflowRecord(
+                step_id=step_id,
+                step_label=str(form["label"]),
+                fields=fields,
+                sop_text=form["sop"].toPlainText().strip() if isinstance(form["sop"], QTextEdit) else "",
+                free_text=form["free"].toPlainText().strip() if isinstance(form["free"], QTextEdit) else "",
+            )
+            export_path = self._workflow_record_store.resolved_path().with_name(f"{step_id}_workflow_record.txt")
+            export_path.parent.mkdir(parents=True, exist_ok=True)
+            export_path.write_text(record.as_text() + "\n", encoding="utf-8")
+            self._record_status(step_id).setText(f"已导出文本：{export_path}")
+
+        def _record_status(self, step_id: str) -> QLabel:
+            status = self._record_forms[step_id]["status"]
+            if isinstance(status, QLabel):
+                return status
+            raise RuntimeError("Western Blot record status widget is missing")
 
         def _handle_calculate(self) -> None:
             try:
@@ -750,15 +1049,20 @@ if QWidget is not None:
 
         def _result_text(self, result: SdsPageGelCalculationResult) -> str:
             lines = [
+                "配胶摘要",
                 GEL_TEMPLATE_CONTEXT_NOTICE,
-                GEL_REVIEW_NOTICE,
+                WB_REVIEW_NOTICE,
                 f"模板名称：{result.template.template_name}",
                 f"胶数量：{result.gel_count}",
                 f"余量百分比：{result.overage_percent}%",
+                "",
+                "Lane 布局摘要",
+                *self._lane_layout_summary(),
+                "",
                 "总量含余量：",
             ]
-            for section in (result.resolving_gel, result.stacking_gel):
-                lines.append(section.section_name)
+            for heading, section in (("Resolving gel 组分表", result.resolving_gel), ("Stacking gel 组分表", result.stacking_gel)):
+                lines.append(heading)
                 if not section.rows:
                     lines.append("- 0 / 不使用")
                 for row in section.rows:
@@ -843,7 +1147,7 @@ if QWidget is not None:
                 border-radius: {RADIUS["sm"]}px;
                 padding: 8px 10px;
             }}
-            QFrame#labToolsWesternBlotCard, QFrame#labToolsWesternBlotSectionCard, QFrame#sdsPageResolvingSectionCard, QFrame#sdsPageStackingSectionCard {{
+            QFrame#labToolsWesternBlotCard, QFrame#labToolsWesternBlotSectionCard, QFrame#sdsPageLaneLayoutCard, QFrame#sdsPageResolvingSectionCard, QFrame#sdsPageStackingSectionCard {{
                 background: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: {RADIUS["md"]}px;

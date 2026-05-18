@@ -199,12 +199,12 @@ if QWidget is not None:
                 panel.setReadOnly(True)
                 panel.setMinimumHeight(150)
                 panel.setText("尚未计算。填写基础参数和样本浓度后生成纵向明细与横向 lane layout。")
-            layout.addWidget(QLabel("完整结果"), 0, 0)
+            layout.addWidget(QLabel("横向 lane layout（主结果）"), 0, 0)
             layout.addWidget(QLabel("纵向计算明细"), 0, 1)
-            layout.addWidget(QLabel("横向 lane layout"), 0, 2)
-            layout.addWidget(self._result_panel, 1, 0)
+            layout.addWidget(QLabel("完整结果"), 0, 2)
+            layout.addWidget(self._lane_panel, 1, 0)
             layout.addWidget(self._detail_panel, 1, 1)
-            layout.addWidget(self._lane_panel, 1, 2)
+            layout.addWidget(self._result_panel, 1, 2)
             return card
 
         def _build_record_card(self) -> QFrame:

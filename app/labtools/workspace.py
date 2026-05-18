@@ -467,6 +467,10 @@ if QWidget is not None:
             home = QPushButton("工具首页")
             home.clicked.connect(self.show_home)
             header_layout.addWidget(home)
+            engine_settings = QPushButton("外部引擎设置")
+            engine_settings.setObjectName("labToolsExternalEngineSettingsButton")
+            engine_settings.clicked.connect(self.show_imagej_fiji)
+            header_layout.addWidget(engine_settings)
             if self._on_back is not None:
                 back = QPushButton("返回模块首页")
                 back.clicked.connect(self._on_back)

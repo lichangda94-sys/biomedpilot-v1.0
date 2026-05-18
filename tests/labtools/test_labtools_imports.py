@@ -15,7 +15,6 @@ def test_labtools_tool_registry_lists_available_and_planned_tools() -> None:
 
     assert tool_ids == [
         "general_reagent_calculator",
-        "imagej_fiji_engine",
         "western_blot",
         "pcr_qpcr",
         "elisa_absorbance",
@@ -25,13 +24,12 @@ def test_labtools_tool_registry_lists_available_and_planned_tools() -> None:
     assert tools[0].is_planned_only is False
     assert tools[1].is_available is True
     assert tools[1].requires_imagej_fiji is False
-    assert tools[2].is_available is True
-    assert tools[2].is_planned_only is False
-    assert tools[2].status == "available / 可用"
-    assert all(tool.is_planned_only for tool in tools[3:])
-    assert all(tool.status == "planned / 未启用" for tool in tools[3:])
+    assert tools[1].is_planned_only is False
+    assert tools[1].status == "available / 可用"
+    assert all(tool.is_planned_only for tool in tools[2:])
+    assert all(tool.status == "planned / 未启用" for tool in tools[2:])
     assert all(tool.boundary_statement for tool in tools)
-    assert tools[2].requires_imagej_fiji is False
+    assert tools[1].requires_imagej_fiji is False
 
 
 def test_labtools_module_exports_features() -> None:
@@ -42,7 +40,6 @@ def test_labtools_module_exports_features() -> None:
 
     assert [feature.name for feature in features] == [
         "通用试剂制备",
-        "ImageJ/Fiji 本地引擎",
         "Western Blot 工具",
         "PCR/qPCR 工具",
         "ELISA/吸光度工具",
@@ -50,18 +47,14 @@ def test_labtools_module_exports_features() -> None:
     ]
     assert features[0].status is FeatureStatus.TESTING
     assert features[1].status is FeatureStatus.TESTING
-    assert features[2].status is FeatureStatus.TESTING
-    assert all(features[index].status is FeatureStatus.UNAVAILABLE for index in (3, 4, 5))
+    assert all(features[index].status is FeatureStatus.UNAVAILABLE for index in (2, 3, 4))
     assert all(feature.module == "labtools" for feature in features)
 
     descriptions = {feature.name: feature.description for feature in features}
     assert "常用试剂快速计算" in descriptions["通用试剂制备"]
     assert "模板管理" in descriptions["通用试剂制备"]
     assert "承载全部实验计算" not in descriptions["通用试剂制备"]
-    assert "ImageJ/Fiji 检测与路径配置" in descriptions["ImageJ/Fiji 本地引擎"]
-    assert "不是图像分析结果工具" in descriptions["ImageJ/Fiji 本地引擎"]
-
-    assert "上样体系计算器可用" in descriptions["Western Blot 工具"]
+    assert "流程工作台可用" in descriptions["Western Blot 工具"]
     assert "不启用 WB 图像分析" in descriptions["Western Blot 工具"]
 
     for name in ("PCR/qPCR 工具", "ELISA/吸光度工具", "细胞实验工具"):
@@ -136,8 +129,8 @@ def test_labtools_workspace_instantiates_when_qt_available() -> None:
     widget.show_western_blot()
     assert widget.current_page_key() == "western_blot"
     western_text = "\n".join(label.text() for label in widget._stack.currentWidget().findChildren(QLabel))
-    assert "Western Blot 上样计算器：available / 可用" in western_text
-    assert "ImageJ-assisted 条带定量 workflow：planned / 未启用" in western_text
+    assert "Western Blot 流程工作台：available / 可用" in western_text
+    assert "结果与灰度分析：placeholder / 未启用" in western_text
     widget.show_pcr_qpcr()
     assert widget.current_page_key() == "pcr_qpcr"
     widget.show_elisa_absorbance()
