@@ -68,7 +68,7 @@ try:
         save_sds_page_gel_calculation_xlsx,
         save_sds_page_gel_template_json,
     )
-    from app.labtools.ui.image_analysis_widgets import wb_grayscale_workbench_widget
+    from app.labtools.ui.western_blot_roi_widgets import WesternBlotROIAnalysisWidget
     from app.labtools.western_blot.widgets import WesternBlotLoadingCalculatorWidget
     from app.shared.local_engines import ImageJFijiBridge
     from app.ui_style_tokens import COLORS, CONTROL_HEIGHT, FONT_SIZE, RADIUS, SPACING
@@ -137,8 +137,8 @@ if QWidget is not None:
             notice.setWordWrap(True)
             l4_status = QLabel(
                 "Western Blot 流程工作台：available / 可用\n"
-                "结果与灰度分析：placeholder / 未启用\n"
-                "当前不启用 WB 图像分析、条带识别、灰度定量、自动 ROI 或结果解释。"
+                "结果与灰度分析：placeholder / 未启用 -> testing / 可测试矩形 ROI 工作流\n"
+                "当前不启用 WB 图像分析的自动 lane/band 识别、不启用自动 ROI 或结果解释。"
             )
             l4_status.setObjectName("labToolsWesternBlotL4Status")
             l4_status.setWordWrap(True)
@@ -512,7 +512,7 @@ if QWidget is not None:
             layout.addWidget(section_title)
             layout.addWidget(section_description)
             if step_id == "result_analysis":
-                planned_label = QLabel("placeholder / 未启用：不启用自动条带识别、自动 ROI、灰度定量或结果解释。")
+                planned_label = QLabel("testing / 可测试：BioMedPilot 内矩形 ROI、ROI 坐标导出、RunRequest 和测量 CSV 归一化；不启用自动条带识别、自动 ROI 或结果解释。")
                 planned_label.setObjectName("labToolsWesternBlotPlannedEntries")
                 planned_label.setWordWrap(True)
                 layout.addWidget(planned_label)
@@ -615,7 +615,7 @@ if QWidget is not None:
             return tab
 
         def _build_result_placeholder_tab(self) -> QWidget:
-            return wb_grayscale_workbench_widget()
+            return WesternBlotROIAnalysisWidget()
 
         def _add_loading_sample_row(self) -> None:
             row = self._loading_sample_table.rowCount()

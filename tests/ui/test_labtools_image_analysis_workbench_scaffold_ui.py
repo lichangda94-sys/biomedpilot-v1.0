@@ -42,12 +42,11 @@ def test_western_blot_result_tab_shows_image_analysis_workbench(qapp) -> None:
 
     assert tabs.tabText(tabs.currentIndex()) == "结果与灰度分析"
     assert "Western Blot 结果与灰度分析" in text
-    assert "图片列表 / 样本列表" in text
-    assert "图片预览与标注区" in text
-    assert "实验参数与操作" in text
-    assert "Macro ID：wb_grayscale_basic" in text
-    assert "外部引擎 key：imagej" in text
-    assert "最低引擎要求：imagej" in text
+    assert "第一步：导入图片" in text
+    assert "第二步：预处理设置" in text
+    assert "第三步：ROI 设置" in text
+    assert "第四步：灰度结果" in text
+    assert "第五步：归一化计算" in text
     assert "图像分析引擎未准备好" in text
     assert "运行 ImageJ macro" not in text
 

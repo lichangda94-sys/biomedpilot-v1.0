@@ -13,6 +13,7 @@ from app.labtools.image_analysis.roi_models import ROIRecord, empty_roi_placehol
 TASK_TYPES: dict[str, str] = {
     "wb_grayscale": "Western Blot 灰度分析",
     "wb_lane_band_measurement": "Western Blot Lane/Band 测量",
+    "wb_fixed_rectangle_roi_measure": "Western Blot 固定矩形 ROI 灰度测量",
     "scratch_area": "划痕实验图像分析",
     "transwell_count": "Transwell 图像分析",
     "wound_healing": "划痕实验面积分析",

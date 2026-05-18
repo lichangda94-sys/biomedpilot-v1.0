@@ -106,6 +106,22 @@ BUILTIN_MACRO_TEMPLATES: tuple[MacroTemplate, ...] = (
         parameter_schema={"lane_count": "int", "invert_image": "bool", "convert_to_8bit": "bool"},
     ),
     _template(
+        "wb_batch_preprocess",
+        "Western Blot 批量预处理 Macro",
+        "western_blot",
+        "wb_preprocess",
+        "western_blot/wb_batch_preprocess.ijm",
+        parameter_schema={"convert_to_8bit": "bool", "invert_mode": "auto/invert/no_invert", "subtract_background": "bool", "rolling_ball_radius": "number", "output_format": "tif/png"},
+    ),
+    _template(
+        "wb_fixed_rectangle_roi_measure",
+        "Western Blot 固定矩形 ROI 灰度测量 Macro",
+        "western_blot",
+        "wb_fixed_rectangle_roi_measure",
+        "western_blot/wb_fixed_rectangle_roi_measure.ijm",
+        parameter_schema={"roi_csv_path": "path", "output_csv_path": "path", "measurement_items": "Area/Mean/IntDen/RawIntDen"},
+    ),
+    _template(
         "scratch_area_basic",
         "划痕实验面积分析占位 Macro",
         "cell_experiment",
@@ -136,6 +152,8 @@ BUILTIN_MACRO_TEMPLATES: tuple[MacroTemplate, ...] = (
 DEFAULT_MACRO_BY_ANALYSIS: dict[tuple[str, str], str] = {
     ("western_blot", "wb_grayscale"): "wb_grayscale_basic",
     ("western_blot", "wb_lane_band_measurement"): "wb_lane_band_measurement",
+    ("western_blot", "wb_preprocess"): "wb_batch_preprocess",
+    ("western_blot", "wb_fixed_rectangle_roi_measure"): "wb_fixed_rectangle_roi_measure",
     ("cell_experiment", "scratch_area"): "scratch_area_basic",
     ("cell_experiment", "transwell_count"): "transwell_count_basic",
     ("cell_experiment", "fluorescence_intensity"): "fluorescence_intensity_basic",

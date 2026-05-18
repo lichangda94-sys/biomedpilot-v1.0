@@ -11,6 +11,8 @@ def test_builtin_macro_registry_loads_expected_templates_and_paths() -> None:
     assert set(templates) == {
         "wb_grayscale_basic",
         "wb_lane_band_measurement",
+        "wb_batch_preprocess",
+        "wb_fixed_rectangle_roi_measure",
         "scratch_area_basic",
         "transwell_count_basic",
         "fluorescence_intensity_basic",
@@ -19,6 +21,7 @@ def test_builtin_macro_registry_loads_expected_templates_and_paths() -> None:
     }
     assert all(template.path.exists() for template in templates.values())
     assert default_macro_for_analysis("western_blot", "wb_grayscale").macro_id == "wb_grayscale_basic"
+    assert default_macro_for_analysis("western_blot", "wb_fixed_rectangle_roi_measure").macro_id == "wb_fixed_rectangle_roi_measure"
     assert default_macro_for_analysis("cell_experiment", "scratch_area").macro_id == "scratch_area_basic"
     assert default_macro_for_analysis("cell_experiment", "transwell_count").macro_id == "transwell_count_basic"
     assert default_macro_for_analysis("cell_experiment", "fluorescence_intensity").macro_id == "fluorescence_intensity_basic"
@@ -65,6 +68,8 @@ def test_builtin_macro_registry_marks_first_wave_macros_as_imagej() -> None:
     for macro_id in (
         "wb_grayscale_basic",
         "wb_lane_band_measurement",
+        "wb_batch_preprocess",
+        "wb_fixed_rectangle_roi_measure",
         "scratch_area_basic",
         "transwell_count_basic",
         "fluorescence_intensity_basic",

@@ -85,6 +85,23 @@ from app.labtools.western_blot.workflow_records import (
     WBWorkflowRecordStore,
     default_wb_workflow_store_path,
 )
+from app.labtools.western_blot.roi_analysis import (
+    WB_ROI_TYPES,
+    CoordinateMapper,
+    WBMeasurement,
+    WBNormalizedResult,
+    WBRectangleROI,
+    WBROIAnalysisError,
+    WBROICollection,
+    background_corrected_density,
+    calculate_wb_normalization,
+    create_wb_roi_run_request_workspace,
+    export_wb_normalized_results,
+    export_wb_roi_csv,
+    export_wb_roi_json,
+    read_wb_measurement_csv,
+    unsupported_image_format_message,
+)
 
 __all__ = [
     "GEL_REVIEW_NOTICE",
@@ -158,4 +175,19 @@ __all__ = [
     "WBWorkflowRecordError",
     "WBWorkflowRecordStore",
     "default_wb_workflow_store_path",
+    "WB_ROI_TYPES",
+    "CoordinateMapper",
+    "WBMeasurement",
+    "WBNormalizedResult",
+    "WBRectangleROI",
+    "WBROIAnalysisError",
+    "WBROICollection",
+    "background_corrected_density",
+    "calculate_wb_normalization",
+    "create_wb_roi_run_request_workspace",
+    "export_wb_normalized_results",
+    "export_wb_roi_csv",
+    "export_wb_roi_json",
+    "read_wb_measurement_csv",
+    "unsupported_image_format_message",
 ]
