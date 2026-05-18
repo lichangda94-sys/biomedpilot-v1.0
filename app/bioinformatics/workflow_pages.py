@@ -121,16 +121,18 @@ from app.bioinformatics.search_center import (
 )
 from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
 from app.shared.ai_gateway import (
+    AI_ROLE_MEDICAL,
+    AI_ROLE_TRANSLATOR,
+    DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING,
     create_ai_draft_record,
     desktop_local_ollama_config,
     load_ai_gateway_config,
     mark_ai_draft_status,
+    resolve_task_role_model,
     save_ai_draft_record,
     save_ai_gateway_config,
 )
 from app.shared.ai_gateway.drafts import AIDraftRecord
-from app.shared.ai_gateway.models import AIProviderStatus
-from app.shared.ai_gateway.providers.ollama_provider import DEFAULT_OLLAMA_BASE_URL, DEFAULT_OLLAMA_MODEL, OllamaProvider
 from app.shared.query_intelligence import LocalModelConfig
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
@@ -1921,6 +1923,8 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         input_layout.addWidget(self._status_label)
         self._topic_summary_label = _status_label("主题识别：尚未开始。")
         input_layout.addWidget(self._topic_summary_label)
+        self._local_model_assist_label = _status_label("本地模型辅助：未启用，当前使用规则词库结果。AI 生成内容仅作为草稿，需用户确认后使用。")
+        input_layout.addWidget(self._local_model_assist_label)
         root.addWidget(input_card)
 
         draft_card, draft_layout = _card("Query draft（草稿 / 待确认）")
@@ -2225,6 +2229,7 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._tcga_query_box.setPlainText(", ".join(query.tcga_project_ids) if query.tcga_project_ids else "暂无 TCGA/GDC 项目草稿")
         self._gtex_query_box.setPlainText(", ".join(query.gtex_tissues) if query.gtex_tissues else "暂无 GTEx 组织草稿")
         self._topic_summary_label.setText(_topic_summary_text(query))
+        self._local_model_assist_label.setText(_local_model_assist_status_text(query.metadata.get("ai_assist_status"), query.metadata.get("local_model_status")))
         self._geo_draft_summary.setText(_geo_draft_summary_text(query))
         self._tcga_draft_summary.setText(f"TCGA：{', '.join(query.tcga_project_ids) if query.tcga_project_ids else '未生成项目草稿'}")
         self._gtex_draft_summary.setText(f"GTEx：{', '.join(query.gtex_tissues) if query.gtex_tissues else '未生成组织草稿'}")
@@ -5099,9 +5104,10 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         enabled = self._local_ai_enabled.isChecked()
         config = desktop_local_ollama_config(
             enabled=enabled,
-            base_url=self._ollama_base_url_input.text().strip() or DEFAULT_OLLAMA_BASE_URL,
-            default_model=self._ollama_model_input.text().strip() or DEFAULT_OLLAMA_MODEL,
+            base_url=self._ollama_base_url_input.text().strip(),
+            default_model=self._ollama_model_input.text().strip() or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL],
             timeout_seconds=20,
+            role_model_mapping=DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING,
         )
         save_ai_gateway_config(config)
         self._refresh_ai_status(config)
@@ -5112,16 +5118,18 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
     def test_local_ai_connection(self) -> str:
         config = desktop_local_ollama_config(
             enabled=self._local_ai_enabled.isChecked(),
-            base_url=self._ollama_base_url_input.text().strip() or DEFAULT_OLLAMA_BASE_URL,
-            default_model=self._ollama_model_input.text().strip() or DEFAULT_OLLAMA_MODEL,
+            base_url=self._ollama_base_url_input.text().strip(),
+            default_model=self._ollama_model_input.text().strip() or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL],
             timeout_seconds=20,
+            role_model_mapping=DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING,
         )
-        provider = OllamaProvider.from_provider_config(config.provider_configs.get("ollama", {}))
-        status = provider.detect_ollama_status()
-        label = _ai_provider_status_label(status)
-        self._connection_status.setText(f"连接状态：{label}")
-        self._refresh_ai_status(config, detected_status=status)
-        return status.value
+        provider_config = config.provider_configs.get("ollama", {})
+        enabled = config.default_provider == "ollama" and config.allow_network and isinstance(provider_config, dict) and provider_config.get("enabled") is True
+        role_ready = all(resolve_task_role_model(config, task).available for task in ("bio_generate_dataset_query_draft", "bio_translate_dataset_detail", "bio_summarize_dataset_detail"))
+        status = "configured" if enabled and role_ready else "disabled"
+        self._connection_status.setText("连接状态：已配置；请在外部引擎页运行 Ollama 检查。" if status == "configured" else "连接状态：未启用")
+        self._refresh_ai_status(config)
+        return status
 
     def run_geo_legacy_environment_check(self) -> str:
         result = run_geo_environment_check()
@@ -5148,7 +5156,7 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
     def status_message(self) -> str:
         return self._ai_status.text()
 
-    def _refresh_ai_status(self, config: object | None = None, *, detected_status: AIProviderStatus | None = None) -> None:
+    def _refresh_ai_status(self, config: object | None = None) -> None:
         config = config or load_ai_gateway_config()
         if not getattr(config, "allow_network", False) or getattr(config, "default_provider", "disabled") != "ollama":
             self._ai_mode.setText("当前 AI 模式：关闭")
@@ -5161,8 +5169,6 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
             self._connection_status.setText("连接状态：未启用")
             return
         self._ai_mode.setText("当前 AI 模式：本地 Ollama")
-        if detected_status is not None:
-            self._connection_status.setText(f"连接状态：{_ai_provider_status_label(detected_status)}")
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
@@ -5203,9 +5209,9 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         self._local_ai_enabled = QCheckBox("启用本地 AI")
         self._local_ai_enabled.setChecked(config.default_provider == "ollama" and config.allow_network and isinstance(provider_config, dict) and provider_config.get("enabled") is True)
         ai_layout.addWidget(self._local_ai_enabled)
-        self._ollama_base_url_input = QLineEdit(str(provider_config.get("base_url") or DEFAULT_OLLAMA_BASE_URL) if isinstance(provider_config, dict) else DEFAULT_OLLAMA_BASE_URL)
+        self._ollama_base_url_input = QLineEdit(str(provider_config.get("base_url") or "") if isinstance(provider_config, dict) else "")
         self._ollama_base_url_input.setPlaceholderText("Ollama 地址")
-        self._ollama_model_input = QLineEdit(str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL) if isinstance(provider_config, dict) else DEFAULT_OLLAMA_MODEL)
+        self._ollama_model_input = QLineEdit(str(provider_config.get("default_model") or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL]) if isinstance(provider_config, dict) else DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL])
         self._ollama_model_input.setPlaceholderText("默认模型名称")
         ai_layout.addWidget(_muted("Ollama 地址"))
         ai_layout.addWidget(self._ollama_base_url_input)
@@ -7310,6 +7316,19 @@ def _topic_summary_text(query: object) -> str:
     return f"主题识别：{diseases_zh} → {diseases_en}；TCGA：{tcga}；GTEx：{gtex}"
 
 
+def _local_model_assist_status_text(ai_status: object, local_model_status: object = "") -> str:
+    status = ai_status if isinstance(ai_status, dict) else {}
+    source = str(status.get("source") or "rule_based")
+    role = str(status.get("ai_role") or "")
+    model = str(status.get("model_name") or "")
+    if source == "local_model_draft":
+        detail = f"role={role}；model={model}" if role or model else "role/model 已由 AI Gateway 配置"
+        return f"本地模型辅助：可用，已生成草稿（{detail}）。AI 生成内容仅作为草稿，需用户确认后使用。"
+    if source == "fallback" or str(local_model_status).endswith("fallback_registry"):
+        return "本地模型辅助：调用失败，当前使用规则词库结果。AI 生成内容仅作为草稿，需用户确认后使用。"
+    return "本地模型辅助：未启用，当前使用规则词库结果。AI 生成内容仅作为草稿，需用户确认后使用。"
+
+
 def _candidate_source_bucket(source: str) -> str:
     if source == "tcga_gdc":
         return "tcga_gdc"
@@ -7738,18 +7757,22 @@ def _geo_text_summary_user_display(candidate: UnifiedDatasetCandidate, summary: 
 def _desktop_local_model_config() -> LocalModelConfig:
     config = load_ai_gateway_config()
     provider_config = config.provider_configs.get("ollama", {})
+    query_model = str(config.role_model_mapping.get("general_3b") or "")
+    translator_model = str(config.role_model_mapping.get("translator") or "")
+    medical_model = str(config.role_model_mapping.get("medical") or "")
     enabled = (
         config.default_provider == "ollama"
         and config.allow_network
         and isinstance(provider_config, dict)
         and provider_config.get("enabled") is True
+        and bool(query_model and translator_model and medical_model)
     )
     return LocalModelConfig(
         enabled=enabled,
         provider="ollama",
         base_url=str(provider_config.get("base_url") or ""),
-        medical_model=str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL),
-        translator_model=str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL),
+        medical_model=medical_model or str(provider_config.get("default_model") or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL]),
+        translator_model=translator_model or str(provider_config.get("default_model") or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_TRANSLATOR]),
         timeout_seconds=int(provider_config.get("timeout_seconds") or 20) if isinstance(provider_config.get("timeout_seconds") or 20, int) else 20,
     )
 
@@ -7775,6 +7798,7 @@ def _query_draft_summary(result: BioinformaticsSearchCenterResult, *, editable_o
         "geo_query_draft": list(query.geo_query_candidates),
         "tcga_project_hint": list(query.tcga_project_ids),
         "gtex_tissue_hint": list(query.gtex_tissues),
+        "ai_assist_status": query.metadata.get("ai_assist_status", {}),
         "confirmed_draft_text_hash_only": bool(editable_output),
         "search_executed": False,
     }
@@ -7794,8 +7818,8 @@ def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, o
     return create_ai_draft_record(
         module="bioinformatics",
         task_type="bio_translate_dataset_detail",
-        provider="ollama" if payload.get("status") == "completed" else "disabled",
-        model=" / ".join(str(payload.get(key) or "") for key in ("translate_model", "brief_model")).strip(" / "),
+        provider=str(payload.get("ai_provider") or ("ollama" if payload.get("status") == "completed" else "disabled")),
+        model=str(payload.get("model_name") or " / ".join(str(payload.get(key) or "") for key in ("translate_model", "brief_model")).strip(" / ")),
         input_text=input_text,
         output_text=output_text,
         warnings=tuple(str(item) for item in payload.get("quality_warnings", ()) or ()),
@@ -7805,19 +7829,17 @@ def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, o
             "title_zh": str(payload.get("title_zh") or ""),
             "summary_zh": str(payload.get("summary_zh") or ""),
             "brief_zh": str(payload.get("brief_zh") or ""),
+            "source": str(payload.get("source") or "fallback"),
+            "ai_provider": str(payload.get("ai_provider") or "disabled"),
+            "ai_role": str(payload.get("ai_role") or ""),
+            "model_name": str(payload.get("model_name") or ""),
+            "generated_at": str(payload.get("generated_at") or ""),
+            "user_confirmation_required": bool(payload.get("user_confirmation_required", True)),
+            "accepted_by_user": bool(payload.get("accepted_by_user", False)),
         },
         status=status,
     )
 
-
-def _ai_provider_status_label(status: AIProviderStatus) -> str:
-    if status == AIProviderStatus.AVAILABLE:
-        return "可用"
-    if status == AIProviderStatus.DISABLED:
-        return "未启用"
-    if status == AIProviderStatus.ERROR:
-        return "错误"
-    return "不可用"
 
 
 def _geo_topic_match_label(summary: dict[str, object], *, status: str, warnings: list[str]) -> str:

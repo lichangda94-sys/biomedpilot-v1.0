@@ -38,8 +38,10 @@ class AIAuditLogger:
             "module": request.module,
             "task_type": request.task_type,
             "status": response.status,
+            "ai_role": _metadata_text(request, response, "ai_role"),
             "provider_name": response.provider_name,
             "model_name": response.model_name,
+            "duration_seconds": _metadata_float(response, "duration_seconds"),
             "fallback_used": response.fallback_used,
             "error_present": bool(response.error_message),
             "privacy": {
@@ -63,7 +65,7 @@ class AIAuditLogger:
             },
         }
         if response.error_message:
-            entry["error_message"] = response.error_message
+            entry["error_summary"] = response.error_message[:240]
         warnings = response.metadata.get("warnings")
         if isinstance(warnings, list):
             entry["warnings"] = [str(item) for item in warnings if str(item).strip()]
@@ -77,3 +79,20 @@ class AIAuditLogger:
 
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest() if value else ""
+
+
+def _metadata_text(request: AIGatewayRequest, response: AIGatewayResponse, key: str) -> str:
+    for source in (response.metadata, request.metadata, request.context):
+        value = source.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _metadata_float(response: AIGatewayResponse, key: str) -> float:
+    value = response.metadata.get(key)
+    if isinstance(value, bool):
+        return 0.0
+    if isinstance(value, (int, float)):
+        return round(max(float(value), 0.0), 6)
+    return 0.0

@@ -104,6 +104,30 @@ def test_raw_prompt_and_response_not_stored_by_default(tmp_path) -> None:
     assert "raw_response" not in entry
 
 
+def test_audit_log_records_role_model_duration_and_error_summary(tmp_path) -> None:
+    registry = AIProviderRegistry()
+    registry.register(FailingProvider())
+    log_path = tmp_path / "ai_gateway_audit.jsonl"
+    gateway = AIGateway(config=AIGatewayConfig(default_provider="failing", audit_log_path=str(log_path)), provider_registry=registry)
+
+    gateway.generate(
+        AIGatewayRequest(
+            module="bioinformatics",
+            task_type="bio_generate_dataset_query_draft",
+            prompt="Short prompt.",
+            metadata={"ai_role": "general_3b", "model": "qwen2.5:3b"},
+        )
+    )
+
+    entry = _read_jsonl(log_path)[0]
+    assert entry["task_type"] == "bio_generate_dataset_query_draft"
+    assert entry["ai_role"] == "general_3b"
+    assert entry["model_name"] == "none"
+    assert isinstance(entry["duration_seconds"], float)
+    assert "error_summary" in entry
+    assert "raw_prompt" not in entry
+
+
 def test_provider_failure_returns_safe_response(tmp_path) -> None:
     registry = AIProviderRegistry()
     registry.register(FailingProvider())

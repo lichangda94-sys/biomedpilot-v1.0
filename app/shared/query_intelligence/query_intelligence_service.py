@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from app.shared.ai_gateway import AIGateway
 from app.shared.query_intelligence.local_model_bridge import (
     describe_local_model_components,
@@ -103,6 +105,10 @@ def build_search_translation_draft(
     local_model_status = "fallback_registry_only"
     local_model_used = False
     model_translation = None
+    ai_provider = "disabled"
+    ai_role = ""
+    ai_model_name = ""
+    ai_source = "rule_based"
 
     if not use_local_model:
         local_model_status = intelligence.local_model_status
@@ -129,6 +135,7 @@ def build_search_translation_draft(
         audit["local_model"] = {
             "model_name": model_translation.model_name,
             "provider_name": model_translation.provider_name or resolved_config.provider,
+            "ai_role": model_translation.ai_role,
             "status": model_translation.status,
             "resolved_status": local_model_status,
             "gateway_status": model_translation.gateway_status,
@@ -138,6 +145,10 @@ def build_search_translation_draft(
             "warnings": list(model_translation.warnings),
         }
         warnings.extend(model_translation.warnings)
+        ai_provider = model_translation.provider_name or resolved_config.provider
+        ai_role = model_translation.ai_role
+        ai_model_name = model_translation.model_name
+        ai_source = "local_model_draft" if model_translation.status == "called_success" else "fallback"
         if model_translation.status == "called_success":
             if _has_authoritative_vocabulary_match(term_lookup):
                 registry["main_concepts_zh"] = _unique([*registry["main_concepts_zh"], *model_translation.parsed_json.get("main_concepts_zh", [])])
@@ -197,6 +208,16 @@ def build_search_translation_draft(
             guarded["main_concepts_en"],
             guarded["modifier_terms_en"],
         )
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    audit["ai_assist"] = {
+        "source": ai_source,
+        "ai_provider": ai_provider,
+        "ai_role": ai_role,
+        "model_name": ai_model_name,
+        "generated_at": generated_at,
+        "user_confirmation_required": True,
+        "accepted_by_user": False,
+    }
     return SearchTranslationDraft(
         original_question=original_question,
         detected_language=intelligence.detected_language,
@@ -233,6 +254,13 @@ def build_search_translation_draft(
         exclusion_type_terms=term_lookup.exclusion_type_terms if target_context == "meta_analysis" else [],
         quality_assessment_terms=term_lookup.quality_assessment_terms if target_context == "meta_analysis" else [],
         pubmed_query_terms=term_lookup.pubmed_query_terms if target_context == "meta_analysis" else [],
+        source=ai_source,
+        ai_provider=ai_provider,
+        ai_role=ai_role,
+        model_name=ai_model_name,
+        generated_at=generated_at,
+        user_confirmation_required=True,
+        accepted_by_user=False,
     )
 
 

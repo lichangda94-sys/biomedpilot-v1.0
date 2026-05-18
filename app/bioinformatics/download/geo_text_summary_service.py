@@ -3,11 +3,18 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from typing import Callable
 
-from app.shared.ai_gateway import AIGateway, AIGatewayConfig, AIGatewayRequest, load_ai_gateway_config
-from app.shared.ai_gateway.models import AIProviderStatus
-from app.shared.ai_gateway.providers.ollama_provider import OllamaProvider
+from app.shared.ai_gateway import (
+    BIO_SUMMARIZE_DATASET_DETAIL,
+    BIO_TRANSLATE_DATASET_DETAIL,
+    AIGateway,
+    AIGatewayConfig,
+    AIGatewayRequest,
+    load_ai_gateway_config,
+    resolve_task_role_model,
+)
 
 
 @dataclass(frozen=True)
@@ -32,6 +39,13 @@ class GeoStudyTextSummary:
     error_message: str = ""
     model_status: dict[str, str] = field(default_factory=dict)
     quality_warnings: tuple[str, ...] = ()
+    source: str = "rule_based"
+    ai_provider: str = "disabled"
+    ai_role: str = ""
+    model_name: str = ""
+    generated_at: str = ""
+    user_confirmation_required: bool = True
+    accepted_by_user: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -111,30 +125,52 @@ class GeoTextSummaryService:
 
     def _gateway_model_status(self) -> dict[str, str]:
         if self._ai_gateway is not None:
+            config = getattr(self._ai_gateway, "config", None)
+            if isinstance(config, AIGatewayConfig):
+                translate = resolve_task_role_model(config, BIO_TRANSLATE_DATASET_DETAIL, fallback_model=self.translate_model)
+                brief = resolve_task_role_model(config, BIO_SUMMARIZE_DATASET_DETAIL, fallback_model=self.brief_model)
+                return {
+                    "ollama": "available" if translate.available and brief.available else "unavailable",
+                    "translate_model": translate.model_name or self.translate_model,
+                    "translate_model_status": "available" if translate.available else "missing",
+                    "translate_role": translate.role_id,
+                    "brief_model": brief.model_name or self.brief_model,
+                    "brief_model_status": "available" if brief.available else "missing",
+                    "brief_role": brief.role_id,
+                }
             return {
                 "ollama": "available",
                 "translate_model": self.translate_model,
                 "translate_model_status": "available",
+                "translate_role": "translator",
                 "brief_model": self.brief_model,
                 "brief_model_status": "available",
+                "brief_role": "medical",
             }
         config = self._ai_gateway_config or load_ai_gateway_config()
-        provider_config = dict(config.provider_configs.get("ollama", {}))
-        if self.base_url and "base_url" not in provider_config:
-            provider_config["base_url"] = self.base_url
-        provider = OllamaProvider.from_provider_config(provider_config)
-        status = provider.detect_ollama_status() if config.default_provider == "ollama" and config.allow_network else AIProviderStatus.DISABLED
-        availability = "available" if status == AIProviderStatus.AVAILABLE else "unavailable"
+        translate = resolve_task_role_model(config, BIO_TRANSLATE_DATASET_DETAIL, fallback_model=self.translate_model)
+        brief = resolve_task_role_model(config, BIO_SUMMARIZE_DATASET_DETAIL, fallback_model=self.brief_model)
+        provider_config = config.provider_configs.get("ollama", {})
+        provider_enabled = (
+            config.default_provider == "ollama"
+            and config.allow_network
+            and isinstance(provider_config, dict)
+            and provider_config.get("enabled") is True
+        )
+        availability = "available" if provider_enabled and translate.available and brief.available else "unavailable"
         return {
-            "ollama": status.value,
-            "translate_model": self.translate_model,
-            "translate_model_status": availability,
-            "brief_model": self.brief_model,
-            "brief_model_status": availability,
+            "ollama": availability if provider_enabled else "disabled",
+            "translate_model": translate.model_name or self.translate_model,
+            "translate_model_status": "available" if provider_enabled and translate.available else "missing",
+            "translate_role": translate.role_id,
+            "brief_model": brief.model_name or self.brief_model,
+            "brief_model_status": "available" if provider_enabled and brief.available else "missing",
+            "brief_role": brief.role_id,
         }
 
     def summarize(self, text: GeoStudyTextInput) -> GeoStudyTextSummary:
         model_status = self.model_availability()
+        generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         if model_status.get("translate_model_status") != "available" or model_status.get("brief_model_status") != "available":
             fallback = _fallback_summary_fields(text)
             return GeoStudyTextSummary(
@@ -149,6 +185,11 @@ class GeoTextSummaryService:
                 error_message=_model_status_error(model_status),
                 model_status=model_status,
                 quality_warnings=("本地模型暂不可用，已使用英文原文生成保守 fallback，需人工确认。",),
+                source="fallback",
+                ai_provider="disabled",
+                ai_role="",
+                model_name="",
+                generated_at=generated_at,
             )
         try:
             translated = self._translate_fields(text)
@@ -168,6 +209,11 @@ class GeoTextSummaryService:
                 error_message=str(exc),
                 model_status=model_status,
                 quality_warnings=("本地模型调用失败，已使用英文原文生成保守 fallback，需人工确认。",),
+                source="fallback",
+                ai_provider="disabled",
+                ai_role="",
+                model_name="",
+                generated_at=generated_at,
             )
         return GeoStudyTextSummary(
             accession=text.accession,
@@ -180,6 +226,11 @@ class GeoTextSummaryService:
             brief_model=self.brief_model,
             model_status=model_status,
             quality_warnings=tuple(dict.fromkeys(warnings)),
+            source="local_model_draft",
+            ai_provider="ollama",
+            ai_role="translator,medical",
+            model_name=" / ".join(str(model_status.get(key) or "") for key in ("translate_model", "brief_model")).strip(" / "),
+            generated_at=generated_at,
         )
 
     def _translate_fields(self, text: GeoStudyTextInput) -> dict[str, str]:
@@ -194,7 +245,7 @@ class GeoTextSummaryService:
             f"overall_design_en:\n{text.overall_design_en or ''}\n"
             f"sample_overview_en:\n{text.sample_overview_en or ''}\n"
         )
-        raw = self._generate(self.translate_model, prompt)
+        raw = self._generate(self.translate_model, prompt, task_type=BIO_TRANSLATE_DATASET_DETAIL)
         payload = _parse_json_object(raw, required_keys=("title_zh", "summary_zh", "overall_design_zh"))
         return {
             "title_zh": str(payload.get("title_zh") or "").strip(),
@@ -219,7 +270,7 @@ class GeoTextSummaryService:
             f"summary_zh:\n{translated.get('summary_zh', '')}\n\n"
             f"overall_design_zh:\n{translated.get('overall_design_zh', '')}\n"
         )
-        raw = self._generate(self.brief_model, prompt)
+        raw = self._generate(self.brief_model, prompt, task_type=BIO_SUMMARIZE_DATASET_DETAIL)
         try:
             payload = _parse_json_object(raw, required_keys=("brief_zh", "covered_terms", "missing_or_uncertain"))
         except Exception:
@@ -233,7 +284,7 @@ class GeoTextSummaryService:
             return _fallback_brief(text, translated), (*warnings, "医学模型 brief_zh 为空，已使用翻译字段生成保守简介。")
         return brief, warnings
 
-    def _generate(self, model: str, prompt: str) -> str:
+    def _generate(self, model: str, prompt: str, *, task_type: str) -> str:
         if self._generator is not None:
             return self._generator(model, prompt).strip()
         if self._ai_gateway is not None:
@@ -242,13 +293,18 @@ class GeoTextSummaryService:
             gateway = AIGateway(config=self._ai_gateway_config)
         else:
             gateway = AIGateway()
+        gateway_config = getattr(gateway, "config", self._ai_gateway_config or load_ai_gateway_config())
+        routing = resolve_task_role_model(gateway_config, task_type, fallback_model=model)
+        if not routing.available:
+            raise RuntimeError(routing.warning or "AI Gateway role mapping unavailable.")
         response = gateway.generate(
             AIGatewayRequest(
                 module="bioinformatics",
-                task_type="bio_translate_dataset_detail",
+                task_type=task_type,
                 prompt=prompt,
-                requires_network=True,
-                metadata={"model": model, "output_format": "json", "timeout_seconds": self.timeout},
+                requires_network=getattr(gateway_config, "default_provider", "") == "ollama",
+                context={"ai_role": routing.role_id},
+                metadata={"model": routing.model_name, "ai_role": routing.role_id, "output_format": "json", "timeout_seconds": self.timeout},
             )
         )
         generated = response.content.strip()
