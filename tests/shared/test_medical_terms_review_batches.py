@@ -73,8 +73,38 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
         assert usage["chinese_database_search"] is False  # type: ignore[index]
         assert usage["chinese_pdf_extraction"] is False  # type: ignore[index]
         assert "Check English mapping" in row["review_focus"]
+        assert row["synonyms_en"] is not None
+        assert row["mesh_terms"] is not None
+        assert row["emtree_terms"] is not None
+        assert "query_expansion_guard" in row
 
-    assert all(row["promotion_allowed"] == "manual_review_only" for row in promotion)
+    by_zh = {row["zh_terms"][0]: row for row in approved}  # type: ignore[index]
+    for term in ["乳腺癌", "甲状腺癌", "2型糖尿病"]:
+        assert by_zh[term]["review_status"] == "approved_runtime_ok"
+        assert by_zh[term]["shared_promotion_decision"] == "align_existing_shared_concept"
+        assert str(by_zh[term]["existing_shared_concept_id"]).startswith("mini:")
+    assert by_zh["肥胖"]["review_status"] == "needs_type_fix"
+    assert by_zh["肥胖"]["shared_promotion_decision"] == "blocked_from_shared_promotion"
+    assert "BMI" not in by_zh["肥胖"]["synonyms_en"]
+    assert "body mass index" not in by_zh["肥胖"]["synonyms_en"]
+    assert "overweight" not in by_zh["肥胖"]["synonyms_en"]
+    assert by_zh["糖尿病前期"]["concept_type"] == "phenotype_risk_state"
+    assert by_zh["糖尿病前期"]["pico_roles"] == ["exposure"]
+    assert by_zh["复发"]["review_status"] == "needs_expansion_guard"
+    assert by_zh["复发"]["query_expansion_allowed"] == "conditional"
+    assert by_zh["复发"]["standalone_search_allowed"] is False
+    assert by_zh["风险"]["query_expansion_allowed"] is False
+    assert by_zh["危险因素"]["query_expansion_allowed"] is False
+    assert by_zh["Meta分析"]["query_expansion_guard"]["mode"] == "filter_only"
+    assert by_zh["Meta分析"]["query_expansion_allowed"] is False
+
+    promotion_by_term = {row["term"]: row for row in promotion}
+    for term in ["2型糖尿病", "乳腺癌", "甲状腺癌"]:
+        assert promotion_by_term[term]["promotion_allowed"] == "align_existing_shared_concept"
+        assert promotion_by_term[term]["shared_core_write_allowed"] is False
+        assert str(promotion_by_term[term]["target_shared_concept_id"]).startswith("mini:")
+    assert promotion_by_term["肥胖"]["promotion_allowed"] == "blocked_from_shared_promotion"
+    assert promotion_by_term["肥胖"]["shared_core_write_allowed"] is False
     assert all("priority_score" in row for row in priority)
     assert all(row["recommended_status"] == "rejected" for row in auto_reject)
 
@@ -82,7 +112,9 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
 def test_discussion_reports_exist() -> None:
     discussion = REVIEW_BATCHES / "reports" / "vocabulary_review_batches_for_discussion.md"
     optimization = REVIEW_BATCHES / "reports" / "meta_candidate_optimization_report.md"
+    correction = REVIEW_BATCHES / "reports" / "meta_runtime_seed_correction_report.md"
 
     assert "GEO core missing" in discussion.read_text(encoding="utf-8")
     assert "Meta approved runtime 11" in discussion.read_text(encoding="utf-8")
     assert "Top Batch Files" in optimization.read_text(encoding="utf-8")
+    assert "blocked_from_shared_promotion" in correction.read_text(encoding="utf-8")

@@ -29,8 +29,12 @@
       "english_pdf_extraction": true,
       "chinese_pdf_extraction": false
     },
-    "query_expansion_allowed": true,
-    "standalone_search_allowed": "conditional",
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "reason": "Outcome term should not expand as an unconditional topic."
+    },
+    "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease"
     ],
@@ -41,7 +45,7 @@
         "source_type": "stage_plan_rule_seed"
       }
     ],
-    "review_status": "approved",
-    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+    "review_status": "needs_expansion_guard",
+    "notes": "Recurrence is a valid Meta outcome seed but requires population/disease context before query expansion."
   }
 ]

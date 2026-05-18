@@ -28,6 +28,13 @@
       "chinese_pdf_extraction": false
     },
     "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "no_topic_expansion",
+      "requires_pairing_with": [
+        "population_or_disease",
+        "exposure"
+      ]
+    },
     "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease",
@@ -74,6 +81,13 @@
       "chinese_pdf_extraction": false
     },
     "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "no_topic_expansion",
+      "requires_pairing_with": [
+        "population_or_disease",
+        "exposure"
+      ]
+    },
     "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease",

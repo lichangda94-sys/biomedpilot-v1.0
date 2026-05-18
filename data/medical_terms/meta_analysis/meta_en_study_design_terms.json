@@ -29,7 +29,11 @@
       "english_pdf_extraction": true,
       "chinese_pdf_extraction": false
     },
-    "query_expansion_allowed": true,
+    "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "filter_only",
+      "reason": "Review marker can filter retrieval but must not become a topic expansion."
+    },
     "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease"

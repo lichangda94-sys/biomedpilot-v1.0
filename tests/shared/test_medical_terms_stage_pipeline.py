@@ -88,7 +88,7 @@ def test_meta_runtime_seed_entries_follow_runtime_rules() -> None:
     assert len(concept_ids) == len(set(concept_ids))
     assert {"糖尿病前期", "甲状腺癌", "放射性碘治疗", "二甲双胍", "肥胖", "乳腺癌"} <= set(by_zh)
     for entry in entries:  # type: ignore[assignment]
-        assert entry["review_status"] == "approved"
+        assert entry["review_status"] in {"approved", "approved_runtime_ok", "needs_type_fix", "needs_expansion_guard"}
         assert entry["preferred_label_en"]
         assert entry["concept_type"]
         assert entry["query_usage"]["chinese_database_search"] is False
@@ -96,7 +96,26 @@ def test_meta_runtime_seed_entries_follow_runtime_rules() -> None:
         if entry["concept_type"] in {"effect_measure", "research_intent"}:
             assert entry["query_expansion_allowed"] is False
         if entry["concept_type"] == "outcome":
-            assert entry["standalone_search_allowed"] in {False, "conditional"}
+            assert entry["query_expansion_allowed"] != True
+            assert entry["standalone_search_allowed"] is False
+            assert entry["query_expansion_guard"]["mode"] == "requires_population_or_disease_context"
+
+    assert by_zh["肥胖"]["review_status"] == "needs_type_fix"
+    assert by_zh["肥胖"]["shared_promotion_decision"] == "blocked_from_shared_promotion"
+    assert "BMI" not in by_zh["肥胖"]["synonyms_en"]
+    assert "body mass index" not in by_zh["肥胖"]["synonyms_en"]
+    assert "overweight" not in by_zh["肥胖"]["synonyms_en"]
+    assert by_zh["肥胖"]["measurement_terms_en"] == ["BMI", "body mass index"]
+    assert by_zh["肥胖"]["related_terms_en"] == ["overweight"]
+    assert by_zh["糖尿病前期"]["concept_type"] == "phenotype_risk_state"
+    assert by_zh["糖尿病前期"]["pico_roles"] == ["exposure"]
+    assert by_zh["复发"]["review_status"] == "needs_expansion_guard"
+    assert by_zh["复发"]["query_expansion_allowed"] == "conditional"
+    assert by_zh["复发"]["standalone_search_allowed"] is False
+    assert by_zh["风险"]["query_expansion_allowed"] is False
+    assert by_zh["危险因素"]["query_expansion_allowed"] is False
+    assert by_zh["Meta分析"]["query_expansion_allowed"] is False
+    assert by_zh["Meta分析"]["query_expansion_guard"]["mode"] == "filter_only"
 
 
 def test_stage_scope_isolation_guards_remain_effective() -> None:

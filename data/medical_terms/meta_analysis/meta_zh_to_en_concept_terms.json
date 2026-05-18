@@ -140,20 +140,24 @@
     ],
     "preferred_label_en": "obesity",
     "synonyms_en": [
-      "overweight",
-      "body mass index",
-      "BMI"
+      "obese",
+      "adiposity"
     ],
     "mesh_terms": [
-      "Obesity",
-      "Body Mass Index"
+      "Obesity"
     ],
     "emtree_terms": [],
-    "free_text_terms_en": [
-      "BMI",
-      "body mass index",
-      "obesity",
+    "related_terms_en": [
       "overweight"
+    ],
+    "measurement_terms_en": [
+      "BMI",
+      "body mass index"
+    ],
+    "free_text_terms_en": [
+      "adiposity",
+      "obesity",
+      "obese"
     ],
     "concept_type": "risk_factor",
     "pico_roles": [
@@ -166,7 +170,17 @@
       "english_pdf_extraction": true,
       "chinese_pdf_extraction": false
     },
-    "query_expansion_allowed": true,
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "blocked_synonyms": [
+        "BMI",
+        "body mass index"
+      ],
+      "downgraded_related_terms": [
+        "overweight"
+      ]
+    },
     "standalone_search_allowed": "conditional",
     "requires_pairing_with": [
       "population_or_disease"
@@ -183,8 +197,9 @@
         "source_type": "symptom_dictionary"
       }
     ],
-    "review_status": "approved",
-    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+    "review_status": "needs_type_fix",
+    "shared_promotion_decision": "blocked_from_shared_promotion",
+    "notes": "Obesity remains Meta-only until shared disease/phenotype and Meta risk_factor/exposure semantics are reconciled. BMI/body mass index are measurement terms, and overweight is a related lower-weight-state term rather than a strong synonym."
   },
   {
     "concept_id": "meta_exposure:prediabetes",
@@ -213,7 +228,7 @@
       "prediabetes",
       "prediabetic state"
     ],
-    "concept_type": "exposure",
+    "concept_type": "phenotype_risk_state",
     "pico_roles": [
       "exposure"
     ],
@@ -224,7 +239,13 @@
       "english_pdf_extraction": true,
       "chinese_pdf_extraction": false
     },
-    "query_expansion_allowed": true,
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "avoid_expansion_to": [
+        "type 2 diabetes mellitus"
+      ]
+    },
     "standalone_search_allowed": "conditional",
     "requires_pairing_with": [
       "population_or_disease"
@@ -236,8 +257,8 @@
         "source_type": "disease_dictionary"
       }
     ],
-    "review_status": "approved",
-    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+    "review_status": "needs_type_fix",
+    "notes": "Prediabetes is a metabolic/phenotype risk state, not a generic exposure; PICO exposure role is retained with guarded expansion."
   },
   {
     "concept_id": "meta_intervention:metformin",
@@ -362,8 +383,12 @@
       "english_pdf_extraction": true,
       "chinese_pdf_extraction": false
     },
-    "query_expansion_allowed": true,
-    "standalone_search_allowed": "conditional",
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "reason": "Outcome term should not expand as an unconditional topic."
+    },
+    "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease"
     ],
@@ -374,8 +399,8 @@
         "source_type": "stage_plan_rule_seed"
       }
     ],
-    "review_status": "approved",
-    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+    "review_status": "needs_expansion_guard",
+    "notes": "Recurrence is a valid Meta outcome seed but requires population/disease context before query expansion."
   },
   {
     "concept_id": "meta_research_intent:risk",
@@ -406,6 +431,13 @@
       "chinese_pdf_extraction": false
     },
     "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "no_topic_expansion",
+      "requires_pairing_with": [
+        "population_or_disease",
+        "exposure"
+      ]
+    },
     "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease",
@@ -452,6 +484,13 @@
       "chinese_pdf_extraction": false
     },
     "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "no_topic_expansion",
+      "requires_pairing_with": [
+        "population_or_disease",
+        "exposure"
+      ]
+    },
     "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease",
@@ -497,7 +536,11 @@
       "english_pdf_extraction": true,
       "chinese_pdf_extraction": false
     },
-    "query_expansion_allowed": true,
+    "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "filter_only",
+      "reason": "Review marker can filter retrieval but must not become a topic expansion."
+    },
     "standalone_search_allowed": false,
     "requires_pairing_with": [
       "population_or_disease"
