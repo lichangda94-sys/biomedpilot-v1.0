@@ -1879,7 +1879,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
-        plan_path = latest_gtex_download_plan_path(self._project_root)
+        selected_tissue_id = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        plan_path = latest_gtex_download_plan_path(self._project_root, tissue_id=selected_tissue_id or None)
         if plan_path is None:
             self._gtex_status_text.setPlainText("未找到 GTEx 下载计划草案，请先生成 G6.1 下载计划。")
             self._set_status("未找到 GTEx 下载计划草案。", error=True)
@@ -1904,7 +1905,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
-        record_path = latest_gtex_raw_expression_record_path(self._project_root)
+        selected_tissue_id = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        record_path = latest_gtex_raw_expression_record_path(self._project_root, tissue_id=selected_tissue_id or None)
         if record_path is None:
             self._gtex_status_text.setPlainText("未找到等待 G6.3 构建的 GTEx 原始文件记录。")
             self._set_status("未找到等待 G6.3 构建的 GTEx 原始文件记录。", error=True)

@@ -187,3 +187,34 @@ def test_tcga_download_plan_executor_empty_plan_is_not_ready(tmp_path: Path) -> 
     assert result.acquisition_summary is not None
     assert result.acquisition_summary.strategy == "plan_only"
     assert workflow_pages._ready_registered_source_count(tmp_path) == 0
+
+
+def test_tcga_light_validation_limits_download_entries(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("BIOINF_LIGHT_VALIDATION_MODE", "1")
+    monkeypatch.setenv("BIOINF_TCGA_DOWNLOAD_LIMIT_FILES", "2")
+    entries = [
+        {
+            "file_id": f"file-{index}",
+            "file_name": f"file-{index}.tsv",
+            "file_size": 7,
+            "access": "open",
+            "data_type": "Gene Expression Quantification",
+            "data_format": "TSV",
+            "analysis": {"workflow_type": "STAR - Counts"},
+        }
+        for index in range(1, 5)
+    ]
+    summary = _preview_summary(entries)
+    draft = write_tcga_download_plan_draft(tmp_path, summary)
+
+    result = TCGADownloadPlanExecutor(downloader=_FakeGdcDownloader()).execute_plan(tmp_path, plan_path=draft.plan_path)
+
+    assert result.success_count == 2
+    assert len(result.downloaded_files) == 2
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert receipt["validation_limited"] is True
+    assert receipt["original_candidate_file_count"] == 4
+    assert receipt["summary"]["acquired_count"] == 2
+    record_path = tmp_path / "acquisition" / "records" / f"{result.acquisition_summary.acquisition_id}.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    assert record["metadata"]["validation_limited"] is True

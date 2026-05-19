@@ -11,6 +11,7 @@ from typing import Any, Iterable
 from uuid import uuid4
 
 from app.bioinformatics.acquisition_file_records import build_file_record
+from app.bioinformatics.data_sources.live_validation import light_validation_enabled, validation_settings, validation_warning
 from app.bioinformatics.project_workspace_binding import AcquisitionSummary, LATEST_RECORD, register_acquisition
 from app.bioinformatics.standard_assets.tcga_assets import (
     TCGA_EXPRESSION_MATRIX,
@@ -96,6 +97,7 @@ class TCGAExpressionQuantificationBuilder:
             raise ValueError("TCGA B6.3 记录缺少 project_id。")
         if str(metadata.get("analysis_gate_status") or "") != "waiting_b6_4_expression_matrix_build":
             raise ValueError("该 TCGA 记录不是等待 B6.4 表达矩阵构建的原始文件记录。")
+        validation_limited = light_validation_enabled() or bool(metadata.get("validation_limited"))
 
         source_files = [Path(path).expanduser().resolve() for path in _string_list(raw_record.get("source_files"))]
         file_records = _file_records_for_raw_record(raw_record, metadata)
@@ -113,6 +115,8 @@ class TCGAExpressionQuantificationBuilder:
 
         if not parsed_samples:
             raise ValueError("未识别到可解析的 TCGA RNA-seq gene expression quantification 文件。")
+        if validation_limited:
+            warnings.append(validation_warning())
 
         build_id = f"tcga-b64-{uuid4().hex[:10]}"
         asset_paths = build_tcga_asset_paths(root / "standardized_data", project_id, build_id, layout="data_prepared")
@@ -156,6 +160,8 @@ class TCGAExpressionQuantificationBuilder:
                 "sample_mapping_path": str(sample_mapping_path),
                 "gene_annotation_path": str(gene_annotation_path),
                 "analysis_gate_status": "pending_data_check",
+                "validation_limited": validation_limited,
+                "validation_settings": validation_settings() if validation_limited else {},
             },
             matrix_orientation="gene_by_sample",
             log_transform=False,
@@ -181,6 +187,8 @@ class TCGAExpressionQuantificationBuilder:
             "prepare_manifest_path": str(prepare_manifest_path),
             "prepare_manifest": prepare_manifest,
             "warnings": warnings,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
             "ready_for_recognition": "pending_data_check",
             "analysis_gate_status": "pending_data_check",
         }
@@ -201,6 +209,7 @@ class TCGAExpressionQuantificationBuilder:
             gene_count=len(gene_order),
             parsed_file_count=len(parsed_samples),
             warnings=warnings,
+            validation_limited=validation_limited,
         )
         return TCGAExpressionBuildResult(
             success=True,
@@ -555,6 +564,7 @@ def _register_expression_build(
     gene_count: int,
     parsed_file_count: int,
     warnings: list[str],
+    validation_limited: bool,
 ) -> AcquisitionSummary:
     selected_paths = [
         expression_matrix_path,
@@ -610,6 +620,8 @@ def _register_expression_build(
                 "gene_count": gene_count,
                 "parsed_file_count": parsed_file_count,
             },
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
             "expected_assets": ["rna_seq_expression", "sample_metadata", "case_sample_mapping"],
             "warnings": list(warnings),
         },

@@ -8,6 +8,13 @@ from typing import Any
 from uuid import uuid4
 
 from app.bioinformatics.acquisition_file_records import build_blocked_file_record, build_file_record
+from app.bioinformatics.data_sources.live_validation import (
+    apply_limit,
+    light_validation_enabled,
+    tcga_download_limit_files,
+    validation_settings,
+    validation_warning,
+)
 from app.bioinformatics.data_sources.tcga_preview import GDCFetcher, fetch_tcga_file_manifest_entries, format_bytes_zh
 from app.bioinformatics.download import GdcDataFileDownloader, StandardRemoteFileDownloader
 from app.bioinformatics.project_workspace_binding import AcquisitionSummary, register_acquisition
@@ -84,6 +91,10 @@ class TCGADownloadPlanExecutor:
         _validate_plan(plan)
         project_id = str(plan.get("project_id") or "").strip().upper()
         entries = self._entries_from_plan(plan, timeout=timeout)
+        original_candidate_count = len(entries)
+        validation_limited = light_validation_enabled() or bool(plan.get("validation_limited"))
+        if validation_limited:
+            entries = apply_limit(entries, tcga_download_limit_files())
         download_id = f"tcga-dl-{uuid4().hex[:10]}"
         target_dir = root / "raw_data" / "tcga" / project_id / download_id
         request_path = root / "acquisition" / "download_requests" / f"{download_id}.json"
@@ -129,6 +140,7 @@ class TCGADownloadPlanExecutor:
                             "file_name": file_name,
                             **_tcga_entry_mapping_fields(entry),
                             "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
+                            "validation_limited": validation_limited,
                         },
                     )
                 )
@@ -158,6 +170,10 @@ class TCGADownloadPlanExecutor:
             "download_events": events,
             "summary": _summary(success_count, cache_hit_count, failed_count, skipped_count, blocked_count, total_size_bytes),
             "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
+            "original_candidate_file_count": original_candidate_count,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
+            "warnings": [validation_warning()] if validation_limited else [],
         }
         _write_json(manifest_path, manifest)
         receipt = {
@@ -179,6 +195,10 @@ class TCGADownloadPlanExecutor:
             "download_events": events,
             "summary": manifest["summary"],
             "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
+            "original_candidate_file_count": original_candidate_count,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
+            "warnings": [validation_warning()] if validation_limited else [],
         }
         _write_json(receipt_path, receipt)
         acquisition = self._register_acquisition(
@@ -194,6 +214,7 @@ class TCGADownloadPlanExecutor:
             target_dir=target_dir,
             file_records=file_records,
             summary=manifest["summary"],
+            validation_limited=validation_limited,
         )
         return TCGADownloadExecutionResult(
             success=bool(downloaded_files) and failed_count == 0,
@@ -244,6 +265,7 @@ class TCGADownloadPlanExecutor:
         target_dir: Path,
         file_records: list[dict[str, Any]],
         summary: dict[str, object],
+        validation_limited: bool,
     ) -> AcquisitionSummary:
         preview = plan.get("preview_summary") if isinstance(plan.get("preview_summary"), dict) else {}
         request = preview.get("request") if isinstance(preview, dict) and isinstance(preview.get("request"), dict) else {}
@@ -270,6 +292,9 @@ class TCGADownloadPlanExecutor:
             "display_title_zh": f"TCGA {project_id}",
             "tcga_download_summary": summary,
             "file_records_summary": summary,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
+            "warnings": [validation_warning()] if validation_limited else [],
         }
         return register_acquisition(
             root,
@@ -316,6 +341,7 @@ def _validate_plan(plan: dict[str, Any]) -> None:
 
 
 def _request_payload(download_id: str, root: Path, plan: dict[str, Any], entries: list[dict[str, Any]], target_dir: Path) -> dict[str, object]:
+    validation_limited = light_validation_enabled() or bool(plan.get("validation_limited"))
     return {
         "schema_version": TCGA_DOWNLOAD_REQUEST_SCHEMA_VERSION,
         "download_id": download_id,
@@ -329,6 +355,8 @@ def _request_payload(download_id: str, root: Path, plan: dict[str, Any], entries
         "target_dir": str(target_dir),
         "execute_download": True,
         "candidate_file_count": len(entries),
+        "validation_limited": validation_limited,
+        "validation_settings": validation_settings() if validation_limited else {},
         "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
     }
 

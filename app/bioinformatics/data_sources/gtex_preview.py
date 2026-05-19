@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import ssl
+import re
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -12,6 +13,13 @@ from urllib.request import urlopen
 from uuid import uuid4
 
 from app.bioinformatics.gtex_tissue_registry import GTExTissueEntry, GTExUsePurpose
+from app.bioinformatics.data_sources.live_validation import (
+    gtex_limit_genes,
+    gtex_limit_samples,
+    light_validation_enabled,
+    validation_settings,
+    validation_warning,
+)
 
 
 GTEX_API_ROOT = "https://gtexportal.org/api/v2"
@@ -112,14 +120,18 @@ class GTExMetadataPreviewService:
                 file_manifest_entries=(),
                 error_message=str(exc),
             )
-        record = _first_record(payload) or {"tissueSiteDetail": request.tissue_site_detail}
-        sample_count = _safe_int(_first_value(record, "rnaSeqSampleCount", "sampleCount", "samples", "count"))
-        donor_count = _safe_int(_first_value(record, "donorCount", "subjectCount", "donors")) or sample_count
+        record = _matching_record(payload, request) or {"tissueSiteDetail": request.tissue_site_detail}
+        sample_count = _safe_int(_first_value(record, "rnaSeqSampleCount", "sampleCount", "samples", "count")) or _nested_total(record, "rnaSeqSampleSummary")
+        donor_count = _safe_int(_first_value(record, "donorCount", "subjectCount", "donors")) or _nested_total(record, "eqtlSampleSummary") or sample_count
         entries = tuple(_file_entries_from_record(record, request))
-        status = "ready" if sample_count or entries else "empty"
         warnings = ["GTEx 是独立正常组织表达资源；不自动作为 TCGA normal control，也不自动与 TCGA 合并。"]
         if not entries:
-            warnings.append("未从 GTEx metadata 返回明确公共下载文件；可生成 metadata 计划，但不能执行真实表达矩阵下载。")
+            if light_validation_enabled():
+                entries = (_validation_slice_entry(record, request),)
+                warnings.append("BIOINF_LIGHT_VALIDATION_MODE=1：使用 GTEx API expression slice 生成轻量验收矩阵，不下载完整 GTEx 表达矩阵。")
+            else:
+                warnings.append("未从 GTEx metadata 返回明确公共下载文件；可生成 metadata 计划，但不能执行真实表达矩阵下载。")
+        status = "ready" if sample_count or entries else "empty"
         return GTExPreviewSummary(
             request=request,
             status=status,
@@ -157,25 +169,43 @@ def write_gtex_download_plan_draft(project_root: str | Path, summary: GTExPrevie
         "preview_summary": summary.to_dict(),
         "file_manifest_entries": [dict(entry) for entry in summary.file_manifest_entries],
         "constraints": {
-            "downloads_files": False,
+            "downloads_files": bool(summary.file_manifest_entries),
             "writes_source_files": False,
             "builds_expression_matrix": False,
             "ready_for_deg_or_gsea": False,
             "not_tcga_normal_control": True,
             "requires_explicit_joint_config": True,
+            "validation_limited": light_validation_enabled(),
         },
+        "validation_limited": light_validation_enabled(),
+        "validation_settings": validation_settings() if light_validation_enabled() else {},
     }
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return draft
 
 
-def latest_gtex_download_plan_path(project_root: str | Path) -> Path | None:
+def latest_gtex_download_plan_path(project_root: str | Path, *, tissue_id: str | None = None, use_purpose: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_tissue = str(tissue_id or "").strip()
+    selected_purpose = str(use_purpose or "").strip()
     plans_dir = root / "acquisition" / "gtex_download_plans"
     if not plans_dir.exists():
         return None
-    paths = [path for path in plans_dir.glob("*.json") if path.is_file()]
+    paths: list[Path] = []
+    for path in plans_dir.glob("*.json"):
+        if not path.is_file():
+            continue
+        if selected_tissue or selected_purpose:
+            try:
+                payload = _read_json(path)
+            except (OSError, json.JSONDecodeError):
+                continue
+            if selected_tissue and str(payload.get("tissue_id") or "") != selected_tissue:
+                continue
+            if selected_purpose and str(payload.get("use_purpose") or "") != selected_purpose:
+                continue
+        paths.append(path)
     return max(paths, key=lambda item: item.stat().st_mtime) if paths else None
 
 
@@ -208,17 +238,76 @@ def _file_entries_from_record(record: dict[str, Any], request: GTExPreviewReques
     return entries
 
 
-def _first_record(payload: dict[str, Any]) -> dict[str, Any] | None:
+def _matching_record(payload: dict[str, Any], request: GTExPreviewRequest) -> dict[str, Any] | None:
+    records = _records(payload)
+    if not records:
+        return None
+    wanted = {
+        _normalize_tissue_key(request.tissue_site_detail),
+        _normalize_tissue_key(request.tissue_id.removeprefix("gtex_")),
+    }
+    for record in records:
+        candidates = {
+            _normalize_tissue_key(record.get("tissueSiteDetail")),
+            _normalize_tissue_key(record.get("tissueSiteDetailId")),
+            _normalize_tissue_key(record.get("tissueSite")),
+        }
+        if wanted & candidates:
+            return record
+    return records[0]
+
+
+def _records(payload: dict[str, Any]) -> list[dict[str, Any]]:
     data = payload.get("data", payload)
     if isinstance(data, list) and data and isinstance(data[0], dict):
-        return data[0]
+        return [dict(item) for item in data if isinstance(item, dict)]
     if isinstance(data, dict):
         for key in ("tissueSiteDetail", "tissueSiteDetails", "items", "results"):
             value = data.get(key)
             if isinstance(value, list) and value and isinstance(value[0], dict):
-                return value[0]
-        return data
-    return None
+                return [dict(item) for item in value if isinstance(item, dict)]
+        return [data]
+    return []
+
+
+def _validation_slice_entry(record: dict[str, Any], request: GTExPreviewRequest) -> dict[str, object]:
+    tissue_api_id = _gtex_api_tissue_id(record, request)
+    return {
+        "file_id": f"{request.tissue_id}-validation-expression-slice",
+        "file_name": f"{request.tissue_id}_validation_expression_slice.tsv",
+        "file_size": 0,
+        "url": "gtex-api://expression-slice",
+        "data_type": "GTEx API Expression Slice",
+        "data_format": "TSV",
+        "value_type": "TPM",
+        "tissue_id": request.tissue_id,
+        "tissue_site_detail": request.tissue_site_detail,
+        "tissue_site_detail_id": tissue_api_id,
+        "role": "gtex_tissue_expression_validation_slice",
+        "validation_limited": True,
+        "validation_query": {
+            "endpoint": f"{GTEX_API_ROOT}/expression/topExpressedGene",
+            "datasetId": "gtex_v8",
+            "tissueSiteDetailId": tissue_api_id,
+            "limit_samples": gtex_limit_samples(),
+            "limit_genes": gtex_limit_genes(),
+        },
+        "warnings": [validation_warning()],
+    }
+
+
+def _gtex_api_tissue_id(record: dict[str, Any], request: GTExPreviewRequest) -> str:
+    candidate = str(record.get("tissueSiteDetailId") or "").strip()
+    if candidate:
+        return candidate
+    return _normalize_tissue_key(request.tissue_site_detail).title().replace("_", "_")
+
+
+def _normalize_tissue_key(value: object) -> str:
+    text = str(value or "").strip().lower()
+    if text.startswith("gtex_"):
+        text = text[5:]
+    return re.sub(r"[^a-z0-9]+", "_", text).strip("_")
 
 
 def _first_value(payload: dict[str, Any], *keys: str) -> object:
@@ -236,10 +325,29 @@ def _safe_int(value: object) -> int:
         return 0
 
 
+def _nested_total(payload: dict[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        return 0
+    return _safe_int(value.get("totalCount") or value.get("count"))
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def _fetch_gtex_json(url: str, params: dict[str, str], timeout: int) -> dict[str, Any]:
     full_url = f"{url}?{urlencode(params)}" if params else url
-    with urlopen(full_url, timeout=timeout, context=ssl.create_default_context()) as handle:
+    with urlopen(full_url, timeout=timeout, context=_ssl_context()) as handle:
         return json.loads(handle.read().decode("utf-8"))
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi  # type: ignore[import-not-found]
+    except Exception:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def _friendly_error(exc: Exception) -> str:

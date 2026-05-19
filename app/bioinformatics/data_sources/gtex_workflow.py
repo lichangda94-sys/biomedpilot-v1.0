@@ -57,8 +57,8 @@ def build_gtex_workflow_state(project_root: str | Path | None, *, tissue_id: str
     plan_path = _latest_plan_path(root, selected_tissue)
     plan = _read_json(plan_path) if plan_path is not None else {}
     raw_record = _latest_raw_record(records)
-    raw_record_path = latest_gtex_raw_expression_record_path(root) if root is not None else None
-    build_manifest_path = latest_gtex_expression_build_manifest_path(root) if root is not None else None
+    raw_record_path = latest_gtex_raw_expression_record_path(root, tissue_id=selected_tissue) if root is not None else None
+    build_manifest_path = latest_gtex_expression_build_manifest_path(root, tissue_id=selected_tissue) if root is not None else None
     build_manifest = _read_json(build_manifest_path) if build_manifest_path is not None else {}
     raw_summary = _metadata_summary(raw_record, "gtex_download_summary")
     build_record = _record_for_manifest(records, build_manifest_path)
@@ -202,7 +202,7 @@ def _latest_plan_path(root: Path | None, tissue_id: str | None) -> Path | None:
         if tissue_id and plan_tissue and plan_tissue != tissue_id:
             continue
         candidates.append(path)
-    return max(candidates, key=lambda item: item.stat().st_mtime) if candidates else latest_gtex_download_plan_path(root)
+    return max(candidates, key=lambda item: item.stat().st_mtime) if candidates else latest_gtex_download_plan_path(root, tissue_id=tissue_id)
 
 
 def _current_stage(steps: list[GTExWorkflowStep]) -> str:

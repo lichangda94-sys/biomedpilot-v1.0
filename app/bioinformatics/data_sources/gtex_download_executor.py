@@ -1,13 +1,26 @@
 from __future__ import annotations
 
 import json
+import ssl
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
+from urllib.request import urlopen
 from uuid import uuid4
 
 from app.bioinformatics.acquisition_file_records import build_blocked_file_record, build_file_record
+from app.bioinformatics.data_sources.live_validation import (
+    apply_limit,
+    gtex_download_limit_files,
+    gtex_limit_genes,
+    gtex_limit_samples,
+    light_validation_enabled,
+    validation_settings,
+    validation_warning,
+)
 from app.bioinformatics.data_sources.gtex_preview import latest_gtex_download_plan_path
 from app.bioinformatics.download import HttpsUrlFileDownloader, StandardRemoteFileDownloader
 from app.bioinformatics.project_workspace_binding import AcquisitionSummary, register_acquisition
@@ -52,8 +65,8 @@ class GTExDownloadPlanExecutor:
     def __init__(self, *, downloader: StandardRemoteFileDownloader | None = None) -> None:
         self._downloader = downloader or HttpsUrlFileDownloader()
 
-    def execute_latest_plan(self, project_root: str | Path) -> GTExDownloadExecutionResult:
-        plan_path = latest_gtex_download_plan_path(project_root)
+    def execute_latest_plan(self, project_root: str | Path, *, tissue_id: str | None = None) -> GTExDownloadExecutionResult:
+        plan_path = latest_gtex_download_plan_path(project_root, tissue_id=tissue_id)
         if plan_path is None:
             raise FileNotFoundError("未找到 GTEx 下载计划草案，请先生成 G6.1 下载计划。")
         return self.execute_plan(project_root, plan_path=plan_path)
@@ -66,6 +79,10 @@ class GTExDownloadPlanExecutor:
         tissue_id = str(plan.get("tissue_id") or "").strip()
         tissue_detail = str(plan.get("tissue_site_detail") or tissue_id).strip()
         entries = _entry_list(plan.get("file_manifest_entries"))
+        original_candidate_count = len(entries)
+        validation_limited = light_validation_enabled() or bool(plan.get("validation_limited"))
+        if validation_limited:
+            entries = apply_limit(entries, gtex_download_limit_files())
         download_id = f"gtex-dl-{uuid4().hex[:10]}"
         target_dir = root / "raw_data" / "gtex" / _slug(tissue_id) / download_id
         request_path = root / "acquisition" / "download_requests" / f"{download_id}.json"
@@ -83,6 +100,9 @@ class GTExDownloadPlanExecutor:
                 "plan_path": str(plan_path),
                 "target_dir": str(target_dir),
                 "candidate_file_count": len(entries),
+                "original_candidate_file_count": original_candidate_count,
+                "validation_limited": validation_limited,
+                "validation_settings": validation_settings() if validation_limited else {},
                 "tcga_default_control_status": "disabled",
             },
         )
@@ -97,7 +117,7 @@ class GTExDownloadPlanExecutor:
                 events.append(_event(entry, "failed", message="missing_download_url"))
                 continue
             try:
-                result = self._downloader.download_file(entry, target_dir)
+                result = _download_gtex_api_slice(entry, target_dir) if str(entry.get("url") or "").startswith("gtex-api://") else self._downloader.download_file(entry, target_dir)
                 local_path = str(result.get("local_path") or "")
                 if not local_path:
                     raise RuntimeError("GTEx downloader did not return local_path.")
@@ -122,6 +142,7 @@ class GTExDownloadPlanExecutor:
                             "value_type": str(entry.get("value_type") or "TPM"),
                             "analysis_gate_status": "waiting_gtex_expression_matrix_build",
                             "tcga_default_control_status": "disabled",
+                            "validation_limited": validation_limited or bool(entry.get("validation_limited")),
                         },
                     )
                 )
@@ -159,6 +180,9 @@ class GTExDownloadPlanExecutor:
             "summary": summary,
             "analysis_gate_status": "waiting_gtex_expression_matrix_build",
             "tcga_default_control_status": "disabled",
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
+            "warnings": [validation_warning()] if validation_limited else [],
         }
         _write_json(manifest_path, manifest)
         receipt = {
@@ -179,6 +203,9 @@ class GTExDownloadPlanExecutor:
             "file_records": file_records,
             "download_events": events,
             "summary": summary,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
+            "warnings": [validation_warning()] if validation_limited else [],
         }
         _write_json(receipt_path, receipt)
         acquisition = _register_download(
@@ -194,6 +221,7 @@ class GTExDownloadPlanExecutor:
             target_dir=target_dir,
             file_records=file_records,
             summary=summary,
+            validation_limited=validation_limited,
         )
         return GTExDownloadExecutionResult(
             success=bool(downloaded_files) and failed_count == 0,
@@ -217,8 +245,9 @@ class GTExDownloadPlanExecutor:
         )
 
 
-def latest_gtex_raw_expression_record_path(project_root: str | Path) -> Path | None:
+def latest_gtex_raw_expression_record_path(project_root: str | Path, *, tissue_id: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_tissue = str(tissue_id or "").strip()
     records_dir = root / "acquisition" / "records"
     if not records_dir.exists():
         return None
@@ -234,6 +263,8 @@ def latest_gtex_raw_expression_record_path(project_root: str | Path) -> Path | N
         if not isinstance(metadata, dict):
             continue
         if str(metadata.get("analysis_gate_status") or "") != "waiting_gtex_expression_matrix_build":
+            continue
+        if selected_tissue and str(metadata.get("tissue_id") or payload.get("source_label") or "") != selected_tissue:
             continue
         if str(metadata.get("source") or "") == "gtex" and payload.get("source_files"):
             candidates.append(path)
@@ -254,7 +285,11 @@ def _register_download(
     target_dir: Path,
     file_records: list[dict[str, Any]],
     summary: dict[str, object],
+    validation_limited: bool,
 ) -> AcquisitionSummary:
+    warnings = ["GTEx 不自动作为 TCGA normal control；TCGA+GTEx 需要显式联合配置。"]
+    if validation_limited:
+        warnings.insert(0, validation_warning())
     return register_acquisition(
         root,
         source_type="gtex_tissue",
@@ -279,10 +314,12 @@ def _register_download(
             "tissue_site_detail": tissue_detail,
             "display_title_zh": f"GTEx {tissue_detail}",
             "gtex_download_summary": summary,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
             "tcga_merge_status": "not_merged",
             "tcga_default_control_status": "disabled",
             "requires_explicit_joint_config": True,
-            "warnings": ["GTEx 不自动作为 TCGA normal control；TCGA+GTEx 需要显式联合配置。"],
+            "warnings": warnings,
         },
         file_records=file_records,
     )
@@ -332,6 +369,92 @@ def _execution_status(downloaded_files: list[str], failed_count: int, entries: l
     if not entries:
         return "gtex_download_plan_empty"
     return "gtex_raw_file_download_failed"
+
+
+def _download_gtex_api_slice(entry: dict[str, Any], target_dir: Path) -> dict[str, object]:
+    target_dir.mkdir(parents=True, exist_ok=True)
+    file_name = Path(str(entry.get("file_name") or "gtex_validation_expression_slice.tsv")).name
+    target_path = target_dir / file_name
+    if target_path.exists() and target_path.stat().st_size > 0:
+        return {
+            "status": "success",
+            "cache_hit": True,
+            "local_path": str(target_path.resolve()),
+            "bytes_downloaded": target_path.stat().st_size,
+            "source_url": "https://gtexportal.org/api/v2/expression/topExpressedGene",
+        }
+    tissue_api_id = str(entry.get("tissue_site_detail_id") or _validation_query(entry).get("tissueSiteDetailId") or "").strip()
+    if not tissue_api_id:
+        raise ValueError("GTEx API validation slice entry lacks tissueSiteDetailId.")
+    gene_limit = gtex_limit_genes() or 3
+    sample_limit = gtex_limit_samples() or 3
+    top = _fetch_gtex_json(
+        "https://gtexportal.org/api/v2/expression/topExpressedGene",
+        {"tissueSiteDetailId": tissue_api_id, "datasetId": "gtex_v8", "itemsPerPage": str(gene_limit), "page": "0"},
+        30,
+    )
+    genes = [dict(item) for item in top.get("data", []) if isinstance(item, dict)]
+    if not genes:
+        raise RuntimeError(f"GTEx topExpressedGene returned no genes for {tissue_api_id}.")
+    sample_ids = [f"GTEX_VALIDATION_SAMPLE_{index}" for index in range(1, sample_limit + 1)]
+    rows: list[dict[str, str]] = []
+    for gene in genes[:gene_limit]:
+        gencode_id = str(gene.get("gencodeId") or "").strip()
+        gene_symbol = str(gene.get("geneSymbol") or gencode_id).strip()
+        expr = _fetch_gtex_json(
+            "https://gtexportal.org/api/v2/expression/geneExpression",
+            {"gencodeId": gencode_id, "datasetId": "gtex_v8", "tissueSiteDetailId": tissue_api_id, "itemsPerPage": "1", "page": "0"},
+            30,
+        )
+        records = [dict(item) for item in expr.get("data", []) if isinstance(item, dict)]
+        values = records[0].get("data") if records else []
+        numeric = [str(value) for value in values[:sample_limit]] if isinstance(values, list) else []
+        while len(numeric) < sample_limit:
+            numeric.append("")
+        rows.append({"gene_id": gene_symbol or gencode_id, **dict(zip(sample_ids, numeric))})
+    partial_path = target_path.with_suffix(target_path.suffix + ".part")
+    with partial_path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write("\t".join(["gene_id", *sample_ids]) + "\n")
+        for row in rows:
+            handle.write("\t".join([row["gene_id"], *[row.get(sample_id, "") for sample_id in sample_ids]]) + "\n")
+    partial_path.replace(target_path)
+    return {
+        "status": "success",
+        "cache_hit": False,
+        "local_path": str(target_path.resolve()),
+        "bytes_downloaded": target_path.stat().st_size,
+        "source_url": "https://gtexportal.org/api/v2/expression/topExpressedGene",
+        "download_method": "gtex_api_expression_slice",
+    }
+
+
+def _validation_query(entry: dict[str, Any]) -> dict[str, Any]:
+    value = entry.get("validation_query")
+    return value if isinstance(value, dict) else {}
+
+
+def _fetch_gtex_json(url: str, params: dict[str, str], timeout: int) -> dict[str, Any]:
+    full_url = f"{url}?{urlencode(params)}"
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            with urlopen(full_url, timeout=timeout, context=_ssl_context()) as handle:
+                return json.loads(handle.read().decode("utf-8"))
+        except Exception as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(1 + attempt)
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("GTEx API request failed.")
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi  # type: ignore[import-not-found]
+    except Exception:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def _safe_int(value: object) -> int:

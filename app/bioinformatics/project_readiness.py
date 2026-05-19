@@ -13,6 +13,7 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.data_sources.gtex_expression_builder import latest_gtex_expression_build_manifest_path
+from app.bioinformatics.data_sources.live_validation import validation_warning
 from app.bioinformatics.gene_set_resources import build_gsea_gene_set_readiness, get_selected_gene_set, validate_gene_set_registry
 from app.bioinformatics.project_recognition import load_recognition_report
 from app.bioinformatics.standardization_confirmation import load_standardization_confirmation
@@ -50,6 +51,11 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     gtex_readiness = build_gtex_readiness_summary(root)
     if gtex_readiness.get("has_gtex_expression_build"):
         available.update(str(item) for item in gtex_readiness.get("available_inputs", []) or [] if str(item))
+    validation_limited_present = any(
+        bool(summary.get("validation_limited"))
+        for summary in (tcga_readiness, tcga_clinical_readiness, gtex_readiness)
+        if isinstance(summary, dict)
+    )
     confirmed_comparison = load_confirmed_comparison_config(root)
     if confirmed_comparison is not None:
         available.add("comparison_config")
@@ -74,12 +80,17 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         warnings.append("样本信息缺失。")
     if "clinical_metadata" not in available:
         warnings.append("临床信息缺失。")
+    if validation_limited_present:
+        warnings.append(validation_warning())
     rows = []
     deg_ready = False
     for key, label, required in ANALYSIS_ROWS:
         missing = sorted(_missing_inputs_for_row(key, required, available, confirmed_comparison))
         can_run = bool(has_core_input) and not missing and (key not in {"tcga_gtex_joint", "reporting"})
         row_warnings = []
+        if validation_limited_present and key in {"differential_expression", "enrichment", "gsea", "correlation", "survival", "clinical_association", "tcga_gtex_joint", "reporting"}:
+            can_run = False
+            row_warnings.append(validation_warning())
         if key == "differential_expression":
             tcga_group_status = str(tcga_readiness.get("default_group_status") or "")
             if tcga_group_status == "available" and confirmed_comparison is None:
@@ -182,6 +193,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         "tcga_readiness": tcga_readiness,
         "tcga_clinical_readiness": tcga_clinical_readiness,
         "gtex_readiness": gtex_readiness,
+        "validation_limited": validation_limited_present,
         "gsea_gene_set_status": gsea_gene_set_status,
         "gsea_gene_set_readiness": gsea_gene_set_readiness,
         "gene_set_registry_validation": gene_set_validation,
@@ -434,6 +446,7 @@ def build_tcga_b6_4_readiness_summary(project_root: str | Path) -> dict[str, obj
         "value_type_policy": _tcga_value_type_policy(),
         "deg_input_value_type": "count",
         "display_value_types": ["TPM", "FPKM", "FPKM-UQ"],
+        "validation_limited": any(bool(build.get("validation_limited")) for build in builds),
         "warnings": list(dict.fromkeys(warnings)),
         "builds": builds,
         "tcga_gtex_boundary": "TCGA B6.4 构建产物不自动与 GTEx 合并；GTEx 仍需独立接入与批次校正方案。",
@@ -483,6 +496,7 @@ def build_tcga_clinical_readiness_summary(project_root: str | Path) -> dict[str,
         "demographic_available_case_count": int(latest.get("demographic_available_case_count") or 0),
         "diagnosis_available_case_count": int(latest.get("diagnosis_available_case_count") or 0),
         "available_inputs": sorted(available_inputs),
+        "validation_limited": any(bool(build.get("validation_limited")) for build in builds),
         "warnings": list(dict.fromkeys(warnings)),
         "builds": builds,
         "survival_execution_status": "not_executed",
@@ -525,6 +539,7 @@ def build_gtex_readiness_summary(project_root: str | Path) -> dict[str, object]:
         "gene_count": int(latest.get("gene_count") or 0),
         "sample_match_status": str(latest.get("sample_match_status") or "not_checked"),
         "value_type_policy": latest.get("value_type_policy") if isinstance(latest.get("value_type_policy"), dict) else {},
+        "validation_limited": any(bool(build.get("validation_limited")) for build in builds),
         "available_inputs": sorted(available_inputs),
         "warnings": list(dict.fromkeys(warnings)),
         "builds": builds,
@@ -617,6 +632,9 @@ def _read_tcga_build_record(record: dict[str, Any]) -> dict[str, object]:
     if sample_match_status == "mismatch":
         status = "blocked_sample_metadata_mismatch"
     warnings = [*sample_warnings]
+    validation_limited = bool(manifest.get("validation_limited") or metadata.get("validation_limited"))
+    if validation_limited:
+        warnings.append(validation_warning())
     if not manifest_path.is_file():
         warnings.append(f"tcga_build_manifest_missing:{manifest_path}")
     for label, path in (("raw_counts_matrix", raw_counts_path), ("sample_metadata", sample_metadata_path), ("gene_annotation", gene_annotation_path)):
@@ -655,6 +673,7 @@ def _read_tcga_build_record(record: dict[str, Any]) -> dict[str, object]:
             "auto_execute_deg": False,
         },
         "value_type_policy": _tcga_value_type_policy(),
+        "validation_limited": validation_limited,
         "warnings": list(dict.fromkeys(warnings)),
     }
 
@@ -672,6 +691,9 @@ def _read_tcga_clinical_build_record(record: dict[str, Any]) -> dict[str, object
     mapping_table_path = Path(str(manifest.get("mapping_table_path") or ""))
     survival_table_path = Path(str(manifest.get("survival_table_path") or ""))
     warnings = [str(item) for item in manifest.get("warnings", []) or [] if str(item)]
+    validation_limited = bool(manifest.get("validation_limited") or metadata.get("validation_limited"))
+    if validation_limited:
+        warnings.append(validation_warning())
     for label, path in (("case_table", case_table_path), ("mapping_table", mapping_table_path), ("survival_table", survival_table_path)):
         if path and str(path) != "." and not path.is_file():
             warnings.append(f"tcga_clinical_{label}_missing:{path}")
@@ -701,6 +723,7 @@ def _read_tcga_clinical_build_record(record: dict[str, Any]) -> dict[str, object
         "demographic_available_case_count": int(summary.get("demographic_available_case_count") or 0),
         "diagnosis_available_case_count": int(summary.get("diagnosis_available_case_count") or 0),
         "available_inputs": sorted(available_inputs),
+        "validation_limited": validation_limited,
         "warnings": list(dict.fromkeys(warnings)),
     }
 
@@ -724,6 +747,9 @@ def _read_gtex_build_record(record: dict[str, Any]) -> dict[str, object]:
     metadata_samples = _sample_ids_from_metadata(sample_rows)
     sample_match_status, sample_warnings = _sample_match_status(matrix_samples, metadata_samples)
     warnings = [*sample_warnings, *[str(item) for item in manifest.get("warnings", []) or [] if str(item)]]
+    validation_limited = bool(manifest.get("validation_limited") or metadata.get("validation_limited"))
+    if validation_limited:
+        warnings.append(validation_warning())
     for label, path in (("expression_matrix", expression_path), ("sample_metadata", sample_metadata_path), ("donor_metadata", donor_metadata_path), ("gene_annotation", gene_annotation_path)):
         if not path.is_file():
             warnings.append(f"gtex_{label}_missing:{path}")
@@ -749,6 +775,7 @@ def _read_gtex_build_record(record: dict[str, Any]) -> dict[str, object]:
         "gene_count": int(manifest.get("gene_count") or 0),
         "sample_match_status": sample_match_status,
         "value_type_policy": manifest.get("value_type_policy") if isinstance(manifest.get("value_type_policy"), dict) else {},
+        "validation_limited": validation_limited,
         "available_inputs": sorted(available_inputs),
         "warnings": list(dict.fromkeys(warnings)),
     }

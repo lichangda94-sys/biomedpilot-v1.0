@@ -10,6 +10,13 @@ from typing import Any, Iterable
 from uuid import uuid4
 
 from app.bioinformatics.acquisition_file_records import build_file_record
+from app.bioinformatics.data_sources.live_validation import (
+    gtex_limit_genes,
+    gtex_limit_samples,
+    light_validation_enabled,
+    validation_settings,
+    validation_warning,
+)
 from app.bioinformatics.data_sources.gtex_download_executor import latest_gtex_raw_expression_record_path
 from app.bioinformatics.project_workspace_binding import AcquisitionSummary, LATEST_RECORD, register_acquisition
 
@@ -56,8 +63,8 @@ class GTExExpressionBuildResult:
 
 
 class GTExExpressionMatrixBuilder:
-    def build_latest(self, project_root: str | Path) -> GTExExpressionBuildResult:
-        record_path = latest_gtex_raw_expression_record_path(project_root)
+    def build_latest(self, project_root: str | Path, *, tissue_id: str | None = None) -> GTExExpressionBuildResult:
+        record_path = latest_gtex_raw_expression_record_path(project_root, tissue_id=tissue_id)
         if record_path is None:
             raise FileNotFoundError("未找到等待 G6.3 构建表达矩阵的 GTEx 原始文件记录。")
         return self.build_from_record(project_root, record_path=record_path)
@@ -71,6 +78,7 @@ class GTExExpressionMatrixBuilder:
             metadata = {}
         if str(metadata.get("analysis_gate_status") or "") != "waiting_gtex_expression_matrix_build":
             raise ValueError("该 GTEx 记录不是等待 G6.3 表达矩阵构建的原始文件记录。")
+        validation_limited = light_validation_enabled() or bool(metadata.get("validation_limited"))
         tissue_id = str(metadata.get("tissue_id") or raw_record.get("source_label") or "gtex_tissue").strip()
         tissue_detail = str(metadata.get("tissue_site_detail") or tissue_id).strip()
         source_files = [Path(path).expanduser().resolve() for path in _string_list(raw_record.get("source_files"))]
@@ -81,6 +89,15 @@ class GTExExpressionMatrixBuilder:
         rows, sample_ids = _read_expression_matrix(expression_source)
         if not rows or not sample_ids:
             raise ValueError(f"GTEx expression matrix is empty or lacks samples: {expression_source}")
+        if validation_limited:
+            sample_limit = gtex_limit_samples()
+            gene_limit = gtex_limit_genes()
+            if sample_limit > 0:
+                sample_ids = sample_ids[:sample_limit]
+            if gene_limit > 0:
+                rows = rows[:gene_limit]
+            rows = [{"gene_id": row.get("gene_id", ""), **{sample_id: row.get(sample_id, "") for sample_id in sample_ids}} for row in rows]
+            warnings.append(validation_warning())
 
         build_id = f"gtex-g63-{uuid4().hex[:10]}"
         base_dir = root / "standardized_data" / "gtex" / _slug(tissue_id) / build_id / "data_prepared" / "gtex"
@@ -118,6 +135,8 @@ class GTExExpressionMatrixBuilder:
             "gene_annotation_path": str(gene_annotation_path),
             "value_type_policy": _value_type_policy(),
             "warnings": warnings,
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
             "ready_for_recognition": "pending_data_check",
             "analysis_gate_status": "pending_data_check",
             "tcga_merge_status": "not_merged",
@@ -140,6 +159,7 @@ class GTExExpressionMatrixBuilder:
             donor_count=len(donor_rows),
             gene_count=len(rows),
             warnings=warnings,
+            validation_limited=validation_limited,
         )
         return GTExExpressionBuildResult(
             success=True,
@@ -165,8 +185,9 @@ class GTExExpressionMatrixBuilder:
         )
 
 
-def latest_gtex_expression_build_manifest_path(project_root: str | Path) -> Path | None:
+def latest_gtex_expression_build_manifest_path(project_root: str | Path, *, tissue_id: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_tissue = str(tissue_id or "").strip()
     records_dir = root / "acquisition" / "records"
     if not records_dir.exists():
         return None
@@ -182,6 +203,8 @@ def latest_gtex_expression_build_manifest_path(project_root: str | Path) -> Path
         if not isinstance(metadata, dict):
             continue
         if str(metadata.get("download_status") or "") != "gtex_expression_matrix_built":
+            continue
+        if selected_tissue and str(metadata.get("tissue_id") or payload.get("source_label") or "") != selected_tissue:
             continue
         manifest_path = Path(str(metadata.get("gtex_expression_build_manifest_path") or ""))
         if manifest_path.is_file():
@@ -269,6 +292,7 @@ def _register_build(
     donor_count: int,
     gene_count: int,
     warnings: list[str],
+    validation_limited: bool,
 ) -> AcquisitionSummary:
     selected_paths = [expression_matrix_path, sample_metadata_path, donor_metadata_path, tissue_metadata_path, gene_annotation_path, build_manifest_path]
     file_records = [
@@ -303,6 +327,8 @@ def _register_build(
             "gtex_tissue_metadata_path": str(tissue_metadata_path),
             "gtex_gene_annotation_path": str(gene_annotation_path),
             "gtex_expression_build_summary": {"sample_count": sample_count, "donor_count": donor_count, "gene_count": gene_count},
+            "validation_limited": validation_limited,
+            "validation_settings": validation_settings() if validation_limited else {},
             "tcga_merge_status": "not_merged",
             "tcga_default_control_status": "disabled",
             "requires_explicit_joint_config": True,
