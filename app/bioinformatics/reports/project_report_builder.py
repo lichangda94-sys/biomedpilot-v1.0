@@ -305,8 +305,13 @@ def _imported_result_lines(imported: list[dict[str, object]]) -> list[str]:
 def _task_run_lines(task_runs: list[dict[str, object]], task_records: list[dict[str, object]]) -> list[str]:
     lines = []
     for item in task_runs:
+        preflight = item.get("deg_preflight_manifest") if isinstance(item.get("deg_preflight_manifest"), dict) else {}
+        preflight_status = str(preflight.get("status") or "")
+        preflight_text = ""
+        if preflight_status:
+            preflight_text = "；DEG 输入准备状态：已生成；DEG 输入校验：通过" if preflight_status.startswith("passed") else f"；DEG 输入准备状态：需检查；DEG 输入校验：{preflight_status}"
         lines.append(
-            f"- {item.get('item_id')}：{item.get('task_type')}；状态：{item.get('status')}；比较数：{item.get('comparison_count', 0)}；说明：任务记录不代表真实 DEG 已完成。"
+            f"- {item.get('item_id')}：{item.get('task_type')}；状态：{item.get('status')}；比较数：{item.get('comparison_count', 0)}{preflight_text}；说明：任务记录不代表真实 DEG 已完成。"
         )
     for item in task_records:
         lines.append(f"- legacy task record {item.get('task_id', '')}：{item.get('task_type', '')}；状态：{item.get('status', '')}")

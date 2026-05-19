@@ -13,13 +13,13 @@ project, task, data, report, settings, environment, and testing surfaces live in
 ## Run
 
 ```bash
-python -m app.main
+python3 -m app.main
 ```
 
 or:
 
 ```bash
-python scripts/run_app.py
+python3 scripts/run_app.py
 ```
 
 If `PySide6` is unavailable, the launcher prints a console smoke summary instead
@@ -28,19 +28,19 @@ of opening the desktop window.
 For automated startup checks without entering the GUI event loop:
 
 ```bash
-python -m app.main --smoke-test
+python3 -m app.main --smoke-test
 ```
 
 ## Test
 
 ```bash
-python scripts/run_tests.py
+python3 scripts/run_tests.py
 ```
 
 The unified smoke suite can also be run with:
 
 ```bash
-python -m pytest -q
+python3 -m pytest -q
 ```
 
 Legacy project tests are preserved in their source snapshots. Run them in

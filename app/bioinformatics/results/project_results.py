@@ -290,6 +290,7 @@ def _analysis_task_run_entries(root: Path) -> list[dict[str, object]]:
                 "comparisons": run.get("comparisons", []),
                 "parameters": run.get("parameters", {}),
                 "outputs": run.get("outputs", []),
+                "deg_preflight_manifest": run.get("deg_preflight_manifest", {}),
             }
         )
     return entries
@@ -323,6 +324,7 @@ def _result_item_from_entry(entry: dict[str, object], index: int) -> dict[str, o
         "path": entry.get("path", ""),
         "source_run_path": entry.get("source_run_path", ""),
         "comparison_count": entry.get("comparison_count", 0),
+        "deg_preflight_manifest": entry.get("deg_preflight_manifest", {}),
     }
 
 

@@ -19,14 +19,8 @@ COMMON_SIDEBAR_ITEMS = (
     SidebarItem("dashboard", "Dashboard"),
     SidebarItem("bioinformatics", "生信分析"),
     SidebarItem("meta_analysis", "Meta 分析"),
-    SidebarItem("project_center", "项目中心"),
-    SidebarItem("data_center", "数据中心"),
-    SidebarItem("task_center", "任务中心"),
-    SidebarItem("report_center", "报告中心"),
     SidebarItem("settings", "设置中心"),
-    SidebarItem("environment", "本地环境检查"),
     SidebarItem("testing", "测试入口"),
-    SidebarItem("packaging", "打包入口"),
 )
 
 
