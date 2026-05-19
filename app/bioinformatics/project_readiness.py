@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from app.bioinformatics.comparison_config import (
     comparison_sample_match_status,
@@ -38,10 +40,14 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     recognition = load_recognition_report(root) or {}
     files = list(recognition.get("files", []) or [])
     available = _available_inputs(files)
+    tcga_readiness = build_tcga_b6_4_readiness_summary(root)
+    if tcga_readiness.get("has_tcga_b6_4_build"):
+        available.update(str(item) for item in tcga_readiness.get("available_inputs", []) or [] if str(item))
     confirmed_comparison = load_confirmed_comparison_config(root)
     if confirmed_comparison is not None:
         available.add("comparison_config")
     expression_samples = expression_samples_from_recognition_report(recognition if isinstance(recognition, dict) else {})
+    expression_samples.update(str(item) for item in tcga_readiness.get("sample_ids", []) or [] if str(item))
     comparison_match = comparison_sample_match_status(confirmed_comparison, expression_samples)
     standardization_ready = bool(available & CORE_INPUTS)
     confirmation = load_standardization_confirmation(root) or {}
@@ -52,6 +58,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     gsea_gene_set_readiness = build_gsea_gene_set_readiness(root)
     has_core_input = standardization_ready
     warnings: list[str] = [str(item) for item in recognition.get("warnings", []) or []]
+    warnings.extend(str(item) for item in tcga_readiness.get("warnings", []) or [] if str(item))
     if not has_core_input:
         warnings.append("无表达矩阵。")
     if "sample_metadata" not in available:
@@ -65,6 +72,11 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
         can_run = bool(has_core_input) and not missing and (key not in {"tcga_gtex_joint", "reporting"})
         row_warnings = []
         if key == "differential_expression":
+            tcga_group_status = str(tcga_readiness.get("default_group_status") or "")
+            if tcga_group_status == "available" and confirmed_comparison is None:
+                row_warnings.append("已检测到 TCGA Primary Tumor vs Solid Tissue Normal 默认分组候选；仍需确认比较组后进入 DEG preflight。")
+            elif tcga_group_status == "insufficient" and tcga_readiness.get("has_tcga_b6_4_build"):
+                row_warnings.append("TCGA tumor/normal 样本不足；只能做表达展示、临床联合或手动分组。")
             comparison_status = _comparison_group_status(
                 has_core_input=has_core_input,
                 confirmed_comparison=confirmed_comparison,
@@ -82,6 +94,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
                 row_warnings.append("比较组已确认，但尚未验证表达矩阵样本 ID。")
         if key == "tcga_gtex_joint":
             row_warnings.append("TCGA + GTEx 尚未批次校正，结果仅用于 preview / testing。")
+            if tcga_readiness.get("has_tcga_b6_4_build"):
+                row_warnings.append("B6.5 保留 TCGA + GTEx 不自动合并边界；GTEx 仍需独立接入和批次校正方案。")
         if key == "gsea":
             if selected_gene_set is None or gsea_gene_set_status.get("status") != "selected":
                 missing.append("gsea_gene_set_selection")
@@ -144,7 +158,9 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
             comparison_match=comparison_match,
             standardization_ready=standardization_ready,
             deg_ready=deg_ready,
+            tcga_readiness=tcga_readiness,
         ),
+        "tcga_readiness": tcga_readiness,
         "gsea_gene_set_status": gsea_gene_set_status,
         "gsea_gene_set_readiness": gsea_gene_set_readiness,
         "gene_set_registry_validation": gene_set_validation,
@@ -313,7 +329,9 @@ def build_dataset_readiness_summary(
     comparison_match: dict[str, object],
     standardization_ready: bool,
     deg_ready: bool,
+    tcga_readiness: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    tcga_readiness = tcga_readiness if isinstance(tcga_readiness, dict) else {}
     typed_files = [item for item in files if isinstance(item, dict)]
     imported_deg_present = any(_record_has_role(item, "differential_result_table") for item in typed_files)
     expression_records = [item for item in typed_files if _record_has_any_role(item, CORE_INPUTS)]
@@ -340,6 +358,231 @@ def build_dataset_readiness_summary(
         "has_gsea_data_basis": bool(expression_records or available & CORE_INPUTS),
         "gsea_gene_set_required_now": False,
         "comparison_sample_match": comparison_match,
+        "tcga_readiness": tcga_readiness,
+        "tcga_value_type_policy": tcga_readiness.get("value_type_policy", {}),
+    }
+
+
+def build_tcga_b6_4_readiness_summary(project_root: str | Path) -> dict[str, object]:
+    root = Path(project_root).expanduser().resolve()
+    records = _tcga_b6_4_build_records(root)
+    if not records:
+        return {
+            "has_tcga_b6_4_build": False,
+            "status": "not_found",
+            "available_inputs": [],
+            "warnings": [],
+            "builds": [],
+            "sample_ids": [],
+            "value_type_policy": {},
+        }
+    builds = [_read_tcga_build_record(record) for record in records]
+    latest = builds[-1] if builds else {}
+    available_inputs: set[str] = set()
+    warnings: list[str] = []
+    sample_ids: set[str] = set()
+    for build in builds:
+        available_inputs.update(str(item) for item in build.get("available_inputs", []) or [] if str(item))
+        warnings.extend(str(item) for item in build.get("warnings", []) or [] if str(item))
+        sample_ids.update(str(item) for item in build.get("sample_ids", []) or [] if str(item))
+    return {
+        "has_tcga_b6_4_build": True,
+        "status": str(latest.get("status") or "unknown"),
+        "project_id": str(latest.get("project_id") or ""),
+        "build_id": str(latest.get("build_id") or ""),
+        "build_manifest_path": str(latest.get("build_manifest_path") or ""),
+        "raw_counts_matrix_path": str(latest.get("raw_counts_matrix_path") or ""),
+        "sample_metadata_path": str(latest.get("sample_metadata_path") or ""),
+        "gene_annotation_path": str(latest.get("gene_annotation_path") or ""),
+        "available_inputs": sorted(available_inputs),
+        "sample_ids": sorted(sample_ids),
+        "sample_count": int(latest.get("sample_count") or 0),
+        "gene_count": int(latest.get("gene_count") or 0),
+        "matrix_sample_count": int(latest.get("matrix_sample_count") or 0),
+        "metadata_sample_count": int(latest.get("metadata_sample_count") or 0),
+        "sample_match_status": str(latest.get("sample_match_status") or "not_checked"),
+        "sample_type_counts": latest.get("sample_type_counts") if isinstance(latest.get("sample_type_counts"), dict) else {},
+        "default_group_status": str(latest.get("default_group_status") or "unknown"),
+        "default_group_suggestion": latest.get("default_group_suggestion") if isinstance(latest.get("default_group_suggestion"), dict) else {},
+        "value_type_policy": _tcga_value_type_policy(),
+        "deg_input_value_type": "count",
+        "display_value_types": ["TPM", "FPKM", "FPKM-UQ"],
+        "warnings": list(dict.fromkeys(warnings)),
+        "builds": builds,
+        "tcga_gtex_boundary": "TCGA B6.4 构建产物不自动与 GTEx 合并；GTEx 仍需独立接入与批次校正方案。",
+    }
+
+
+def _tcga_b6_4_build_records(root: Path) -> list[dict[str, Any]]:
+    records_dir = root / "acquisition" / "records"
+    if not records_dir.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(records_dir.glob("*.json"), key=lambda item: item.stat().st_mtime):
+        if path.name == "latest_acquisition_record.json":
+            continue
+        try:
+            payload = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        if not isinstance(metadata, dict):
+            continue
+        if str(metadata.get("download_status") or "") != "tcga_expression_matrix_built":
+            continue
+        records.append({"record_path": str(path), "payload": payload, "metadata": metadata})
+    return records
+
+
+def _read_tcga_build_record(record: dict[str, Any]) -> dict[str, object]:
+    metadata = record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    manifest_path = Path(str(metadata.get("tcga_expression_build_manifest_path") or ""))
+    manifest = _read_json(manifest_path) if manifest_path.is_file() else {}
+    metric_paths = manifest.get("metric_matrix_paths") if isinstance(manifest.get("metric_matrix_paths"), dict) else {}
+    raw_counts_path = Path(str(metric_paths.get("raw_counts") or metadata.get("tcga_expression_matrix_path") or ""))
+    sample_metadata_path = Path(str(manifest.get("sample_metadata_path") or metadata.get("tcga_sample_metadata_path") or ""))
+    gene_annotation_path = Path(str(manifest.get("gene_annotation_path") or metadata.get("tcga_gene_annotation_path") or ""))
+    matrix_samples = _matrix_sample_columns(raw_counts_path)
+    sample_rows = _sample_metadata_rows(sample_metadata_path)
+    metadata_samples = _sample_ids_from_metadata(sample_rows)
+    sample_match_status, sample_warnings = _sample_match_status(matrix_samples, metadata_samples)
+    sample_type_counts = _tcga_sample_type_counts(sample_rows)
+    default_group_status = "available" if sample_type_counts.get("Primary Tumor", 0) > 0 and sample_type_counts.get("Solid Tissue Normal", 0) > 0 else "insufficient"
+    status = "ready_for_deg_preflight_candidate" if sample_match_status == "matched" and default_group_status == "available" else "expression_display_or_manual_group_only"
+    if sample_match_status == "mismatch":
+        status = "blocked_sample_metadata_mismatch"
+    warnings = [*sample_warnings]
+    if not manifest_path.is_file():
+        warnings.append(f"tcga_build_manifest_missing:{manifest_path}")
+    for label, path in (("raw_counts_matrix", raw_counts_path), ("sample_metadata", sample_metadata_path), ("gene_annotation", gene_annotation_path)):
+        if not path.is_file():
+            warnings.append(f"tcga_{label}_missing:{path}")
+    if default_group_status == "insufficient":
+        warnings.append("tcga_default_tumor_normal_group_insufficient")
+    available_inputs = {"tcga_expression_matrix", "expression_matrix", "raw_count_matrix"}
+    if sample_metadata_path.is_file() and sample_rows:
+        available_inputs.update({"tcga_sample_metadata", "sample_metadata"})
+    if gene_annotation_path.is_file():
+        available_inputs.add("gene_annotation")
+    return {
+        "status": status,
+        "project_id": str(manifest.get("project_id") or metadata.get("project_id") or ""),
+        "build_id": str(manifest.get("build_id") or metadata.get("build_id") or ""),
+        "build_manifest_path": str(manifest_path),
+        "raw_counts_matrix_path": str(raw_counts_path),
+        "sample_metadata_path": str(sample_metadata_path),
+        "gene_annotation_path": str(gene_annotation_path),
+        "available_inputs": sorted(available_inputs),
+        "sample_ids": sorted(set(matrix_samples)),
+        "sample_count": len(matrix_samples),
+        "gene_count": int(manifest.get("gene_count") or 0),
+        "matrix_sample_count": len(matrix_samples),
+        "metadata_sample_count": len(metadata_samples),
+        "sample_match_status": sample_match_status,
+        "sample_type_counts": sample_type_counts,
+        "default_group_status": default_group_status,
+        "default_group_suggestion": {
+            "case_group": "Primary Tumor",
+            "control_group": "Solid Tissue Normal",
+            "case_count": sample_type_counts.get("Primary Tumor", 0),
+            "control_count": sample_type_counts.get("Solid Tissue Normal", 0),
+            "requires_user_confirmation": True,
+            "auto_execute_deg": False,
+        },
+        "value_type_policy": _tcga_value_type_policy(),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def _matrix_sample_columns(path: Path) -> list[str]:
+    if not path.is_file():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        header = next(csv.reader(handle), [])
+    return [cell.strip() for cell in header[1:] if cell.strip()]
+
+
+def _sample_metadata_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return [{str(key or "").strip(): str(value or "").strip() for key, value in row.items()} for row in csv.DictReader(handle)]
+
+
+def _sample_ids_from_metadata(rows: list[dict[str, str]]) -> list[str]:
+    ids: list[str] = []
+    for row in rows:
+        for key in ("sample_id", "barcode", "tcga_barcode", "sample_barcode"):
+            value = str(row.get(key) or "").strip()
+            if value:
+                ids.append(value)
+                break
+    return ids
+
+
+def _sample_match_status(matrix_samples: list[str], metadata_samples: list[str]) -> tuple[str, list[str]]:
+    if not matrix_samples or not metadata_samples:
+        return "not_checked", ["tcga_sample_match_not_checked"]
+    matrix = set(matrix_samples)
+    metadata = set(metadata_samples)
+    if matrix == metadata:
+        return "matched", []
+    warnings: list[str] = []
+    missing_metadata = sorted(matrix - metadata)
+    missing_matrix = sorted(metadata - matrix)
+    if missing_metadata:
+        warnings.append("tcga_matrix_samples_missing_metadata:" + ",".join(missing_metadata))
+    if missing_matrix:
+        warnings.append("tcga_metadata_samples_missing_matrix:" + ",".join(missing_matrix))
+    return "mismatch", warnings
+
+
+def _tcga_sample_type_counts(rows: list[dict[str, str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        label = _tcga_sample_type_label(row)
+        if not label:
+            continue
+        counts[label] = counts.get(label, 0) + 1
+    return counts
+
+
+def _tcga_sample_type_label(row: dict[str, str]) -> str:
+    code = str(row.get("sample_type_code") or "").strip()
+    label = str(row.get("sample_type_label") or row.get("sample_type_gdc") or row.get("sample_type") or "").strip()
+    if code == "01" or label.lower() == "primary tumor":
+        return "Primary Tumor"
+    if code == "11" or label.lower() == "solid tissue normal":
+        return "Solid Tissue Normal"
+    if label:
+        return label
+    return code
+
+
+def _tcga_value_type_policy() -> dict[str, object]:
+    return {
+        "raw_counts": {
+            "value_type": "count",
+            "default_for_deg": True,
+            "default_for_display": False,
+        },
+        "TPM": {
+            "value_type": "TPM",
+            "default_for_deg": False,
+            "default_for_display": True,
+        },
+        "FPKM": {
+            "value_type": "FPKM",
+            "default_for_deg": False,
+            "default_for_display": True,
+        },
+        "FPKM-UQ": {
+            "value_type": "FPKM-UQ",
+            "default_for_deg": False,
+            "default_for_display": True,
+        },
     }
 
 

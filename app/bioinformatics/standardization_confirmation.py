@@ -439,7 +439,7 @@ def _parser_type(record: dict[str, object]) -> str:
 
 def _expression_value_type(record: dict[str, object], asset_type: str, asset: dict[str, object]) -> str:
     existing = str(asset.get("expression_value_type_candidate") or record.get("expression_value_type_candidate") or "")
-    if existing:
+    if existing and existing not in {"unknown", "unknown_expression_value"}:
         return existing
     label = str(asset.get("label_zh") or asset.get("reason") or "").lower()
     if "fpkm" in label:
@@ -449,6 +449,11 @@ def _expression_value_type(record: dict[str, object], asset_type: str, asset: di
     if asset_type == "raw_count_matrix":
         return "count"
     if asset_type == "tcga_expression_matrix":
+        evidence = record.get("evidence") if isinstance(record.get("evidence"), dict) else {}
+        source_manifest = evidence.get("source_manifest") if isinstance(evidence.get("source_manifest"), dict) else {}
+        manifest_message = str(source_manifest.get("matched_record_message") or "").lower() if isinstance(source_manifest, dict) else ""
+        if "b6.4" in manifest_message and "raw count" in manifest_message:
+            return "count"
         return "tcga_expression_candidate"
     if asset_type == "gtex_expression_matrix":
         return "gtex_reference_expression_candidate"

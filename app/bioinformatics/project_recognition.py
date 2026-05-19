@@ -432,7 +432,13 @@ def _find_source_manifest_for_path(manifest_root: Path, path: Path) -> dict[str,
                 continue
             values = {str(record.get("local_path") or ""), str(record.get("source_path") or ""), str(record.get("path") or "")}
             if target in values:
-                return {"manifest_path": str(manifest_path), "source": manifest.get("source") or manifest.get("source_type") or "", "matched_record_status": record.get("status") or ""}
+                return {
+                    "manifest_path": str(manifest_path),
+                    "source": manifest.get("source") or manifest.get("source_type") or "",
+                    "matched_record_status": record.get("status") or "",
+                    "matched_record_role": record.get("role") or "",
+                    "matched_record_message": record.get("message") or "",
+                }
     return {}
 
 

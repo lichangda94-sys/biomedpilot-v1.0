@@ -6590,9 +6590,9 @@ def _dataset_is_downloadable(row: RegisteredSourceRow, payload: dict[str, object
 
 def _dataset_entry_rank(entry: DatasetListEntry, created_at: str) -> tuple[int, str]:
     score = 0
-    if entry.status in {"识别完成", "已导入", "已下载"} or entry.ready_for_recognition:
+    if entry.status in {"识别完成", "已导入", "已下载"} or entry.ready_for_recognition or "表达矩阵已构建" in entry.status:
         score = 3
-    elif entry.status == "待识别":
+    elif entry.status == "待识别" or "原始文件已获取" in entry.status:
         score = 2
     elif entry.status == "未下载":
         score = 1
@@ -9923,6 +9923,15 @@ def _dataset_readiness_user_rows(summary: dict[str, object]) -> list[list[str]]:
         ["进入 DEG preflight", _yes_no(summary.get("can_enter_deg_preflight")), "需要表达矩阵、样本信息和已确认比较组。"],
         ["GSEA 数据基础", _yes_no(summary.get("has_gsea_data_basis")), "GSEA gene set 未选择不阻断当前数据检查和 DEG preflight。"],
     ]
+    tcga = summary.get("tcga_readiness") if isinstance(summary.get("tcga_readiness"), dict) else {}
+    if tcga and tcga.get("has_tcga_b6_4_build"):
+        rows.extend(
+            [
+                ["TCGA B6.4 构建产物", str(tcga.get("status") or "unknown"), f"{tcga.get('sample_count') or 0} 样本 / {tcga.get('gene_count') or 0} 基因。"],
+                ["TCGA 默认分组候选", str(tcga.get("default_group_status") or "unknown"), "Primary Tumor vs Solid Tissue Normal；仍需用户确认比较组。"],
+                ["TCGA DEG 值类型", str(tcga.get("deg_input_value_type") or "count"), "raw counts 用于 DEG preflight；TPM/FPKM/FPKM-UQ 仅默认展示。"],
+            ]
+        )
     return rows
 
 

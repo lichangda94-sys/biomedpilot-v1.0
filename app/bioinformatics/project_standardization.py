@@ -727,6 +727,12 @@ def _confirmed_value_type(asset_type: str, record: dict[str, object], confirmati
         return _normalize_value_type(confirmed_value)
     if asset_type == "raw_count_matrix":
         return "count"
+    if asset_type == "tcga_expression_matrix":
+        evidence = record.get("evidence") if isinstance(record.get("evidence"), dict) else {}
+        source_manifest = evidence.get("source_manifest") if isinstance(evidence.get("source_manifest"), dict) else {}
+        manifest_message = str(source_manifest.get("matched_record_message") or "").lower() if isinstance(source_manifest, dict) else ""
+        if "b6.4" in manifest_message and "raw count" in manifest_message:
+            return "count"
     profile = record.get("matrix_profile") if isinstance(record.get("matrix_profile"), dict) else {}
     candidate = str(record.get("expression_value_type_candidate") or profile.get("value_type_candidate") or "")
     return _normalize_value_type(candidate)
