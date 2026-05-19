@@ -69,6 +69,7 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     english_qualified = _jsonl(REVIEW_BATCHES / "meta" / "meta_english_mapping_qualified_term_candidates.jsonl")
     english_tcm = _jsonl(REVIEW_BATCHES / "meta" / "meta_english_mapping_tcm_future_scope_candidates.jsonl")
     english_manual = _jsonl(REVIEW_BATCHES / "meta" / "meta_english_mapping_still_require_manual_review.jsonl")
+    english_manual_decisions = _jsonl(REVIEW_BATCHES / "meta" / "meta_english_mapping_manual_decisions.jsonl")
     auto_reject = _jsonl(REVIEW_BATCHES / "meta" / "meta_auto_reject_candidates.jsonl")
     evidence = _jsonl(REVIEW_BATCHES / "meta" / "meta_evidence_only_candidates_optimized.jsonl")
     future = _jsonl(REVIEW_BATCHES / "meta" / "meta_future_scope_candidates_optimized.jsonl")
@@ -179,8 +180,25 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert {row["bucket"] for row in english_conditions} == {"condition_candidate_only"}
     assert {row["bucket"] for row in english_qualified} == {"qualified_term"}
     assert {row["bucket"] for row in english_tcm} == {"tcm_future_scope"}
-    assert {row["bucket"] for row in english_manual} == {"still_require_manual_review"}
-    assert {row["normalized_zh_term"] for row in english_manual} == {"外阴皮肤APUD癌", "家族性高脂蛋白血症IV型"}
+    assert english_manual == []
+    english_manual_decisions_by_term = {row["normalized_zh_term"]: row for row in english_manual_decisions}
+    assert set(english_manual_decisions_by_term) == {"外阴皮肤APUD癌", "家族性高脂蛋白血症IV型"}
+    assert english_manual_decisions_by_term["外阴皮肤APUD癌"]["manual_mapping_required"] is True
+    assert english_manual_decisions_by_term["外阴皮肤APUD癌"]["auto_english_mapping_allowed"] is False
+    assert english_manual_decisions_by_term["外阴皮肤APUD癌"]["runtime_promotion_allowed"] is False
+    assert english_manual_decisions_by_term["家族性高脂蛋白血症IV型"]["english_candidate_mappings"] == [
+        "hyperlipoproteinemia type IV",
+        "familial type IV hyperlipoproteinemia",
+        "familial hypertriglyceridemia",
+    ]
+    assert english_manual_decisions_by_term["家族性高脂蛋白血症IV型"]["seed_runtime_allowed"] is False
+    english_conditions_by_term = {row["normalized_zh_term"]: row for row in english_conditions}
+    assert english_conditions_by_term["外阴皮肤APUD癌"]["manual_mapping_required"] is True
+    assert english_conditions_by_term["家族性高脂蛋白血症IV型"]["english_candidate_mappings"] == [
+        "hyperlipoproteinemia type IV",
+        "familial type IV hyperlipoproteinemia",
+        "familial hypertriglyceridemia",
+    ]
     diabetic_terms = [row for row in english_qualified if "糖尿病肾病" in row["normalized_zh_term"]]
     assert len(diabetic_terms) == 9
     assert all(row["base_concept"] == "diabetic nephropathy" for row in diabetic_terms)
@@ -206,3 +224,5 @@ def test_discussion_reports_exist() -> None:
     assert "not a Meta outcome runtime input" in layering.read_text(encoding="utf-8")
     role_collapse = REVIEW_BATCHES / "reports" / "meta_english_mapping_role_collapse_report.md"
     assert "Raw rows: 300" in role_collapse.read_text(encoding="utf-8")
+    manual_decision = REVIEW_BATCHES / "reports" / "meta_english_mapping_manual_decision_report.md"
+    assert "meta_english_mapping_still_require_manual_review.jsonl is now closed" in manual_decision.read_text(encoding="utf-8")

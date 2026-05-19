@@ -47,6 +47,7 @@ Auto-reject candidates include single-character non-abbreviations, generic medic
 - data/medical_terms/review_batches/meta/meta_english_mapping_qualified_term_candidates.jsonl
 - data/medical_terms/review_batches/meta/meta_english_mapping_tcm_future_scope_candidates.jsonl
 - data/medical_terms/review_batches/meta/meta_english_mapping_still_require_manual_review.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_manual_decisions.jsonl
 
 ## Conflict Batch Rule Refinement
 
@@ -78,12 +79,15 @@ The original `meta_english_mapping_top_300.jsonl` contains 300 rows but only 156
 
 - `meta_english_mapping_disease_population_candidates.jsonl`: 0 rows.
 - `meta_english_mapping_event_outcome_candidates.jsonl`: 15 rows.
-- `meta_english_mapping_condition_candidate_only.jsonl`: 119 rows.
+- `meta_english_mapping_condition_candidate_only.jsonl`: 121 rows.
 - `meta_english_mapping_qualified_term_candidates.jsonl`: 9 rows.
 - `meta_english_mapping_tcm_future_scope_candidates.jsonl`: 11 rows.
-- `meta_english_mapping_still_require_manual_review.jsonl`: 2 rows, `外阴皮肤APUD癌` and `家族性高脂蛋白血症IV型`.
+- `meta_english_mapping_still_require_manual_review.jsonl`: 0 rows; closed after manual decisions.
+- `meta_english_mapping_manual_decisions.jsonl`: 2 rows, `外阴皮肤APUD癌` and `家族性高脂蛋白血症IV型`.
 
 Diabetic nephropathy staging terms are represented as `base_concept=diabetic nephropathy` plus diabetes type and stage qualifiers; they are not independent runtime concepts.
+
+The two English-mapping manual decisions are candidate-only. `外阴皮肤APUD癌` remains manual-mapping-required with no automatic English mapping. `家族性高脂蛋白血症IV型` records the candidate mappings `hyperlipoproteinemia type IV`, `familial type IV hyperlipoproteinemia`, and `familial hypertriglyceridemia`. Neither enters the current seed runtime.
 
 ## Remaining Manual Review Reason
 

@@ -21,10 +21,11 @@ This stage collapses duplicated Chinese terms before English preferred-label con
 | --- | ---: | --- |
 | `meta_english_mapping_disease_population_candidates.jsonl` | 0 | Disease/population candidates eligible for Meta-specific or shared-promotion discussion after English mapping confirmation. |
 | `meta_english_mapping_event_outcome_candidates.jsonl` | 15 | Event, complication, injury, poisoning, bleeding, or drug-related outcome candidates. Default Meta-specific and context guarded. |
-| `meta_english_mapping_condition_candidate_only.jsonl` | 119 | Long-tail condition, diagnosis, symptom, sign, or clinical-feature candidates. Candidate-only; no seed runtime concept. |
+| `meta_english_mapping_condition_candidate_only.jsonl` | 121 | Long-tail condition, diagnosis, symptom, sign, or clinical-feature candidates. Candidate-only; no seed runtime concept. Includes the 2 resolved manual-review terms. |
 | `meta_english_mapping_qualified_term_candidates.jsonl` | 9 | Qualified terms. Diabetic nephropathy staging collapses to base concept plus diabetes type/stage qualifier. |
 | `meta_english_mapping_tcm_future_scope_candidates.jsonl` | 11 | TCM syndrome/pattern or Chinese-specific future-scope terms. |
-| `meta_english_mapping_still_require_manual_review.jsonl` | 2 | Rare or ambiguous disease labels still requiring manual English mapping confirmation. |
+| `meta_english_mapping_still_require_manual_review.jsonl` | 0 | Closed manual-review queue for this pass. |
+| `meta_english_mapping_manual_decisions.jsonl` | 2 | Final manual decisions for the closed English-mapping queue. |
 
 ## Guardrails
 
@@ -50,11 +51,11 @@ The following terms are not independent runtime concepts:
 
 They are represented as `base_concept=diabetic nephropathy` plus `diabetes_type` and `stage` qualifiers.
 
-## Manual Review Remainder
+## Manual Review Closure
 
-`meta_english_mapping_still_require_manual_review.jsonl` retains only:
+`meta_english_mapping_still_require_manual_review.jsonl` is now closed for this review pass and contains 0 rows.
 
-- `外阴皮肤APUD癌`
-- `家族性高脂蛋白血症IV型`
+Final decisions are recorded in `meta_english_mapping_manual_decisions.jsonl`:
 
-These require manual English preferred-label confirmation before bucket assignment or any later candidate promotion.
+- `外阴皮肤APUD癌`: condition_candidate_only; manual_mapping_required; no automatic English mapping; not runtime.
+- `家族性高脂蛋白血症IV型`: condition_candidate_only; candidate mappings are `hyperlipoproteinemia type IV`, `familial type IV hyperlipoproteinemia`, and `familial hypertriglyceridemia`; not current seed runtime.
