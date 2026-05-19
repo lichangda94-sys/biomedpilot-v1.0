@@ -21,11 +21,23 @@ Disambiguation outcome candidates must be layered before any runtime considerati
 
 English-mapping candidates must be role-collapsed by `normalized_zh_term` before English preferred-label confirmation. Duplicated disease/outcome rows are review artifacts, not multiple runtime concepts.
 
+Priority review candidates must be role-collapsed before any seed-expansion discussion. The Top 300 priority queue contains already-reviewed seed terms plus many disease/outcome duplicate artifacts, so it is not a direct Meta runtime input.
+
 Auto-reject candidates include single-character non-abbreviations, generic medical words, colloquial terms, long sentence-like strings, Chinese PDF section terms, and out-of-scope TCM terms.
 
 ## Top Batch Files
 
 - data/medical_terms/review_batches/meta/meta_priority_review_batch_top_300.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_seed_expansion_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_existing_runtime_seed_terms.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_event_outcome_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_symptom_feature_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_clinical_feature_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_functional_impairment_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_condition_candidate_only.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_qualified_term_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_tcm_future_scope_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_priority_still_require_manual_review.jsonl
 - data/medical_terms/review_batches/meta/meta_mapping_conflicts_top_200.jsonl
 - data/medical_terms/review_batches/meta/meta_symptom_clinical_feature_candidates.jsonl
 - data/medical_terms/review_batches/meta/meta_tcm_future_scope_candidates.jsonl
@@ -88,6 +100,23 @@ The original `meta_english_mapping_top_300.jsonl` contains 300 rows but only 156
 Diabetic nephropathy staging terms are represented as `base_concept=diabetic nephropathy` plus diabetes type and stage qualifiers; they are not independent runtime concepts.
 
 The two English-mapping manual decisions are candidate-only. `外阴皮肤APUD癌` remains manual-mapping-required with no automatic English mapping. `家族性高脂蛋白血症IV型` records the candidate mappings `hyperlipoproteinemia type IV`, `familial type IV hyperlipoproteinemia`, and `familial hypertriglyceridemia`. Neither enters the current seed runtime.
+
+## Priority Review Role Collapse
+
+The original `meta_priority_review_batch_top_300.jsonl` contains 300 rows but only 161 unique normalized Chinese terms. The role-collapse stage groups duplicate disease/outcome candidates and applies existing manual decisions before any seed-expansion discussion.
+
+- `meta_priority_seed_expansion_candidates.jsonl`: 0 rows.
+- `meta_priority_existing_runtime_seed_terms.jsonl`: 11 rows, already covered by the Meta approved runtime seed review batch.
+- `meta_priority_event_outcome_candidates.jsonl`: 14 rows.
+- `meta_priority_symptom_feature_candidates.jsonl`: 19 rows.
+- `meta_priority_clinical_feature_candidates.jsonl`: 25 rows.
+- `meta_priority_functional_impairment_candidates.jsonl`: 23 rows.
+- `meta_priority_condition_candidate_only.jsonl`: 49 rows.
+- `meta_priority_qualified_term_candidates.jsonl`: 9 rows.
+- `meta_priority_tcm_future_scope_candidates.jsonl`: 11 rows.
+- `meta_priority_still_require_manual_review.jsonl`: 0 rows.
+
+No term from the priority Top 300 is approved for seed expansion in this pass.
 
 ## Remaining Manual Review Reason
 

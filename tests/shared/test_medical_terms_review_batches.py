@@ -48,6 +48,16 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     approved = _jsonl(REVIEW_BATCHES / "meta" / "meta_approved_runtime_review_batch.jsonl")
     promotion = _jsonl(REVIEW_BATCHES / "meta" / "meta_shared_promotion_review_batch.jsonl")
     priority = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_review_batch_top_300.jsonl")
+    priority_seed_expansion = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_seed_expansion_candidates.jsonl")
+    priority_existing_seed = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_existing_runtime_seed_terms.jsonl")
+    priority_events = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_event_outcome_candidates.jsonl")
+    priority_symptoms = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_symptom_feature_candidates.jsonl")
+    priority_features = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_clinical_feature_candidates.jsonl")
+    priority_functional = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_functional_impairment_candidates.jsonl")
+    priority_conditions = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_condition_candidate_only.jsonl")
+    priority_qualified = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_qualified_term_candidates.jsonl")
+    priority_tcm = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_tcm_future_scope_candidates.jsonl")
+    priority_manual = _jsonl(REVIEW_BATCHES / "meta" / "meta_priority_still_require_manual_review.jsonl")
     conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_mapping_conflicts_top_200.jsonl")
     symptom_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_symptom_clinical_feature_candidates.jsonl")
     tcm_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_tcm_future_scope_candidates.jsonl")
@@ -78,6 +88,20 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert len(approved) == 11
     assert len(promotion) == 4
     assert len(priority) == 300
+    priority_unique_terms = {row["normalized_zh_term"] for row in priority}
+    collapsed_priority_rows = (
+        priority_seed_expansion
+        + priority_existing_seed
+        + priority_events
+        + priority_symptoms
+        + priority_features
+        + priority_functional
+        + priority_conditions
+        + priority_qualified
+        + priority_tcm
+        + priority_manual
+    )
+    assert len(collapsed_priority_rows) == len(priority_unique_terms)
     assert len(conflicts) == 200
     assert len(symptom_conflicts) + len(tcm_conflicts) + len(event_conflicts) + len(condition_conflicts) + len(manual_conflicts) == len(conflicts)
     assert len(manual_conflicts) < len(conflicts)
@@ -132,6 +156,38 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert promotion_by_term["肥胖"]["shared_core_write_allowed"] is False
     assert all("priority_score" in row for row in priority)
     assert all(row["recommended_status"] == "rejected" for row in auto_reject)
+
+    assert {row["normalized_zh_term"] for row in collapsed_priority_rows} == priority_unique_terms
+    assert all(row["runtime_promotion_allowed"] is False for row in collapsed_priority_rows)
+    assert all(row["seed_expansion_allowed"] is False for row in collapsed_priority_rows)
+    assert all(row["shared_core_write_allowed"] is False for row in collapsed_priority_rows)
+    assert all("observed_candidate_types" in row for row in collapsed_priority_rows)
+    assert priority_seed_expansion == []
+    assert priority_manual == []
+    assert len(priority_existing_seed) == 11
+    assert {row["bucket"] for row in priority_existing_seed} == {"existing_runtime_seed_reviewed"}
+    assert {row["normalized_zh_term"] for row in priority_existing_seed} == {
+        "肥胖",
+        "2型糖尿病",
+        "乳腺癌",
+        "甲状腺癌",
+        "糖尿病前期",
+        "Meta分析",
+        "二甲双胍",
+        "危险因素",
+        "复发",
+        "放射性碘治疗",
+        "风险",
+    }
+    assert {row["bucket"] for row in priority_events} == {"event_outcome_candidate"}
+    assert {row["bucket"] for row in priority_symptoms} == {"symptom_feature_candidate"}
+    assert {row["bucket"] for row in priority_features} == {"clinical_feature_candidate"}
+    assert {row["bucket"] for row in priority_functional} == {"functional_impairment_candidate"}
+    assert {row["bucket"] for row in priority_conditions} == {"condition_candidate_only"}
+    assert {row["bucket"] for row in priority_qualified} == {"qualified_term"}
+    assert {row["bucket"] for row in priority_tcm} == {"tcm_future_scope"}
+    assert len(priority_conditions) == 49
+    assert len(priority_qualified) == 9
 
     routed_conflict_rows = symptom_conflicts + tcm_conflicts + event_conflicts + condition_conflicts + manual_conflicts
     original_conflict_terms = {row["normalized_zh_term"] for row in conflicts}
@@ -226,3 +282,7 @@ def test_discussion_reports_exist() -> None:
     assert "Raw rows: 300" in role_collapse.read_text(encoding="utf-8")
     manual_decision = REVIEW_BATCHES / "reports" / "meta_english_mapping_manual_decision_report.md"
     assert "meta_english_mapping_still_require_manual_review.jsonl is now closed" in manual_decision.read_text(encoding="utf-8")
+    priority_collapse = REVIEW_BATCHES / "reports" / "meta_priority_review_role_collapse_report.md"
+    priority_text = priority_collapse.read_text(encoding="utf-8")
+    assert "Raw rows: 300" in priority_text
+    assert "Seed expansion candidates: 0" in priority_text
