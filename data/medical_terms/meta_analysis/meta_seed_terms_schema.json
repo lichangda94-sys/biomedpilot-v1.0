@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BioMedPilot Meta seed terms",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "concept_id",
+      "preferred_label_en",
+      "zh_terms",
+      "synonyms_en",
+      "concept_type",
+      "pico_roles",
+      "query_expansion_allowed",
+      "standalone_search_allowed",
+      "requires_pairing_with",
+      "filter_only",
+      "pdf_extraction_target",
+      "mesh_terms",
+      "pubmed_free_text_terms",
+      "emtree_terms",
+      "emtree_review_status",
+      "review_status"
+    ],
+    "properties": {
+      "concept_id": {
+        "type": "string"
+      },
+      "preferred_label_en": {
+        "type": "string"
+      },
+      "zh_terms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "synonyms_en": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "concept_type": {
+        "type": "string",
+        "enum": [
+          "disease",
+          "exposure",
+          "intervention",
+          "outcome",
+          "effect_measure",
+          "study_design",
+          "research_intent"
+        ]
+      },
+      "pico_roles": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "query_expansion_allowed": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "const": "conditional"
+          }
+        ]
+      },
+      "standalone_search_allowed": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "const": "conditional"
+          }
+        ]
+      },
+      "requires_pairing_with": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "filter_only": {
+        "type": "boolean"
+      },
+      "pdf_extraction_target": {
+        "type": "boolean"
+      },
+      "mesh_terms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "pubmed_free_text_terms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "emtree_terms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "emtree_review_status": {
+        "type": "string",
+        "enum": [
+          "mapped",
+          "needs_review",
+          "not_applicable"
+        ]
+      },
+      "review_status": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,422 @@
+[
+  {
+    "concept_id": "meta_disease:breast_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:thyroid_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:type_2_diabetes_mellitus",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:type_1_diabetes_mellitus",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:lung_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:colorectal_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:hepatocellular_carcinoma",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:hypertension",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:coronary_artery_disease",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:chronic_kidney_disease",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:stroke",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:pancreatic_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:prostate_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:glioma",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_disease:gastric_cancer",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:obesity",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:prediabetes",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:smoking",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:alcohol_consumption",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:physical_activity",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:body_mass_index",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:blood_pressure",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:ldl_cholesterol",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:hyperglycemia",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_exposure:air_pollution",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:metformin",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:radioactive_iodine_therapy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:chemotherapy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:radiotherapy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:surgery",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:immunotherapy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:statin_therapy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:aspirin",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:insulin_therapy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_intervention:lifestyle_intervention",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:recurrence",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:mortality",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:overall_survival",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:progression_free_survival",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:disease_free_survival",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:recurrence_free_survival",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:adverse_event",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:cardiovascular_event",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:major_adverse_cardiovascular_event",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:treatment_response",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:quality_of_life",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_outcome:hospitalization",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:hazard_ratio",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:odds_ratio",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:risk_ratio",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:relative_risk",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:mean_difference",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:standardized_mean_difference",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:confidence_interval",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:p_value",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_effect:sample_size",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:meta_analysis",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:systematic_review",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:randomized_controlled_trial",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:cohort_study",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:case_control_study",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:cross_sectional_study",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_study_design:diagnostic_accuracy_study",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:risk_factor",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:risk",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:prognostic_value",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:diagnostic_value",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:efficacy",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:safety",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  },
+  {
+    "concept_id": "meta_research_intent:association",
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_notes": "Emtree mapping placeholder; no reliable manual mapping recorded in this stage."
+  }
+]

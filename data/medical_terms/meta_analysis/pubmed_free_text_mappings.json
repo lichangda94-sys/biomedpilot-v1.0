@@ -1,0 +1,331 @@
+[
+  {
+    "concept_id": "meta_disease:breast_cancer",
+    "pubmed_free_text_terms": [
+      "breast cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:thyroid_cancer",
+    "pubmed_free_text_terms": [
+      "thyroid cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:type_2_diabetes_mellitus",
+    "pubmed_free_text_terms": [
+      "type 2 diabetes mellitus"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:type_1_diabetes_mellitus",
+    "pubmed_free_text_terms": [
+      "type 1 diabetes mellitus"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:lung_cancer",
+    "pubmed_free_text_terms": [
+      "lung cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:colorectal_cancer",
+    "pubmed_free_text_terms": [
+      "colorectal cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hepatocellular_carcinoma",
+    "pubmed_free_text_terms": [
+      "hepatocellular carcinoma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hypertension",
+    "pubmed_free_text_terms": [
+      "hypertension"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:coronary_artery_disease",
+    "pubmed_free_text_terms": [
+      "coronary artery disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:chronic_kidney_disease",
+    "pubmed_free_text_terms": [
+      "chronic kidney disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:stroke",
+    "pubmed_free_text_terms": [
+      "stroke"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:pancreatic_cancer",
+    "pubmed_free_text_terms": [
+      "pancreatic cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:prostate_cancer",
+    "pubmed_free_text_terms": [
+      "prostate cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:glioma",
+    "pubmed_free_text_terms": [
+      "glioma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:gastric_cancer",
+    "pubmed_free_text_terms": [
+      "gastric cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:obesity",
+    "pubmed_free_text_terms": [
+      "obesity"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:prediabetes",
+    "pubmed_free_text_terms": [
+      "prediabetes"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:smoking",
+    "pubmed_free_text_terms": [
+      "smoking"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:alcohol_consumption",
+    "pubmed_free_text_terms": [
+      "alcohol consumption"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:physical_activity",
+    "pubmed_free_text_terms": [
+      "physical activity"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:body_mass_index",
+    "pubmed_free_text_terms": [
+      "body mass index"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:blood_pressure",
+    "pubmed_free_text_terms": [
+      "blood pressure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:ldl_cholesterol",
+    "pubmed_free_text_terms": [
+      "LDL cholesterol"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:hyperglycemia",
+    "pubmed_free_text_terms": [
+      "hyperglycemia"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:air_pollution",
+    "pubmed_free_text_terms": [
+      "air pollution"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:metformin",
+    "pubmed_free_text_terms": [
+      "metformin"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:radioactive_iodine_therapy",
+    "pubmed_free_text_terms": [
+      "radioactive iodine therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:chemotherapy",
+    "pubmed_free_text_terms": [
+      "chemotherapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:radiotherapy",
+    "pubmed_free_text_terms": [
+      "radiotherapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:surgery",
+    "pubmed_free_text_terms": [
+      "surgery"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:immunotherapy",
+    "pubmed_free_text_terms": [
+      "immunotherapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:statin_therapy",
+    "pubmed_free_text_terms": [
+      "statin therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:aspirin",
+    "pubmed_free_text_terms": [
+      "aspirin"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:insulin_therapy",
+    "pubmed_free_text_terms": [
+      "insulin therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:lifestyle_intervention",
+    "pubmed_free_text_terms": [
+      "lifestyle intervention"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:recurrence",
+    "pubmed_free_text_terms": [
+      "recurrence"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:mortality",
+    "pubmed_free_text_terms": [
+      "mortality"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:overall_survival",
+    "pubmed_free_text_terms": [
+      "overall survival"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:progression_free_survival",
+    "pubmed_free_text_terms": [
+      "progression-free survival"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:disease_free_survival",
+    "pubmed_free_text_terms": [
+      "disease-free survival"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:recurrence_free_survival",
+    "pubmed_free_text_terms": [
+      "recurrence-free survival"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:adverse_event",
+    "pubmed_free_text_terms": [
+      "adverse event"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:cardiovascular_event",
+    "pubmed_free_text_terms": [
+      "cardiovascular event"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:major_adverse_cardiovascular_event",
+    "pubmed_free_text_terms": [
+      "major adverse cardiovascular event"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:treatment_response",
+    "pubmed_free_text_terms": [
+      "treatment response"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:quality_of_life",
+    "pubmed_free_text_terms": [
+      "quality of life"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:hospitalization",
+    "pubmed_free_text_terms": [
+      "hospitalization"
+    ],
+    "review_status": "manual_seed_mapping"
+  }
+]

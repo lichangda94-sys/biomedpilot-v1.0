@@ -1,0 +1,321 @@
+[
+  {
+    "concept_id": "meta_disease:breast_cancer",
+    "mesh_terms": [
+      "Breast Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:thyroid_cancer",
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:type_2_diabetes_mellitus",
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 2"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:type_1_diabetes_mellitus",
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 1"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:lung_cancer",
+    "mesh_terms": [
+      "Lung Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:colorectal_cancer",
+    "mesh_terms": [
+      "Colorectal Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hepatocellular_carcinoma",
+    "mesh_terms": [
+      "Carcinoma, Hepatocellular"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hypertension",
+    "mesh_terms": [
+      "Hypertension"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:coronary_artery_disease",
+    "mesh_terms": [
+      "Coronary Artery Disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:chronic_kidney_disease",
+    "mesh_terms": [
+      "Renal Insufficiency, Chronic"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:stroke",
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:pancreatic_cancer",
+    "mesh_terms": [
+      "Pancreatic Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:prostate_cancer",
+    "mesh_terms": [
+      "Prostatic Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:glioma",
+    "mesh_terms": [
+      "Glioma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:gastric_cancer",
+    "mesh_terms": [
+      "Stomach Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:obesity",
+    "mesh_terms": [
+      "Obesity"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:prediabetes",
+    "mesh_terms": [
+      "Prediabetic State"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:smoking",
+    "mesh_terms": [
+      "Smoking"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:alcohol_consumption",
+    "mesh_terms": [
+      "Alcohol Drinking"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:physical_activity",
+    "mesh_terms": [
+      "Exercise"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:body_mass_index",
+    "mesh_terms": [
+      "Body Mass Index"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:blood_pressure",
+    "mesh_terms": [
+      "Blood Pressure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:ldl_cholesterol",
+    "mesh_terms": [
+      "Cholesterol, LDL"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:hyperglycemia",
+    "mesh_terms": [
+      "Hyperglycemia"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:air_pollution",
+    "mesh_terms": [
+      "Air Pollution"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:metformin",
+    "mesh_terms": [
+      "Metformin"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:radioactive_iodine_therapy",
+    "mesh_terms": [
+      "Radioisotopes"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:chemotherapy",
+    "mesh_terms": [
+      "Drug Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:radiotherapy",
+    "mesh_terms": [
+      "Radiotherapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:surgery",
+    "mesh_terms": [
+      "Surgical Procedures, Operative"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:immunotherapy",
+    "mesh_terms": [
+      "Immunotherapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:statin_therapy",
+    "mesh_terms": [
+      "Hydroxymethylglutaryl-CoA Reductase Inhibitors"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:aspirin",
+    "mesh_terms": [
+      "Aspirin"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:insulin_therapy",
+    "mesh_terms": [
+      "Insulin"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:lifestyle_intervention",
+    "mesh_terms": [
+      "Life Style"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:recurrence",
+    "mesh_terms": [
+      "Recurrence"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:mortality",
+    "mesh_terms": [
+      "Mortality"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:overall_survival",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:progression_free_survival",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:disease_free_survival",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:recurrence_free_survival",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:adverse_event",
+    "mesh_terms": [
+      "Drug-Related Side Effects and Adverse Reactions"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:cardiovascular_event",
+    "mesh_terms": [
+      "Cardiovascular Diseases"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:major_adverse_cardiovascular_event",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:treatment_response",
+    "mesh_terms": [
+      "Treatment Outcome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:quality_of_life",
+    "mesh_terms": [
+      "Quality of Life"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:hospitalization",
+    "mesh_terms": [
+      "Hospitalization"
+    ],
+    "review_status": "manual_seed_mapping"
+  }
+]
