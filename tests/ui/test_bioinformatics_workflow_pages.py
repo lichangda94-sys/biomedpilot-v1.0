@@ -360,7 +360,7 @@ def test_data_source_requires_project_and_generates_gse_plan(qt_app, project_sum
     assert widget.objectName() == "bioinformaticsDataSourcePage"
 
 
-def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
+def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
     widget = BioinformaticsDataSourceWidget()
     card_titles = [
         label.text()
@@ -375,15 +375,20 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
         + [input_box.placeholderText() for input_box in inputs]
     )
 
+    assert "选择数据来源" in card_titles
+    assert "GEO 数据库" in card_titles
+    assert "TCGA 数据库" in card_titles
+    assert "GTEx 数据库" in card_titles
     assert "本地数据导入" in card_titles
-    assert "GSE 编号检索" in card_titles
-    assert "中文研究主题检索" in card_titles
+    assert "按 GSE 编号检索/下载" in card_titles
+    assert "按中文研究问题检索 GEO 数据集" in card_titles
     assert "GEO Series Matrix 文件" not in card_titles
     assert "TCGA 本地数据" not in card_titles
     assert "GTEx 本地数据" not in card_titles
     assert "TCGA + GTEx 联合数据" not in card_titles
     assert "本地 AI 检索助手" not in card_titles
-    assert card_titles[:3] == ["本地数据导入", "GSE 编号检索", "中文研究主题检索"]
+    assert {"GEO 数据库", "TCGA 数据库", "GTEx 数据库", "本地数据导入"} <= set(card_titles)
+    assert {"进入", "下载并构建数据集"} <= set(button_texts)
     assert "选择本地文件或文件夹" in button_texts
     assert "选择本地数据" not in button_texts
     assert "选择本地文件夹" not in button_texts
@@ -400,6 +405,50 @@ def test_data_source_page_shows_only_three_primary_modules(qt_app) -> None:
     assert widget.findChild(QLabel, "dataSelectionDownloadCount").text() == "下载列表 / 待处理：0 个"
     assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据检查：0 个"
     assert "下一步" in widget.findChild(QLabel, "dataSelectionNextStep").text()
+
+
+def test_data_source_tcga_request_is_pending_not_ready(qt_app, project_summary) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.create_tcga_source_request()
+
+    assert summary is not None
+    assert summary.source_type == "tcga_project"
+    assert summary.strategy == "plan_only"
+    assert summary.source_files == ()
+    assert "不会执行虚假下载" in widget.status_message()
+    request_index = project_summary.project_root / "manifests" / "data_source_requests.json"
+    payload = json.loads(request_index.read_text(encoding="utf-8"))
+    assert payload["requests"][-1]["source_type"] == "TCGA"
+    assert payload["requests"][-1]["actual_assets"] == []
+    assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 0
+    entries = workflow_pages._current_project_dataset_entries(project_summary.project_root)
+    assert entries[0].source == "TCGA 数据库"
+    assert entries[0].status == "等待下载与构建"
+    assert entries[0].ready_for_recognition is False
+
+
+def test_data_source_gtex_request_is_pending_and_not_tcga_control(qt_app, project_summary) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.create_gtex_source_request()
+
+    assert summary is not None
+    assert summary.source_type == "gtex_tissue"
+    assert summary.strategy == "plan_only"
+    assert summary.source_files == ()
+    assert "不会作为 TCGA 自动对照" in widget.status_message()
+    request_index = project_summary.project_root / "manifests" / "data_source_requests.json"
+    payload = json.loads(request_index.read_text(encoding="utf-8"))
+    assert payload["requests"][-1]["source_type"] == "GTEx"
+    assert payload["requests"][-1]["internal_selection"]["not_tcga_auto_control"] is True
+    assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 0
+    entries = workflow_pages._current_project_dataset_entries(project_summary.project_root)
+    assert entries[0].source == "GTEx 数据库"
+    assert entries[0].status == "等待下载与构建"
+    assert entries[0].ready_for_recognition is False
 
 
 def test_data_source_registers_local_reference_strategy(qt_app, project_summary, tmp_path: Path) -> None:

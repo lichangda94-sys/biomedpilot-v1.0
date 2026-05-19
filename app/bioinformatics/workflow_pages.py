@@ -51,6 +51,8 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
+from app.bioinformatics.data_source_requests import create_data_source_request
+from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
 from app.bioinformatics.project_readiness import (
     has_standardizable_expression_input,
@@ -120,6 +122,14 @@ from app.bioinformatics.search_center import (
     UnifiedDatasetCandidate,
 )
 from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
+from app.bioinformatics.tcga_project_registry import (
+    TCGA_ANALYSIS_PURPOSES,
+    TCGA_SAMPLE_SCOPES,
+    get_tcga_analysis_purpose,
+    get_tcga_project,
+    get_tcga_sample_scope,
+    grouped_tcga_projects,
+)
 from app.shared.ai_gateway import (
     create_ai_draft_record,
     desktop_local_ollama_config,
@@ -828,8 +838,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         root = _scroll_root(self, max_width=1040)
         root.addWidget(
             _header(
-                "数据导入与检索",
-                "先添加数据，下一步进入数据检查与准备。",
+                "选择数据来源",
+                "请选择数据来源。软件会根据所选数据库、研究目的和样本范围自动构建数据获取与检查流程。",
                 back_text="返回项目首页",
                 back_signal=self.back_requested,
             )
@@ -839,9 +849,13 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._status_label = _status_label("先添加数据，下一步进入数据检查与准备。")
         root.addWidget(self._status_label)
 
-        root.addWidget(self._local_import_card())
+        root.addWidget(self._data_source_home_card())
+        root.addWidget(self._geo_database_card())
         root.addWidget(self._gse_card())
         root.addWidget(self._research_card())
+        root.addWidget(self._tcga_database_card())
+        root.addWidget(self._gtex_database_card())
+        root.addWidget(self._local_import_card())
 
         self._selection_status_card = self._data_selection_status_card()
         root.addWidget(self._selection_status_card)
@@ -882,6 +896,61 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions.addWidget(self._next_button)
         root.addWidget(actions_frame)
 
+    def _data_source_home_card(self) -> QFrame:
+        card, layout = _card("选择数据来源")
+        card.setObjectName("dataSourceEntryHomeCard")
+        layout.addWidget(_muted("GEO 保留现有真实下载能力；TCGA 与 GTEx 本阶段先建立中文类目、选择流程和任务草案。"))
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(SPACING["md"])
+        grid.setVerticalSpacing(SPACING["sm"])
+        entries = (
+            ("GEO 数据库", "GSE 编号、中文研究问题检索、本地 GEO 文件导入", "geo", "openGeoDatabaseButton"),
+            ("TCGA 数据库", "按癌种选择 TCGA 项目并构建分析数据集", "tcga", "openTcgaDatabaseButton"),
+            ("GTEx 数据库", "按正常组织选择 GTEx 表达数据", "gtex", "openGtexDatabaseButton"),
+            ("本地数据导入", "导入已有表达矩阵、样本注释或分析结果", "local", "openLocalImportButton"),
+        )
+        for index, (title, description, key, object_name) in enumerate(entries):
+            entry = QFrame()
+            entry.setObjectName(f"dataSourceEntry_{key}")
+            entry_layout = QVBoxLayout(entry)
+            entry_layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
+            entry_layout.setSpacing(SPACING["xs"])
+            label = QLabel(title)
+            label.setObjectName("bioProjectCardTitle")
+            label.setWordWrap(True)
+            entry_layout.addWidget(label)
+            entry_layout.addWidget(_muted(description))
+            button = _button("进入", "primaryButton", lambda checked=False, target=key: self._jump_to_data_source_section(target))
+            button.setObjectName(object_name)
+            entry_layout.addWidget(button, alignment=Qt.AlignLeft)
+            grid.addWidget(entry, index // 2, index % 2)
+        layout.addLayout(grid)
+        return card
+
+    def _geo_database_card(self) -> QFrame:
+        card, layout = _card("GEO 数据库")
+        card.setObjectName("geoDatabaseSectionCard")
+        layout.addWidget(_muted("GEO 专区保留 GSE 编号检索/下载、中文研究问题检索和本地 GEO 文件导入入口。下载或导入完成后仍进入当前数据检查与准备。"))
+        return card
+
+    def _jump_to_data_source_section(self, target: str) -> None:
+        labels = {
+            "geo": "已进入 GEO 数据库区域；可按 GSE 编号检索，或进入中文研究问题检索。",
+            "tcga": "已进入 TCGA 数据库区域；本阶段生成任务草案，不执行真实 GDC 下载。",
+            "gtex": "已进入 GTEx 数据库区域；本阶段生成任务草案，不作为 TCGA 自动对照。",
+            "local": "已进入本地数据导入区域。",
+        }
+        if target == "geo":
+            self._gse_input.setFocus()
+        elif target == "tcga":
+            self._tcga_project_combo.setFocus()
+        elif target == "gtex":
+            self._gtex_tissue_combo.setFocus()
+        elif target == "local":
+            self._local_strategy_combo.setFocus()
+        self._set_status(labels.get(target, "请选择数据来源。"))
+
     def _local_import_card(self) -> QFrame:
         card, layout = _card("本地数据导入")
         card.setObjectName("localImportEntryCard")
@@ -900,7 +969,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _gse_card(self) -> QFrame:
-        card, layout = _card("GSE 编号检索")
+        card, layout = _card("按 GSE 编号检索/下载")
         card.setObjectName("gseSearchEntryCard")
         layout.addWidget(_muted("已知 GEO 数据集编号时使用，可查看详情并加入项目数据来源。"))
         self._gse_input = QLineEdit()
@@ -944,9 +1013,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _research_card(self) -> QFrame:
-        card, layout = _card("中文研究主题检索")
+        card, layout = _card("按中文研究问题检索 GEO 数据集")
         card.setObjectName("chineseResearchSearchEntryCard")
-        layout.addWidget(_muted("面向 GEO / TCGA / GTEx 的生信数据检索辅助，用于寻找表达数据来源。"))
+        layout.addWidget(_muted("面向 GEO 的中文研究问题检索入口；TCGA / GTEx 请选择各自数据库页面。"))
         self._chinese_query_input = QLineEdit()
         self._chinese_query_input.setObjectName("chineseResearchTopicEntry")
         self._chinese_query_input.setPlaceholderText("请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据")
@@ -958,6 +1027,247 @@ class BioinformaticsDataSourceWidget(QWidget):
         button.setMinimumHeight(44)
         layout.addWidget(button, alignment=Qt.AlignLeft)
         return card
+
+    def _tcga_database_card(self) -> QFrame:
+        card, layout = _card("TCGA 数据库")
+        card.setObjectName("tcgaDatabaseEntryCard")
+        layout.addWidget(_muted("请选择癌种、分析目的和样本范围。软件会自动决定需要获取的数据内容。"))
+        self._tcga_project_combo = QComboBox()
+        self._tcga_project_combo.setObjectName("tcgaProjectCombo")
+        for group, projects in grouped_tcga_projects().items():
+            for project in projects:
+                self._tcga_project_combo.addItem(f"{group} / {project.chinese_name} ({project.project_id})", project.project_id)
+        self._tcga_purpose_combo = QComboBox()
+        self._tcga_purpose_combo.setObjectName("tcgaAnalysisPurposeCombo")
+        for purpose in TCGA_ANALYSIS_PURPOSES:
+            self._tcga_purpose_combo.addItem(purpose.chinese_name, purpose.purpose_id)
+        self._tcga_sample_scope_combo = QComboBox()
+        self._tcga_sample_scope_combo.setObjectName("tcgaSampleScopeCombo")
+        for scope in TCGA_SAMPLE_SCOPES:
+            self._tcga_sample_scope_combo.addItem(scope.chinese_name, scope.scope_id)
+        form = QGridLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(SPACING["md"])
+        form.setVerticalSpacing(SPACING["sm"])
+        form.addWidget(QLabel("癌种项目"), 0, 0)
+        form.addWidget(self._tcga_project_combo, 0, 1)
+        form.addWidget(QLabel("分析目的"), 1, 0)
+        form.addWidget(self._tcga_purpose_combo, 1, 1)
+        form.addWidget(QLabel("样本范围"), 2, 0)
+        form.addWidget(self._tcga_sample_scope_combo, 2, 1)
+        layout.addLayout(form)
+        self._tcga_preview_table = _table(["项目", "分析目的", "样本范围", "预览状态", "预计内容"])
+        self._tcga_preview_table.setObjectName("tcgaPreviewTable")
+        self._tcga_preview_table.setMaximumHeight(120)
+        layout.addWidget(self._tcga_preview_table)
+        self._tcga_status_label = _status_label("当前阶段已建立 TCGA 中文类目和任务流程。真实 GDC 查询与下载将在下一阶段接入。")
+        layout.addWidget(self._tcga_status_label)
+        button = _button("下载并构建数据集", "primaryButton", self.create_tcga_source_request)
+        button.setObjectName("createTcgaDataSourceRequestButton")
+        layout.addWidget(button, alignment=Qt.AlignLeft)
+        self._tcga_project_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
+        self._tcga_purpose_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
+        self._tcga_sample_scope_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
+        self._refresh_tcga_preview()
+        return card
+
+    def _gtex_database_card(self) -> QFrame:
+        card, layout = _card("GTEx 数据库")
+        card.setObjectName("gtexDatabaseEntryCard")
+        layout.addWidget(_muted("请选择正常组织和使用目的。GTEx 将作为独立正常组织表达资源管理，不作为 TCGA 的自动合并对照。"))
+        self._gtex_tissue_combo = QComboBox()
+        self._gtex_tissue_combo.setObjectName("gtexTissueCombo")
+        for group, tissues in grouped_gtex_tissues().items():
+            for tissue in tissues:
+                self._gtex_tissue_combo.addItem(f"{group} / {tissue.chinese_name} ({tissue.tissue_site_detail})", tissue.tissue_id)
+        self._gtex_purpose_combo = QComboBox()
+        self._gtex_purpose_combo.setObjectName("gtexUsePurposeCombo")
+        for purpose in GTEX_USE_PURPOSES:
+            self._gtex_purpose_combo.addItem(purpose.chinese_name, purpose.purpose_id)
+        form = QGridLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(SPACING["md"])
+        form.setVerticalSpacing(SPACING["sm"])
+        form.addWidget(QLabel("组织"), 0, 0)
+        form.addWidget(self._gtex_tissue_combo, 0, 1)
+        form.addWidget(QLabel("使用目的"), 1, 0)
+        form.addWidget(self._gtex_purpose_combo, 1, 1)
+        layout.addLayout(form)
+        self._gtex_preview_table = _table(["组织大类", "具体组织", "使用目的", "预览状态", "预计内容"])
+        self._gtex_preview_table.setObjectName("gtexPreviewTable")
+        self._gtex_preview_table.setMaximumHeight(120)
+        layout.addWidget(self._gtex_preview_table)
+        self._gtex_status_label = _status_label("当前阶段已建立 GTEx 组织类目和任务流程。真实 GTEx 查询与下载将在下一阶段接入。")
+        layout.addWidget(self._gtex_status_label)
+        button = _button("下载并构建数据集", "primaryButton", self.create_gtex_source_request)
+        button.setObjectName("createGtexDataSourceRequestButton")
+        layout.addWidget(button, alignment=Qt.AlignLeft)
+        self._gtex_tissue_combo.currentIndexChanged.connect(lambda _: self._refresh_gtex_preview())
+        self._gtex_purpose_combo.currentIndexChanged.connect(lambda _: self._refresh_gtex_preview())
+        self._refresh_gtex_preview()
+        return card
+
+    def _refresh_tcga_preview(self) -> None:
+        if not hasattr(self, "_tcga_preview_table"):
+            return
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or "TCGA-THCA"))
+        purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or "differential_expression"))
+        scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or "tumor"))
+        expected = "、".join(_user_asset_label(asset) for asset in purpose.required_internal_assets)
+        _fill_table(
+            self._tcga_preview_table,
+            [
+                [
+                    f"{project.chinese_name} ({project.project_id})",
+                    purpose.chinese_name,
+                    scope.chinese_name,
+                    "需要下一阶段连接 GDC API 后获取真实预览",
+                    expected or "项目元数据",
+                ]
+            ],
+        )
+
+    def _refresh_gtex_preview(self) -> None:
+        if not hasattr(self, "_gtex_preview_table"):
+            return
+        tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or "gtex_thyroid"))
+        purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or "normal_expression_view"))
+        expected = "、".join(_user_asset_label(asset) for asset in purpose.required_internal_assets)
+        _fill_table(
+            self._gtex_preview_table,
+            [
+                [
+                    tissue.tissue_group,
+                    f"{tissue.chinese_name} ({tissue.tissue_site_detail})",
+                    purpose.chinese_name,
+                    "需要下一阶段连接 GTEx API 后获取真实预览",
+                    expected or "组织元数据",
+                ]
+            ],
+        )
+
+    def create_tcga_source_request(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or ""))
+        purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or ""))
+        scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or ""))
+        warnings = (
+            "真实 GDC 查询与下载将在下一阶段接入；本阶段不伪造 case/sample/file 数。",
+            "TCGA request 处于等待下载与构建状态，不进入 DEG/GSEA ready。",
+        )
+        draft = create_data_source_request(
+            self._project_root,
+            source_type="TCGA",
+            user_title=f"TCGA 数据库 - {project.chinese_name}",
+            user_selection_summary=f"{project.chinese_name} / {purpose.chinese_name} / {scope.chinese_name}",
+            internal_selection={
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "analysis_purpose": purpose.purpose_id,
+                "sample_scope": scope.scope_id,
+                "internal_sample_types": list(scope.internal_sample_types),
+                "readiness_profile": purpose.readiness_profile,
+            },
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="pending_download",
+        )
+        summary = register_acquisition(
+            self._project_root,
+            source_type="tcga_project",
+            source_label=project.project_id,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "tcga_gdc",
+                "ui_source": "tcga_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "registered_pending_tcga_build",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": draft.request.request_id,
+                "data_source_request_path": str(draft.request_path),
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "chinese_name": project.chinese_name,
+                "english_name": project.english_name,
+                "organ_system": project.organ_system,
+                "analysis_purpose": purpose.purpose_id,
+                "analysis_purpose_zh": purpose.chinese_name,
+                "sample_scope": scope.scope_id,
+                "sample_scope_zh": scope.chinese_name,
+                "expected_assets": list(purpose.required_internal_assets),
+                "display_title_zh": f"TCGA {project.chinese_name}",
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = summary
+        self._tcga_status_label.setText(f"已生成 TCGA 任务草案：{project.project_id}；等待下一阶段真实 GDC 查询与下载。")
+        self._refresh_registered_sources()
+        self._set_status("TCGA 数据源 request 草案已生成；不会执行虚假下载，也不会进入真实分析 ready。")
+        return summary
+
+    def create_gtex_source_request(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or ""))
+        purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or ""))
+        warnings = (
+            "真实 GTEx 查询与下载将在下一阶段接入；本阶段不伪造 sample/donor/file 数。",
+            "GTEx request 不会被自动作为 TCGA normal control，也不进入 DEG/GSEA ready。",
+        )
+        draft = create_data_source_request(
+            self._project_root,
+            source_type="GTEx",
+            user_title=f"GTEx 数据库 - {tissue.chinese_name}",
+            user_selection_summary=f"{tissue.tissue_group} / {tissue.chinese_name} / {purpose.chinese_name}",
+            internal_selection={
+                "tissue_id": tissue.tissue_id,
+                "tissue_site_detail": tissue.tissue_site_detail,
+                "use_purpose": purpose.purpose_id,
+                "version": tissue.version,
+                "readiness_profile": purpose.readiness_profile,
+                "not_tcga_auto_control": True,
+            },
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="pending_download",
+        )
+        summary = register_acquisition(
+            self._project_root,
+            source_type="gtex_tissue",
+            source_label=tissue.tissue_site_detail,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "gtex",
+                "ui_source": "gtex_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "registered_pending_gtex_build",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": draft.request.request_id,
+                "data_source_request_path": str(draft.request_path),
+                "tissue_id": tissue.tissue_id,
+                "tissue_name": tissue.tissue_site_detail,
+                "tissue_site_detail": tissue.tissue_site_detail,
+                "chinese_name": tissue.chinese_name,
+                "tissue_group": tissue.tissue_group,
+                "version": tissue.version,
+                "use_purpose": purpose.purpose_id,
+                "use_purpose_zh": purpose.chinese_name,
+                "expected_assets": list(purpose.required_internal_assets),
+                "display_title_zh": f"GTEx {tissue.chinese_name}",
+                "not_tcga_auto_control": True,
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = summary
+        self._gtex_status_label.setText(f"已生成 GTEx 任务草案：{tissue.chinese_name}；等待下一阶段真实 GTEx 查询与下载。")
+        self._refresh_registered_sources()
+        self._set_status("GTEx 数据源 request 草案已生成；不会执行虚假下载，也不会作为 TCGA 自动对照。")
+        return summary
 
     def _data_selection_status_card(self) -> QFrame:
         card, layout = _card("当前数据选择状态")
@@ -5530,6 +5840,20 @@ def _data_selection_next_step_text(project_root: Path | None, *, count: int, rea
     return "下一步：请检查数据来源状态。"
 
 
+def _user_asset_label(asset: str) -> str:
+    return {
+        "rna_seq_expression": "RNA-seq 表达矩阵",
+        "sample_metadata": "样本信息",
+        "clinical_metadata": "临床信息",
+        "case_sample_mapping": "case/sample 映射",
+        "project_metadata": "项目元数据",
+        "gene_expression": "基因表达",
+        "gene_level_expression": "gene-level 表达矩阵",
+        "sample_annotation": "样本注释",
+        "tissue_metadata": "组织元数据",
+    }.get(asset, asset)
+
+
 def _dataset_entry_from_record(
     project_root: Path,
     row: RegisteredSourceRow,
@@ -5714,6 +6038,10 @@ def _dataset_source_label(row: RegisteredSourceRow, metadata: dict[str, object])
         return "本地导入"
     if ui_source == "chinese_research_question_search":
         return "中文检索"
+    if ui_source == "tcga_database_page":
+        return "TCGA 数据库"
+    if ui_source == "gtex_database_page":
+        return "GTEx 数据库"
     if row.source_type_key in GEO_SOURCE_TYPES:
         return "GSE 编号检索"
     if "tcga" in row.source_type_key:
@@ -5742,6 +6070,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
     if payload.get("strategy") == "plan_only":
         if row.source_type_key in GEO_SOURCE_TYPES:
             return "未下载"
+        if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
+            return "等待下载与构建"
         return "未下载"
     if row.status and row.status not in {"已登记", "已登记，需确认"}:
         return row.status.replace("已登记", "已添加")
@@ -5761,9 +6091,15 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
     if "平台" in raw_status or metadata.get("platform_accessions"):
         assets.append("平台注释")
     if "tcga" in row.source_type_key:
-        return "表达矩阵、临床信息"
+        expected = metadata.get("expected_assets")
+        if isinstance(expected, list) and expected:
+            return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
+        return "待下载与构建"
     if "gtex" in row.source_type_key:
-        return "表达矩阵"
+        expected = metadata.get("expected_assets")
+        if isinstance(expected, list) and expected:
+            return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
+        return "待下载与构建"
     return "、".join(dict.fromkeys(assets)) if assets else "待确认"
 
 
