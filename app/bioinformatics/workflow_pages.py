@@ -1575,7 +1575,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
-        plan_path = latest_tcga_download_plan_path(self._project_root)
+        plan_path = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id())
         if plan_path is None:
             self._tcga_download_status_text.setPlainText("未找到 TCGA 下载计划草案，请先生成 B6.2 下载计划。")
             self._set_status("未找到 TCGA 下载计划草案。", error=True)
@@ -1616,7 +1616,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
-        record_path = latest_tcga_raw_expression_record_path(self._project_root)
+        record_path = latest_tcga_raw_expression_record_path(self._project_root, project_id=self._selected_tcga_project_id())
         if record_path is None:
             self._tcga_expression_build_status_text.setPlainText("未找到等待 B6.4 构建的 TCGA 原始文件记录。")
             self._set_status("未找到等待 B6.4 构建的 TCGA 原始文件记录。", error=True)
@@ -1662,14 +1662,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         if self._project_root is None:
             self._set_status("请先创建或打开生信分析项目。", error=True)
             return None
-        expression_manifest = latest_tcga_expression_build_manifest_path(self._project_root)
-        project = get_tcga_project(str(self._tcga_project_combo.currentData() or "TCGA-THCA"))
+        project = get_tcga_project(self._selected_tcga_project_id() or "TCGA-THCA")
+        expression_manifest = latest_tcga_expression_build_manifest_path(self._project_root, project_id=project.project_id)
         if expression_manifest is not None:
             self._tcga_clinical_build_status_text.setPlainText("正在从 GDC /cases 获取 TCGA clinical metadata，并与 B6.4 表达样本映射。")
             self._tcga_status_label.setText("正在获取 TCGA clinical metadata，请稍候。")
             QApplication.processEvents()
             try:
-                result = self._tcga_clinical_builder.build_for_latest_expression_build(self._project_root)
+                result = self._tcga_clinical_builder.build_for_latest_expression_build(self._project_root, project_id=project.project_id)
             except Exception as exc:
                 self._tcga_clinical_build_status_text.setPlainText(f"TCGA clinical metadata 构建失败：{exc}")
                 self._set_status(f"TCGA clinical metadata 构建失败：{exc}", error=True)
@@ -1717,7 +1717,7 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _refresh_tcga_download_plan_state(self) -> None:
         if not hasattr(self, "_tcga_download_button"):
             return
-        plan_path = latest_tcga_download_plan_path(self._project_root) if self._project_root is not None else None
+        plan_path = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id()) if self._project_root is not None else None
         self._tcga_download_button.setEnabled(plan_path is not None)
         if hasattr(self, "_tcga_download_status_text") and self._tcga_download_result is None:
             self._tcga_download_status_text.setPlainText(
@@ -1727,7 +1727,7 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _refresh_tcga_expression_build_state(self) -> None:
         if not hasattr(self, "_tcga_expression_build_button"):
             return
-        record_path = latest_tcga_raw_expression_record_path(self._project_root) if self._project_root is not None else None
+        record_path = latest_tcga_raw_expression_record_path(self._project_root, project_id=self._selected_tcga_project_id()) if self._project_root is not None else None
         self._tcga_expression_build_button.setEnabled(record_path is not None)
         if hasattr(self, "_tcga_expression_build_status_text") and self._tcga_expression_build_result is None:
             self._tcga_expression_build_status_text.setPlainText(
@@ -1737,7 +1737,8 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _refresh_tcga_clinical_build_state(self) -> None:
         if not hasattr(self, "_tcga_clinical_build_button"):
             return
-        state = self._tcga_workflow_state or self._build_tcga_workflow_state()
+        state = self._build_tcga_workflow_state()
+        self._tcga_workflow_state = state
         clinical_step = state.step("clinical")
         has_project = self._project_root is not None
         self._tcga_clinical_build_button.setEnabled(has_project and clinical_step.enabled)
@@ -1748,10 +1749,11 @@ class BioinformaticsDataSourceWidget(QWidget):
             if clinical_step.enabled:
                 self._tcga_clinical_build_status_text.setPlainText(clinical_step.summary)
             else:
-                self._tcga_clinical_build_status_text.setPlainText(clinical_step.blocking_reason or clinical_step.summary)
+                detail = f"\n阻断原因：{clinical_step.blocking_reason}" if clinical_step.blocking_reason else ""
+                self._tcga_clinical_build_status_text.setPlainText(f"{clinical_step.summary}{detail}")
 
     def _build_tcga_workflow_state(self) -> TCGAWorkflowState:
-        project_id = str(self._tcga_project_combo.currentData() or "TCGA-THCA") if hasattr(self, "_tcga_project_combo") else ""
+        project_id = self._selected_tcga_project_id()
         analysis_purpose = str(self._tcga_purpose_combo.currentData() or "") if hasattr(self, "_tcga_purpose_combo") else ""
         sample_scope = str(self._tcga_sample_scope_combo.currentData() or "") if hasattr(self, "_tcga_sample_scope_combo") else ""
         return build_tcga_workflow_state(
@@ -1760,6 +1762,9 @@ class BioinformaticsDataSourceWidget(QWidget):
             analysis_purpose=analysis_purpose,
             sample_scope=sample_scope,
         )
+
+    def _selected_tcga_project_id(self) -> str:
+        return str(self._tcga_project_combo.currentData() or "TCGA-THCA") if hasattr(self, "_tcga_project_combo") else ""
 
     def _refresh_tcga_workflow_state(self) -> None:
         if not hasattr(self, "_tcga_workflow_table"):

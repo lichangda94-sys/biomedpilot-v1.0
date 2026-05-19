@@ -7,15 +7,15 @@ from app.bioinformatics.data_sources.tcga_workflow import build_tcga_workflow_st
 from app.bioinformatics.project_workspace_binding import register_acquisition
 
 
-def _write_plan(root: Path, *, file_count: int = 2, warnings: list[str] | None = None) -> Path:
-    path = root / "acquisition" / "tcga_download_plans" / "tcga-plan-test.json"
+def _write_plan(root: Path, *, file_count: int = 2, warnings: list[str] | None = None, project: str = "TCGA-THCA") -> Path:
+    path = root / "acquisition" / "tcga_download_plans" / f"tcga-plan-{project.lower()}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
             {
                 "schema_version": "biomedpilot.tcga_gdc_download_plan_draft.v1",
                 "plan_id": "tcga-plan-test",
-                "project_id": "TCGA-THCA",
+                "project_id": project,
                 "analysis_purpose": "differential_expression",
                 "sample_scope": "tumor",
                 "file_count": file_count,
@@ -43,8 +43,8 @@ def _register_request(root: Path) -> None:
     )
 
 
-def _register_raw(root: Path, *, acquired: int = 1, failed: int = 0, blocked: int = 0, status: str = "tcga_gdc_raw_files_acquired") -> None:
-    raw_file = root / "raw_data" / "tcga" / "TCGA-THCA" / "dl" / "file-1.tsv"
+def _register_raw(root: Path, *, acquired: int = 1, failed: int = 0, blocked: int = 0, status: str = "tcga_gdc_raw_files_acquired", project: str = "TCGA-THCA") -> None:
+    raw_file = root / "raw_data" / "tcga" / project / "dl" / "file-1.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
     if acquired:
         raw_file.write_text("gene_id\tvalue\nTP53\t1\n", encoding="utf-8")
@@ -52,12 +52,12 @@ def _register_raw(root: Path, *, acquired: int = 1, failed: int = 0, blocked: in
     register_acquisition(
         root,
         source_type="tcga_project",
-        source_label="TCGA-THCA",
+        source_label=project,
         strategy="reference" if acquired else "plan_only",
         selected_paths=selected,
         metadata={
             "source": "tcga_gdc",
-            "project_id": "TCGA-THCA",
+            "project_id": project,
             "download_status": status,
             "ready_for_recognition": "pending_expression_matrix_build",
             "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
@@ -121,8 +121,8 @@ def _register_expression(root: Path, *, project: str = "TCGA-THCA") -> Path:
     return manifest
 
 
-def _register_clinical(root: Path, *, mode: str = "expression_matched_cases") -> Path:
-    manifest = root / "standardized_data" / "tcga" / "tcga-thca" / "build" / "data_prepared" / "tcga" / "clinical" / "tcga_clinical_build_manifest.json"
+def _register_clinical(root: Path, *, mode: str = "expression_matched_cases", project: str = "TCGA-THCA") -> Path:
+    manifest = root / "standardized_data" / "tcga" / project.lower() / "build" / "data_prepared" / "tcga" / "clinical" / "tcga_clinical_build_manifest.json"
     manifest.parent.mkdir(parents=True, exist_ok=True)
     summary = {
         "case_count": 2,
@@ -137,7 +137,7 @@ def _register_clinical(root: Path, *, mode: str = "expression_matched_cases") ->
         json.dumps(
             {
                 "schema_version": "biomedpilot.tcga_clinical_build_manifest.v1",
-                "project_id": "TCGA-THCA",
+                "project_id": project,
                 "clinical_build_id": "clinical",
                 "mode": mode,
                 "summary": summary,
@@ -150,12 +150,12 @@ def _register_clinical(root: Path, *, mode: str = "expression_matched_cases") ->
     register_acquisition(
         root,
         source_type="tcga_project",
-        source_label="TCGA-THCA",
+        source_label=project,
         strategy="reference",
         selected_paths=[manifest],
         metadata={
             "source": "tcga_gdc",
-            "project_id": "TCGA-THCA",
+            "project_id": project,
             "download_status": "tcga_clinical_metadata_built",
             "ready_for_recognition": "pending_data_check",
             "analysis_gate_status": "pending_data_check",
@@ -248,3 +248,23 @@ def test_tcga_workflow_prefers_highest_stage_over_old_plan(tmp_path: Path) -> No
     assert state.step("download").status == "completed"
     assert state.step("expression_build").status == "completed"
     assert state.step("clinical").status == "completed"
+
+
+def test_tcga_workflow_is_scoped_to_selected_project(tmp_path: Path) -> None:
+    _write_plan(tmp_path, project="TCGA-LUAD")
+    _register_raw(tmp_path, project="TCGA-LUAD")
+    _register_expression(tmp_path, project="TCGA-LUAD")
+    _register_clinical(tmp_path, project="TCGA-LUAD")
+
+    thca_state = build_tcga_workflow_state(tmp_path, project_id="TCGA-THCA")
+    luad_state = build_tcga_workflow_state(tmp_path, project_id="TCGA-LUAD")
+
+    assert thca_state.step("preview").status == "available"
+    assert thca_state.step("download").status == "blocked"
+    assert thca_state.step("expression_build").status == "blocked"
+    assert thca_state.step("clinical").status == "blocked"
+    assert thca_state.can_enter_data_check is False
+    assert luad_state.step("download").status == "completed"
+    assert luad_state.step("expression_build").status == "completed"
+    assert luad_state.step("clinical").status == "completed"
+    assert luad_state.can_enter_data_check is True

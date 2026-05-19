@@ -71,11 +71,11 @@ def build_tcga_workflow_state(
     plan_path = _latest_plan_path(root, selected_project)
     plan = _read_json(plan_path) if plan_path is not None else {}
     raw_record = _latest_raw_record(records)
-    expression_manifest_path = latest_tcga_expression_build_manifest_path(root) if root is not None else None
+    expression_manifest_path = latest_tcga_expression_build_manifest_path(root, project_id=selected_project) if root is not None else None
     expression_manifest = _read_json(expression_manifest_path) if expression_manifest_path is not None else {}
-    clinical_manifest_path = latest_tcga_clinical_build_manifest_path(root) if root is not None else None
+    clinical_manifest_path = latest_tcga_clinical_build_manifest_path(root, project_id=selected_project) if root is not None else None
     clinical_manifest = _read_json(clinical_manifest_path) if clinical_manifest_path is not None else {}
-    raw_record_path = latest_tcga_raw_expression_record_path(root) if root is not None else None
+    raw_record_path = latest_tcga_raw_expression_record_path(root, project_id=selected_project) if root is not None else None
 
     raw_summary = _metadata_summary(raw_record, "tcga_download_summary")
     expression_summary = _metadata_summary(_record_for_manifest(records, expression_manifest_path), "tcga_expression_build_summary")
@@ -316,7 +316,7 @@ def _latest_plan_path(root: Path | None, project_id: str | None) -> Path | None:
         candidates.append(path)
     if candidates:
         return max(candidates, key=lambda item: item.stat().st_mtime)
-    return latest_tcga_download_plan_path(root)
+    return latest_tcga_download_plan_path(root) if not project_id else None
 
 
 def _current_stage(steps: list[TCGAWorkflowStep]) -> str:

@@ -66,8 +66,14 @@ class TCGADownloadPlanExecutor:
         self._fetcher = fetcher
         self._page_size = page_size
 
-    def execute_latest_plan(self, project_root: str | Path, *, timeout: int = 10) -> TCGADownloadExecutionResult:
-        plan_path = latest_tcga_download_plan_path(project_root)
+    def execute_latest_plan(
+        self,
+        project_root: str | Path,
+        *,
+        timeout: int = 10,
+        project_id: str | None = None,
+    ) -> TCGADownloadExecutionResult:
+        plan_path = latest_tcga_download_plan_path(project_root, project_id=project_id)
         if plan_path is None:
             raise FileNotFoundError("未找到 TCGA 下载计划草案，请先生成 B6.2 下载计划。")
         return self.execute_plan(project_root, plan_path=plan_path, timeout=timeout)
@@ -276,12 +282,25 @@ class TCGADownloadPlanExecutor:
         )
 
 
-def latest_tcga_download_plan_path(project_root: str | Path) -> Path | None:
+def latest_tcga_download_plan_path(project_root: str | Path, *, project_id: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_project = str(project_id or "").strip().upper()
     plans_dir = root / "acquisition" / "tcga_download_plans"
     if not plans_dir.exists():
         return None
-    paths = [path for path in plans_dir.glob("*.json") if path.is_file()]
+    paths: list[Path] = []
+    for path in plans_dir.glob("*.json"):
+        if not path.is_file():
+            continue
+        if selected_project:
+            try:
+                plan = _read_json(path)
+            except (OSError, json.JSONDecodeError):
+                continue
+            plan_project = str(plan.get("project_id") or "").strip().upper()
+            if plan_project and plan_project != selected_project:
+                continue
+        paths.append(path)
     if not paths:
         return None
     return max(paths, key=lambda path: path.stat().st_mtime)

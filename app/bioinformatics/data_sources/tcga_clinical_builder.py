@@ -123,11 +123,28 @@ class TCGAClinicalMetadataBuilder:
         self._fetcher = fetcher or _fetch_gdc_json
         self._page_size = max(1, int(page_size))
 
-    def build_for_latest_expression_build(self, project_root: str | Path, *, timeout: int = 10) -> TCGAClinicalBuildResult:
+    def build_for_latest_expression_build(
+        self,
+        project_root: str | Path,
+        *,
+        timeout: int = 10,
+        project_id: str | None = None,
+    ) -> TCGAClinicalBuildResult:
         root = Path(project_root).expanduser().resolve()
-        manifest_path = latest_tcga_expression_build_manifest_path(root)
+        manifest_path = latest_tcga_expression_build_manifest_path(root, project_id=project_id)
         if manifest_path is None:
             raise FileNotFoundError("未找到 B6.4 TCGA expression build manifest；只能按项目执行 clinical 概况预览。")
+        return self.build_for_expression_build(root, manifest_path=manifest_path, timeout=timeout)
+
+    def build_for_expression_build(
+        self,
+        project_root: str | Path,
+        *,
+        manifest_path: str | Path,
+        timeout: int = 10,
+    ) -> TCGAClinicalBuildResult:
+        root = Path(project_root).expanduser().resolve()
+        manifest_path = Path(manifest_path).expanduser().resolve()
         manifest = _read_json(manifest_path)
         project_id = str(manifest.get("project_id") or "").strip().upper()
         sample_mapping_path = Path(str(manifest.get("sample_mapping_path") or ""))
@@ -452,8 +469,9 @@ _MAPPING_TABLE_FIELDS = [
 ]
 
 
-def latest_tcga_expression_build_manifest_path(project_root: str | Path) -> Path | None:
+def latest_tcga_expression_build_manifest_path(project_root: str | Path, *, project_id: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_project = str(project_id or "").strip().upper()
     records_dir = root / "acquisition" / "records"
     if not records_dir.exists():
         return None
@@ -467,6 +485,9 @@ def latest_tcga_expression_build_manifest_path(project_root: str | Path) -> Path
             continue
         metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
         if not isinstance(metadata, dict):
+            continue
+        record_project = str(metadata.get("project_id") or payload.get("source_label") or "").strip().upper()
+        if selected_project and record_project and record_project != selected_project:
             continue
         if str(metadata.get("download_status") or "") != "tcga_expression_matrix_built":
             continue
@@ -476,8 +497,9 @@ def latest_tcga_expression_build_manifest_path(project_root: str | Path) -> Path
     return candidates[-1] if candidates else None
 
 
-def latest_tcga_clinical_build_manifest_path(project_root: str | Path) -> Path | None:
+def latest_tcga_clinical_build_manifest_path(project_root: str | Path, *, project_id: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_project = str(project_id or "").strip().upper()
     records_dir = root / "acquisition" / "records"
     if not records_dir.exists():
         return None
@@ -491,6 +513,9 @@ def latest_tcga_clinical_build_manifest_path(project_root: str | Path) -> Path |
             continue
         metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
         if not isinstance(metadata, dict):
+            continue
+        record_project = str(metadata.get("project_id") or payload.get("source_label") or "").strip().upper()
+        if selected_project and record_project and record_project != selected_project:
             continue
         if str(metadata.get("download_status") or "") != "tcga_clinical_metadata_built":
             continue

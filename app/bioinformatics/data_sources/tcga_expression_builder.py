@@ -78,8 +78,8 @@ class TCGAExpressionBuildResult:
 
 
 class TCGAExpressionQuantificationBuilder:
-    def build_latest(self, project_root: str | Path) -> TCGAExpressionBuildResult:
-        record_path = latest_tcga_raw_expression_record_path(project_root)
+    def build_latest(self, project_root: str | Path, *, project_id: str | None = None) -> TCGAExpressionBuildResult:
+        record_path = latest_tcga_raw_expression_record_path(project_root, project_id=project_id)
         if record_path is None:
             raise FileNotFoundError("未找到等待 B6.4 构建表达矩阵的 TCGA B6.3 原始文件记录。")
         return self.build_from_record(project_root, record_path=record_path)
@@ -252,8 +252,9 @@ class _ParsedSample:
         return self.mapping.local_path
 
 
-def latest_tcga_raw_expression_record_path(project_root: str | Path) -> Path | None:
+def latest_tcga_raw_expression_record_path(project_root: str | Path, *, project_id: str | None = None) -> Path | None:
     root = Path(project_root).expanduser().resolve()
+    selected_project = str(project_id or "").strip().upper()
     records_dir = root / "acquisition" / "records"
     if not records_dir.exists():
         return None
@@ -267,6 +268,9 @@ def latest_tcga_raw_expression_record_path(project_root: str | Path) -> Path | N
             continue
         metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
         if not isinstance(metadata, dict):
+            continue
+        record_project = str(metadata.get("project_id") or payload.get("source_label") or "").strip().upper()
+        if selected_project and record_project and record_project != selected_project:
             continue
         if str(metadata.get("analysis_gate_status") or "") != "waiting_b6_4_expression_matrix_build":
             continue
