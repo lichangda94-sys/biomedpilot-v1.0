@@ -12,6 +12,7 @@ from app.bioinformatics.comparison_config import (
     expression_samples_from_recognition_report,
     load_confirmed_comparison_config,
 )
+from app.bioinformatics.data_sources.gtex_expression_builder import latest_gtex_expression_build_manifest_path
 from app.bioinformatics.gene_set_resources import build_gsea_gene_set_readiness, get_selected_gene_set, validate_gene_set_registry
 from app.bioinformatics.project_recognition import load_recognition_report
 from app.bioinformatics.standardization_confirmation import load_standardization_confirmation
@@ -46,6 +47,9 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     tcga_clinical_readiness = build_tcga_clinical_readiness_summary(root)
     if tcga_clinical_readiness.get("has_tcga_clinical_build"):
         available.update(str(item) for item in tcga_clinical_readiness.get("available_inputs", []) or [] if str(item))
+    gtex_readiness = build_gtex_readiness_summary(root)
+    if gtex_readiness.get("has_gtex_expression_build"):
+        available.update(str(item) for item in gtex_readiness.get("available_inputs", []) or [] if str(item))
     confirmed_comparison = load_confirmed_comparison_config(root)
     if confirmed_comparison is not None:
         available.add("comparison_config")
@@ -63,6 +67,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     warnings: list[str] = [str(item) for item in recognition.get("warnings", []) or []]
     warnings.extend(str(item) for item in tcga_readiness.get("warnings", []) or [] if str(item))
     warnings.extend(str(item) for item in tcga_clinical_readiness.get("warnings", []) or [] if str(item))
+    warnings.extend(str(item) for item in gtex_readiness.get("warnings", []) or [] if str(item))
     if not has_core_input:
         warnings.append("无表达矩阵。")
     if "sample_metadata" not in available:
@@ -100,6 +105,8 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
             row_warnings.append("TCGA + GTEx 尚未批次校正，结果仅用于 preview / testing。")
             if tcga_readiness.get("has_tcga_b6_4_build"):
                 row_warnings.append("B6.5 保留 TCGA + GTEx 不自动合并边界；GTEx 仍需独立接入和批次校正方案。")
+            if gtex_readiness.get("has_gtex_expression_build"):
+                row_warnings.append("GTEx 已作为独立正常组织表达资源接入；不会自动作为 TCGA normal control，需显式联合配置。")
         if key == "survival" and tcga_clinical_readiness.get("has_tcga_clinical_build"):
             survival_status = str(tcga_clinical_readiness.get("survival_gate_status") or "")
             if survival_status == "survival_ready_basic":
@@ -170,9 +177,11 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
             deg_ready=deg_ready,
             tcga_readiness=tcga_readiness,
             tcga_clinical_readiness=tcga_clinical_readiness,
+            gtex_readiness=gtex_readiness,
         ),
         "tcga_readiness": tcga_readiness,
         "tcga_clinical_readiness": tcga_clinical_readiness,
+        "gtex_readiness": gtex_readiness,
         "gsea_gene_set_status": gsea_gene_set_status,
         "gsea_gene_set_readiness": gsea_gene_set_readiness,
         "gene_set_registry_validation": gene_set_validation,
@@ -343,9 +352,11 @@ def build_dataset_readiness_summary(
     deg_ready: bool,
     tcga_readiness: dict[str, object] | None = None,
     tcga_clinical_readiness: dict[str, object] | None = None,
+    gtex_readiness: dict[str, object] | None = None,
 ) -> dict[str, object]:
     tcga_readiness = tcga_readiness if isinstance(tcga_readiness, dict) else {}
     tcga_clinical_readiness = tcga_clinical_readiness if isinstance(tcga_clinical_readiness, dict) else {}
+    gtex_readiness = gtex_readiness if isinstance(gtex_readiness, dict) else {}
     typed_files = [item for item in files if isinstance(item, dict)]
     imported_deg_present = any(_record_has_role(item, "differential_result_table") for item in typed_files)
     expression_records = [item for item in typed_files if _record_has_any_role(item, CORE_INPUTS)]
@@ -374,6 +385,7 @@ def build_dataset_readiness_summary(
         "comparison_sample_match": comparison_match,
         "tcga_readiness": tcga_readiness,
         "tcga_clinical_readiness": tcga_clinical_readiness,
+        "gtex_readiness": gtex_readiness,
         "tcga_value_type_policy": tcga_readiness.get("value_type_policy", {}),
     }
 
@@ -478,6 +490,50 @@ def build_tcga_clinical_readiness_summary(project_root: str | Path) -> dict[str,
     }
 
 
+def build_gtex_readiness_summary(project_root: str | Path) -> dict[str, object]:
+    root = Path(project_root).expanduser().resolve()
+    records = _gtex_build_records(root)
+    if not records:
+        return {
+            "has_gtex_expression_build": False,
+            "status": "not_found",
+            "available_inputs": [],
+            "warnings": [],
+            "builds": [],
+        }
+    builds = [_read_gtex_build_record(record) for record in records]
+    latest = builds[-1] if builds else {}
+    available_inputs: set[str] = set()
+    warnings: list[str] = []
+    for build in builds:
+        available_inputs.update(str(item) for item in build.get("available_inputs", []) or [] if str(item))
+        warnings.extend(str(item) for item in build.get("warnings", []) or [] if str(item))
+    warnings.append("GTEx 不自动作为 TCGA normal control；TCGA+GTEx 需要显式联合配置和批次校正。")
+    return {
+        "has_gtex_expression_build": True,
+        "status": str(latest.get("status") or "gtex_expression_ready_for_data_check"),
+        "tissue_id": str(latest.get("tissue_id") or ""),
+        "tissue_site_detail": str(latest.get("tissue_site_detail") or ""),
+        "build_id": str(latest.get("build_id") or ""),
+        "build_manifest_path": str(latest.get("build_manifest_path") or ""),
+        "expression_matrix_path": str(latest.get("expression_matrix_path") or ""),
+        "sample_metadata_path": str(latest.get("sample_metadata_path") or ""),
+        "donor_metadata_path": str(latest.get("donor_metadata_path") or ""),
+        "gene_annotation_path": str(latest.get("gene_annotation_path") or ""),
+        "sample_count": int(latest.get("sample_count") or 0),
+        "donor_count": int(latest.get("donor_count") or 0),
+        "gene_count": int(latest.get("gene_count") or 0),
+        "sample_match_status": str(latest.get("sample_match_status") or "not_checked"),
+        "value_type_policy": latest.get("value_type_policy") if isinstance(latest.get("value_type_policy"), dict) else {},
+        "available_inputs": sorted(available_inputs),
+        "warnings": list(dict.fromkeys(warnings)),
+        "builds": builds,
+        "tcga_merge_status": "not_merged",
+        "tcga_default_control_status": "disabled",
+        "requires_explicit_joint_config": True,
+    }
+
+
 def _tcga_b6_4_build_records(root: Path) -> list[dict[str, Any]]:
     records_dir = root / "acquisition" / "records"
     if not records_dir.exists():
@@ -494,6 +550,27 @@ def _tcga_b6_4_build_records(root: Path) -> list[dict[str, Any]]:
         if not isinstance(metadata, dict):
             continue
         if str(metadata.get("download_status") or "") != "tcga_expression_matrix_built":
+            continue
+        records.append({"record_path": str(path), "payload": payload, "metadata": metadata})
+    return records
+
+
+def _gtex_build_records(root: Path) -> list[dict[str, Any]]:
+    records_dir = root / "acquisition" / "records"
+    if not records_dir.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(records_dir.glob("*.json"), key=lambda item: item.stat().st_mtime):
+        if path.name == "latest_acquisition_record.json":
+            continue
+        try:
+            payload = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+        if not isinstance(metadata, dict):
+            continue
+        if str(metadata.get("download_status") or "") != "gtex_expression_matrix_built":
             continue
         records.append({"record_path": str(path), "payload": payload, "metadata": metadata})
     return records
@@ -623,6 +700,55 @@ def _read_tcga_clinical_build_record(record: dict[str, Any]) -> dict[str, object
         "death_event_count": int(summary.get("death_event_count") or 0),
         "demographic_available_case_count": int(summary.get("demographic_available_case_count") or 0),
         "diagnosis_available_case_count": int(summary.get("diagnosis_available_case_count") or 0),
+        "available_inputs": sorted(available_inputs),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
+
+
+def _read_gtex_build_record(record: dict[str, Any]) -> dict[str, object]:
+    metadata = record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    manifest_path = Path(str(metadata.get("gtex_expression_build_manifest_path") or ""))
+    if not manifest_path.is_file():
+        record_path = Path(str(record.get("record_path") or ""))
+        fallback = latest_gtex_expression_build_manifest_path(record_path.parents[2]) if len(record_path.parents) > 2 else None
+        manifest_path = fallback if fallback is not None else manifest_path
+    manifest = _read_json(manifest_path) if manifest_path.is_file() else {}
+    expression_path = Path(str(manifest.get("expression_matrix_path") or metadata.get("gtex_expression_matrix_path") or ""))
+    sample_metadata_path = Path(str(manifest.get("sample_metadata_path") or metadata.get("gtex_sample_metadata_path") or ""))
+    donor_metadata_path = Path(str(manifest.get("donor_metadata_path") or metadata.get("gtex_donor_metadata_path") or ""))
+    gene_annotation_path = Path(str(manifest.get("gene_annotation_path") or metadata.get("gtex_gene_annotation_path") or ""))
+    matrix_samples = _matrix_sample_columns(expression_path)
+    sample_rows = _sample_metadata_rows(sample_metadata_path)
+    metadata_samples = _sample_ids_from_metadata(sample_rows)
+    sample_match_status, sample_warnings = _sample_match_status(matrix_samples, metadata_samples)
+    warnings = [*sample_warnings, *[str(item) for item in manifest.get("warnings", []) or [] if str(item)]]
+    for label, path in (("expression_matrix", expression_path), ("sample_metadata", sample_metadata_path), ("donor_metadata", donor_metadata_path), ("gene_annotation", gene_annotation_path)):
+        if not path.is_file():
+            warnings.append(f"gtex_{label}_missing:{path}")
+    available_inputs = {"gtex_expression_matrix", "expression_matrix"}
+    if sample_metadata_path.is_file() and sample_rows:
+        available_inputs.update({"gtex_sample_metadata", "sample_metadata"})
+    if donor_metadata_path.is_file():
+        available_inputs.add("gtex_donor_metadata")
+    if gene_annotation_path.is_file():
+        available_inputs.add("gene_annotation")
+    return {
+        "status": "gtex_expression_ready_for_data_check" if sample_match_status in {"matched", "not_checked"} else "blocked_sample_metadata_mismatch",
+        "tissue_id": str(manifest.get("tissue_id") or metadata.get("tissue_id") or ""),
+        "tissue_site_detail": str(manifest.get("tissue_site_detail") or metadata.get("tissue_site_detail") or ""),
+        "build_id": str(manifest.get("build_id") or metadata.get("build_id") or ""),
+        "build_manifest_path": str(manifest_path),
+        "expression_matrix_path": str(expression_path),
+        "sample_metadata_path": str(sample_metadata_path),
+        "donor_metadata_path": str(donor_metadata_path),
+        "gene_annotation_path": str(gene_annotation_path),
+        "sample_count": len(matrix_samples) or int(manifest.get("sample_count") or 0),
+        "donor_count": int(manifest.get("donor_count") or 0),
+        "gene_count": int(manifest.get("gene_count") or 0),
+        "sample_match_status": sample_match_status,
+        "value_type_policy": manifest.get("value_type_policy") if isinstance(manifest.get("value_type_policy"), dict) else {},
         "available_inputs": sorted(available_inputs),
         "warnings": list(dict.fromkeys(warnings)),
     }

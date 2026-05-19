@@ -53,6 +53,14 @@ from app.bioinformatics.comparison_config import (
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
+    GTExDownloadExecutionResult,
+    GTExDownloadPlanDraft,
+    GTExDownloadPlanExecutor,
+    GTExExpressionBuildResult,
+    GTExExpressionMatrixBuilder,
+    GTExMetadataPreviewService,
+    GTExPreviewSummary,
+    GTExWorkflowState,
     TCGADownloadPlanExecutor,
     TCGADownloadPlanDraft,
     TCGADownloadExecutionResult,
@@ -63,12 +71,17 @@ from app.bioinformatics.data_sources import (
     TCGAMetadataPreviewService,
     TCGAPreviewSummary,
     TCGAWorkflowState,
+    build_gtex_preview_request,
+    build_gtex_workflow_state,
     build_tcga_preview_request,
     build_tcga_workflow_state,
     format_bytes_zh,
+    latest_gtex_download_plan_path,
+    latest_gtex_raw_expression_record_path,
     latest_tcga_download_plan_path,
     latest_tcga_expression_build_manifest_path,
     latest_tcga_raw_expression_record_path,
+    write_gtex_download_plan_draft,
     write_tcga_download_plan_draft,
 )
 from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
@@ -701,6 +714,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_expression_build_result: TCGAExpressionBuildResult | None = None
         self._tcga_clinical_build_result: TCGAClinicalBuildResult | None = None
         self._tcga_workflow_state: TCGAWorkflowState | None = None
+        self._gtex_preview_service = GTExMetadataPreviewService()
+        self._gtex_download_executor = GTExDownloadPlanExecutor()
+        self._gtex_expression_builder = GTExExpressionMatrixBuilder()
+        self._gtex_preview_summary: GTExPreviewSummary | None = None
+        self._gtex_download_plan_draft: GTExDownloadPlanDraft | None = None
+        self._gtex_download_result: GTExDownloadExecutionResult | None = None
+        self._gtex_expression_build_result: GTExExpressionBuildResult | None = None
+        self._gtex_workflow_state: GTExWorkflowState | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -728,6 +749,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_tcga_expression_build_state()
         self._refresh_tcga_clinical_build_state()
         self._refresh_tcga_workflow_state()
+        self._refresh_gtex_workflow_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1195,15 +1217,53 @@ class BioinformaticsDataSourceWidget(QWidget):
         form.addWidget(QLabel("使用目的"), 1, 0)
         form.addWidget(self._gtex_purpose_combo, 1, 1)
         layout.addLayout(form)
-        self._gtex_preview_table = _table(["组织大类", "具体组织", "使用目的", "预览状态", "预计内容"])
+        self._gtex_preview_table = _table(["组织大类", "具体组织", "使用目的", "预览状态", "sample", "file"])
         self._gtex_preview_table.setObjectName("gtexPreviewTable")
         self._gtex_preview_table.setMaximumHeight(120)
         layout.addWidget(self._gtex_preview_table)
-        self._gtex_status_label = _status_label("当前阶段已建立 GTEx 组织类目和任务流程。真实 GTEx 查询与下载将在下一阶段接入。")
+        self._gtex_status_label = _status_label("GTEx 作为独立正常组织表达资源管理，不自动作为 TCGA normal control。")
         layout.addWidget(self._gtex_status_label)
-        button = _button("下载并构建数据集", "primaryButton", self.create_gtex_source_request)
-        button.setObjectName("createGtexDataSourceRequestButton")
-        layout.addWidget(button, alignment=Qt.AlignLeft)
+        self._gtex_workflow_table = _table(["步骤", "状态", "摘要", "下一步"])
+        self._gtex_workflow_table.setObjectName("gtexWorkflowStepsTable")
+        self._gtex_workflow_table.setMinimumHeight(160)
+        self._gtex_workflow_table.setMaximumHeight(220)
+        layout.addWidget(self._gtex_workflow_table)
+        self._gtex_workflow_summary_text = _text_preview(86)
+        self._gtex_workflow_summary_text.setObjectName("gtexWorkflowSummary")
+        self._gtex_workflow_summary_text.setPlainText("按步骤预览、下载并构建 GTEx 独立正常组织表达资源。")
+        layout.addWidget(self._gtex_workflow_summary_text)
+        gtex_actions = QHBoxLayout()
+        self._gtex_preview_button = _button("预览 GTEx 可下载数据", "primaryButton", self.preview_gtex_downloadable_data)
+        self._gtex_preview_button.setObjectName("previewGtexDownloadableDataButton")
+        self._gtex_plan_button = _button("生成 GTEx 下载计划草案", "secondaryButton", self.create_gtex_download_plan_draft)
+        self._gtex_plan_button.setObjectName("createGtexDownloadPlanDraftButton")
+        self._gtex_plan_button.setEnabled(False)
+        self._gtex_download_button = _button("下载 GTEx 原始文件", "secondaryButton", self.download_gtex_raw_files)
+        self._gtex_download_button.setObjectName("downloadGtexRawFilesButton")
+        self._gtex_download_button.setEnabled(False)
+        self._gtex_expression_build_button = _button("构建 GTEx 表达矩阵", "secondaryButton", self.build_gtex_expression_matrix)
+        self._gtex_expression_build_button.setObjectName("buildGtexExpressionMatrixButton")
+        self._gtex_expression_build_button.setEnabled(False)
+        self._gtex_data_check_button = _button("进入数据检查与准备", "primaryButton", self.continue_to_recognition)
+        self._gtex_data_check_button.setObjectName("enterGtexDataCheckButton")
+        self._gtex_data_check_button.setEnabled(False)
+        self._gtex_data_check_button.setVisible(False)
+        self._gtex_data_check_button.setText("进入准备")
+        legacy_button = _button("下载并构建数据集", "secondaryButton", self.create_gtex_source_request)
+        legacy_button.setObjectName("createGtexDataSourceRequestButton")
+        legacy_button.setVisible(False)
+        for button in (self._gtex_preview_button, self._gtex_plan_button, self._gtex_download_button, self._gtex_expression_build_button, self._gtex_data_check_button, legacy_button):
+            gtex_actions.addWidget(button)
+        gtex_actions.addStretch(1)
+        layout.addLayout(gtex_actions)
+        self._gtex_status_text = _text_preview(90)
+        self._gtex_status_text.setObjectName("gtexWorkflowStatus")
+        self._gtex_status_text.setPlainText("尚未预览 GTEx metadata。")
+        layout.addWidget(self._gtex_status_text)
+        self._gtex_developer_details = _text_preview(130)
+        self._gtex_developer_details.setObjectName("gtexDeveloperDiagnostics")
+        self._gtex_developer_details.setVisible(False)
+        layout.addWidget(self._gtex_developer_details)
         self._gtex_tissue_combo.currentIndexChanged.connect(lambda _: self._refresh_gtex_preview())
         self._gtex_purpose_combo.currentIndexChanged.connect(lambda _: self._refresh_gtex_preview())
         self._refresh_gtex_preview()
@@ -1305,7 +1365,6 @@ class BioinformaticsDataSourceWidget(QWidget):
             return
         tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or "gtex_thyroid"))
         purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or "normal_expression_view"))
-        expected = "、".join(_user_asset_label(asset) for asset in purpose.required_internal_assets)
         _fill_table(
             self._gtex_preview_table,
             [
@@ -1313,11 +1372,56 @@ class BioinformaticsDataSourceWidget(QWidget):
                     tissue.tissue_group,
                     f"{tissue.chinese_name} ({tissue.tissue_site_detail})",
                     purpose.chinese_name,
-                    "需要下一阶段连接 GTEx API 后获取真实预览",
-                    expected or "组织元数据",
+                    "尚未预览",
+                    "-",
+                    "-",
                 ]
             ],
         )
+        self._gtex_preview_summary = None
+        self._gtex_download_plan_draft = None
+        if hasattr(self, "_gtex_plan_button"):
+            self._gtex_plan_button.setEnabled(False)
+        if hasattr(self, "_gtex_status_text"):
+            self._gtex_status_text.setPlainText("尚未预览 GTEx metadata。GTEx 不自动作为 TCGA normal control。")
+        self._refresh_gtex_workflow_state()
+
+    def preview_gtex_downloadable_data(self) -> GTExPreviewSummary | None:
+        tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or ""))
+        purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or ""))
+        request = build_gtex_preview_request(tissue=tissue, purpose=purpose)
+        self._gtex_status_label.setText("正在查询 GTEx metadata，请稍候。")
+        QApplication.processEvents()
+        summary = self._gtex_preview_service.build_preview(request)
+        self._gtex_preview_summary = summary
+        self._gtex_download_plan_draft = None
+        self._render_gtex_preview(summary)
+        self._refresh_gtex_workflow_state()
+        if summary.status == "failed":
+            self._set_status("GTEx metadata 预览失败；请稍后重试。", error=True)
+        elif summary.status == "empty":
+            self._set_status("未找到 GTEx metadata 或表达文件。", error=True)
+        else:
+            self._set_status("GTEx metadata 预览已生成；如有公共表达文件，可生成下载计划草案。")
+        return summary
+
+    def _render_gtex_preview(self, summary: GTExPreviewSummary) -> None:
+        _fill_table(
+            self._gtex_preview_table,
+            [[summary.request.tissue_group, f"{summary.request.tissue_label_zh} ({summary.request.tissue_site_detail})", summary.request.use_purpose_zh, _gtex_preview_status_text(summary), str(summary.sample_count), str(summary.file_count)]],
+        )
+        self._gtex_plan_button.setEnabled(summary.is_download_plan_available)
+        self._gtex_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"组织：{summary.request.tissue_label_zh} ({summary.request.tissue_site_detail})",
+                    f"sample：{summary.sample_count}；donor：{summary.donor_count}；file：{summary.file_count}",
+                    "GTEx 是独立正常组织表达资源，不自动作为 TCGA normal control，也不自动与 TCGA 合并。",
+                    "提示：" + ("；".join(summary.warnings[:3]) if summary.warnings else "无"),
+                ]
+            )
+        )
+        self._gtex_developer_details.setPlainText(_json({"preview_summary": summary.to_dict()}))
 
     def create_tcga_source_request(self) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -1705,6 +1809,152 @@ class BioinformaticsDataSourceWidget(QWidget):
                 }
             )
             self._tcga_developer_details.setPlainText(workflow_payload)
+
+    def create_gtex_download_plan_draft(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        summary = self._gtex_preview_summary
+        if summary is None:
+            self._set_status("请先点击“预览 GTEx 可下载数据”。", error=True)
+            return None
+        if not summary.is_download_plan_available:
+            self._set_status("当前 GTEx 预览没有可用下载计划。", error=True)
+            return None
+        draft = write_gtex_download_plan_draft(self._project_root, summary)
+        self._gtex_download_plan_draft = draft
+        tissue = get_gtex_tissue(summary.request.tissue_id)
+        purpose = get_gtex_use_purpose(summary.request.use_purpose)
+        warnings = tuple(dict.fromkeys((*summary.warnings, "GTEx 下载计划草案不写 source_files，不进入 DEG/GSEA ready。")))
+        request_draft = create_data_source_request(
+            self._project_root,
+            source_type="GTEx",
+            user_title=f"GTEx 数据库 - {tissue.chinese_name}",
+            user_selection_summary=f"{tissue.tissue_group} / {tissue.chinese_name} / {purpose.chinese_name}",
+            internal_selection={"tissue_id": tissue.tissue_id, "tissue_site_detail": tissue.tissue_site_detail, "use_purpose": purpose.purpose_id, "download_plan_draft_path": str(draft.plan_path), "not_tcga_auto_control": True},
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="download_plan_draft",
+        )
+        acquisition = register_acquisition(
+            self._project_root,
+            source_type="gtex_tissue",
+            source_label=tissue.tissue_id,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "gtex",
+                "ui_source": "gtex_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "gtex_download_plan_draft_created",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": request_draft.request.request_id,
+                "data_source_request_path": str(request_draft.request_path),
+                "download_plan_draft_id": draft.plan_id,
+                "download_plan_draft_path": str(draft.plan_path),
+                "tissue_id": tissue.tissue_id,
+                "tissue_site_detail": tissue.tissue_site_detail,
+                "use_purpose": purpose.purpose_id,
+                "display_title_zh": f"GTEx {tissue.chinese_name}",
+                "gtex_preview_summary": summary.to_dict(),
+                "tcga_merge_status": "not_merged",
+                "tcga_default_control_status": "disabled",
+                "requires_explicit_joint_config": True,
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = acquisition
+        self._refresh_gtex_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("GTEx 下载计划草案已生成；不会作为 TCGA normal control。")
+        return acquisition
+
+    def download_gtex_raw_files(self) -> GTExDownloadExecutionResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        plan_path = latest_gtex_download_plan_path(self._project_root)
+        if plan_path is None:
+            self._gtex_status_text.setPlainText("未找到 GTEx 下载计划草案，请先生成 G6.1 下载计划。")
+            self._set_status("未找到 GTEx 下载计划草案。", error=True)
+            return None
+        self._gtex_status_text.setPlainText("正在下载 GTEx 原始文件；已存在文件会计为缓存命中。")
+        QApplication.processEvents()
+        try:
+            result = self._gtex_download_executor.execute_plan(self._project_root, plan_path=plan_path)
+        except Exception as exc:
+            self._gtex_status_text.setPlainText(f"GTEx 下载执行失败：{exc}")
+            self._set_status(f"GTEx 下载执行失败：{exc}", error=True)
+            return None
+        self._gtex_download_result = result
+        self._gtex_status_text.setPlainText(f"{result.message}\n成功：{result.success_count}；缓存：{result.cache_hit_count}；失败：{result.failed_count}\n本地缓存路径：{result.target_dir}\nreceipt：{result.receipt_path}")
+        self._refresh_gtex_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("GTEx 原始文件已获取，等待构建表达矩阵；不会自动与 TCGA 合并。")
+        return result
+
+    def build_gtex_expression_matrix(self) -> GTExExpressionBuildResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        record_path = latest_gtex_raw_expression_record_path(self._project_root)
+        if record_path is None:
+            self._gtex_status_text.setPlainText("未找到等待 G6.3 构建的 GTEx 原始文件记录。")
+            self._set_status("未找到等待 G6.3 构建的 GTEx 原始文件记录。", error=True)
+            return None
+        self._gtex_status_text.setPlainText("正在解析 GTEx 表达矩阵并构建本地标准产物。")
+        QApplication.processEvents()
+        try:
+            result = self._gtex_expression_builder.build_from_record(self._project_root, record_path=record_path)
+        except Exception as exc:
+            self._gtex_status_text.setPlainText(f"GTEx 表达矩阵构建失败：{exc}")
+            self._set_status(f"GTEx 表达矩阵构建失败：{exc}", error=True)
+            return None
+        self._gtex_expression_build_result = result
+        self._gtex_status_text.setPlainText(f"{result.message}\nsample：{result.sample_count}；donor：{result.donor_count}；gene：{result.gene_count}\nexpression matrix：{result.expression_matrix_path}\nbuild manifest：{result.build_manifest_path}\nGTEx 不自动作为 TCGA normal control。")
+        self._refresh_gtex_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("GTEx 表达矩阵已构建，等待数据检查与准备；不自动与 TCGA 合并。")
+        return result
+
+    def _build_gtex_workflow_state(self) -> GTExWorkflowState:
+        tissue_id = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        use_purpose = str(self._gtex_purpose_combo.currentData() or "") if hasattr(self, "_gtex_purpose_combo") else ""
+        return build_gtex_workflow_state(self._project_root, tissue_id=tissue_id, use_purpose=use_purpose)
+
+    def _refresh_gtex_workflow_state(self) -> None:
+        if not hasattr(self, "_gtex_workflow_table"):
+            return
+        state = self._build_gtex_workflow_state()
+        self._gtex_workflow_state = state
+        _fill_table(
+            self._gtex_workflow_table,
+            [[step.title, _tcga_workflow_status_zh(step.status), _tcga_workflow_user_summary(step), step.action_label if step.enabled and step.action_label else step.blocking_reason or "-"] for step in state.steps],
+        )
+        self._gtex_workflow_summary_text.setPlainText(
+            "\n".join(
+                [
+                    f"当前阶段：{_gtex_workflow_stage_zh(state.current_stage)}",
+                    f"下一步：{state.next_action or '暂无可执行主步骤'}",
+                    "可进入数据检查与准备：" + ("是" if state.can_enter_data_check else "否"),
+                    "提示：" + ("；".join(state.warnings[:3]) if state.warnings else "无"),
+                ]
+            )
+        )
+        self._gtex_preview_button.setEnabled(state.step("preview").enabled)
+        self._gtex_download_button.setEnabled(state.step("download").enabled)
+        self._gtex_expression_build_button.setEnabled(state.step("expression_build").enabled)
+        self._gtex_data_check_button.setEnabled(state.can_enter_data_check)
+        self._gtex_data_check_button.setVisible(state.can_enter_data_check)
+        self._gtex_data_check_button.setText("进入数据检查与准备" if state.can_enter_data_check else "进入准备")
+        if self._gtex_preview_summary is not None:
+            self._gtex_plan_button.setEnabled(self._gtex_preview_summary.is_download_plan_available)
+        else:
+            self._gtex_plan_button.setEnabled(False)
+        self._gtex_developer_details.setPlainText(_json({"gtex_workflow_state": state.to_dict()}))
 
     def create_gtex_source_request(self) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -6561,6 +6811,16 @@ def _tcga_workflow_stage_zh(stage: str) -> str:
     }.get(stage, stage or "未开始")
 
 
+def _gtex_workflow_stage_zh(stage: str) -> str:
+    return {
+        "preview": "预览 GTEx 可下载数据",
+        "download": "下载 GTEx 原始文件",
+        "expression_build": "构建 GTEx 表达矩阵",
+        "data_check": "进入数据检查与准备",
+        "manual_config": "后续手动配置用途",
+    }.get(stage, stage or "未开始")
+
+
 def _tcga_workflow_user_summary(step) -> str:
     summary = str(getattr(step, "summary", "") or "")
     warning = str(getattr(step, "warning", "") or "")
@@ -6568,6 +6828,16 @@ def _tcga_workflow_user_summary(step) -> str:
     if warning:
         text = f"{text}；提示：{warning}"
     return text
+
+
+def _gtex_preview_status_text(summary: GTExPreviewSummary) -> str:
+    if summary.status == "failed":
+        return "预览失败"
+    if summary.status == "empty":
+        return "未找到匹配数据"
+    if summary.is_download_plan_available:
+        return "可生成下载计划草案"
+    return "metadata 预览完成"
 
 
 def _counter_text(values: dict[str, int]) -> str:
@@ -6667,6 +6937,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
         if str(metadata.get("mode") or "") == "project_clinical_preview_only":
             return "TCGA clinical 概况已获取，等待 B6.4 表达矩阵后映射"
         return "TCGA clinical metadata 已获取，等待数据检查与准备"
+    if "gtex" in row.source_type_key and str(metadata.get("download_status") or "") == "gtex_expression_matrix_built":
+        return "GTEx 表达矩阵已构建，等待数据检查与准备"
     if _record_ready_for_recognition(payload, metadata):
         if row.source_type_key == "local_import":
             return "已导入"
@@ -6681,6 +6953,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
         return "未下载"
     if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
         return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
+    if "gtex" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_gtex_expression_matrix_build":
+        return "GTEx 原始文件已获取，等待构建表达矩阵"
     if row.status and row.status not in {"已登记", "已登记，需确认"}:
         return row.status.replace("已登记", "已添加")
     return "需要补充信息" if row.status.endswith("需确认") else "待识别"
@@ -6727,6 +7001,18 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
             return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
         return "待下载与构建"
     if "gtex" in row.source_type_key:
+        if str(metadata.get("download_status") or "") == "gtex_expression_matrix_built":
+            summary = metadata.get("gtex_expression_build_summary")
+            if isinstance(summary, dict):
+                return f"GTEx 表达矩阵（{int(summary.get('sample_count') or 0)} 样本 / {int(summary.get('gene_count') or 0)} 基因）"
+            return "GTEx 表达矩阵、sample/donor metadata"
+        if str(metadata.get("analysis_gate_status") or "") == "waiting_gtex_expression_matrix_build":
+            summary = metadata.get("gtex_download_summary")
+            if isinstance(summary, dict):
+                return f"GTEx 原始文件：{int(summary.get('acquired_count') or 0)} 个"
+            return "GTEx 原始文件"
+        if str(metadata.get("download_status") or "") == "gtex_download_plan_draft_created":
+            return "GTEx 下载计划草案"
         expected = metadata.get("expected_assets")
         if isinstance(expected, list) and expected:
             return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
@@ -6752,6 +7038,10 @@ def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: di
             return "统一数据检查与准备"
         if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
             return "B6.4 表达矩阵构建"
+        if "gtex" in row.source_type_key and str(metadata.get("download_status") or "") == "gtex_expression_matrix_built":
+            return "统一数据检查与准备；不会自动作为 TCGA 对照"
+        if "gtex" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_gtex_expression_matrix_build":
+            return "G6.3 表达矩阵构建"
         return "数据文件"
     return "、".join(dict.fromkeys(missing)) if missing else "无"
 
@@ -7738,6 +8028,12 @@ def _registered_status_text(payload: dict[str, object]) -> str:
             return "TCGA clinical metadata 已获取，等待数据检查与准备"
         if download_status == "gtex_download_manifest_created":
             return "GTEx 下载清单已创建，待下载表达矩阵"
+        if download_status == "gtex_download_plan_draft_created":
+            return "GTEx metadata 预览完成，下载计划草案已创建"
+        if download_status in {"gtex_raw_files_acquired", "gtex_raw_files_acquired_with_warnings"}:
+            return "GTEx 原始文件已获取，等待构建表达矩阵"
+        if download_status == "gtex_expression_matrix_built":
+            return "GTEx 表达矩阵已构建，等待数据检查与准备"
         if ready == "ready" and download_status == "geo_metadata_downloaded":
             return "元数据已下载 / 表达矩阵待下载 / 可进入识别"
         if ready == "ready" or download_status == "downloaded":
@@ -10163,6 +10459,15 @@ def _dataset_readiness_user_rows(summary: dict[str, object]) -> list[list[str]]:
                 ["TCGA clinical metadata", str(tcga_clinical.get("clinical_gate_status") or "clinical_unavailable"), f"{tcga_clinical.get('case_count') or 0} case；匹配 {tcga_clinical.get('matched_case_count') or 0} case。"],
                 ["表达-临床映射", str(tcga_clinical.get("mode") or "unknown"), f"{tcga_clinical.get('matched_sample_count') or 0}/{tcga_clinical.get('sample_count') or 0} sample 已匹配 clinical。"],
                 ["TCGA 基础 OS readiness", str(tcga_clinical.get("survival_gate_status") or "survival_unavailable"), f"OS 可用 {tcga_clinical.get('survival_case_count') or 0} case；死亡事件 {tcga_clinical.get('death_event_count') or 0}。不自动运行 survival，不生成临床结论。"],
+            ]
+        )
+    gtex = summary.get("gtex_readiness") if isinstance(summary.get("gtex_readiness"), dict) else {}
+    if gtex and gtex.get("has_gtex_expression_build"):
+        rows.extend(
+            [
+                ["GTEx G6 构建产物", str(gtex.get("status") or "gtex_expression_matrix_built"), f"{gtex.get('sample_count') or 0} 样本 / {gtex.get('donor_count') or 0} donor / {gtex.get('gene_count') or 0} 基因。"],
+                ["GTEx TCGA 边界", str(gtex.get("tcga_default_control_status") or "disabled"), "GTEx 不自动作为 TCGA normal control；TCGA+GTEx 需要显式联合配置。"],
+                ["GTEx 值类型", str(gtex.get("value_type") or "expression_values"), "作为独立正常组织表达资源进入数据检查；不默认进入 TCGA DEG/GSEA 执行。"],
             ]
         )
     return rows

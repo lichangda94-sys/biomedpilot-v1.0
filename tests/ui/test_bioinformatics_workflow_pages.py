@@ -967,6 +967,90 @@ def test_data_source_gtex_request_is_pending_and_not_tcga_control(qt_app, projec
     assert entries[0].ready_for_recognition is False
 
 
+def test_data_source_gtex_g6_preview_download_build_flow(qt_app, project_summary) -> None:
+    class FakeDownloader:
+        def download_file(self, entry: dict[str, object], target_dir: Path) -> dict[str, object]:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target = target_dir / str(entry.get("file_name") or "gtex_expression.tsv")
+            target.write_text(
+                "gene_id\tGTEX-1111-0001-SM-A\tGTEX-2222-0001-SM-B\n"
+                "TP53\t1.2\t2.4\n"
+                "PTEN\t0.5\t0.8\n",
+                encoding="utf-8",
+            )
+            return {
+                "status": "success",
+                "cache_hit": False,
+                "local_path": str(target),
+                "bytes_downloaded": target.stat().st_size,
+                "source_url": str(entry.get("url") or ""),
+            }
+
+    def fake_fetcher(url, params, timeout):
+        return {
+            "data": [
+                {
+                    "tissueSiteDetailId": "Thyroid",
+                    "tissueSiteDetail": "Thyroid",
+                    "rnaSeqSampleCount": 2,
+                    "donorCount": 2,
+                    "datasetId": "GTEx_v8",
+                    "file_manifest_entries": [
+                        {
+                            "file_id": "gtex-thyroid",
+                            "file_name": "gtex_thyroid_tpm.tsv",
+                            "file_size": 10,
+                            "url": "https://example.org/gtex_thyroid_tpm.tsv",
+                            "value_type": "TPM",
+                        }
+                    ],
+                }
+            ]
+        }
+
+    widget = BioinformaticsDataSourceWidget()
+    widget._gtex_preview_service = workflow_pages.GTExMetadataPreviewService(fake_fetcher)
+    widget._gtex_download_executor = workflow_pages.GTExDownloadPlanExecutor(downloader=FakeDownloader())
+    widget.refresh_project(project_summary)
+
+    button_texts = [button.text() for button in widget.findChildren(QPushButton)]
+    assert "获取 TCGA 临床信息" in button_texts
+    assert "预览 GTEx 可下载数据" in button_texts
+    assert "下载 GTEx 原始文件" in button_texts
+    assert "构建 GTEx 表达矩阵" in button_texts
+    assert widget.findChild(QPushButton, "createGtexDownloadPlanDraftButton").isEnabled() is False
+
+    preview = widget.preview_gtex_downloadable_data()
+    assert preview is not None
+    assert preview.file_count == 1
+    assert widget.findChild(QPushButton, "createGtexDownloadPlanDraftButton").isEnabled() is True
+
+    plan = widget.create_gtex_download_plan_draft()
+    assert plan is not None
+    assert widget.findChild(QPushButton, "downloadGtexRawFilesButton").isEnabled() is True
+
+    download = widget.download_gtex_raw_files()
+    assert download is not None
+    assert download.success_count == 1
+    assert widget.findChild(QPushButton, "buildGtexExpressionMatrixButton").isEnabled() is True
+
+    build = widget.build_gtex_expression_matrix()
+    assert build is not None
+    assert build.sample_count == 2
+    assert build.donor_count == 2
+    assert widget.findChild(QPushButton, "enterGtexDataCheckButton").isEnabled() is True
+    status = widget.findChild(QPlainTextEdit, "gtexWorkflowStatus").toPlainText()
+    assert "GTEx 不自动作为 TCGA normal control" in status
+    workflow_text = _table_text(widget.findChild(QTableWidget, "gtexWorkflowStepsTable"))
+    assert "4. 进入数据检查与准备" in workflow_text
+    assert "GTEx 构建产物可进入数据检查" in workflow_text
+    assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 1
+    readiness = workflow_pages.run_project_readiness(project_summary.project_root)
+    joint_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "tcga_gtex_joint")
+    assert joint_row["can_run"] is False
+    assert any("不会自动作为 TCGA normal control" in warning for warning in joint_row["warnings"])
+
+
 def test_data_source_registers_local_reference_strategy(qt_app, project_summary, tmp_path: Path) -> None:
     source = tmp_path / "sample_metadata.tsv"
     source.write_text("sample\tgroup\ns1\tcase\n", encoding="utf-8")
