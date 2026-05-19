@@ -27,6 +27,7 @@ from .tcga_preview import (
     format_bytes_zh,
     write_tcga_download_plan_draft,
 )
+from .tcga_workflow import TCGAWorkflowState, TCGAWorkflowStep, build_tcga_workflow_state
 
 __all__ = [
     "GDC_API_ROOT",
@@ -40,7 +41,10 @@ __all__ = [
     "TCGAMetadataPreviewService",
     "TCGAPreviewRequest",
     "TCGAPreviewSummary",
+    "TCGAWorkflowState",
+    "TCGAWorkflowStep",
     "build_tcga_preview_request",
+    "build_tcga_workflow_state",
     "fetch_tcga_file_manifest_entries",
     "format_bytes_zh",
     "latest_tcga_clinical_build_manifest_path",

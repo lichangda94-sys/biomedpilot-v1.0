@@ -47,6 +47,16 @@ else:
     IMPORT_ERROR = None
 
 
+def _table_text(table: QTableWidget) -> str:
+    values: list[str] = []
+    for row in range(table.rowCount()):
+        for column in range(table.columnCount()):
+            item = table.item(row, column)
+            if item is not None:
+                values.append(item.text())
+    return "\n".join(values)
+
+
 @pytest.fixture
 def qt_app():
     if QApplication is None:
@@ -407,6 +417,31 @@ def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
     assert "下一步" in widget.findChild(QLabel, "dataSelectionNextStep").text()
 
 
+def test_data_source_tcga_workflow_initial_state_shows_five_steps_and_only_preview(qt_app, project_summary) -> None:
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    table = widget.findChild(QTableWidget, "tcgaWorkflowStepsTable")
+    text = _table_text(table)
+
+    assert table.rowCount() == 5
+    assert "1. 预览可下载数据" in text
+    assert "2. 下载 TCGA 原始文件" in text
+    assert "3. 构建 TCGA 表达矩阵" in text
+    assert "4. 获取 TCGA 临床信息" in text
+    assert "5. 进入数据检查与准备" in text
+    assert widget.findChild(QPushButton, "previewTcgaDownloadableDataButton").isEnabled()
+    assert widget.findChild(QPushButton, "downloadTcgaRawFilesButton").isEnabled() is False
+    assert widget.findChild(QPushButton, "buildTcgaExpressionMatrixButton").isEnabled() is False
+    assert widget.findChild(QPushButton, "fetchTcgaClinicalMetadataButton").isEnabled() is False
+    assert widget.findChild(QPushButton, "enterTcgaDataCheckButton").isEnabled() is False
+    assert widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewDeveloperDiagnostics").isVisible() is False
+    main_text = widget.findChild(QPlainTextEdit, "tcgaWorkflowSummary").toPlainText()
+    assert "file uuid" not in main_text.lower()
+    assert "raw path" not in main_text.lower()
+    assert "GDC filter" not in main_text
+
+
 def test_data_source_tcga_request_is_pending_not_ready(qt_app, project_summary) -> None:
     widget = BioinformaticsDataSourceWidget()
     widget.refresh_project(project_summary)
@@ -477,6 +512,11 @@ def test_data_source_tcga_metadata_preview_and_plan_draft(qt_app, project_summar
     assert "case 数：2" in widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewSummary").toPlainText()
     assert "STAR - Counts 2" in widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewSummary").toPlainText()
     assert widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewDeveloperDiagnostics").isVisible() is False
+    workflow_text = _table_text(widget.findChild(QTableWidget, "tcgaWorkflowStepsTable"))
+    assert "1. 预览可下载数据" in workflow_text
+    assert "已完成" in workflow_text
+    assert "下载 TCGA 原始文件" in workflow_text
+    assert widget.findChild(QPushButton, "downloadTcgaRawFilesButton").isEnabled()
     request_index = project_summary.project_root / "manifests" / "data_source_requests.json"
     payload = json.loads(request_index.read_text(encoding="utf-8"))
     assert payload["requests"][-1]["status"] == "download_plan_draft"
@@ -563,6 +603,9 @@ def test_data_source_tcga_raw_download_ui_registers_files_but_not_ready(qt_app, 
     assert "成功：1" in status_text
     assert "本地缓存路径" in status_text
     assert "receipt" in status_text
+    workflow_text = _table_text(widget.findChild(QTableWidget, "tcgaWorkflowStepsTable"))
+    assert "3. 构建 TCGA 表达矩阵" in workflow_text
+    assert widget.findChild(QPushButton, "buildTcgaExpressionMatrixButton").isEnabled()
     assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 0
     entries = workflow_pages._current_project_dataset_entries(project_summary.project_root)
     assert entries[0].source == "TCGA 数据库"
@@ -660,6 +703,10 @@ def test_data_source_tcga_expression_build_ui_waits_for_data_check(qt_app, proje
     status_text = widget.findChild(QPlainTextEdit, "tcgaExpressionBuildStatus").toPlainText()
     assert "样本：1；基因：1" in status_text
     assert "build manifest" in status_text
+    workflow_text = _table_text(widget.findChild(QTableWidget, "tcgaWorkflowStepsTable"))
+    assert "4. 获取 TCGA 临床信息" in workflow_text
+    assert widget.findChild(QPushButton, "fetchTcgaClinicalMetadataButton").isEnabled()
+    assert widget.findChild(QPushButton, "enterTcgaDataCheckButton").isEnabled()
     entries = workflow_pages._current_project_dataset_entries(project_summary.project_root)
     assert entries[0].status == "TCGA 表达矩阵已构建，等待数据检查与准备"
     assert entries[0].missing_content == "统一数据检查与准备"
@@ -673,6 +720,21 @@ def test_data_source_tcga_clinical_metadata_ui_runs_after_expression_build(qt_ap
     manifest = project_summary.project_root / "standardized_data" / "tcga" / "tcga-thca" / "build" / "data_prepared" / "tcga" / "tcga_expression_build_manifest.json"
     manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text("{}", encoding="utf-8")
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="tcga_project",
+        source_label="TCGA-THCA",
+        strategy="reference",
+        selected_paths=[manifest],
+        metadata={
+            "source": "tcga_gdc",
+            "project_id": "TCGA-THCA",
+            "download_status": "tcga_expression_matrix_built",
+            "ready_for_recognition": "pending_data_check",
+            "analysis_gate_status": "pending_data_check",
+            "tcga_expression_build_manifest_path": str(manifest),
+        },
+    )
     raw_cases = tmp_path / "tcga_clinical_raw_cases.json"
     case_table = tmp_path / "tcga_clinical_case_table.tsv"
     diagnosis_table = tmp_path / "tcga_clinical_diagnosis_table.tsv"
@@ -772,7 +834,7 @@ def test_data_source_tcga_clinical_metadata_ui_allows_project_preview_without_ex
     widget._tcga_clinical_builder = FakeClinicalBuilder()
     widget.refresh_project(project_summary)
 
-    assert widget.findChild(QPushButton, "fetchTcgaClinicalMetadataButton").isEnabled()
+    assert widget.findChild(QPushButton, "fetchTcgaClinicalMetadataButton").isEnabled() is False
     result = widget.fetch_tcga_clinical_metadata()
 
     assert result is not None
@@ -780,6 +842,65 @@ def test_data_source_tcga_clinical_metadata_ui_allows_project_preview_without_ex
     status_text = widget.findChild(QPlainTextEdit, "tcgaClinicalBuildStatus").toPlainText()
     assert "项目 clinical 概况预览" in status_text
     assert "匹配 case：0；匹配 sample：0" in status_text
+
+
+def test_data_source_tcga_workflow_restores_existing_clinical_manifest(qt_app, project_summary) -> None:
+    expression_manifest = project_summary.project_root / "standardized_data" / "tcga" / "tcga-thca" / "build" / "data_prepared" / "tcga" / "tcga_expression_build_manifest.json"
+    clinical_manifest = expression_manifest.parent / "clinical" / "tcga_clinical_build_manifest.json"
+    expression_manifest.parent.mkdir(parents=True, exist_ok=True)
+    clinical_manifest.parent.mkdir(parents=True, exist_ok=True)
+    expression_manifest.write_text(json.dumps({"project_id": "TCGA-THCA", "sample_count": 2, "gene_count": 1}), encoding="utf-8")
+    clinical_manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.tcga_clinical_build_manifest.v1",
+                "project_id": "TCGA-THCA",
+                "clinical_build_id": "clinical",
+                "mode": "expression_matched_cases",
+                "summary": {
+                    "case_count": 2,
+                    "matched_case_count": 2,
+                    "matched_sample_count": 2,
+                    "survival_case_count": 1,
+                    "death_event_count": 1,
+                    "clinical_gate_status": "clinical_ready",
+                    "survival_gate_status": "survival_ready_basic",
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="tcga_project",
+        source_label="TCGA-THCA",
+        strategy="reference",
+        selected_paths=[expression_manifest],
+        metadata={"source": "tcga_gdc", "project_id": "TCGA-THCA", "download_status": "tcga_expression_matrix_built", "tcga_expression_build_manifest_path": str(expression_manifest)},
+    )
+    workflow_pages.register_acquisition(
+        project_summary.project_root,
+        source_type="tcga_project",
+        source_label="TCGA-THCA",
+        strategy="reference",
+        selected_paths=[clinical_manifest],
+        metadata={
+            "source": "tcga_gdc",
+            "project_id": "TCGA-THCA",
+            "download_status": "tcga_clinical_metadata_built",
+            "tcga_clinical_build_manifest_path": str(clinical_manifest),
+            "tcga_clinical_summary": {"case_count": 2, "matched_case_count": 2, "survival_case_count": 1, "death_event_count": 1},
+        },
+    )
+
+    widget = BioinformaticsDataSourceWidget()
+    widget.refresh_project(project_summary)
+
+    workflow_text = _table_text(widget.findChild(QTableWidget, "tcgaWorkflowStepsTable"))
+    assert "4. 获取 TCGA 临床信息" in workflow_text
+    assert "clinical 已获取：2 case" in workflow_text
+    assert "基础 OS 1 case" in workflow_text
 
 
 def test_data_source_tcga_metadata_preview_network_failure(qt_app, project_summary) -> None:

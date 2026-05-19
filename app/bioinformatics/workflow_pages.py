@@ -62,7 +62,9 @@ from app.bioinformatics.data_sources import (
     TCGAExpressionQuantificationBuilder,
     TCGAMetadataPreviewService,
     TCGAPreviewSummary,
+    TCGAWorkflowState,
     build_tcga_preview_request,
+    build_tcga_workflow_state,
     format_bytes_zh,
     latest_tcga_download_plan_path,
     latest_tcga_expression_build_manifest_path,
@@ -698,6 +700,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_download_result: TCGADownloadExecutionResult | None = None
         self._tcga_expression_build_result: TCGAExpressionBuildResult | None = None
         self._tcga_clinical_build_result: TCGAClinicalBuildResult | None = None
+        self._tcga_workflow_state: TCGAWorkflowState | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -724,6 +727,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_tcga_download_plan_state()
         self._refresh_tcga_expression_build_state()
         self._refresh_tcga_clinical_build_state()
+        self._refresh_tcga_workflow_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1104,9 +1108,20 @@ class BioinformaticsDataSourceWidget(QWidget):
         layout.addWidget(self._tcga_warning_text)
         self._tcga_status_label = _status_label("当前阶段已建立 TCGA 中文类目和任务流程。可先执行真实 GDC metadata 预览。")
         layout.addWidget(self._tcga_status_label)
+        layout.addWidget(_muted("TCGA 数据构建流程"))
+        self._tcga_workflow_table = _table(["步骤", "状态", "摘要", "下一步"])
+        self._tcga_workflow_table.setObjectName("tcgaWorkflowStepsTable")
+        self._tcga_workflow_table.setMinimumHeight(190)
+        self._tcga_workflow_table.setMaximumHeight(240)
+        layout.addWidget(self._tcga_workflow_table)
+        self._tcga_workflow_summary_text = _text_preview(92)
+        self._tcga_workflow_summary_text.setObjectName("tcgaWorkflowSummary")
+        self._tcga_workflow_summary_text.setPlainText("请选择 TCGA project 后按步骤预览、下载、构建表达矩阵和获取临床信息。")
+        layout.addWidget(self._tcga_workflow_summary_text)
         actions = QHBoxLayout()
         preview_button = _button("预览可下载数据", "primaryButton", self.preview_tcga_downloadable_data)
         preview_button.setObjectName("previewTcgaDownloadableDataButton")
+        self._tcga_preview_button = preview_button
         self._tcga_plan_button = _button("生成下载计划草案", "secondaryButton", self.create_tcga_download_plan_draft)
         self._tcga_plan_button.setObjectName("createTcgaDownloadPlanDraftButton")
         self._tcga_plan_button.setEnabled(False)
@@ -1119,11 +1134,17 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_clinical_build_button = _button("获取 TCGA 临床信息", "secondaryButton", self.fetch_tcga_clinical_metadata)
         self._tcga_clinical_build_button.setObjectName("fetchTcgaClinicalMetadataButton")
         self._tcga_clinical_build_button.setEnabled(False)
+        self._tcga_data_check_button = _button("进入数据检查与准备", "primaryButton", self.continue_to_recognition)
+        self._tcga_data_check_button.setObjectName("enterTcgaDataCheckButton")
+        self._tcga_data_check_button.setEnabled(False)
+        self._tcga_data_check_button.setVisible(False)
+        self._tcga_data_check_button.setText("进入准备")
         actions.addWidget(preview_button)
         actions.addWidget(self._tcga_plan_button)
         actions.addWidget(self._tcga_download_button)
         actions.addWidget(self._tcga_expression_build_button)
         actions.addWidget(self._tcga_clinical_build_button)
+        actions.addWidget(self._tcga_data_check_button)
         actions.addStretch(1)
         layout.addLayout(actions)
         self._tcga_download_status_text = _text_preview(88)
@@ -1227,6 +1248,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         if hasattr(self, "_tcga_developer_details"):
             self._tcga_developer_details.setPlainText("")
         self._refresh_tcga_download_plan_state()
+        self._refresh_tcga_workflow_state()
 
     def preview_tcga_downloadable_data(self) -> TCGAPreviewSummary | None:
         project = get_tcga_project(str(self._tcga_project_combo.currentData() or ""))
@@ -1239,6 +1261,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_preview_summary = summary
         self._tcga_download_plan_draft = None
         self._render_tcga_metadata_preview(summary)
+        self._refresh_tcga_workflow_state()
         if summary.status == "failed":
             self._set_status("TCGA metadata 预览失败；请稍后重试或更换条件。", error=True)
         elif summary.status == "empty":
@@ -1438,6 +1461,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._latest_summary = acquisition
         self._tcga_status_label.setText(f"已生成 TCGA 下载计划草案：{project.project_id}；未下载文件。")
         self._refresh_tcga_download_plan_state()
+        self._refresh_tcga_workflow_state()
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
         self._set_status("TCGA 下载计划草案已生成；未写 source_files，也不会进入真实分析 ready。")
@@ -1466,6 +1490,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
         self._refresh_tcga_expression_build_state()
+        self._refresh_tcga_workflow_state()
         self._set_status("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵；当前不会进入 DEG/GSEA ready。")
         return result
 
@@ -1507,6 +1532,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_geo_download_list()
         self._refresh_tcga_expression_build_state()
         self._refresh_tcga_clinical_build_state()
+        self._refresh_tcga_workflow_state()
         self._set_status("TCGA 表达矩阵已构建，等待统一数据检查与准备；仍不会直接进入 DEG/GSEA ready。")
         return result
 
@@ -1559,6 +1585,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
         self._refresh_tcga_clinical_build_state()
+        self._refresh_tcga_workflow_state()
         self._set_status("TCGA clinical metadata 已获取；仅进入 clinical/survival preflight readiness，不自动执行 survival、DEG 或 GSEA。")
         return result
 
@@ -1606,17 +1633,78 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _refresh_tcga_clinical_build_state(self) -> None:
         if not hasattr(self, "_tcga_clinical_build_button"):
             return
+        state = self._tcga_workflow_state or self._build_tcga_workflow_state()
+        clinical_step = state.step("clinical")
         has_project = self._project_root is not None
-        self._tcga_clinical_build_button.setEnabled(has_project)
+        self._tcga_clinical_build_button.setEnabled(has_project and clinical_step.enabled)
         if hasattr(self, "_tcga_clinical_build_status_text") and self._tcga_clinical_build_result is None:
             if not has_project:
                 self._tcga_clinical_build_status_text.setPlainText("请先创建或打开项目。")
                 return
-            expression_manifest = latest_tcga_expression_build_manifest_path(self._project_root)
-            if expression_manifest is not None:
-                self._tcga_clinical_build_status_text.setPlainText(f"可获取 clinical metadata 并匹配表达构建：{expression_manifest.name}")
+            if clinical_step.enabled:
+                self._tcga_clinical_build_status_text.setPlainText(clinical_step.summary)
             else:
-                self._tcga_clinical_build_status_text.setPlainText("可按当前 TCGA project 获取 clinical 概况；无 B6.4 build 时不能做表达-临床映射。")
+                self._tcga_clinical_build_status_text.setPlainText(clinical_step.blocking_reason or clinical_step.summary)
+
+    def _build_tcga_workflow_state(self) -> TCGAWorkflowState:
+        project_id = str(self._tcga_project_combo.currentData() or "TCGA-THCA") if hasattr(self, "_tcga_project_combo") else ""
+        analysis_purpose = str(self._tcga_purpose_combo.currentData() or "") if hasattr(self, "_tcga_purpose_combo") else ""
+        sample_scope = str(self._tcga_sample_scope_combo.currentData() or "") if hasattr(self, "_tcga_sample_scope_combo") else ""
+        return build_tcga_workflow_state(
+            self._project_root,
+            project_id=project_id,
+            analysis_purpose=analysis_purpose,
+            sample_scope=sample_scope,
+        )
+
+    def _refresh_tcga_workflow_state(self) -> None:
+        if not hasattr(self, "_tcga_workflow_table"):
+            return
+        state = self._build_tcga_workflow_state()
+        self._tcga_workflow_state = state
+        _fill_table(
+            self._tcga_workflow_table,
+            [
+                [
+                    step.title,
+                    _tcga_workflow_status_zh(step.status),
+                    _tcga_workflow_user_summary(step),
+                    step.action_label if step.enabled and step.action_label else step.blocking_reason or "-",
+                ]
+                for step in state.steps
+            ],
+        )
+        warning_text = "；".join(state.warnings[:3]) if state.warnings else "无阻断性提示。"
+        self._tcga_workflow_summary_text.setPlainText(
+            "\n".join(
+                [
+                    f"当前阶段：{_tcga_workflow_stage_zh(state.current_stage)}",
+                    f"下一步：{state.next_action or '暂无可执行主步骤'}",
+                    "可进入数据检查与准备：" + ("是" if state.can_enter_data_check else "否"),
+                    f"提示：{warning_text}",
+                ]
+            )
+        )
+        if hasattr(self, "_tcga_preview_button"):
+            self._tcga_preview_button.setEnabled(state.step("preview").enabled)
+        if hasattr(self, "_tcga_download_button"):
+            self._tcga_download_button.setEnabled(state.step("download").enabled)
+        if hasattr(self, "_tcga_expression_build_button"):
+            self._tcga_expression_build_button.setEnabled(state.step("expression_build").enabled)
+        if hasattr(self, "_tcga_clinical_build_button"):
+            self._tcga_clinical_build_button.setEnabled(state.step("clinical").enabled)
+        if hasattr(self, "_tcga_data_check_button"):
+            self._tcga_data_check_button.setEnabled(state.can_enter_data_check)
+            self._tcga_data_check_button.setVisible(state.can_enter_data_check)
+            self._tcga_data_check_button.setText("进入数据检查与准备" if state.can_enter_data_check else "进入准备")
+        if hasattr(self, "_tcga_developer_details"):
+            workflow_payload = _json(
+                {
+                    "tcga_workflow_state": state.to_dict(),
+                    "note": "GDC filters, file UUIDs, manifest/source paths and raw paths are intentionally kept in developer diagnostics.",
+                }
+            )
+            self._tcga_developer_details.setPlainText(workflow_payload)
 
     def create_gtex_source_request(self) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -6449,6 +6537,37 @@ def _tcga_preview_developer_payload(summary: TCGAPreviewSummary) -> dict[str, ob
         "status": summary.status,
         "error_message": summary.error_message,
     }
+
+
+def _tcga_workflow_status_zh(status: str) -> str:
+    return {
+        "not_started": "未开始",
+        "available": "可执行",
+        "running_or_requested": "已请求",
+        "completed": "已完成",
+        "failed": "失败",
+        "blocked": "被阻断",
+        "skipped": "已跳过",
+    }.get(status, status)
+
+
+def _tcga_workflow_stage_zh(stage: str) -> str:
+    return {
+        "preview": "预览可下载数据",
+        "download": "下载 TCGA 原始文件",
+        "expression_build": "构建 TCGA 表达矩阵",
+        "clinical": "获取 TCGA 临床信息",
+        "data_check": "进入数据检查与准备",
+    }.get(stage, stage or "未开始")
+
+
+def _tcga_workflow_user_summary(step) -> str:
+    summary = str(getattr(step, "summary", "") or "")
+    warning = str(getattr(step, "warning", "") or "")
+    text = summary if len(summary) <= 130 else summary[:127] + "..."
+    if warning:
+        text = f"{text}；提示：{warning}"
+    return text
 
 
 def _counter_text(values: dict[str, int]) -> str:
