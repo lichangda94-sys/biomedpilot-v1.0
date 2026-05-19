@@ -55,6 +55,13 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     condition_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_condition_candidate_only.jsonl")
     manual_conflicts = _jsonl(REVIEW_BATCHES / "meta" / "meta_conflicts_still_require_manual_review.jsonl")
     disambiguation = _jsonl(REVIEW_BATCHES / "meta" / "meta_disambiguation_top_200.jsonl")
+    outcome_symptoms = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_symptom_feature_candidates.jsonl")
+    outcome_features = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_clinical_feature_candidates.jsonl")
+    outcome_conditions = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_condition_candidate_only.jsonl")
+    outcome_events = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_adverse_event_candidates.jsonl")
+    outcome_functional = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_functional_impairment_candidates.jsonl")
+    outcome_tcm = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_tcm_future_scope_candidates.jsonl")
+    outcome_manual = _jsonl(REVIEW_BATCHES / "meta" / "meta_outcome_still_requires_manual_review.jsonl")
     english = _jsonl(REVIEW_BATCHES / "meta" / "meta_english_mapping_top_300.jsonl")
     auto_reject = _jsonl(REVIEW_BATCHES / "meta" / "meta_auto_reject_candidates.jsonl")
     evidence = _jsonl(REVIEW_BATCHES / "meta" / "meta_evidence_only_candidates_optimized.jsonl")
@@ -68,6 +75,7 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert len(symptom_conflicts) + len(tcm_conflicts) + len(event_conflicts) + len(condition_conflicts) + len(manual_conflicts) == len(conflicts)
     assert len(manual_conflicts) < len(conflicts)
     assert len(disambiguation) == 200
+    assert len(outcome_symptoms) + len(outcome_features) + len(outcome_conditions) + len(outcome_events) + len(outcome_functional) + len(outcome_tcm) + len(outcome_manual) == len(disambiguation)
     assert len(english) == 300
     assert summary["approved_runtime_total"] == 11  # type: ignore[index]
     assert summary["shared_promotion_total"] == 4  # type: ignore[index]
@@ -131,6 +139,28 @@ def test_meta_review_batches_are_loadable_and_scoped() -> None:
     assert {row["recommended_action"] for row in manual_conflicts} == {"manual_disambiguation_required"}
     assert {row["normalized_zh_term"] for row in manual_conflicts} == {"疱疹", "结石", "肥胖", "脚气", "镇静", "风团"}
 
+    layered_outcome_rows = (
+        outcome_symptoms
+        + outcome_features
+        + outcome_conditions
+        + outcome_events
+        + outcome_functional
+        + outcome_tcm
+        + outcome_manual
+    )
+    assert {row["normalized_zh_term"] for row in layered_outcome_rows} == {row["normalized_zh_term"] for row in disambiguation}
+    assert all(row["runtime_promotion_allowed"] is False for row in layered_outcome_rows)
+    assert all(row["query_expansion_allowed"] is False for row in layered_outcome_rows)
+    assert all(row["requires_context_rule"] is True for row in layered_outcome_rows)
+    assert {row["outcome_layer"] for row in outcome_symptoms} == {"symptom_or_sign"}
+    assert {row["outcome_layer"] for row in outcome_features} == {"clinical_feature_or_phenotype"}
+    assert {row["outcome_layer"] for row in outcome_conditions} == {"condition_candidate_only"}
+    assert {row["outcome_layer"] for row in outcome_events} == {"adverse_event_or_complication"}
+    assert {row["outcome_layer"] for row in outcome_functional} == {"functional_impairment"}
+    assert {row["outcome_layer"] for row in outcome_tcm} == {"tcm_future_scope"}
+    assert {row["normalized_zh_term"] for row in outcome_manual} == {"结节"}
+    assert any(row["normalized_zh_term"] == "晕厥" for row in outcome_symptoms)
+
 
 def test_discussion_reports_exist() -> None:
     discussion = REVIEW_BATCHES / "reports" / "vocabulary_review_batches_for_discussion.md"
@@ -142,5 +172,8 @@ def test_discussion_reports_exist() -> None:
     optimization_text = optimization.read_text(encoding="utf-8")
     assert "Top Batch Files" in optimization_text
     assert "no longer treat every empty-mapping disease/symptom overlap" in optimization_text
+    assert "Disambiguation Outcome Layering" in optimization_text
     assert "meta_conflicts_still_require_manual_review.jsonl" in optimization_text
     assert "blocked_from_shared_promotion" in correction.read_text(encoding="utf-8")
+    layering = REVIEW_BATCHES / "reports" / "meta_disambiguation_outcome_layering_report.md"
+    assert "not a Meta outcome runtime input" in layering.read_text(encoding="utf-8")

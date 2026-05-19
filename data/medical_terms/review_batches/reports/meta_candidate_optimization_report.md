@@ -17,6 +17,8 @@ Truly high-risk conflict terms remain in manual review when the term is short or
 
 Disambiguation and English-mapping batches prioritize terms likely to become runtime candidates after human review.
 
+Disambiguation outcome candidates must be layered before any runtime consideration. `meta_disambiguation_top_200.jsonl` is now treated as an outcome-layering review queue, not as a Meta outcome runtime input.
+
 Auto-reject candidates include single-character non-abbreviations, generic medical words, colloquial terms, long sentence-like strings, Chinese PDF section terms, and out-of-scope TCM terms.
 
 ## Top Batch Files
@@ -29,6 +31,13 @@ Auto-reject candidates include single-character non-abbreviations, generic medic
 - data/medical_terms/review_batches/meta/meta_condition_candidate_only.jsonl
 - data/medical_terms/review_batches/meta/meta_conflicts_still_require_manual_review.jsonl
 - data/medical_terms/review_batches/meta/meta_disambiguation_top_200.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_symptom_feature_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_clinical_feature_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_condition_candidate_only.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_adverse_event_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_functional_impairment_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_tcm_future_scope_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_outcome_still_requires_manual_review.jsonl
 - data/medical_terms/review_batches/meta/meta_english_mapping_top_300.jsonl
 
 ## Conflict Batch Rule Refinement
@@ -40,6 +49,20 @@ The original `meta_mapping_conflicts_top_200.jsonl` contains 200 disease/symptom
 - `meta_event_adverse_outcome_candidates.jsonl`: 16 rows, event, adverse outcome, injury, bleeding, or acute episode candidates.
 - `meta_condition_candidate_only.jsonl`: 41 rows, likely condition/disease candidates that need English/PICO evidence before any runtime use.
 - `meta_conflicts_still_require_manual_review.jsonl`: 6 rows, still high-risk semantically overloaded terms: 疱疹, 结石, 肥胖, 脚气, 镇静, 风团.
+
+## Disambiguation Outcome Layering
+
+The original `meta_disambiguation_top_200.jsonl` contains 200 rows with `possible_roles=["outcome"]`. These rows are not automatically approved Meta outcome runtime terms. They are layered first:
+
+- `meta_outcome_symptom_feature_candidates.jsonl`: 34 rows.
+- `meta_outcome_clinical_feature_candidates.jsonl`: 42 rows.
+- `meta_outcome_condition_candidate_only.jsonl`: 62 rows.
+- `meta_outcome_adverse_event_candidates.jsonl`: 21 rows.
+- `meta_outcome_functional_impairment_candidates.jsonl`: 27 rows.
+- `meta_outcome_tcm_future_scope_candidates.jsonl`: 13 rows.
+- `meta_outcome_still_requires_manual_review.jsonl`: 1 row, `结节`.
+
+All layered rows are review-batch derivatives with `runtime_promotion_allowed=false`, `query_expansion_allowed=false`, and `requires_context_rule=true`.
 
 ## Remaining Manual Review Reason
 
