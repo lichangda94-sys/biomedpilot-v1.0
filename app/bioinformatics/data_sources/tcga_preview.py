@@ -105,12 +105,14 @@ class TCGAPreviewSummary:
     files_total: int | None
     cases_total: int | None
     error_message: str = ""
+    file_manifest_entries: tuple[dict[str, object], ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["request"] = self.request.to_dict()
         payload["warnings"] = list(self.warnings)
         payload["selected_file_ids_preview"] = list(self.selected_file_ids_preview)
+        payload["file_manifest_entries"] = [dict(entry) for entry in self.file_manifest_entries]
         return payload
 
 
@@ -194,6 +196,7 @@ class TCGAMetadataPreviewService:
                 files_total=None,
                 cases_total=None,
                 error_message=str(exc),
+                file_manifest_entries=(),
             )
         return _summary_from_hits(request, file_filters, case_filters, files, cases)
 
@@ -245,6 +248,39 @@ def build_gdc_case_filters(request: TCGAPreviewRequest) -> dict[str, object]:
     return {"op": "and", "content": operands}
 
 
+def fetch_tcga_file_manifest_entries(
+    filters: dict[str, object],
+    *,
+    fetcher: GDCFetcher | None = None,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    timeout: int = 10,
+) -> tuple[dict[str, object], ...]:
+    resolved_fetcher = fetcher or _fetch_gdc_json
+    offset = 0
+    total: int | None = None
+    entries: list[dict[str, object]] = []
+    while total is None or offset < total:
+        payload = resolved_fetcher(
+            "/files",
+            {
+                "filters": filters,
+                "fields": FILE_FIELDS,
+                "format": "JSON",
+                "size": max(1, page_size),
+                "from": offset,
+                "sort": "file_name:asc",
+            },
+            timeout,
+        )
+        hits, pagination_total = _payload_hits_and_total(payload)
+        entries.extend(_file_manifest_entry(hit) for hit in hits)
+        total = pagination_total if pagination_total is not None else len(entries)
+        if not hits or pagination_total is None:
+            break
+        offset += len(hits)
+    return tuple(entries)
+
+
 def write_tcga_download_plan_draft(project_root: str | Path, summary: TCGAPreviewSummary) -> TCGADownloadPlanDraft:
     root = Path(project_root).expanduser().resolve()
     plan_id = f"tcga-plan-{uuid4().hex[:10]}"
@@ -268,6 +304,7 @@ def write_tcga_download_plan_draft(project_root: str | Path, summary: TCGAPrevie
     payload = {
         "schema_version": "biomedpilot.tcga_gdc_download_plan_draft.v1",
         **draft.to_dict(),
+        "file_manifest_entries": [dict(entry) for entry in summary.file_manifest_entries],
         "preview_summary": summary.to_dict(),
         "constraints": {
             "downloads_files": False,
@@ -357,7 +394,23 @@ def _summary_from_hits(
         cases_fetched=cases.fetched,
         files_total=files.total,
         cases_total=cases.total,
+        file_manifest_entries=tuple(_file_manifest_entry(file) for file in file_hits),
     )
+
+
+def _file_manifest_entry(file: dict[str, Any]) -> dict[str, object]:
+    return {
+        "file_id": _clean(file.get("file_id") or file.get("id")),
+        "file_name": _clean(file.get("file_name") or file.get("filename")),
+        "file_size": file.get("file_size") or 0,
+        "access": _clean(file.get("access")),
+        "data_category": _clean(file.get("data_category")),
+        "data_type": _clean(file.get("data_type")),
+        "data_format": _clean(file.get("data_format")),
+        "experimental_strategy": _clean(file.get("experimental_strategy")),
+        "workflow_type": _workflow_type(file),
+        "sample_types": _unique(sample_type for _sample_id, sample_type in _iter_file_samples([file])),
+    }
 
 
 def _payload_hits_and_total(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int | None]:

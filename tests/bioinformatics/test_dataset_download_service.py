@@ -411,7 +411,8 @@ def test_tcga_and_gtex_execute_download_downloads_real_files_and_records_manifes
     assert tcga_record["strategy"] == "reference"
     assert tcga_record["source_files"] == list(tcga.downloaded_files)
     assert tcga_record["metadata"]["download_manifest_path"] == str(tcga_manifest)
-    assert tcga_record["metadata"]["ready_for_recognition"] == "ready"
+    assert tcga_record["metadata"]["ready_for_recognition"] == "pending_expression_matrix_build"
+    assert tcga_record["metadata"]["analysis_gate_status"] == "waiting_b6_4_expression_matrix_build"
     assert tcga_record["metadata"]["source_manifest_path"]
     source_manifest = json.loads(Path(tcga_record["metadata"]["source_manifest_path"]).read_text(encoding="utf-8"))
     assert source_manifest["summary"]["real_file_count"] == 1

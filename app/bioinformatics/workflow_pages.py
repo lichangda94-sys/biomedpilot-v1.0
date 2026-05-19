@@ -53,11 +53,14 @@ from app.bioinformatics.comparison_config import (
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
+    TCGADownloadPlanExecutor,
     TCGADownloadPlanDraft,
+    TCGADownloadExecutionResult,
     TCGAMetadataPreviewService,
     TCGAPreviewSummary,
     build_tcga_preview_request,
     format_bytes_zh,
+    latest_tcga_download_plan_path,
     write_tcga_download_plan_draft,
 )
 from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
@@ -681,8 +684,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._geo_candidates: dict[str, UnifiedDatasetCandidate] = {}
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
         self._tcga_preview_service = TCGAMetadataPreviewService()
+        self._tcga_download_executor = TCGADownloadPlanExecutor()
         self._tcga_preview_summary: TCGAPreviewSummary | None = None
         self._tcga_download_plan_draft: TCGADownloadPlanDraft | None = None
+        self._tcga_download_result: TCGADownloadExecutionResult | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -706,6 +711,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("先添加数据，下一步进入数据检查与准备。")
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
+        self._refresh_tcga_download_plan_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1092,10 +1098,18 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_plan_button = _button("生成下载计划草案", "secondaryButton", self.create_tcga_download_plan_draft)
         self._tcga_plan_button.setObjectName("createTcgaDownloadPlanDraftButton")
         self._tcga_plan_button.setEnabled(False)
+        self._tcga_download_button = _button("下载 TCGA 原始文件", "secondaryButton", self.download_tcga_raw_files)
+        self._tcga_download_button.setObjectName("downloadTcgaRawFilesButton")
+        self._tcga_download_button.setEnabled(False)
         actions.addWidget(preview_button)
         actions.addWidget(self._tcga_plan_button)
+        actions.addWidget(self._tcga_download_button)
         actions.addStretch(1)
         layout.addLayout(actions)
+        self._tcga_download_status_text = _text_preview(88)
+        self._tcga_download_status_text.setObjectName("tcgaRawDownloadStatus")
+        self._tcga_download_status_text.setPlainText("尚未生成下载计划草案。")
+        layout.addWidget(self._tcga_download_status_text)
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._tcga_developer_details)))
         developer_actions.addStretch(1)
@@ -1184,6 +1198,7 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._tcga_warning_text.setPlainText("尚未执行 GDC metadata 预览。下载计划草案不会进入 DEG/GSEA ready。")
         if hasattr(self, "_tcga_developer_details"):
             self._tcga_developer_details.setPlainText("")
+        self._refresh_tcga_download_plan_state()
 
     def preview_tcga_downloadable_data(self) -> TCGAPreviewSummary | None:
         project = get_tcga_project(str(self._tcga_project_combo.currentData() or ""))
@@ -1394,10 +1409,60 @@ class BioinformaticsDataSourceWidget(QWidget):
         )
         self._latest_summary = acquisition
         self._tcga_status_label.setText(f"已生成 TCGA 下载计划草案：{project.project_id}；未下载文件。")
+        self._refresh_tcga_download_plan_state()
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
         self._set_status("TCGA 下载计划草案已生成；未写 source_files，也不会进入真实分析 ready。")
         return acquisition
+
+    def download_tcga_raw_files(self) -> TCGADownloadExecutionResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        plan_path = latest_tcga_download_plan_path(self._project_root)
+        if plan_path is None:
+            self._tcga_download_status_text.setPlainText("未找到 TCGA 下载计划草案，请先生成 B6.2 下载计划。")
+            self._set_status("未找到 TCGA 下载计划草案。", error=True)
+            return None
+        self._tcga_download_status_text.setPlainText("正在下载 TCGA/GDC 原始文件；已存在文件会直接计为缓存命中。")
+        self._tcga_status_label.setText("正在执行 TCGA 原始文件下载，请稍候。")
+        QApplication.processEvents()
+        try:
+            result = self._tcga_download_executor.execute_plan(self._project_root, plan_path=plan_path)
+        except Exception as exc:
+            self._tcga_download_status_text.setPlainText(f"TCGA 下载执行失败：{exc}")
+            self._set_status(f"TCGA 下载执行失败：{exc}", error=True)
+            return None
+        self._tcga_download_result = result
+        self._render_tcga_download_result(result)
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵；当前不会进入 DEG/GSEA ready。")
+        return result
+
+    def _render_tcga_download_result(self, result: TCGADownloadExecutionResult) -> None:
+        self._tcga_download_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"下载状态：{result.message}",
+                    f"成功：{result.success_count}；缓存：{result.cache_hit_count}；失败：{result.failed_count}；阻断：{result.blocked_count}；跳过：{result.skipped_count}",
+                    f"总大小：{format_bytes_zh(result.total_size_bytes)}",
+                    f"本地缓存路径：{result.target_dir}",
+                    f"receipt：{result.receipt_path}",
+                ]
+            )
+        )
+        self._tcga_status_label.setText("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵。")
+
+    def _refresh_tcga_download_plan_state(self) -> None:
+        if not hasattr(self, "_tcga_download_button"):
+            return
+        plan_path = latest_tcga_download_plan_path(self._project_root) if self._project_root is not None else None
+        self._tcga_download_button.setEnabled(plan_path is not None)
+        if hasattr(self, "_tcga_download_status_text") and self._tcga_download_result is None:
+            self._tcga_download_status_text.setPlainText(
+                f"可执行下载计划：{plan_path.name}" if plan_path is not None else "尚未生成下载计划草案。"
+            )
 
     def create_gtex_source_request(self) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -3192,7 +3257,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             key = (str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
             if key != (source, accession_or_project):
                 continue
-            if metadata.get("ready_for_recognition") == "ready" or payload.get("strategy") != "plan_only":
+            if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+                state = "planned"
+            elif metadata.get("ready_for_recognition") == "ready" or payload.get("strategy") != "plan_only":
                 state = "ready"
             elif not state:
                 state = "planned"
@@ -6333,6 +6400,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
         if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
             return "等待下载与构建"
         return "未下载"
+    if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+        return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
     if row.status and row.status not in {"已登记", "已登记，需确认"}:
         return row.status.replace("已登记", "已添加")
     return "需要补充信息" if row.status.endswith("需确认") else "待识别"
@@ -6351,6 +6420,12 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
     if "平台" in raw_status or metadata.get("platform_accessions"):
         assets.append("平台注释")
     if "tcga" in row.source_type_key:
+        if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+            summary = metadata.get("tcga_download_summary")
+            if isinstance(summary, dict):
+                acquired = int(summary.get("acquired_count") or 0)
+                return f"TCGA 原始文件：{acquired} 个"
+            return "TCGA 原始文件"
         if str(metadata.get("download_status") or "") == "tcga_gdc_download_plan_draft_created":
             return "下载计划草案"
         expected = metadata.get("expected_assets")
@@ -6375,6 +6450,8 @@ def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: di
     if "平台" not in raw_status and not metadata.get("platform_accessions") and row.source_type_key in GEO_SOURCE_TYPES:
         missing.append("平台注释")
     if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
+        if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+            return "B6.4 表达矩阵构建"
         return "数据文件"
     return "、".join(dict.fromkeys(missing)) if missing else "无"
 
@@ -7353,6 +7430,8 @@ def _registered_status_text(payload: dict[str, object]) -> str:
             return "GDC 文件清单已创建，待下载数据文件"
         if download_status == "tcga_gdc_download_plan_draft_created":
             return "GDC metadata 预览完成，下载计划草案已创建"
+        if download_status in {"tcga_gdc_raw_files_acquired", "tcga_gdc_raw_files_acquired_with_warnings", "tcga_gdc_files_downloaded", "tcga_gdc_files_downloaded_with_warnings"}:
+            return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
         if download_status == "gtex_download_manifest_created":
             return "GTEx 下载清单已创建，待下载表达矩阵"
         if ready == "ready" and download_status == "geo_metadata_downloaded":
@@ -7392,6 +7471,10 @@ def _geo_asset_status_text(metadata: dict[str, object]) -> str:
 
 
 def _record_ready_for_recognition(payload: dict[str, object], metadata: dict[str, object]) -> bool:
+    if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+        return False
+    if str(metadata.get("ready_for_recognition") or "") == "pending_expression_matrix_build":
+        return False
     if metadata.get("ready_for_recognition") == "ready" or metadata.get("download_status") == "downloaded":
         return True
     if payload.get("strategy") != "plan_only":

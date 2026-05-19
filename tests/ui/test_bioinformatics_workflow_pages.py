@@ -455,6 +455,10 @@ def test_data_source_tcga_metadata_preview_and_plan_draft(qt_app, project_summar
                 cases_fetched=2,
                 files_total=2,
                 cases_total=2,
+                file_manifest_entries=(
+                    {"file_id": "file-1", "file_name": "file-1.tsv", "file_size": 8, "access": "open", "data_type": "Gene Expression Quantification", "data_format": "TSV"},
+                    {"file_id": "file-2", "file_name": "file-2.tsv", "file_size": 8, "access": "open", "data_type": "Gene Expression Quantification", "data_format": "TSV"},
+                ),
             )
 
     widget = BioinformaticsDataSourceWidget()
@@ -481,6 +485,7 @@ def test_data_source_tcga_metadata_preview_and_plan_draft(qt_app, project_summar
     assert plan_path.is_file()
     plan_payload = json.loads(plan_path.read_text(encoding="utf-8"))
     assert plan_payload["status"] == "draft_only"
+    assert len(plan_payload["file_manifest_entries"]) == 2
     assert plan_payload["constraints"]["writes_source_files"] is False
     assert "source_files" not in plan_payload
     assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 0
@@ -489,6 +494,83 @@ def test_data_source_tcga_metadata_preview_and_plan_draft(qt_app, project_summar
     assert entries[0].status == "等待下载与构建"
     assert entries[0].available_content == "下载计划草案"
     assert entries[0].ready_for_recognition is False
+
+
+def test_data_source_tcga_raw_download_ui_registers_files_but_not_ready(qt_app, project_summary) -> None:
+    from app.bioinformatics.data_sources.tcga_download_executor import TCGADownloadPlanExecutor
+
+    class FakeTcgaPreviewService:
+        def build_preview(self, request):
+            from app.bioinformatics.data_sources.tcga_preview import TCGAPreviewSummary
+
+            return TCGAPreviewSummary(
+                request=request,
+                status="ready",
+                case_count=1,
+                sample_count=1,
+                file_count=1,
+                estimated_size_bytes=8,
+                size_has_unknown=False,
+                sample_type_counts={"Primary Tumor": 1},
+                access_counts={"open": 1},
+                workflow_type_counts={"STAR - Counts": 1},
+                data_format_counts={"TSV": 1},
+                warnings=(),
+                is_download_plan_available=True,
+                gdc_filters={"op": "and", "content": []},
+                case_filters={"op": "and", "content": []},
+                selected_file_ids_preview=("file-1",),
+                files_fetched=1,
+                cases_fetched=1,
+                files_total=1,
+                cases_total=1,
+                file_manifest_entries=(
+                    {"file_id": "file-1", "file_name": "file-1.tsv", "file_size": 8, "access": "open", "data_type": "Gene Expression Quantification", "data_format": "TSV"},
+                ),
+            )
+
+    class FakeGdcDownloader:
+        def download_file(self, entry, target_dir):
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target = target_dir / str(entry["file_name"])
+            target.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+            return {
+                "status": "success",
+                "cache_hit": False,
+                "local_path": str(target),
+                "bytes_downloaded": target.stat().st_size,
+                "source_url": f"https://api.gdc.cancer.gov/data/{entry['file_id']}",
+                "sha256": "fake",
+            }
+
+    widget = BioinformaticsDataSourceWidget()
+    widget._tcga_preview_service = FakeTcgaPreviewService()
+    widget._tcga_download_executor = TCGADownloadPlanExecutor(downloader=FakeGdcDownloader())
+    widget.refresh_project(project_summary)
+
+    assert widget.findChild(QPushButton, "downloadTcgaRawFilesButton").isEnabled() is False
+    assert widget.download_tcga_raw_files() is None
+    assert "未找到 TCGA 下载计划草案" in widget.findChild(QPlainTextEdit, "tcgaRawDownloadStatus").toPlainText()
+
+    widget.preview_tcga_downloadable_data()
+    widget.create_tcga_download_plan_draft()
+    assert widget.findChild(QPushButton, "downloadTcgaRawFilesButton").isEnabled() is True
+    result = widget.download_tcga_raw_files()
+
+    assert result is not None
+    assert result.status == "tcga_gdc_raw_files_acquired"
+    status_text = widget.findChild(QPlainTextEdit, "tcgaRawDownloadStatus").toPlainText()
+    assert "成功：1" in status_text
+    assert "本地缓存路径" in status_text
+    assert "receipt" in status_text
+    assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 0
+    entries = workflow_pages._current_project_dataset_entries(project_summary.project_root)
+    assert entries[0].source == "TCGA 数据库"
+    assert entries[0].status == "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
+    assert entries[0].available_content == "TCGA 原始文件：1 个"
+    assert entries[0].missing_content == "B6.4 表达矩阵构建"
+    assert entries[0].ready_for_recognition is False
+    assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据检查：0 个"
 
 
 def test_data_source_tcga_metadata_preview_network_failure(qt_app, project_summary) -> None:

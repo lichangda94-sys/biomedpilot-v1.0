@@ -615,6 +615,15 @@ class DatasetDownloadService:
                 "recognition_scope": "downloaded_source_files" if downloaded_files else "pending_source_download",
             }
         )
+        if request.source == "tcga_gdc":
+            metadata.update(
+                {
+                    "ready_for_recognition": "pending_expression_matrix_build",
+                    "recognition_scope": "tcga_raw_files_waiting_b6_4" if downloaded_files else "pending_source_download",
+                    "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
+                    "analysis_gate_message": "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵。",
+                }
+            )
         registration_status = "registered_with_download_task"
         if downloaded_files:
             registration_status = "registered_metadata_source" if status == "geo_metadata_downloaded" else "registered_downloaded_files"

@@ -122,6 +122,8 @@ def test_tcga_preview_builds_gdc_filters_and_summary(tmp_path) -> None:
     assert summary.data_format_counts == {"TSV": 2}
     assert summary.is_download_plan_available is True
     assert draft.status == "draft_only"
+    assert len(payload["file_manifest_entries"]) == 2
+    assert payload["file_manifest_entries"][0]["file_id"] == "file-1"
     assert payload["constraints"]["downloads_files"] is False
     assert payload["constraints"]["writes_source_files"] is False
     assert "source_files" not in payload
