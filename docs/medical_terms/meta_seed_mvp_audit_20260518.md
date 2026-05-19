@@ -2,29 +2,29 @@
 
 Generated: 2026-05-19
 
-Scope: audit of the additive Meta seed / mapping / extraction MVP. This report verifies the new Meta-scoped seed layer and deterministic helper behavior. It does not describe a shared-core promotion and does not claim production PDF extraction.
+Scope: audit of the additive Meta seed / mapping / extraction MVP after curated seed batch 2. This report verifies seed quality, query guards, Chinese input mapping, English evidence extraction, and module boundaries. It does not add seed terms, does not change retrieval workflows, and does not claim production PDF extraction.
 
 ## Seed Distribution
 
 Source: `data/medical_terms/meta_analysis/meta_seed_terms.json`
 
-Total seeds: 70
+Total seeds: 190
 
 | category | count | notes |
 | --- | ---: | --- |
-| disease / population | 15 | Disease concepts usable as population/disease terms. |
-| exposure | 10 | Risk factor or exposure concepts. |
-| intervention | 10 | Treatment, drug, procedure, or lifestyle intervention concepts. |
-| outcome | 12 | Outcome terms; all require context guard. |
-| effect / statistical term | 9 | Effect measures and statistical tokens for extraction/planning, not topic expansion. |
-| study design | 7 | Meta-analysis/systematic review and study design filters. |
-| research intent | 7 | Intent classifiers, not retrieval topics. |
+| disease / population | 50 | Disease concepts usable as population/disease terms. |
+| exposure | 35 | Risk factor, biomarker, lifestyle, environmental, socioeconomic, or exposure concepts. |
+| intervention | 30 | Treatment, drug, procedure, screening, rehabilitation, diet, or exercise intervention concepts. |
+| outcome | 37 | Outcome terms; all require context guard. |
+| effect / statistical term | 14 | Effect measures and statistical tokens for extraction/planning, not topic expansion. |
+| study design | 12 | Meta-analysis/systematic review and study design filters. |
+| research intent | 12 | Intent classifiers, not retrieval topics. |
 
 Mapping files:
 
-- `data/medical_terms/meta_analysis/mesh_mappings.json`: 47 disease/exposure/intervention/outcome mappings.
-- `data/medical_terms/meta_analysis/pubmed_free_text_mappings.json`: 47 disease/exposure/intervention/outcome mappings.
-- `data/medical_terms/meta_analysis/emtree_mappings.json`: 70 entries, all present as placeholders with `emtree_review_status=needs_review`.
+- `data/medical_terms/meta_analysis/mesh_mappings.json`: 152 disease/exposure/intervention/outcome mapping rows.
+- `data/medical_terms/meta_analysis/pubmed_free_text_mappings.json`: 152 disease/exposure/intervention/outcome mapping rows.
+- `data/medical_terms/meta_analysis/emtree_mappings.json`: 190 rows, all present as placeholders with `emtree_review_status=needs_review`.
 
 ## Query Guard Audit
 
@@ -32,15 +32,16 @@ Source: `app/shared/query_intelligence/meta_seed_terms/query_builder.py`
 
 | guard | result |
 | --- | --- |
-| effect measure not in topic search | Pass. All 9 effect/statistical terms have `query_expansion_allowed=false`; PubMed topic block generation for `meta_effect:hazard_ratio` returns no block. |
-| research intent not in topic search | Pass. All 7 research-intent terms have `query_expansion_allowed=false`; PubMed topic block generation for `meta_research_intent:risk_factor` returns no block. |
-| outcome conditional | Pass. All 12 outcome terms have `query_expansion_allowed=conditional`, `standalone_search_allowed=false`, and `requires_pairing_with=["population_or_disease"]`. |
-| study design filter-only | Pass. All 7 study-design terms have `filter_only=true`, `query_expansion_allowed=false`, and `standalone_search_allowed=false`. |
+| effect measure not in topic search | Pass. All 14 effect/statistical terms have `query_expansion_allowed=false`; PubMed topic block generation for `meta_effect:hazard_ratio` returns no block. |
+| research intent not in topic search | Pass. All 12 research-intent terms have `query_expansion_allowed=false`; PubMed topic block generation for `meta_research_intent:risk_factor` returns no block. |
+| outcome conditional | Pass. All 37 outcome terms have `query_expansion_allowed=conditional`, `standalone_search_allowed=false`, and `requires_pairing_with=["population_or_disease"]`. |
+| study design filter-only | Pass. All 12 study-design terms have `filter_only=true`, `query_expansion_allowed=false`, and `standalone_search_allowed=false`. |
 
 Observed negative-control query block:
 
 ```text
 build_pubmed_query_blocks(["meta_effect:hazard_ratio", "meta_research_intent:risk_factor"]) -> []
+build_pubmed_query_blocks(["meta_study_design:meta_analysis"]) -> []
 ```
 
 Observed positive-control query block:
@@ -48,6 +49,15 @@ Observed positive-control query block:
 ```text
 build_pubmed_query_blocks(["meta_disease:thyroid_cancer"])
 -> ("Thyroid Neoplasms"[MeSH Terms] OR "thyroid cancer"[Title/Abstract])
+```
+
+Batch 2 positive controls:
+
+```text
+meta_disease:heart_failure -> "Heart Failure"[MeSH Terms]
+meta_exposure:mediterranean_diet -> "Mediterranean diet"[Title/Abstract]
+meta_intervention:sglt2_inhibitor -> "SGLT2 inhibitor"[Title/Abstract]
+meta_outcome:objective_response_rate -> "objective response rate"[Title/Abstract]
 ```
 
 ## Chinese Input Tests
@@ -68,6 +78,14 @@ Research-intent rules covered:
 - `诊断价值` -> `diagnostic_accuracy_meta`
 - `疗效` -> `treatment_effect_meta`
 - `安全性` -> `safety_outcome_meta`
+
+Batch 2 smoke:
+
+```text
+SGLT2抑制剂治疗心力衰竭的安全性
+-> intent=safety_outcome_meta
+-> concepts=meta_disease:heart_failure, meta_intervention:sglt2_inhibitor
+```
 
 ## English Extraction Tests
 
@@ -113,7 +131,7 @@ Binding policy:
 - no write to a formal extraction table
 - local human review is required before any candidate becomes structured evidence
 
-This is sufficient for M4.2 because the MVP creates an evidence review queue, not final extracted results.
+This satisfies M4.2 because the MVP creates an evidence review queue, not final extracted results.
 
 ## Boundary Checks
 
@@ -144,5 +162,6 @@ Explicit unsupported behavior:
 ```bash
 git diff --check
 python3 -m pytest tests/shared/test_meta_seed_terms.py -q
-python3 -m pytest tests/shared/test_query_intelligence_service.py tests/shared/test_medical_vocabulary_meta_analysis_terms_core.py -q
+python3 -m pytest tests/shared/test_query_intelligence_service.py -q
+python3 -m app.main --smoke-test
 ```

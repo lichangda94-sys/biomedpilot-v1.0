@@ -58,6 +58,7 @@ def test_query_guards_block_intent_and_effect_topic_expansion() -> None:
     seeds = load_seed_terms()
     intent_or_effect = [seed for seed in seeds if seed.concept_type in {"research_intent", "effect_measure"}]
     outcomes = [seed for seed in seeds if seed.concept_type == "outcome"]
+    study_designs = [seed for seed in seeds if seed.concept_type == "study_design"]
 
     assert all(seed.query_expansion_allowed is False for seed in intent_or_effect)
     assert all(seed.standalone_search_allowed is False for seed in intent_or_effect)
@@ -65,10 +66,14 @@ def test_query_guards_block_intent_and_effect_topic_expansion() -> None:
     assert all(seed.query_expansion_allowed == "conditional" for seed in outcomes)
     assert all(seed.standalone_search_allowed is False for seed in outcomes)
     assert all("population_or_disease" in seed.requires_pairing_with for seed in outcomes)
+    assert all(seed.filter_only is True for seed in study_designs)
+    assert all(seed.query_expansion_allowed is False for seed in study_designs)
+    assert all(seed.standalone_search_allowed is False for seed in study_designs)
 
     blocks = build_pubmed_query_blocks(["meta_research_intent:risk_factor", "meta_effect:hazard_ratio"])
 
     assert blocks == []
+    assert build_pubmed_query_blocks(["meta_study_design:meta_analysis"]) == []
 
 
 def test_pubmed_query_blocks_use_manual_mesh_and_free_text_mappings() -> None:
