@@ -19,6 +19,8 @@ Disambiguation and English-mapping batches prioritize terms likely to become run
 
 Disambiguation outcome candidates must be layered before any runtime consideration. `meta_disambiguation_top_200.jsonl` is now treated as an outcome-layering review queue, not as a Meta outcome runtime input.
 
+English-mapping candidates must be role-collapsed by `normalized_zh_term` before English preferred-label confirmation. Duplicated disease/outcome rows are review artifacts, not multiple runtime concepts.
+
 Auto-reject candidates include single-character non-abbreviations, generic medical words, colloquial terms, long sentence-like strings, Chinese PDF section terms, and out-of-scope TCM terms.
 
 ## Top Batch Files
@@ -39,6 +41,12 @@ Auto-reject candidates include single-character non-abbreviations, generic medic
 - data/medical_terms/review_batches/meta/meta_outcome_tcm_future_scope_candidates.jsonl
 - data/medical_terms/review_batches/meta/meta_outcome_still_requires_manual_review.jsonl
 - data/medical_terms/review_batches/meta/meta_english_mapping_top_300.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_disease_population_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_event_outcome_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_condition_candidate_only.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_qualified_term_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_tcm_future_scope_candidates.jsonl
+- data/medical_terms/review_batches/meta/meta_english_mapping_still_require_manual_review.jsonl
 
 ## Conflict Batch Rule Refinement
 
@@ -63,6 +71,19 @@ The original `meta_disambiguation_top_200.jsonl` contains 200 rows with `possibl
 - `meta_outcome_still_requires_manual_review.jsonl`: 1 row, `结节`.
 
 All layered rows are review-batch derivatives with `runtime_promotion_allowed=false`, `query_expansion_allowed=false`, and `requires_context_rule=true`.
+
+## English Mapping Role Collapse
+
+The original `meta_english_mapping_top_300.jsonl` contains 300 rows but only 156 unique normalized Chinese terms. The role-collapse stage groups duplicate disease/outcome candidates before any English preferred-label confirmation.
+
+- `meta_english_mapping_disease_population_candidates.jsonl`: 0 rows.
+- `meta_english_mapping_event_outcome_candidates.jsonl`: 15 rows.
+- `meta_english_mapping_condition_candidate_only.jsonl`: 119 rows.
+- `meta_english_mapping_qualified_term_candidates.jsonl`: 9 rows.
+- `meta_english_mapping_tcm_future_scope_candidates.jsonl`: 11 rows.
+- `meta_english_mapping_still_require_manual_review.jsonl`: 2 rows, `外阴皮肤APUD癌` and `家族性高脂蛋白血症IV型`.
+
+Diabetic nephropathy staging terms are represented as `base_concept=diabetic nephropathy` plus diabetes type and stage qualifiers; they are not independent runtime concepts.
 
 ## Remaining Manual Review Reason
 
