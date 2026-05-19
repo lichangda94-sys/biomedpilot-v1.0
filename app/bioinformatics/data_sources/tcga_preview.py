@@ -399,6 +399,8 @@ def _summary_from_hits(
 
 
 def _file_manifest_entry(file: dict[str, Any]) -> dict[str, object]:
+    case_records = list(_file_case_records(file))
+    sample_records = list(_file_sample_records(file))
     return {
         "file_id": _clean(file.get("file_id") or file.get("id")),
         "file_name": _clean(file.get("file_name") or file.get("filename")),
@@ -409,7 +411,11 @@ def _file_manifest_entry(file: dict[str, Any]) -> dict[str, object]:
         "data_format": _clean(file.get("data_format")),
         "experimental_strategy": _clean(file.get("experimental_strategy")),
         "workflow_type": _workflow_type(file),
-        "sample_types": _unique(sample_type for _sample_id, sample_type in _iter_file_samples([file])),
+        "case_ids": _unique(record["case_id"] for record in case_records),
+        "case_submitter_ids": _unique(record["case_submitter_id"] for record in case_records),
+        "sample_ids": _unique(record["sample_id"] for record in sample_records),
+        "sample_submitter_ids": _unique(record["sample_submitter_id"] for record in sample_records),
+        "sample_types": _unique(record["sample_type"] for record in sample_records),
     }
 
 
@@ -484,6 +490,28 @@ def _iter_file_samples(files: Iterable[dict[str, Any]]) -> Iterable[tuple[str, s
                 if isinstance(sample, dict):
                     sample_id = _clean(sample.get("sample_id") or sample.get("submitter_id")) or f"{case_id}:{_clean(sample.get('sample_type'))}"
                     yield sample_id, _clean(sample.get("sample_type"))
+
+
+def _file_case_records(file: dict[str, Any]) -> Iterable[dict[str, str]]:
+    for case in file.get("cases", []) or []:
+        if isinstance(case, dict):
+            yield {
+                "case_id": _clean(case.get("case_id")),
+                "case_submitter_id": _clean(case.get("submitter_id")),
+            }
+
+
+def _file_sample_records(file: dict[str, Any]) -> Iterable[dict[str, str]]:
+    for case in file.get("cases", []) or []:
+        if not isinstance(case, dict):
+            continue
+        for sample in case.get("samples", []) or []:
+            if isinstance(sample, dict):
+                yield {
+                    "sample_id": _clean(sample.get("sample_id")),
+                    "sample_submitter_id": _clean(sample.get("submitter_id")),
+                    "sample_type": _clean(sample.get("sample_type")),
+                }
 
 
 def _case_id(case: dict[str, Any]) -> str:

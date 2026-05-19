@@ -121,6 +121,7 @@ class TCGADownloadPlanExecutor:
                         extra={
                             "file_id": file_id,
                             "file_name": file_name,
+                            **_tcga_entry_mapping_fields(entry),
                             "analysis_gate_status": "waiting_b6_4_expression_matrix_build",
                         },
                     )
@@ -354,6 +355,7 @@ def _event(entry: dict[str, Any], *, status: str, message: str = "", local_path:
         "message": message,
         "local_path": local_path,
         "bytes_downloaded": bytes_downloaded,
+        **_tcga_entry_mapping_fields(entry),
     }
 
 
@@ -415,6 +417,25 @@ def _tcga_entry_role(entry: dict[str, Any]) -> str:
     if "gene expression" in data_type or "expression" in data_type:
         return "tcga_gdc_gene_expression_quantification"
     return "tcga_gdc_raw_file"
+
+
+def _tcga_entry_mapping_fields(entry: dict[str, Any]) -> dict[str, object]:
+    return {
+        "case_ids": _string_list(entry.get("case_ids")),
+        "case_submitter_ids": _string_list(entry.get("case_submitter_ids")),
+        "sample_ids": _string_list(entry.get("sample_ids")),
+        "sample_submitter_ids": _string_list(entry.get("sample_submitter_ids")),
+        "sample_types": _string_list(entry.get("sample_types")),
+    }
+
+
+def _string_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, tuple):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value or "").strip()
+    return [text] if text else []
 
 
 def _safe_int(value: object) -> int:

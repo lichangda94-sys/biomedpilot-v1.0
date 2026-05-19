@@ -56,11 +56,14 @@ from app.bioinformatics.data_sources import (
     TCGADownloadPlanExecutor,
     TCGADownloadPlanDraft,
     TCGADownloadExecutionResult,
+    TCGAExpressionBuildResult,
+    TCGAExpressionQuantificationBuilder,
     TCGAMetadataPreviewService,
     TCGAPreviewSummary,
     build_tcga_preview_request,
     format_bytes_zh,
     latest_tcga_download_plan_path,
+    latest_tcga_raw_expression_record_path,
     write_tcga_download_plan_draft,
 )
 from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
@@ -685,9 +688,11 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
         self._tcga_preview_service = TCGAMetadataPreviewService()
         self._tcga_download_executor = TCGADownloadPlanExecutor()
+        self._tcga_expression_builder = TCGAExpressionQuantificationBuilder()
         self._tcga_preview_summary: TCGAPreviewSummary | None = None
         self._tcga_download_plan_draft: TCGADownloadPlanDraft | None = None
         self._tcga_download_result: TCGADownloadExecutionResult | None = None
+        self._tcga_expression_build_result: TCGAExpressionBuildResult | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -712,6 +717,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
         self._refresh_tcga_download_plan_state()
+        self._refresh_tcga_expression_build_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1101,15 +1107,23 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_download_button = _button("下载 TCGA 原始文件", "secondaryButton", self.download_tcga_raw_files)
         self._tcga_download_button.setObjectName("downloadTcgaRawFilesButton")
         self._tcga_download_button.setEnabled(False)
+        self._tcga_expression_build_button = _button("构建 TCGA 表达矩阵", "secondaryButton", self.build_tcga_expression_matrix)
+        self._tcga_expression_build_button.setObjectName("buildTcgaExpressionMatrixButton")
+        self._tcga_expression_build_button.setEnabled(False)
         actions.addWidget(preview_button)
         actions.addWidget(self._tcga_plan_button)
         actions.addWidget(self._tcga_download_button)
+        actions.addWidget(self._tcga_expression_build_button)
         actions.addStretch(1)
         layout.addLayout(actions)
         self._tcga_download_status_text = _text_preview(88)
         self._tcga_download_status_text.setObjectName("tcgaRawDownloadStatus")
         self._tcga_download_status_text.setPlainText("尚未生成下载计划草案。")
         layout.addWidget(self._tcga_download_status_text)
+        self._tcga_expression_build_status_text = _text_preview(88)
+        self._tcga_expression_build_status_text.setObjectName("tcgaExpressionBuildStatus")
+        self._tcga_expression_build_status_text.setPlainText("尚未获取 TCGA 原始表达文件。")
+        layout.addWidget(self._tcga_expression_build_status_text)
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._tcga_developer_details)))
         developer_actions.addStretch(1)
@@ -1437,6 +1451,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._render_tcga_download_result(result)
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
+        self._refresh_tcga_expression_build_state()
         self._set_status("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵；当前不会进入 DEG/GSEA ready。")
         return result
 
@@ -1454,6 +1469,50 @@ class BioinformaticsDataSourceWidget(QWidget):
         )
         self._tcga_status_label.setText("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵。")
 
+    def build_tcga_expression_matrix(self) -> TCGAExpressionBuildResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        record_path = latest_tcga_raw_expression_record_path(self._project_root)
+        if record_path is None:
+            self._tcga_expression_build_status_text.setPlainText("未找到等待 B6.4 构建的 TCGA 原始文件记录。")
+            self._set_status("未找到等待 B6.4 构建的 TCGA 原始文件记录。", error=True)
+            return None
+        self._tcga_expression_build_status_text.setPlainText("正在解析 TCGA expression quantification 文件并构建本地表达矩阵。")
+        self._tcga_status_label.setText("正在构建 TCGA 表达矩阵，请稍候。")
+        QApplication.processEvents()
+        try:
+            result = self._tcga_expression_builder.build_from_record(self._project_root, record_path=record_path)
+        except Exception as exc:
+            self._tcga_expression_build_status_text.setPlainText(f"TCGA 表达矩阵构建失败：{exc}")
+            self._set_status(f"TCGA 表达矩阵构建失败：{exc}", error=True)
+            return None
+        self._tcga_expression_build_result = result
+        self._render_tcga_expression_build_result(result)
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._refresh_tcga_expression_build_state()
+        self._set_status("TCGA 表达矩阵已构建，等待统一数据检查与准备；仍不会直接进入 DEG/GSEA ready。")
+        return result
+
+    def _render_tcga_expression_build_result(self, result: TCGAExpressionBuildResult) -> None:
+        warning_line = f"警告：{len(result.warnings)} 条" if result.warnings else "警告：无"
+        self._tcga_expression_build_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"构建状态：{result.message}",
+                    f"解析文件：{result.parsed_file_count}/{result.source_file_count}",
+                    f"样本：{result.sample_count}；基因：{result.gene_count}",
+                    f"counts 矩阵：{result.expression_matrix_path}",
+                    f"sample metadata：{result.sample_metadata_path}",
+                    f"sample mapping：{result.sample_mapping_path}",
+                    f"build manifest：{result.build_manifest_path}",
+                    warning_line,
+                ]
+            )
+        )
+        self._tcga_status_label.setText("TCGA 表达矩阵已构建，等待统一数据检查与准备。")
+
     def _refresh_tcga_download_plan_state(self) -> None:
         if not hasattr(self, "_tcga_download_button"):
             return
@@ -1462,6 +1521,16 @@ class BioinformaticsDataSourceWidget(QWidget):
         if hasattr(self, "_tcga_download_status_text") and self._tcga_download_result is None:
             self._tcga_download_status_text.setPlainText(
                 f"可执行下载计划：{plan_path.name}" if plan_path is not None else "尚未生成下载计划草案。"
+            )
+
+    def _refresh_tcga_expression_build_state(self) -> None:
+        if not hasattr(self, "_tcga_expression_build_button"):
+            return
+        record_path = latest_tcga_raw_expression_record_path(self._project_root) if self._project_root is not None else None
+        self._tcga_expression_build_button.setEnabled(record_path is not None)
+        if hasattr(self, "_tcga_expression_build_status_text") and self._tcga_expression_build_result is None:
+            self._tcga_expression_build_status_text.setPlainText(
+                f"可构建表达矩阵：{record_path.name}" if record_path is not None else "尚未获取 TCGA 原始表达文件。"
             )
 
     def create_gtex_source_request(self) -> AcquisitionSummary | None:
@@ -6388,6 +6457,8 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
                 return "元数据已下载"
             if payload.get("strategy") == "plan_only":
                 return "未下载"
+    if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
+        return "TCGA 表达矩阵已构建，等待数据检查与准备"
     if _record_ready_for_recognition(payload, metadata):
         if row.source_type_key == "local_import":
             return "已导入"
@@ -6420,6 +6491,13 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
     if "平台" in raw_status or metadata.get("platform_accessions"):
         assets.append("平台注释")
     if "tcga" in row.source_type_key:
+        if str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
+            summary = metadata.get("tcga_expression_build_summary")
+            if isinstance(summary, dict):
+                samples = int(summary.get("sample_count") or 0)
+                genes = int(summary.get("gene_count") or 0)
+                return f"表达矩阵、样本信息（{samples} 样本 / {genes} 基因）"
+            return "表达矩阵、样本信息、sample mapping"
         if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
             summary = metadata.get("tcga_download_summary")
             if isinstance(summary, dict):
@@ -6450,6 +6528,8 @@ def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: di
     if "平台" not in raw_status and not metadata.get("platform_accessions") and row.source_type_key in GEO_SOURCE_TYPES:
         missing.append("平台注释")
     if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
+        if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
+            return "统一数据检查与准备"
         if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
             return "B6.4 表达矩阵构建"
         return "数据文件"
@@ -7432,6 +7512,8 @@ def _registered_status_text(payload: dict[str, object]) -> str:
             return "GDC metadata 预览完成，下载计划草案已创建"
         if download_status in {"tcga_gdc_raw_files_acquired", "tcga_gdc_raw_files_acquired_with_warnings", "tcga_gdc_files_downloaded", "tcga_gdc_files_downloaded_with_warnings"}:
             return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
+        if download_status == "tcga_expression_matrix_built":
+            return "TCGA 表达矩阵已构建，等待数据检查与准备"
         if download_status == "gtex_download_manifest_created":
             return "GTEx 下载清单已创建，待下载表达矩阵"
         if ready == "ready" and download_status == "geo_metadata_downloaded":
