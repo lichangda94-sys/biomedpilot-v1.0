@@ -317,5 +317,718 @@
       "Hospitalization"
     ],
     "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:heart_failure",
+    "mesh_terms": [
+      "Heart Failure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:atrial_fibrillation",
+    "mesh_terms": [
+      "Atrial Fibrillation"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:myocardial_infarction",
+    "mesh_terms": [
+      "Myocardial Infarction"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:chronic_obstructive_pulmonary_disease",
+    "mesh_terms": [
+      "Pulmonary Disease, Chronic Obstructive"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:asthma",
+    "mesh_terms": [
+      "Asthma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:obstructive_sleep_apnea",
+    "mesh_terms": [
+      "Sleep Apnea, Obstructive"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:depression",
+    "mesh_terms": [
+      "Depression"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:anxiety_disorder",
+    "mesh_terms": [
+      "Anxiety Disorders"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:alzheimer_disease",
+    "mesh_terms": [
+      "Alzheimer Disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:parkinson_disease",
+    "mesh_terms": [
+      "Parkinson Disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:osteoporosis",
+    "mesh_terms": [
+      "Osteoporosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:osteoarthritis",
+    "mesh_terms": [
+      "Osteoarthritis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:rheumatoid_arthritis",
+    "mesh_terms": [
+      "Arthritis, Rheumatoid"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:systemic_lupus_erythematosus",
+    "mesh_terms": [
+      "Lupus Erythematosus, Systemic"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:inflammatory_bowel_disease",
+    "mesh_terms": [
+      "Inflammatory Bowel Diseases"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:crohn_disease",
+    "mesh_terms": [
+      "Crohn Disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:ulcerative_colitis",
+    "mesh_terms": [
+      "Colitis, Ulcerative"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:nonalcoholic_fatty_liver_disease",
+    "mesh_terms": [
+      "Non-alcoholic Fatty Liver Disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:cirrhosis",
+    "mesh_terms": [
+      "Liver Cirrhosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hepatitis_b",
+    "mesh_terms": [
+      "Hepatitis B"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hepatitis_c",
+    "mesh_terms": [
+      "Hepatitis C"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:gestational_diabetes_mellitus",
+    "mesh_terms": [
+      "Diabetes, Gestational"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:polycystic_ovary_syndrome",
+    "mesh_terms": [
+      "Polycystic Ovary Syndrome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:endometriosis",
+    "mesh_terms": [
+      "Endometriosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:ovarian_cancer",
+    "mesh_terms": [
+      "Ovarian Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:cervical_cancer",
+    "mesh_terms": [
+      "Uterine Cervical Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:endometrial_cancer",
+    "mesh_terms": [
+      "Endometrial Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:esophageal_cancer",
+    "mesh_terms": [
+      "Esophageal Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:renal_cell_carcinoma",
+    "mesh_terms": [
+      "Carcinoma, Renal Cell"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:bladder_cancer",
+    "mesh_terms": [
+      "Urinary Bladder Neoplasms"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:leukemia",
+    "mesh_terms": [
+      "Leukemia"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:lymphoma",
+    "mesh_terms": [
+      "Lymphoma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:melanoma",
+    "mesh_terms": [
+      "Melanoma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:sepsis",
+    "mesh_terms": [
+      "Sepsis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:acute_kidney_injury",
+    "mesh_terms": [
+      "Acute Kidney Injury"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:dietary_pattern",
+    "mesh_terms": [
+      "Diet"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:mediterranean_diet",
+    "mesh_terms": [
+      "Diet, Mediterranean"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:salt_intake",
+    "mesh_terms": [
+      "Sodium, Dietary"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:sugar_sweetened_beverage",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:coffee_consumption",
+    "mesh_terms": [
+      "Coffee"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:tea_consumption",
+    "mesh_terms": [
+      "Tea"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:vitamin_d_level",
+    "mesh_terms": [
+      "Vitamin D"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:insulin_resistance",
+    "mesh_terms": [
+      "Insulin Resistance"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:metabolic_syndrome",
+    "mesh_terms": [
+      "Metabolic Syndrome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:dyslipidemia",
+    "mesh_terms": [
+      "Dyslipidemias"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:triglycerides",
+    "mesh_terms": [
+      "Triglycerides"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:hdl_cholesterol",
+    "mesh_terms": [
+      "Cholesterol, HDL"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:c_reactive_protein",
+    "mesh_terms": [
+      "C-Reactive Protein"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:interleukin_6",
+    "mesh_terms": [
+      "Interleukin-6"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:occupational_exposure",
+    "mesh_terms": [
+      "Occupational Exposure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:night_shift_work",
+    "mesh_terms": [
+      "Shift Work Schedule"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:sleep_duration",
+    "mesh_terms": [
+      "Sleep"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:sedentary_behavior",
+    "mesh_terms": [
+      "Sedentary Behavior"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:education_level",
+    "mesh_terms": [
+      "Educational Status"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:socioeconomic_status",
+    "mesh_terms": [
+      "Socioeconomic Factors"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:family_history",
+    "mesh_terms": [
+      "Family History"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:genetic_variant",
+    "mesh_terms": [
+      "Genetic Variation"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:hormone_replacement_therapy",
+    "mesh_terms": [
+      "Hormone Replacement Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:oral_contraceptive_use",
+    "mesh_terms": [
+      "Contraceptives, Oral"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:breastfeeding",
+    "mesh_terms": [
+      "Breast Feeding"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:ace_inhibitor",
+    "mesh_terms": [
+      "Angiotensin-Converting Enzyme Inhibitors"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:angiotensin_receptor_blocker",
+    "mesh_terms": [
+      "Angiotensin Receptor Antagonists"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:beta_blocker",
+    "mesh_terms": [
+      "Adrenergic beta-Antagonists"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:sglt2_inhibitor",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:glp1_receptor_agonist",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:anticoagulation",
+    "mesh_terms": [
+      "Anticoagulants"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:antiplatelet_therapy",
+    "mesh_terms": [
+      "Platelet Aggregation Inhibitors"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:proton_pump_inhibitor",
+    "mesh_terms": [
+      "Proton Pump Inhibitors"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:antibiotic_therapy",
+    "mesh_terms": [
+      "Anti-Bacterial Agents"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:corticosteroid",
+    "mesh_terms": [
+      "Glucocorticoids"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:nonsteroidal_anti_inflammatory_drug",
+    "mesh_terms": [
+      "Anti-Inflammatory Agents, Non-Steroidal"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:targeted_therapy",
+    "mesh_terms": [
+      "Molecular Targeted Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:endocrine_therapy",
+    "mesh_terms": [
+      "Hormone Antagonists"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:neoadjuvant_therapy",
+    "mesh_terms": [
+      "Neoadjuvant Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:adjuvant_therapy",
+    "mesh_terms": [
+      "Adjuvant Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:screening",
+    "mesh_terms": [
+      "Mass Screening"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:vaccination",
+    "mesh_terms": [
+      "Vaccination"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:rehabilitation",
+    "mesh_terms": [
+      "Rehabilitation"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:dietary_intervention",
+    "mesh_terms": [
+      "Diet Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:exercise_intervention",
+    "mesh_terms": [
+      "Exercise Therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:incidence",
+    "mesh_terms": [
+      "Incidence"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:prevalence",
+    "mesh_terms": [
+      "Prevalence"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:remission",
+    "mesh_terms": [
+      "Remission Induction"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:complete_response",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:partial_response",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:objective_response_rate",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:disease_control_rate",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:pathologic_complete_response",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:complication",
+    "mesh_terms": [
+      "Postoperative Complications"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:bleeding",
+    "mesh_terms": [
+      "Hemorrhage"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:infection",
+    "mesh_terms": [
+      "Infection"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:thrombosis",
+    "mesh_terms": [
+      "Thrombosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:stroke_outcome",
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:myocardial_infarction_outcome",
+    "mesh_terms": [
+      "Myocardial Infarction"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:renal_function_decline",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:acute_kidney_injury_outcome",
+    "mesh_terms": [
+      "Acute Kidney Injury"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:progression",
+    "mesh_terms": [
+      "Disease Progression"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:metastasis",
+    "mesh_terms": [
+      "Neoplasm Metastasis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:readmission",
+    "mesh_terms": [
+      "Patient Readmission"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:length_of_stay",
+    "mesh_terms": [
+      "Length of Stay"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:pain_score",
+    "mesh_terms": [
+      "Pain Measurement"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:body_weight_change",
+    "mesh_terms": [
+      "Body Weight"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:glycemic_control",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:blood_pressure_control",
+    "mesh_terms": [
+      "Blood Pressure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:biochemical_recurrence",
+    "mesh_terms": [],
+    "review_status": "manual_seed_mapping"
   }
 ]

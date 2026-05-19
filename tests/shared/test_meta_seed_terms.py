@@ -28,7 +28,7 @@ def test_meta_seed_terms_schema_and_category_coverage() -> None:
     seeds = load_seed_terms()
     by_type = Counter(seed.concept_type for seed in seeds)
 
-    assert 50 <= len(seeds) <= 100
+    assert 170 <= len(seeds) <= 220
     assert len({seed.concept_id for seed in seeds}) == len(seeds)
     assert validate_seed_terms() == []
     assert set(schema["items"]["required"]) <= set(seeds[0].__dict__)
@@ -41,13 +41,17 @@ def test_meta_seed_terms_schema_and_category_coverage() -> None:
         "study_design",
         "research_intent",
     } <= set(by_type)
-    assert 15 <= by_type["disease"] <= 20
-    assert 10 <= by_type["exposure"] <= 15
-    assert 10 <= by_type["intervention"] <= 15
-    assert 12 <= by_type["outcome"] <= 18
-    assert 8 <= by_type["effect_measure"] <= 12
-    assert 5 <= by_type["study_design"] <= 8
-    assert by_type["research_intent"] >= 5
+    assert 45 <= by_type["disease"] <= 55
+    assert 30 <= by_type["exposure"] <= 40
+    assert 25 <= by_type["intervention"] <= 35
+    assert 32 <= by_type["outcome"] <= 42
+    assert 12 <= by_type["effect_measure"] <= 18
+    assert 10 <= by_type["study_design"] <= 15
+    assert 10 <= by_type["research_intent"] <= 15
+    assert _seed(seeds, "meta_disease:heart_failure").review_status == "seed_batch_2_curated"
+    assert _seed(seeds, "meta_exposure:mediterranean_diet").review_status == "seed_batch_2_curated"
+    assert _seed(seeds, "meta_intervention:sglt2_inhibitor").review_status == "seed_batch_2_curated"
+    assert _seed(seeds, "meta_outcome:objective_response_rate").review_status == "seed_batch_2_curated"
 
 
 def test_query_guards_block_intent_and_effect_topic_expansion() -> None:
@@ -85,6 +89,21 @@ def test_pubmed_query_blocks_use_manual_mesh_and_free_text_mappings() -> None:
     assert '"Recurrence"[MeSH Terms]' in text
     assert "hazard ratio" not in text.lower()
     assert "risk factor" not in text.lower()
+
+    batch_2_blocks = build_pubmed_query_blocks(
+        [
+            "meta_disease:heart_failure",
+            "meta_exposure:mediterranean_diet",
+            "meta_intervention:sglt2_inhibitor",
+            "meta_outcome:objective_response_rate",
+        ]
+    )
+    batch_2_text = " ".join(batch_2_blocks)
+
+    assert '"Heart Failure"[MeSH Terms]' in batch_2_text
+    assert '"Mediterranean diet"[Title/Abstract]' in batch_2_text
+    assert '"SGLT2 inhibitor"[Title/Abstract]' in batch_2_text
+    assert '"objective response rate"[Title/Abstract]' in batch_2_text
 
 
 def test_manual_mapping_files_cover_expected_seed_sets() -> None:
@@ -153,6 +172,16 @@ def test_research_intent_rules_are_deterministic() -> None:
     assert classify_research_intent("安全性") == "safety_outcome_meta"
 
 
+def test_batch_2_chinese_terms_are_curated_seed_matches() -> None:
+    draft = match_chinese_question_to_pico("SGLT2抑制剂治疗心力衰竭的安全性")
+    concept_ids = set(draft.concept_ids())
+
+    assert draft.research_intent == "safety_outcome_meta"
+    assert "meta_disease:heart_failure" in concept_ids
+    assert "meta_intervention:sglt2_inhibitor" in concept_ids
+    assert "meta_research_intent:safety" not in concept_ids
+
+
 def test_english_section_detection_excludes_references_and_extracts_regex_candidates() -> None:
     text = """
     Abstract
@@ -191,3 +220,7 @@ def test_outcome_effect_binding_outputs_pending_review_only() -> None:
     assert all(binding.review_status == "pending_review" for binding in bindings)
     assert all(binding.final_extraction_allowed is False for binding in bindings)
     assert any(binding.effect_measure.upper().startswith("HR") for binding in bindings)
+
+
+def _seed(seeds: tuple[object, ...], concept_id: str) -> object:
+    return next(seed for seed in seeds if seed.concept_id == concept_id)

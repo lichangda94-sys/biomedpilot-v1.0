@@ -327,5 +327,740 @@
       "hospitalization"
     ],
     "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:heart_failure",
+    "pubmed_free_text_terms": [
+      "heart failure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:atrial_fibrillation",
+    "pubmed_free_text_terms": [
+      "atrial fibrillation"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:myocardial_infarction",
+    "pubmed_free_text_terms": [
+      "myocardial infarction"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:chronic_obstructive_pulmonary_disease",
+    "pubmed_free_text_terms": [
+      "chronic obstructive pulmonary disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:asthma",
+    "pubmed_free_text_terms": [
+      "asthma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:obstructive_sleep_apnea",
+    "pubmed_free_text_terms": [
+      "obstructive sleep apnea"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:depression",
+    "pubmed_free_text_terms": [
+      "depression"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:anxiety_disorder",
+    "pubmed_free_text_terms": [
+      "anxiety disorder"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:alzheimer_disease",
+    "pubmed_free_text_terms": [
+      "Alzheimer disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:parkinson_disease",
+    "pubmed_free_text_terms": [
+      "Parkinson disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:osteoporosis",
+    "pubmed_free_text_terms": [
+      "osteoporosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:osteoarthritis",
+    "pubmed_free_text_terms": [
+      "osteoarthritis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:rheumatoid_arthritis",
+    "pubmed_free_text_terms": [
+      "rheumatoid arthritis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:systemic_lupus_erythematosus",
+    "pubmed_free_text_terms": [
+      "systemic lupus erythematosus"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:inflammatory_bowel_disease",
+    "pubmed_free_text_terms": [
+      "inflammatory bowel disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:crohn_disease",
+    "pubmed_free_text_terms": [
+      "Crohn disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:ulcerative_colitis",
+    "pubmed_free_text_terms": [
+      "ulcerative colitis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:nonalcoholic_fatty_liver_disease",
+    "pubmed_free_text_terms": [
+      "nonalcoholic fatty liver disease"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:cirrhosis",
+    "pubmed_free_text_terms": [
+      "liver cirrhosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hepatitis_b",
+    "pubmed_free_text_terms": [
+      "hepatitis B"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:hepatitis_c",
+    "pubmed_free_text_terms": [
+      "hepatitis C"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:gestational_diabetes_mellitus",
+    "pubmed_free_text_terms": [
+      "gestational diabetes mellitus"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:polycystic_ovary_syndrome",
+    "pubmed_free_text_terms": [
+      "polycystic ovary syndrome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:endometriosis",
+    "pubmed_free_text_terms": [
+      "endometriosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:ovarian_cancer",
+    "pubmed_free_text_terms": [
+      "ovarian cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:cervical_cancer",
+    "pubmed_free_text_terms": [
+      "cervical cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:endometrial_cancer",
+    "pubmed_free_text_terms": [
+      "endometrial cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:esophageal_cancer",
+    "pubmed_free_text_terms": [
+      "esophageal cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:renal_cell_carcinoma",
+    "pubmed_free_text_terms": [
+      "renal cell carcinoma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:bladder_cancer",
+    "pubmed_free_text_terms": [
+      "bladder cancer"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:leukemia",
+    "pubmed_free_text_terms": [
+      "leukemia"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:lymphoma",
+    "pubmed_free_text_terms": [
+      "lymphoma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:melanoma",
+    "pubmed_free_text_terms": [
+      "melanoma"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:sepsis",
+    "pubmed_free_text_terms": [
+      "sepsis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_disease:acute_kidney_injury",
+    "pubmed_free_text_terms": [
+      "acute kidney injury"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:dietary_pattern",
+    "pubmed_free_text_terms": [
+      "dietary pattern"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:mediterranean_diet",
+    "pubmed_free_text_terms": [
+      "Mediterranean diet"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:salt_intake",
+    "pubmed_free_text_terms": [
+      "salt intake"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:sugar_sweetened_beverage",
+    "pubmed_free_text_terms": [
+      "sugar-sweetened beverage"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:coffee_consumption",
+    "pubmed_free_text_terms": [
+      "coffee consumption"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:tea_consumption",
+    "pubmed_free_text_terms": [
+      "tea consumption"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:vitamin_d_level",
+    "pubmed_free_text_terms": [
+      "vitamin D level"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:insulin_resistance",
+    "pubmed_free_text_terms": [
+      "insulin resistance"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:metabolic_syndrome",
+    "pubmed_free_text_terms": [
+      "metabolic syndrome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:dyslipidemia",
+    "pubmed_free_text_terms": [
+      "dyslipidemia"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:triglycerides",
+    "pubmed_free_text_terms": [
+      "triglycerides"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:hdl_cholesterol",
+    "pubmed_free_text_terms": [
+      "HDL cholesterol"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:c_reactive_protein",
+    "pubmed_free_text_terms": [
+      "C-reactive protein"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:interleukin_6",
+    "pubmed_free_text_terms": [
+      "interleukin-6"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:occupational_exposure",
+    "pubmed_free_text_terms": [
+      "occupational exposure"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:night_shift_work",
+    "pubmed_free_text_terms": [
+      "night shift work"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:sleep_duration",
+    "pubmed_free_text_terms": [
+      "sleep duration"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:sedentary_behavior",
+    "pubmed_free_text_terms": [
+      "sedentary behavior"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:education_level",
+    "pubmed_free_text_terms": [
+      "education level"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:socioeconomic_status",
+    "pubmed_free_text_terms": [
+      "socioeconomic status"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:family_history",
+    "pubmed_free_text_terms": [
+      "family history"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:genetic_variant",
+    "pubmed_free_text_terms": [
+      "genetic variant"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:hormone_replacement_therapy",
+    "pubmed_free_text_terms": [
+      "hormone replacement therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:oral_contraceptive_use",
+    "pubmed_free_text_terms": [
+      "oral contraceptive use"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_exposure:breastfeeding",
+    "pubmed_free_text_terms": [
+      "breastfeeding"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:ace_inhibitor",
+    "pubmed_free_text_terms": [
+      "ACE inhibitor"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:angiotensin_receptor_blocker",
+    "pubmed_free_text_terms": [
+      "angiotensin receptor blocker"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:beta_blocker",
+    "pubmed_free_text_terms": [
+      "beta-blocker"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:sglt2_inhibitor",
+    "pubmed_free_text_terms": [
+      "SGLT2 inhibitor"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:glp1_receptor_agonist",
+    "pubmed_free_text_terms": [
+      "GLP-1 receptor agonist"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:anticoagulation",
+    "pubmed_free_text_terms": [
+      "anticoagulation"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:antiplatelet_therapy",
+    "pubmed_free_text_terms": [
+      "antiplatelet therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:proton_pump_inhibitor",
+    "pubmed_free_text_terms": [
+      "proton pump inhibitor"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:antibiotic_therapy",
+    "pubmed_free_text_terms": [
+      "antibiotic therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:corticosteroid",
+    "pubmed_free_text_terms": [
+      "corticosteroid"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:nonsteroidal_anti_inflammatory_drug",
+    "pubmed_free_text_terms": [
+      "nonsteroidal anti-inflammatory drug"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:targeted_therapy",
+    "pubmed_free_text_terms": [
+      "targeted therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:endocrine_therapy",
+    "pubmed_free_text_terms": [
+      "endocrine therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:neoadjuvant_therapy",
+    "pubmed_free_text_terms": [
+      "neoadjuvant therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:adjuvant_therapy",
+    "pubmed_free_text_terms": [
+      "adjuvant therapy"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:screening",
+    "pubmed_free_text_terms": [
+      "screening"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:vaccination",
+    "pubmed_free_text_terms": [
+      "vaccination"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:rehabilitation",
+    "pubmed_free_text_terms": [
+      "rehabilitation"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:dietary_intervention",
+    "pubmed_free_text_terms": [
+      "dietary intervention"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_intervention:exercise_intervention",
+    "pubmed_free_text_terms": [
+      "exercise intervention"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:incidence",
+    "pubmed_free_text_terms": [
+      "incidence"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:prevalence",
+    "pubmed_free_text_terms": [
+      "prevalence"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:remission",
+    "pubmed_free_text_terms": [
+      "remission"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:complete_response",
+    "pubmed_free_text_terms": [
+      "complete response"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:partial_response",
+    "pubmed_free_text_terms": [
+      "partial response"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:objective_response_rate",
+    "pubmed_free_text_terms": [
+      "objective response rate"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:disease_control_rate",
+    "pubmed_free_text_terms": [
+      "disease control rate"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:pathologic_complete_response",
+    "pubmed_free_text_terms": [
+      "pathologic complete response"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:complication",
+    "pubmed_free_text_terms": [
+      "complication"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:bleeding",
+    "pubmed_free_text_terms": [
+      "bleeding"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:infection",
+    "pubmed_free_text_terms": [
+      "infection"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:thrombosis",
+    "pubmed_free_text_terms": [
+      "thrombosis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:stroke_outcome",
+    "pubmed_free_text_terms": [
+      "stroke outcome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:myocardial_infarction_outcome",
+    "pubmed_free_text_terms": [
+      "myocardial infarction outcome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:renal_function_decline",
+    "pubmed_free_text_terms": [
+      "renal function decline"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:acute_kidney_injury_outcome",
+    "pubmed_free_text_terms": [
+      "acute kidney injury outcome"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:progression",
+    "pubmed_free_text_terms": [
+      "progression"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:metastasis",
+    "pubmed_free_text_terms": [
+      "metastasis"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:readmission",
+    "pubmed_free_text_terms": [
+      "readmission"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:length_of_stay",
+    "pubmed_free_text_terms": [
+      "length of stay"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:pain_score",
+    "pubmed_free_text_terms": [
+      "pain score"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:body_weight_change",
+    "pubmed_free_text_terms": [
+      "body weight change"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:glycemic_control",
+    "pubmed_free_text_terms": [
+      "glycemic control"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:blood_pressure_control",
+    "pubmed_free_text_terms": [
+      "blood pressure control"
+    ],
+    "review_status": "manual_seed_mapping"
+  },
+  {
+    "concept_id": "meta_outcome:biochemical_recurrence",
+    "pubmed_free_text_terms": [
+      "biochemical recurrence"
+    ],
+    "review_status": "manual_seed_mapping"
   }
 ]
