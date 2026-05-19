@@ -10,6 +10,12 @@ from .tcga_expression_builder import (
     TCGAExpressionQuantificationBuilder,
     latest_tcga_raw_expression_record_path,
 )
+from .tcga_clinical_builder import (
+    TCGAClinicalBuildResult,
+    TCGAClinicalMetadataBuilder,
+    latest_tcga_clinical_build_manifest_path,
+    latest_tcga_expression_build_manifest_path,
+)
 from .tcga_preview import (
     GDC_API_ROOT,
     TCGADownloadPlanDraft,
@@ -27,6 +33,8 @@ __all__ = [
     "TCGADownloadExecutionResult",
     "TCGADownloadPlanDraft",
     "TCGADownloadPlanExecutor",
+    "TCGAClinicalBuildResult",
+    "TCGAClinicalMetadataBuilder",
     "TCGAExpressionBuildResult",
     "TCGAExpressionQuantificationBuilder",
     "TCGAMetadataPreviewService",
@@ -35,7 +43,9 @@ __all__ = [
     "build_tcga_preview_request",
     "fetch_tcga_file_manifest_entries",
     "format_bytes_zh",
+    "latest_tcga_clinical_build_manifest_path",
     "latest_tcga_download_plan_path",
+    "latest_tcga_expression_build_manifest_path",
     "latest_tcga_raw_expression_record_path",
     "write_tcga_download_plan_draft",
 ]

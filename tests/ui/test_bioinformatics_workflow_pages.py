@@ -667,6 +667,121 @@ def test_data_source_tcga_expression_build_ui_waits_for_data_check(qt_app, proje
     assert widget.findChild(QLabel, "dataSelectionReadyCount").text() == "可进入数据检查：1 个"
 
 
+def test_data_source_tcga_clinical_metadata_ui_runs_after_expression_build(qt_app, project_summary, monkeypatch, tmp_path: Path) -> None:
+    from app.bioinformatics.data_sources.tcga_clinical_builder import TCGAClinicalBuildResult
+
+    manifest = project_summary.project_root / "standardized_data" / "tcga" / "tcga-thca" / "build" / "data_prepared" / "tcga" / "tcga_expression_build_manifest.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text("{}", encoding="utf-8")
+    raw_cases = tmp_path / "tcga_clinical_raw_cases.json"
+    case_table = tmp_path / "tcga_clinical_case_table.tsv"
+    diagnosis_table = tmp_path / "tcga_clinical_diagnosis_table.tsv"
+    followup_table = tmp_path / "tcga_clinical_followup_table.tsv"
+    survival_table = tmp_path / "tcga_clinical_survival_table.tsv"
+    mapping_table = tmp_path / "tcga_clinical_mapping_table.tsv"
+    clinical_manifest = tmp_path / "tcga_clinical_build_manifest.json"
+    receipt = tmp_path / "tcga_clinical_receipt.json"
+    for path in (raw_cases, case_table, diagnosis_table, followup_table, survival_table, mapping_table, clinical_manifest, receipt):
+        path.write_text("", encoding="utf-8")
+
+    class FakeClinicalBuilder:
+        def build_for_latest_expression_build(self, project_root):
+            return TCGAClinicalBuildResult(
+                success=True,
+                status="tcga_clinical_metadata_built",
+                message="TCGA clinical metadata 已获取：2 个 case；匹配表达 case 2 个，基础 OS 可用 1 个 case；等待数据检查与准备。",
+                project_id="TCGA-THCA",
+                clinical_build_id="tcga-b66-test",
+                mode="expression_matched_cases",
+                case_count=2,
+                matched_case_count=2,
+                matched_sample_count=3,
+                survival_case_count=1,
+                death_event_count=1,
+                raw_cases_path=raw_cases,
+                case_table_path=case_table,
+                diagnosis_table_path=diagnosis_table,
+                followup_table_path=followup_table,
+                survival_table_path=survival_table,
+                mapping_table_path=mapping_table,
+                clinical_manifest_path=clinical_manifest,
+                clinical_receipt_path=receipt,
+                warnings=("death_event_count_below_warning_threshold_5",),
+            )
+
+    monkeypatch.setattr(workflow_pages, "latest_tcga_expression_build_manifest_path", lambda project_root: manifest)
+    widget = BioinformaticsDataSourceWidget()
+    widget._tcga_clinical_builder = FakeClinicalBuilder()
+    widget.refresh_project(project_summary)
+
+    button = widget.findChild(QPushButton, "fetchTcgaClinicalMetadataButton")
+    assert button.isEnabled()
+    result = widget.fetch_tcga_clinical_metadata()
+
+    assert result is not None
+    assert result.mode == "expression_matched_cases"
+    status_text = widget.findChild(QPlainTextEdit, "tcgaClinicalBuildStatus").toPlainText()
+    assert "case：2；匹配 case：2；匹配 sample：3" in status_text
+    assert "基础 OS 可用 case：1；死亡事件：1" in status_text
+    assert "不会执行 KM/Cox/log-rank" in status_text
+
+
+def test_data_source_tcga_clinical_metadata_ui_allows_project_preview_without_expression_build(qt_app, project_summary, monkeypatch, tmp_path: Path) -> None:
+    from app.bioinformatics.data_sources.tcga_clinical_builder import TCGAClinicalBuildResult
+
+    paths = [tmp_path / name for name in (
+        "tcga_clinical_raw_cases.json",
+        "tcga_clinical_case_table.tsv",
+        "tcga_clinical_diagnosis_table.tsv",
+        "tcga_clinical_followup_table.tsv",
+        "tcga_clinical_survival_table.tsv",
+        "tcga_clinical_mapping_table.tsv",
+        "tcga_clinical_build_manifest.json",
+        "tcga_clinical_receipt.json",
+    )]
+    for path in paths:
+        path.write_text("", encoding="utf-8")
+
+    class FakeClinicalBuilder:
+        def build_for_project(self, project_root, project_id):
+            return TCGAClinicalBuildResult(
+                success=True,
+                status="tcga_clinical_metadata_built",
+                message="TCGA clinical 概况已获取：1 个 case；无 B6.4 表达矩阵，不能做表达-临床映射。",
+                project_id=project_id,
+                clinical_build_id="tcga-b66-preview",
+                mode="project_clinical_preview_only",
+                case_count=1,
+                matched_case_count=0,
+                matched_sample_count=0,
+                survival_case_count=1,
+                death_event_count=0,
+                raw_cases_path=paths[0],
+                case_table_path=paths[1],
+                diagnosis_table_path=paths[2],
+                followup_table_path=paths[3],
+                survival_table_path=paths[4],
+                mapping_table_path=paths[5],
+                clinical_manifest_path=paths[6],
+                clinical_receipt_path=paths[7],
+                warnings=("project_clinical_preview_only_no_expression_mapping",),
+            )
+
+    monkeypatch.setattr(workflow_pages, "latest_tcga_expression_build_manifest_path", lambda project_root: None)
+    widget = BioinformaticsDataSourceWidget()
+    widget._tcga_clinical_builder = FakeClinicalBuilder()
+    widget.refresh_project(project_summary)
+
+    assert widget.findChild(QPushButton, "fetchTcgaClinicalMetadataButton").isEnabled()
+    result = widget.fetch_tcga_clinical_metadata()
+
+    assert result is not None
+    assert result.mode == "project_clinical_preview_only"
+    status_text = widget.findChild(QPlainTextEdit, "tcgaClinicalBuildStatus").toPlainText()
+    assert "项目 clinical 概况预览" in status_text
+    assert "匹配 case：0；匹配 sample：0" in status_text
+
+
 def test_data_source_tcga_metadata_preview_network_failure(qt_app, project_summary) -> None:
     class FailingTcgaPreviewService:
         def build_preview(self, request):

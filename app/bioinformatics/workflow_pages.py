@@ -56,6 +56,8 @@ from app.bioinformatics.data_sources import (
     TCGADownloadPlanExecutor,
     TCGADownloadPlanDraft,
     TCGADownloadExecutionResult,
+    TCGAClinicalBuildResult,
+    TCGAClinicalMetadataBuilder,
     TCGAExpressionBuildResult,
     TCGAExpressionQuantificationBuilder,
     TCGAMetadataPreviewService,
@@ -63,6 +65,7 @@ from app.bioinformatics.data_sources import (
     build_tcga_preview_request,
     format_bytes_zh,
     latest_tcga_download_plan_path,
+    latest_tcga_expression_build_manifest_path,
     latest_tcga_raw_expression_record_path,
     write_tcga_download_plan_draft,
 )
@@ -689,10 +692,12 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_preview_service = TCGAMetadataPreviewService()
         self._tcga_download_executor = TCGADownloadPlanExecutor()
         self._tcga_expression_builder = TCGAExpressionQuantificationBuilder()
+        self._tcga_clinical_builder = TCGAClinicalMetadataBuilder()
         self._tcga_preview_summary: TCGAPreviewSummary | None = None
         self._tcga_download_plan_draft: TCGADownloadPlanDraft | None = None
         self._tcga_download_result: TCGADownloadExecutionResult | None = None
         self._tcga_expression_build_result: TCGAExpressionBuildResult | None = None
+        self._tcga_clinical_build_result: TCGAClinicalBuildResult | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -718,6 +723,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_geo_download_list()
         self._refresh_tcga_download_plan_state()
         self._refresh_tcga_expression_build_state()
+        self._refresh_tcga_clinical_build_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -1110,10 +1116,14 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_expression_build_button = _button("构建 TCGA 表达矩阵", "secondaryButton", self.build_tcga_expression_matrix)
         self._tcga_expression_build_button.setObjectName("buildTcgaExpressionMatrixButton")
         self._tcga_expression_build_button.setEnabled(False)
+        self._tcga_clinical_build_button = _button("获取 TCGA 临床信息", "secondaryButton", self.fetch_tcga_clinical_metadata)
+        self._tcga_clinical_build_button.setObjectName("fetchTcgaClinicalMetadataButton")
+        self._tcga_clinical_build_button.setEnabled(False)
         actions.addWidget(preview_button)
         actions.addWidget(self._tcga_plan_button)
         actions.addWidget(self._tcga_download_button)
         actions.addWidget(self._tcga_expression_build_button)
+        actions.addWidget(self._tcga_clinical_build_button)
         actions.addStretch(1)
         layout.addLayout(actions)
         self._tcga_download_status_text = _text_preview(88)
@@ -1124,6 +1134,10 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._tcga_expression_build_status_text.setObjectName("tcgaExpressionBuildStatus")
         self._tcga_expression_build_status_text.setPlainText("尚未获取 TCGA 原始表达文件。")
         layout.addWidget(self._tcga_expression_build_status_text)
+        self._tcga_clinical_build_status_text = _text_preview(92)
+        self._tcga_clinical_build_status_text.setObjectName("tcgaClinicalBuildStatus")
+        self._tcga_clinical_build_status_text.setPlainText("尚未构建 TCGA clinical metadata。")
+        layout.addWidget(self._tcga_clinical_build_status_text)
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._tcga_developer_details)))
         developer_actions.addStretch(1)
@@ -1492,6 +1506,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
         self._refresh_tcga_expression_build_state()
+        self._refresh_tcga_clinical_build_state()
         self._set_status("TCGA 表达矩阵已构建，等待统一数据检查与准备；仍不会直接进入 DEG/GSEA ready。")
         return result
 
@@ -1513,6 +1528,61 @@ class BioinformaticsDataSourceWidget(QWidget):
         )
         self._tcga_status_label.setText("TCGA 表达矩阵已构建，等待统一数据检查与准备。")
 
+    def fetch_tcga_clinical_metadata(self) -> TCGAClinicalBuildResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        expression_manifest = latest_tcga_expression_build_manifest_path(self._project_root)
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or "TCGA-THCA"))
+        if expression_manifest is not None:
+            self._tcga_clinical_build_status_text.setPlainText("正在从 GDC /cases 获取 TCGA clinical metadata，并与 B6.4 表达样本映射。")
+            self._tcga_status_label.setText("正在获取 TCGA clinical metadata，请稍候。")
+            QApplication.processEvents()
+            try:
+                result = self._tcga_clinical_builder.build_for_latest_expression_build(self._project_root)
+            except Exception as exc:
+                self._tcga_clinical_build_status_text.setPlainText(f"TCGA clinical metadata 构建失败：{exc}")
+                self._set_status(f"TCGA clinical metadata 构建失败：{exc}", error=True)
+                return None
+        else:
+            self._tcga_clinical_build_status_text.setPlainText("未找到 B6.4 build；将仅按项目获取 TCGA clinical 概况，不能做表达-临床映射。")
+            self._tcga_status_label.setText("正在获取项目 clinical 概况，请稍候。")
+            QApplication.processEvents()
+            try:
+                result = self._tcga_clinical_builder.build_for_project(self._project_root, project.project_id)
+            except Exception as exc:
+                self._tcga_clinical_build_status_text.setPlainText(f"TCGA clinical metadata 预览失败：{exc}")
+                self._set_status(f"TCGA clinical metadata 预览失败：{exc}", error=True)
+                return None
+        self._tcga_clinical_build_result = result
+        self._render_tcga_clinical_build_result(result)
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._refresh_tcga_clinical_build_state()
+        self._set_status("TCGA clinical metadata 已获取；仅进入 clinical/survival preflight readiness，不自动执行 survival、DEG 或 GSEA。")
+        return result
+
+    def _render_tcga_clinical_build_result(self, result: TCGAClinicalBuildResult) -> None:
+        mode_text = "表达数据匹配" if result.mode == "expression_matched_cases" else "项目 clinical 概况预览"
+        warning_line = f"警告：{len(result.warnings)} 条" if result.warnings else "警告：无"
+        self._tcga_clinical_build_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"构建状态：{result.message}",
+                    f"模式：{mode_text}",
+                    f"case：{result.case_count}；匹配 case：{result.matched_case_count}；匹配 sample：{result.matched_sample_count}",
+                    f"基础 OS 可用 case：{result.survival_case_count}；死亡事件：{result.death_event_count}",
+                    f"case table：{result.case_table_path}",
+                    f"mapping table：{result.mapping_table_path}",
+                    f"clinical manifest：{result.clinical_manifest_path}",
+                    f"receipt：{result.clinical_receipt_path}",
+                    warning_line,
+                    "当前不会执行 KM/Cox/log-rank，也不会生成 clinical 结论。",
+                ]
+            )
+        )
+        self._tcga_status_label.setText("TCGA clinical metadata 已获取，等待数据检查与准备。")
+
     def _refresh_tcga_download_plan_state(self) -> None:
         if not hasattr(self, "_tcga_download_button"):
             return
@@ -1532,6 +1602,21 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._tcga_expression_build_status_text.setPlainText(
                 f"可构建表达矩阵：{record_path.name}" if record_path is not None else "尚未获取 TCGA 原始表达文件。"
             )
+
+    def _refresh_tcga_clinical_build_state(self) -> None:
+        if not hasattr(self, "_tcga_clinical_build_button"):
+            return
+        has_project = self._project_root is not None
+        self._tcga_clinical_build_button.setEnabled(has_project)
+        if hasattr(self, "_tcga_clinical_build_status_text") and self._tcga_clinical_build_result is None:
+            if not has_project:
+                self._tcga_clinical_build_status_text.setPlainText("请先创建或打开项目。")
+                return
+            expression_manifest = latest_tcga_expression_build_manifest_path(self._project_root)
+            if expression_manifest is not None:
+                self._tcga_clinical_build_status_text.setPlainText(f"可获取 clinical metadata 并匹配表达构建：{expression_manifest.name}")
+            else:
+                self._tcga_clinical_build_status_text.setPlainText("可按当前 TCGA project 获取 clinical 概况；无 B6.4 build 时不能做表达-临床映射。")
 
     def create_gtex_source_request(self) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -6459,6 +6544,10 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
                 return "未下载"
     if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
         return "TCGA 表达矩阵已构建，等待数据检查与准备"
+    if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+        if str(metadata.get("mode") or "") == "project_clinical_preview_only":
+            return "TCGA clinical 概况已获取，等待 B6.4 表达矩阵后映射"
+        return "TCGA clinical metadata 已获取，等待数据检查与准备"
     if _record_ready_for_recognition(payload, metadata):
         if row.source_type_key == "local_import":
             return "已导入"
@@ -6491,6 +6580,14 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
     if "平台" in raw_status or metadata.get("platform_accessions"):
         assets.append("平台注释")
     if "tcga" in row.source_type_key:
+        if str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+            summary = metadata.get("tcga_clinical_summary")
+            if isinstance(summary, dict):
+                cases = int(summary.get("case_count") or 0)
+                matched = int(summary.get("matched_case_count") or 0)
+                survival = int(summary.get("survival_case_count") or 0)
+                return f"clinical metadata（{cases} case / 匹配 {matched} case / OS {survival} case）"
+            return "clinical metadata、case/sample mapping"
         if str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
             summary = metadata.get("tcga_expression_build_summary")
             if isinstance(summary, dict):
@@ -6528,6 +6625,10 @@ def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: di
     if "平台" not in raw_status and not metadata.get("platform_accessions") and row.source_type_key in GEO_SOURCE_TYPES:
         missing.append("平台注释")
     if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
+        if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+            if str(metadata.get("mode") or "") == "project_clinical_preview_only":
+                return "B6.4 表达矩阵构建后再做表达-临床映射"
+            return "统一数据检查与准备；survival 仅进入 preflight"
         if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
             return "统一数据检查与准备"
         if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
@@ -6592,7 +6693,7 @@ def _dataset_entry_rank(entry: DatasetListEntry, created_at: str) -> tuple[int, 
     score = 0
     if entry.status in {"识别完成", "已导入", "已下载"} or entry.ready_for_recognition or "表达矩阵已构建" in entry.status:
         score = 3
-    elif entry.status == "待识别" or "原始文件已获取" in entry.status:
+    elif entry.status == "待识别" or "原始文件已获取" in entry.status or "clinical" in entry.status:
         score = 2
     elif entry.status == "未下载":
         score = 1
@@ -7514,6 +7615,8 @@ def _registered_status_text(payload: dict[str, object]) -> str:
             return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
         if download_status == "tcga_expression_matrix_built":
             return "TCGA 表达矩阵已构建，等待数据检查与准备"
+        if download_status == "tcga_clinical_metadata_built":
+            return "TCGA clinical metadata 已获取，等待数据检查与准备"
         if download_status == "gtex_download_manifest_created":
             return "GTEx 下载清单已创建，待下载表达矩阵"
         if ready == "ready" and download_status == "geo_metadata_downloaded":
@@ -7556,6 +7659,8 @@ def _record_ready_for_recognition(payload: dict[str, object], metadata: dict[str
     if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
         return False
     if str(metadata.get("ready_for_recognition") or "") == "pending_expression_matrix_build":
+        return False
+    if str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
         return False
     if metadata.get("ready_for_recognition") == "ready" or metadata.get("download_status") == "downloaded":
         return True
@@ -9930,6 +10035,15 @@ def _dataset_readiness_user_rows(summary: dict[str, object]) -> list[list[str]]:
                 ["TCGA B6.4 构建产物", str(tcga.get("status") or "unknown"), f"{tcga.get('sample_count') or 0} 样本 / {tcga.get('gene_count') or 0} 基因。"],
                 ["TCGA 默认分组候选", str(tcga.get("default_group_status") or "unknown"), "Primary Tumor vs Solid Tissue Normal；仍需用户确认比较组。"],
                 ["TCGA DEG 值类型", str(tcga.get("deg_input_value_type") or "count"), "raw counts 用于 DEG preflight；TPM/FPKM/FPKM-UQ 仅默认展示。"],
+            ]
+        )
+    tcga_clinical = summary.get("tcga_clinical_readiness") if isinstance(summary.get("tcga_clinical_readiness"), dict) else {}
+    if tcga_clinical and tcga_clinical.get("has_tcga_clinical_build"):
+        rows.extend(
+            [
+                ["TCGA clinical metadata", str(tcga_clinical.get("clinical_gate_status") or "clinical_unavailable"), f"{tcga_clinical.get('case_count') or 0} case；匹配 {tcga_clinical.get('matched_case_count') or 0} case。"],
+                ["表达-临床映射", str(tcga_clinical.get("mode") or "unknown"), f"{tcga_clinical.get('matched_sample_count') or 0}/{tcga_clinical.get('sample_count') or 0} sample 已匹配 clinical。"],
+                ["TCGA 基础 OS readiness", str(tcga_clinical.get("survival_gate_status") or "survival_unavailable"), f"OS 可用 {tcga_clinical.get('survival_case_count') or 0} case；死亡事件 {tcga_clinical.get('death_event_count') or 0}。不自动运行 survival，不生成临床结论。"],
             ]
         )
     return rows
