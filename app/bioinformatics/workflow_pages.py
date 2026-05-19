@@ -52,6 +52,14 @@ from app.bioinformatics.comparison_config import (
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.data_source_requests import create_data_source_request
+from app.bioinformatics.data_sources import (
+    TCGADownloadPlanDraft,
+    TCGAMetadataPreviewService,
+    TCGAPreviewSummary,
+    build_tcga_preview_request,
+    format_bytes_zh,
+    write_tcga_download_plan_draft,
+)
 from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
 from app.bioinformatics.project_readiness import (
@@ -672,6 +680,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_preview: GseDatasetPreview | None = None
         self._geo_candidates: dict[str, UnifiedDatasetCandidate] = {}
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
+        self._tcga_preview_service = TCGAMetadataPreviewService()
+        self._tcga_preview_summary: TCGAPreviewSummary | None = None
+        self._tcga_download_plan_draft: TCGADownloadPlanDraft | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -1031,7 +1042,8 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _tcga_database_card(self) -> QFrame:
         card, layout = _card("TCGA 数据库")
         card.setObjectName("tcgaDatabaseEntryCard")
-        layout.addWidget(_muted("请选择癌种、分析目的和样本范围。软件会自动决定需要获取的数据内容。"))
+        layout.addWidget(_muted("请选择癌种、分析目的和样本范围。本步骤仅预览 TCGA 可下载数据，不会下载大文件。"))
+        layout.addWidget(_muted("软件会根据分析目的自动选择所需数据类型；下载计划草案不会进入差异分析或 GSEA。"))
         self._tcga_project_combo = QComboBox()
         self._tcga_project_combo.setObjectName("tcgaProjectCombo")
         for group, projects in grouped_tcga_projects().items():
@@ -1056,15 +1068,42 @@ class BioinformaticsDataSourceWidget(QWidget):
         form.addWidget(QLabel("样本范围"), 2, 0)
         form.addWidget(self._tcga_sample_scope_combo, 2, 1)
         layout.addLayout(form)
-        self._tcga_preview_table = _table(["项目", "分析目的", "样本范围", "预览状态", "预计内容"])
+        self._tcga_preview_table = _table(["项目", "分析目的", "样本范围", "预览状态", "case", "sample", "file", "预计大小"])
         self._tcga_preview_table.setObjectName("tcgaPreviewTable")
-        self._tcga_preview_table.setMaximumHeight(120)
+        self._tcga_preview_table.setMaximumHeight(128)
         layout.addWidget(self._tcga_preview_table)
-        self._tcga_status_label = _status_label("当前阶段已建立 TCGA 中文类目和任务流程。真实 GDC 查询与下载将在下一阶段接入。")
+        self._tcga_sample_type_table = _table(["样本类型", "数量"])
+        self._tcga_sample_type_table.setObjectName("tcgaSampleTypeDistributionTable")
+        self._tcga_sample_type_table.setMaximumHeight(150)
+        layout.addWidget(self._tcga_sample_type_table)
+        self._tcga_summary_text = _text_preview(118)
+        self._tcga_summary_text.setObjectName("tcgaMetadataPreviewSummary")
+        self._tcga_summary_text.setPlainText("尚未预览。点击“预览可下载数据”后显示 case/sample/file 和预计下载内容。")
+        layout.addWidget(self._tcga_summary_text)
+        self._tcga_warning_text = _text_preview(92)
+        self._tcga_warning_text.setObjectName("tcgaMetadataPreviewWarnings")
+        self._tcga_warning_text.setPlainText("风险/限制提示会显示在这里。TCGA 与 GTEx 不会被自动合并。")
+        layout.addWidget(self._tcga_warning_text)
+        self._tcga_status_label = _status_label("当前阶段已建立 TCGA 中文类目和任务流程。可先执行真实 GDC metadata 预览。")
         layout.addWidget(self._tcga_status_label)
-        button = _button("下载并构建数据集", "primaryButton", self.create_tcga_source_request)
-        button.setObjectName("createTcgaDataSourceRequestButton")
-        layout.addWidget(button, alignment=Qt.AlignLeft)
+        actions = QHBoxLayout()
+        preview_button = _button("预览可下载数据", "primaryButton", self.preview_tcga_downloadable_data)
+        preview_button.setObjectName("previewTcgaDownloadableDataButton")
+        self._tcga_plan_button = _button("生成下载计划草案", "secondaryButton", self.create_tcga_download_plan_draft)
+        self._tcga_plan_button.setObjectName("createTcgaDownloadPlanDraftButton")
+        self._tcga_plan_button.setEnabled(False)
+        actions.addWidget(preview_button)
+        actions.addWidget(self._tcga_plan_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._tcga_developer_details)))
+        developer_actions.addStretch(1)
+        layout.addLayout(developer_actions)
+        self._tcga_developer_details = _text_preview(150)
+        self._tcga_developer_details.setObjectName("tcgaMetadataPreviewDeveloperDiagnostics")
+        self._tcga_developer_details.setVisible(False)
+        layout.addWidget(self._tcga_developer_details)
         self._tcga_project_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
         self._tcga_purpose_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
         self._tcga_sample_scope_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
@@ -1110,10 +1149,14 @@ class BioinformaticsDataSourceWidget(QWidget):
     def _refresh_tcga_preview(self) -> None:
         if not hasattr(self, "_tcga_preview_table"):
             return
+        self._tcga_preview_summary = None
+        self._tcga_download_plan_draft = None
+        if hasattr(self, "_tcga_plan_button"):
+            self._tcga_plan_button.setEnabled(False)
         project = get_tcga_project(str(self._tcga_project_combo.currentData() or "TCGA-THCA"))
         purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or "differential_expression"))
         scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or "tumor"))
-        expected = "、".join(_user_asset_label(asset) for asset in purpose.required_internal_assets)
+        request = build_tcga_preview_request(project=project, purpose=purpose, scope=scope)
         _fill_table(
             self._tcga_preview_table,
             [
@@ -1121,11 +1164,75 @@ class BioinformaticsDataSourceWidget(QWidget):
                     f"{project.chinese_name} ({project.project_id})",
                     purpose.chinese_name,
                     scope.chinese_name,
-                    "需要下一阶段连接 GDC API 后获取真实预览",
-                    expected or "项目元数据",
+                    "尚未预览",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
                 ]
             ],
         )
+        _fill_table(self._tcga_sample_type_table, [[sample_type, "-"] for sample_type in request.sample_types] or [["全部可用样本", "-"]])
+        expected = "、".join(_user_asset_label(asset) for asset in purpose.required_internal_assets)
+        if hasattr(self, "_tcga_summary_text"):
+            self._tcga_summary_text.setPlainText(
+                "预计内容："
+                + (expected or "项目元数据")
+                + "\n本阶段仅预览可下载数据，不执行下载和矩阵构建。"
+            )
+        if hasattr(self, "_tcga_warning_text"):
+            self._tcga_warning_text.setPlainText("尚未执行 GDC metadata 预览。下载计划草案不会进入 DEG/GSEA ready。")
+        if hasattr(self, "_tcga_developer_details"):
+            self._tcga_developer_details.setPlainText("")
+
+    def preview_tcga_downloadable_data(self) -> TCGAPreviewSummary | None:
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or ""))
+        purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or ""))
+        scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or ""))
+        request = build_tcga_preview_request(project=project, purpose=purpose, scope=scope)
+        self._tcga_status_label.setText("正在查询 GDC metadata，请稍候。")
+        QApplication.processEvents()
+        summary = self._tcga_preview_service.build_preview(request)
+        self._tcga_preview_summary = summary
+        self._tcga_download_plan_draft = None
+        self._render_tcga_metadata_preview(summary)
+        if summary.status == "failed":
+            self._set_status("TCGA metadata 预览失败；请稍后重试或更换条件。", error=True)
+        elif summary.status == "empty":
+            self._set_status("未找到符合当前项目、分析目的和样本范围的数据。", error=True)
+        else:
+            self._set_status("TCGA metadata 预览已生成；如满足条件，可生成下载计划草案。")
+        return summary
+
+    def _render_tcga_metadata_preview(self, summary: TCGAPreviewSummary) -> None:
+        status_text = _tcga_preview_status_text(summary)
+        _fill_table(
+            self._tcga_preview_table,
+            [
+                [
+                    f"{summary.request.project_label_zh} ({summary.request.project_id})",
+                    summary.request.analysis_purpose_zh,
+                    summary.request.sample_scope_zh,
+                    status_text,
+                    str(summary.case_count),
+                    str(summary.sample_count),
+                    str(summary.file_count),
+                    format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown),
+                ]
+            ],
+        )
+        sample_rows = [[sample_type, str(count)] for sample_type, count in summary.sample_type_counts.items()]
+        _fill_table(self._tcga_sample_type_table, sample_rows or [["未返回样本类型", "0"]])
+        self._tcga_summary_text.setPlainText(_tcga_preview_summary_text(summary))
+        self._tcga_warning_text.setPlainText("\n".join(summary.warnings) if summary.warnings else "未发现阻断性提示。")
+        self._tcga_developer_details.setPlainText(_json(_tcga_preview_developer_payload(summary)))
+        self._tcga_plan_button.setEnabled(summary.is_download_plan_available)
+        if summary.is_download_plan_available:
+            self._tcga_status_label.setText("TCGA metadata 预览完成，可生成下载计划草案；不会下载文件。")
+        elif summary.status == "failed":
+            self._tcga_status_label.setText("TCGA metadata 预览失败，未生成下载计划。")
+        else:
+            self._tcga_status_label.setText("当前预览不满足生成下载计划草案条件。")
 
     def _refresh_gtex_preview(self) -> None:
         if not hasattr(self, "_gtex_preview_table"):
@@ -1207,6 +1314,90 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._refresh_registered_sources()
         self._set_status("TCGA 数据源 request 草案已生成；不会执行虚假下载，也不会进入真实分析 ready。")
         return summary
+
+    def create_tcga_download_plan_draft(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        summary = self._tcga_preview_summary
+        if summary is None:
+            self._set_status("请先点击“预览可下载数据”。", error=True)
+            return None
+        if not summary.is_download_plan_available:
+            self._set_status("当前预览没有可用表达文件，不能生成下载计划草案。", error=True)
+            return None
+        draft = write_tcga_download_plan_draft(self._project_root, summary)
+        self._tcga_download_plan_draft = draft
+        project = get_tcga_project(summary.request.project_id)
+        purpose = get_tcga_analysis_purpose(summary.request.analysis_purpose)
+        scope = get_tcga_sample_scope(summary.request.sample_scope)
+        warnings = tuple(dict.fromkeys((
+            *summary.warnings,
+            "本阶段只生成 TCGA/GDC 下载计划草案，不下载大文件。",
+            "TCGA 下载计划草案不写 source_files，不进入 DEG/GSEA ready。",
+        )))
+        request_draft = create_data_source_request(
+            self._project_root,
+            source_type="TCGA",
+            user_title=f"TCGA 数据库 - {project.chinese_name}",
+            user_selection_summary=f"{project.chinese_name} / {purpose.chinese_name} / {scope.chinese_name}",
+            internal_selection={
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "analysis_purpose": purpose.purpose_id,
+                "sample_scope": scope.scope_id,
+                "internal_sample_types": list(scope.internal_sample_types),
+                "readiness_profile": purpose.readiness_profile,
+                "metadata_preview": summary.to_dict(),
+                "download_plan_draft_path": str(draft.plan_path),
+                "download_plan_status": draft.status,
+            },
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="download_plan_draft",
+        )
+        acquisition = register_acquisition(
+            self._project_root,
+            source_type="tcga_project",
+            source_label=project.project_id,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "tcga_gdc",
+                "ui_source": "tcga_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "tcga_gdc_download_plan_draft_created",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": request_draft.request.request_id,
+                "data_source_request_path": str(request_draft.request_path),
+                "download_plan_draft_id": draft.plan_id,
+                "download_plan_draft_path": str(draft.plan_path),
+                "download_plan_status": draft.status,
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "chinese_name": project.chinese_name,
+                "english_name": project.english_name,
+                "organ_system": project.organ_system,
+                "analysis_purpose": purpose.purpose_id,
+                "analysis_purpose_zh": purpose.chinese_name,
+                "sample_scope": scope.scope_id,
+                "sample_scope_zh": scope.chinese_name,
+                "expected_assets": list(purpose.required_internal_assets),
+                "metadata_preview_summary": summary.to_dict(),
+                "tcga_preview_file_count": summary.file_count,
+                "tcga_preview_case_count": summary.case_count,
+                "tcga_preview_sample_count": summary.sample_count,
+                "tcga_preview_estimated_size": format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown),
+                "display_title_zh": f"TCGA {project.chinese_name}",
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = acquisition
+        self._tcga_status_label.setText(f"已生成 TCGA 下载计划草案：{project.project_id}；未下载文件。")
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("TCGA 下载计划草案已生成；未写 source_files，也不会进入真实分析 ready。")
+        return acquisition
 
     def create_gtex_source_request(self) -> AcquisitionSummary | None:
         if self._project_root is None:
@@ -5974,6 +6165,75 @@ def _geo_file_dataset_technical_info(entry: DatasetListEntry, focused_source_fil
     )
 
 
+def _tcga_preview_status_text(summary: TCGAPreviewSummary) -> str:
+    if summary.status == "failed":
+        return "预览失败"
+    if summary.status == "empty":
+        return "未找到匹配数据"
+    if summary.is_download_plan_available:
+        return "可生成下载计划草案"
+    return "metadata 预览完成"
+
+
+def _tcga_preview_summary_text(summary: TCGAPreviewSummary) -> str:
+    lines = [
+        f"项目：{summary.request.project_label_zh} ({summary.request.project_id})",
+        f"分析目的：{summary.request.analysis_purpose_zh}",
+        f"样本范围：{summary.request.sample_scope_zh}",
+        f"case 数：{summary.case_count}",
+        f"sample 数：{summary.sample_count}",
+        f"file 数：{summary.file_count}",
+        f"预计下载大小：{format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown)}",
+    ]
+    if summary.request.analysis_purpose == "differential_expression":
+        lines.append("预计下载内容：开放 RNA-Seq STAR - Counts，用于后续表达矩阵构建和差异分析 preflight。")
+    elif summary.request.analysis_purpose == "expression_clinical":
+        lines.append("预计下载内容：开放 RNA-Seq STAR - Counts，并预览 clinical/sample metadata 可用性。")
+    elif summary.request.analysis_purpose == "survival":
+        lines.append("预计下载内容：clinical/case/sample metadata 概况；本阶段不执行生存分析。")
+    else:
+        lines.append("预计下载内容：项目样本 metadata 概况，不创建可分析表达数据集。")
+    lines.append("本阶段仅预览和生成草案，不下载文件、不构建表达矩阵、不进入 DEG/GSEA ready。")
+    if summary.access_counts:
+        lines.append("访问类型分布：" + _counter_text(summary.access_counts))
+    if summary.workflow_type_counts:
+        lines.append("工作流摘要：" + _counter_text(summary.workflow_type_counts))
+    if summary.data_format_counts:
+        lines.append("文件格式摘要：" + _counter_text(summary.data_format_counts))
+    return "\n".join(lines)
+
+
+def _tcga_preview_developer_payload(summary: TCGAPreviewSummary) -> dict[str, object]:
+    return {
+        "endpoint": {
+            "files": "/files",
+            "cases": "/cases",
+        },
+        "filters": {
+            "files": summary.gdc_filters,
+            "cases": summary.case_filters,
+        },
+        "fields": {
+            "files": "see app.bioinformatics.data_sources.tcga_preview.FILE_FIELDS",
+            "cases": "see app.bioinformatics.data_sources.tcga_preview.CASE_FIELDS",
+        },
+        "pagination": {
+            "files_fetched": summary.files_fetched,
+            "files_total": summary.files_total,
+            "cases_fetched": summary.cases_fetched,
+            "cases_total": summary.cases_total,
+        },
+        "selected_file_ids_preview": list(summary.selected_file_ids_preview[:10]),
+        "warnings": list(summary.warnings),
+        "status": summary.status,
+        "error_message": summary.error_message,
+    }
+
+
+def _counter_text(values: dict[str, int]) -> str:
+    return "、".join(f"{key} {count}" for key, count in values.items())
+
+
 def _local_import_batch_summary(source_files: tuple[str, ...], storage_policy: str, status: str) -> str:
     if not source_files:
         return ""
@@ -6091,6 +6351,8 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
     if "平台" in raw_status or metadata.get("platform_accessions"):
         assets.append("平台注释")
     if "tcga" in row.source_type_key:
+        if str(metadata.get("download_status") or "") == "tcga_gdc_download_plan_draft_created":
+            return "下载计划草案"
         expected = metadata.get("expected_assets")
         if isinstance(expected, list) and expected:
             return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
@@ -7089,6 +7351,8 @@ def _registered_status_text(payload: dict[str, object]) -> str:
                 return asset_status
         if download_status in {"tcga_gdc_download_manifest_created", "tcga_gdc_download_manifest_pending_file_selection"}:
             return "GDC 文件清单已创建，待下载数据文件"
+        if download_status == "tcga_gdc_download_plan_draft_created":
+            return "GDC metadata 预览完成，下载计划草案已创建"
         if download_status == "gtex_download_manifest_created":
             return "GTEx 下载清单已创建，待下载表达矩阵"
         if ready == "ready" and download_status == "geo_metadata_downloaded":

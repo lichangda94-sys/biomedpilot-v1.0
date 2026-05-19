@@ -388,7 +388,7 @@ def test_data_source_page_shows_four_primary_source_entries(qt_app) -> None:
     assert "TCGA + GTEx 联合数据" not in card_titles
     assert "本地 AI 检索助手" not in card_titles
     assert {"GEO 数据库", "TCGA 数据库", "GTEx 数据库", "本地数据导入"} <= set(card_titles)
-    assert {"进入", "下载并构建数据集"} <= set(button_texts)
+    assert {"进入", "预览可下载数据", "生成下载计划草案"} <= set(button_texts)
     assert "选择本地文件或文件夹" in button_texts
     assert "选择本地数据" not in button_texts
     assert "选择本地文件夹" not in button_texts
@@ -427,6 +427,110 @@ def test_data_source_tcga_request_is_pending_not_ready(qt_app, project_summary) 
     assert entries[0].source == "TCGA 数据库"
     assert entries[0].status == "等待下载与构建"
     assert entries[0].ready_for_recognition is False
+
+
+def test_data_source_tcga_metadata_preview_and_plan_draft(qt_app, project_summary, monkeypatch) -> None:
+    class FakeTcgaPreviewService:
+        def build_preview(self, request):
+            from app.bioinformatics.data_sources.tcga_preview import TCGAPreviewSummary
+
+            return TCGAPreviewSummary(
+                request=request,
+                status="ready",
+                case_count=2,
+                sample_count=2,
+                file_count=2,
+                estimated_size_bytes=3 * 1024 * 1024,
+                size_has_unknown=False,
+                sample_type_counts={"Primary Tumor": 2},
+                access_counts={"open": 2},
+                workflow_type_counts={"STAR - Counts": 2},
+                data_format_counts={"TSV": 2},
+                warnings=("本阶段仅预览可下载数据。",),
+                is_download_plan_available=True,
+                gdc_filters={"op": "and", "content": []},
+                case_filters={"op": "and", "content": []},
+                selected_file_ids_preview=("file-1", "file-2"),
+                files_fetched=2,
+                cases_fetched=2,
+                files_total=2,
+                cases_total=2,
+            )
+
+    widget = BioinformaticsDataSourceWidget()
+    widget._tcga_preview_service = FakeTcgaPreviewService()
+    widget.refresh_project(project_summary)
+
+    summary = widget.preview_tcga_downloadable_data()
+    acquisition = widget.create_tcga_download_plan_draft()
+
+    assert summary is not None
+    assert acquisition is not None
+    assert acquisition.strategy == "plan_only"
+    assert acquisition.source_files == ()
+    assert "未写 source_files" in widget.status_message()
+    assert widget.findChild(QPushButton, "createTcgaDownloadPlanDraftButton").isEnabled()
+    assert "case 数：2" in widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewSummary").toPlainText()
+    assert "STAR - Counts 2" in widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewSummary").toPlainText()
+    assert widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewDeveloperDiagnostics").isVisible() is False
+    request_index = project_summary.project_root / "manifests" / "data_source_requests.json"
+    payload = json.loads(request_index.read_text(encoding="utf-8"))
+    assert payload["requests"][-1]["status"] == "download_plan_draft"
+    assert payload["requests"][-1]["actual_assets"] == []
+    plan_path = Path(payload["requests"][-1]["internal_selection"]["download_plan_draft_path"])
+    assert plan_path.is_file()
+    plan_payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert plan_payload["status"] == "draft_only"
+    assert plan_payload["constraints"]["writes_source_files"] is False
+    assert "source_files" not in plan_payload
+    assert workflow_pages._ready_registered_source_count(project_summary.project_root) == 0
+    entries = workflow_pages._current_project_dataset_entries(project_summary.project_root)
+    assert entries[0].source == "TCGA 数据库"
+    assert entries[0].status == "等待下载与构建"
+    assert entries[0].available_content == "下载计划草案"
+    assert entries[0].ready_for_recognition is False
+
+
+def test_data_source_tcga_metadata_preview_network_failure(qt_app, project_summary) -> None:
+    class FailingTcgaPreviewService:
+        def build_preview(self, request):
+            from app.bioinformatics.data_sources.tcga_preview import TCGAPreviewSummary
+
+            return TCGAPreviewSummary(
+                request=request,
+                status="failed",
+                case_count=0,
+                sample_count=0,
+                file_count=0,
+                estimated_size_bytes=0,
+                size_has_unknown=False,
+                sample_type_counts={},
+                access_counts={},
+                workflow_type_counts={},
+                data_format_counts={},
+                warnings=("GDC metadata 预览失败：timeout",),
+                is_download_plan_available=False,
+                gdc_filters={"op": "and", "content": []},
+                case_filters={"op": "and", "content": []},
+                selected_file_ids_preview=(),
+                files_fetched=0,
+                cases_fetched=0,
+                files_total=None,
+                cases_total=None,
+                error_message="timeout",
+            )
+
+    widget = BioinformaticsDataSourceWidget()
+    widget._tcga_preview_service = FailingTcgaPreviewService()
+    widget.refresh_project(project_summary)
+
+    summary = widget.preview_tcga_downloadable_data()
+
+    assert summary is not None
+    assert summary.status == "failed"
+    assert "预览失败" in widget.findChild(QPlainTextEdit, "tcgaMetadataPreviewWarnings").toPlainText()
+    assert widget.findChild(QPushButton, "createTcgaDownloadPlanDraftButton").isEnabled() is False
+    assert widget.create_tcga_download_plan_draft() is None
 
 
 def test_data_source_gtex_request_is_pending_and_not_tcga_control(qt_app, project_summary) -> None:
