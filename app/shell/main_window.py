@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -27,6 +29,7 @@ from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
+from app.shared.ui_components.primitives import diagnostic_disclosure_title, make_button, make_status_chip
 
 
 class MainWindow(QMainWindow):
@@ -276,31 +279,265 @@ class MainWindow(QMainWindow):
     def _build_settings_page(self) -> QWidget:
         profile = SettingsProfile()
         page = QWidget()
+        page.setObjectName("settingsPage")
         root = QVBoxLayout(page)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
         title = QLabel("Settings / 设置中心")
+        title.setObjectName("settingsTitle")
         title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
-        note = QLabel("设置中心当前为占位页，用于统一管理默认项目路径、语言、Python/R 环境、本地 AI 模型、数据库、图表样式、导出格式和缓存清理。")
+        note = QLabel("低保真 Settings 壳层：集中呈现外部能力、模型与分析资源状态。所有外部能力遵循 detect-first，安装、更新和云端配置仅保留禁用入口。")
+        note.setObjectName("settingsScopeNote")
         note.setWordWrap(True)
         root.addWidget(note)
-        root.addWidget(self._icon_asset_status_card(detailed=True))
-        rows = [
-            ("默认项目路径", profile.default_project_path),
-            ("语言", profile.language),
-            ("Python 环境", profile.python_environment),
-            ("R 环境", profile.r_environment),
-            ("本地 AI 模型", profile.local_ai_model),
-            ("数据库设置", profile.database_settings),
-            ("图表样式", profile.chart_style),
-            ("导出格式", profile.export_format),
-            ("缓存清理", profile.cache_cleanup),
-        ]
-        for label, value in rows:
-            root.addWidget(self._list_card(label, [value]))
+
+        body = QHBoxLayout()
+        body.setSpacing(16)
+        nav = QListWidget()
+        nav.setObjectName("settingsSecondaryNav")
+        nav.setFixedWidth(230)
+        for item in (
+            "通用偏好",
+            "外部能力",
+            "分析资源",
+            "模型与引擎",
+            "开发者诊断",
+        ):
+            nav.addItem(QListWidgetItem(item))
+
+        stack = QStackedWidget()
+        stack.setObjectName("settingsContentStack")
+        stack.addWidget(self._build_settings_general_page(profile))
+        stack.addWidget(self._build_settings_external_capabilities_page())
+        stack.addWidget(self._build_settings_analysis_resources_page())
+        stack.addWidget(self._build_settings_model_engine_page(profile))
+        stack.addWidget(self._build_settings_developer_diagnostics_page())
+        nav.currentRowChanged.connect(stack.setCurrentIndex)
+        nav.setCurrentRow(0)
+
+        body.addWidget(nav)
+        body.addWidget(stack, 1)
+        root.addLayout(body, 1)
         root.addStretch(1)
         return page
+
+    def _build_settings_general_page(self, profile: SettingsProfile) -> QWidget:
+        page = QWidget()
+        page.setObjectName("settingsGeneralPage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(12)
+        root.addWidget(
+            self._settings_status_card(
+                title="通用偏好",
+                status_key="shell_only",
+                rows=[
+                    ("默认项目路径", profile.default_project_path),
+                    ("语言", profile.language),
+                    ("图表样式", profile.chart_style),
+                    ("导出格式", profile.export_format),
+                    ("缓存清理", profile.cache_cleanup),
+                ],
+            )
+        )
+        root.addWidget(self._icon_asset_status_card(detailed=True))
+        root.addStretch(1)
+        return page
+
+    def _build_settings_external_capabilities_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("settingsExternalCapabilitiesPage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(12)
+        root.addWidget(QLabel("检测优先：先显示本机状态，再由用户主动触发安装或更新；本阶段不执行真实安装、下载或云端配置。"))
+        for title, status_key, details in (
+            (
+                "Python 环境",
+                "available",
+                [
+                    ("检测目标", "Python executable / package visibility"),
+                    ("后续动作", "用户触发安装或更新，当前禁用"),
+                ],
+            ),
+            (
+                "R 环境",
+                "not_configured",
+                [
+                    ("检测目标", "Rscript / R packages"),
+                    ("后续动作", "检测后提示用户安装，当前禁用"),
+                ],
+            ),
+            (
+                "ImageJ/Fiji",
+                "not_configured",
+                [
+                    ("检测目标", "本地 ImageJ/Fiji executable"),
+                    ("归属", "LabTools 外部图像引擎，不进入主任务页"),
+                ],
+            ),
+            (
+                "外部图像分析引擎",
+                "planned",
+                [
+                    ("检测目标", "engine path / version / capability manifest"),
+                    ("边界", "仅壳层占位，不连接真实引擎"),
+                ],
+            ),
+        ):
+            root.addWidget(self._settings_capability_card(title, status_key=status_key, details=details))
+        root.addStretch(1)
+        return page
+
+    def _build_settings_analysis_resources_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("settingsAnalysisResourcesPage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(12)
+        for title, status_key, details in (
+            (
+                "GO / KEGG / MSigDB 资源",
+                "planned",
+                [
+                    ("检测目标", "本地资源 manifest 与版本"),
+                    ("边界", "不自动下载数据库"),
+                ],
+            ),
+            (
+                "Bioinformatics resolver / input package",
+                "preflight_only",
+                [
+                    ("检测目标", "standardized repository 与 analysis input package"),
+                    ("边界", "resolver-first，未通过预检不显示正式运行承诺"),
+                ],
+            ),
+            (
+                "Report / Export templates",
+                "developer_preview",
+                [
+                    ("检测目标", "Markdown / HTML / DOCX template availability"),
+                    ("边界", "报告模板多语言化后再正式开放"),
+                ],
+            ),
+        ):
+            root.addWidget(self._settings_capability_card(title, status_key=status_key, details=details))
+        root.addStretch(1)
+        return page
+
+    def _build_settings_model_engine_page(self, profile: SettingsProfile) -> QWidget:
+        page = QWidget()
+        page.setObjectName("settingsModelEnginePage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(12)
+        root.addWidget(
+            self._settings_capability_card(
+                "本地 AI 模型",
+                status_key="not_configured",
+                details=[
+                    ("当前配置", profile.local_ai_model),
+                    ("检测目标", "local model gateway / provider availability"),
+                    ("边界", "AI suggestion 仅为辅助建议，不自动生成结论"),
+                ],
+            )
+        )
+        root.addWidget(
+            self._settings_capability_card(
+                "外部云端模型配置",
+                status_key="blocked",
+                details=[
+                    ("当前状态", "本阶段不配置云端服务"),
+                    ("后续动作", "需要安全策略、密钥策略和用户确认流程"),
+                ],
+            )
+        )
+        root.addStretch(1)
+        return page
+
+    def _build_settings_developer_diagnostics_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("settingsDeveloperDiagnosticsPage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(12)
+
+        toggle = QToolButton()
+        toggle.setObjectName("developerDiagnosticsToggle")
+        toggle.setText(diagnostic_disclosure_title("Settings resources"))
+        toggle.setCheckable(True)
+        toggle.setChecked(False)
+        toggle.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        root.addWidget(toggle)
+
+        panel = self._settings_status_card(
+            title="诊断信息",
+            status_key="developer_preview",
+            rows=[
+                ("用途", "仅供开发者查看本地检测槽位、图标资源状态和壳层边界。"),
+                ("外部动作", "不会安装、下载、更新或连接云端。"),
+                ("覆盖范围", "Settings 二级导航、状态标签、检测优先 UI。"),
+            ],
+        )
+        panel.setObjectName("developerDiagnosticsPanel")
+        panel.setVisible(False)
+        toggle.toggled.connect(panel.setVisible)
+        root.addWidget(panel)
+        root.addStretch(1)
+        return page
+
+    def _settings_status_card(self, *, title: str, status_key: str, rows: list[tuple[str, str]]) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("settingsStatusCard")
+        frame.setStyleSheet("QFrame#settingsStatusCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QHBoxLayout()
+        label = QLabel(title)
+        label.setObjectName("settingsCardTitle")
+        label.setStyleSheet("font-weight: 700;")
+        header.addWidget(label)
+        header.addStretch(1)
+        header.addWidget(make_status_chip(status_key=status_key))
+        layout.addLayout(header)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(8)
+        for row, (name, value) in enumerate(rows):
+            key_label = QLabel(name)
+            key_label.setObjectName("settingsFieldLabel")
+            key_label.setStyleSheet("color: #64748B;")
+            value_label = QLabel(value)
+            value_label.setObjectName("settingsFieldValue")
+            value_label.setWordWrap(True)
+            grid.addWidget(key_label, row, 0)
+            grid.addWidget(value_label, row, 1)
+        layout.addLayout(grid)
+        return frame
+
+    def _settings_capability_card(self, title: str, *, status_key: str, details: list[tuple[str, str]]) -> QFrame:
+        frame = self._settings_status_card(title=title, status_key=status_key, rows=details)
+        frame.setObjectName("settingsCapabilityCard")
+        frame.setStyleSheet("QFrame#settingsCapabilityCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        actions = QHBoxLayout()
+        detect_button = make_button("检测状态", role="secondary")
+        detect_button.setObjectName("settingsDetectButton")
+        install_button = make_button("安装 / 更新（检测后由用户触发）", role="ghost")
+        install_button.setObjectName("settingsInstallButton")
+        install_button.setEnabled(False)
+        cloud_button = make_button("云端配置（未开放）", role="ghost")
+        cloud_button.setObjectName("settingsCloudConfigButton")
+        cloud_button.setEnabled(False)
+        actions.addWidget(detect_button)
+        actions.addWidget(install_button)
+        actions.addWidget(cloud_button)
+        actions.addStretch(1)
+        layout = frame.layout()
+        if isinstance(layout, QVBoxLayout):
+            layout.addLayout(actions)
+        return frame
 
     def _icon_asset_status_card(self, *, detailed: bool = False) -> QFrame:
         summary = icon_asset_summary()
