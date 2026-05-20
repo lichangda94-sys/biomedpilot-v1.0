@@ -7,11 +7,14 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
+    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication, QFrame, QLabel, QListWidget, QPushButton, QStackedWidget, QToolButton
 
     from app.shell.main_window import MainWindow
+    from app.shared.semantic_keys import ModuleKey, PageKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
+    Qt = None  # type: ignore[assignment]
     MainWindow = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
@@ -42,14 +45,22 @@ def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
 
     assert settings_window.current_workspace_key() == "settings"
     assert nav is not None
-    assert [nav.item(index).text() for index in range(nav.count())] == [
-        "通用偏好",
-        "外部能力",
-        "分析资源",
-        "模型与引擎",
-        "开发者诊断",
+    assert [nav.item(index).data(Qt.UserRole + 1) for index in range(nav.count())] == [
+        PageKey.SETTINGS_GENERAL.value,
+        PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+        PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
+        PageKey.SETTINGS_MODEL_ENGINE.value,
+        PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
     ]
     assert stack is not None
+    assert [stack.widget(index).property("moduleKey") for index in range(stack.count())] == [ModuleKey.SETTINGS.value] * 5
+    assert [stack.widget(index).property("semanticKey") for index in range(stack.count())] == [
+        PageKey.SETTINGS_GENERAL.value,
+        PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+        PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
+        PageKey.SETTINGS_MODEL_ENGINE.value,
+        PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
+    ]
     assert [stack.widget(index).objectName() for index in range(stack.count())] == [
         "settingsGeneralPage",
         "settingsExternalCapabilitiesPage",
@@ -78,11 +89,15 @@ def test_settings_external_capabilities_are_detect_first(settings_window) -> Non
     assert "ImageJ/Fiji" in labels
     assert "外部图像分析引擎" in labels
     assert detect_buttons
-    assert all(button.isEnabled() and button.text() == "检测状态" for button in detect_buttons)
+    assert all(button.isEnabled() for button in detect_buttons)
+    assert all(button.property("moduleKey") == ModuleKey.SETTINGS.value for button in detect_buttons)
+    assert all(button.property("semanticKey") == PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value for button in detect_buttons)
     assert install_buttons
     assert all(not button.isEnabled() for button in install_buttons)
+    assert all(button.property("moduleKey") == ModuleKey.SETTINGS.value for button in install_buttons)
     assert cloud_buttons
     assert all(not button.isEnabled() for button in cloud_buttons)
+    assert all(button.property("semanticKey") == PageKey.SETTINGS_MODEL_ENGINE.value for button in cloud_buttons)
 
 
 def test_settings_status_chips_cover_external_resource_states(settings_window) -> None:
@@ -111,6 +126,8 @@ def test_settings_developer_diagnostics_are_collapsed_by_default(settings_window
     assert toggle.text() == "Settings resources / Developer diagnostics"
     assert panel is not None
     assert panel.isHidden()
+    assert panel.property("moduleKey") == ModuleKey.SETTINGS.value
+    assert panel.property("statusKey") == "developer_preview"
 
     toggle.click()
 

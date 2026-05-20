@@ -10,7 +10,7 @@ try:
     from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QFrame
 
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget, meta_active_types_v1, meta_target_ia_pages
-    from app.shared.semantic_keys import ReportStatusKey, ResultSemanticKey
+    from app.shared.semantic_keys import FeatureStatusKey, ModuleKey, PageKey, ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     MetaAnalysisWorkspaceWidget = None  # type: ignore[assignment]
@@ -96,6 +96,17 @@ def test_meta_workspace_renders_target_ia_shell(meta_workspace) -> None:
     assert all(item.isEnabled() for item in nav_items)
     assert all(item.property("interactionMode") == "select_only" for item in nav_items)
     assert all(item.property("formalActionEnabled") is False for item in nav_items)
+    assert all(item.property("moduleKey") == ModuleKey.META_ANALYSIS.value for item in nav_items)
+    assert {item.property("semanticKey") for item in nav_items} >= {
+        PageKey.META_PROJECT_HOME.value,
+        PageKey.META_RESULT_REPORT.value,
+        PageKey.META_REPORT_EXPORT.value,
+    }
+    assert {item.property("statusSemanticKey") for item in nav_items} >= {
+        FeatureStatusKey.SHELL_ONLY.value,
+        FeatureStatusKey.TESTING.value,
+        FeatureStatusKey.PLANNED.value,
+    }
 
 
 def test_meta_workspace_groups_ten_active_meta_types(meta_workspace) -> None:
@@ -115,8 +126,12 @@ def test_meta_workspace_groups_ten_active_meta_types(meta_workspace) -> None:
         "Testing schema",
     ]
     assert all(card.property("statusKey") == "testing" for card in cards)
+    assert all(card.property("moduleKey") == ModuleKey.META_ANALYSIS.value for card in cards)
+    assert all(card.property("semanticKey") == FeatureStatusKey.TESTING.value for card in cards)
     assert all(button.property("interactionMode") == "schema_shell" for button in select_buttons)
     assert all(button.property("formalActionEnabled") is False for button in select_buttons)
+    assert all(button.property("moduleKey") == ModuleKey.META_ANALYSIS.value for button in select_buttons)
+    assert all(button.property("semanticKey") == FeatureStatusKey.TESTING.value for button in select_buttons)
 
 
 def test_network_meta_is_planned_boundary_not_active_type(meta_workspace) -> None:

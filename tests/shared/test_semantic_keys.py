@@ -7,6 +7,7 @@ from app.shared.semantic_keys import (
     BrandKey,
     FeatureStatusKey,
     NavKey,
+    PageKey,
     ReportStatusKey,
     ResourceStatusKey,
     ResultSemanticKey,
@@ -35,6 +36,22 @@ def test_key_registry_contains_required_brand_and_nav_keys() -> None:
     assert get_semantic_key(BrandKey.SECONDARY).default_label == "BioMedPilot / 医研智析"
     assert get_semantic_key(NavKey.LABTOOLS).group is SemanticKeyGroup.NAV
     assert get_semantic_key(NavKey.TEST_FEEDBACK).default_label == "Test Feedback / 测试反馈"
+
+
+def test_key_registry_contains_selective_page_keys() -> None:
+    values = set(semantic_key_values())
+
+    assert {
+        PageKey.BIO_RESULT_REPORT.value,
+        PageKey.BIO_REPORT_EXPORT.value,
+        PageKey.META_RESULT_REPORT.value,
+        PageKey.META_REPORT_EXPORT.value,
+        PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
+        PageKey.LABTOOLS_EXPERIMENT_MODULES.value,
+        PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+        PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
+    } <= values
+    assert get_semantic_key(PageKey.LABTOOLS_GENERAL_CALCULATORS).group is SemanticKeyGroup.PAGE
 
 
 def test_semantic_status_enums_use_stable_full_keys() -> None:

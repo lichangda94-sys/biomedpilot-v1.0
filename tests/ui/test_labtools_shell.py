@@ -10,6 +10,7 @@ try:
     from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
 
     from app.shell.main_window import MainWindow
+    from app.shared.semantic_keys import ModuleKey, PageKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     MainWindow = None  # type: ignore[assignment]
@@ -40,18 +41,24 @@ def test_labtools_entry_is_reachable_from_global_shell(labtools_window) -> None:
     assert labtools_window.current_workspace_key() == "labtools"
     title = labtools_window.findChild(QLabel, "labtoolsShellTitle")
     assert title is not None
-    assert title.text() == "LabTools / 实验工具"
+    assert title.property("moduleKey") == ModuleKey.LABTOOLS.value
+    assert title.property("semanticKey") == ModuleKey.LABTOOLS.value
 
 
 def test_labtools_primary_ia_has_only_three_entries(labtools_window) -> None:
-    entry_titles = [label.text() for label in labtools_window.findChildren(QLabel, "labtoolsPrimaryEntryTitle")]
+    entry_title_labels = labtools_window.findChildren(QLabel, "labtoolsPrimaryEntryTitle")
+    entry_pages = [label.property("semanticKey") for label in entry_title_labels]
     entry_buttons = labtools_window.findChildren(QPushButton, "labtoolsEntryButton")
 
-    assert entry_titles == ["通用计算器", "试剂制备", "实验模块"]
+    assert entry_pages == [
+        PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
+        PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+        PageKey.LABTOOLS_EXPERIMENT_MODULES.value,
+    ]
     assert len(entry_buttons) == 3
+    assert all(button.property("moduleKey") == ModuleKey.LABTOOLS.value for button in entry_buttons)
+    assert [button.property("semanticKey") for button in entry_buttons] == entry_pages
     assert all(not button.isEnabled() for button in entry_buttons)
-    assert "图像分析" not in entry_titles
-    assert "库存" not in entry_titles
 
 
 def test_general_calculator_excludes_experiment_specific_workflows(labtools_window) -> None:
@@ -59,7 +66,7 @@ def test_general_calculator_excludes_experiment_specific_workflows(labtools_wind
     general_card = next(
         card
         for card in cards
-        if card.findChild(QLabel, "labtoolsPrimaryEntryTitle").text() == "通用计算器"
+        if card.property("semanticKey") == PageKey.LABTOOLS_GENERAL_CALCULATORS.value
     )
     details = "\n".join(label.text() for label in general_card.findChildren(QLabel, "labtoolsEntryDetail"))
 
@@ -72,16 +79,18 @@ def test_general_calculator_excludes_experiment_specific_workflows(labtools_wind
 
 
 def test_labtools_experiment_modules_cover_five_categories(labtools_window) -> None:
-    module_titles = [label.text() for label in labtools_window.findChildren(QLabel, "labtoolsExperimentModuleTitle")]
+    module_titles = labtools_window.findChildren(QLabel, "labtoolsExperimentModuleTitle")
+    module_keys = [label.property("semanticKey") for label in module_titles]
     module_details = "\n".join(label.text() for label in labtools_window.findChildren(QLabel, "labtoolsExperimentModuleDetail"))
 
-    assert module_titles == [
-        "细胞实验",
-        "蛋白实验",
-        "核酸实验",
-        "免疫与吸光度实验",
-        "免疫组化",
+    assert module_keys == [
+        PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
+        PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+        PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value,
+        PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+        PageKey.LABTOOLS_IHC.value,
     ]
+    assert all(label.property("moduleKey") == ModuleKey.LABTOOLS.value for label in module_titles)
     assert "MTT / CCK-8 / AlamarBlue 归属此类" in module_details
     assert "Western Blot 完整流程" in module_details
     assert "PCR" in module_details

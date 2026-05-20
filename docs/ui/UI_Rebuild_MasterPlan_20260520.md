@@ -24,7 +24,7 @@ Priority order:
 
 ## 2. Current Phase Boundary
 
-Current checkpoint after UI-A4.3: current stage calibration checkpoint after B5.2 / B6.1 / B7.1 / B9b.
+Current checkpoint after UI-B9c: selective semantic page key adoption and focused test migration expansion.
 
 Completed:
 
@@ -40,29 +40,30 @@ Completed:
 - UI-B6.1: Meta Analysis target shell interaction calibration.
 - UI-B7 shell: shared Result / Report / Export semantic shell.
 - UI-B7.1: Result / Report / Export shell adoption calibration.
+- UI-B8a: resource inventory / placeholder strategy.
 - UI-B9a: semantic key registry.
 - UI-B9b: key adoption / test migration.
+- UI-B9c: selective key adoption / test migration expansion.
 
 Partially completed:
 
-- UI-B8a resource inventory / placeholder strategy is complete.
-- UI-B8b formal resource replacement has not started.
 - Full UI-B9 i18n adoption / language switch has not started.
 
 Not started:
 
+- UI-B8b formal resource replacement.
 - UI-B10 packaging / desktop entry.
 
 Current hard boundary:
 
 - Do not handle App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation, or desktop `.app` overwrite before UI-B10.
 - Do not treat UI-B8a as resource replacement; it is only inventory and placeholder policy.
-- Do not treat UI-B9a/B9b as full i18n; they are key registry, selective key adoption and focused test migration only.
+- Do not treat UI-B9a/B9b/B9c as full i18n; they are key registry, selective key adoption and focused test migration only.
 
 Recommended next stage:
 
 - UI-B8b formal resource replacement only after brand/resource confirmation, or
-- UI-B9c selective key adoption / test migration expansion.
+- module-specific selective key adoption follow-up if a new shell surface is added.
 
 ## 3. Rebuild Principles
 

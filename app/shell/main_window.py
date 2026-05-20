@@ -27,6 +27,7 @@ from app.shell.module_selection import ModuleSelectionWidget
 from app.shell.sidebar import SidebarWidget
 from app.shell.status_panel import StatusPanel
 from app.shared.project_center.service import ProjectCenter, ProjectRecord
+from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
 from app.shared.ui_components.primitives import diagnostic_disclosure_title, make_button, make_status_chip
@@ -251,11 +252,16 @@ class MainWindow(QMainWindow):
     def _build_labtools_page(self) -> QWidget:
         page = QWidget()
         page.setObjectName("labtoolsShellPage")
+        page.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        page.setProperty("pageKey", "home")
+        page.setProperty("semanticKey", PageKey.LABTOOLS_HOME.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
         title = QLabel("LabTools / 实验工具")
         title.setObjectName("labtoolsShellTitle")
+        title.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        title.setProperty("semanticKey", ModuleKey.LABTOOLS.value)
         title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
         note = QLabel("低保真 IA 壳层：LabTools 一级入口只保留通用计算器、试剂制备、实验模块。本阶段不接入真实实验计算、完整库存、云端协作或局域网共享。")
@@ -268,6 +274,8 @@ class MainWindow(QMainWindow):
         entry_row.addWidget(
             self._labtools_primary_entry_card(
                 title="通用计算器",
+                page_key="general_calculators",
+                semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
                 status_key="shell_only",
                 rows=[
                     "跨实验场景的公式型动态求解器。",
@@ -278,6 +286,8 @@ class MainWindow(QMainWindow):
         entry_row.addWidget(
             self._labtools_primary_entry_card(
                 title="试剂制备",
+                page_key="reagent_preparation",
+                semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
                 status_key="planned",
                 rows=[
                     "模板 -> 本次配制 -> 配制单 -> 配制记录。",
@@ -288,6 +298,8 @@ class MainWindow(QMainWindow):
         entry_row.addWidget(
             self._labtools_primary_entry_card(
                 title="实验模块",
+                page_key="experiment_modules",
+                semantic_key=PageKey.LABTOOLS_EXPERIMENT_MODULES.value,
                 status_key="testing",
                 rows=[
                     "按真实实验目的和流程组织。",
@@ -300,37 +312,53 @@ class MainWindow(QMainWindow):
         module_grid = QGridLayout()
         module_grid.setHorizontalSpacing(14)
         module_grid.setVerticalSpacing(14)
-        for index, (module_title, status_key, rows) in enumerate(
+        for index, (module_title, page_key, semantic_key, status_key, rows) in enumerate(
             (
                 (
                     "细胞实验",
+                    "cell_experiments",
+                    PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
                     "testing",
                     ["细胞培养与传代", "接种 / 铺板记录", "MTT / CCK-8 / AlamarBlue 归属此类"],
                 ),
                 (
                     "蛋白实验",
+                    "protein_experiments",
+                    PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
                     "planned",
                     ["蛋白样本与定量", "Western Blot 完整流程", "SDS-PAGE 配胶归入 Western Blot"],
                 ),
                 (
                     "核酸实验",
+                    "nucleic_acid_experiments",
+                    PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value,
                     "planned",
                     ["样本与核酸提取记录", "PCR", "qPCR 与 plate layout"],
                 ),
                 (
                     "免疫与吸光度实验",
+                    "immuno_absorbance",
+                    PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
                     "planned",
                     ["ELISA", "标准曲线与浓度计算", "结果记录与导出"],
                 ),
                 (
                     "免疫组化",
+                    "ihc",
+                    PageKey.LABTOOLS_IHC.value,
                     "shell_only",
                     ["切片 / 染色记录", "图像记录辅助", "结果记录"],
                 ),
             )
         ):
             module_grid.addWidget(
-                self._labtools_experiment_module_card(module_title, status_key=status_key, rows=rows),
+                self._labtools_experiment_module_card(
+                    module_title,
+                    page_key=page_key,
+                    semantic_key=semantic_key,
+                    status_key=status_key,
+                    rows=rows,
+                ),
                 index // 2,
                 index % 2,
             )
@@ -360,9 +388,13 @@ class MainWindow(QMainWindow):
         root.addStretch(1)
         return page
 
-    def _labtools_primary_entry_card(self, *, title: str, status_key: str, rows: list[str]) -> QFrame:
+    def _labtools_primary_entry_card(self, *, title: str, page_key: str, semantic_key: str, status_key: str, rows: list[str]) -> QFrame:
         frame = QFrame()
         frame.setObjectName("labtoolsPrimaryEntryCard")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setProperty("statusKey", status_key)
         frame.setStyleSheet("QFrame#labtoolsPrimaryEntryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
@@ -370,6 +402,9 @@ class MainWindow(QMainWindow):
         header = QHBoxLayout()
         title_label = QLabel(title)
         title_label.setObjectName("labtoolsPrimaryEntryTitle")
+        title_label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        title_label.setProperty("pageKey", page_key)
+        title_label.setProperty("semanticKey", semantic_key)
         title_label.setStyleSheet("font-weight: 700;")
         header.addWidget(title_label)
         header.addStretch(1)
@@ -382,13 +417,21 @@ class MainWindow(QMainWindow):
             layout.addWidget(label)
         button = make_button("查看壳层", role="secondary")
         button.setObjectName("labtoolsEntryButton")
+        button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        button.setProperty("pageKey", page_key)
+        button.setProperty("semanticKey", semantic_key)
+        button.setProperty("statusKey", status_key)
         button.setEnabled(False)
         layout.addWidget(button)
         return frame
 
-    def _labtools_experiment_module_card(self, title: str, *, status_key: str, rows: list[str]) -> QFrame:
+    def _labtools_experiment_module_card(self, title: str, *, page_key: str, semantic_key: str, status_key: str, rows: list[str]) -> QFrame:
         frame = QFrame()
         frame.setObjectName("labtoolsExperimentModuleCard")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setProperty("statusKey", status_key)
         frame.setStyleSheet("QFrame#labtoolsExperimentModuleCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
@@ -396,6 +439,9 @@ class MainWindow(QMainWindow):
         header = QHBoxLayout()
         title_label = QLabel(title)
         title_label.setObjectName("labtoolsExperimentModuleTitle")
+        title_label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        title_label.setProperty("pageKey", page_key)
+        title_label.setProperty("semanticKey", semantic_key)
         title_label.setStyleSheet("font-weight: 700;")
         header.addWidget(title_label)
         header.addStretch(1)
@@ -430,11 +476,16 @@ class MainWindow(QMainWindow):
         profile = SettingsProfile()
         page = QWidget()
         page.setObjectName("settingsPage")
+        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        page.setProperty("pageKey", "settings")
+        page.setProperty("semanticKey", ModuleKey.SETTINGS.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
         title = QLabel("Settings / 设置中心")
         title.setObjectName("settingsTitle")
+        title.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        title.setProperty("semanticKey", ModuleKey.SETTINGS.value)
         title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
         note = QLabel("低保真 Settings 壳层：集中呈现外部能力、模型与分析资源状态。所有外部能力遵循 detect-first，安装、更新和云端配置仅保留禁用入口。")
@@ -447,14 +498,17 @@ class MainWindow(QMainWindow):
         nav = QListWidget()
         nav.setObjectName("settingsSecondaryNav")
         nav.setFixedWidth(230)
-        for item in (
-            "通用偏好",
-            "外部能力",
-            "分析资源",
-            "模型与引擎",
-            "开发者诊断",
+        for label, page_key, semantic_key in (
+            ("通用偏好", "general", PageKey.SETTINGS_GENERAL.value),
+            ("外部能力", "external_capabilities", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value),
+            ("分析资源", "analysis_resources", PageKey.SETTINGS_ANALYSIS_RESOURCES.value),
+            ("模型与引擎", "model_engine", PageKey.SETTINGS_MODEL_ENGINE.value),
+            ("开发者诊断", "developer_diagnostics", PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value),
         ):
-            nav.addItem(QListWidgetItem(item))
+            nav_item = QListWidgetItem(label)
+            nav_item.setData(Qt.UserRole, page_key)
+            nav_item.setData(Qt.UserRole + 1, semantic_key)
+            nav.addItem(nav_item)
 
         stack = QStackedWidget()
         stack.setObjectName("settingsContentStack")
@@ -475,6 +529,9 @@ class MainWindow(QMainWindow):
     def _build_settings_general_page(self, profile: SettingsProfile) -> QWidget:
         page = QWidget()
         page.setObjectName("settingsGeneralPage")
+        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        page.setProperty("pageKey", "general")
+        page.setProperty("semanticKey", PageKey.SETTINGS_GENERAL.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
@@ -498,6 +555,9 @@ class MainWindow(QMainWindow):
     def _build_settings_external_capabilities_page(self) -> QWidget:
         page = QWidget()
         page.setObjectName("settingsExternalCapabilitiesPage")
+        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        page.setProperty("pageKey", "external_capabilities")
+        page.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
@@ -543,6 +603,9 @@ class MainWindow(QMainWindow):
     def _build_settings_analysis_resources_page(self) -> QWidget:
         page = QWidget()
         page.setObjectName("settingsAnalysisResourcesPage")
+        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        page.setProperty("pageKey", "analysis_resources")
+        page.setProperty("semanticKey", PageKey.SETTINGS_ANALYSIS_RESOURCES.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
@@ -579,6 +642,9 @@ class MainWindow(QMainWindow):
     def _build_settings_model_engine_page(self, profile: SettingsProfile) -> QWidget:
         page = QWidget()
         page.setObjectName("settingsModelEnginePage")
+        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        page.setProperty("pageKey", "model_engine")
+        page.setProperty("semanticKey", PageKey.SETTINGS_MODEL_ENGINE.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
@@ -609,6 +675,9 @@ class MainWindow(QMainWindow):
     def _build_settings_developer_diagnostics_page(self) -> QWidget:
         page = QWidget()
         page.setObjectName("settingsDeveloperDiagnosticsPage")
+        page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        page.setProperty("pageKey", "developer_diagnostics")
+        page.setProperty("semanticKey", PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value)
         root = QVBoxLayout(page)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
@@ -640,6 +709,8 @@ class MainWindow(QMainWindow):
     def _settings_status_card(self, *, title: str, status_key: str, rows: list[tuple[str, str]]) -> QFrame:
         frame = QFrame()
         frame.setObjectName("settingsStatusCard")
+        frame.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        frame.setProperty("statusKey", status_key)
         frame.setStyleSheet("QFrame#settingsStatusCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
@@ -647,6 +718,8 @@ class MainWindow(QMainWindow):
         header = QHBoxLayout()
         label = QLabel(title)
         label.setObjectName("settingsCardTitle")
+        label.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        label.setProperty("statusKey", status_key)
         label.setStyleSheet("font-weight: 700;")
         header.addWidget(label)
         header.addStretch(1)
@@ -670,15 +743,26 @@ class MainWindow(QMainWindow):
     def _settings_capability_card(self, title: str, *, status_key: str, details: list[tuple[str, str]]) -> QFrame:
         frame = self._settings_status_card(title=title, status_key=status_key, rows=details)
         frame.setObjectName("settingsCapabilityCard")
+        frame.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        frame.setProperty("statusKey", status_key)
         frame.setStyleSheet("QFrame#settingsCapabilityCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         actions = QHBoxLayout()
         detect_button = make_button("检测状态", role="secondary")
         detect_button.setObjectName("settingsDetectButton")
+        detect_button.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        detect_button.setProperty("statusKey", status_key)
+        detect_button.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
         install_button = make_button("安装 / 更新（检测后由用户触发）", role="ghost")
         install_button.setObjectName("settingsInstallButton")
+        install_button.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        install_button.setProperty("statusKey", status_key)
+        install_button.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
         install_button.setEnabled(False)
         cloud_button = make_button("云端配置（未开放）", role="ghost")
         cloud_button.setObjectName("settingsCloudConfigButton")
+        cloud_button.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        cloud_button.setProperty("statusKey", status_key)
+        cloud_button.setProperty("semanticKey", PageKey.SETTINGS_MODEL_ENGINE.value)
         cloud_button.setEnabled(False)
         actions.addWidget(detect_button)
         actions.addWidget(install_button)

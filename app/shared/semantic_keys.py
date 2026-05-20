@@ -8,6 +8,7 @@ class SemanticKeyGroup(StrEnum):
     BRAND = "brand"
     NAV = "nav"
     MODULE = "module"
+    PAGE = "page"
     STATUS = "status"
     REPORT = "report"
     EXPORT = "export"
@@ -33,6 +34,43 @@ class ModuleKey(StrEnum):
     META_ANALYSIS = "module.meta_analysis"
     LABTOOLS = "module.labtools"
     SETTINGS = "module.settings"
+
+
+class PageKey(StrEnum):
+    BIO_PROJECT_HOME = "bio.page.project_home"
+    BIO_DATA_SOURCE = "bio.page.data_source"
+    BIO_DATA_CHECK_PREPARATION = "bio.page.data_check_preparation"
+    BIO_GROUP_DESIGN = "bio.page.group_design"
+    BIO_ANALYSIS_TASKS = "bio.page.analysis_tasks"
+    BIO_RESULT_REPORT = "bio.page.result_report"
+    BIO_REPORT_EXPORT = "bio.page.report_export"
+    BIO_SETTINGS_RESOURCES = "bio.page.settings_resources"
+    BIO_PROJECT_LOGS_TECHNICAL_DETAILS = "bio.page.project_logs_technical_details"
+    META_PROJECT_HOME = "meta.page.project_home"
+    META_QUESTION_TYPE = "meta.page.question_meta_type"
+    META_SEARCH_STRATEGY = "meta.page.search_strategy"
+    META_IMPORT_DEDUP = "meta.page.import_dedup"
+    META_SCREENING = "meta.page.screening"
+    META_FULLTEXT_EXTRACTION = "meta.page.fulltext_extraction"
+    META_QUALITY_ASSESSMENT = "meta.page.quality_assessment"
+    META_ANALYSIS_TASKS = "meta.page.analysis_tasks"
+    META_RESULT_REPORT = "meta.page.result_report"
+    META_REPORT_EXPORT = "meta.page.report_export"
+    META_SETTINGS = "meta.page.meta_settings"
+    LABTOOLS_HOME = "labtools.page.home"
+    LABTOOLS_GENERAL_CALCULATORS = "labtools.page.general_calculators"
+    LABTOOLS_REAGENT_PREPARATION = "labtools.page.reagent_preparation"
+    LABTOOLS_EXPERIMENT_MODULES = "labtools.page.experiment_modules"
+    LABTOOLS_CELL_EXPERIMENTS = "labtools.page.cell_experiments"
+    LABTOOLS_PROTEIN_EXPERIMENTS = "labtools.page.protein_experiments"
+    LABTOOLS_NUCLEIC_ACID_EXPERIMENTS = "labtools.page.nucleic_acid_experiments"
+    LABTOOLS_IMMUNO_ABSORBANCE = "labtools.page.immuno_absorbance"
+    LABTOOLS_IHC = "labtools.page.ihc"
+    SETTINGS_GENERAL = "settings.page.general"
+    SETTINGS_EXTERNAL_CAPABILITIES = "settings.page.external_capabilities"
+    SETTINGS_ANALYSIS_RESOURCES = "settings.page.analysis_resources"
+    SETTINGS_MODEL_ENGINE = "settings.page.model_engine"
+    SETTINGS_DEVELOPER_DIAGNOSTICS = "settings.page.developer_diagnostics"
 
 
 class FeatureStatusKey(StrEnum):
@@ -108,6 +146,40 @@ KEY_REGISTRY: tuple[SemanticKey, ...] = (
     _entry(ModuleKey.META_ANALYSIS, SemanticKeyGroup.MODULE, "Meta Analysis / Meta 分析", "Meta Analysis module identity."),
     _entry(ModuleKey.LABTOOLS, SemanticKeyGroup.MODULE, "LabTools / 实验工具", "LabTools module identity."),
     _entry(ModuleKey.SETTINGS, SemanticKeyGroup.MODULE, "Settings / 设置中心", "Settings module identity."),
+    _entry(PageKey.BIO_PROJECT_HOME, SemanticKeyGroup.PAGE, "Bio Project Home", "Bioinformatics project home page key."),
+    _entry(PageKey.BIO_DATA_SOURCE, SemanticKeyGroup.PAGE, "Bio Data Source", "Bioinformatics data source page key."),
+    _entry(PageKey.BIO_DATA_CHECK_PREPARATION, SemanticKeyGroup.PAGE, "Bio Data Check & Preparation", "Bioinformatics data check and preparation page key."),
+    _entry(PageKey.BIO_GROUP_DESIGN, SemanticKeyGroup.PAGE, "Bio Group & Design", "Bioinformatics group and design page key."),
+    _entry(PageKey.BIO_ANALYSIS_TASKS, SemanticKeyGroup.PAGE, "Bio Analysis Tasks", "Bioinformatics analysis tasks page key."),
+    _entry(PageKey.BIO_RESULT_REPORT, SemanticKeyGroup.PAGE, "Bio Result & Report", "Bioinformatics result and report page key."),
+    _entry(PageKey.BIO_REPORT_EXPORT, SemanticKeyGroup.PAGE, "Bio Report Export", "Bioinformatics report export page key."),
+    _entry(PageKey.BIO_SETTINGS_RESOURCES, SemanticKeyGroup.PAGE, "Bio Settings Resources", "Bioinformatics settings resources page key."),
+    _entry(PageKey.BIO_PROJECT_LOGS_TECHNICAL_DETAILS, SemanticKeyGroup.PAGE, "Bio Project Logs & Technical Details", "Bioinformatics logs and technical details page key."),
+    _entry(PageKey.META_PROJECT_HOME, SemanticKeyGroup.PAGE, "Meta Project Home", "Meta Analysis project home page key."),
+    _entry(PageKey.META_QUESTION_TYPE, SemanticKeyGroup.PAGE, "Meta Question & Type", "Meta Analysis question and type page key."),
+    _entry(PageKey.META_SEARCH_STRATEGY, SemanticKeyGroup.PAGE, "Meta Search Strategy", "Meta Analysis search strategy page key."),
+    _entry(PageKey.META_IMPORT_DEDUP, SemanticKeyGroup.PAGE, "Meta Import & Dedup", "Meta Analysis import and deduplication page key."),
+    _entry(PageKey.META_SCREENING, SemanticKeyGroup.PAGE, "Meta Screening", "Meta Analysis screening page key."),
+    _entry(PageKey.META_FULLTEXT_EXTRACTION, SemanticKeyGroup.PAGE, "Meta Full-text & Extraction", "Meta Analysis full-text and extraction page key."),
+    _entry(PageKey.META_QUALITY_ASSESSMENT, SemanticKeyGroup.PAGE, "Meta Quality Assessment", "Meta Analysis quality assessment page key."),
+    _entry(PageKey.META_ANALYSIS_TASKS, SemanticKeyGroup.PAGE, "Meta Analysis Tasks", "Meta Analysis tasks page key."),
+    _entry(PageKey.META_RESULT_REPORT, SemanticKeyGroup.PAGE, "Meta Result & Report", "Meta Analysis result and report page key."),
+    _entry(PageKey.META_REPORT_EXPORT, SemanticKeyGroup.PAGE, "Meta Report Export", "Meta Analysis report export page key."),
+    _entry(PageKey.META_SETTINGS, SemanticKeyGroup.PAGE, "Meta Settings", "Meta Analysis settings page key."),
+    _entry(PageKey.LABTOOLS_HOME, SemanticKeyGroup.PAGE, "LabTools Home", "LabTools shell home page key."),
+    _entry(PageKey.LABTOOLS_GENERAL_CALCULATORS, SemanticKeyGroup.PAGE, "LabTools General Calculators", "LabTools general calculators page key."),
+    _entry(PageKey.LABTOOLS_REAGENT_PREPARATION, SemanticKeyGroup.PAGE, "LabTools Reagent Preparation", "LabTools reagent preparation page key."),
+    _entry(PageKey.LABTOOLS_EXPERIMENT_MODULES, SemanticKeyGroup.PAGE, "LabTools Experiment Modules", "LabTools experiment modules page key."),
+    _entry(PageKey.LABTOOLS_CELL_EXPERIMENTS, SemanticKeyGroup.PAGE, "LabTools Cell Experiments", "LabTools cell experiments page key."),
+    _entry(PageKey.LABTOOLS_PROTEIN_EXPERIMENTS, SemanticKeyGroup.PAGE, "LabTools Protein Experiments", "LabTools protein experiments page key."),
+    _entry(PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS, SemanticKeyGroup.PAGE, "LabTools Nucleic Acid Experiments", "LabTools nucleic acid experiments page key."),
+    _entry(PageKey.LABTOOLS_IMMUNO_ABSORBANCE, SemanticKeyGroup.PAGE, "LabTools Immuno/Absorbance", "LabTools immuno and absorbance experiments page key."),
+    _entry(PageKey.LABTOOLS_IHC, SemanticKeyGroup.PAGE, "LabTools IHC", "LabTools immunohistochemistry page key."),
+    _entry(PageKey.SETTINGS_GENERAL, SemanticKeyGroup.PAGE, "Settings General", "Settings general page key."),
+    _entry(PageKey.SETTINGS_EXTERNAL_CAPABILITIES, SemanticKeyGroup.PAGE, "Settings External Capabilities", "Settings external capabilities page key."),
+    _entry(PageKey.SETTINGS_ANALYSIS_RESOURCES, SemanticKeyGroup.PAGE, "Settings Analysis Resources", "Settings analysis resources page key."),
+    _entry(PageKey.SETTINGS_MODEL_ENGINE, SemanticKeyGroup.PAGE, "Settings Model & Engine", "Settings model and engine page key."),
+    _entry(PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS, SemanticKeyGroup.PAGE, "Settings Developer Diagnostics", "Settings developer diagnostics page key."),
     _entry(FeatureStatusKey.TESTING, SemanticKeyGroup.STATUS, "测试中", "Feature is testable but not formal production capability."),
     _entry(FeatureStatusKey.PLANNED, SemanticKeyGroup.STATUS, "后续开放", "Feature is planned and should not appear as runnable."),
     _entry(FeatureStatusKey.SHELL_ONLY, SemanticKeyGroup.STATUS, "Shell only", "UI shell exists without business implementation."),

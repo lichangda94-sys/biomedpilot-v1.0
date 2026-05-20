@@ -16,7 +16,7 @@ try:
         bioinformatics_main_flow_pages,
         bioinformatics_target_ia_pages,
     )
-    from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
+    from app.shared.semantic_keys import AnalysisStatusKey, ModuleKey, PageKey, ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     QFrame = None  # type: ignore[assignment]
@@ -106,15 +106,21 @@ def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) 
     by_page = {item.property("pageKey"): item for item in nav_items}
 
     assert by_page["data_check_preparation"].property("statusKey") == "preflight_only"
-    assert by_page["data_check_preparation"].property("semanticKey") == AnalysisStatusKey.PREFLIGHT_ONLY.value
+    assert by_page["data_check_preparation"].property("semanticKey") == PageKey.BIO_DATA_CHECK_PREPARATION.value
+    assert by_page["data_check_preparation"].property("statusSemanticKey") == AnalysisStatusKey.PREFLIGHT_ONLY.value
     assert by_page["analysis_tasks"].property("statusKey") == "blocked"
-    assert by_page["analysis_tasks"].property("semanticKey") == AnalysisStatusKey.BLOCKED.value
-    assert by_page["result_report"].property("semanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
+    assert by_page["analysis_tasks"].property("semanticKey") == PageKey.BIO_ANALYSIS_TASKS.value
+    assert by_page["analysis_tasks"].property("statusSemanticKey") == AnalysisStatusKey.BLOCKED.value
+    assert by_page["result_report"].property("semanticKey") == PageKey.BIO_RESULT_REPORT.value
+    assert by_page["result_report"].property("statusSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
     assert by_page["report_export"].property("statusKey") == "draft"
-    assert by_page["report_export"].property("semanticKey") == ReportStatusKey.TESTING_SUMMARY.value
+    assert by_page["report_export"].property("semanticKey") == PageKey.BIO_REPORT_EXPORT.value
+    assert by_page["report_export"].property("statusSemanticKey") == ReportStatusKey.TESTING_SUMMARY.value
     assert by_page["result_report"].property("pageGroup") == "main_flow"
     assert by_page["result_report"].property("flowIndex") == 6
+    assert by_page["result_report"].property("moduleKey") == ModuleKey.BIOINFORMATICS.value
     assert by_page["settings_resources"].property("pageGroup") == "auxiliary"
+    assert by_page["settings_resources"].property("semanticKey") == PageKey.BIO_SETTINGS_RESOURCES.value
 
 
 def test_bioinformatics_shell_copy_keeps_preflight_and_result_boundaries(bio_workspace) -> None:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
-from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
+from app.shared.semantic_keys import AnalysisStatusKey, ModuleKey, PageKey, ReportStatusKey, ResultSemanticKey
 
 
 def bioinformatics_features() -> list[FeatureItem]:
@@ -137,6 +137,19 @@ def bioinformatics_main_flow_pages() -> tuple[BioinformaticsIAPage, ...]:
 
 def bioinformatics_auxiliary_pages() -> tuple[BioinformaticsIAPage, ...]:
     return tuple(page for page in bioinformatics_target_ia_pages() if page.page_group == "auxiliary")
+
+
+_BIO_PAGE_SEMANTIC_KEYS = {
+    "project_home": PageKey.BIO_PROJECT_HOME.value,
+    "data_source": PageKey.BIO_DATA_SOURCE.value,
+    "data_check_preparation": PageKey.BIO_DATA_CHECK_PREPARATION.value,
+    "group_design": PageKey.BIO_GROUP_DESIGN.value,
+    "analysis_tasks": PageKey.BIO_ANALYSIS_TASKS.value,
+    "result_report": PageKey.BIO_RESULT_REPORT.value,
+    "report_export": PageKey.BIO_REPORT_EXPORT.value,
+    "settings_resources": PageKey.BIO_SETTINGS_RESOURCES.value,
+    "project_logs_technical_details": PageKey.BIO_PROJECT_LOGS_TECHNICAL_DETAILS.value,
+}
 
 
 def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
@@ -426,8 +439,10 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
+                item.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
                 item.setProperty("statusKey", page.status_key)
-                item.setProperty("semanticKey", page.semantic_key)
+                item.setProperty("semanticKey", _BIO_PAGE_SEMANTIC_KEYS[page.key])
+                item.setProperty("statusSemanticKey", page.semantic_key)
                 item.setToolTip(page.boundary)
                 item.setEnabled(False)
                 row.addWidget(item)
@@ -445,8 +460,10 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
+                item.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
                 item.setProperty("statusKey", page.status_key)
-                item.setProperty("semanticKey", page.semantic_key)
+                item.setProperty("semanticKey", _BIO_PAGE_SEMANTIC_KEYS[page.key])
+                item.setProperty("statusSemanticKey", page.semantic_key)
                 item.setToolTip(page.boundary)
                 item.setEnabled(False)
                 auxiliary_row.addWidget(item)

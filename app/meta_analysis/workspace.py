@@ -7,6 +7,7 @@ from typing import Callable
 from app.shared.feature_availability import FeatureAvailability, FeatureAvailabilityStatus, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
+from app.shared.semantic_keys import FeatureStatusKey, ModuleKey, PageKey
 from app.shared.ui_components.primitives import make_status_chip
 from app.version import APP_VERSION
 
@@ -122,6 +123,27 @@ def meta_active_types_v1() -> tuple[MetaActiveType, ...]:
         MetaActiveType("prognostic_factor_meta", "预后因素 Meta", "HR / OR", "关联与预后 Meta"),
         MetaActiveType("dose_response_meta", "剂量反应 Meta", "testing schema only", "Testing schema"),
     )
+
+
+_META_PAGE_SEMANTIC_KEYS = {
+    "project_home": PageKey.META_PROJECT_HOME.value,
+    "question_meta_type": PageKey.META_QUESTION_TYPE.value,
+    "search_strategy": PageKey.META_SEARCH_STRATEGY.value,
+    "import_dedup": PageKey.META_IMPORT_DEDUP.value,
+    "screening": PageKey.META_SCREENING.value,
+    "fulltext_extraction": PageKey.META_FULLTEXT_EXTRACTION.value,
+    "quality_assessment": PageKey.META_QUALITY_ASSESSMENT.value,
+    "analysis_tasks": PageKey.META_ANALYSIS_TASKS.value,
+    "result_report": PageKey.META_RESULT_REPORT.value,
+    "report_export": PageKey.META_REPORT_EXPORT.value,
+    "meta_settings": PageKey.META_SETTINGS.value,
+}
+
+_META_STATUS_SEMANTIC_KEYS = {
+    "shell_only": FeatureStatusKey.SHELL_ONLY.value,
+    "testing": FeatureStatusKey.TESTING.value,
+    "planned": FeatureStatusKey.PLANNED.value,
+}
 
 
 def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
@@ -315,7 +337,10 @@ if QWidget is not None:
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
+                item.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                 item.setProperty("statusKey", page.status_key)
+                item.setProperty("semanticKey", _META_PAGE_SEMANTIC_KEYS[page.key])
+                item.setProperty("statusSemanticKey", _META_STATUS_SEMANTIC_KEYS[page.status_key])
                 item.setProperty("interactionMode", "select_only")
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.boundary)
@@ -343,7 +368,9 @@ if QWidget is not None:
                     card = QFrame()
                     card.setObjectName("metaActiveTypeCard")
                     card.setProperty("typeId", meta_type.type_id)
+                    card.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                     card.setProperty("statusKey", meta_type.status_key)
+                    card.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
                     card.setStyleSheet("QFrame#metaActiveTypeCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #FFFFFF; }")
                     card_layout = QVBoxLayout(card)
                     card_layout.setContentsMargins(10, 8, 10, 8)
@@ -362,7 +389,9 @@ if QWidget is not None:
                     select.setObjectName("metaActiveTypeSelectButton")
                     select.setCheckable(True)
                     select.setProperty("typeId", meta_type.type_id)
+                    select.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                     select.setProperty("statusKey", meta_type.status_key)
+                    select.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
                     select.setProperty("interactionMode", meta_type.interaction_mode)
                     select.setProperty("formalActionEnabled", False)
                     select.clicked.connect(lambda _checked=False, type_id=meta_type.type_id: self.select_active_meta_type(type_id))
