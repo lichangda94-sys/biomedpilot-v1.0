@@ -78,6 +78,8 @@ class MetaTargetIAPage:
     label: str
     status_key: str
     boundary: str
+    page_group: str
+    flow_index: int
 
 
 @dataclass(frozen=True)
@@ -87,21 +89,22 @@ class MetaActiveType:
     effect_size: str
     group: str
     status_key: str = "testing"
+    interaction_mode: str = "schema_shell"
 
 
 def meta_target_ia_pages() -> tuple[MetaTargetIAPage, ...]:
     return (
-        MetaTargetIAPage("project_home", "Project Home / 项目首页", "shell_only", "项目状态总览；不声明生产级系统综述能力。"),
-        MetaTargetIAPage("question_meta_type", "Question & Meta Type / 研究问题与 Meta 类型", "testing", "选择 active Meta 类型，控制后续 extraction schema、质量评价和统计任务。"),
-        MetaTargetIAPage("search_strategy", "Search Strategy / 检索策略", "testing", "检索策略和检索计划；不是自动系统综述结论。"),
-        MetaTargetIAPage("import_dedup", "Import & Deduplication / 文献导入与去重", "testing", "导入、文献库和去重壳层；保留人工审核。"),
-        MetaTargetIAPage("screening", "Screening / 文献筛选", "testing", "标题摘要、全文筛选和排除理由；AI 仅辅助建议。"),
-        MetaTargetIAPage("fulltext_extraction", "Full-text & Extraction / 全文与数据提取", "testing", "按 Meta 类型加载不同数据提取结构；需要人工复核。"),
-        MetaTargetIAPage("quality_assessment", "Quality Assessment / 质量评价", "planned", "按 Meta 类型选择评价工具；当前仅目标 IA 壳层。"),
-        MetaTargetIAPage("analysis_tasks", "Meta Analysis Tasks / 统计分析", "planned", "显示类型专属统计任务边界；不启用 Network Meta。"),
-        MetaTargetIAPage("result_report", "Result & Report / 结果与报告", "shell_only", "仅展示测试边界，不生成生产级结果或投稿级系统综述。"),
-        MetaTargetIAPage("report_export", "Report Export / 报告导出", "shell_only", "报告草稿边界；不声明投稿级输出。"),
-        MetaTargetIAPage("meta_settings", "Meta Settings / Meta 设置", "shell_only", "Meta 偏好、日志和外部资源检测入口。"),
+        MetaTargetIAPage("project_home", "Project Home / 项目首页", "shell_only", "项目状态总览；不声明生产级系统综述能力。", "main_flow", 1),
+        MetaTargetIAPage("question_meta_type", "Question & Meta Type / 研究问题与 Meta 类型", "testing", "选择 active Meta 类型，控制后续 extraction schema、质量评价和统计任务。", "main_flow", 2),
+        MetaTargetIAPage("search_strategy", "Search Strategy / 检索策略", "testing", "检索策略和检索计划；不是自动系统综述结论。", "main_flow", 3),
+        MetaTargetIAPage("import_dedup", "Import & Deduplication / 文献导入与去重", "testing", "导入、文献库和去重壳层；保留人工审核。", "main_flow", 4),
+        MetaTargetIAPage("screening", "Screening / 文献筛选", "testing", "标题摘要、全文筛选和排除理由；AI 仅辅助建议。", "main_flow", 5),
+        MetaTargetIAPage("fulltext_extraction", "Full-text & Extraction / 全文与数据提取", "testing", "按 Meta 类型加载不同数据提取结构；需要人工复核。", "main_flow", 6),
+        MetaTargetIAPage("quality_assessment", "Quality Assessment / 质量评价", "planned", "按 Meta 类型选择评价工具；当前仅目标 IA 壳层。", "main_flow", 7),
+        MetaTargetIAPage("analysis_tasks", "Meta Analysis Tasks / 统计分析", "planned", "显示类型专属统计任务边界；不启用 Network Meta。", "main_flow", 8),
+        MetaTargetIAPage("result_report", "Result & Report / 结果与报告", "shell_only", "仅展示测试边界，不生成生产级结果或投稿级系统综述。", "main_flow", 9),
+        MetaTargetIAPage("report_export", "Report Export / 报告导出", "shell_only", "报告草稿边界；不声明投稿级输出。", "main_flow", 10),
+        MetaTargetIAPage("meta_settings", "Meta Settings / Meta 设置", "shell_only", "Meta 偏好、日志和外部资源检测入口。", "auxiliary", 1),
     )
 
 
@@ -147,6 +150,10 @@ if QWidget is not None:
             self._current_project_dir: Path | None = None
             self._current_meta_project: MetaProjectSummary | None = None
             self._layout_state = meta_workspace_layout_state()
+            self._current_target_page_key = "project_home"
+            self._selected_active_meta_type_id = meta_active_types_v1()[0].type_id
+            self._target_ia_buttons: dict[str, QPushButton] = {}
+            self._active_type_buttons: dict[str, QPushButton] = {}
             self._page_keys: list[str] = []
             self._build_ui()
 
@@ -158,6 +165,15 @@ if QWidget is not None:
             if row < 0 or row >= len(self._page_keys):
                 return ""
             return self._page_keys[row]
+
+        def current_target_page_key(self) -> str:
+            return self._current_target_page_key
+
+        def selected_active_meta_type_id(self) -> str:
+            return self._selected_active_meta_type_id
+
+        def network_meta_enabled(self) -> bool:
+            return False
 
         def current_project_dir(self) -> Path | None:
             return self._current_project_dir
@@ -188,12 +204,27 @@ if QWidget is not None:
             if page_key in self._page_keys:
                 self._navigation_list.setCurrentRow(self._page_keys.index(page_key))
 
+        def show_target_ia_page(self, page_key: str) -> None:
+            if page_key not in {page.key for page in meta_target_ia_pages()}:
+                return
+            self._current_target_page_key = page_key
+            self._sync_target_interaction_state()
+
+        def select_active_meta_type(self, type_id: str) -> None:
+            if type_id not in {meta_type.type_id for meta_type in meta_active_types_v1()}:
+                return
+            self._selected_active_meta_type_id = type_id
+            self._sync_type_interaction_state()
+
         def meta_workspace_layout_state(self) -> dict[str, object]:
             return {
                 "workflow_nav": self._navigation_list.objectName(),
                 "current_step_workspace": self._page_stack.objectName(),
                 "page_keys": self.page_keys(),
                 "current_page_key": self.current_page_key(),
+                "current_target_page_key": self.current_target_page_key(),
+                "selected_active_meta_type_id": self.selected_active_meta_type_id(),
+                "network_meta_enabled": self.network_meta_enabled(),
                 "project_dir": str(self._current_project_dir or ""),
                 "contract_version": META_ANALYSIS_MAINLINE_CONTRACT_VERSION,
             }
@@ -268,17 +299,33 @@ if QWidget is not None:
             boundary.setWordWrap(True)
             layout.addWidget(boundary)
 
+            self._target_interaction_status = QLabel("")
+            self._target_interaction_status.setObjectName("metaTargetInteractionStatus")
+            self._target_interaction_status.setWordWrap(True)
+            layout.addWidget(self._target_interaction_status)
+
             page_row = QHBoxLayout()
             page_row.setSpacing(8)
             for page in meta_target_ia_pages():
                 item = QPushButton(page.label)
                 item.setObjectName("metaTargetIANavItem")
+                item.setCheckable(True)
                 item.setProperty("pageKey", page.key)
+                item.setProperty("pageGroup", page.page_group)
+                item.setProperty("flowIndex", page.flow_index)
                 item.setProperty("statusKey", page.status_key)
+                item.setProperty("interactionMode", "select_only")
+                item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.boundary)
-                item.setEnabled(False)
+                item.clicked.connect(lambda _checked=False, key=page.key: self.show_target_ia_page(key))
+                self._target_ia_buttons[page.key] = item
                 page_row.addWidget(item)
             layout.addLayout(page_row)
+
+            self._active_type_status = QLabel("")
+            self._active_type_status.setObjectName("metaActiveTypeInteractionStatus")
+            self._active_type_status.setWordWrap(True)
+            layout.addWidget(self._active_type_status)
 
             type_groups: dict[str, list[MetaActiveType]] = {}
             for meta_type in meta_active_types_v1():
@@ -309,18 +356,61 @@ if QWidget is not None:
                     effect = QLabel(meta_type.effect_size)
                     effect.setObjectName("metaActiveTypeEffect")
                     effect.setWordWrap(True)
+                    select = QPushButton("选择类型")
+                    select.setObjectName("metaActiveTypeSelectButton")
+                    select.setCheckable(True)
+                    select.setProperty("typeId", meta_type.type_id)
+                    select.setProperty("statusKey", meta_type.status_key)
+                    select.setProperty("interactionMode", meta_type.interaction_mode)
+                    select.setProperty("formalActionEnabled", False)
+                    select.clicked.connect(lambda _checked=False, type_id=meta_type.type_id: self.select_active_meta_type(type_id))
+                    self._active_type_buttons[meta_type.type_id] = select
                     card_layout.addWidget(type_id)
                     card_layout.addWidget(label)
                     card_layout.addWidget(effect)
+                    card_layout.addWidget(select)
                     type_row.addWidget(card)
                 layout.addLayout(type_row)
 
             planned = QLabel("Network Meta：planned only / not enabled，不属于当前 active Meta 类型。")
             planned.setObjectName("metaNetworkMetaBoundary")
+            planned.setProperty("typeId", "network_meta_analysis")
+            planned.setProperty("statusKey", "planned")
+            planned.setProperty("formalActionEnabled", False)
             planned.setWordWrap(True)
             planned.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 6px 8px; background: #FFF7E6;")
             layout.addWidget(planned)
+            network_button = QPushButton("Network Meta planned")
+            network_button.setObjectName("metaNetworkMetaPlannedButton")
+            network_button.setProperty("typeId", "network_meta_analysis")
+            network_button.setProperty("statusKey", "planned")
+            network_button.setProperty("interactionMode", "planned_disabled")
+            network_button.setProperty("formalActionEnabled", False)
+            network_button.setEnabled(False)
+            layout.addWidget(network_button)
+            self._sync_target_interaction_state()
+            self._sync_type_interaction_state()
             return frame
+
+        def _sync_target_interaction_state(self) -> None:
+            pages = {page.key: page for page in meta_target_ia_pages()}
+            current = pages[self._current_target_page_key]
+            for key, button in self._target_ia_buttons.items():
+                button.setChecked(key == self._current_target_page_key)
+            if hasattr(self, "_target_interaction_status"):
+                self._target_interaction_status.setText(
+                    f"Selected target page: {current.key} · {current.status_key} · shell selection only. {current.boundary}"
+                )
+
+        def _sync_type_interaction_state(self) -> None:
+            types = {meta_type.type_id: meta_type for meta_type in meta_active_types_v1()}
+            current = types[self._selected_active_meta_type_id]
+            for type_id, button in self._active_type_buttons.items():
+                button.setChecked(type_id == self._selected_active_meta_type_id)
+            if hasattr(self, "_active_type_status"):
+                self._active_type_status.setText(
+                    f"Selected active Meta type: {current.type_id} · {current.status_key} · {current.interaction_mode}; AI suggestion remains review-only."
+                )
 
         def _build_pages(self) -> None:
             for item in self._layout_state.navigation_items:

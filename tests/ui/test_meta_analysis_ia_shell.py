@@ -53,6 +53,8 @@ def test_meta_target_ia_pages_are_shell_structure_only() -> None:
         "meta_settings",
     ]
     assert {"testing", "planned", "shell_only"} <= {page.status_key for page in pages}
+    assert [page.flow_index for page in pages if page.page_group == "main_flow"] == list(range(1, 11))
+    assert [page.key for page in pages if page.page_group == "auxiliary"] == ["meta_settings"]
     assert any("不启用 Network Meta" in page.boundary for page in pages)
     assert any("不声明生产级系统综述能力" in page.boundary for page in pages)
 
@@ -90,15 +92,19 @@ def test_meta_workspace_renders_target_ia_shell(meta_workspace) -> None:
     assert "不声明生产级系统综述能力" in boundary.text()
     assert len(nav_items) == 11
     assert tuple(item.property("pageKey") for item in nav_items) == meta_workspace.target_ia_page_keys()
-    assert all(not item.isEnabled() for item in nav_items)
+    assert all(item.isEnabled() for item in nav_items)
+    assert all(item.property("interactionMode") == "select_only" for item in nav_items)
+    assert all(item.property("formalActionEnabled") is False for item in nav_items)
 
 
 def test_meta_workspace_groups_ten_active_meta_types(meta_workspace) -> None:
     cards = meta_workspace.findChildren(QFrame, "metaActiveTypeCard")
+    select_buttons = meta_workspace.findChildren(QPushButton, "metaActiveTypeSelectButton")
     group_titles = [label.text() for label in meta_workspace.findChildren(QLabel, "metaTypeGroupTitle")]
     type_ids = [card.property("typeId") for card in cards]
 
     assert len(cards) == 10
+    assert len(select_buttons) == 10
     assert type_ids == list(meta_workspace.active_meta_type_ids())
     assert group_titles == [
         "结局型 Meta",
@@ -108,16 +114,62 @@ def test_meta_workspace_groups_ten_active_meta_types(meta_workspace) -> None:
         "Testing schema",
     ]
     assert all(card.property("statusKey") == "testing" for card in cards)
+    assert all(button.property("interactionMode") == "schema_shell" for button in select_buttons)
+    assert all(button.property("formalActionEnabled") is False for button in select_buttons)
 
 
 def test_network_meta_is_planned_boundary_not_active_type(meta_workspace) -> None:
     cards = meta_workspace.findChildren(QFrame, "metaActiveTypeCard")
     planned = meta_workspace.findChild(QLabel, "metaNetworkMetaBoundary")
+    planned_button = meta_workspace.findChild(QPushButton, "metaNetworkMetaPlannedButton")
 
     assert planned is not None
     assert "Network Meta：planned only / not enabled" in planned.text()
+    assert planned.property("formalActionEnabled") is False
+    assert planned_button is not None
+    assert planned_button.property("typeId") == "network_meta_analysis"
+    assert planned_button.property("interactionMode") == "planned_disabled"
+    assert planned_button.property("formalActionEnabled") is False
+    assert not planned_button.isEnabled()
+    assert meta_workspace.network_meta_enabled() is False
     assert all("network" not in str(card.property("typeId")).lower() for card in cards)
 
 
 def test_mainline_page_keys_remain_shell_contract(meta_workspace) -> None:
     assert meta_workspace.page_keys() == ("workflow_home", "project_contract", "dev_branch")
+
+
+def test_meta_target_page_selection_updates_shell_state_only(meta_workspace) -> None:
+    nav_items = meta_workspace.findChildren(QPushButton, "metaTargetIANavItem")
+    by_page = {button.property("pageKey"): button for button in nav_items}
+    status = meta_workspace.findChild(QLabel, "metaTargetInteractionStatus")
+
+    assert meta_workspace.current_target_page_key() == "project_home"
+    assert by_page["project_home"].isChecked()
+
+    by_page["screening"].click()
+
+    assert meta_workspace.current_target_page_key() == "screening"
+    assert by_page["screening"].isChecked()
+    assert by_page["screening"].property("pageGroup") == "main_flow"
+    assert by_page["screening"].property("flowIndex") == 5
+    assert status is not None
+    assert "Selected target page: screening · testing · shell selection only" in status.text()
+    assert meta_workspace.page_keys() == ("workflow_home", "project_contract", "dev_branch")
+
+
+def test_meta_active_type_selection_remains_schema_shell(meta_workspace) -> None:
+    type_buttons = meta_workspace.findChildren(QPushButton, "metaActiveTypeSelectButton")
+    by_type = {button.property("typeId"): button for button in type_buttons}
+    status = meta_workspace.findChild(QLabel, "metaActiveTypeInteractionStatus")
+
+    assert meta_workspace.selected_active_meta_type_id() == "binary_outcome_meta"
+    assert by_type["binary_outcome_meta"].isChecked()
+
+    by_type["diagnostic_accuracy_meta"].click()
+
+    assert meta_workspace.selected_active_meta_type_id() == "diagnostic_accuracy_meta"
+    assert by_type["diagnostic_accuracy_meta"].isChecked()
+    assert by_type["diagnostic_accuracy_meta"].property("interactionMode") == "schema_shell"
+    assert status is not None
+    assert "AI suggestion remains review-only" in status.text()
