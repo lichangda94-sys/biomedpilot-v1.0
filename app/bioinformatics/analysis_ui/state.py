@@ -176,7 +176,7 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         _formal_deg_gate_row("Dependency policy", deg_dependency.get("status"), deg_dependency.get("blockers", []), deg_dependency.get("warnings", []), basis=str(deg_dependency.get("dependency_policy") or "")),
         _formal_deg_gate_row("Parameter manifest", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", [])),
         _formal_deg_gate_row("Result schema gate", result_schema_gate.get("status"), result_schema_gate.get("blockers", []), result_schema_gate.get("warnings", [])),
-        _formal_deg_gate_row("B9.2 activation", "blocked", ["b9_2_activation_required"], [], basis="B9.1 hardens gates only; formal execution remains disabled."),
+        _formal_deg_gate_row("B9.2 controlled activation", "passed", [], [], basis="Enabled only for audited two-group controlled DEG MVP."),
     ]
     return {
         "deg_ready_gate": deg_ready_gate,

@@ -8,7 +8,7 @@ def test_deg_parameter_gate_builds_required_manifest_fields() -> None:
         _deg_ready(value_type="count"),
         case_samples=["case1", "case2"],
         control_samples=["ctrl1", "ctrl2"],
-        method="count_model",
+        method="welch_t_test",
         dependency_snapshot={"status": "passed", "engine_candidate": "python_scipy_statsmodels", "blockers": []},
     )
 
@@ -56,7 +56,7 @@ def test_deg_parameter_gate_blocks_missing_same_groups_samples_and_dependency() 
         control_group="tumor",
         case_samples=[],
         control_samples=[],
-        method="count_model",
+        method="welch_t_test",
         dependency_snapshot={"status": "blocked", "blockers": ["missing_python_package:scipy"]},
     )
 
@@ -66,6 +66,19 @@ def test_deg_parameter_gate_blocks_missing_same_groups_samples_and_dependency() 
     assert "missing_control_samples" in manifest["blockers"]
     assert "dependency_snapshot_not_passed" in manifest["blockers"]
     assert "missing_python_package:scipy" in manifest["blockers"]
+
+
+def test_deg_parameter_gate_blocks_count_model_backend_in_controlled_mvp() -> None:
+    manifest = build_deg_parameter_manifest(
+        _deg_ready(value_type="count"),
+        case_samples=["case1"],
+        control_samples=["ctrl1"],
+        method="count_model",
+        dependency_snapshot={"status": "passed", "blockers": []},
+    )
+
+    assert manifest["status"] == "blocked"
+    assert "count_model_backend_not_activated_in_b9_2_controlled_mvp" in manifest["blockers"]
 
 
 def test_deg_parameter_gate_blocks_value_type_method_mapping_threshold_and_fdr_errors() -> None:

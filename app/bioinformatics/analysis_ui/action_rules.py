@@ -5,7 +5,7 @@ from typing import Any
 from app.bioinformatics.results.models import normalize_result_semantics
 
 
-FORMAL_DISABLED_REASON = "Formal executor is not activated in B9.1; proceed through B9.2 audited formal DEG execution activation."
+FORMAL_DISABLED_REASON = "Formal DEG is limited to audited two-group controlled DEG MVP."
 
 
 def build_action_rows(
@@ -118,10 +118,18 @@ def _formal_deg_action(
         blockers.extend(_list(result_schema_gate.get("blockers")) or ["result_schema_gate_not_passed"])
         if state == "hidden_until_ready":
             state = "blocked_missing_result_schema"
-    blockers.append("b9_2_activation_required")
     if state == "hidden_until_ready":
-        state = "formal_ready_but_not_activated"
-    return _disabled("formal_deg", "Run formal DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter and result schema gates; B9.2 activation is still required.")
+        return {
+            "action_id": "formal_deg",
+            "label": "Run controlled two-group DEG",
+            "state": "enabled_formal_deg",
+            "button_behavior": "enabled_controlled_two_group_mvp",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run audited two-group controlled DEG MVP and register result index v2 output.",
+        }
+    return _disabled("formal_deg", "Run controlled two-group DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter and result schema gates.")
 
 
 def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str, Any]]) -> dict[str, Any]:

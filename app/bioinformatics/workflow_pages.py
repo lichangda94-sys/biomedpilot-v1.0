@@ -53,6 +53,7 @@ from app.bioinformatics.comparison_config import (
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
+from app.bioinformatics.deg_engine import run_formal_controlled_deg
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -5392,6 +5393,19 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._status_label.setText("已打开免疫浸润 / TME评分页；该入口只生成探索性 bulk signature score。")
         return {"next_page": "immune_tme_scoring", "project_root": str(self._project_root)}
 
+    def run_formal_controlled_deg_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result = run_formal_controlled_deg(self._project_root)
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成两组 controlled DEG MVP，并写入 result index v2。未生成 GSEA、plot、report-ready 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG gate 未通过"
+            self._status_label.setText(f"两组 controlled DEG 未运行：{blockers}")
+        return result
+
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5502,6 +5516,9 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
+        self._formal_deg_button.setEnabled(False)
+        actions.addWidget(self._formal_deg_button)
         actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
         actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
@@ -5598,6 +5615,12 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
         _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
+        formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
+        self._formal_deg_button.setEnabled(bool(formal_action.get("enabled")))
+        if formal_action.get("enabled"):
+            self._formal_deg_button.setToolTip("运行两组 controlled DEG MVP；只写 result index v2，不生成 GSEA/plot/report-ready/survival。")
+        else:
+            self._formal_deg_button.setToolTip(str(formal_action.get("disabled_reason") or "formal DEG gate 未通过"))
         _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
         _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
         _fill_table(self._gate_table, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
@@ -10303,6 +10326,13 @@ def _analysis_ui_action_rows(rows: object, *, normal_user_only: bool = False) ->
             ]
         )
     return visible_rows
+
+
+def _analysis_ui_action(rows: object, action_id: str) -> dict[str, object]:
+    for row in rows:
+        if isinstance(row, dict) and row.get("action_id") == action_id:
+            return row
+    return {}
 
 
 def _analysis_ui_dependency_rows(rows: object) -> list[list[object]]:

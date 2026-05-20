@@ -140,10 +140,12 @@ def _sample_alignment(matrix_samples: list[str], sample_groups: dict[str, str]) 
     elif missing_in_metadata or missing_in_matrix:
         warnings.append("expression_metadata_sample_partial_overlap")
     group_counts: dict[str, int] = {}
+    matched_assignments: dict[str, str] = {}
     for sample in matched:
         group = sample_groups.get(sample, "")
         if group:
             group_counts[group] = group_counts.get(group, 0) + 1
+            matched_assignments[sample] = group
     non_empty_groups = [group for group, count in group_counts.items() if count > 0]
     if len(non_empty_groups) < 2:
         blockers.append("case_control_groups_not_confirmed_or_empty")
@@ -156,6 +158,7 @@ def _sample_alignment(matrix_samples: list[str], sample_groups: dict[str, str]) 
         "missing_in_matrix": missing_in_matrix,
         "duplicate_samples": duplicates,
         "group_counts": group_counts,
+        "sample_group_assignments": matched_assignments,
         "blockers": blockers,
         "warnings": warnings,
     }

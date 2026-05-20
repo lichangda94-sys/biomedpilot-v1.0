@@ -90,10 +90,9 @@ def _deg_recompute_package(
     if gene_id_type in PROBE_GENE_ID_TYPES and not _mapping_confirmed(feature_asset):
         blockers.append("geo_probe_or_id_ref_requires_platform_mapping")
     if value_type in DISPLAY_VALUE_TYPES:
-        blockers.append("display_value_type_not_allowed_for_count_model_deg")
-        warnings.append("display_value_type_can_feed_correlation_or_immune_score_candidate")
+        warnings.append("display_value_type_requires_controlled_two_group_method_not_count_model")
     elif value_type in COUNT_VALUE_TYPES:
-        warnings.append("raw_counts_route_requires_deg_preflight_before_formal_backend")
+        warnings.append("raw_counts_allowed_for_controlled_two_group_mvp_not_count_model")
     else:
         blockers.append("unknown_or_unsupported_value_type_for_deg")
     if _is_gtex_asset(expression_asset):

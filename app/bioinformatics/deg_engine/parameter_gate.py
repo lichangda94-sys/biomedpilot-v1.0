@@ -9,7 +9,7 @@ PARAMETER_GATE_SCHEMA_VERSION = "biomedpilot.deg_parameter_gate.v1"
 COUNT_VALUE_TYPES = {"count", "raw_count", "raw_counts", "count_like_candidate"}
 DISPLAY_VALUE_TYPES = {"TPM", "FPKM", "FPKM-UQ", "normalized", "normalized_expression", "normalized_or_log_expression", "log_expression", "log2_transformed"}
 COUNT_MODEL_METHODS = {"count_model", "deseq2", "deseq2_external_design", "edger", "edger_external_design"}
-DISPLAY_METHODS = {"welch_t_test", "mann_whitney", "limma_trend_preflight"}
+CONTROLLED_TWO_GROUP_METHODS = {"welch_t_test", "mann_whitney"}
 
 REQUIRED_PARAMETER_FIELDS = (
     "schema_version",
@@ -135,10 +135,12 @@ def validate_deg_parameter_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     sample_policy = str(manifest.get("sample_alignment_policy") or "")
     if sample_policy.startswith("blocked"):
         blockers.append("sample_group_mismatch")
+    if method in COUNT_MODEL_METHODS:
+        blockers.append("count_model_backend_not_activated_in_b9_2_controlled_mvp")
     if value_type in DISPLAY_VALUE_TYPES and method in COUNT_MODEL_METHODS:
         blockers.append("count_model_requested_for_display_value_type")
-    elif value_type in COUNT_VALUE_TYPES and method not in COUNT_MODEL_METHODS:
-        blockers.append("method_incompatible_with_count_value_type")
+    elif value_type in COUNT_VALUE_TYPES | DISPLAY_VALUE_TYPES and method not in CONTROLLED_TWO_GROUP_METHODS | COUNT_MODEL_METHODS:
+        blockers.append("method_not_supported_by_controlled_deg_mvp")
     elif value_type in {"", "unknown"}:
         blockers.append("unknown_value_type")
     elif value_type not in COUNT_VALUE_TYPES | DISPLAY_VALUE_TYPES:
@@ -173,16 +175,18 @@ def validate_deg_parameter_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
 def _method_family(method: str) -> str:
     if method in COUNT_MODEL_METHODS:
         return "count_model"
-    if method in DISPLAY_METHODS:
-        return "display_value_statistical_test"
+    if method in CONTROLLED_TWO_GROUP_METHODS:
+        return "controlled_two_group_statistical_test"
     return "unknown"
 
 
 def _value_type_policy(value_type: str, method: str) -> str:
     if value_type in COUNT_VALUE_TYPES and method in COUNT_MODEL_METHODS:
-        return "count_model_allowed"
-    if value_type in DISPLAY_VALUE_TYPES and method not in COUNT_MODEL_METHODS:
-        return "display_value_non_count_model_only"
+        return "blocked_count_model_backend_not_activated"
+    if value_type in COUNT_VALUE_TYPES and method in CONTROLLED_TWO_GROUP_METHODS:
+        return "count_values_controlled_two_group_mvp"
+    if value_type in DISPLAY_VALUE_TYPES and method in CONTROLLED_TWO_GROUP_METHODS:
+        return "display_values_controlled_two_group_mvp"
     if value_type in DISPLAY_VALUE_TYPES and method in COUNT_MODEL_METHODS:
         return "blocked_display_value_for_count_model"
     return "blocked_unknown_or_incompatible_value_type"

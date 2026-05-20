@@ -34,15 +34,14 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
 
     formal_deg = _action(state, "formal_deg")
     assert formal_deg["enabled"] is False
-    assert "b9_2_activation_required" in formal_deg["disabled_reason"]
-    assert "missing_case_samples" in formal_deg["disabled_reason"]
+    assert "missing_python_package:scipy" in formal_deg["disabled_reason"]
     assert _action(state, "formal_gsea")["enabled"] is False
     assert _action(state, "km_cox_logrank")["enabled"] is False
     assert _action(state, "report_ready_export")["state"] == "blocked_report_ready_gate"
     formal_gate_text = "\n".join(str(row) for row in state["formal_deg_gate_rows"])
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
-    assert "b9_2_activation_required" in formal_gate_text
+    assert "B9.2 controlled activation" in formal_gate_text
 
 
 def test_analysis_center_state_shows_package_repair_guidance_for_deg_blockers(tmp_path: Path) -> None:
@@ -64,9 +63,8 @@ def test_analysis_center_state_shows_package_repair_guidance_for_deg_blockers(tm
     deg_row = next(row for row in state["package_rows"] if row["package_type"] == "deg_recompute")
 
     assert "geo_probe_or_id_ref_requires_platform_mapping" in deg_row["blockers"]
-    assert "display_value_type_not_allowed_for_count_model_deg" in deg_row["blockers"]
+    assert "display_value_type_requires_controlled_two_group_method_not_count_model" in deg_row["warnings"]
     assert "platform probe-to-gene mapping" in deg_row["repair_action"]
-    assert "raw count matrix" in deg_row["repair_action"]
     assert _action(state, "formal_deg")["enabled"] is False
 
 

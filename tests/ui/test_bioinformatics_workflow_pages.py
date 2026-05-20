@@ -2983,7 +2983,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     action_table = widget.findChild(QTableWidget, "analysisActionGateTable")
     assert action_table is not None
     action_text = _table_text(action_table)
-    assert "Run formal DEG" in action_text
+    assert "Run controlled two-group DEG" in action_text
     assert "disabled" in action_text
     assert "Run formal GSEA" not in action_text
     assert "KM/Cox/log-rank" not in action_text
@@ -3004,7 +3004,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     formal_deg_gate_text = _table_text(formal_deg_gate)
     assert "Parameter manifest" in formal_deg_gate_text
     assert "Result schema gate" in formal_deg_gate_text
-    assert "b9_2_activation_required" in formal_deg_gate_text
+    assert "B9.2 controlled activation" in formal_deg_gate_text
 
     gate_table = widget.findChild(QTableWidget, "analysisGatePreviewTable")
     assert gate_table is not None

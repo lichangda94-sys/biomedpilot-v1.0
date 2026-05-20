@@ -22,6 +22,8 @@ def run_controlled_deg(
     pseudocount: float = 1e-9,
 ) -> dict[str, Any]:
     snapshot = dependency_snapshot or check_deg_backend_dependencies()
+    if method not in {"welch_t_test", "mann_whitney"}:
+        return _blocked_bundle(deg_ready_package, snapshot, ["method_not_supported_by_controlled_deg_mvp"])
     if snapshot.get("status") != "passed":
         return _blocked_bundle(deg_ready_package, snapshot, ["deg_dependencies_missing_no_p_values_computed"])
     scipy_stats, multipletests = _import_backends()

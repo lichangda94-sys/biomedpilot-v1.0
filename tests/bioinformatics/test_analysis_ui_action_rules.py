@@ -25,10 +25,9 @@ def test_can_run_task_does_not_enable_formal_deg() -> None:
     )
 
     formal_deg = _row(rows, "formal_deg")
-    assert formal_deg["enabled"] is False
-    assert "b9_2_activation_required" in formal_deg["disabled_reason"]
-    assert formal_deg["state"] == "formal_ready_but_not_activated"
-    assert "B9.2 audited formal DEG execution activation" in formal_deg["disabled_reason"]
+    assert formal_deg["enabled"] is True
+    assert formal_deg["state"] == "enabled_formal_deg"
+    assert formal_deg["button_behavior"] == "enabled_controlled_two_group_mvp"
 
     preflight = _row(rows, "deg_preflight")
     assert preflight["enabled"] is True
@@ -96,7 +95,7 @@ def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
     assert "sample_group_mismatch" in reason
     assert "missing_fdr_policy" in reason
     assert "missing_output_artifact" in reason
-    assert "b9_2_activation_required" in reason
+    assert "controlled DEG MVP" in reason
 
 
 def _row(rows: list[dict[str, object]], action_id: str) -> dict[str, object]:
