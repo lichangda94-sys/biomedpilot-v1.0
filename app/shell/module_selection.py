@@ -38,6 +38,7 @@ class ModuleEntryCard(QFrame):
 class ModuleSelectionWidget(QWidget):
     open_bioinformatics_requested = Signal()
     open_meta_analysis_requested = Signal()
+    open_labtools_requested = Signal()
     logout_requested = Signal()
 
     def __init__(
@@ -47,6 +48,7 @@ class ModuleSelectionWidget(QWidget):
         session: LocalSession | None = None,
         on_open_bioinformatics: Callable[[], None] | None = None,
         on_open_meta_analysis: Callable[[], None] | None = None,
+        on_open_labtools: Callable[[], None] | None = None,
         on_logout: Callable[[], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
@@ -60,6 +62,8 @@ class ModuleSelectionWidget(QWidget):
             self.open_bioinformatics_requested.connect(on_open_bioinformatics)
         if on_open_meta_analysis is not None:
             self.open_meta_analysis_requested.connect(on_open_meta_analysis)
+        if on_open_labtools is not None:
+            self.open_labtools_requested.connect(on_open_labtools)
         if on_logout is not None:
             self.logout_requested.connect(on_logout)
         self.set_session(session)
@@ -82,7 +86,7 @@ class ModuleSelectionWidget(QWidget):
         display = self.session_display()
         self._user_badge.setText(f"当前用户：{display['username']}")
         self._tier_label.setText(f"当前账号等级：{display['tier']}")
-        self._license_label.setText(f"License 状态：{display['license_status']}")
+        self._license_label.setText(f"测试状态：{display['license_status']}")
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
@@ -102,9 +106,9 @@ class ModuleSelectionWidget(QWidget):
         module_row.setSpacing(SPACING["md"])
         module_row.addWidget(
             self._module_card(
-                title="生信分析模块",
-                english_title="Bioinformatics Analyze Module",
-                description="用于 GEO、TCGA、GTEx、本地表达矩阵、差异分析、富集分析、相关性分析、生存分析和报告生成。",
+                title="Bioinformatics / 生信分析",
+                english_title="Resolver-first analysis workspace",
+                description="目标壳层入口：数据来源、准备检查、分析任务、结果与报告。正式按钮需遵守 preflight-first 与 result-schema-first 边界。",
                 button_text="进入生信分析模块",
                 object_name="bioModuleButton",
                 icon_key="bioinformatics",
@@ -113,13 +117,24 @@ class ModuleSelectionWidget(QWidget):
         )
         module_row.addWidget(
             self._module_card(
-                title="Meta 分析模块",
-                english_title="Meta Analysis Module",
-                description="UIShell 当前仅保留 Meta 入口壳和项目边界说明；完整 PICO、检索、筛选、提取、统计和报告 runtime 位于 Meta 专属开发线，当前不得视为已接入完整流程。",
+                title="Meta Analysis / Meta 分析",
+                english_title="Systematic review workflow shell",
+                description="低保真入口壳：PICO、检索、筛选、提取、质量评价、统计与报告仍按 Developer Preview 边界呈现。",
                 button_text="进入 Meta 分析模块",
                 object_name="metaModuleButton",
                 icon_key="meta_analysis",
                 callback=self.open_meta_analysis_requested.emit,
+            )
+        )
+        module_row.addWidget(
+            self._module_card(
+                title="LabTools / 实验工具",
+                english_title="Calculators, reagents, records",
+                description="目标壳层入口：通用计算器、试剂制备、实验记录与外部图像引擎配置。本阶段不接入实验计算业务。",
+                button_text="进入 LabTools",
+                object_name="labtoolsModuleButton",
+                icon_key="labtools",
+                callback=self.open_labtools_requested.emit,
             )
         )
 
@@ -143,9 +158,9 @@ class ModuleSelectionWidget(QWidget):
 
         layout.addWidget(self._ui02_icon_label("dashboard", 42))
         title_col = QVBoxLayout()
-        title = QLabel("BioMedPilot / 医研智析")
+        title = QLabel("萤火虫 / Firefly")
         title.setObjectName("dashboardTitle")
-        subtitle = QLabel("统一模块入口，选择一个工作区开始本地测试。")
+        subtitle = QLabel("BioMedPilot / 医研智析低保真 Dashboard：选择 Bioinformatics、Meta Analysis 或 LabTools。")
         subtitle.setObjectName("dashboardSubtitle")
         subtitle.setWordWrap(True)
         title_col.addWidget(title)
@@ -191,6 +206,8 @@ class ModuleSelectionWidget(QWidget):
         icon_label.setFixedSize(64, 64)
         icon_label.setAlignment(Qt.AlignCenter)
         icon = load_module_pixmap(icon_key, 60)
+        if icon.isNull():
+            icon = load_ui02_module_selection_pixmap("workspace", 60)
         icon_label.setPixmap(icon)
         icon_label.setVisible(not icon.isNull())
         title_label = QLabel(title)
@@ -244,13 +261,13 @@ class ModuleSelectionWidget(QWidget):
         layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
         layout.setSpacing(SPACING["md"])
 
-        layout.addLayout(self._title_row("本地测试信息", "settings"))
+        layout.addLayout(self._title_row("壳层状态", "settings"))
         self._tier_label = self._support_line("")
         self._license_label = self._support_line("")
         layout.addWidget(self._tier_label)
         layout.addWidget(self._license_label)
-        layout.addWidget(self._support_line("订阅 / VIP 服务：预留功能"))
-        layout.addWidget(self._support_line("设置入口：占位"))
+        layout.addWidget(self._support_line("Welcome / Dashboard / Sidebar / About / Test Feedback：低保真可见。"))
+        layout.addWidget(self._support_line("业务功能入口遵守 Developer Preview、planned、blocked 状态。"))
         icon_summary = icon_asset_summary()
         layout.addWidget(
             self._support_line(
@@ -264,21 +281,15 @@ class ModuleSelectionWidget(QWidget):
         environment = self._dashboard.environment
         layout.addWidget(self._support_line(f"Python：{environment.python_version}"))
         layout.addWidget(self._support_line(f"PySide6：{'可用' if environment.pyside6_available else '不可用'}"))
-        layout.addWidget(self._support_line("环境检查详情：后续接入设置中心。"))
+        layout.addWidget(self._support_line("环境检查详情：设置中心后续统一接入。"))
         layout.addStretch(1)
 
-        settings_button = QPushButton("设置入口（预留）")
+        settings_button = QPushButton("设置中心见侧边栏")
         settings_button.setObjectName("secondaryButton")
         settings_button.setIcon(load_ui02_module_selection_icon("settings"))
         settings_button.setIconSize(QSize(18, 18))
         settings_button.setEnabled(False)
-        logout_button = QPushButton("退出登录")
-        logout_button.setObjectName("logoutButton")
-        logout_button.setIcon(load_ui02_module_selection_icon("logout"))
-        logout_button.setIconSize(QSize(18, 18))
-        logout_button.clicked.connect(self.logout_requested.emit)
         layout.addWidget(settings_button)
-        layout.addWidget(logout_button)
         return frame
 
     def _support_line(self, text: str) -> QLabel:

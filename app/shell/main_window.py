@@ -43,20 +43,29 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(860, 560)
 
         self._root_stack = QStackedWidget()
-        self._login_page = BioMedPilotLoginWidget(on_login=self._complete_login)
-        self._root_stack.addWidget(self._login_page)
+        self._welcome_page = BioMedPilotLoginWidget(
+            on_login=self._complete_login,
+            on_settings=self._open_settings_from_welcome,
+            on_about=self._open_about_from_welcome,
+        )
+        self._login_page = self._welcome_page
+        self._root_stack.addWidget(self._welcome_page)
 
         self._stack = QStackedWidget()
         self._dashboard_page = self._build_dashboard_page()
         self._bioinformatics_page = BioinformaticsWorkspaceWidget(on_back=self.show_dashboard)
         self._meta_analysis_page = MetaAnalysisWorkspaceWidget(on_back=self.show_dashboard)
+        self._labtools_page = self._build_labtools_page()
         self._settings_page = self._build_settings_page()
-        self._testing_page = self._build_testing_page()
+        self._testing_page = self._build_test_feedback_page()
+        self._about_page = self._build_about_page()
         self._stack.addWidget(self._dashboard_page)
         self._stack.addWidget(self._bioinformatics_page)
         self._stack.addWidget(self._meta_analysis_page)
+        self._stack.addWidget(self._labtools_page)
         self._stack.addWidget(self._settings_page)
         self._stack.addWidget(self._testing_page)
+        self._stack.addWidget(self._about_page)
 
         self._shell_page = QWidget()
         shell_layout = QHBoxLayout(self._shell_page)
@@ -67,13 +76,15 @@ class MainWindow(QMainWindow):
                 on_dashboard=self.show_dashboard,
                 on_bioinformatics=self.show_bioinformatics,
                 on_meta_analysis=self.show_meta_analysis,
+                on_labtools=self.show_labtools,
                 on_settings=self.show_settings,
-                on_testing=self.show_testing_mode,
+                on_test_feedback=self.show_test_feedback,
+                on_about=self.show_about,
             )
         )
         shell_layout.addWidget(self._stack, 1)
         self._root_stack.addWidget(self._shell_page)
-        self._root_stack.setCurrentWidget(self._login_page)
+        self._root_stack.setCurrentWidget(self._welcome_page)
         self.setCentralWidget(self._root_stack)
 
     def current_session(self) -> LocalSession | None:
@@ -86,9 +97,19 @@ class MainWindow(QMainWindow):
 
     def logout(self) -> None:
         self._session = None
-        self._login_page.reset_session()
-        self._root_stack.setCurrentWidget(self._login_page)
+        self._welcome_page.reset_session()
+        self._root_stack.setCurrentWidget(self._welcome_page)
         self.setWindowTitle(APP_NAME)
+
+    def _open_settings_from_welcome(self) -> None:
+        if self._session is None:
+            self._welcome_page.enter_workspace()
+        self.show_settings()
+
+    def _open_about_from_welcome(self) -> None:
+        if self._session is None:
+            self._welcome_page.enter_workspace()
+        self.show_about()
 
     def show_dashboard(self) -> None:
         self._refresh_dashboard_page()
@@ -103,13 +124,24 @@ class MainWindow(QMainWindow):
         self._stack.setCurrentWidget(self._meta_analysis_page)
         self.setWindowTitle("BioMedPilot / Meta 分析")
 
+    def show_labtools(self) -> None:
+        self._stack.setCurrentWidget(self._labtools_page)
+        self.setWindowTitle("BioMedPilot / LabTools")
+
     def show_settings(self) -> None:
         self._stack.setCurrentWidget(self._settings_page)
         self.setWindowTitle("BioMedPilot / 设置中心")
 
-    def show_testing_mode(self) -> None:
+    def show_test_feedback(self) -> None:
         self._stack.setCurrentWidget(self._testing_page)
-        self.setWindowTitle("BioMedPilot / 测试模式")
+        self.setWindowTitle("BioMedPilot / Test Feedback")
+
+    def show_testing_mode(self) -> None:
+        self.show_test_feedback()
+
+    def show_about(self) -> None:
+        self._stack.setCurrentWidget(self._about_page)
+        self.setWindowTitle("BioMedPilot / About")
 
     def create_bioinformatics_project(self) -> None:
         self._create_project_and_open("bioinformatics")
@@ -125,17 +157,21 @@ class MainWindow(QMainWindow):
             self.show_meta_analysis()
 
     def current_workspace_key(self) -> str:
-        if hasattr(self, "_root_stack") and self._root_stack.currentWidget() is self._login_page:
-            return "login"
+        if hasattr(self, "_root_stack") and self._root_stack.currentWidget() is self._welcome_page:
+            return "welcome"
         current = self._stack.currentWidget()
         if current is self._bioinformatics_page:
             return "bioinformatics"
         if current is self._meta_analysis_page:
             return "meta_analysis"
+        if current is self._labtools_page:
+            return "labtools"
         if current is self._settings_page:
             return "settings"
         if current is self._testing_page:
-            return "testing"
+            return "test_feedback"
+        if current is self._about_page:
+            return "about"
         return "dashboard"
 
     def _build_dashboard_page(self) -> QWidget:
@@ -144,7 +180,7 @@ class MainWindow(QMainWindow):
             session=self._session,
             on_open_bioinformatics=self.show_bioinformatics,
             on_open_meta_analysis=self.show_meta_analysis,
-            on_logout=self.logout,
+            on_open_labtools=self.show_labtools,
         )
 
     def _refresh_dashboard_page(self) -> None:
@@ -209,6 +245,34 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return frame
 
+    def _build_labtools_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("labtoolsShellPage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(28, 24, 28, 24)
+        root.setSpacing(14)
+        title = QLabel("LabTools / 实验工具")
+        title.setObjectName("labtoolsShellTitle")
+        title.setStyleSheet("font-size: 24px; font-weight: 700;")
+        root.addWidget(title)
+        note = QLabel("低保真目标壳层：通用计算器、试剂制备、实验记录、实验模块和外部图像引擎配置。本阶段不接入实验计算业务。")
+        note.setWordWrap(True)
+        root.addWidget(note)
+        root.addWidget(
+            self._list_card(
+                "目标入口",
+                [
+                    "通用计算器：planned shell",
+                    "试剂制备：planned shell",
+                    "实验记录：planned shell",
+                    "ImageJ/Fiji 外部引擎：Settings 统一检测与配置",
+                ],
+            )
+        )
+        root.addWidget(self._list_card("当前状态", ["Developer Preview / planned", "仅用于全局导航验收。"]))
+        root.addStretch(1)
+        return page
+
     def _build_settings_page(self) -> QWidget:
         profile = SettingsProfile()
         page = QWidget()
@@ -254,13 +318,15 @@ class MainWindow(QMainWindow):
                 rows.append(f"{item.state_label} · {item.category} · {item.label} · 调用：{usages}")
         return self._list_card("图标资源状态", rows)
 
-    def _build_testing_page(self) -> QWidget:
+    def _build_test_feedback_page(self) -> QWidget:
         summary = testing_mode_summary()
         page = QWidget()
+        page.setObjectName("testFeedbackPage")
         root = QVBoxLayout(page)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
-        title = QLabel("Testing Mode / 用户测试模式")
+        title = QLabel("Test Feedback / 测试反馈")
+        title.setObjectName("testFeedbackTitle")
         title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
         goal = QLabel(str(summary["goal"]))
@@ -277,11 +343,46 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self._list_card("已知限制", list(summary["known_limitations"])))
         content_layout.addWidget(self._list_card("反馈记录位置", [str(summary["feedback_location"])]))
         feedback_button = QPushButton("生成测试反馈模板")
+        feedback_button.setObjectName("generateTestFeedbackButton")
         feedback_button.clicked.connect(self.generate_testing_feedback_template)
         content_layout.addWidget(feedback_button)
         content_layout.addStretch(1)
         scroll.setWidget(content)
         root.addWidget(scroll, 1)
+        return page
+
+    def _build_about_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("aboutPage")
+        root = QVBoxLayout(page)
+        root.setContentsMargins(28, 24, 28, 24)
+        root.setSpacing(14)
+        title = QLabel("About / 关于")
+        title.setObjectName("aboutTitle")
+        title.setStyleSheet("font-size: 24px; font-weight: 700;")
+        root.addWidget(title)
+        root.addWidget(
+            self._list_card(
+                "品牌关系",
+                [
+                    "主入口显示：萤火虫 / Firefly",
+                    "当前 bundle 与工程名：BioMedPilot / 医研智析",
+                    "模块：Bioinformatics、Meta Analysis、LabTools",
+                ],
+            )
+        )
+        root.addWidget(
+            self._list_card(
+                "阶段边界",
+                [
+                    "UI-B2 只重建全局低保真壳层。",
+                    "Bioinformatics、Meta Analysis、LabTools 业务能力仍按各自 Developer Preview / planned 状态呈现。",
+                    "本阶段不替换资源、不打包、不运行 packaged app。",
+                ],
+            )
+        )
+        root.addWidget(self._icon_asset_status_card(detailed=False))
+        root.addStretch(1)
         return page
 
     def _create_project_and_open(self, project_type: str) -> None:

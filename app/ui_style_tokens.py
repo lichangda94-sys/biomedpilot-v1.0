@@ -247,7 +247,7 @@ def global_app_stylesheet() -> str:
 
 def login_stylesheet() -> str:
     return f"""
-    QWidget#loginPage {{
+    QWidget#loginPage, QWidget#welcomePage {{
         background: {COLORS["background"]};
         color: {COLORS["text"]};
         font-size: {FONT_SIZE["body"]}px;
@@ -538,14 +538,14 @@ def module_selection_stylesheet() -> str:
         color: {COLORS["muted"]};
         background: {COLORS["surface_muted"]};
     }}
-    QPushButton#primaryButton, QPushButton#bioModuleButton, QPushButton#metaModuleButton {{
+    QPushButton#primaryButton, QPushButton#bioModuleButton, QPushButton#metaModuleButton, QPushButton#labtoolsModuleButton {{
         color: #FFFFFF;
         background: {COLORS["bio"]};
         border: 1px solid {COLORS["bio"]};
         min-height: {CONTROL_HEIGHT["primary"] - 18}px;
         font-weight: 700;
     }}
-    QPushButton#bioModuleButton:hover, QPushButton#metaModuleButton:hover {{
+    QPushButton#bioModuleButton:hover, QPushButton#metaModuleButton:hover, QPushButton#labtoolsModuleButton:hover {{
         background: #0D273B;
     }}
     QPushButton#secondaryButton {{

@@ -16,6 +16,7 @@ class DashboardModel:
     product_subtitle: str
     bioinformatics_features: tuple[str, ...]
     meta_analysis_features: tuple[str, ...]
+    labtools_features: tuple[str, ...]
     recent_projects: tuple[ProjectRecord, ...]
     recent_tasks: tuple[TaskRecord, ...]
     environment: EnvironmentStatus
@@ -31,11 +32,17 @@ def build_dashboard_model(
     return DashboardModel(
         product_name="BioMedPilot / 医研智析",
         product_subtitle=(
-            "统一入口，独立工作台：Bioinformatics Analysis 与 Meta Analysis · "
+            "萤火虫 / Firefly 低保真全局壳层：Bioinformatics、Meta Analysis 与 LabTools · "
             f"{APP_VERSION} · 内部测试版 / {APP_CHANNEL}"
         ),
         bioinformatics_features=tuple(item.name for item in bioinformatics_features()),
         meta_analysis_features=tuple(item.name for item in meta_analysis_features()),
+        labtools_features=(
+            "通用计算器",
+            "试剂制备",
+            "实验记录",
+            "外部图像引擎入口",
+        ),
         recent_projects=tuple(project_center.list_projects(limit=5)),
         recent_tasks=tuple(task_center.list_tasks(limit=5)),
         environment=check_local_environment(),

@@ -10,9 +10,13 @@ def test_shell_navigation_state_switches_workspaces() -> None:
     assert navigation.current_workspace == "bioinformatics"
     navigation.show_meta_analysis()
     assert navigation.current_workspace == "meta_analysis"
+    navigation.show_labtools()
+    assert navigation.current_workspace == "labtools"
     navigation.show_settings()
     assert navigation.current_workspace == "settings"
-    navigation.show_testing()
-    assert navigation.current_workspace == "testing"
+    navigation.show_test_feedback()
+    assert navigation.current_workspace == "test_feedback"
+    navigation.show_about()
+    assert navigation.current_workspace == "about"
     navigation.show_dashboard()
     assert navigation.current_workspace == "dashboard"

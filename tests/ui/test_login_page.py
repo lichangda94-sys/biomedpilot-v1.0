@@ -26,68 +26,45 @@ def qt_app():
     return QApplication.instance() or QApplication([])
 
 
-def test_login_widget_instantiates(qt_app) -> None:
+def test_welcome_widget_instantiates(qt_app) -> None:
     widget = BioMedPilotLoginWidget()
-    assert widget.objectName() == "loginPage"
+    assert widget.objectName() == "welcomePage"
 
 
-def test_login_page_uses_ui01_icons(qt_app) -> None:
+def test_welcome_page_uses_existing_icons_without_replacing_resources(qt_app) -> None:
     widget = BioMedPilotLoginWidget()
 
     brand_icon = widget.findChild(QLabel, "loginBrandIcon")
-    username_input = widget.findChild(QLineEdit, "usernameInput")
-    password_input = widget.findChild(QLineEdit, "passwordInput")
-    login_button = widget.findChild(QPushButton, "primaryButton")
-    meta_icons = widget.findChildren(QLabel, "loginMetaIcon")
+    enter_button = widget.findChild(QPushButton, "primaryButton")
 
     assert brand_icon is not None
     assert brand_icon.pixmap() is not None and not brand_icon.pixmap().isNull()
-    assert username_input is not None and username_input.actions()
-    assert password_input is not None and password_input.actions()
-    assert login_button is not None and not login_button.icon().isNull()
-    assert len(meta_icons) >= 5
+    assert enter_button is not None and not enter_button.icon().isNull()
 
 
-def test_login_page_matches_reference_layout_sections(qt_app) -> None:
+def test_welcome_page_removes_visible_credential_flow(qt_app) -> None:
     widget = BioMedPilotLoginWidget()
 
-    assert widget.findChild(QLabel, "loginTopTitle") is not None
-    assert widget.findChild(QLabel, "loginTopVersion") is not None
-    assert widget.findChild(QLabel, "loginBrandIcon") is not None
-    assert widget.findChild(QLabel, "brandChineseName").text() == "医研智析"
-    assert widget.findChild(QLineEdit, "usernameInput").placeholderText() == "用户名"
-    assert widget.findChild(QLineEdit, "passwordInput").placeholderText() == "密码"
+    labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    username_input = widget.findChild(QLineEdit, "usernameInput")
+    password_input = widget.findChild(QLineEdit, "passwordInput")
 
-    dock_tiles = widget.findChildren(QLabel, "loginDockLabel")
-    assert dock_tiles == []
-    assert widget.findChild(QLabel, "loginDockIcon") is None
+    assert "萤火虫 / Firefly" in labels
+    assert "BioMedPilot / 医研智析" in labels
+    assert "账号" not in labels
+    assert "VIP" not in labels
+    assert username_input is not None and username_input.isHidden()
+    assert password_input is not None and password_input.isHidden()
 
 
-@pytest.mark.parametrize(
-    ("username", "password"),
-    [
-        ("", ""),
-        ("doctor", ""),
-        ("", "local-password"),
-    ],
-)
-def test_login_requires_username_and_password(qt_app, username: str, password: str) -> None:
+def test_welcome_enter_workspace_creates_local_session_without_password(qt_app) -> None:
     widget = BioMedPilotLoginWidget()
-    widget.set_credentials(username, password)
+    widget.set_credentials("", "ignored")
 
-    assert widget.attempt_login() is None
-    assert widget.session() is None
-    assert widget.error_message() == "请输入用户名和密码。"
-
-
-def test_non_empty_credentials_create_local_session(qt_app) -> None:
-    widget = BioMedPilotLoginWidget()
-    widget.set_credentials("researcher", "local-password")
-
-    session = widget.attempt_login()
+    session = widget.enter_workspace()
 
     assert isinstance(session, LocalSession)
-    assert session.username == "researcher"
+    assert session.username == "local_workspace_user"
     assert session.role == "local_test_user"
     assert session.tier == "Developer Preview"
     assert session.license_status == "local_testing"
@@ -96,24 +73,22 @@ def test_non_empty_credentials_create_local_session(qt_app) -> None:
     assert widget.error_message() == ""
 
 
-def test_successful_login_triggers_callback(qt_app) -> None:
+def test_successful_welcome_entry_triggers_callback(qt_app) -> None:
     sessions: list[LocalSession] = []
     widget = BioMedPilotLoginWidget(on_login=sessions.append)
-    widget.set_credentials("researcher", "local-password")
 
-    session = widget.attempt_login()
+    session = widget.enter_workspace()
 
     assert sessions == [session]
 
 
-def test_main_window_starts_at_login_and_enters_dashboard(qt_app) -> None:
+def test_main_window_starts_at_welcome_and_enters_dashboard(qt_app) -> None:
     from app.shell.main_window import MainWindow
 
     window = MainWindow()
 
-    assert window.current_workspace_key() == "login"
-    window._login_page.set_credentials("researcher", "local-password")
-    session = window._login_page.attempt_login()
+    assert window.current_workspace_key() == "welcome"
+    session = window._welcome_page.enter_workspace()
 
     assert window.current_workspace_key() == "dashboard"
     assert window.current_session() == session
@@ -123,8 +98,7 @@ def test_settings_page_displays_icon_asset_details(qt_app) -> None:
     from app.shell.main_window import MainWindow
 
     window = MainWindow()
-    window._login_page.set_credentials("researcher", "local-password")
-    window._login_page.attempt_login()
+    window._welcome_page.enter_workspace()
     window.show_settings()
 
     labels = "\n".join(label.text() for label in window.findChildren(QLabel))
