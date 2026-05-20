@@ -86,6 +86,14 @@ from app.bioinformatics.data_sources import (
 )
 from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
+from app.bioinformatics.immune_infiltration import (
+    build_immune_infiltration_readiness,
+    build_linkage_preflight,
+    generate_immune_tme_report,
+    load_signature_catalog,
+    run_immune_scoring,
+)
+from app.bioinformatics.immune_infiltration.signature_models import signature_from_dict
 from app.bioinformatics.project_readiness import (
     has_standardizable_expression_input,
     load_readiness_artifacts,
@@ -5304,6 +5312,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     back_requested = Signal()
     deg_config_requested = Signal(object)
     imported_deg_requested = Signal(object)
+    immune_scoring_requested = Signal(object)
 
     def __init__(
         self,
@@ -5312,6 +5321,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         on_back: Callable[[], None] | None = None,
         on_configure_deg: Callable[[Path], None] | None = None,
         on_view_imported_deg: Callable[[Path], None] | None = None,
+        on_configure_immune_scoring: Callable[[Path], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -5327,6 +5337,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self.deg_config_requested.connect(on_configure_deg)
         if on_view_imported_deg is not None:
             self.imported_deg_requested.connect(on_view_imported_deg)
+        if on_configure_immune_scoring is not None:
+            self.immune_scoring_requested.connect(on_configure_immune_scoring)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -5369,6 +5381,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self.imported_deg_requested.emit(self._project_root)
         self._status_label.setText("已打开导入结果浏览；该入口只查看用户导入 / 外部分析结果，不运行 DEG。")
         return {"next_page": "imported_deg", "project_root": str(self._project_root)}
+
+    def open_immune_scoring(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.immune_scoring_requested.emit(self._project_root)
+        self._status_label.setText("已打开免疫浸润 / TME评分页；该入口只生成探索性 bulk signature score。")
+        return {"next_page": "immune_tme_scoring", "project_root": str(self._project_root)}
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -5477,6 +5497,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
         actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
         root.addLayout(actions)
@@ -5681,6 +5702,250 @@ class BioinformaticsDegConfigWidget(QWidget):
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._developer_details.setPlainText(_json(payload))
+
+
+class BioinformaticsImmuneInfiltrationWidget(QWidget):
+    back_requested = Signal()
+
+    def __init__(self, *, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self._readiness: dict[str, object] = {}
+        self._last_result: object | None = None
+        self.setObjectName("bioinformaticsImmuneInfiltrationPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_state()
+
+    def refresh_state(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        readiness = build_immune_infiltration_readiness(self._project_root)
+        self._readiness = readiness
+        self._render_readiness(readiness)
+        return readiness
+
+    def run_scoring(self) -> object | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        dataset = self._selected_dataset()
+        if not dataset:
+            self._status_label.setText("没有可用于 B7 的表达矩阵。")
+            return None
+        signatures = self._selected_signatures()
+        if not signatures:
+            self._status_label.setText("请至少选择一个 immune / TME signature。")
+            return None
+        readiness = build_immune_infiltration_readiness(self._project_root, dataset_id=str(dataset.get("dataset_id") or ""), signatures=signatures)
+        if not readiness.get("can_run_scoring"):
+            self._render_readiness(readiness)
+            self._status_label.setText("当前输入未通过 B7 readiness，不能运行评分。")
+            return None
+        try:
+            result = run_immune_scoring(
+                self._project_root,
+                expression_matrix_path=str(dataset.get("expression_matrix_path") or ""),
+                selected_signatures=signatures,
+                dataset_id=str(dataset.get("dataset_id") or ""),
+                dataset_label=str(dataset.get("label") or ""),
+                input_value_type=str(dataset.get("value_type") or "unknown"),
+                gene_id_column=str(dataset.get("gene_id_column") or ""),
+                sample_columns=[str(item) for item in dataset.get("sample_columns", []) or []],
+                scoring_method=self._method_combo.currentText(),
+                value_transform=self._transform_combo.currentText(),
+            )
+            preflight = build_linkage_preflight(
+                self._project_root,
+                score_matrix_path=result.score_matrix_path,
+                expression_matrix_path=str(dataset.get("expression_matrix_path") or ""),
+                target_gene=self._target_gene_input.text().strip(),
+            )
+            report = generate_immune_tme_report(self._project_root, manifest_path=result.manifest_path, linkage_preflight=preflight)
+        except Exception as exc:
+            self._status_label.setText(f"免疫浸润 / TME评分失败：{exc}")
+            return None
+        self._last_result = result
+        self._render_result(result, preflight, report)
+        self._status_label.setText("免疫浸润 / TME评分已完成；结果为探索性 bulk signature score，不自动进入 DEG/GSEA/KM/Cox。")
+        return result
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(
+            _header(
+                "免疫浸润 / TME评分",
+                "基于 bulk 表达矩阵计算探索性 immune / TME signature score。",
+                back_text="返回分析任务中心",
+                back_signal=self.back_requested,
+            )
+        )
+        self._status_label = _status_label("请先完成数据检查与准备，并选择可用于 B7 的表达矩阵。")
+        root.addWidget(self._status_label)
+
+        input_card, input_layout = _card("输入与规则")
+        self._dataset_combo = QComboBox()
+        self._dataset_combo.setObjectName("immuneDatasetCombo")
+        self._dataset_combo.currentIndexChanged.connect(lambda _index: self._render_dataset_detail())
+        input_layout.addWidget(QLabel("表达矩阵"))
+        input_layout.addWidget(self._dataset_combo)
+        self._input_status_label = _muted("输入状态待检查。")
+        self._input_status_label.setObjectName("immuneInputStatusCard")
+        self._value_policy_label = _muted("value type policy：推荐 TPM；raw counts / unknown 默认阻断。")
+        self._value_policy_label.setObjectName("immuneValueTypePolicy")
+        self._limitations_label = _muted("限制：bulk signature score 不等同于真实免疫细胞比例；不执行 CIBERSORT/xCell/ESTIMATE。")
+        self._limitations_label.setObjectName("immuneLimitationsLabel")
+        input_layout.addWidget(self._input_status_label)
+        input_layout.addWidget(self._value_policy_label)
+        input_layout.addWidget(self._limitations_label)
+        root.addWidget(input_card)
+
+        config_card, config_layout = _card("Signature 与评分配置")
+        self._signature_ids_input = QLineEdit("cd8_t_cell,cytolytic_activity,pdcd1_checkpoint")
+        self._signature_ids_input.setObjectName("immuneSignatureIdsInput")
+        self._signature_ids_input.setPlaceholderText("signature id，逗号分隔")
+        config_layout.addWidget(self._signature_ids_input)
+        option_row = QHBoxLayout()
+        self._method_combo = QComboBox()
+        self._method_combo.setObjectName("immuneScoringMethodCombo")
+        self._method_combo.addItems(["mean_zscore", "mean_expression"])
+        self._transform_combo = QComboBox()
+        self._transform_combo.setObjectName("immuneValueTransformCombo")
+        self._transform_combo.addItems(["none", "log2_x_plus_1"])
+        self._target_gene_input = QLineEdit()
+        self._target_gene_input.setObjectName("immuneTargetGeneInput")
+        self._target_gene_input.setPlaceholderText("可选 target gene correlation preflight")
+        option_row.addWidget(self._method_combo)
+        option_row.addWidget(self._transform_combo)
+        option_row.addWidget(self._target_gene_input)
+        config_layout.addLayout(option_row)
+        self._signature_table = _table(["Signature", "类别", "基因数", "说明"])
+        self._signature_table.setObjectName("immuneSignatureTable")
+        _set_table_widths(self._signature_table, [190, 120, 80, 420])
+        self._signature_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        config_layout.addWidget(self._signature_table)
+        root.addWidget(config_card)
+
+        actions = QHBoxLayout()
+        self._run_button = _button("运行免疫浸润 / TME评分", "primaryButton", self.run_scoring)
+        self._run_button.setObjectName("immuneRunButton")
+        actions.addWidget(self._run_button)
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_state))
+        actions.addWidget(_button("返回分析任务中心", "secondaryButton", self.back_requested.emit))
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        result_card, result_layout = _card("结果预览")
+        self._run_summary_label = _muted("尚未运行评分。")
+        self._run_summary_label.setObjectName("immuneRunSummary")
+        result_layout.addWidget(self._run_summary_label)
+        self._score_preview = _table(["signature_id", "display_name", "coverage_status"])
+        self._score_preview.setObjectName("immuneScorePreviewTable")
+        self._coverage_preview = _table(["signature_id", "matched_gene_count", "coverage_ratio", "status"])
+        self._coverage_preview.setObjectName("immuneCoverageTable")
+        result_layout.addWidget(self._score_preview)
+        result_layout.addWidget(self._coverage_preview)
+        root.addWidget(result_card)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(160)
+        self._developer_details.setObjectName("immuneDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        root.addWidget(developer_card)
+
+    def _render_readiness(self, readiness: dict[str, object]) -> None:
+        datasets = [item for item in readiness.get("available_datasets", []) or [] if isinstance(item, dict)]
+        selected_id = str((readiness.get("input_summary") or {}).get("dataset_id") if isinstance(readiness.get("input_summary"), dict) else "")
+        self._dataset_combo.blockSignals(True)
+        self._dataset_combo.clear()
+        for dataset in datasets:
+            self._dataset_combo.addItem(str(dataset.get("label") or dataset.get("dataset_id") or "未命名表达矩阵"), dataset)
+            if selected_id and str(dataset.get("dataset_id") or "") == selected_id:
+                self._dataset_combo.setCurrentIndex(self._dataset_combo.count() - 1)
+        self._dataset_combo.blockSignals(False)
+        self._render_dataset_detail()
+        catalog_payload = load_signature_catalog()
+        signatures = [_signature_from_catalog_item(item) for item in catalog_payload.get("signatures", []) if isinstance(item, dict)]
+        _fill_table(
+            self._signature_table,
+            [
+                [
+                    signature.display_name,
+                    signature.category,
+                    str(len(signature.genes)),
+                    signature.notes or "exploratory built-in signature",
+                ]
+                for signature in signatures
+            ],
+        )
+        blockers = [str(item) for item in readiness.get("blockers", []) or []]
+        warnings = [str(item) for item in readiness.get("warnings", []) or []]
+        self._run_button.setEnabled(bool(readiness.get("can_run_scoring")))
+        self._status_label.setText(
+            "B7 readiness："
+            + ("可运行。" if readiness.get("can_run_scoring") else "不可运行。")
+            + (f" 阻塞：{'；'.join(blockers)}。" if blockers else "")
+            + (f" 提示：{'；'.join(warnings[:3])}。" if warnings else "")
+        )
+        self._developer_details.setPlainText(_json({"immune_infiltration_readiness": readiness}))
+
+    def _render_dataset_detail(self) -> None:
+        dataset = self._selected_dataset()
+        if not dataset:
+            self._input_status_label.setText("未发现可用于 B7 的表达矩阵。")
+            self._value_policy_label.setText("value type policy：无输入。")
+            return
+        self._input_status_label.setText(
+            f"输入：{dataset.get('source')}；样本 {dataset.get('sample_count')}；基因 {dataset.get('gene_count')}；gene id {dataset.get('gene_id_type')}。"
+        )
+        self._value_policy_label.setText(f"value type：{dataset.get('value_type')}；推荐 TPM / normalized expression；raw counts / unknown 默认阻断。")
+
+    def _render_result(self, result: object, preflight: dict[str, object], report: dict[str, object]) -> None:
+        self._run_summary_label.setText(
+            f"run：{getattr(result, 'run_id', '')}；signature {getattr(result, 'scored_signature_count', 0)}/{getattr(result, 'signature_count', 0)}；"
+            f"sample {getattr(result, 'sample_count', 0)}；report 已生成。"
+        )
+        _fill_table(self._score_preview, _tsv_rows(getattr(result, "score_matrix_path", ""), limit=8, columns=["signature_id", "display_name", "coverage_status"]))
+        _fill_table(self._coverage_preview, _tsv_rows(getattr(result, "coverage_path", ""), limit=8, columns=["signature_id", "matched_gene_count", "coverage_ratio", "status"]))
+        self._developer_details.setPlainText(
+            _json(
+                {
+                    "immune_scoring_result": result.to_dict() if hasattr(result, "to_dict") else {},
+                    "linkage_preflight": preflight,
+                    "report": report,
+                }
+            )
+        )
+
+    def _selected_dataset(self) -> dict[str, object] | None:
+        data = self._dataset_combo.currentData()
+        return data if isinstance(data, dict) else None
+
+    def _selected_signatures(self) -> list[object]:
+        requested = {
+            item.strip()
+            for item in self._signature_ids_input.text().replace("\n", ",").split(",")
+            if item.strip()
+        }
+        catalog_payload = load_signature_catalog()
+        catalog = [_signature_from_catalog_item(item) for item in catalog_payload.get("signatures", []) if isinstance(item, dict)]
+        if not requested:
+            return catalog
+        return [signature for signature in catalog if signature.signature_id in requested or signature.display_name in requested]
 
 
 class BioinformaticsImportedDegBrowserWidget(QWidget):
@@ -9783,6 +10048,10 @@ def _analysis_task_user_status(
         return "需要先有结果"
     if task_type == "tcga_gtex_joint":
         return "测试级 / 暂不可用"
+    if task_type == "immune_tme_scoring":
+        if _analysis_has_result(result_entries, "immune_tme_scoring"):
+            return "已有探索性评分"
+        return "可配置" if task.get("can_run") else "需要合适表达矩阵"
     if _analysis_has_task_record(task_records, task_type):
         return "已有配置草稿"
     if task.get("can_run"):
@@ -9795,6 +10064,7 @@ def _analysis_required_inputs_text(task_type: str) -> str:
         "differential_expression": "表达矩阵、样本信息、分组设计",
         "enrichment": "表达矩阵或差异分析结果",
         "gsea": "表达矩阵、GSEA 基因集选择",
+        "immune_tme_scoring": "TPM / 标准化表达矩阵、immune / TME signatures",
         "correlation": "表达矩阵、目标基因",
         "survival": "表达矩阵、临床/生存信息",
         "clinical_association": "临床信息",
@@ -9840,6 +10110,12 @@ def _analysis_task_next_action(
         return "需要差异分析结果或基因列表；不要生成假富集结果。"
     if task_type == "gsea":
         return "先在 GSEA 基因集资源管理器选择本地资源；未选择只阻断 GSEA preflight / execution。"
+    if task_type == "immune_tme_scoring":
+        if _analysis_has_result(result_entries, "immune_tme_scoring"):
+            return "进入结果浏览或重新运行 B7 评分；结果仍为探索性 bulk score。"
+        if task.get("can_run"):
+            return "进入免疫浸润 / TME评分；不执行 CIBERSORT/xCell/ESTIMATE，也不自动进入 DEG/GSEA/KM/Cox。"
+        return "请补充 TPM / 标准化表达矩阵；raw counts / unknown 默认不能评分。"
     if task_type == "correlation":
         return "确认目标基因和样本数量后再配置。"
     if task_type == "survival":
@@ -9906,6 +10182,27 @@ def _analysis_has_task_record(records: list[dict[str, object]], task_type: str) 
 
 def _analysis_has_result(entries: list[dict[str, object]], analysis_type: str) -> bool:
     return any(str(item.get("analysis_type") or "") == analysis_type for item in entries)
+
+
+def _tsv_rows(path_text: str, *, limit: int = 8, columns: list[str] | None = None) -> list[list[object]]:
+    import csv
+
+    path = Path(str(path_text or "")).expanduser()
+    if not path.is_file():
+        return []
+    rows: list[list[object]] = []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        selected = columns or list(reader.fieldnames or [])
+        for index, row in enumerate(reader):
+            if index >= limit:
+                break
+            rows.append([str(row.get(column, "")) for column in selected])
+    return rows
+
+
+def _signature_from_catalog_item(item: dict[str, object]) -> object:
+    return signature_from_dict(item)
 
 
 def _analysis_entry_semantics(entry: dict[str, object]) -> str:

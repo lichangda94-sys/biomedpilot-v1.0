@@ -34,6 +34,7 @@ try:
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsDegConfigWidget,
+        BioinformaticsImmuneInfiltrationWidget,
         BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
@@ -96,8 +97,12 @@ if QWidget is not None:
                 on_back=self.show_standardization,
                 on_configure_deg=self.show_deg_config,
                 on_view_imported_deg=self.show_imported_deg_browser,
+                on_configure_immune_scoring=self.show_immune_scoring,
             )
             self._deg_config_page = BioinformaticsDegConfigWidget(
+                on_back=self.show_analysis_tasks,
+            )
+            self._immune_scoring_page = BioinformaticsImmuneInfiltrationWidget(
                 on_back=self.show_analysis_tasks,
             )
             self._imported_deg_page = BioinformaticsImportedDegBrowserWidget(
@@ -126,6 +131,7 @@ if QWidget is not None:
                 self._workflow_status_page,
                 self._analysis_task_page,
                 self._deg_config_page,
+                self._immune_scoring_page,
                 self._imported_deg_page,
                 self._results_browser_page,
                 self._report_viewer_page,
@@ -184,6 +190,11 @@ if QWidget is not None:
             self._set_current_project(summary)
             self._deg_config_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._deg_config_page)
+
+        def show_immune_scoring(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._immune_scoring_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._immune_scoring_page)
 
         def show_results_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)

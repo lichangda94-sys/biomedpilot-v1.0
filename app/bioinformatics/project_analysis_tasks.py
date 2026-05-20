@@ -28,6 +28,16 @@ TASK_TEMPLATES: tuple[dict[str, object], ...] = (
     {"task_type": "enrichment", "label": "富集分析", "default_parameters": {"method": "preview over-representation"}},
     {"task_type": "gsea", "label": "GSEA", "default_parameters": {"gene_set": "GMT gene set"}},
     {
+        "task_type": "immune_tme_scoring",
+        "label": "免疫浸润 / TME评分",
+        "default_parameters": {
+            "method": "mean_zscore",
+            "value_transform": "none",
+            "recommended_value_type": "TPM / normalized expression",
+            "signatures": "built-in exploratory immune / TME signatures",
+        },
+    },
+    {
         "task_type": "correlation",
         "label": "相关性分析",
         "default_parameters": {"target gene": "未设置", "method": "Pearson / Spearman", "minimum samples": "10"},

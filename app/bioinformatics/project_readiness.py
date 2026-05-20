@@ -26,6 +26,7 @@ ANALYSIS_ROWS = (
     ("differential_expression", "差异表达分析", {"expression_matrix", "sample_metadata", "comparison_config"}),
     ("enrichment", "富集分析", {"expression_matrix"}),
     ("gsea", "GSEA", {"expression_matrix"}),
+    ("immune_tme_scoring", "免疫浸润 / TME评分", {"expression_matrix"}),
     ("correlation", "相关性分析", {"expression_matrix"}),
     ("survival", "生存分析", {"expression_matrix", "clinical_metadata"}),
     ("clinical_association", "临床变量关联", {"clinical_metadata"}),
@@ -38,6 +39,8 @@ EXPRESSION_COMPATIBLE_INPUTS = {"expression_matrix", "normalized_expression_matr
 
 
 def run_project_readiness(project_root: str | Path) -> dict[str, object]:
+    from app.bioinformatics.immune_infiltration.readiness import build_immune_infiltration_readiness
+
     root = Path(project_root).expanduser().resolve()
     recognition = load_recognition_report(root) or {}
     files = list(recognition.get("files", []) or [])
@@ -51,6 +54,9 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     gtex_readiness = build_gtex_readiness_summary(root)
     if gtex_readiness.get("has_gtex_expression_build"):
         available.update(str(item) for item in gtex_readiness.get("available_inputs", []) or [] if str(item))
+    immune_readiness = build_immune_infiltration_readiness(root)
+    if immune_readiness.get("can_run_scoring"):
+        available.add("immune_tme_scoring_input")
     validation_limited_present = any(
         bool(summary.get("validation_limited"))
         for summary in (tcga_readiness, tcga_clinical_readiness, gtex_readiness)
@@ -74,6 +80,7 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
     warnings.extend(str(item) for item in tcga_readiness.get("warnings", []) or [] if str(item))
     warnings.extend(str(item) for item in tcga_clinical_readiness.get("warnings", []) or [] if str(item))
     warnings.extend(str(item) for item in gtex_readiness.get("warnings", []) or [] if str(item))
+    warnings.extend(str(item) for item in immune_readiness.get("warnings", []) or [] if str(item))
     if not has_core_input:
         warnings.append("无表达矩阵。")
     if "sample_metadata" not in available:
@@ -129,6 +136,14 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
                 missing.append("gsea_gene_set_selection")
                 can_run = False
                 row_warnings.append("GSEA 基因集尚未选择；这只阻断后续 GSEA preflight / execution，不影响当前数据检查、标准化准备或 DEG preflight。")
+        if key == "immune_tme_scoring":
+            can_run = bool(immune_readiness.get("can_run_scoring"))
+            missing = list(immune_readiness.get("blockers", []) or [])
+            row_warnings.extend(str(item) for item in immune_readiness.get("warnings", []) or [] if str(item))
+            policy = immune_readiness.get("value_type_policy") if isinstance(immune_readiness.get("value_type_policy"), dict) else {}
+            if policy and not policy.get("can_run"):
+                row_warnings.append("B7 默认阻断 raw counts / unknown 表达矩阵；推荐 TPM 或已经标准化的表达值。")
+            row_warnings.append("B7 仅生成探索性 immune / TME signature score，不等同于真实免疫细胞比例。")
         if key == "reporting":
             row_warnings.append("报告生成不参与 Ready 判定；需先有真实分析结果。")
         next_step = _next_step_for_row(key, can_run, missing, row_warnings)
@@ -189,10 +204,12 @@ def run_project_readiness(project_root: str | Path) -> dict[str, object]:
             tcga_readiness=tcga_readiness,
             tcga_clinical_readiness=tcga_clinical_readiness,
             gtex_readiness=gtex_readiness,
+            immune_readiness=immune_readiness,
         ),
         "tcga_readiness": tcga_readiness,
         "tcga_clinical_readiness": tcga_clinical_readiness,
         "gtex_readiness": gtex_readiness,
+        "immune_infiltration_readiness": immune_readiness,
         "validation_limited": validation_limited_present,
         "gsea_gene_set_status": gsea_gene_set_status,
         "gsea_gene_set_readiness": gsea_gene_set_readiness,
@@ -365,10 +382,12 @@ def build_dataset_readiness_summary(
     tcga_readiness: dict[str, object] | None = None,
     tcga_clinical_readiness: dict[str, object] | None = None,
     gtex_readiness: dict[str, object] | None = None,
+    immune_readiness: dict[str, object] | None = None,
 ) -> dict[str, object]:
     tcga_readiness = tcga_readiness if isinstance(tcga_readiness, dict) else {}
     tcga_clinical_readiness = tcga_clinical_readiness if isinstance(tcga_clinical_readiness, dict) else {}
     gtex_readiness = gtex_readiness if isinstance(gtex_readiness, dict) else {}
+    immune_readiness = immune_readiness if isinstance(immune_readiness, dict) else {}
     typed_files = [item for item in files if isinstance(item, dict)]
     imported_deg_present = any(_record_has_role(item, "differential_result_table") for item in typed_files)
     expression_records = [item for item in typed_files if _record_has_any_role(item, CORE_INPUTS)]
@@ -398,6 +417,7 @@ def build_dataset_readiness_summary(
         "tcga_readiness": tcga_readiness,
         "tcga_clinical_readiness": tcga_clinical_readiness,
         "gtex_readiness": gtex_readiness,
+        "immune_infiltration_readiness": immune_readiness,
         "tcga_value_type_policy": tcga_readiness.get("value_type_policy", {}),
     }
 
