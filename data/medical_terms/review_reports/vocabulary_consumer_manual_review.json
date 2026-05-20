@@ -1,0 +1,214 @@
+{
+  "report_name": "vocabulary_consumer_manual_review",
+  "report_date": "2026-05-20",
+  "phase": "vocabulary_consumer_manual_review",
+  "source_audit": "data/medical_terms/review_reports/vocabulary_consumer_adoption_audit.json",
+  "source_manual_review_count": 15,
+  "business_runtime_bypass_found": false,
+  "business_runtime_refactor_executed": false,
+  "loader_modified": false,
+  "mini_medical_terms_index_modified": false,
+  "zh_term_overrides_modified": false,
+  "summary": {
+    "reviewed_count": 15,
+    "classification_counts": {
+      "approved_script_internal": 13,
+      "needs_scope_loader_migration": 2
+    },
+    "manual_fix_required_count": 0,
+    "needs_scope_loader_migration_count": 2,
+    "approved_script_internal_count": 13,
+    "safe_test_fixture_count": 0
+  },
+  "items": [
+    {
+      "file": "scripts/audit_bioinformatics_vocabulary_coverage.py",
+      "line": 21,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "direct_json_read",
+      "final_classification": "needs_scope_loader_migration",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This historical Bioinformatics coverage audit reads shared mini/zh files directly; if reused, it should migrate to Bioinformatics scoped audit JSON or load_terms(scope='bioinformatics') to avoid pre-fix source-of-truth drift.",
+      "recommended_action": "Do not fix in this stage. In a separate script-maintenance patch, either retire this script or rewrite it to use current Bioinformatics scoped audit files/load_terms(scope='bioinformatics')."
+    },
+    {
+      "file": "scripts/audit_bioinformatics_vocabulary_coverage.py",
+      "line": 22,
+      "matched_path": "zh_term_overrides.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "direct_json_read",
+      "final_classification": "needs_scope_loader_migration",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This historical Bioinformatics coverage audit reads shared mini/zh files directly; if reused, it should migrate to Bioinformatics scoped audit JSON or load_terms(scope='bioinformatics') to avoid pre-fix source-of-truth drift.",
+      "recommended_action": "Do not fix in this stage. In a separate script-maintenance patch, either retire this script or rewrite it to use current Bioinformatics scoped audit files/load_terms(scope='bioinformatics')."
+    },
+    {
+      "file": "scripts/audit_medical_terms_scope_isolation.py",
+      "line": 16,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption.",
+      "recommended_action": "No migration required unless the script starts reading runtime terms."
+    },
+    {
+      "file": "scripts/audit_medical_terms_scope_isolation.py",
+      "line": 16,
+      "matched_path": "zh_term_overrides.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption.",
+      "recommended_action": "No migration required unless the script starts reading runtime terms."
+    },
+    {
+      "file": "scripts/audit_medical_terms_scope_isolation.py",
+      "line": 20,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption.",
+      "recommended_action": "No migration required unless the script starts reading runtime terms."
+    },
+    {
+      "file": "scripts/audit_medical_terms_scope_isolation.py",
+      "line": 20,
+      "matched_path": "zh_term_overrides.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption.",
+      "recommended_action": "No migration required unless the script starts reading runtime terms."
+    },
+    {
+      "file": "scripts/audit_medical_vocabulary_coverage.py",
+      "line": 14,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This is an offline coverage/reference audit over curated shared source files. Direct file reads are acceptable as audit inputs and do not affect runtime scope isolation.",
+      "recommended_action": "Keep as script-internal; if converted to runtime lookup, require load_terms(scope=...)."
+    },
+    {
+      "file": "scripts/audit_medical_vocabulary_coverage.py",
+      "line": 15,
+      "matched_path": "zh_term_overrides.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This is an offline coverage/reference audit over curated shared source files. Direct file reads are acceptable as audit inputs and do not affect runtime scope isolation.",
+      "recommended_action": "Keep as script-internal; if converted to runtime lookup, require load_terms(scope=...)."
+    },
+    {
+      "file": "scripts/inventory_shared_core_pollution.py",
+      "line": 10,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This inventory must inspect raw shared-core and Meta mirror files directly; using scope loader would hide the file-layer pollution being audited.",
+      "recommended_action": "Keep direct reads for inventory/reporting only."
+    },
+    {
+      "file": "scripts/inventory_shared_core_pollution.py",
+      "line": 11,
+      "matched_path": "meta_seed_terms.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This inventory must inspect raw shared-core and Meta mirror files directly; using scope loader would hide the file-layer pollution being audited.",
+      "recommended_action": "Keep direct reads for inventory/reporting only."
+    },
+    {
+      "file": "scripts/inventory_shared_core_pollution.py",
+      "line": 164,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "string_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This inventory must inspect raw shared-core and Meta mirror files directly; using scope loader would hide the file-layer pollution being audited.",
+      "recommended_action": "Keep direct reads for inventory/reporting only."
+    },
+    {
+      "file": "scripts/inventory_shared_core_pollution.py",
+      "line": 190,
+      "matched_path": "meta_migrated_from_shared_terms.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This inventory must inspect raw shared-core and Meta mirror files directly; using scope loader would hide the file-layer pollution being audited.",
+      "recommended_action": "Keep direct reads for inventory/reporting only."
+    },
+    {
+      "file": "scripts/update_medical_term_index.py",
+      "line": 19,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "path_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This is an optional index builder/source metadata updater. The mini index path is an explicit build input, not business runtime lookup.",
+      "recommended_action": "Keep as builder input; future scoped index-build redesign can be planned separately."
+    },
+    {
+      "file": "scripts/update_medical_term_index.py",
+      "line": 639,
+      "matched_path": "mini_medical_terms_index.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "string_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This is an optional index builder/source metadata updater. The mini index path is an explicit build input, not business runtime lookup.",
+      "recommended_action": "Keep as builder input; future scoped index-build redesign can be planned separately."
+    },
+    {
+      "file": "scripts/update_medical_term_index.py",
+      "line": 639,
+      "matched_path": "zh_term_overrides.json",
+      "original_classification": "manual_review_required",
+      "consumer_type": "string_reference",
+      "final_classification": "approved_script_internal",
+      "runtime_business_path": false,
+      "manual_fix_required": false,
+      "reason": "This is an optional index builder/source metadata updater. The mini index path is an explicit build input, not business runtime lookup.",
+      "recommended_action": "Keep as builder input; future scoped index-build redesign can be planned separately."
+    }
+  ],
+  "follow_up_actions": [
+    {
+      "id": "script_audit_bioinformatics_vocabulary_coverage_scope_migration",
+      "priority": "low_medium",
+      "reason": "Script can regenerate old pre-scoped Bioinformatics coverage reports if reused.",
+      "recommended_action": "Retire or update scripts/audit_bioinformatics_vocabulary_coverage.py to use current Bioinformatics scoped audit files/load_terms(scope='bioinformatics') in a separate maintenance patch.",
+      "business_runtime_blocker": false
+    }
+  ]
+}
