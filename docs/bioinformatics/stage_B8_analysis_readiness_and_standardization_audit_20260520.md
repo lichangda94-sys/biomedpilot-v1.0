@@ -2,9 +2,9 @@
 
 Date: 2026-05-20
 
-Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`  
-Branch: `dev/bioinformatics`  
-Audited HEAD: `e90c8c582b91909b59c58dd73abc4db2ae0555ab`  
+Workspace: `/Users/changdali/Developer/biomedpilot v1.0/Bioinformatics`
+Branch: `dev/bioinformatics`
+Audited HEAD: `e90c8c582b91909b59c58dd73abc4db2ae0555ab`
 
 This audit reviews the current Bioinformatics runtime after TCGA B6, GTEx G6, and B7 immune / TME scoring. The emphasis is whether standardized data is mature enough to support the next phase of downstream analysis development.
 

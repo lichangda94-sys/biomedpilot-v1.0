@@ -1,7 +1,7 @@
 # Bioinformatics B6.V：TCGA / GTEx 轻量联网验收报告
 
-生成日期：2026-05-19  
-当前基线 commit：`d2478ff Audit and close TCGA B6 upstream workflow`  
+生成日期：2026-05-19
+当前基线 commit：`d2478ff Audit and close TCGA B6 upstream workflow`
 验收性质：轻量联网测试与审计，不推进 B5.19，不实现 DEG/GSEA/KM/Cox/log-rank/report-ready。
 
 ## 1. 验收配置

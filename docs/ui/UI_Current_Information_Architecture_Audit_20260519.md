@@ -424,4 +424,3 @@ App launch
 3. 收敛 Bioinformatics 页面中的多主按钮区域，确保每页只有一个最突出主操作。
 4. 做一次普通用户界面文案巡检，清理 `manifest`、`acquisition`、`source_type`、`plan_only`、`registry`、`dry-run` 等技术术语泄漏。
 5. 保持 Meta 在 UIShell 中 shell-only，直到完整 Meta runtime 在目标工作区通过有效测试。
-

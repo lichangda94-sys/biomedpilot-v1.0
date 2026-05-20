@@ -156,4 +156,3 @@ ReleaseBuild still requires separate signing and packaging validation.
 3. Rewrite UI-02 Meta copy so it clearly says Shell-only in UIShell.
 4. Reduce technical terms in visible Bioinformatics task pages after workflow tests run without skips.
 5. Add a reusable status badge / notice component before any broader visual pass.
-

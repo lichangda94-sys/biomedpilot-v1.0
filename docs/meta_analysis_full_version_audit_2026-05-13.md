@@ -1,9 +1,9 @@
 # Meta 分析模块全版本目录与进度审计
 
-审计日期：2026-05-13  
-审计目标分支：`dev/meta-analysis`  
-当前 HEAD：`e97d87e chore(meta): remove backup artifact and ignore local conflict copies`  
-真实仓库路径：`/Users/changdali/Developer/BioMedPilot`  
+审计日期：2026-05-13
+审计目标分支：`dev/meta-analysis`
+当前 HEAD：`e97d87e chore(meta): remove backup artifact and ignore local conflict copies`
+真实仓库路径：`/Users/changdali/Developer/BioMedPilot`
 文稿入口：`/Users/changdali/Documents/BioMedPilot -> /Users/changdali/Developer/BioMedPilot`
 
 ## 结论摘要

@@ -446,4 +446,3 @@ open -W -n dist/BioMedPilot.app --args --smoke-test
 plutil -p dist/BioMedPilot.app/Contents/Info.plist
 codesign --verify --deep --strict --verbose=2 dist/BioMedPilot.app
 ```
-
