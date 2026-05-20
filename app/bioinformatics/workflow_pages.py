@@ -10158,8 +10158,28 @@ def _analysis_input_resolver_summary(resolver: dict[str, object]) -> str:
         return "Resolver：尚未发现 standardized analysis input package。"
     ready = [item for item in packages if not item.get("blockers")]
     package_types = "、".join(str(item.get("package_type") or "") for item in packages if item.get("package_type"))
+    blockers = _resolver_issue_preview(packages, "blockers")
+    warnings = _resolver_issue_preview(packages, "warnings")
     disabled = "；formal DEG/GSEA/Survival/Plot/Report-ready 仍按阶段 gate 禁用"
-    return f"Resolver：发现 {len(packages)} 个 input package（可进入预检查/探索 {len(ready)} 个）：{package_types}{disabled}。"
+    issue_text = ""
+    if blockers:
+        issue_text += f"；阻断：{blockers}"
+    if warnings:
+        issue_text += f"；提示：{warnings}"
+    return f"Resolver：发现 {len(packages)} 个 input package（可进入预检查/探索 {len(ready)} 个）：{package_types}{issue_text}{disabled}。"
+
+
+def _resolver_issue_preview(packages: list[dict[str, object]], field_name: str) -> str:
+    issues: list[str] = []
+    for package in packages:
+        package_type = str(package.get("package_type") or "package")
+        for issue in package.get(field_name, []) or []:
+            if len(issues) >= 4:
+                break
+            issues.append(f"{package_type}:{issue}")
+        if len(issues) >= 4:
+            break
+    return "、".join(issues)
 
 
 def _analysis_task_result_summary(entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:

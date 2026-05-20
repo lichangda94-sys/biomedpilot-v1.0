@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.bioinformatics.results.models import normalize_result_semantics
+
 
 def build_basic_plot_spec(result_entry: dict[str, Any], plot_type: str, *, parameters: dict[str, Any] | None = None) -> dict[str, Any]:
-    semantics = str(result_entry.get("result_semantics") or "")
+    semantics = normalize_result_semantics(result_entry.get("canonical_result_semantics") or result_entry.get("result_semantics"))
     task_type = str(result_entry.get("task_type") or "")
     spec = {
         "schema_version": "biomedpilot.plot_spec.v1",

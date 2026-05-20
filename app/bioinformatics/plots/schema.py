@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.bioinformatics.results.models import normalize_result_semantics
+
 from .models import PLOT_TYPES
 
 
@@ -31,7 +33,7 @@ def validate_plot_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     warnings: list[str] = []
     if artifact.get("plot_type") not in PLOT_TYPES:
         blockers.append(f"unsupported_plot_type:{artifact.get('plot_type')}")
-    semantics = str(artifact.get("source_result_semantics") or "")
+    semantics = normalize_result_semantics(artifact.get("source_result_semantics"))
     if semantics == "preflight_only":
         blockers.append("preflight_only_source_cannot_generate_formal_plot")
     if semantics == "testing_level":

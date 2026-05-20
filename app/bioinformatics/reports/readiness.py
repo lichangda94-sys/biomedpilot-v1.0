@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.results.registry import load_registry
+from app.bioinformatics.results.models import normalize_result_semantics
 
 from .models import REPORT_READY_SCHEMA_VERSION
 
@@ -34,7 +35,11 @@ def evaluate_report_ready_gate(project_root: str | Path, *, include_result_ids: 
     for name, passed in checks.items():
         if not passed:
             blockers.append(name)
-    non_formal = [str(entry.get("result_id") or "") for entry in selected if entry.get("result_semantics") in {"testing_level", "exploratory", "imported_external_result"}]
+    non_formal = [
+        str(entry.get("result_id") or "")
+        for entry in selected
+        if _entry_semantics(entry) in {"testing_level", "exploratory", "imported_external_result", "preflight_only"}
+    ]
     if non_formal and not test_report_mode:
         blockers.append("unverified_testing_exploratory_or_imported_results_present")
     if non_formal and test_report_mode:
@@ -56,3 +61,10 @@ def _plots_registered(entry: dict[str, Any]) -> bool:
     if not entry.get("plot_artifacts"):
         return True
     return all(isinstance(plot, dict) and plot.get("plot_id") for plot in entry.get("plot_artifacts", []) or [])
+
+
+def _entry_semantics(entry: dict[str, Any]) -> str:
+    canonical = str(entry.get("canonical_result_semantics") or "")
+    if canonical:
+        return normalize_result_semantics(canonical)
+    return normalize_result_semantics(entry.get("result_semantics"))

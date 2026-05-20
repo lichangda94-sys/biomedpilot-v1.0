@@ -37,3 +37,29 @@ def test_plot_schema_blocks_preflight_only_source() -> None:
     )
 
     assert "preflight_only_source_cannot_generate_formal_plot" in validation["blockers"]
+
+
+def test_plot_schema_blocks_legacy_preflight_only_source_label() -> None:
+    validation = validate_plot_artifact(
+        {
+            "plot_id": "plot",
+            "plot_type": "volcano_plot",
+            "source_result_id": "preflight",
+            "source_result_semantics": "preflight-only",
+            "input_package_id": "pkg",
+            "task_run_id": "task",
+            "parameters_manifest": {},
+            "plot_spec_artifact": {},
+            "image_artifacts": [],
+            "table_artifacts": [],
+            "engine_name": "spec",
+            "engine_version": "1",
+            "dependency_snapshot": {},
+            "warnings": [],
+            "blockers": [],
+            "created_at": "now",
+            "schema_version": "biomedpilot.plot_artifact.v1",
+        }
+    )
+
+    assert "preflight_only_source_cannot_generate_formal_plot" in validation["blockers"]
