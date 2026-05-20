@@ -2,13 +2,13 @@
 
 Date: 2026-05-20
 
-Status: current implementation-plan index and UI-A4.2 checkpoint
+Status: current implementation-plan index and UI-A4.3 checkpoint
 
 Scope: UI-B0 through UI-B10
 
 ## 1. Current Stage
 
-Current checkpoint: UI-A4.2 stage index update after low-fidelity UI rebuild shell work.
+Current checkpoint: UI-A4.3 checkpoint update after B5.2 / B6.1 / B7.1 / B9b calibration work.
 
 Completed stages:
 
@@ -18,14 +18,19 @@ Completed stages:
 - UI-B3: Settings secondary navigation and external capability management shell.
 - UI-B4: LabTools IA shell.
 - UI-B5 shell: Bioinformatics target IA shell and gated/preflight copy.
+- UI-B5.1: Bioinformatics legacy page routing calibration.
+- UI-B5.2: Bioinformatics target page consolidation.
 - UI-B6 shell: Meta Analysis target IA shell and active Meta type display.
+- UI-B6.1: Meta Analysis target shell interaction calibration.
 - UI-B7 shell: shared Result / Report / Export semantic shell.
+- UI-B7.1: Result / Report / Export shell adoption calibration.
+- UI-B9a: semantic key registry.
+- UI-B9b: key adoption / test migration.
 
 Partially completed stages:
 
 - UI-B8a resource inventory / placeholder strategy is complete.
 - UI-B8b formal resource replacement has not started.
-- UI-B9a semantic key registry is complete.
 - Full UI-B9 i18n adoption / language switch has not started.
 
 Not started:
@@ -40,8 +45,8 @@ Current forbidden scope:
 
 Recommended next stage:
 
-- UI-B5.1 Bioinformatics legacy page routing calibration, or
-- UI-B9b key adoption / test migration.
+- UI-B8b formal resource replacement only after brand/resource confirmation, or
+- UI-B9c selective key adoption / test migration expansion.
 
 ## 2. Stage Route
 
@@ -52,8 +57,12 @@ UI-B0: MasterPlan / Visual Style Guide / I18N Strategy / Stage Index
 -> UI-B3: Settings shell and external resource management
 -> UI-B4: LabTools target IA shell
 -> UI-B5: Bioinformatics target 7 pages + 2 auxiliary pages
+-> UI-B5.1: Bioinformatics legacy page routing calibration
+-> UI-B5.2: Bioinformatics target page consolidation
 -> UI-B6: Meta Analysis target IA shell
+-> UI-B6.1: Meta Analysis target shell interaction calibration
 -> UI-B7: Result / Report / Export unified semantics
+-> UI-B7.1: Result / Report / Export shell adoption calibration
 -> UI-B8a: resource inventory / placeholder strategy
 -> UI-B8b: formal resource replacement after brand/resource confirmation
 -> UI-B9a: semantic key registry
@@ -70,14 +79,19 @@ Recommended execution order:
 5. UI-B9a critical semantic keys: completed.
 6. UI-B4: completed.
 7. UI-B5 shell: completed.
-8. UI-B6 shell: completed.
-9. UI-B7 shell: completed.
-10. UI-B8a inventory / placeholder strategy: completed.
-11. UI-B5.1 Bioinformatics legacy page routing calibration or UI-B9b key adoption / test migration.
-12. UI-B8b formal resource replacement only after resource decisions.
-13. UI-B10 packaging and desktop entry last.
+8. UI-B5.1 Bioinformatics legacy page routing calibration: completed.
+9. UI-B5.2 Bioinformatics target page consolidation: completed.
+10. UI-B6 shell: completed.
+11. UI-B6.1 Meta target shell interaction calibration: completed.
+12. UI-B7 shell: completed.
+13. UI-B7.1 Result / Report / Export adoption calibration: completed.
+14. UI-B8a inventory / placeholder strategy: completed.
+15. UI-B9b key adoption / test migration: completed.
+16. UI-B8b formal resource replacement only after resource decisions.
+17. UI-B9c selective key adoption / test migration expansion if needed.
+18. UI-B10 packaging and desktop entry last.
 
-UI-B8b, UI-B9b and UI-B10 must not be inferred from UI-B8a/UI-B9a. UI-B10 remains last.
+UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. UI-B10 remains last.
 
 ## 3. Dependency Table
 
@@ -107,8 +121,12 @@ UI-B8b, UI-B9b and UI-B10 must not be inferred from UI-B8a/UI-B9a. UI-B10 remain
 | UI-B3 | Settings secondary IA exists and external resources use detect-first semantics. |
 | UI-B4 | LabTools module shell respects target top-level IA and planned/hidden boundaries. |
 | UI-B5 | Bioinformatics target pages are reorganized with B8.1-safe gating. |
+| UI-B5.1 | Legacy Bioinformatics pages are mapped to target pages or developer diagnostics. |
+| UI-B5.2 | Bioinformatics target pages are consolidated as 7 main-flow pages plus 2 auxiliary pages. |
 | UI-B6 | Meta target shell has type-first IA, testing/shell-only status and AI disclaimer. |
+| UI-B6.1 | Meta target shell interaction is select-only/schema-shell and Network Meta remains disabled. |
 | UI-B7 | Result/report/export statuses are unified and draft/report-ready cannot be confused. |
+| UI-B7.1 | Bioinformatics and Meta target shells adopt the shared Result / Report / Export shell panel. |
 | UI-B8a | Resource inventory and placeholder/final strategy exist; active icons are not replaced. |
 | UI-B8b | Formal resources are confirmed, added or replaced with focused resource tests. |
 | UI-B9a | Critical i18n keys and semantic status boundaries are in place. |
@@ -125,8 +143,11 @@ UI-B8b, UI-B9b and UI-B10 must not be inferred from UI-B8a/UI-B9a. UI-B10 remain
 | UI-B3 | Settings nav tests, resource status shell tests, detect-first copy tests. |
 | UI-B4 | LabTools sidebar/dashboard entry tests, IA tests, planned/hidden state tests, smoke. |
 | UI-B5 | Bio workflow page tests, task gating tests, report draft boundary tests, smoke. |
+| UI-B5.2 | Bio target IA focused tests and legacy stack navigation smoke. |
 | UI-B6 | Meta shell tests, Meta type registry tests, AI suggestion disclaimer tests, smoke. |
+| UI-B6.1 | Meta shell interaction tests, active type selection tests, Network Meta disabled tests, smoke. |
 | UI-B7 | Report status tests, export gating tests, empty state tests, disclaimer tests. |
+| UI-B7.1 | Result / Report / Export adoption tests for shared panel plus Bio/Meta target shells. |
 | UI-B8a | `git diff --check`; resource inventory review. No icon replacement tests required because no active resources change. |
 | UI-B8b | Icon path tests, resource inventory tests, module icon loading tests, smoke. |
 | UI-B9a | Key existence tests and status enum rendering tests. |
@@ -156,7 +177,13 @@ Full test suites are not mandatory for every early phase unless the changed surf
 | `docs/ui/UI_Rebuild_MasterPlan_20260520.md` | current |
 | `docs/ui/UI_Visual_Style_Guide_v1_20260520.md` | current |
 | `docs/ui/UI_I18N_Strategy_v1_20260520.md` | current |
-| `docs/ui/UI_Rebuild_Stage_Index_20260520.md` | current implementation-plan index |
+| `docs/ui/UI_Rebuild_Stage_Index_20260520.md` | current implementation-plan index / UI-A4.3 checkpoint |
+| `docs/ui/UI_A4_3_current_checkpoint_next_stage_planning_20260520.md` | current checkpoint summary |
+| `docs/ui/UI_B5_1_bioinformatics_legacy_page_routing_calibration_20260520.md` | completed stage checkpoint |
+| `docs/ui/UI_B5_2_bioinformatics_target_page_consolidation_20260520.md` | completed stage checkpoint |
+| `docs/ui/UI_B6_1_meta_analysis_target_shell_interaction_calibration_20260520.md` | completed stage checkpoint |
+| `docs/ui/UI_B7_1_result_report_export_shell_adoption_calibration_20260520.md` | completed stage checkpoint |
+| `docs/ui/UI_B9b_semantic_key_adoption_test_migration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_A1_target_markdown_architecture_audit_20260520.md` | audit-only / planning input |
 | `docs/ui/UI_A2_visual_brand_resource_audit_20260520.md` | audit-only / planning input |
 | `docs/ui/UI_A3_i18n_readiness_audit_20260520.md` | audit-only / planning input |
@@ -185,11 +212,11 @@ Full test suites are not mandatory for every early phase unless the changed surf
 
 | category | checkpoint_status |
 |---|---|
-| Completed | UI-B0, UI-B1, UI-B2, UI-B3, UI-B4, UI-B5 shell, UI-B6 shell, UI-B7 shell. |
-| Partial | UI-B8a resource inventory / placeholder strategy; UI-B9a semantic key registry. |
+| Completed | UI-B0, UI-B1, UI-B2, UI-B3, UI-B4, UI-B5 shell, UI-B5.1, UI-B5.2, UI-B6 shell, UI-B6.1, UI-B7 shell, UI-B7.1, UI-B8a, UI-B9a, UI-B9b. |
+| Partial | Full UI-B9 i18n adoption / language switch remains future work. |
 | Not started | UI-B8b formal resource replacement; complete i18n adoption / language switch; UI-B10 packaging / desktop entry. |
 | Hard stop | App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation and desktop `.app` overwrite stay out of scope until UI-B10. |
-| Next recommended work | UI-B5.1 Bioinformatics legacy page routing calibration or UI-B9b key adoption / test migration. |
+| Next recommended work | UI-B8b formal resource replacement after confirmation, or UI-B9c selective key adoption / test migration expansion. |
 
 ## 9. UI-B0 Command Log
 
