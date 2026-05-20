@@ -20,24 +20,24 @@
   "runtime_refactor_executed": false,
   "loader_behavior_modified": false,
   "summary": {
-    "finding_count": 68,
-    "manual_review_required_count": 15,
+    "finding_count": 73,
+    "manual_review_required_count": 13,
     "classification_counts": {
       "approved_loader_internal": 6,
       "bioinformatics_scoped_allowed": 3,
       "legacy_meta_compatibility_allowed": 2,
-      "manual_review_required": 15,
-      "safe_test_fixture": 42
+      "manual_review_required": 13,
+      "safe_test_fixture": 49
     },
     "matched_path_counts": {
-      "bioinformatics_data_type_terms.json": 5,
+      "bioinformatics_data_type_terms.json": 7,
       "bioinformatics_species_terms.json": 5,
       "bioinformatics_tissue_terms.json": 3,
       "legacy_meta_compatibility_map.json": 5,
       "meta_migrated_from_shared_terms.json": 6,
-      "meta_seed_terms.json": 4,
-      "mini_medical_terms_index.json": 24,
-      "zh_term_overrides.json": 16
+      "meta_seed_terms.json": 5,
+      "mini_medical_terms_index.json": 25,
+      "zh_term_overrides.json": 17
     }
   },
   "findings": [
@@ -128,28 +128,6 @@
       "risk_level": "low",
       "manual_review_required": false,
       "notes": "Loader internals are allowed to read source files directly."
-    },
-    {
-      "file": "scripts/audit_bioinformatics_vocabulary_coverage.py",
-      "line": 21,
-      "matched_path": "mini_medical_terms_index.json",
-      "consumer_type": "direct_json_read",
-      "classification": "manual_review_required",
-      "recommended_scope_loader": "load_terms(scope='<shared_core|meta_analysis|bioinformatics>') based on caller context",
-      "risk_level": "medium",
-      "manual_review_required": true,
-      "notes": "Audit or review-batch script; direct reads are acceptable as reporting inputs but should not become runtime lookup paths."
-    },
-    {
-      "file": "scripts/audit_bioinformatics_vocabulary_coverage.py",
-      "line": 22,
-      "matched_path": "zh_term_overrides.json",
-      "consumer_type": "direct_json_read",
-      "classification": "manual_review_required",
-      "recommended_scope_loader": "Use approved zh override loader or load_terms(scope=...) based on caller context",
-      "risk_level": "medium",
-      "manual_review_required": true,
-      "notes": "Audit or review-batch script; direct reads are acceptable as reporting inputs but should not become runtime lookup paths."
     },
     {
       "file": "scripts/audit_medical_terms_scope_isolation.py",
@@ -351,7 +329,18 @@
     },
     {
       "file": "tests/shared/test_bioinformatics_geo_core_terms.py",
-      "line": 105,
+      "line": 82,
+      "matched_path": "bioinformatics_data_type_terms.json",
+      "consumer_type": "string_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_bioinformatics_geo_core_terms.py",
+      "line": 124,
       "matched_path": "bioinformatics_species_terms.json",
       "consumer_type": "path_reference",
       "classification": "safe_test_fixture",
@@ -362,7 +351,7 @@
     },
     {
       "file": "tests/shared/test_bioinformatics_geo_core_terms.py",
-      "line": 123,
+      "line": 142,
       "matched_path": "bioinformatics_species_terms.json",
       "consumer_type": "string_reference",
       "classification": "safe_test_fixture",
@@ -373,7 +362,7 @@
     },
     {
       "file": "tests/shared/test_bioinformatics_geo_core_terms.py",
-      "line": 125,
+      "line": 144,
       "matched_path": "bioinformatics_data_type_terms.json",
       "consumer_type": "string_reference",
       "classification": "safe_test_fixture",
@@ -530,6 +519,17 @@
       "line": 27,
       "matched_path": "zh_term_overrides.json",
       "consumer_type": "path_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_medical_terms_scope_routing.py",
+      "line": 76,
+      "matched_path": "bioinformatics_data_type_terms.json",
+      "consumer_type": "string_reference",
       "classification": "safe_test_fixture",
       "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
       "risk_level": "low",
@@ -760,6 +760,61 @@
       "file": "tests/shared/test_shared_core_pollution_inventory.py",
       "line": 27,
       "matched_path": "legacy_meta_compatibility_map.json",
+      "consumer_type": "path_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_vocabulary_consumer_manual_review.py",
+      "line": 46,
+      "matched_path": "mini_medical_terms_index.json",
+      "consumer_type": "string_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_vocabulary_consumer_manual_review.py",
+      "line": 47,
+      "matched_path": "zh_term_overrides.json",
+      "consumer_type": "string_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_vocabulary_consumer_manual_review.py",
+      "line": 63,
+      "matched_path": "mini_medical_terms_index.json",
+      "consumer_type": "path_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_vocabulary_consumer_manual_review.py",
+      "line": 64,
+      "matched_path": "zh_term_overrides.json",
+      "consumer_type": "path_reference",
+      "classification": "safe_test_fixture",
+      "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",
+      "risk_level": "low",
+      "manual_review_required": false,
+      "notes": "Test fixture or boundary assertion, not production runtime consumption."
+    },
+    {
+      "file": "tests/shared/test_vocabulary_consumer_manual_review.py",
+      "line": 65,
+      "matched_path": "meta_seed_terms.json",
       "consumer_type": "path_reference",
       "classification": "safe_test_fixture",
       "recommended_scope_loader": "No migration required for tests; use load_terms(scope=...) in new runtime-facing tests.",

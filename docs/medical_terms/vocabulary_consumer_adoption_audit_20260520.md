@@ -10,8 +10,8 @@ Scanned roots: `app/`, `scripts/`, `tests/`.
 
 ## Summary
 
-- Findings: `68`
-- Manual review required: `15`
+- Findings: `73`
+- Manual review required: `13`
 - Runtime refactor executed: `false`
 - Loader behavior modified: `false`
 
@@ -20,8 +20,8 @@ Classification counts:
 - `approved_loader_internal`: 6
 - `bioinformatics_scoped_allowed`: 3
 - `legacy_meta_compatibility_allowed`: 2
-- `manual_review_required`: 15
-- `safe_test_fixture`: 42
+- `manual_review_required`: 13
+- `safe_test_fixture`: 49
 
 ## Findings
 
@@ -33,8 +33,6 @@ Classification counts:
 - `app/shared/query_intelligence/medical_terms/term_index_loader.py:72` references `mini_medical_terms_index.json`; classification=`approved_loader_internal`; risk=`low`; recommendation=Already part of the approved loader layer..
 - `app/shared/query_intelligence/medical_terms/zh_overrides_loader.py:11` references `zh_term_overrides.json`; classification=`approved_loader_internal`; risk=`low`; recommendation=Already part of the approved loader layer..
 - `app/shared/query_intelligence/meta_seed_terms/loader.py:11` references `meta_seed_terms.json`; classification=`approved_loader_internal`; risk=`low`; recommendation=Already part of the approved loader layer..
-- `scripts/audit_bioinformatics_vocabulary_coverage.py:21` references `mini_medical_terms_index.json`; classification=`manual_review_required`; risk=`medium`; recommendation=load_terms(scope='<shared_core|meta_analysis|bioinformatics>') based on caller context.
-- `scripts/audit_bioinformatics_vocabulary_coverage.py:22` references `zh_term_overrides.json`; classification=`manual_review_required`; risk=`medium`; recommendation=Use approved zh override loader or load_terms(scope=...) based on caller context.
 - `scripts/audit_medical_terms_scope_isolation.py:16` references `mini_medical_terms_index.json`; classification=`manual_review_required`; risk=`medium`; recommendation=load_terms(scope='<shared_core|meta_analysis|bioinformatics>') based on caller context.
 - `scripts/audit_medical_terms_scope_isolation.py:16` references `zh_term_overrides.json`; classification=`manual_review_required`; risk=`medium`; recommendation=Use approved zh override loader or load_terms(scope=...) based on caller context.
 - `scripts/audit_medical_terms_scope_isolation.py:20` references `mini_medical_terms_index.json`; classification=`manual_review_required`; risk=`medium`; recommendation=load_terms(scope='<shared_core|meta_analysis|bioinformatics>') based on caller context.
@@ -53,9 +51,10 @@ Classification counts:
 - `scripts/update_medical_term_index.py:639` references `zh_term_overrides.json`; classification=`manual_review_required`; risk=`medium`; recommendation=Use approved zh override loader or load_terms(scope=...) based on caller context.
 - `tests/shared/test_bioinformatics_geo_core_terms.py:32` references `bioinformatics_species_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_bioinformatics_geo_core_terms.py:56` references `bioinformatics_data_type_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
-- `tests/shared/test_bioinformatics_geo_core_terms.py:105` references `bioinformatics_species_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
-- `tests/shared/test_bioinformatics_geo_core_terms.py:123` references `bioinformatics_species_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
-- `tests/shared/test_bioinformatics_geo_core_terms.py:125` references `bioinformatics_data_type_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_bioinformatics_geo_core_terms.py:82` references `bioinformatics_data_type_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_bioinformatics_geo_core_terms.py:124` references `bioinformatics_species_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_bioinformatics_geo_core_terms.py:142` references `bioinformatics_species_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_bioinformatics_geo_core_terms.py:144` references `bioinformatics_data_type_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_bioinformatics_gtex_tissue_terms.py:17` references `bioinformatics_tissue_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_bioinformatics_gtex_tissue_terms.py:79` references `bioinformatics_tissue_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_medical_term_index_runtime_strategy.py:241` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
@@ -70,6 +69,7 @@ Classification counts:
 - `tests/shared/test_medical_terms_integration_audit.py:66` references `bioinformatics_data_type_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_medical_terms_review_batches.py:26` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_medical_terms_review_batches.py:27` references `zh_term_overrides.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_medical_terms_scope_routing.py:76` references `bioinformatics_data_type_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_medical_vocabulary_cardiovascular_core.py:17` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_medical_vocabulary_consolidation_regression.py:35` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_medical_vocabulary_consolidation_regression.py:39` references `zh_term_overrides.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
@@ -91,6 +91,11 @@ Classification counts:
 - `tests/shared/test_shared_core_pollution_inventory.py:25` references `zh_term_overrides.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_shared_core_pollution_inventory.py:26` references `meta_migrated_from_shared_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_shared_core_pollution_inventory.py:27` references `legacy_meta_compatibility_map.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_vocabulary_consumer_manual_review.py:46` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_vocabulary_consumer_manual_review.py:47` references `zh_term_overrides.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_vocabulary_consumer_manual_review.py:63` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_vocabulary_consumer_manual_review.py:64` references `zh_term_overrides.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
+- `tests/shared/test_vocabulary_consumer_manual_review.py:65` references `meta_seed_terms.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_vocabulary_stage_v0_1_merge_readiness.py:29` references `mini_medical_terms_index.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 - `tests/shared/test_vocabulary_stage_v0_1_merge_readiness.py:30` references `zh_term_overrides.json`; classification=`safe_test_fixture`; risk=`low`; recommendation=No migration required for tests; use load_terms(scope=...) in new runtime-facing tests..
 

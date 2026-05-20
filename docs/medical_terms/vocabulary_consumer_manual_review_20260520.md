@@ -4,25 +4,31 @@ Date: 2026-05-20
 
 ## Scope
 
-This report manually reviews the 15 paths previously marked `manual_review_required` in `vocabulary_consumer_adoption_audit.json`.
+This report manually reviews the paths marked `manual_review_required` in `vocabulary_consumer_adoption_audit.json` after migrating `scripts/audit_bioinformatics_vocabulary_coverage.py` away from direct shared JSON reads.
 
 No business code was refactored. No loader behavior was changed. No vocabulary runtime files were modified.
 
 ## Summary
 
-- Reviewed paths: `15`
+- Previous manual review paths: `15`
+- Current manual review paths: `13`
+- Resolved previous `needs_scope_loader_migration`: `1`
 - `approved_script_internal`: `13`
-- `needs_scope_loader_migration`: `2`
+- `needs_scope_loader_migration`: `0`
 - `safe_test_fixture`: `0`
 - `manual_fix_required`: `0`
 - Business runtime bypass found: `false`
 
-## Decisions
+## Resolved Migration Items
+
+| path | previous matched files | previous classification | final classification | resolution |
+| --- | --- | --- | --- | --- |
+| `scripts/audit_bioinformatics_vocabulary_coverage.py` | `mini_medical_terms_index.json, zh_term_overrides.json` | `needs_scope_loader_migration` | `approved_script_internal` | Direct reads were replaced with load_terms(scope='bioinformatics'), load_mini_term_index(), and load_zh_overrides() helper calls. |
+
+## Current Decisions
 
 | path | matched file | final classification | business runtime path | reason |
 | --- | --- | --- | --- | --- |
-| `scripts/audit_bioinformatics_vocabulary_coverage.py:21` | `mini_medical_terms_index.json` | `needs_scope_loader_migration` | `false` | This historical Bioinformatics coverage audit reads shared mini/zh files directly; if reused, it should migrate to Bioinformatics scoped audit JSON or load_terms(scope='bioinformatics') to avoid pre-fix source-of-truth drift. |
-| `scripts/audit_bioinformatics_vocabulary_coverage.py:22` | `zh_term_overrides.json` | `needs_scope_loader_migration` | `false` | This historical Bioinformatics coverage audit reads shared mini/zh files directly; if reused, it should migrate to Bioinformatics scoped audit JSON or load_terms(scope='bioinformatics') to avoid pre-fix source-of-truth drift. |
 | `scripts/audit_medical_terms_scope_isolation.py:16` | `mini_medical_terms_index.json` | `approved_script_internal` | `false` | This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption. |
 | `scripts/audit_medical_terms_scope_isolation.py:16` | `zh_term_overrides.json` | `approved_script_internal` | `false` | This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption. |
 | `scripts/audit_medical_terms_scope_isolation.py:20` | `mini_medical_terms_index.json` | `approved_script_internal` | `false` | This script writes a static scope-isolation policy artifact; the references are declared allowed source names, not runtime vocabulary consumption. |
@@ -39,6 +45,4 @@ No business code was refactored. No loader behavior was changed. No vocabulary r
 
 ## Follow-Up
 
-`script_audit_bioinformatics_vocabulary_coverage_scope_migration` is recommended as a separate low/medium priority maintenance patch. It should retire or update `scripts/audit_bioinformatics_vocabulary_coverage.py` so it cannot regenerate pre-scoped Bioinformatics status from `mini_medical_terms_index.json` and `zh_term_overrides.json`.
-
-No immediate business fix is required because no runtime business path was found bypassing the scope-aware loader.
+No immediate business fix is required because no runtime business path was found bypassing the scope-aware loader, and the only previous `needs_scope_loader_migration` script has been migrated to approved loaders/helpers.

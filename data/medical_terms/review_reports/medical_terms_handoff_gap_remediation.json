@@ -13,7 +13,7 @@
         "docs/medical_terms/vocabulary_consumer_adoption_audit_20260520.md",
         "data/medical_terms/review_reports/vocabulary_consumer_adoption_audit.json"
       ],
-      "notes": "68 findings; 15 manual review items."
+      "notes": "73 findings; 13 current manual review items; previous needs_scope_loader_migration resolved to 0."
     },
     {
       "task": "Task 2",
@@ -135,7 +135,7 @@
     "loader_modified": false
   },
   "manual_review_required": {
-    "consumer_adoption_findings": 15,
+    "consumer_adoption_findings": 13,
     "gene_expression_profiling_runtime_promotion": true,
     "shared_core_strategy_a_execution": true,
     "emtree_mapping_review": true
@@ -179,7 +179,7 @@
     }
   ],
   "follow_up_recommendations": [
-    "Review consumer adoption manual-review findings before release hardening.",
+    "Keep consumer adoption audit current when adding new vocabulary scripts or tests.",
     "Ask for explicit approval before Strategy A shared-core deprecation.",
     "Route gene expression profiling to Bioinformatics only after a dedicated vocabulary patch.",
     "Keep Meta seed expansion curated and capped at 50-100 terms per batch.",

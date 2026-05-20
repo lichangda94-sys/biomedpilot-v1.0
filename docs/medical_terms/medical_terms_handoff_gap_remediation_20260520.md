@@ -8,7 +8,7 @@ This stage closes governance gaps exposed by `medical_terms_phase_final_handoff_
 
 ## Task Responses
 
-- Task 1 Vocabulary Consumer Adoption Audit: `complete`. 68 findings; 15 manual review items.
+- Task 1 Vocabulary Consumer Adoption Audit: `complete`. 73 findings; 13 current manual review items; previous `needs_scope_loader_migration` resolved to `0`.
 - Task 2 Shared Core Strategy A Execution Plan: `complete`. Plan only; no shared core fields written.
 - Task 3 gene expression profiling Routing Decision: `complete`. Decision recorded for Bioinformatics scoped routing; no runtime write.
 - Task 4 Documentation Source-of-Truth Cleanup: `complete`. Index generated; old docs not deleted or edited.
@@ -71,14 +71,14 @@ This stage closes governance gaps exposed by `medical_terms_phase_final_handoff_
 
 ## Manual Review Required
 
-- Consumer adoption audit manual review findings: `15`
+- Consumer adoption audit manual review findings: `13`
 - Strategy A execution: required before any shared-core deprecation write.
 - `gene expression profiling` runtime promotion: required before writing Bioinformatics vocabulary.
 - Emtree mapping: required before Embase query support.
 
 ## Follow-Up Recommendations
 
-- Review consumer adoption manual-review findings before release hardening.
+- Keep consumer adoption audit current when adding new vocabulary scripts or tests.
 - Ask for explicit approval before Strategy A shared-core deprecation.
 - Route gene expression profiling to Bioinformatics only after a dedicated vocabulary patch.
 - Keep Meta seed expansion curated and capped at 50-100 terms per batch.

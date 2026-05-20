@@ -14,45 +14,52 @@ def test_vocabulary_consumer_manual_review_decisions_are_recorded() -> None:
     report = json.loads((REPORTS / "vocabulary_consumer_manual_review.json").read_text(encoding="utf-8"))
 
     assert report["report_name"] == "vocabulary_consumer_manual_review"
-    assert report["source_manual_review_count"] == 15
+    assert report["previous_manual_review_count"] == 15
+    assert report["source_manual_review_count"] == 13
+    assert report["resolved_previous_needs_scope_loader_migration_count"] == 1
     assert report["business_runtime_bypass_found"] is False
     assert report["business_runtime_refactor_executed"] is False
     assert report["loader_modified"] is False
     assert report["mini_medical_terms_index_modified"] is False
     assert report["zh_term_overrides_modified"] is False
     assert report["summary"] == {
-        "reviewed_count": 15,
+        "reviewed_count": 13,
         "classification_counts": {
             "approved_script_internal": 13,
-            "needs_scope_loader_migration": 2,
         },
         "manual_fix_required_count": 0,
-        "needs_scope_loader_migration_count": 2,
+        "needs_scope_loader_migration_count": 0,
         "approved_script_internal_count": 13,
         "safe_test_fixture_count": 0,
     }
-    assert len(report["items"]) == 15
+    assert len(report["items"]) == 13
     assert all(item["final_classification"] != "manual_fix_required" for item in report["items"])
     assert all(item["runtime_business_path"] is False for item in report["items"])
     assert (DOCS / "vocabulary_consumer_manual_review_20260520.md").exists()
 
 
-def test_bioinformatics_coverage_audit_is_only_scope_migration_follow_up() -> None:
+def test_bioinformatics_coverage_audit_scope_migration_is_resolved() -> None:
     report = json.loads((REPORTS / "vocabulary_consumer_manual_review.json").read_text(encoding="utf-8"))
     needs_migration = [item for item in report["items"] if item["final_classification"] == "needs_scope_loader_migration"]
+    script_text = (ROOT / "scripts" / "audit_bioinformatics_vocabulary_coverage.py").read_text(encoding="utf-8")
 
-    assert {item["file"] for item in needs_migration} == {"scripts/audit_bioinformatics_vocabulary_coverage.py"}
-    assert {item["matched_path"] for item in needs_migration} == {
-        "mini_medical_terms_index.json",
-        "zh_term_overrides.json",
-    }
-    assert report["follow_up_actions"] == [
+    assert needs_migration == []
+    assert "mini_medical_terms_index.json" not in script_text
+    assert "zh_term_overrides.json" not in script_text
+    assert 'load_terms("bioinformatics")' in script_text
+    assert "load_mini_term_index()" in script_text
+    assert "load_zh_overrides()" in script_text
+    assert report["follow_up_actions"] == []
+    assert report["resolved_items"] == [
         {
-            "id": "script_audit_bioinformatics_vocabulary_coverage_scope_migration",
-            "priority": "low_medium",
-            "reason": "Script can regenerate old pre-scoped Bioinformatics coverage reports if reused.",
-            "recommended_action": "Retire or update scripts/audit_bioinformatics_vocabulary_coverage.py to use current Bioinformatics scoped audit files/load_terms(scope='bioinformatics') in a separate maintenance patch.",
-            "business_runtime_blocker": False,
+            "file": "scripts/audit_bioinformatics_vocabulary_coverage.py",
+            "previous_lines": [21, 22],
+            "previous_matched_paths": ["mini_medical_terms_index.json", "zh_term_overrides.json"],
+            "previous_classification": "needs_scope_loader_migration",
+            "final_classification": "approved_script_internal",
+            "resolution": "Direct reads were replaced with load_terms(scope='bioinformatics'), load_mini_term_index(), and load_zh_overrides() helper calls.",
+            "runtime_business_path": False,
+            "manual_fix_required": False,
         }
     ]
 

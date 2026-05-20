@@ -90,8 +90,11 @@ def test_gene_expression_profiling_decision_routes_to_bioinformatics_only() -> N
     assert decision["suggested_concept_type"] == "expression_profiling_assay"
     assert decision["meta_analysis_allowed"] is False
     assert decision["shared_core_allowed"] is False
-    assert decision["runtime_files_modified"] is False
-    assert decision["manual_review_required_before_runtime_change"] is True
+    assert decision["implementation_status"] == "implemented_in_bioinformatics_scoped_vocabulary"
+    assert decision["runtime_files_modified"] is True
+    assert decision["shared_core_modified"] is False
+    assert decision["meta_seed_modified"] is False
+    assert decision["loader_modified"] is False
 
 
 def test_governance_policies_keep_runtime_boundaries_closed() -> None:

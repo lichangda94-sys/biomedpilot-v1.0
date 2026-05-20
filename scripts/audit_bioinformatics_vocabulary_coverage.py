@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import sys
+from dataclasses import asdict
 from pathlib import Path
 
 from medical_terms_stage_pipeline import (
@@ -17,10 +19,17 @@ from medical_terms_stage_pipeline import (
 )
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from app.shared.query_intelligence.medical_terms import load_terms  # noqa: E402
+from app.shared.query_intelligence.medical_terms.term_index_loader import load_mini_term_index  # noqa: E402
+from app.shared.query_intelligence.medical_terms.zh_overrides_loader import load_zh_overrides  # noqa: E402
+
+
 def main() -> int:
-    mini = json.loads((MEDICAL_TERMS / "mini_medical_terms_index.json").read_text(encoding="utf-8"))
-    zh = json.loads((MEDICAL_TERMS / "zh_term_overrides.json").read_text(encoding="utf-8"))
-    haystack = json.dumps({"mini": mini, "zh": zh}, ensure_ascii=False).lower()
+    mini, haystack = _load_audit_corpus()
 
     tcga = _audit_tcga(mini, haystack)
     gtex = _audit_gtex(mini, haystack)
@@ -32,6 +41,24 @@ def main() -> int:
     _write_markdown_reports(tcga, gtex, geo)
     print("wrote Bioinformatics vocabulary coverage audits")
     return 0
+
+
+def _load_audit_corpus() -> tuple[list[dict[str, object]], str]:
+    """Use approved loaders so this script does not bypass scope routing."""
+    mini = [asdict(term) for term in load_mini_term_index()]
+    zh = [asdict(override) for override in load_zh_overrides()]
+    scoped = [
+        {
+            "concept_id": term.concept_id,
+            "preferred_label_en": term.preferred_label_en,
+            "concept_type": term.concept_type,
+            "source": term.source,
+            "terms": list(term.terms),
+        }
+        for term in load_terms("bioinformatics")
+    ]
+    haystack = json.dumps({"bioinformatics_scope": scoped, "mini_cross_refs": mini, "zh_overrides": zh}, ensure_ascii=False).lower()
+    return mini, haystack
 
 
 def _audit_tcga(mini: list[dict[str, object]], haystack: str) -> dict[str, object]:
