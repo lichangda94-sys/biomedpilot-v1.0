@@ -20,6 +20,7 @@ def build_action_rows(
     result_schema_gate: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
+    formal_deg_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -31,6 +32,7 @@ def build_action_rows(
     result_schema_gate = result_schema_gate or {}
     survival_dependency = survival_dependency or {}
     report_gate = report_gate or {}
+    formal_deg_report_gate = formal_deg_report_gate or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -49,7 +51,7 @@ def build_action_rows(
     rows.append(_constant_disabled_action("km_cox_logrank", "KM/Cox/log-rank", "hidden_until_ready", "KM plot, Cox model and log-rank p-value are disabled until a later audited stage."))
     rows.append(_plot_action(results))
     rows.append(_markdown_draft_action(results, tasks))
-    rows.append(_report_ready_action(report_gate))
+    rows.append(_report_ready_action(report_gate, formal_deg_report_gate))
     rows.append(
         {
             "action_id": "developer_geo_deg_runner",
@@ -292,7 +294,19 @@ def _markdown_draft_action(results: list[dict[str, Any]], tasks: list[dict[str, 
     return _disabled("markdown_draft", "Generate Markdown draft", "blocked_missing_result_schema", "No result or task record exists.", "Create a configuration record or import a result first.")
 
 
-def _report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
+def _report_ready_action(gate: dict[str, Any], formal_deg_gate: dict[str, Any] | None = None) -> dict[str, Any]:
+    formal_deg_gate = formal_deg_gate or {}
+    if formal_deg_gate.get("status") == "eligible_for_formal_deg_report_ready":
+        return {
+            "action_id": "report_ready_export",
+            "label": "Export formal DEG report-ready package",
+            "state": "available",
+            "button_behavior": "enabled_b9_7_formal_deg_gate_passed",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Export formal DEG section only; GSEA, survival and clinical conclusions remain disabled.",
+        }
     if gate.get("status") == "eligible_for_internal_report":
         return {
             "action_id": "report_ready_export",
@@ -304,7 +318,8 @@ def _report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
             "disabled_reason": "",
             "next_action": "Export package through B8.6 gate.",
         }
-    blockers = _list(gate.get("blockers")) or ["blocked_report_ready_gate"]
+    formal_blockers = _list(formal_deg_gate.get("blockers")) if formal_deg_gate.get("selected_result_id") else []
+    blockers = formal_blockers or _list(gate.get("blockers")) or ["blocked_report_ready_gate"]
     return _disabled("report_ready_export", "Export report-ready package", "blocked_report_ready_gate", "; ".join(blockers), "Resolve B8.6 report-ready gate first.")
 
 

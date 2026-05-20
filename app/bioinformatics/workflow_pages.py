@@ -56,6 +56,7 @@ from app.bioinformatics.analysis_ui import build_analysis_center_state, build_de
 from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
+from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -6380,6 +6381,22 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._render_formal_deg_plot_gate(result)
         return result
 
+    def generate_formal_deg_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._formal_deg_review.get("selected_result_id") or "")
+        allow_table_only = bool(self._formal_deg_table_only_report.isChecked()) if hasattr(self, "_formal_deg_table_only_report") else False
+        result = create_formal_deg_report_ready_package(self._project_root, result_id=result_id or None, allow_table_only_report=allow_table_only)
+        if result.get("status") == "formal_deg_report_ready_package_created":
+            self.refresh_results()
+            self._status_label.setText("已生成 formal DEG report-ready package；仅包含 formal DEG section，未生成 GSEA、survival 或临床结论。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG report-ready gate 未通过"
+            self._status_label.setText(f"formal DEG report-ready package 未生成：{blockers}")
+            self._render_formal_deg_report_gate(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
+        return result
+
     def _export_formal_deg_review(self, file_format: str) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -6461,6 +6478,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         plot_controls.addWidget(self._formal_deg_plot_status)
         plot_controls.addStretch(1)
         review_layout.addLayout(plot_controls)
+        report_controls = QHBoxLayout()
+        self._formal_deg_table_only_report = QCheckBox("允许 table-only report mode")
+        self._formal_deg_table_only_report.setObjectName("formalDegTableOnlyReportMode")
+        self._formal_deg_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._formal_deg_report_button = _button("生成 formal DEG report-ready package", "secondaryButton", self.generate_formal_deg_report_ready_package)
+        self._formal_deg_report_button.setObjectName("formalDegReportReadyButton")
+        self._formal_deg_report_status = _muted("Formal DEG report-ready gate 需要完整 result index、未过期 confirmation、passed dependency/table validation 和 formal plot artifact。")
+        self._formal_deg_report_status.setObjectName("formalDegReportReadyStatus")
+        report_controls.addWidget(self._formal_deg_table_only_report)
+        report_controls.addWidget(self._formal_deg_report_button)
+        report_controls.addWidget(self._formal_deg_report_status)
+        report_controls.addStretch(1)
+        review_layout.addLayout(report_controls)
         self._formal_deg_summary_label = _muted("Formal DEG summary：暂无 formal computed DEG result。")
         self._formal_deg_summary_label.setObjectName("formalDegReviewSummary")
         self._formal_deg_downstream_label = _muted("Plot/report disabled：等待 B9.6 plot artifact / B9.7 report-ready gate。")
@@ -6530,6 +6560,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             plot_type=self._formal_deg_plot_type.currentText(),
         ) if self._project_root else {}
         self._render_formal_deg_plot_gate(plot_gate)
+        report_gate = evaluate_formal_deg_report_ready_gate(
+            self._project_root,
+            result_id=str(review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._formal_deg_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_formal_deg_report_gate(report_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
@@ -6606,6 +6642,24 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._formal_deg_plot_status.setText(f"Formal DEG plot disabled：{reason}")
+
+    def _render_formal_deg_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_formal_deg_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "eligible_for_formal_deg_report_ready":
+            self._formal_deg_report_button.setEnabled(True)
+            self._formal_deg_report_status.setText(
+                f"Formal DEG report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                "package scope=formal DEG only；GSEA/survival/clinical conclusions disabled."
+            )
+        else:
+            self._formal_deg_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "formal DEG report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
 
 
 class BioinformaticsReportViewerWidget(QWidget):

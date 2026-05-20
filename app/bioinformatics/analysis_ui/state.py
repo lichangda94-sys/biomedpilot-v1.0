@@ -11,6 +11,7 @@ from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dep
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
+from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
@@ -29,6 +30,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     deg_dependency = check_deg_backend_dependencies()
     survival_dependency = check_survival_backend_dependencies()
     report_gate = evaluate_report_ready_gate(root)
+    formal_deg_report_gate = evaluate_formal_deg_report_ready_gate(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
@@ -44,9 +46,10 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         result_schema_gate=deg_gates["result_schema_gate"],
         survival_dependency=survival_dependency,
         report_gate=report_gate,
+        formal_deg_report_gate=formal_deg_report_gate,
     )
     result_rows = build_result_gate_rows(result_entries)
-    gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate)
+    gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
     survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency)
     blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]])
@@ -79,6 +82,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "formal_deg_gate_state": deg_gates,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
+            "formal_deg_report_ready_gate": formal_deg_report_gate,
         },
     }
 
@@ -253,7 +257,7 @@ def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]
     return rows
 
 
-def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate: dict[str, Any]) -> list[dict[str, Any]]:
+def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate: dict[str, Any], formal_deg_report_gate: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     result_blockers = []
     if not result_entries:
         result_blockers.append("result_index_missing_or_empty")
@@ -279,6 +283,13 @@ def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate
             "basis": f"{len(plot_eligible)} formal DEG result candidates",
             "blockers": compact_list(["preflight_only_source_cannot_generate_formal_plot"] if preflight_sources and not plot_eligible else []),
             "warnings": "Formal DEG plot artifacts require formal_computed_result DEG sources and inherit source semantics.",
+        },
+        {
+            "gate": "Formal DEG report-ready",
+            "status": "available" if (formal_deg_report_gate or {}).get("status") == "eligible_for_formal_deg_report_ready" else "blocked_formal_deg_report_ready_gate",
+            "basis": str((formal_deg_report_gate or {}).get("status") or "blocked"),
+            "blockers": compact_list((formal_deg_report_gate or {}).get("blockers", []) or []),
+            "warnings": compact_list((formal_deg_report_gate or {}).get("warnings", []) or []),
         },
         {
             "gate": "Report-ready export",
