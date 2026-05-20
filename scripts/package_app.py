@@ -214,6 +214,11 @@ fi
 
 cd "$RESOURCE_ROOT"
 export PYTHONDONTWRITEBYTECODE="1"
+if [ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" = "1" ] && command -v arch >/dev/null 2>&1; then
+  if /usr/bin/arch -arm64 "$PYTHON_BIN" -c "import platform; raise SystemExit(0 if platform.machine() == 'arm64' else 1)" >/dev/null 2>&1; then
+    exec /usr/bin/arch -arm64 "$PYTHON_BIN" -m app.main "$@"
+  fi
+fi
 exec "$PYTHON_BIN" -m app.main "$@"
 """
     path.write_text(script, encoding="utf-8")

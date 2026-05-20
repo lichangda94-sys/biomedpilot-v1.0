@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import importlib
 from importlib import metadata
 from typing import Any
 
@@ -32,19 +33,30 @@ def check_deg_backend_dependencies() -> dict[str, Any]:
 
 
 def _package_status(name: str) -> dict[str, Any]:
-    available = importlib.util.find_spec(name) is not None
+    found = importlib.util.find_spec(name) is not None
+    import_error = ""
+    available = False
+    module: Any | None = None
+    if found:
+        try:
+            module = importlib.import_module(name)
+            available = True
+        except Exception as exc:  # pragma: no cover - depends on broken native package installs.
+            import_error = f"{exc.__class__.__name__}: {exc}"
     version = ""
     missing_reason = ""
     if available:
         try:
             version = metadata.version(name)
         except metadata.PackageNotFoundError:
-            version = "unknown"
+            version = str(getattr(module, "__version__", "") or "unknown")
     else:
-        missing_reason = f"{name}_not_importable_in_current_runtime"
+        missing_reason = import_error or f"{name}_not_importable_in_current_runtime"
     return {
         "available": available,
         "installed": available,
+        "spec_found": found,
+        "importable": available,
         "version": version,
         "missing_reason": missing_reason,
         "required_for_formal_deg": name in FORMAL_DEG_REQUIRED_PACKAGES,
