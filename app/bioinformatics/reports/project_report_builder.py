@@ -12,6 +12,7 @@ from app.bioinformatics.project_recognition import load_recognition_report
 from app.bioinformatics.project_standardization import load_standardization_artifacts
 from app.bioinformatics.project_workspace_binding import load_latest_acquisition_summary
 from app.bioinformatics.results.project_results import load_result_index
+from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 
 
 PROJECT_REPORT_MD = Path("reports") / "project_analysis_report.md"
@@ -57,6 +58,8 @@ def generate_project_report(project_root: str | Path) -> dict[str, object]:
         "schema_version": "biomedpilot.project_report_manifest.v1",
         "generated_at": _now(),
         "markdown_path": str(markdown_path),
+        "report_status": "draft_only",
+        "report_ready_gate": evaluate_report_ready_gate(root),
         "semantic_policy": _semantic_policy(),
         "section_statuses": _section_statuses(acquisition, recognition, readiness, standardization, task_records, preflight, imported_deg_results),
         "included_result_ids": included_result_ids,

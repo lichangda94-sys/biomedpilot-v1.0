@@ -51,6 +51,7 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
+from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -5484,11 +5485,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         summary_card, summary_layout = _card("当前分析条件")
         self._analysis_input_label = _muted("核心输入：待检查。")
         self._analysis_input_label.setObjectName("analysisTaskInputSummary")
+        self._analysis_resolver_label = _muted("Resolver：待检查 standardized analysis input packages。")
+        self._analysis_resolver_label.setObjectName("analysisInputResolverSummary")
         self._analysis_result_label = _muted("结果状态：暂无结果。")
         self._analysis_result_label.setObjectName("analysisTaskResultSummary")
         self._analysis_next_step_label = _muted("下一步建议：先返回数据标准化确认输入。")
         self._analysis_next_step_label.setObjectName("analysisTaskNextStep")
         summary_layout.addWidget(self._analysis_input_label)
+        summary_layout.addWidget(self._analysis_resolver_label)
         summary_layout.addWidget(self._analysis_result_label)
         summary_layout.addWidget(self._analysis_next_step_label)
         root.addWidget(summary_card)
@@ -5529,16 +5533,18 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
         records = load_task_records(self._project_root) if self._project_root else []
         result_index = load_result_index(self._project_root) if self._project_root else {}
+        resolver = resolve_analysis_inputs(self._project_root) if self._project_root else None
         entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
         imported_deg = _analysis_imported_deg_detected(self._project_root)
         configurable = sum(1 for item in tasks if item.get("can_run"))
         blocked = len(tasks) - configurable
         self._status_label.setText(f"分析任务中心：{len(tasks)} 类任务；可配置 {configurable} 类，需要补充 {blocked} 类。")
         self._analysis_input_label.setText(_analysis_task_input_summary(tasks))
+        self._analysis_resolver_label.setText(_analysis_input_resolver_summary(resolver.to_dict() if resolver else {}))
         self._analysis_result_label.setText(_analysis_task_result_summary(entries, records, imported_deg))
         self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
         _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
-        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index})
+        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}})
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._records.setPlainText(_json(payload))
@@ -10141,6 +10147,19 @@ def _analysis_task_input_summary(tasks: list[dict[str, object]]) -> str:
     if diff.get("can_run"):
         return "核心输入：已具备表达矩阵、样本信息和分组设计，可进入 DEG 配置与 preflight。"
     return f"核心输入：差异表达分析仍缺少 {missing}。"
+
+
+def _analysis_input_resolver_summary(resolver: dict[str, object]) -> str:
+    packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
+    if not packages:
+        blockers = resolver.get("blockers", []) or []
+        if blockers:
+            return "Resolver：尚未形成可用 input package；阻断项：" + "、".join(str(item) for item in blockers[:3]) + "。"
+        return "Resolver：尚未发现 standardized analysis input package。"
+    ready = [item for item in packages if not item.get("blockers")]
+    package_types = "、".join(str(item.get("package_type") or "") for item in packages if item.get("package_type"))
+    disabled = "；formal DEG/GSEA/Survival/Plot/Report-ready 仍按阶段 gate 禁用"
+    return f"Resolver：发现 {len(packages)} 个 input package（可进入预检查/探索 {len(ready)} 个）：{package_types}{disabled}。"
 
 
 def _analysis_task_result_summary(entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:

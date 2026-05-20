@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.bioinformatics.results.migration import migrate_result_entries
+from app.bioinformatics.results.models import RESULT_INDEX_SCHEMA_VERSION
+
 
 RESULT_MANAGER = Path("manifests") / "result_manager.json"
 RESULT_INDEX = Path("results") / "summaries" / "result_index.json"
@@ -17,7 +20,7 @@ def load_result_index(project_root: str | Path) -> dict[str, object]:
     entries = []
     if isinstance(index, dict):
         raw_entries = index.get("results") or index.get("entries") or []
-        entries = [item for item in raw_entries if isinstance(item, dict)]
+        entries = migrate_result_entries([item for item in raw_entries if isinstance(item, dict)])
     warnings = []
     for entry in entries:
         path = Path(str(entry.get("path") or entry.get("file_path") or ""))
@@ -39,7 +42,7 @@ def load_result_index(project_root: str | Path) -> dict[str, object]:
 def write_result_index(project_root: str | Path, entries: list[dict[str, object]]) -> Path:
     root = Path(project_root).expanduser().resolve()
     path = root / RESULT_INDEX
-    payload = {"schema_version": "biomedpilot.result_index.v1", "results": entries}
+    payload = {"schema_version": RESULT_INDEX_SCHEMA_VERSION, "results": entries}
     _write_json(path, payload)
     _write_json(root / RESULT_MANAGER, {"schema_version": "biomedpilot.result_manager.v1", "result_count": len(entries)})
     return path
