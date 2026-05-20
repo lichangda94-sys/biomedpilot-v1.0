@@ -54,6 +54,7 @@ from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_prefl
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
 from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
+from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -6316,6 +6317,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsResultsBrowserPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._formal_deg_review: dict[str, object] = {}
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -6355,6 +6357,25 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._status_label.setText("已打开导入结果浏览；这里只查看 imported DEG，不运行或生成 DEG。")
         return {"next_page": "imported_deg", "project_root": str(self._project_root)}
 
+    def export_formal_deg_review_tsv(self) -> dict[str, object] | None:
+        return self._export_formal_deg_review("tsv")
+
+    def export_formal_deg_review_csv(self) -> dict[str, object] | None:
+        return self._export_formal_deg_review("csv")
+
+    def _export_formal_deg_review(self, file_format: str) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._formal_deg_review.get("selected_result_id") or "")
+        result = export_formal_deg_review_table(self._project_root, result_id=result_id, file_format=file_format)
+        if result.get("status") == "passed":
+            self._status_label.setText(f"已导出 formal DEG {file_format.upper()} 表格；未生成 report-ready、plot、GSEA 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 formal DEG result"
+            self._status_label.setText(f"formal DEG 表格未导出：{blockers}")
+        return result
+
     def status_message(self) -> str:
         return self._status_label.text()
 
@@ -6387,6 +6408,45 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         root.addWidget(self._results)
         _set_table_widths(self._results, [170, 110, 170, 120, 120, 160, 280, 100])
         self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+
+        review_card, review_layout = _card("Formal DEG result review")
+        self._formal_deg_guard_label = _muted("Formal DEG review shows statistical analysis results only. It is not a clinical conclusion or treatment recommendation.")
+        self._formal_deg_guard_label.setObjectName("formalDegReviewGuard")
+        review_layout.addWidget(self._formal_deg_guard_label)
+        controls = QHBoxLayout()
+        self._formal_deg_sort_input = QComboBox()
+        self._formal_deg_sort_input.setObjectName("formalDegReviewSort")
+        self._formal_deg_sort_input.addItems(["adjusted_p_value", "p_value", "log2_fold_change", "significance_label", "input_order"])
+        self._formal_deg_sort_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        self._formal_deg_filter_input = QComboBox()
+        self._formal_deg_filter_input.setObjectName("formalDegReviewFilter")
+        self._formal_deg_filter_input.addItems(["all", "significant", "up", "down", "not_significant"])
+        self._formal_deg_filter_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        controls.addWidget(QLabel("Sort"))
+        controls.addWidget(self._formal_deg_sort_input)
+        controls.addWidget(QLabel("Filter"))
+        controls.addWidget(self._formal_deg_filter_input)
+        controls.addWidget(_button("导出 DEG TSV", "secondaryButton", self.export_formal_deg_review_tsv))
+        controls.addWidget(_button("导出 DEG CSV", "secondaryButton", self.export_formal_deg_review_csv))
+        controls.addStretch(1)
+        review_layout.addLayout(controls)
+        self._formal_deg_summary_label = _muted("Formal DEG summary：暂无 formal computed DEG result。")
+        self._formal_deg_summary_label.setObjectName("formalDegReviewSummary")
+        self._formal_deg_downstream_label = _muted("Plot/report disabled：等待 B9.6 plot artifact / B9.7 report-ready gate。")
+        self._formal_deg_downstream_label.setObjectName("formalDegReviewDownstream")
+        review_layout.addWidget(self._formal_deg_summary_label)
+        review_layout.addWidget(self._formal_deg_downstream_label)
+        self._formal_deg_table = _table(["feature_id", "gene_symbol", "log2FC", "p-value", "FDR", "significance_label"])
+        self._formal_deg_table.setObjectName("formalDegReviewTable")
+        review_layout.addWidget(self._formal_deg_table)
+        _set_table_widths(self._formal_deg_table, [160, 160, 110, 110, 110, 160])
+        self._formal_deg_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self._formal_deg_provenance = _table(["Provenance", "Value"])
+        self._formal_deg_provenance.setObjectName("formalDegReviewProvenanceTable")
+        review_layout.addWidget(self._formal_deg_provenance)
+        _set_table_widths(self._formal_deg_provenance, [190, 620])
+        self._formal_deg_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        root.addWidget(review_card)
 
         gate_card, gate_layout = _card("Result semantics / plot / report gates")
         gate_layout.addWidget(_muted("结果浏览只展示 result index 语义和 eligibility；不会把 testing/imported/preflight 输出升级为 formal result。"))
@@ -6426,9 +6486,70 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._results,
             _results_user_rows(self._project_root, entries, records),
         )
+        review = build_formal_deg_result_review(
+            self._project_root,
+            sort_by=self._formal_deg_sort_input.currentText(),
+            significance_filter=self._formal_deg_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._formal_deg_review = review
+        self._render_formal_deg_review(review)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
+
+    def _render_formal_deg_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._formal_deg_summary_label.setText("Formal DEG summary：暂无 formal_computed_result DEG；imported/testing/exploratory/preflight 不会混入此审阅区。")
+            _fill_table(self._formal_deg_table, [])
+            _fill_table(self._formal_deg_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        thresholds = summary.get("thresholds") if isinstance(summary.get("thresholds"), dict) else {}
+        sample_counts = summary.get("sample_counts") if isinstance(summary.get("sample_counts"), dict) else {}
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._formal_deg_summary_label.setText(
+            "Formal DEG summary："
+            f"genes={summary.get('total_gene_count', 0)}；up={summary.get('significant_up_count', 0)}；down={summary.get('significant_down_count', 0)}；"
+            f"method={summary.get('method', '')}；threshold log2FC={thresholds.get('log2fc_threshold', '')}, p={thresholds.get('p_value_threshold', '')}, FDR={thresholds.get('fdr_threshold', '')}；"
+            f"samples case={sample_counts.get('case', 0)}, control={sample_counts.get('control', 0)}；"
+            f"deps numpy={deps.get('numpy', '')}, pandas={deps.get('pandas', '')}, scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._formal_deg_downstream_label.setText(
+            "；".join(str(value) for value in downstream.values())
+            if downstream
+            else "等待 B9.6 plot artifact / B9.7 report-ready gate。"
+        )
+        _fill_table(
+            self._formal_deg_table,
+            [
+                [
+                    row.get("feature_id", ""),
+                    row.get("gene_symbol", ""),
+                    row.get("log2_fold_change", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._formal_deg_provenance,
+            [
+                ["input_package_id", provenance.get("input_package_id", "")],
+                ["parameter_confirmation", provenance.get("parameter_confirmation", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
 
 
 class BioinformaticsReportViewerWidget(QWidget):

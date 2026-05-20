@@ -17,7 +17,9 @@ try:
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.project_workspace import create_bioinformatics_project
+    from app.bioinformatics.results.models import ResultIndexEntry
     from app.bioinformatics.results.project_results import write_result_index
+    from app.bioinformatics.results.registry import register_result
     import app.bioinformatics.project_recognition as project_recognition
     import app.bioinformatics.workflow_pages as workflow_pages
     from app.bioinformatics.workflow_pages import (
@@ -4026,6 +4028,98 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     assert "Report-ready export" in gate_text
     assert "blocked_report_ready_gate" in gate_text
     assert "Testing/imported/exploratory entries keep their semantics" in gate_text
+
+    formal_review = widget.findChild(QTableWidget, "formalDegReviewTable")
+    assert formal_review is not None
+    assert formal_review.rowCount() == 0
+    guard = widget.findChild(QLabel, "formalDegReviewGuard")
+    assert guard is not None
+    assert "not a clinical conclusion" in guard.text()
+
+
+def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "formal_deg.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "feature_id\tgene_symbol\tbase_mean_or_mean_expression\tcase_mean\tcontrol_mean\tlog2_fold_change\tstatistic\tp_value\tadjusted_p_value\tsignificance_label\twarnings\n"
+        "g1\tTP53\t10\t12\t4\t1.5\t3.0\t0.001\t0.003\tup\t\n"
+        "g2\tEGFR\t10\t3\t9\t-1.4\t-2.9\t0.002\t0.004\tdown\t\n",
+        encoding="utf-8",
+    )
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(
+            result_id="formal-ui",
+            task_run_id="task-formal-ui",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            input_package_id="pkg-ui",
+            source_dataset_id="dataset-ui",
+            source_repository_manifest="standardized_data/repositories/repository_manifest.json",
+            parameters_manifest={
+                "method": "welch_t_test",
+                "log2fc_threshold": 1.0,
+                "p_value_threshold": 0.05,
+                "fdr_threshold": 0.05,
+                "case_samples": ["case1", "case2"],
+                "control_samples": ["ctrl1", "ctrl2"],
+            },
+            engine_name="python_scipy_statsmodels_deg_mvp",
+            engine_version="0.1",
+            dependency_snapshot={
+                "packages": {
+                    "numpy": {"version": "2.4.6"},
+                    "pandas": {"version": "3.0.3"},
+                    "scipy": {"version": "1.17.1"},
+                    "statsmodels": {"version": "0.14.6"},
+                }
+            },
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(table_path.relative_to(project_summary.project_root)), "schema": "biomedpilot.deg_result_table.v1"},),
+            plot_artifacts=(),
+            report_artifacts=(),
+            validation_status="passed",
+            log_artifacts=({"artifact_type": "formal_deg_run_log", "path": "analysis/formal_deg/formal-ui_run_log.json"},),
+            report_ready_eligible=False,
+        ),
+    )
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(result_id="testing-ui", task_run_id="task-testing-ui", task_type="deg", result_semantics="testing_level", validation_status="passed"),
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "formalDegReviewSummary")
+    assert summary is not None
+    assert "genes=2" in summary.text()
+    assert "up=1" in summary.text()
+    assert "down=1" in summary.text()
+    assert "scipy=1.17.1" in summary.text()
+    review_table = widget.findChild(QTableWidget, "formalDegReviewTable")
+    assert review_table is not None
+    review_text = _table_text(review_table)
+    assert "TP53" in review_text
+    assert "EGFR" in review_text
+    provenance = widget.findChild(QTableWidget, "formalDegReviewProvenanceTable")
+    assert provenance is not None
+    provenance_text = _table_text(provenance)
+    assert "pkg-ui" in provenance_text
+    assert "manifests/formal_deg_parameter_confirmation.json" in provenance_text
+    assert "results/summaries/result_index.json" in provenance_text
+    assert "False" in provenance_text
+    downstream = widget.findChild(QLabel, "formalDegReviewDownstream")
+    assert downstream is not None
+    assert "B9.6 plot artifact" in downstream.text()
+    assert "B9.7 report-ready gate" in downstream.text()
+
+    exported = widget.export_formal_deg_review_csv()
+
+    assert exported is not None
+    assert exported["status"] == "passed"
+    assert exported["report_ready_eligible"] is False
+    assert Path(str(exported["export_path"])).is_file()
+    assert "未生成 report-ready" in widget.status_message()
 
 
 def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_summary) -> None:
