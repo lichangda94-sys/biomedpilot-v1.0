@@ -2971,6 +2971,45 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     diagnostics_text = diagnostics.toPlainText()
     assert "analysis_task_center" in diagnostics_text
     assert "differential_expression" in diagnostics_text
+    assert "analysis_center_state" in diagnostics_text
+
+    package_table = widget.findChild(QTableWidget, "analysisPackageTable")
+    assert package_table is not None
+    package_text = _table_text(package_table)
+    assert "DEG recompute input" in package_text
+    assert "Blockers" not in package_text
+    assert "sample metadata" in package_text or "Return to" in package_text or "raw count matrix" in package_text
+
+    action_table = widget.findChild(QTableWidget, "analysisActionGateTable")
+    assert action_table is not None
+    action_text = _table_text(action_table)
+    assert "Run formal DEG" in action_text
+    assert "disabled" in action_text
+    assert "Run formal GSEA" not in action_text
+    assert "KM/Cox/log-rank" not in action_text
+    assert "Export report-ready package" in action_text
+    assert "blocked_report_ready_gate" in action_text
+
+    dependency_table = widget.findChild(QTableWidget, "analysisDependencyTable")
+    assert dependency_table is not None
+    dependency_text = _table_text(dependency_table)
+    assert "scipy" in dependency_text
+    assert "statsmodels" in dependency_text
+    assert "Detect only" in dependency_text
+    assert "安装" not in dependency_text
+
+    gate_table = widget.findChild(QTableWidget, "analysisGatePreviewTable")
+    assert gate_table is not None
+    gate_text = _table_text(gate_table)
+    assert "Report-ready export" in gate_text
+    assert "blocked_report_ready_gate" in gate_text
+
+    survival_table = widget.findChild(QTableWidget, "analysisSurvivalClinicalTable")
+    assert survival_table is not None
+    survival_text = _table_text(survival_table)
+    assert "Survival design preflight" in survival_text
+    assert "KM/Cox/log-rank/HR" in survival_text
+    assert "disabled" in survival_text
 
 
 def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, project_summary, tmp_path: Path) -> None:
@@ -3960,6 +3999,14 @@ def test_results_browser_userized_result_semantics_and_diagnostics(qt_app, proje
     assert "result_index" in diagnostics_text
     assert "schema_version" in diagnostics_text
     assert str(imported_path) in diagnostics_text
+    assert "analysis_center_state" in diagnostics_text
+
+    gate = widget.findChild(QTableWidget, "resultsGatePreviewTable")
+    assert gate is not None
+    gate_text = _table_text(gate)
+    assert "Report-ready export" in gate_text
+    assert "blocked_report_ready_gate" in gate_text
+    assert "Testing/imported/exploratory entries keep their semantics" in gate_text
 
 
 def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_summary) -> None:
@@ -4045,6 +4092,14 @@ def test_report_viewer_userized_draft_semantics_and_diagnostics(qt_app, project_
     assert "report_manifest" in diagnostics_text
     assert "schema_version" in diagnostics_text
     assert str(imported_path) in diagnostics_text
+    assert "analysis_center_state" in diagnostics_text
+
+    gate = widget.findChild(QTableWidget, "reportReadyGateTable")
+    assert gate is not None
+    gate_text = _table_text(gate)
+    assert "Report-ready export" in gate_text
+    assert "blocked_report_ready_gate" in gate_text
+    assert "unverified_testing_exploratory_or_imported_results_present" in gate_text
 
 
 def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) -> None:
@@ -4062,6 +4117,14 @@ def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) ->
     assert "legacy check ok" in result
     assert "不下载数据" in result
     assert "已完成" in settings._geo_check_status.text()
+    dep_table = settings.findChild(QTableWidget, "analysisDependencyStatusTable")
+    assert dep_table is not None
+    dep_text = _table_text(dep_table)
+    assert "scipy" in dep_text
+    assert "statsmodels" in dep_text
+    assert "lifelines" in dep_text
+    assert "Detect only" in dep_text
+    assert "安装" not in dep_text
 
 
 def test_workspace_navigation_reaches_full_stack(qt_app, project_summary) -> None:

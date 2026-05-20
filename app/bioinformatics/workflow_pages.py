@@ -52,6 +52,7 @@ from app.bioinformatics.comparison_config import (
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
+from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -5512,6 +5513,51 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _set_table_widths(self._tasks, [160, 150, 220, 220, 300])
         self._tasks.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
 
+        package_card, package_layout = _card("Analysis input packages")
+        package_layout.addWidget(_muted("来源：B8 resolver，仅使用 standardized repository / registry / analysis_input_repository。"))
+        self._package_table = _table(["Package", "状态", "Value", "Gene ID", "下游任务", "Blockers", "Warnings", "修复建议"])
+        self._package_table.setObjectName("analysisPackageTable")
+        package_layout.addWidget(self._package_table)
+        root.addWidget(package_card)
+        _set_table_widths(self._package_table, [180, 110, 110, 110, 200, 260, 260, 320])
+        self._package_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+
+        action_card, action_layout = _card("Action matrix and disabled reasons")
+        action_layout.addWidget(_muted("Formal actions stay disabled until B8 gates pass and later activation stages explicitly enable execution."))
+        self._action_table = _table(["动作", "状态", "按钮", "Disabled reason", "下一步"])
+        self._action_table.setObjectName("analysisActionGateTable")
+        action_layout.addWidget(self._action_table)
+        root.addWidget(action_card)
+        _set_table_widths(self._action_table, [190, 150, 180, 360, 300])
+        self._action_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        dependency_card, dependency_layout = _card("Dependency status")
+        dependency_layout.addWidget(_muted("Detect-first only：显示缺失依赖并阻断 formal action，不自动安装。"))
+        self._dependency_table = _table(["依赖", "状态", "版本", "Blockers", "操作"])
+        self._dependency_table.setObjectName("analysisDependencyTable")
+        dependency_layout.addWidget(self._dependency_table)
+        root.addWidget(dependency_card)
+        _set_table_widths(self._dependency_table, [150, 130, 110, 310, 240])
+        self._dependency_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        gate_card, gate_layout = _card("Result / plot / report gate preview")
+        gate_layout.addWidget(_muted("Result semantics、plot source 和 report-ready gate 均来自 B8 contracts；preflight/testing/imported 不会升级为 formal result。"))
+        self._gate_table = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
+        self._gate_table.setObjectName("analysisGatePreviewTable")
+        gate_layout.addWidget(self._gate_table)
+        root.addWidget(gate_card)
+        _set_table_widths(self._gate_table, [170, 170, 230, 320, 300])
+        self._gate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        survival_card, survival_layout = _card("Survival / clinical preflight")
+        survival_layout.addWidget(_muted("Survival/clinical association 仅显示设计和 preflight 状态；KM/Cox/log-rank/HR/KM plot 禁用。"))
+        self._survival_table = _table(["项目", "状态", "资产/字段", "Backend", "禁用原因"])
+        self._survival_table.setObjectName("analysisSurvivalClinicalTable")
+        survival_layout.addWidget(self._survival_table)
+        root.addWidget(survival_card)
+        _set_table_widths(self._survival_table, [190, 140, 190, 190, 360])
+        self._survival_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._records)))
@@ -5534,6 +5580,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         records = load_task_records(self._project_root) if self._project_root else []
         result_index = load_result_index(self._project_root) if self._project_root else {}
         resolver = resolve_analysis_inputs(self._project_root) if self._project_root else None
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
         imported_deg = _analysis_imported_deg_detected(self._project_root)
         configurable = sum(1 for item in tasks if item.get("can_run"))
@@ -5544,7 +5591,12 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._analysis_result_label.setText(_analysis_task_result_summary(entries, records, imported_deg))
         self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
         _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
-        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}})
+        _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
+        _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
+        _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
+        _fill_table(self._gate_table, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
+        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}, "analysis_center_state": analysis_state})
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._records.setPlainText(_json(payload))
@@ -6217,6 +6269,15 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         _set_table_widths(self._results, [170, 110, 170, 120, 120, 160, 280, 100])
         self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
 
+        gate_card, gate_layout = _card("Result semantics / plot / report gates")
+        gate_layout.addWidget(_muted("结果浏览只展示 result index 语义和 eligibility；不会把 testing/imported/preflight 输出升级为 formal result。"))
+        self._gate_preview = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
+        self._gate_preview.setObjectName("resultsGatePreviewTable")
+        gate_layout.addWidget(self._gate_preview)
+        root.addWidget(gate_card)
+        _set_table_widths(self._gate_preview, [170, 170, 230, 320, 300])
+        self._gate_preview.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._details)))
@@ -6246,7 +6307,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._results,
             _results_user_rows(self._project_root, entries, records),
         )
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings}))
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
 
 
 class BioinformaticsReportViewerWidget(QWidget):
@@ -6314,6 +6377,12 @@ class BioinformaticsReportViewerWidget(QWidget):
         _set_table_widths(self._sections, [170, 150, 260, 320])
         self._sections.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
+        self._report_ready_gate = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
+        self._report_ready_gate.setObjectName("reportReadyGateTable")
+        root.addWidget(self._report_ready_gate)
+        _set_table_widths(self._report_ready_gate, [170, 170, 230, 320, 300])
+        self._report_ready_gate.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
         self._markdown = _text_preview(220)
         self._markdown.setObjectName("reportDraftUserPreview")
         root.addWidget(self._markdown)
@@ -6344,8 +6413,10 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._report_semantics_label.setText(_report_result_semantics_text(entries, records))
         self._report_next_step_label.setText(_report_next_step_text(markdown, entries, records))
         _fill_table(self._sections, _report_section_rows(self._project_root, entries, records, bool(markdown)))
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
+        _fill_table(self._report_ready_gate, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         self._markdown.setPlainText(_report_user_preview_text(markdown, entries, records))
-        self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records}))
+        self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records, "analysis_center_state": analysis_state}))
 
     def copy_report_summary(self) -> str:
         summary = self._markdown.toPlainText().strip()
@@ -6456,6 +6527,16 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         env_layout.addWidget(_muted("核心依赖状态：随测试环境预检；缺失时由测试或打包流程提示。"))
         env_layout.addWidget(_muted("package manifest 状态：占位"))
         root.addWidget(env_card)
+
+        analysis_dep_card, analysis_dep_layout = _card("Analysis dependency detection")
+        analysis_dep_layout.addWidget(_muted("Detect-first only：不自动安装 scipy/statsmodels/R/lifelines；缺失时显示 blocker 并禁用 formal analysis。"))
+        self._analysis_dependency_status = _table(["依赖", "状态", "版本", "Blockers", "操作"])
+        self._analysis_dependency_status.setObjectName("analysisDependencyStatusTable")
+        analysis_dep_layout.addWidget(self._analysis_dependency_status)
+        root.addWidget(analysis_dep_card)
+        _set_table_widths(self._analysis_dependency_status, [150, 130, 110, 310, 240])
+        self._analysis_dependency_status.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        _fill_table(self._analysis_dependency_status, _analysis_ui_dependency_rows(build_dependency_rows()))
 
         geo_card, geo_layout = _card("GEO legacy 环境检查")
         self._geo_check_status = _status_label("尚未运行 GEO legacy 环境检查。")
@@ -10180,6 +10261,84 @@ def _resolver_issue_preview(packages: list[dict[str, object]], field_name: str) 
         if len(issues) >= 4:
             break
     return "、".join(issues)
+
+
+def _analysis_ui_package_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("package_label", ""),
+            row.get("status", ""),
+            row.get("value_type", ""),
+            row.get("gene_id_type", ""),
+            row.get("allowed_downstream_tasks", ""),
+            row.get("blockers", ""),
+            row.get("warnings", ""),
+            row.get("repair_action", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_action_rows(rows: object, *, normal_user_only: bool = False) -> list[list[object]]:
+    visible_rows = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if normal_user_only and row.get("normal_user_visible") is False:
+            continue
+        visible_rows.append(
+            [
+                row.get("label", ""),
+                row.get("state", ""),
+                row.get("button_behavior", ""),
+                row.get("disabled_reason", ""),
+                row.get("next_action", ""),
+            ]
+        )
+    return visible_rows
+
+
+def _analysis_ui_dependency_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("label", ""),
+            row.get("status", ""),
+            row.get("version", ""),
+            row.get("blockers", ""),
+            row.get("action", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_gate_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("gate", ""),
+            row.get("status", ""),
+            row.get("basis", ""),
+            row.get("blockers", ""),
+            row.get("warnings", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_survival_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("label", ""),
+            row.get("status", ""),
+            row.get("asset_status", ""),
+            row.get("backend_status", ""),
+            row.get("disabled_reason", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
 
 
 def _analysis_task_result_summary(entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:
