@@ -8,7 +8,7 @@ Scope: UI-B0 through UI-B10
 
 ## 1. Current Stage
 
-Current checkpoint: UI-C0 low-fidelity shell usability pass.
+Current checkpoint: UI-B8b-prep resource design / Figma / icon brief.
 
 Completed stages:
 
@@ -25,6 +25,7 @@ Completed stages:
 - UI-B7 shell: shared Result / Report / Export semantic shell.
 - UI-B7.1: Result / Report / Export shell adoption calibration.
 - UI-B8a: resource inventory / placeholder strategy.
+- UI-B8b-prep: resource design brief, Figma brief and icon requirements.
 - UI-B9a: semantic key registry.
 - UI-B9b: key adoption / test migration.
 - UI-B9c: selective key adoption / test migration expansion.
@@ -44,10 +45,11 @@ Current forbidden scope:
 - Do not handle App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation, or desktop `.app` overwrite before UI-B10.
 - Do not replace active icons or resources under the current checkpoint.
 - Do not treat shell-only, testing, planned, or Developer Preview UI as production capability.
+- Do not treat UI-B8b-prep as permission to implement or bind new resources.
 
 Recommended next stage:
 
-- UI-B8b formal resource replacement only after brand/resource confirmation, or
+- UI-B8b formal resource replacement only after brand/resource owner confirmation and approved design exports, or
 - UI-C1 module-specific usability follow-up if needed.
 
 ## 2. Stage Route
@@ -66,6 +68,7 @@ UI-B0: MasterPlan / Visual Style Guide / I18N Strategy / Stage Index
 -> UI-B7: Result / Report / Export unified semantics
 -> UI-B7.1: Result / Report / Export shell adoption calibration
 -> UI-B8a: resource inventory / placeholder strategy
+-> UI-B8b-prep: resource design / Figma / icon brief
 -> UI-B8b: formal resource replacement after brand/resource confirmation
 -> UI-B9a: semantic key registry
 -> UI-B9b: key adoption / test migration
@@ -90,12 +93,13 @@ Recommended execution order:
 12. UI-B7 shell: completed.
 13. UI-B7.1 Result / Report / Export adoption calibration: completed.
 14. UI-B8a inventory / placeholder strategy: completed.
-15. UI-B9b key adoption / test migration: completed.
-16. UI-B8b formal resource replacement only after resource decisions.
-17. UI-B9c selective key adoption / test migration expansion: completed.
-18. UI-C0 low-fidelity shell usability pass: completed.
-19. UI-C1 module-specific usability follow-up if needed.
-20. UI-B10 packaging and desktop entry last.
+15. UI-B8b-prep resource design / Figma / icon brief: completed.
+16. UI-B9b key adoption / test migration: completed.
+17. UI-B8b formal resource replacement only after resource decisions and approved exports.
+18. UI-B9c selective key adoption / test migration expansion: completed.
+19. UI-C0 low-fidelity shell usability pass: completed.
+20. UI-C1 module-specific usability follow-up if needed.
+21. UI-B10 packaging and desktop entry last.
 
 UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. UI-B10 remains last.
 
@@ -112,6 +116,7 @@ UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. U
 | UI-B6 | UI-B0/B1 and Meta runtime/IA calibration or shell-only boundary | Meta专线 audit | Production Meta workflow claims. |
 | UI-B7 | UI-B0/B1 and result/report schema state | B8.4/B8.5/B8.6 planning | Fake plots or final reports. |
 | UI-B8a | Visual Style Guide and current resource audit | Shell work with placeholders | Replacing active icons, App icon, Finder icon, desktop package changes. |
+| UI-B8b-prep | UI-B8a inventory and Visual Style Guide | UI-C1 planning | Resource replacement, App icon, Finder icon, packaging. |
 | UI-B8b | Confirmed brand/resource owner decisions and UI-B8a inventory | High-fidelity shell work | Unconfirmed App icon or desktop package changes. |
 | UI-B9a | I18N Strategy, status keys, UI-B1 tokens | UI-B2-B7 shell work | One-shot full translation, language switch. |
 | UI-B9b | UI-B9a key registry and focused test baseline | UI-B5.1 routing calibration | Full multilingual release, report template rewrite. |
@@ -136,6 +141,7 @@ UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. U
 | UI-B7 | Result/report/export statuses are unified and draft/report-ready cannot be confused. |
 | UI-B7.1 | Bioinformatics and Meta target shells adopt the shared Result / Report / Export shell panel. |
 | UI-B8a | Resource inventory and placeholder/final strategy exist; active icons are not replaced. |
+| UI-B8b-prep | Resource design brief, Figma brief and icon requirements exist; active resources are not replaced. |
 | UI-B8b | Formal resources are confirmed, added or replaced with focused resource tests. |
 | UI-B9a | Critical i18n keys and semantic status boundaries are in place. |
 | UI-B9b | Key adoption and high-risk test migration are in place; full language switch may still be future work. |
@@ -159,6 +165,7 @@ UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. U
 | UI-B7 | Report status tests, export gating tests, empty state tests, disclaimer tests. |
 | UI-B7.1 | Result / Report / Export adoption tests for shared panel plus Bio/Meta target shells. |
 | UI-B8a | `git diff --check`; resource inventory review. No icon replacement tests required because no active resources change. |
+| UI-B8b-prep | `git diff --check`; documentation-only brief review. No icon replacement tests required because no active resources change. |
 | UI-B8b | Icon path tests, resource inventory tests, module icon loading tests, smoke. |
 | UI-B9a | Key existence tests and status enum rendering tests. |
 | UI-B9b | High-risk assertion migration tests and key adoption tests. |
@@ -189,12 +196,13 @@ Full test suites are not mandatory for every early phase unless the changed surf
 | `docs/ui/UI_Rebuild_MasterPlan_20260520.md` | current |
 | `docs/ui/UI_Visual_Style_Guide_v1_20260520.md` | current |
 | `docs/ui/UI_I18N_Strategy_v1_20260520.md` | current |
-| `docs/ui/UI_Rebuild_Stage_Index_20260520.md` | current implementation-plan index / UI-C0 checkpoint |
+| `docs/ui/UI_Rebuild_Stage_Index_20260520.md` | current implementation-plan index / UI-B8b-prep checkpoint |
 | `docs/ui/UI_A4_3_current_checkpoint_next_stage_planning_20260520.md` | current checkpoint summary |
 | `docs/ui/UI_B5_1_bioinformatics_legacy_page_routing_calibration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_B5_2_bioinformatics_target_page_consolidation_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_B6_1_meta_analysis_target_shell_interaction_calibration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_B7_1_result_report_export_shell_adoption_calibration_20260520.md` | completed stage checkpoint |
+| `docs/ui/UI_B8b_prep_resource_design_figma_icon_brief_20260520.md` | completed design-prep checkpoint |
 | `docs/ui/UI_B9b_semantic_key_adoption_test_migration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_B9c_selective_key_adoption_test_migration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_C0_low_fidelity_shell_usability_pass_20260520.md` | completed stage checkpoint |
@@ -226,11 +234,11 @@ Full test suites are not mandatory for every early phase unless the changed surf
 
 | category | checkpoint_status |
 |---|---|
-| Completed | UI-B0, UI-B1, UI-B2, UI-B3, UI-B4, UI-B5 shell, UI-B5.1, UI-B5.2, UI-B6 shell, UI-B6.1, UI-B7 shell, UI-B7.1, UI-B8a, UI-B9a, UI-B9b, UI-B9c, UI-C0. |
+| Completed | UI-B0, UI-B1, UI-B2, UI-B3, UI-B4, UI-B5 shell, UI-B5.1, UI-B5.2, UI-B6 shell, UI-B6.1, UI-B7 shell, UI-B7.1, UI-B8a, UI-B8b-prep, UI-B9a, UI-B9b, UI-B9c, UI-C0. |
 | Partial | Full UI-B9 i18n adoption / language switch remains future work. |
 | Not started | UI-B8b formal resource replacement; complete i18n adoption / language switch; UI-B10 packaging / desktop entry. |
 | Hard stop | App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation and desktop `.app` overwrite stay out of scope until UI-B10. |
-| Next recommended work | UI-B8b formal resource replacement after confirmation, or UI-C1 module-specific usability follow-up if needed. |
+| Next recommended work | UI-B8b formal resource replacement after owner approval and exported assets, or UI-C1 module-specific usability follow-up if needed. |
 
 ## 9. UI-B0 Command Log
 

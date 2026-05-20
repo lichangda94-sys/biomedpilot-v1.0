@@ -24,7 +24,7 @@ Priority order:
 
 ## 2. Current Phase Boundary
 
-Current checkpoint after UI-C0: low-fidelity shell usability pass.
+Current checkpoint after UI-B8b-prep: resource design / Figma / icon brief.
 
 Completed:
 
@@ -41,6 +41,7 @@ Completed:
 - UI-B7 shell: shared Result / Report / Export semantic shell.
 - UI-B7.1: Result / Report / Export shell adoption calibration.
 - UI-B8a: resource inventory / placeholder strategy.
+- UI-B8b-prep: resource design brief, Figma brief and icon requirements.
 - UI-B9a: semantic key registry.
 - UI-B9b: key adoption / test migration.
 - UI-B9c: selective key adoption / test migration expansion.
@@ -59,11 +60,12 @@ Current hard boundary:
 
 - Do not handle App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation, or desktop `.app` overwrite before UI-B10.
 - Do not treat UI-B8a as resource replacement; it is only inventory and placeholder policy.
+- Do not treat UI-B8b-prep as resource replacement; it is only design brief and icon requirements.
 - Do not treat UI-B9a/B9b/B9c as full i18n; they are key registry, selective key adoption and focused test migration only.
 
 Recommended next stage:
 
-- UI-B8b formal resource replacement only after brand/resource confirmation, or
+- UI-B8b formal resource replacement only after brand/resource owner confirmation and approved design exports, or
 - UI-C1 module-specific usability follow-up if a new shell surface needs deeper calibration.
 
 ## 3. Rebuild Principles
@@ -360,15 +362,15 @@ Critical rules:
 
 ## 11. Immediate Next Stage
 
-After UI-C0, proceed only with one of the following confirmed next stages:
+After UI-B8b-prep, proceed only with one of the following confirmed next stages:
 
 ```text
 UI-C1: module-specific usability follow-up, if deeper shell calibration is needed
-UI-B8b: formal resource replacement, only after brand/resource confirmation
+UI-B8b: formal resource replacement, only after brand/resource owner approval and exported assets
 UI-B10: packaging / desktop entry, only when explicitly authorized
 ```
 
-Do not treat UI-C0 as permission to replace icons, bind App icons, update Finder/LaunchServices metadata, or run packaged app validation.
+Do not treat UI-B8b-prep as permission to replace icons, bind App icons, update Finder/LaunchServices metadata, or run packaged app validation.
 
 ## 12. UI-B0 Completion Statement
 
