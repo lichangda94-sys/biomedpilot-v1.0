@@ -46,7 +46,7 @@ def build_pubmed_search_execution_plan(
     warnings = tuple(_strings(confirmed.get("warnings")))
 
     return PubMedSearchExecutionPlan(
-        plan_status="preflight_ready",
+        plan_status="draft_execution_plan",
         source_confirmed_search_plan_path=str(confirmed_path),
         database="PubMed",
         execution_mode="manual_preflight_only",

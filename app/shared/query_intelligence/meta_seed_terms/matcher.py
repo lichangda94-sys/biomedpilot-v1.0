@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from app.shared.query_intelligence.meta_seed_terms.loader import load_seed_terms
 from app.shared.query_intelligence.meta_seed_terms.models import PicoDraft, SeedTerm
 
@@ -39,6 +41,18 @@ def match_chinese_question_to_pico(question: str) -> PicoDraft:
 def _match_seed_terms(question: str) -> list[SeedTerm]:
     matches: list[SeedTerm] = []
     for seed in load_seed_terms():
-        if any(term and term in question for term in seed.zh_terms):
+        if any(_term_matches(question, term) for term in seed.zh_terms):
             matches.append(seed)
     return matches
+
+
+def _term_matches(question: str, term: str) -> bool:
+    if not term:
+        return False
+    if _is_latin_token(term):
+        return re.search(rf"(?<![A-Za-z0-9]){re.escape(term)}(?![A-Za-z0-9])", question, re.IGNORECASE) is not None
+    return term in question
+
+
+def _is_latin_token(term: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z0-9]+", term))

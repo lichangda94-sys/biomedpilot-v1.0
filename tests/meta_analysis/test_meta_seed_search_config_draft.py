@@ -227,7 +227,7 @@ def test_pubmed_search_execution_preflight_generates_plan_without_retrieval(tmp_
     config = json.loads((project.project_root / "meta_project_config.json").read_text(encoding="utf-8"))
 
     assert plan_path.name == "search_execution_plan.json"
-    assert payload["plan_status"] == "preflight_ready"
+    assert payload["plan_status"] == "draft_execution_plan"
     assert payload["database"] == "PubMed"
     assert payload["execution_mode"] == "manual_preflight_only"
     assert payload["search_execution_status"] == "not_executed"
