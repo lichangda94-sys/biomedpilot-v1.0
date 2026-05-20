@@ -12,8 +12,11 @@ from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_an
 from app.meta_analysis.search_config_draft import (
     MetaSeedConceptGuard,
     MetaSeedSearchConfigDraft,
+    build_user_edited_search_plan,
     build_meta_seed_search_config_draft,
+    save_confirmed_search_plan,
     save_meta_seed_search_config_draft,
+    save_rejected_search_config_draft,
 )
 from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
 
@@ -113,6 +116,7 @@ if QWidget is not None:
             self._current_project_dir: Path | None = None
             self._current_meta_project: MetaProjectSummary | None = None
             self._current_search_config_draft: MetaSeedSearchConfigDraft | None = None
+            self._current_user_edited_search_plan = None
             self._layout_state = meta_workspace_layout_state()
             self._page_keys: list[str] = []
             self._build_ui()
@@ -180,8 +184,39 @@ if QWidget is not None:
                 if not question.strip():
                     raise ValueError("请先输入中文研究问题并生成草稿。")
                 self._current_search_config_draft = build_meta_seed_search_config_draft(question)
-            path = save_meta_seed_search_config_draft(self._current_project_dir, self._current_search_config_draft)
-            self._search_config_status_label.setText(f"已保存草稿：{path}；状态仍为 draft/not_executed。")
+            edited = self._build_user_edited_search_plan_from_ui()
+            self._current_user_edited_search_plan = edited
+            path = save_meta_seed_search_config_draft(self._current_project_dir, self._current_search_config_draft, edited)
+            self._search_config_status_label.setText(f"已保存草稿：{path}；状态为 {edited.review_status}/not_executed。")
+            return path
+
+        def confirm_seed_search_config_plan(self) -> Path:
+            if self._current_project_dir is None:
+                raise ValueError("请先绑定 Meta 项目，再确认检索计划。")
+            if self._current_search_config_draft is None:
+                raise ValueError("请先生成检索配置草稿。")
+            edited = self._build_user_edited_search_plan_from_ui()
+            self._current_user_edited_search_plan = edited
+            path = save_confirmed_search_plan(
+                self._current_project_dir,
+                self._current_search_config_draft,
+                edited,
+                user_confirmed=True,
+            )
+            self._search_config_status_label.setText(f"已确认检索计划：{path}；仍未执行在线检索。")
+            return path
+
+        def reject_seed_search_config_draft(self) -> Path:
+            if self._current_project_dir is None:
+                raise ValueError("请先绑定 Meta 项目，再拒绝检索草稿。")
+            if self._current_search_config_draft is None:
+                raise ValueError("请先生成检索配置草稿。")
+            path = save_rejected_search_config_draft(
+                self._current_project_dir,
+                self._current_search_config_draft,
+                user_notes=self._search_user_notes_input.toPlainText() if hasattr(self, "_search_user_notes_input") else "",
+            )
+            self._search_config_status_label.setText(f"已拒绝草稿：{path}；不会进入后续 workflow。")
             return path
 
         def _build_ui(self) -> None:
@@ -272,12 +307,20 @@ if QWidget is not None:
             generate_button.setObjectName("metaGenerateSearchConfigDraftButton")
             save_button = QPushButton("保存草稿")
             save_button.setObjectName("metaSaveSearchConfigDraftButton")
+            confirm_button = QPushButton("确认为检索计划")
+            confirm_button.setObjectName("metaConfirmSearchPlanButton")
+            reject_button = QPushButton("拒绝草稿")
+            reject_button.setObjectName("metaRejectSearchDraftButton")
             generate_button.clicked.connect(
                 lambda: self.generate_seed_search_config_preview(self._search_question_input.toPlainText())
             )
             save_button.clicked.connect(self.save_seed_search_config_preview)
+            confirm_button.clicked.connect(self.confirm_seed_search_config_plan)
+            reject_button.clicked.connect(self.reject_seed_search_config_draft)
             button_row.addWidget(generate_button)
             button_row.addWidget(save_button)
+            button_row.addWidget(confirm_button)
+            button_row.addWidget(reject_button)
             button_row.addStretch(1)
             self._search_config_status_label = QLabel("尚未生成检索配置草稿。")
             self._search_config_status_label.setObjectName("metaSearchConfigDraftStatus")
@@ -285,6 +328,14 @@ if QWidget is not None:
             self._search_config_summary_label = QLabel("")
             self._search_config_summary_label.setObjectName("metaSearchConfigDraftSummary")
             self._search_config_summary_label.setWordWrap(True)
+            self._search_query_edit = QPlainTextEdit()
+            self._search_query_edit.setObjectName("metaSearchQueryDraftEdit")
+            self._search_query_edit.setPlaceholderText("生成后可编辑 PubMed query block；确认前不会执行检索。")
+            self._search_query_edit.setMaximumHeight(120)
+            self._search_user_notes_input = QPlainTextEdit()
+            self._search_user_notes_input.setObjectName("metaSearchUserNotes")
+            self._search_user_notes_input.setPlaceholderText("用户 notes / selected terms / included blocks 说明")
+            self._search_user_notes_input.setMaximumHeight(80)
             self._search_config_guard_label = QLabel("")
             self._search_config_guard_label.setObjectName("metaSearchConfigDraftGuards")
             self._search_config_guard_label.setWordWrap(True)
@@ -295,6 +346,8 @@ if QWidget is not None:
             layout.addLayout(button_row)
             layout.addWidget(self._search_config_status_label)
             layout.addWidget(self._search_config_summary_label)
+            layout.addWidget(self._search_query_edit)
+            layout.addWidget(self._search_user_notes_input)
             layout.addWidget(self._search_config_guard_label)
             layout.addStretch(1)
             return frame
@@ -318,7 +371,19 @@ if QWidget is not None:
                 for guard in draft.detected_concepts
             ]
             self._search_config_summary_label.setText("\n".join(summary))
+            self._search_query_edit.setPlainText(draft.pubmed_query_draft)
             self._search_config_guard_label.setText("Query guard:\n" + ("\n".join(guards) if guards else "未检测到 seed term。"))
+
+        def _build_user_edited_search_plan_from_ui(self):
+            if self._current_search_config_draft is None:
+                raise ValueError("请先生成检索配置草稿。")
+            edited_query = self._search_query_edit.toPlainText() if hasattr(self, "_search_query_edit") else None
+            notes = self._search_user_notes_input.toPlainText() if hasattr(self, "_search_user_notes_input") else ""
+            return build_user_edited_search_plan(
+                self._current_search_config_draft,
+                edited_pubmed_query_draft=edited_query,
+                user_notes=notes,
+            )
 
         def _refresh_summary(self) -> None:
             if self._current_meta_project is not None:

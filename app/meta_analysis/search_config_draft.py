@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 from app.meta_analysis.project_workspace import META_PROJECT_CONFIG, open_meta_analysis_project
 from app.shared.query_intelligence.meta_seed_terms import (
@@ -15,6 +16,9 @@ from app.shared.query_intelligence.meta_seed_terms import (
 
 
 META_SEED_SEARCH_CONFIG_DRAFT = "meta_seed_search_config_draft.json"
+META_SEED_CONFIRMED_SEARCH_PLAN = "confirmed_search_plan.json"
+
+SearchDraftReviewStatus = Literal["draft_only", "needs_edit", "user_confirmed", "rejected"]
 
 
 @dataclass(frozen=True)
@@ -36,7 +40,7 @@ class MetaSeedConceptGuard:
 @dataclass(frozen=True)
 class MetaSeedSearchConfigDraft:
     original_question: str
-    draft_status: str
+    draft_status: SearchDraftReviewStatus
     user_confirmation_required: bool
     search_execution_status: str
     online_retrieval_executed: bool
@@ -59,6 +63,44 @@ class MetaSeedSearchConfigDraft:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class MetaSearchPlanGuardOverride:
+    concept_id: str
+    reason: str
+    requested_action: str
+    warning: str
+
+
+@dataclass(frozen=True)
+class MetaUserEditedSearchPlan:
+    review_status: SearchDraftReviewStatus
+    selected_concept_ids: tuple[str, ...]
+    included_pubmed_query_blocks: tuple[str, ...]
+    edited_pubmed_query_draft: str
+    user_notes: str
+    guard_overrides: tuple[MetaSearchPlanGuardOverride, ...]
+    updated_at: str
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class MetaConfirmedSearchPlan:
+    review_status: SearchDraftReviewStatus
+    search_execution_status: str
+    online_retrieval_executed: bool
+    formal_search_completed: bool
+    auto_generated_draft: dict[str, object]
+    user_edited_plan: dict[str, object]
+    confirmed_pubmed_query_draft: str
+    warnings: tuple[str, ...]
+    created_at: str
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
 def build_meta_seed_search_config_draft(question: str) -> MetaSeedSearchConfigDraft:
     normalized_question = " ".join(question.strip().split())
     pico = match_chinese_question_to_pico(normalized_question)
@@ -71,7 +113,7 @@ def build_meta_seed_search_config_draft(question: str) -> MetaSeedSearchConfigDr
 
     return MetaSeedSearchConfigDraft(
         original_question=normalized_question,
-        draft_status="draft_needs_user_confirmation",
+        draft_status="draft_only",
         user_confirmation_required=True,
         search_execution_status="not_executed",
         online_retrieval_executed=False,
@@ -98,9 +140,99 @@ def build_meta_seed_search_config_draft(question: str) -> MetaSeedSearchConfigDr
     )
 
 
+def build_user_edited_search_plan(
+    draft: MetaSeedSearchConfigDraft,
+    *,
+    selected_concept_ids: list[str] | tuple[str, ...] | None = None,
+    included_pubmed_query_blocks: list[str] | tuple[str, ...] | None = None,
+    edited_pubmed_query_draft: str | None = None,
+    user_notes: str = "",
+    guard_overrides: list[dict[str, str]] | tuple[dict[str, str], ...] | None = None,
+) -> MetaUserEditedSearchPlan:
+    selected_ids = tuple(selected_concept_ids if selected_concept_ids is not None else _included_concept_ids(draft))
+    included_blocks = tuple(included_pubmed_query_blocks if included_pubmed_query_blocks is not None else draft.pubmed_query_blocks)
+    edited_query = edited_pubmed_query_draft if edited_pubmed_query_draft is not None else " AND ".join(included_blocks)
+    overrides = tuple(_guard_override_from_dict(payload) for payload in (guard_overrides or ()))
+    has_edits = (
+        selected_ids != _included_concept_ids(draft)
+        or included_blocks != draft.pubmed_query_blocks
+        or edited_query != draft.pubmed_query_draft
+        or bool(user_notes.strip())
+        or bool(overrides)
+    )
+    return MetaUserEditedSearchPlan(
+        review_status="needs_edit" if has_edits else "draft_only",
+        selected_concept_ids=selected_ids,
+        included_pubmed_query_blocks=included_blocks,
+        edited_pubmed_query_draft=edited_query,
+        user_notes=user_notes.strip(),
+        guard_overrides=overrides,
+        updated_at=_now(),
+    )
+
+
+def build_confirmed_search_plan(
+    draft: MetaSeedSearchConfigDraft,
+    user_edited_plan: MetaUserEditedSearchPlan,
+    *,
+    user_confirmed: bool = False,
+) -> MetaConfirmedSearchPlan:
+    if draft.draft_status == "rejected" or user_edited_plan.review_status == "rejected":
+        raise ValueError("Rejected Meta search config drafts cannot become confirmed search plans.")
+    if not user_confirmed:
+        raise ValueError("User confirmation is required before creating a confirmed search plan.")
+    override_warnings = tuple(override.warning for override in user_edited_plan.guard_overrides)
+    warnings = (
+        *draft.warnings,
+        *override_warnings,
+        "Confirmed search plan only: no online retrieval was executed.",
+    )
+    return MetaConfirmedSearchPlan(
+        review_status="user_confirmed",
+        search_execution_status="not_executed",
+        online_retrieval_executed=False,
+        formal_search_completed=False,
+        auto_generated_draft=draft.to_dict(),
+        user_edited_plan=user_edited_plan.to_dict(),
+        confirmed_pubmed_query_draft=user_edited_plan.edited_pubmed_query_draft,
+        warnings=warnings,
+        created_at=_now(),
+    )
+
+
+def reject_meta_seed_search_config_draft(
+    draft: MetaSeedSearchConfigDraft,
+    *,
+    user_notes: str = "",
+) -> dict[str, object]:
+    return {
+        "review_status": "rejected",
+        "search_execution_status": "not_executed",
+        "online_retrieval_executed": False,
+        "formal_search_completed": False,
+        "auto_generated_draft": draft.to_dict(),
+        "user_edited_plan": {
+            "review_status": "rejected",
+            "selected_concept_ids": [],
+            "included_pubmed_query_blocks": [],
+            "edited_pubmed_query_draft": "",
+            "user_notes": user_notes.strip(),
+            "guard_overrides": [],
+            "updated_at": _now(),
+        },
+        "confirmed_search_plan": None,
+        "warnings": (
+            "Rejected draft cannot enter formal retrieval or downstream Meta workflow.",
+            "No online retrieval was executed.",
+        ),
+        "updated_at": _now(),
+    }
+
+
 def save_meta_seed_search_config_draft(
     project_root: str | Path,
     draft: MetaSeedSearchConfigDraft,
+    user_edited_plan: MetaUserEditedSearchPlan | None = None,
 ) -> Path:
     validation = open_meta_analysis_project(project_root)
     if not validation.is_valid or validation.summary is None:
@@ -108,9 +240,48 @@ def save_meta_seed_search_config_draft(
 
     root = validation.summary.project_root
     draft_path = root / "search_strategy" / META_SEED_SEARCH_CONFIG_DRAFT
-    _atomic_write_json(draft_path, draft.to_dict())
-    _update_project_config(root, draft_path, draft)
+    edited = user_edited_plan or build_user_edited_search_plan(draft)
+    _atomic_write_json(draft_path, _review_payload(draft, edited, None))
+    _update_project_config(root, draft_path, draft, edited.review_status, None)
     return draft_path
+
+
+def save_confirmed_search_plan(
+    project_root: str | Path,
+    draft: MetaSeedSearchConfigDraft,
+    user_edited_plan: MetaUserEditedSearchPlan,
+    *,
+    user_confirmed: bool = False,
+) -> Path:
+    validation = open_meta_analysis_project(project_root)
+    if not validation.is_valid or validation.summary is None:
+        raise ValueError("Cannot save confirmed Meta search plan into an invalid Meta project.")
+
+    root = validation.summary.project_root
+    confirmed_plan = build_confirmed_search_plan(draft, user_edited_plan, user_confirmed=user_confirmed)
+    draft_path = root / "search_strategy" / META_SEED_SEARCH_CONFIG_DRAFT
+    confirmed_path = root / "search_strategy" / META_SEED_CONFIRMED_SEARCH_PLAN
+    _atomic_write_json(draft_path, _review_payload(draft, user_edited_plan, confirmed_plan))
+    _atomic_write_json(confirmed_path, confirmed_plan.to_dict())
+    _update_project_config(root, draft_path, draft, "user_confirmed", confirmed_path)
+    return confirmed_path
+
+
+def save_rejected_search_config_draft(
+    project_root: str | Path,
+    draft: MetaSeedSearchConfigDraft,
+    *,
+    user_notes: str = "",
+) -> Path:
+    validation = open_meta_analysis_project(project_root)
+    if not validation.is_valid or validation.summary is None:
+        raise ValueError("Cannot save rejected Meta search draft into an invalid Meta project.")
+
+    root = validation.summary.project_root
+    rejected_path = root / "search_strategy" / META_SEED_SEARCH_CONFIG_DRAFT
+    _atomic_write_json(rejected_path, reject_meta_seed_search_config_draft(draft, user_notes=user_notes))
+    _update_project_config(root, rejected_path, draft, "rejected", None)
+    return rejected_path
 
 
 def _match_all_seed_terms(question: str) -> list[SeedTerm]:
@@ -183,7 +354,32 @@ def _warnings(pico, blocks: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(warnings)
 
 
-def _update_project_config(root: Path, draft_path: Path, draft: MetaSeedSearchConfigDraft) -> None:
+def _review_payload(
+    draft: MetaSeedSearchConfigDraft,
+    user_edited_plan: MetaUserEditedSearchPlan,
+    confirmed_plan: MetaConfirmedSearchPlan | None,
+) -> dict[str, object]:
+    review_status: SearchDraftReviewStatus = "user_confirmed" if confirmed_plan else user_edited_plan.review_status
+    return {
+        "review_status": review_status,
+        "search_execution_status": "not_executed",
+        "online_retrieval_executed": False,
+        "formal_search_completed": False,
+        "auto_generated_draft": draft.to_dict(),
+        "user_edited_plan": user_edited_plan.to_dict(),
+        "confirmed_search_plan": confirmed_plan.to_dict() if confirmed_plan else None,
+        "warnings": (*draft.warnings, *_override_warnings(user_edited_plan)),
+        "updated_at": _now(),
+    }
+
+
+def _update_project_config(
+    root: Path,
+    draft_path: Path,
+    draft: MetaSeedSearchConfigDraft,
+    review_status: SearchDraftReviewStatus,
+    confirmed_path: Path | None,
+) -> None:
     config_path = root / META_PROJECT_CONFIG
     payload: dict[str, object]
     if config_path.exists():
@@ -196,13 +392,38 @@ def _update_project_config(root: Path, draft_path: Path, draft: MetaSeedSearchCo
     payload["search_config_draft"] = {
         "type": "meta_seed_search_config_draft",
         "path": str(draft_path),
-        "draft_status": draft.draft_status,
-        "user_confirmation_required": draft.user_confirmation_required,
+        "review_status": review_status,
+        "draft_status": review_status,
+        "user_confirmation_required": review_status != "user_confirmed",
         "search_execution_status": draft.search_execution_status,
         "online_retrieval_executed": draft.online_retrieval_executed,
         "formal_search_completed": draft.formal_search_completed,
+        "confirmed_search_plan_path": str(confirmed_path) if confirmed_path else "",
     }
     _atomic_write_json(config_path, payload)
+
+
+def _guard_override_from_dict(payload: dict[str, str]) -> MetaSearchPlanGuardOverride:
+    concept_id = str(payload.get("concept_id") or "").strip()
+    requested_action = str(payload.get("requested_action") or "manual_query_override").strip()
+    reason = str(payload.get("reason") or "").strip()
+    return MetaSearchPlanGuardOverride(
+        concept_id=concept_id,
+        reason=reason,
+        requested_action=requested_action,
+        warning=(
+            f"Guard override requested for {concept_id or 'unknown concept'}; "
+            "manual override is recorded but not automatically considered safe."
+        ),
+    )
+
+
+def _included_concept_ids(draft: MetaSeedSearchConfigDraft) -> tuple[str, ...]:
+    return tuple(guard.concept_id for guard in draft.detected_concepts if guard.included_in_pubmed_topic_query)
+
+
+def _override_warnings(user_edited_plan: MetaUserEditedSearchPlan) -> tuple[str, ...]:
+    return tuple(override.warning for override in user_edited_plan.guard_overrides)
 
 
 def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
@@ -210,6 +431,10 @@ def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(path)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _unique(values: list[str]) -> list[str]:

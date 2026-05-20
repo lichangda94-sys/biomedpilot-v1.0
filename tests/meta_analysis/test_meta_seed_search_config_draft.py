@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from app.meta_analysis.project_workspace import create_meta_analysis_project
 from app.meta_analysis.search_config_draft import (
+    build_confirmed_search_plan,
     build_meta_seed_search_config_draft,
+    build_user_edited_search_plan,
+    reject_meta_seed_search_config_draft,
+    save_confirmed_search_plan,
     save_meta_seed_search_config_draft,
+    save_rejected_search_config_draft,
 )
 
 
@@ -53,7 +60,7 @@ def test_meta_seed_search_config_draft_handles_four_chinese_examples() -> None:
 
         assert draft.detected_intent == expected["intent"]
         assert expected["concepts"] <= concept_ids
-        assert draft.draft_status == "draft_needs_user_confirmation"
+        assert draft.draft_status == "draft_only"
         assert draft.user_confirmation_required is True
         assert draft.search_execution_status == "not_executed"
         assert draft.online_retrieval_executed is False
@@ -108,15 +115,94 @@ def test_meta_seed_search_config_save_stays_draft_only(tmp_path) -> None:
 
     assert draft_path.name == "meta_seed_search_config_draft.json"
     assert draft_path.parent.name == "search_strategy"
+    assert payload["review_status"] == "draft_only"
     assert payload["search_execution_status"] == "not_executed"
     assert payload["online_retrieval_executed"] is False
     assert payload["formal_search_completed"] is False
-    assert payload["unsupported_features"] == [
+    assert payload["confirmed_search_plan"] is None
+    assert payload["auto_generated_draft"]["unsupported_features"] == [
         "no_online_pubmed_embase_wos_retrieval",
         "no_chinese_database_search",
         "no_chinese_pdf_extraction",
         "no_english_pdf_extraction_ui",
         "no_final_extraction_table_write",
     ]
+    assert payload["user_edited_plan"]["review_status"] == "draft_only"
     assert config["search_config_draft"]["search_execution_status"] == "not_executed"
     assert config["search_config_draft"]["formal_search_completed"] is False
+    assert config["search_config_draft"]["review_status"] == "draft_only"
+
+
+def test_unconfirmed_draft_cannot_enter_confirmed_plan() -> None:
+    draft = build_meta_seed_search_config_draft("糖尿病前期与甲状腺癌风险的关系")
+    edited = build_user_edited_search_plan(draft)
+
+    with pytest.raises(ValueError, match="User confirmation is required"):
+        build_confirmed_search_plan(draft, edited)
+
+
+def test_confirmed_plan_preserves_auto_draft_and_user_edits(tmp_path) -> None:
+    project = create_meta_analysis_project("Confirmed Search", tmp_path)
+    draft = build_meta_seed_search_config_draft("肥胖与乳腺癌风险的Meta分析")
+    edited = build_user_edited_search_plan(
+        draft,
+        edited_pubmed_query_draft=f"{draft.pubmed_query_draft} AND humans[Filter]",
+        user_notes="Prefer human studies only after reviewer confirmation.",
+    )
+
+    confirmed_path = save_confirmed_search_plan(project.project_root, draft, edited, user_confirmed=True)
+    confirmed = json.loads(confirmed_path.read_text(encoding="utf-8"))
+    review_payload = json.loads((project.project_root / "search_strategy" / "meta_seed_search_config_draft.json").read_text(encoding="utf-8"))
+    config = json.loads((project.project_root / "meta_project_config.json").read_text(encoding="utf-8"))
+
+    assert confirmed_path.name == "confirmed_search_plan.json"
+    assert confirmed["review_status"] == "user_confirmed"
+    assert confirmed["search_execution_status"] == "not_executed"
+    assert confirmed["formal_search_completed"] is False
+    assert confirmed["auto_generated_draft"]["original_question"] == "肥胖与乳腺癌风险的Meta分析"
+    assert confirmed["user_edited_plan"]["review_status"] == "needs_edit"
+    assert "humans[Filter]" in confirmed["confirmed_pubmed_query_draft"]
+    assert "Prefer human studies" in confirmed["user_edited_plan"]["user_notes"]
+    assert review_payload["confirmed_search_plan"]["review_status"] == "user_confirmed"
+    assert config["search_config_draft"]["review_status"] == "user_confirmed"
+    assert config["search_config_draft"]["confirmed_search_plan_path"].endswith("confirmed_search_plan.json")
+
+
+def test_rejected_draft_does_not_enter_downstream_flow(tmp_path) -> None:
+    project = create_meta_analysis_project("Rejected Search", tmp_path)
+    draft = build_meta_seed_search_config_draft("复发风险Meta分析")
+
+    rejected = reject_meta_seed_search_config_draft(draft, user_notes="Not enough topic context.")
+    rejected_path = save_rejected_search_config_draft(project.project_root, draft, user_notes="Not enough topic context.")
+    payload = json.loads(rejected_path.read_text(encoding="utf-8"))
+    config = json.loads((project.project_root / "meta_project_config.json").read_text(encoding="utf-8"))
+
+    assert rejected["review_status"] == "rejected"
+    assert rejected["confirmed_search_plan"] is None
+    assert payload["review_status"] == "rejected"
+    assert payload["confirmed_search_plan"] is None
+    assert payload["formal_search_completed"] is False
+    assert payload["search_execution_status"] == "not_executed"
+    assert config["search_config_draft"]["review_status"] == "rejected"
+    assert config["search_config_draft"]["confirmed_search_plan_path"] == ""
+
+
+def test_guard_override_records_warning_and_not_safe_by_default() -> None:
+    draft = build_meta_seed_search_config_draft("肥胖与乳腺癌风险的Meta分析，报告HR")
+    edited = build_user_edited_search_plan(
+        draft,
+        guard_overrides=[
+            {
+                "concept_id": "meta_effect:hazard_ratio",
+                "requested_action": "include_in_pubmed_topic_query",
+                "reason": "Reviewer wants to search HR explicitly.",
+            }
+        ],
+    )
+    confirmed = build_confirmed_search_plan(draft, edited, user_confirmed=True)
+
+    assert edited.review_status == "needs_edit"
+    assert edited.guard_overrides[0].concept_id == "meta_effect:hazard_ratio"
+    assert "not automatically considered safe" in edited.guard_overrides[0].warning
+    assert any("Guard override requested for meta_effect:hazard_ratio" in warning for warning in confirmed.warnings)
+    assert "hazard ratio" not in draft.pubmed_query_draft.lower()

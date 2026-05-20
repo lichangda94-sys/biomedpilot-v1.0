@@ -77,9 +77,26 @@ def test_mainline_meta_workspace_generates_seed_search_config_preview(qt_app) ->
     widget = MetaAnalysisWorkspaceWidget()
     draft = widget.generate_seed_search_config_preview("肥胖与乳腺癌风险的Meta分析")
 
-    assert draft["draft_status"] == "draft_needs_user_confirmation"
+    assert draft["draft_status"] == "draft_only"
     assert draft["search_execution_status"] == "not_executed"
     assert draft["formal_search_completed"] is False
     assert "metaSearchConfigDraftSummary" == widget._search_config_summary_label.objectName()
+    assert "metaSearchQueryDraftEdit" == widget._search_query_edit.objectName()
     assert "breast cancer" in draft["pubmed_query_draft"].lower()
     assert "meta-analysis" not in draft["pubmed_query_draft"].lower()
+
+
+def test_mainline_meta_workspace_confirms_seed_search_plan(qt_app, tmp_path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    project = create_meta_analysis_project("Meta Confirm UI", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(project.project_root)
+    widget.generate_seed_search_config_preview("二甲双胍治疗2型糖尿病的疗效")
+    widget._search_user_notes_input.setPlainText("Reviewer confirmed local draft.")
+
+    confirmed_path = widget.confirm_seed_search_config_plan()
+
+    assert confirmed_path.name == "confirmed_search_plan.json"
+    assert confirmed_path.exists()
+    assert "仍未执行在线检索" in widget._search_config_status_label.text()
