@@ -9,12 +9,13 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
-    from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget, bioinformatics_target_ia_pages
+    from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget, bioinformatics_legacy_routes, bioinformatics_target_ia_pages
     from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     BioinformaticsWorkspaceWidget = None  # type: ignore[assignment]
     bioinformatics_target_ia_pages = None  # type: ignore[assignment]
+    bioinformatics_legacy_routes = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
     IMPORT_ERROR = None
@@ -48,6 +49,7 @@ def test_bioinformatics_target_ia_pages_are_consolidated() -> None:
         "results",
         "report_export",
         "settings_resources",
+        "project_logs_technical_details",
     ]
     assert pages[2].semantic_key == AnalysisStatusKey.PREFLIGHT_ONLY.value
     assert pages[5].semantic_key == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
@@ -64,7 +66,7 @@ def test_bioinformatics_workspace_renders_target_ia_shell(bio_workspace) -> None
     assert boundary is not None
     assert "resolver-first / preflight-first / result-schema-first" in boundary.text()
     assert "不启用正式分析执行器" in boundary.text()
-    assert len(nav_items) == 8
+    assert len(nav_items) == 9
     assert tuple(item.property("pageKey") for item in nav_items) == bio_workspace.target_ia_page_keys()
     assert all(not item.isEnabled() for item in nav_items)
 
@@ -93,3 +95,43 @@ def test_bioinformatics_shell_copy_keeps_preflight_and_result_boundaries(bio_wor
     assert "不得把预检包装成正式 DEG/GSEA/生存分析执行" in tooltips
     assert "不生成假结果或假图" in tooltips
     assert "不声明 report-ready 正式报告" in tooltips
+
+
+def test_bioinformatics_legacy_routes_are_mapped_to_target_pages() -> None:
+    routes = bioinformatics_legacy_routes()
+    by_route = {route.route_key: route for route in routes}
+
+    assert by_route["recognition"].target_page_key == "data_check_preparation"
+    assert by_route["recognition"].legacy_status == "folded_into_target"
+    assert by_route["readiness"].target_page_key == "data_check_preparation"
+    assert by_route["readiness"].visibility == "developer_diagnostic"
+    assert by_route["workflow_status"].target_page_key == "project_logs_technical_details"
+    assert by_route["workflow_status"].legacy_status == "developer_diagnostic"
+    assert by_route["analysis_tasks"].legacy_status == "gated_target"
+    assert by_route["report_viewer"].target_page_key == "report_export"
+
+
+def test_bioinformatics_workspace_exposes_legacy_route_calibration(bio_workspace) -> None:
+    route_items = bio_workspace.findChildren(QPushButton, "bioinformaticsLegacyRouteItem")
+    by_route = {item.property("routeKey"): item for item in route_items}
+
+    assert tuple(by_route) == bio_workspace.legacy_route_keys()
+    assert by_route["recognition"].property("targetPageKey") == "data_check_preparation"
+    assert by_route["workflow_status"].property("targetPageKey") == "project_logs_technical_details"
+    assert by_route["workflow_status"].property("routeVisibility") == "developer_diagnostic"
+    assert all(not item.isEnabled() for item in route_items)
+
+
+def test_bioinformatics_legacy_navigation_sets_current_target_metadata(bio_workspace) -> None:
+    bio_workspace.show_recognition()
+    assert bio_workspace.current_page_object_name() == "bioinformaticsRecognitionPage"
+    assert bio_workspace.current_route_key() == "recognition"
+    assert bio_workspace.current_target_page_key() == "data_check_preparation"
+    assert bio_workspace.current_route_status() == "folded_into_target"
+
+    bio_workspace.show_workflow_status()
+    assert bio_workspace.current_page_object_name() == "bioinformaticsWorkflowStatusPage"
+    assert bio_workspace.current_route_key() == "workflow_status"
+    assert bio_workspace.current_target_page_key() == "project_logs_technical_details"
+    assert bio_workspace.current_route_status() == "developer_diagnostic"
+    assert bio_workspace.current_route_visibility() == "developer_diagnostic"

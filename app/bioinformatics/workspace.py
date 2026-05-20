@@ -32,6 +32,16 @@ class BioinformaticsIAPage:
     boundary: str
 
 
+@dataclass(frozen=True)
+class BioinformaticsLegacyRoute:
+    route_key: str
+    widget_name: str
+    target_page_key: str
+    legacy_status: str
+    visibility: str
+    boundary: str
+
+
 def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
     return (
         BioinformaticsIAPage(
@@ -90,6 +100,122 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "resource.status.not_configured",
             "GO/KEGG/MSigDB、R/Python 包和外部资源检测归 Settings 管理。",
         ),
+        BioinformaticsIAPage(
+            "project_logs_technical_details",
+            "Project Logs & Technical Details / 项目日志与技术详情",
+            "shell_only",
+            "feature.status.developer_preview",
+            "旧 workflow status、manifest、technical logs 和反馈包只作为开发者诊断或项目日志入口，不作为普通主流程。",
+        ),
+    )
+
+
+def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
+    return (
+        BioinformaticsLegacyRoute(
+            "project_home",
+            "bioinformaticsProjectHomePage",
+            "project_home",
+            "target_page",
+            "primary",
+            "目标 Project Home；保留项目创建、打开和状态摘要，不执行分析。",
+        ),
+        BioinformaticsLegacyRoute(
+            "data_source",
+            "bioinformaticsDataSourcePage",
+            "data_source",
+            "target_page",
+            "primary",
+            "目标 Data Source；本地/GEO/TCGA/GTEx 入口保持 testing 边界。",
+        ),
+        BioinformaticsLegacyRoute(
+            "chinese_search",
+            "bioinformaticsChineseDatasetSearchPage",
+            "data_source",
+            "folded_into_target",
+            "secondary",
+            "中文研究问题检索折叠到 Data Source；不绕过数据来源登记和预检。",
+        ),
+        BioinformaticsLegacyRoute(
+            "acquisition_status",
+            "bioinformaticsAcquisitionStatusPage",
+            "data_source",
+            "legacy_support",
+            "developer_diagnostic",
+            "旧 Acquisition Status 不作为目标一级页面；只作为数据来源登记的技术详情。",
+        ),
+        BioinformaticsLegacyRoute(
+            "recognition",
+            "bioinformaticsRecognitionPage",
+            "data_check_preparation",
+            "folded_into_target",
+            "secondary",
+            "旧 Recognition 折叠到 Data Check & Preparation；必须保持 preflight-only 语义。",
+        ),
+        BioinformaticsLegacyRoute(
+            "readiness",
+            "bioinformaticsReadinessDashboardPage",
+            "data_check_preparation",
+            "legacy_support",
+            "developer_diagnostic",
+            "旧 Readiness Dashboard 不作为普通主流程入口；保留为数据准备诊断。",
+        ),
+        BioinformaticsLegacyRoute(
+            "standardized_assets",
+            "bioinformaticsStandardizedAssetsPage",
+            "data_check_preparation",
+            "folded_into_target",
+            "secondary",
+            "标准化资产页折叠到 Data Check & Preparation；正式 resolver/input package 仍受 B8.1 门控。",
+        ),
+        BioinformaticsLegacyRoute(
+            "group_design",
+            "bioinformaticsGroupComparisonDesignPage",
+            "group_design",
+            "target_page",
+            "primary",
+            "目标 Group & Design；不是 DEG 专属页面。",
+        ),
+        BioinformaticsLegacyRoute(
+            "workflow_status",
+            "bioinformaticsWorkflowStatusPage",
+            "project_logs_technical_details",
+            "developer_diagnostic",
+            "developer_diagnostic",
+            "旧 Workflow Status 只进入项目日志与技术详情，不作为目标主流程。",
+        ),
+        BioinformaticsLegacyRoute(
+            "analysis_tasks",
+            "bioinformaticsAnalysisTaskCenterPage",
+            "analysis_tasks",
+            "gated_target",
+            "primary_gated",
+            "分析任务为 gated/preflight copy；不得启用正式分析执行器。",
+        ),
+        BioinformaticsLegacyRoute(
+            "results_browser",
+            "bioinformaticsResultsBrowserPage",
+            "results",
+            "testing_summary",
+            "secondary",
+            "结果浏览只承载 testing summary 或 imported external result；不生成假图假结果。",
+        ),
+        BioinformaticsLegacyRoute(
+            "report_viewer",
+            "bioinformaticsReportViewerPage",
+            "report_export",
+            "report_draft",
+            "secondary",
+            "旧 Report Viewer 只作为 report draft / testing summary；不声明 report-ready。",
+        ),
+        BioinformaticsLegacyRoute(
+            "settings",
+            "bioinformaticsSettingsAndLocalAIPage",
+            "settings_resources",
+            "settings_redirect",
+            "secondary",
+            "生信设置和本地 AI 资源归 Settings 管理；模块内只保留壳层指引。",
+        ),
     )
 
 
@@ -130,6 +256,9 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
             super().__init__()
             self._current_project: BioinformaticsProjectSummary | Path | None = None
+            self._legacy_routes = bioinformatics_legacy_routes()
+            self._legacy_route_by_key = {route.route_key: route for route in self._legacy_routes}
+            self._current_route_key = "project_home"
             self._stack = QStackedWidget()
             root = QVBoxLayout(self)
             root.setContentsMargins(0, 0, 0, 0)
@@ -206,10 +335,28 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 self._settings_page,
             ):
                 self._stack.addWidget(page)
+            self._apply_legacy_route_properties()
             self._stack.setCurrentWidget(self._project_home_page)
+            self._set_current_route("project_home")
 
         def target_ia_page_keys(self) -> tuple[str, ...]:
             return tuple(page.key for page in bioinformatics_target_ia_pages())
+
+        def legacy_route_keys(self) -> tuple[str, ...]:
+            return tuple(route.route_key for route in self._legacy_routes)
+
+        def legacy_route_calibration(self) -> tuple[dict[str, str], ...]:
+            return tuple(
+                {
+                    "route_key": route.route_key,
+                    "widget_name": route.widget_name,
+                    "target_page_key": route.target_page_key,
+                    "legacy_status": route.legacy_status,
+                    "visibility": route.visibility,
+                    "boundary": route.boundary,
+                }
+                for route in self._legacy_routes
+            )
 
         def _build_target_ia_shell(self) -> QFrame:
             frame = QFrame()
@@ -258,19 +405,43 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 status_row.addWidget(label)
             status_row.addStretch(1)
             layout.addLayout(status_row)
+
+            legacy_title = QLabel("Legacy page routing calibration / 旧页面路由校准")
+            legacy_title.setObjectName("bioinformaticsLegacyRouteTitle")
+            legacy_title.setStyleSheet("font-weight: 700;")
+            layout.addWidget(legacy_title)
+            legacy_routes = list(bioinformatics_legacy_routes())
+            for start in range(0, len(legacy_routes), 4):
+                route_row = QHBoxLayout()
+                route_row.setSpacing(8)
+                for route in legacy_routes[start : start + 4]:
+                    item = QPushButton(f"{route.route_key} -> {route.target_page_key}")
+                    item.setObjectName("bioinformaticsLegacyRouteItem")
+                    item.setProperty("routeKey", route.route_key)
+                    item.setProperty("targetPageKey", route.target_page_key)
+                    item.setProperty("legacyRouteStatus", route.legacy_status)
+                    item.setProperty("routeVisibility", route.visibility)
+                    item.setToolTip(route.boundary)
+                    item.setEnabled(False)
+                    route_row.addWidget(item)
+                route_row.addStretch(1)
+                layout.addLayout(route_row)
             return frame
 
         def show_project_home(self) -> None:
+            self._set_current_route("project_home")
             self._stack.setCurrentWidget(self._project_home_page)
 
         def show_data_source(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._data_source_page.refresh_project(self._current_project)
+            self._set_current_route("data_source")
             self._stack.setCurrentWidget(self._data_source_page)
 
         def show_acquisition_status(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._acquisition_status_page.refresh_project(self._current_project)
+            self._set_current_route("acquisition_status")
             self._stack.setCurrentWidget(self._acquisition_status_page)
 
         def show_chinese_search(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
@@ -279,49 +450,59 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             pending_query = self._data_source_page.pending_chinese_query()
             if pending_query:
                 self._chinese_search_page.set_query_text(pending_query)
+            self._set_current_route("chinese_search")
             self._stack.setCurrentWidget(self._chinese_search_page)
 
         def show_recognition(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._recognition_page.refresh_project(self._current_project)
+            self._set_current_route("recognition")
             self._stack.setCurrentWidget(self._recognition_page)
 
         def show_readiness(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._readiness_page.refresh_project(self._current_project)
+            self._set_current_route("readiness")
             self._stack.setCurrentWidget(self._readiness_page)
 
         def show_standardization(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._standardized_assets_page.refresh_project(self._current_project)
+            self._set_current_route("standardized_assets")
             self._stack.setCurrentWidget(self._standardized_assets_page)
 
         def show_workflow_status(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._workflow_status_page.refresh_project(self._current_project)
+            self._set_current_route("workflow_status")
             self._stack.setCurrentWidget(self._workflow_status_page)
 
         def show_group_design(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._group_design_page.refresh_project(self._current_project)
+            self._set_current_route("group_design")
             self._stack.setCurrentWidget(self._group_design_page)
 
         def show_analysis_tasks(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._analysis_task_page.refresh_project(self._current_project)
+            self._set_current_route("analysis_tasks")
             self._stack.setCurrentWidget(self._analysis_task_page)
 
         def show_results_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._results_browser_page.refresh_project(self._current_project)
+            self._set_current_route("results_browser")
             self._stack.setCurrentWidget(self._results_browser_page)
 
         def show_report_viewer(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._report_viewer_page.refresh_project(self._current_project)
+            self._set_current_route("report_viewer")
             self._stack.setCurrentWidget(self._report_viewer_page)
 
         def show_settings(self) -> None:
+            self._set_current_route("settings")
             self._stack.setCurrentWidget(self._settings_page)
 
         def _handle_workflow_navigation(self, target: str, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
@@ -342,9 +523,49 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
         def current_page_object_name(self) -> str:
             return self._stack.currentWidget().objectName()
 
+        def current_route_key(self) -> str:
+            return self._current_route_key
+
+        def current_target_page_key(self) -> str:
+            return str(self._stack.currentWidget().property("targetPageKey") or "")
+
+        def current_route_status(self) -> str:
+            return str(self._stack.currentWidget().property("legacyRouteStatus") or "")
+
+        def current_route_visibility(self) -> str:
+            return str(self._stack.currentWidget().property("routeVisibility") or "")
+
         def _set_current_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
             if summary is not None:
                 self._current_project = summary
+
+        def _apply_legacy_route_properties(self) -> None:
+            route_pages = {
+                "project_home": self._project_home_page,
+                "data_source": self._data_source_page,
+                "chinese_search": self._chinese_search_page,
+                "acquisition_status": self._acquisition_status_page,
+                "recognition": self._recognition_page,
+                "readiness": self._readiness_page,
+                "standardized_assets": self._standardized_assets_page,
+                "group_design": self._group_design_page,
+                "workflow_status": self._workflow_status_page,
+                "analysis_tasks": self._analysis_task_page,
+                "results_browser": self._results_browser_page,
+                "report_viewer": self._report_viewer_page,
+                "settings": self._settings_page,
+            }
+            for route_key, page in route_pages.items():
+                route = self._legacy_route_by_key[route_key]
+                page.setProperty("legacyRouteKey", route.route_key)
+                page.setProperty("targetPageKey", route.target_page_key)
+                page.setProperty("legacyRouteStatus", route.legacy_status)
+                page.setProperty("routeVisibility", route.visibility)
+                page.setProperty("developerDiagnostic", route.visibility == "developer_diagnostic")
+                page.setProperty("formalActionEnabled", False)
+
+        def _set_current_route(self, route_key: str) -> None:
+            self._current_route_key = route_key
 
 
     def _feature_row(feature: FeatureAvailability) -> QFrame:
@@ -390,11 +611,42 @@ elif QWidget is not None:
         def show_settings(self) -> None:
             return None
 
+        def target_ia_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in bioinformatics_target_ia_pages())
+
+        def legacy_route_keys(self) -> tuple[str, ...]:
+            return tuple(route.route_key for route in bioinformatics_legacy_routes())
+
+        def legacy_route_calibration(self) -> tuple[dict[str, str], ...]:
+            return tuple(
+                {
+                    "route_key": route.route_key,
+                    "widget_name": route.widget_name,
+                    "target_page_key": route.target_page_key,
+                    "legacy_status": route.legacy_status,
+                    "visibility": route.visibility,
+                    "boundary": route.boundary,
+                }
+                for route in bioinformatics_legacy_routes()
+            )
+
         def current_project(self) -> None:
             return None
 
         def current_page_object_name(self) -> str:
             return self.objectName()
+
+        def current_route_key(self) -> str:
+            return ""
+
+        def current_target_page_key(self) -> str:
+            return ""
+
+        def current_route_status(self) -> str:
+            return ""
+
+        def current_route_visibility(self) -> str:
+            return ""
 
 else:
 
