@@ -294,6 +294,8 @@ exec "$PYTHON_BIN" -m app.main "$@"
 
 
 def _ad_hoc_sign_app(app_path: Path) -> str:
+    if sys.platform != "darwin":
+        return "codesign_skipped_non_darwin"
     xattr = shutil.which("xattr")
     if xattr:
         subprocess.run([xattr, "-cr", str(app_path)], check=True, text=True, capture_output=True)

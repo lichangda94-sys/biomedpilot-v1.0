@@ -11,9 +11,13 @@ from app.version import app_version_summary
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch BioMedPilot.")
     parser.add_argument("--smoke-test", action="store_true", help="Load startup state and exit without opening the GUI event loop.")
-    normalized_argv = list(sys.argv[1:] if argv is None else argv)
-    filtered_argv = [arg for arg in normalized_argv if not arg.startswith("-psn_")]
-    return parser.parse_args(filtered_argv)
+    return parser.parse_args(_strip_launchservices_args(argv))
+
+
+def _strip_launchservices_args(argv: list[str] | None) -> list[str]:
+    if argv is None:
+        argv = sys.argv[1:]
+    return [arg for arg in argv if not arg.startswith("-psn_")]
 
 
 def main(argv: list[str] | None = None) -> int:

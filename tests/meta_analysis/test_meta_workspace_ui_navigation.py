@@ -234,6 +234,7 @@ def test_meta_fulltext_management_workspace_renders_chinese_user_controls_withou
     assert str(summary.project_root) not in visible
     assert "fulltext_management_registry_v1.json" not in visible
     assert "manifest" not in visible
+    assert "manifest" not in visible
     assert "raw JSON" not in visible
     assert "ft-rec-1" not in visible
 

@@ -12,6 +12,8 @@
 ## 集成板块规则
 
 - Bioinformatics Analysis 负责生信分析模块主流程：项目首页 -> 数据选择 -> 数据识别 -> 数据标准化 -> 分析任务中心 -> 结果浏览 -> 项目报告。
+- Meta Analysis 当前是 Developer Preview / testing；统计、报告、handoff 和 AI/OCR 输出都必须保留 draft / testing-level / human-review wording。
+- LabTools 在 Integration 中同时保留桌面 UI 入口和顶层 `labtools` 公共后端包。
 - AI Gateway 负责本地模型接入、模块策略、隐私策略和审计。
 - AI 默认关闭。
 - 本地模型必须通过 `AIGateway.generate()`。
@@ -33,5 +35,6 @@
 - 不要生成假 DEG、假火山图、假富集结果。
 - 不要让 AI 直接执行下载或分析。
 - 不要在主 UI 暴露大量 manifest、asset id、raw path。
+- 不要让 Meta active services 重新依赖 `app/meta_analysis/legacy/**`。
 
 ## 测试
