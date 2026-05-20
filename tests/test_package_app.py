@@ -25,9 +25,10 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     )
 
     assert result.mode == "local-python-launcher"
+    assert result.app_version == "0.1.0-internal-beta"
+    assert result.code_signed is (sys.platform == "darwin")
     if shutil.which("codesign"):
         assert result.signing_status == "ad_hoc_signed"
-    assert result.app_version == "0.1.0-internal-beta"
     assert result.app_path.exists()
     assert result.launcher_path.exists()
     assert result.build_info_path.exists()
@@ -38,16 +39,29 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert (result.resource_root / "reporting" / "bioinformatics_standard_report.py").exists()
     assert (result.resource_root / "project_storage" / "projects" / ".gitkeep").exists()
     assert not (result.resource_root / ".git").exists()
+    medical_terms = result.resource_root / "data" / "medical_terms"
+    assert (medical_terms / "mini_medical_terms_index.json").exists()
+    assert (medical_terms / "zh_term_overrides.json").exists()
+    assert (medical_terms / "source_metadata.json").exists()
+    assert (medical_terms / "license_attribution.md").exists()
+    assert (medical_terms / "reference_checklists").is_dir()
+    assert not (medical_terms / "medical_terms_index.sqlite").exists()
+    assert not (medical_terms / "raw").exists()
 
     build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
+    assert build_info["app_name"] == "BioMedPilotTest"
     assert build_info["version"] == "0.1.0-internal-beta"
     assert build_info["launch_mode"] == "packaged-local-python"
 
     with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
-    assert info["CFBundleExecutable"] == "BioMedPilotTest"
+    assert info["CFBundleExecutable"] == "BioMedPilot"
     assert info["CFBundleName"] == "BioMedPilotTest"
+    assert info["CFBundleDisplayName"] == "BioMedPilotTest"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.biomedpilottest"
     assert info["BioMedPilotVersion"] == "0.1.0-internal-beta"
+    if sys.platform == "darwin":
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(result.app_path)], check=True)
 
 
 def test_integration_preview_package_uses_stable_launcher_name(tmp_path) -> None:
@@ -143,3 +157,48 @@ def test_package_app_ignores_local_conflict_copies_and_backups(tmp_path) -> None
     assert "analysis_task_runs 2.py" in ignored
     assert "sample 3.csv" in ignored
     assert "valid_module.py" not in ignored
+
+
+def test_package_app_keeps_display_name_separate_from_executable_name(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilot Integration Preview",
+            python_executable=sys.executable,
+        )
+    )
+
+    assert result.launcher_path.name == "BioMedPilot"
+    assert result.launcher_path.exists()
+    launcher_text = result.launcher_path.read_text(encoding="utf-8")
+    assert "export PYTHONDONTWRITEBYTECODE=\"1\"" in launcher_text
+    assert "PYTHON_ARCH=\"arm64\"" in launcher_text
+    assert "exec arch -arm64 \"$PYTHON_BIN\" -m app.main \"$@\"" in launcher_text
+
+    with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
+        info = plistlib.load(handle)
+    assert info["CFBundleExecutable"] == "BioMedPilot"
+    assert info["CFBundleName"] == "BioMedPilot Integration Preview"
+    assert info["CFBundleDisplayName"] == "BioMedPilot Integration Preview"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.integration-preview"
+
+
+def test_package_app_can_record_source_git_head(tmp_path) -> None:
+    result = build_launcher_app(
+        PackagingOptions(
+            repo_root=REPO_ROOT,
+            output_dir=tmp_path,
+            app_name="BioMedPilot MainLine Preview",
+            python_executable=sys.executable,
+            package_git_head="83749d1",
+        )
+    )
+
+    build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
+    assert result.git_head == "83749d1"
+    assert build_info["git_head"] == "83749d1"
+
+    with (result.app_path / "Contents" / "Info.plist").open("rb") as handle:
+        info = plistlib.load(handle)
+    assert info["BioMedPilotGitHead"] == "83749d1"

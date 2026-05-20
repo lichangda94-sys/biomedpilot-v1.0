@@ -9,6 +9,8 @@
 
 本工作区只做阶段性合并、冲突解决、全量测试和内部测试版准备。
 
+ReleaseBuild 相关内容只能作为已验证打包候选和预发布检查输入纳入；Integration 不直接发布、不推送远程。
+
 ## 集成板块规则
 
 - Bioinformatics Analysis 负责生信分析模块主流程：项目首页 -> 数据选择 -> 数据识别 -> 数据标准化 -> 分析任务中心 -> 结果浏览 -> 项目报告。
@@ -34,7 +36,19 @@
 - 不要把 Meta 文献候选混入生信。
 - 不要生成假 DEG、假火山图、假富集结果。
 - 不要让 AI 直接执行下载或分析。
-- 不要在主 UI 暴露大量 manifest、asset id、raw path。
+- 不要在主 UI 暴露大量 manifest、schema、branch、asset id、raw path。
 - 不要让 Meta active services 重新依赖 `app/meta_analysis/legacy/**`。
+- 不要覆盖 `dist/BioMedPilot.app` 或桌面入口，除非任务明确授权。
+- 不要推送远程。
 
 ## 测试
+
+按任务范围运行：
+
+- `git diff --check`
+- `QT_QPA_PLATFORM=offscreen python3 -m app.main --smoke-test`
+- `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/meta_analysis -q`
+- `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ui -q`
+- `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/shared -q`
+- `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/bioinformatics -q`
+- `python3 scripts/run_tests.py`

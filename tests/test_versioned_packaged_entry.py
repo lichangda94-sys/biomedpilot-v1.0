@@ -25,6 +25,8 @@ def test_versioned_packaged_entry_smoke_reports_metadata(tmp_path: Path) -> None
     )
 
     build_info = json.loads(result.build_info_path.read_text(encoding="utf-8"))
+    assert result.code_signed is (sys.platform == "darwin")
+    assert build_info["app_name"] == "BioMedPilotAcceptance"
     assert build_info["version"] == APP_VERSION
     assert build_info["channel"] == APP_CHANNEL
     assert build_info["launch_mode"] == "packaged-local-python"
@@ -35,6 +37,8 @@ def test_versioned_packaged_entry_smoke_reports_metadata(tmp_path: Path) -> None
     assert info["BioMedPilotVersion"] == APP_VERSION
     assert info["BioMedPilotChannel"] == APP_CHANNEL
     assert info["BioMedPilotGitHead"] == build_info["git_head"]
+    assert info["CFBundleDisplayName"] == "BioMedPilotAcceptance"
+    assert info["CFBundleIdentifier"] == "local.biomedpilot.biomedpilotacceptance"
 
     env = os.environ.copy()
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
