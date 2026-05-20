@@ -5,6 +5,13 @@ from app.shared.query_intelligence.medical_terms.term_index_models import (
 )
 from app.shared.query_intelligence.medical_terms.term_index_loader import active_index_status
 from app.shared.query_intelligence.medical_terms.term_lookup import lookup_medical_terms
+from app.shared.query_intelligence.medical_terms.scope_loader import (
+    LegacyConceptResolution,
+    ScopedMedicalTerm,
+    find_terms,
+    load_terms,
+    resolve_legacy_concept_id,
+)
 from app.shared.query_intelligence.medical_terms.vocabulary_provider import (
     ChineseOverrideVocabularyProvider,
     MedicalVocabularyProvider,
@@ -25,5 +32,10 @@ __all__ = [
     "VocabularyProviderMatch",
     "active_index_status",
     "default_vocabulary_providers",
+    "find_terms",
+    "load_terms",
     "lookup_medical_terms",
+    "LegacyConceptResolution",
+    "resolve_legacy_concept_id",
+    "ScopedMedicalTerm",
 ]
