@@ -1,0 +1,29 @@
+{
+  "decision_name": "gene_expression_profiling_routing_decision",
+  "decision_date": "2026-05-20",
+  "phase": "handoff_gap_remediation_task_3",
+  "term": "gene expression profiling",
+  "legacy_concept_id": "mini:data_modality_core",
+  "recommended_target": "Bioinformatics scoped vocabulary",
+  "suggested_target_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+  "suggested_concept_type": "expression_profiling_assay",
+  "alternate_concept_type": "omics_assay",
+  "bioinformatics_usage": [
+    "dataset_search",
+    "geo_query_expansion",
+    "data_type_detection",
+    "analysis_readiness_check"
+  ],
+  "meta_analysis_allowed": false,
+  "shared_core_allowed": false,
+  "standalone_search_allowed": "conditional",
+  "recommended_query_context": "GEO or omics dataset search context only",
+  "not_synonym_of": [
+    "overall survival",
+    "Meta PICO outcome",
+    "Meta study design"
+  ],
+  "execution_status": "decision_recorded_only_not_written_to_runtime",
+  "runtime_files_modified": false,
+  "manual_review_required_before_runtime_change": true
+}

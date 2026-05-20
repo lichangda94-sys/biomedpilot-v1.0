@@ -1,0 +1,37 @@
+{
+  "policy_name": "bioinformatics_geo_long_tail_intake_policy",
+  "policy_date": "2026-05-20",
+  "phase": "handoff_gap_remediation_task_7",
+  "default_destination": "candidate_queue",
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "default_runtime_promotion_allowed": false,
+  "categories": [
+    "species",
+    "assay",
+    "data_format",
+    "grouping",
+    "treatment_status",
+    "platform",
+    "tissue",
+    "cell_line",
+    "metadata_field"
+  ],
+  "required_fields": [
+    "term",
+    "source_dataset",
+    "observed_context",
+    "category",
+    "proposed_concept_type",
+    "shared_core_allowed",
+    "meta_scope_allowed",
+    "review_status"
+  ],
+  "batch_requirements": [
+    "audit_diff",
+    "scope_isolation_tests",
+    "GEO core regression tests",
+    "manual review for ambiguous grouping/treatment terms"
+  ],
+  "geo_core_audit_policy": "Long-tail candidate intake must not alter existing GEO core audit status until a reviewed expansion is approved."
+}

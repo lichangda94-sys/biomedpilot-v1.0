@@ -1,0 +1,49 @@
+{
+  "policy_name": "meta_seed_expansion_governance",
+  "policy_date": "2026-05-20",
+  "phase": "handoff_gap_remediation_task_5",
+  "current_seed_count": 190,
+  "batch_size_limit": {
+    "min_recommended": 50,
+    "max_allowed": 100
+  },
+  "manual_curated_required": true,
+  "automatic_external_chinese_candidate_promotion_allowed": false,
+  "required_fields": [
+    "concept_id",
+    "preferred_label_en",
+    "zh_terms",
+    "concept_type",
+    "pico_roles",
+    "query_expansion_allowed",
+    "standalone_search_allowed",
+    "requires_pairing_with",
+    "filter_only",
+    "pdf_extraction_target",
+    "review_status"
+  ],
+  "guard_rules": {
+    "outcome": "query_expansion_allowed=conditional and requires population/disease pairing",
+    "effect_statistical": "query_expansion_allowed=false and not included in topic expansion",
+    "study_design": "filter_only=true",
+    "research_intent": "query_expansion_allowed=false and standalone_search_allowed=false"
+  },
+  "prohibited_inputs": [
+    "automatic promotion from external Chinese corpus",
+    "unreviewed condition/symptom long-tail candidates",
+    "TCM future-scope candidates",
+    "candidate_only files",
+    "unmapped ambiguous English candidates"
+  ],
+  "required_outputs_per_batch": [
+    "seed_diff_report",
+    "mapping_diff_report",
+    "scope_isolation_test_results",
+    "query_guard_test_results"
+  ],
+  "required_tests": [
+    "tests/shared/test_meta_seed_terms.py",
+    "tests/shared/test_query_intelligence_service.py",
+    "tests/meta_analysis"
+  ]
+}
