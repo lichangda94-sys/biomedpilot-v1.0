@@ -16,6 +16,7 @@ from app.shared.ui_components import (
     make_empty_state,
     make_status_chip,
 )
+from app.shared.semantic_keys import AnalysisStatusKey
 from app.ui_style_tokens import get_status_token
 
 
@@ -31,6 +32,7 @@ def test_status_chip_sets_semantic_properties(qt_app) -> None:
     assert chip.objectName() == "uiStatusChip"
     assert chip.property("uiPrimitive") == "status_chip"
     assert chip.property("statusKey") == "preflight_only"
+    assert chip.property("semanticKey") == AnalysisStatusKey.PREFLIGHT_ONLY.value
     assert chip.property("iconHint") == token.icon_hint
     assert token.background in chip.styleSheet()
 

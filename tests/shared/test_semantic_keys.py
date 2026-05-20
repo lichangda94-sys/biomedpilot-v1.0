@@ -28,10 +28,13 @@ def test_key_registry_contains_required_brand_and_nav_keys() -> None:
         "nav.meta_analysis",
         "nav.labtools",
         "nav.settings",
+        "nav.test_feedback",
+        "nav.about",
     } <= values
     assert get_semantic_key(BrandKey.PRIMARY).default_label == "萤火虫 / Firefly"
     assert get_semantic_key(BrandKey.SECONDARY).default_label == "BioMedPilot / 医研智析"
     assert get_semantic_key(NavKey.LABTOOLS).group is SemanticKeyGroup.NAV
+    assert get_semantic_key(NavKey.TEST_FEEDBACK).default_label == "Test Feedback / 测试反馈"
 
 
 def test_semantic_status_enums_use_stable_full_keys() -> None:

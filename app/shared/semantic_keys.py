@@ -24,6 +24,8 @@ class NavKey(StrEnum):
     META_ANALYSIS = "nav.meta_analysis"
     LABTOOLS = "nav.labtools"
     SETTINGS = "nav.settings"
+    TEST_FEEDBACK = "nav.test_feedback"
+    ABOUT = "nav.about"
 
 
 class ModuleKey(StrEnum):
@@ -100,6 +102,8 @@ KEY_REGISTRY: tuple[SemanticKey, ...] = (
     _entry(NavKey.META_ANALYSIS, SemanticKeyGroup.NAV, "Meta Analysis / Meta 分析", "Meta Analysis workspace navigation entry."),
     _entry(NavKey.LABTOOLS, SemanticKeyGroup.NAV, "LabTools / 实验工具", "LabTools workspace navigation entry."),
     _entry(NavKey.SETTINGS, SemanticKeyGroup.NAV, "Settings / 设置中心", "Settings navigation entry."),
+    _entry(NavKey.TEST_FEEDBACK, SemanticKeyGroup.NAV, "Test Feedback / 测试反馈", "Test feedback navigation entry."),
+    _entry(NavKey.ABOUT, SemanticKeyGroup.NAV, "About / 关于", "About navigation entry."),
     _entry(ModuleKey.BIOINFORMATICS, SemanticKeyGroup.MODULE, "Bioinformatics / 生信分析", "Bioinformatics module identity."),
     _entry(ModuleKey.META_ANALYSIS, SemanticKeyGroup.MODULE, "Meta Analysis / Meta 分析", "Meta Analysis module identity."),
     _entry(ModuleKey.LABTOOLS, SemanticKeyGroup.MODULE, "LabTools / 实验工具", "LabTools module identity."),

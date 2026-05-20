@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Callable
 
+from app.shared.semantic_keys import NavKey
+
 try:
     from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout
 except Exception:  # pragma: no cover
@@ -13,16 +15,17 @@ except Exception:  # pragma: no cover
 class SidebarItem:
     key: str
     label: str
+    semantic_key: str
 
 
 COMMON_SIDEBAR_ITEMS = (
-    SidebarItem("dashboard", "Dashboard"),
-    SidebarItem("bioinformatics", "Bioinformatics / 生信分析"),
-    SidebarItem("meta_analysis", "Meta Analysis / Meta 分析"),
-    SidebarItem("labtools", "LabTools / 实验工具"),
-    SidebarItem("settings", "设置中心"),
-    SidebarItem("test_feedback", "Test Feedback / 测试反馈"),
-    SidebarItem("about", "About / 关于"),
+    SidebarItem("dashboard", "Dashboard", NavKey.DASHBOARD.value),
+    SidebarItem("bioinformatics", "Bioinformatics / 生信分析", NavKey.BIOINFORMATICS.value),
+    SidebarItem("meta_analysis", "Meta Analysis / Meta 分析", NavKey.META_ANALYSIS.value),
+    SidebarItem("labtools", "LabTools / 实验工具", NavKey.LABTOOLS.value),
+    SidebarItem("settings", "设置中心", NavKey.SETTINGS.value),
+    SidebarItem("test_feedback", "Test Feedback / 测试反馈", NavKey.TEST_FEEDBACK.value),
+    SidebarItem("about", "About / 关于", NavKey.ABOUT.value),
 )
 
 
@@ -53,24 +56,30 @@ if QFrame is not None:
             title = QLabel("萤火虫 / Firefly")
             title.setStyleSheet("font-size: 18px; font-weight: 700;")
             layout.addWidget(title)
-            for label, callback in (
-                ("Dashboard", on_dashboard),
-                ("Bioinformatics / 生信分析", on_bioinformatics),
-                ("Meta Analysis / Meta 分析", on_meta_analysis),
-                ("LabTools / 实验工具", on_labtools),
-                ("设置中心", on_settings),
+            for item, callback in (
+                (COMMON_SIDEBAR_ITEMS[0], on_dashboard),
+                (COMMON_SIDEBAR_ITEMS[1], on_bioinformatics),
+                (COMMON_SIDEBAR_ITEMS[2], on_meta_analysis),
+                (COMMON_SIDEBAR_ITEMS[3], on_labtools),
+                (COMMON_SIDEBAR_ITEMS[4], on_settings),
             ):
-                button = QPushButton(label)
+                button = QPushButton(item.label)
                 button.setObjectName("sidebarButton")
+                button.setProperty("navKey", item.semantic_key)
+                button.setProperty("semanticKey", item.semantic_key)
+                button.setProperty("pageKey", item.key)
                 button.clicked.connect(callback)
                 layout.addWidget(button)
             layout.addStretch(1)
-            for label, callback in (
-                ("Test Feedback / 测试反馈", on_test_feedback),
-                ("About / 关于", on_about),
+            for item, callback in (
+                (COMMON_SIDEBAR_ITEMS[5], on_test_feedback),
+                (COMMON_SIDEBAR_ITEMS[6], on_about),
             ):
-                button = QPushButton(label)
+                button = QPushButton(item.label)
                 button.setObjectName("sidebarAuxButton")
+                button.setProperty("navKey", item.semantic_key)
+                button.setProperty("semanticKey", item.semantic_key)
+                button.setProperty("pageKey", item.key)
                 button.clicked.connect(callback)
                 layout.addWidget(button)
             footer = QLabel("Developer Preview")

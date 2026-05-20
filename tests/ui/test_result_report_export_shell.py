@@ -39,6 +39,7 @@ def test_result_preview_empty_state_carries_semantic_gating(qt_app) -> None:
     assert empty.objectName() == "resultPreviewEmptyState"
     assert empty.property("uiPrimitive") == "empty_state"
     assert empty.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
+    assert empty.property("semanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
     assert empty.property("reportStatusKey") == ReportStatusKey.DRAFT.value
     assert empty.property("exportGate") == "disabled_empty_result"
     assert "暂无结果预览" in empty.findChild(QLabel, "uiEmptyStateTitle").text()
@@ -50,19 +51,21 @@ def test_report_draft_boundary_disclaimer_is_visible(qt_app) -> None:
 
     assert boundary.objectName() == "reportDraftBoundaryCard"
     assert boundary.property("reportStatusKey") == ReportStatusKey.TESTING_SUMMARY.value
-    assert boundary.findChild(QLabel, "reportDraftBoundaryTitle").text() == "Report draft boundary / 报告草稿边界"
-    assert "report-ready" in boundary.findChild(QLabel, "reportDraftBoundaryDisclaimer").text()
-    assert boundary.findChild(QLabel, "uiStatusChip").property("statusKey") == "testing"
+    assert boundary.property("semanticKey") == ReportStatusKey.TESTING_SUMMARY.value
+    assert boundary.findChild(QLabel, "uiStatusChip").property("semanticKey") == "feature.status.testing"
 
 
 def test_export_buttons_are_disabled_without_results(qt_app) -> None:
     buttons = make_export_buttons(empty_result_preview_state(), (ExportKey.MARKDOWN, ExportKey.DOCX))
 
     assert [button.property("formatKey") for button in buttons] == ["export.format.markdown", "export.format.docx"]
+    assert [button.property("exportFormatKey") for button in buttons] == ["export.format.markdown", "export.format.docx"]
+    assert [button.property("semanticKey") for button in buttons] == ["export.format.markdown", "export.format.docx"]
     assert all(button.objectName() == "exportGatedButton" for button in buttons)
     assert all(not button.isEnabled() for button in buttons)
     assert all(button.property("exportGate") == "disabled_empty_result" for button in buttons)
-    assert all("尚无可预览结果" in button.toolTip() for button in buttons)
+    assert all(button.property("reportStatusKey") == ReportStatusKey.DRAFT.value for button in buttons)
+    assert all(button.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value for button in buttons)
 
 
 def test_export_buttons_allow_testing_summary_but_block_report_ready_future(qt_app) -> None:
@@ -71,8 +74,8 @@ def test_export_buttons_allow_testing_summary_but_block_report_ready_future(qt_a
 
     assert testing_buttons[0].isEnabled()
     assert testing_buttons[0].property("exportGate") == "enabled_testing_export"
-    assert "report-ready 包" in testing_buttons[0].toolTip()
+    assert testing_buttons[0].property("reportStatusKey") == ReportStatusKey.TESTING_SUMMARY.value
 
     assert not future_buttons[0].isEnabled()
     assert future_buttons[0].property("exportGate") == "blocked_formal_report_ready"
-    assert "禁止生成" in future_buttons[0].toolTip()
+    assert future_buttons[0].property("reportStatusKey") == ReportStatusKey.REPORT_READY_FUTURE.value

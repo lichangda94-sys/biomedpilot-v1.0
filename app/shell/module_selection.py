@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 from app.app_identity import icon_asset_summary, load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
 from app.shell.dashboard import DashboardModel
 from app.shell.login import LocalSession
+from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
 from app.ui_style_tokens import SPACING, module_selection_stylesheet
 
 
@@ -112,6 +113,8 @@ class ModuleSelectionWidget(QWidget):
                 button_text="进入生信分析模块",
                 object_name="bioModuleButton",
                 icon_key="bioinformatics",
+                module_key=ModuleKey.BIOINFORMATICS.value,
+                nav_key=NavKey.BIOINFORMATICS.value,
                 callback=self.open_bioinformatics_requested.emit,
             )
         )
@@ -123,6 +126,8 @@ class ModuleSelectionWidget(QWidget):
                 button_text="进入 Meta 分析模块",
                 object_name="metaModuleButton",
                 icon_key="meta_analysis",
+                module_key=ModuleKey.META_ANALYSIS.value,
+                nav_key=NavKey.META_ANALYSIS.value,
                 callback=self.open_meta_analysis_requested.emit,
             )
         )
@@ -134,6 +139,8 @@ class ModuleSelectionWidget(QWidget):
                 button_text="进入 LabTools",
                 object_name="labtoolsModuleButton",
                 icon_key="labtools",
+                module_key=ModuleKey.LABTOOLS.value,
+                nav_key=NavKey.LABTOOLS.value,
                 callback=self.open_labtools_requested.emit,
             )
         )
@@ -160,8 +167,10 @@ class ModuleSelectionWidget(QWidget):
         title_col = QVBoxLayout()
         title = QLabel("萤火虫 / Firefly")
         title.setObjectName("dashboardTitle")
+        title.setProperty("semanticKey", BrandKey.PRIMARY.value)
         subtitle = QLabel("BioMedPilot / 医研智析低保真 Dashboard：选择 Bioinformatics、Meta Analysis 或 LabTools。")
         subtitle.setObjectName("dashboardSubtitle")
+        subtitle.setProperty("semanticKey", BrandKey.SECONDARY.value)
         subtitle.setWordWrap(True)
         title_col.addWidget(title)
         title_col.addWidget(subtitle)
@@ -190,10 +199,15 @@ class ModuleSelectionWidget(QWidget):
         button_text: str,
         object_name: str,
         icon_key: str,
+        module_key: str,
+        nav_key: str,
         callback: Callable[[], None],
     ) -> QFrame:
         frame = ModuleEntryCard()
         frame.setObjectName("moduleCard")
+        frame.setProperty("moduleKey", module_key)
+        frame.setProperty("navKey", nav_key)
+        frame.setProperty("semanticKey", module_key)
         frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         frame.setToolTip(f"点击进入{title}")
         frame.clicked.connect(callback)
@@ -212,8 +226,11 @@ class ModuleSelectionWidget(QWidget):
         icon_label.setVisible(not icon.isNull())
         title_label = QLabel(title)
         title_label.setObjectName("moduleTitle")
+        title_label.setProperty("moduleKey", module_key)
+        title_label.setProperty("semanticKey", module_key)
         english = QLabel(english_title)
         english.setObjectName("moduleEnglishTitle")
+        english.setProperty("moduleKey", module_key)
         accent = QLabel("")
         accent.setObjectName("moduleAccentLine")
         accent.setFixedHeight(4)
@@ -224,6 +241,9 @@ class ModuleSelectionWidget(QWidget):
 
         button = QPushButton(button_text)
         button.setObjectName(object_name)
+        button.setProperty("moduleKey", module_key)
+        button.setProperty("navKey", nav_key)
+        button.setProperty("semanticKey", module_key)
         button.setIcon(load_ui02_module_selection_icon("workspace"))
         button.setIconSize(QSize(18, 18))
         button.setMinimumWidth(168)

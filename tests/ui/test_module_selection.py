@@ -14,6 +14,7 @@ try:
     from app.shell.dashboard import build_dashboard_model
     from app.shell.login import LocalSession
     from app.shell.module_selection import ModuleSelectionWidget
+    from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     QPushButton = None  # type: ignore[assignment]
@@ -21,6 +22,9 @@ except Exception as exc:  # pragma: no cover - depends on optional local GUI run
     build_dashboard_model = None  # type: ignore[assignment]
     LocalSession = None  # type: ignore[assignment]
     ModuleSelectionWidget = None  # type: ignore[assignment]
+    BrandKey = None  # type: ignore[assignment]
+    ModuleKey = None  # type: ignore[assignment]
+    NavKey = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
     IMPORT_ERROR = None
@@ -70,10 +74,14 @@ def test_module_selection_widget_instantiates(qt_app) -> None:
 def test_module_selection_displays_global_shell_brand(qt_app, local_session: LocalSession) -> None:
     widget = _widget(local_session)
 
+    title = widget.findChild(QLabel, "dashboardTitle")
+    subtitle = widget.findChild(QLabel, "dashboardSubtitle")
     labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
 
-    assert "萤火虫 / Firefly" in labels
-    assert "BioMedPilot / 医研智析低保真 Dashboard" in labels
+    assert title is not None
+    assert title.property("semanticKey") == BrandKey.PRIMARY.value
+    assert subtitle is not None
+    assert subtitle.property("semanticKey") == BrandKey.SECONDARY.value
     assert "订阅 / VIP" not in labels
 
 
@@ -89,15 +97,17 @@ def test_module_selection_displays_icon_asset_summary(qt_app, local_session: Loc
 def test_three_module_cards_are_visible(qt_app, local_session: LocalSession) -> None:
     widget = _widget(local_session)
 
-    module_titles = [label.text() for label in widget.findChildren(QLabel, "moduleTitle")]
+    module_titles = widget.findChildren(QLabel, "moduleTitle")
+    module_cards = widget.findChildren(QFrame, "moduleCard")
     icons = widget.findChildren(QLabel, "moduleIcon")
     visible_icons = [icon for icon in icons if not icon.isHidden() and icon.pixmap() is not None and not icon.pixmap().isNull()]
 
-    assert module_titles == [
-        "Bioinformatics / 生信分析",
-        "Meta Analysis / Meta 分析",
-        "LabTools / 实验工具",
+    assert [card.property("moduleKey") for card in module_cards] == [
+        ModuleKey.BIOINFORMATICS.value,
+        ModuleKey.META_ANALYSIS.value,
+        ModuleKey.LABTOOLS.value,
     ]
+    assert [label.property("semanticKey") for label in module_titles] == [card.property("moduleKey") for card in module_cards]
     assert len(icons) == 3
     assert len(visible_icons) == 3
 
@@ -107,7 +117,9 @@ def test_bioinformatics_button_triggers_callback(qt_app, local_session: LocalSes
     widget = _widget(local_session, on_open_bioinformatics=lambda: events.append("bio"))
 
     button = widget.findChild(QPushButton, "bioModuleButton")
-    assert button.text() == "进入生信分析模块"
+    assert button.property("moduleKey") == ModuleKey.BIOINFORMATICS.value
+    assert button.property("navKey") == NavKey.BIOINFORMATICS.value
+    assert button.property("semanticKey") == ModuleKey.BIOINFORMATICS.value
     assert not button.icon().isNull()
     button.click()
 
@@ -129,7 +141,8 @@ def test_meta_button_triggers_callback(qt_app, local_session: LocalSession) -> N
     widget = _widget(local_session, on_open_meta_analysis=lambda: events.append("meta"))
 
     button = widget.findChild(QPushButton, "metaModuleButton")
-    assert button.text() == "进入 Meta 分析模块"
+    assert button.property("moduleKey") == ModuleKey.META_ANALYSIS.value
+    assert button.property("navKey") == NavKey.META_ANALYSIS.value
     assert not button.icon().isNull()
     button.click()
 
@@ -141,7 +154,8 @@ def test_labtools_button_triggers_low_fidelity_shell_callback(qt_app, local_sess
     widget = _widget(local_session, on_open_labtools=lambda: events.append("labtools"))
 
     button = widget.findChild(QPushButton, "labtoolsModuleButton")
-    assert button.text() == "进入 LabTools"
+    assert button.property("moduleKey") == ModuleKey.LABTOOLS.value
+    assert button.property("navKey") == NavKey.LABTOOLS.value
     assert not button.icon().isNull()
     button.click()
 

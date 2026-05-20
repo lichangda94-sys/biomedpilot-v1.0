@@ -11,6 +11,23 @@ from app.ui_style_tokens import (
     get_status_token,
     status_chip_stylesheet,
 )
+from app.shared.semantic_keys import AnalysisStatusKey, FeatureStatusKey, ReportStatusKey, ResourceStatusKey
+
+
+STATUS_SEMANTIC_KEYS: dict[str, str] = {
+    UIStatusKey.DEVELOPER_PREVIEW.value: FeatureStatusKey.DEVELOPER_PREVIEW.value,
+    UIStatusKey.TESTING.value: FeatureStatusKey.TESTING.value,
+    UIStatusKey.PLANNED.value: FeatureStatusKey.PLANNED.value,
+    UIStatusKey.SHELL_ONLY.value: FeatureStatusKey.SHELL_ONLY.value,
+    UIStatusKey.PREFLIGHT_ONLY.value: AnalysisStatusKey.PREFLIGHT_ONLY.value,
+    UIStatusKey.BLOCKED.value: FeatureStatusKey.BLOCKED.value,
+    UIStatusKey.AVAILABLE.value: ResourceStatusKey.AVAILABLE.value,
+    UIStatusKey.NOT_CONFIGURED.value: ResourceStatusKey.NOT_CONFIGURED.value,
+    UIStatusKey.MISSING.value: ResourceStatusKey.NOT_CONFIGURED.value,
+    UIStatusKey.FAILED.value: ResourceStatusKey.FAILED.value,
+    UIStatusKey.DRAFT.value: ReportStatusKey.DRAFT.value,
+    UIStatusKey.REPORT_READY.value: ReportStatusKey.REPORT_READY_FUTURE.value,
+}
 
 
 def make_status_chip(label: str | None = None, *, status_key: str | UIStatusKey = UIStatusKey.NOT_CONFIGURED):
@@ -22,6 +39,7 @@ def make_status_chip(label: str | None = None, *, status_key: str | UIStatusKey 
     chip.setObjectName("uiStatusChip")
     chip.setProperty("uiPrimitive", "status_chip")
     chip.setProperty("statusKey", token.key)
+    chip.setProperty("semanticKey", STATUS_SEMANTIC_KEYS.get(token.key, ResourceStatusKey.NOT_CONFIGURED.value))
     chip.setProperty("iconHint", token.icon_hint)
     chip.setAlignment(Qt.AlignCenter)
     chip.setWordWrap(False)

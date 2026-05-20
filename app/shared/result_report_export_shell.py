@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.shared.semantic_keys import ExportKey, ReportStatusKey, ResultSemanticKey
+from app.shared.semantic_keys import ExportKey, ReportKey, ReportStatusKey, ResultSemanticKey
 
 
 class ResultPreviewState(StrEnum):
@@ -111,6 +111,7 @@ def make_result_preview_empty_state(state: ResultReportExportState | None = None
     empty.setObjectName("resultPreviewEmptyState")
     empty.setProperty("resultSemanticKey", shell_state.result_semantic_key)
     empty.setProperty("reportStatusKey", shell_state.report_status_key)
+    empty.setProperty("semanticKey", shell_state.result_semantic_key)
     empty.setProperty("exportGate", shell_state.export_gate.value)
     return empty
 
@@ -123,6 +124,8 @@ def make_report_draft_boundary(state: ResultReportExportState | None = None):
     shell_state = state or empty_result_preview_state()
     card = make_card(object_name="reportDraftBoundaryCard")
     card.setProperty("reportStatusKey", shell_state.report_status_key)
+    card.setProperty("reportKey", ReportKey.STATUS.value)
+    card.setProperty("semanticKey", shell_state.report_status_key)
     layout = QVBoxLayout(card)
     layout.setContentsMargins(16, 14, 16, 14)
     layout.setSpacing(8)
@@ -145,7 +148,11 @@ def make_export_buttons(state: ResultReportExportState, formats: tuple[ExportKey
         button = make_button(f"导出 {action.label}", role="secondary")
         button.setObjectName("exportGatedButton")
         button.setProperty("formatKey", action.format_key)
+        button.setProperty("exportFormatKey", action.format_key)
+        button.setProperty("semanticKey", action.format_key)
         button.setProperty("exportGate", state.export_gate.value)
+        button.setProperty("reportStatusKey", state.report_status_key)
+        button.setProperty("resultSemanticKey", state.result_semantic_key)
         button.setToolTip(action.gate_reason)
         button.setEnabled(action.enabled)
         buttons.append(button)
