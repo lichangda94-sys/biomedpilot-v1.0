@@ -9,12 +9,20 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
-    from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget, bioinformatics_legacy_routes, bioinformatics_target_ia_pages
+    from app.bioinformatics.workspace import (
+        BioinformaticsWorkspaceWidget,
+        bioinformatics_auxiliary_pages,
+        bioinformatics_legacy_routes,
+        bioinformatics_main_flow_pages,
+        bioinformatics_target_ia_pages,
+    )
     from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     BioinformaticsWorkspaceWidget = None  # type: ignore[assignment]
     bioinformatics_target_ia_pages = None  # type: ignore[assignment]
+    bioinformatics_main_flow_pages = None  # type: ignore[assignment]
+    bioinformatics_auxiliary_pages = None  # type: ignore[assignment]
     bioinformatics_legacy_routes = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
@@ -46,11 +54,26 @@ def test_bioinformatics_target_ia_pages_are_consolidated() -> None:
         "data_check_preparation",
         "group_design",
         "analysis_tasks",
-        "results",
+        "result_report",
         "report_export",
         "settings_resources",
         "project_logs_technical_details",
     ]
+    assert [page.key for page in bioinformatics_main_flow_pages()] == [
+        "project_home",
+        "data_source",
+        "data_check_preparation",
+        "group_design",
+        "analysis_tasks",
+        "result_report",
+        "report_export",
+    ]
+    assert [page.key for page in bioinformatics_auxiliary_pages()] == [
+        "settings_resources",
+        "project_logs_technical_details",
+    ]
+    assert [page.flow_index for page in bioinformatics_main_flow_pages()] == list(range(1, 8))
+    assert [page.flow_index for page in bioinformatics_auxiliary_pages()] == [1, 2]
     assert pages[2].semantic_key == AnalysisStatusKey.PREFLIGHT_ONLY.value
     assert pages[5].semantic_key == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
     assert pages[6].semantic_key == ReportStatusKey.TESTING_SUMMARY.value
@@ -68,6 +91,12 @@ def test_bioinformatics_workspace_renders_target_ia_shell(bio_workspace) -> None
     assert "不启用正式分析执行器" in boundary.text()
     assert len(nav_items) == 9
     assert tuple(item.property("pageKey") for item in nav_items) == bio_workspace.target_ia_page_keys()
+    assert tuple(item.property("pageKey") for item in nav_items if item.property("pageGroup") == "main_flow") == (
+        bio_workspace.main_flow_page_keys()
+    )
+    assert tuple(item.property("pageKey") for item in nav_items if item.property("pageGroup") == "auxiliary") == (
+        bio_workspace.auxiliary_page_keys()
+    )
     assert all(not item.isEnabled() for item in nav_items)
 
 
@@ -79,9 +108,12 @@ def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) 
     assert by_page["data_check_preparation"].property("semanticKey") == AnalysisStatusKey.PREFLIGHT_ONLY.value
     assert by_page["analysis_tasks"].property("statusKey") == "blocked"
     assert by_page["analysis_tasks"].property("semanticKey") == AnalysisStatusKey.BLOCKED.value
-    assert by_page["results"].property("semanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
+    assert by_page["result_report"].property("semanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
     assert by_page["report_export"].property("statusKey") == "draft"
     assert by_page["report_export"].property("semanticKey") == ReportStatusKey.TESTING_SUMMARY.value
+    assert by_page["result_report"].property("pageGroup") == "main_flow"
+    assert by_page["result_report"].property("flowIndex") == 6
+    assert by_page["settings_resources"].property("pageGroup") == "auxiliary"
 
 
 def test_bioinformatics_shell_copy_keeps_preflight_and_result_boundaries(bio_workspace) -> None:
@@ -108,6 +140,7 @@ def test_bioinformatics_legacy_routes_are_mapped_to_target_pages() -> None:
     assert by_route["workflow_status"].target_page_key == "project_logs_technical_details"
     assert by_route["workflow_status"].legacy_status == "developer_diagnostic"
     assert by_route["analysis_tasks"].legacy_status == "gated_target"
+    assert by_route["results_browser"].target_page_key == "result_report"
     assert by_route["report_viewer"].target_page_key == "report_export"
 
 

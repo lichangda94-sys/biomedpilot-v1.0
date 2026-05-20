@@ -30,6 +30,8 @@ class BioinformaticsIAPage:
     status_key: str
     semantic_key: str
     boundary: str
+    page_group: str
+    flow_index: int
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,8 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "shell_only",
             "feature.status.shell_only",
             "项目创建、打开和项目状态汇总；不执行分析。",
+            "main_flow",
+            1,
         ),
         BioinformaticsIAPage(
             "data_source",
@@ -57,6 +61,8 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "testing",
             "feature.status.testing",
             "GEO、本地导入与后续 TCGA/GTEx 入口；TCGA+GTEx 不自动合并。",
+            "main_flow",
+            2,
         ),
         BioinformaticsIAPage(
             "data_check_preparation",
@@ -64,6 +70,8 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "preflight_only",
             AnalysisStatusKey.PREFLIGHT_ONLY.value,
             "resolver-first / preflight-first；未形成 standardized repository 与 analysis input package 前不开放正式分析。",
+            "main_flow",
+            3,
         ),
         BioinformaticsIAPage(
             "group_design",
@@ -71,6 +79,8 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "preflight_only",
             AnalysisStatusKey.PREFLIGHT_ONLY.value,
             "服务 DEG、GSEA/ORA、相关性、生存与临床关联；不是 DEG 专属页面。",
+            "main_flow",
+            4,
         ),
         BioinformaticsIAPage(
             "analysis_tasks",
@@ -78,27 +88,35 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "blocked",
             AnalysisStatusKey.BLOCKED.value,
             "只显示 gated 任务卡；不得把预检包装成正式 DEG/GSEA/生存分析执行。",
+            "main_flow",
+            5,
         ),
         BioinformaticsIAPage(
-            "results",
-            "Results / 结果浏览",
+            "result_report",
+            "Result & Report / 结果与报告",
             "testing",
             ResultSemanticKey.TESTING_SUMMARY_ONLY.value,
-            "区分 imported_external_result 与未来 formal_computed_result；不生成假结果或假图。",
+            "单次任务结果与报告草稿入口；区分 imported_external_result 与未来 formal_computed_result，不生成假结果或假图。",
+            "main_flow",
+            6,
         ),
         BioinformaticsIAPage(
             "report_export",
-            "Report / Export / 报告导出",
+            "Report Export / 报告导出",
             "draft",
             ReportStatusKey.TESTING_SUMMARY.value,
             "仅允许测试摘要和报告草稿边界；不声明 report-ready 正式报告。",
+            "main_flow",
+            7,
         ),
         BioinformaticsIAPage(
             "settings_resources",
-            "Settings Resources / 生信资源设置",
+            "Bioinformatics Settings / 生信设置",
             "shell_only",
             "resource.status.not_configured",
             "GO/KEGG/MSigDB、R/Python 包和外部资源检测归 Settings 管理。",
+            "auxiliary",
+            1,
         ),
         BioinformaticsIAPage(
             "project_logs_technical_details",
@@ -106,8 +124,18 @@ def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
             "shell_only",
             "feature.status.developer_preview",
             "旧 workflow status、manifest、technical logs 和反馈包只作为开发者诊断或项目日志入口，不作为普通主流程。",
+            "auxiliary",
+            2,
         ),
     )
+
+
+def bioinformatics_main_flow_pages() -> tuple[BioinformaticsIAPage, ...]:
+    return tuple(page for page in bioinformatics_target_ia_pages() if page.page_group == "main_flow")
+
+
+def bioinformatics_auxiliary_pages() -> tuple[BioinformaticsIAPage, ...]:
+    return tuple(page for page in bioinformatics_target_ia_pages() if page.page_group == "auxiliary")
 
 
 def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
@@ -195,10 +223,10 @@ def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
         BioinformaticsLegacyRoute(
             "results_browser",
             "bioinformaticsResultsBrowserPage",
-            "results",
+            "result_report",
             "testing_summary",
             "secondary",
-            "结果浏览只承载 testing summary 或 imported external result；不生成假图假结果。",
+            "结果浏览折叠到 Result & Report；只承载 testing summary 或 imported external result，不生成假图假结果。",
         ),
         BioinformaticsLegacyRoute(
             "report_viewer",
@@ -342,6 +370,12 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
         def target_ia_page_keys(self) -> tuple[str, ...]:
             return tuple(page.key for page in bioinformatics_target_ia_pages())
 
+        def main_flow_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in bioinformatics_main_flow_pages())
+
+        def auxiliary_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in bioinformatics_auxiliary_pages())
+
         def legacy_route_keys(self) -> tuple[str, ...]:
             return tuple(route.route_key for route in self._legacy_routes)
 
@@ -379,18 +413,44 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             boundary.setWordWrap(True)
             layout.addWidget(boundary)
 
+            main_title = QLabel("Main flow / 主流程：7 target pages")
+            main_title.setObjectName("bioinformaticsIAMainFlowTitle")
+            main_title.setStyleSheet("font-weight: 700;")
+            layout.addWidget(main_title)
             row = QHBoxLayout()
             row.setSpacing(8)
-            for page in bioinformatics_target_ia_pages():
+            for page in bioinformatics_main_flow_pages():
                 item = QPushButton(page.label)
                 item.setObjectName("bioinformaticsIANavItem")
                 item.setProperty("pageKey", page.key)
+                item.setProperty("pageGroup", page.page_group)
+                item.setProperty("flowIndex", page.flow_index)
                 item.setProperty("statusKey", page.status_key)
                 item.setProperty("semanticKey", page.semantic_key)
                 item.setToolTip(page.boundary)
                 item.setEnabled(False)
                 row.addWidget(item)
             layout.addLayout(row)
+
+            auxiliary_title = QLabel("Auxiliary / 辅助：settings and technical details")
+            auxiliary_title.setObjectName("bioinformaticsIAAuxiliaryTitle")
+            auxiliary_title.setStyleSheet("font-weight: 700;")
+            layout.addWidget(auxiliary_title)
+            auxiliary_row = QHBoxLayout()
+            auxiliary_row.setSpacing(8)
+            for page in bioinformatics_auxiliary_pages():
+                item = QPushButton(page.label)
+                item.setObjectName("bioinformaticsIANavItem")
+                item.setProperty("pageKey", page.key)
+                item.setProperty("pageGroup", page.page_group)
+                item.setProperty("flowIndex", page.flow_index)
+                item.setProperty("statusKey", page.status_key)
+                item.setProperty("semanticKey", page.semantic_key)
+                item.setToolTip(page.boundary)
+                item.setEnabled(False)
+                auxiliary_row.addWidget(item)
+            auxiliary_row.addStretch(1)
+            layout.addLayout(auxiliary_row)
 
             status_row = QHBoxLayout()
             status_row.setSpacing(8)
@@ -613,6 +673,12 @@ elif QWidget is not None:
 
         def target_ia_page_keys(self) -> tuple[str, ...]:
             return tuple(page.key for page in bioinformatics_target_ia_pages())
+
+        def main_flow_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in bioinformatics_main_flow_pages())
+
+        def auxiliary_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in bioinformatics_auxiliary_pages())
 
         def legacy_route_keys(self) -> tuple[str, ...]:
             return tuple(route.route_key for route in bioinformatics_legacy_routes())
