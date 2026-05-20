@@ -13,6 +13,7 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
+from app.bioinformatics.results.registry import RESULT_INDEX
 from app.version import app_version_summary
 
 from .dependency_check import REQUIRED_PACKAGES, check_deg_backend_dependencies
@@ -191,6 +192,12 @@ def _validate_fixture_result(root: Path, result: dict[str, Any], dependency_snap
         "result_id": result.get("result_id", ""),
         "task_run_id": result.get("task_run_id", ""),
         "result_semantics": result_entry.get("result_semantics", ""),
+        "result_index_registry_path": str(RESULT_INDEX),
+        "output_artifacts": result_entry.get("output_artifacts", []),
+        "plot_artifacts": result_entry.get("plot_artifacts", []),
+        "report_artifacts": result_entry.get("report_artifacts", []),
+        "log_artifacts": result_entry.get("log_artifacts", []),
+        "report_ready_eligible": result_entry.get("report_ready_eligible"),
         "result_table_row_count": len(rows),
         "has_numeric_p_value": bool(rows) and all(_numeric(row.get("p_value")) for row in rows),
         "has_numeric_fdr": bool(rows) and all(_numeric(row.get("adjusted_p_value")) for row in rows),

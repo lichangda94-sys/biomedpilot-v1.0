@@ -23,6 +23,12 @@ def test_formal_deg_runtime_validation_uses_real_environment(tmp_path: Path) -> 
         assert result["fixture_result"]["has_numeric_p_value"] is True
         assert result["fixture_result"]["has_numeric_fdr"] is True
         assert result["fixture_result"]["result_semantics"] == "formal_computed_result"
+        assert result["fixture_result"]["result_index_registry_path"] == "results/summaries/result_index.json"
+        assert result["fixture_result"]["plot_artifacts"] == []
+        assert result["fixture_result"]["report_artifacts"] == []
+        assert result["fixture_result"]["report_ready_eligible"] is False
+        assert result["fixture_result"]["output_artifacts"]
+        assert result["fixture_result"]["log_artifacts"]
         assert result["fixture_result"]["task_run_log_present"] is True
         assert result["fixture_result"]["parameters_manifest_status"] == "passed"
         assert result["fixture_result"]["dependency_snapshot_status"] == "passed"
