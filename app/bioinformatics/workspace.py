@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
+from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
 
 
@@ -465,6 +466,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 status_row.addWidget(label)
             status_row.addStretch(1)
             layout.addLayout(status_row)
+            layout.addWidget(make_result_report_export_adoption_panel(module="bioinformatics"))
 
             legacy_title = QLabel("Legacy page routing calibration / 旧页面路由校准")
             legacy_title.setObjectName("bioinformaticsLegacyRouteTitle")

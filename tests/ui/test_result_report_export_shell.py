@@ -7,12 +7,13 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
     from app.shared.result_report_export_shell import (
         empty_result_preview_state,
         make_export_buttons,
         make_report_draft_boundary,
+        make_result_report_export_adoption_panel,
         make_result_preview_empty_state,
         report_ready_future_state,
         testing_summary_state as build_testing_summary_state,
@@ -20,6 +21,7 @@ try:
     from app.shared.semantic_keys import ExportKey, ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
+    QPushButton = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
     IMPORT_ERROR = None
@@ -66,6 +68,8 @@ def test_export_buttons_are_disabled_without_results(qt_app) -> None:
     assert all(button.property("exportGate") == "disabled_empty_result" for button in buttons)
     assert all(button.property("reportStatusKey") == ReportStatusKey.DRAFT.value for button in buttons)
     assert all(button.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value for button in buttons)
+    assert all(button.property("formalActionEnabled") is False for button in buttons)
+    assert all(button.property("reportReadyPackageAllowed") is False for button in buttons)
 
 
 def test_export_buttons_allow_testing_summary_but_block_report_ready_future(qt_app) -> None:
@@ -75,7 +79,26 @@ def test_export_buttons_allow_testing_summary_but_block_report_ready_future(qt_a
     assert testing_buttons[0].isEnabled()
     assert testing_buttons[0].property("exportGate") == "enabled_testing_export"
     assert testing_buttons[0].property("reportStatusKey") == ReportStatusKey.TESTING_SUMMARY.value
+    assert testing_buttons[0].property("reportReadyPackageAllowed") is False
 
     assert not future_buttons[0].isEnabled()
     assert future_buttons[0].property("exportGate") == "blocked_formal_report_ready"
     assert future_buttons[0].property("reportStatusKey") == ReportStatusKey.REPORT_READY_FUTURE.value
+    assert future_buttons[0].property("formalActionEnabled") is False
+
+
+def test_adoption_panel_keeps_empty_result_exports_gated(qt_app) -> None:
+    panel = make_result_report_export_adoption_panel(module="bioinformatics", formats=(ExportKey.MARKDOWN, ExportKey.HTML))
+    labels = panel.findChildren(QLabel)
+    export_buttons = panel.findChildren(QPushButton, "exportGatedButton")
+
+    assert panel.objectName() == "resultReportExportAdoptionPanel"
+    assert panel.property("adoptionModule") == "bioinformatics"
+    assert panel.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
+    assert panel.property("reportStatusKey") == ReportStatusKey.DRAFT.value
+    assert panel.property("exportGate") == "disabled_empty_result"
+    assert panel.property("reportReadyPackageAllowed") is False
+    assert any(label.objectName() == "resultReportExportAdoptionTitle" for label in labels)
+    assert [button.property("exportFormatKey") for button in export_buttons] == ["export.format.markdown", "export.format.html"]
+    assert all(button.property("formalActionEnabled") is False for button in export_buttons)
+    assert all(not button.isEnabled() for button in export_buttons)

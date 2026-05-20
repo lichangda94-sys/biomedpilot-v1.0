@@ -6,6 +6,7 @@ from typing import Callable
 
 from app.shared.feature_availability import FeatureAvailability, FeatureAvailabilityStatus, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
+from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.ui_components.primitives import make_status_chip
 from app.version import APP_VERSION
 
@@ -298,6 +299,7 @@ if QWidget is not None:
             boundary.setObjectName("metaTargetIABoundary")
             boundary.setWordWrap(True)
             layout.addWidget(boundary)
+            layout.addWidget(make_result_report_export_adoption_panel(module="meta_analysis"))
 
             self._target_interaction_status = QLabel("")
             self._target_interaction_status.setObjectName("metaTargetInteractionStatus")

@@ -10,6 +10,7 @@ try:
     from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QFrame
 
     from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget, meta_active_types_v1, meta_target_ia_pages
+    from app.shared.semantic_keys import ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     MetaAnalysisWorkspaceWidget = None  # type: ignore[assignment]
@@ -133,6 +134,20 @@ def test_network_meta_is_planned_boundary_not_active_type(meta_workspace) -> Non
     assert not planned_button.isEnabled()
     assert meta_workspace.network_meta_enabled() is False
     assert all("network" not in str(card.property("typeId")).lower() for card in cards)
+
+
+def test_meta_adopts_shared_result_report_export_shell(meta_workspace) -> None:
+    panel = meta_workspace.findChild(QFrame, "resultReportExportAdoptionPanel")
+
+    assert panel is not None
+    buttons = panel.findChildren(QPushButton, "exportGatedButton")
+    assert panel.property("adoptionModule") == "meta_analysis"
+    assert panel.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
+    assert panel.property("reportStatusKey") == ReportStatusKey.DRAFT.value
+    assert panel.property("exportGate") == "disabled_empty_result"
+    assert panel.property("reportReadyPackageAllowed") is False
+    assert all(button.property("formalActionEnabled") is False for button in buttons)
+    assert all(not button.isEnabled() for button in buttons)
 
 
 def test_mainline_page_keys_remain_shell_contract(meta_workspace) -> None:

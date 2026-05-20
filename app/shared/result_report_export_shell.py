@@ -153,10 +153,54 @@ def make_export_buttons(state: ResultReportExportState, formats: tuple[ExportKey
         button.setProperty("exportGate", state.export_gate.value)
         button.setProperty("reportStatusKey", state.report_status_key)
         button.setProperty("resultSemanticKey", state.result_semantic_key)
+        button.setProperty("formalActionEnabled", False)
+        button.setProperty("reportReadyPackageAllowed", state.report_ready_package_allowed)
         button.setToolTip(action.gate_reason)
         button.setEnabled(action.enabled)
         buttons.append(button)
     return tuple(buttons)
+
+
+def make_result_report_export_adoption_panel(
+    *,
+    module: str,
+    state: ResultReportExportState | None = None,
+    formats: tuple[ExportKey, ...] = (ExportKey.MARKDOWN, ExportKey.HTML, ExportKey.DOCX),
+):
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
+
+    shell_state = state or empty_result_preview_state(module=module)
+    frame = QFrame()
+    frame.setObjectName("resultReportExportAdoptionPanel")
+    frame.setProperty("adoptionModule", module)
+    frame.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    frame.setProperty("reportStatusKey", shell_state.report_status_key)
+    frame.setProperty("exportGate", shell_state.export_gate.value)
+    frame.setProperty("reportReadyPackageAllowed", shell_state.report_ready_package_allowed)
+    frame.setStyleSheet("QFrame#resultReportExportAdoptionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(14, 12, 14, 12)
+    layout.setSpacing(8)
+
+    title = QLabel("Result / Report / Export shell adoption")
+    title.setObjectName("resultReportExportAdoptionTitle")
+    title.setStyleSheet("font-weight: 700;")
+    detail = QLabel("Shared shell semantics are adopted here; exports stay gated by result and report status.")
+    detail.setObjectName("resultReportExportAdoptionDetail")
+    detail.setWordWrap(True)
+    layout.addWidget(title)
+    layout.addWidget(detail)
+    layout.addWidget(make_result_preview_empty_state(shell_state))
+    layout.addWidget(make_report_draft_boundary(shell_state))
+
+    button_row = QHBoxLayout()
+    button_row.setSpacing(8)
+    for button in make_export_buttons(shell_state, formats):
+        button_row.addWidget(button)
+    button_row.addStretch(1)
+    layout.addLayout(button_row)
+    return frame
 
 
 def _visual_status_for_report(report_status_key: str) -> str:

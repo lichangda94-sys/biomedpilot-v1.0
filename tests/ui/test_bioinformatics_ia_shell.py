@@ -7,7 +7,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QLabel, QPushButton
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QFrame
 
     from app.bioinformatics.workspace import (
         BioinformaticsWorkspaceWidget,
@@ -19,6 +19,7 @@ try:
     from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
+    QFrame = None  # type: ignore[assignment]
     BioinformaticsWorkspaceWidget = None  # type: ignore[assignment]
     bioinformatics_target_ia_pages = None  # type: ignore[assignment]
     bioinformatics_main_flow_pages = None  # type: ignore[assignment]
@@ -127,6 +128,24 @@ def test_bioinformatics_shell_copy_keeps_preflight_and_result_boundaries(bio_wor
     assert "不得把预检包装成正式 DEG/GSEA/生存分析执行" in tooltips
     assert "不生成假结果或假图" in tooltips
     assert "不声明 report-ready 正式报告" in tooltips
+
+
+def test_bioinformatics_adopts_shared_result_report_export_shell(bio_workspace) -> None:
+    panel = bio_workspace.findChild(QFrame, "resultReportExportAdoptionPanel")
+
+    assert panel is not None
+    buttons = panel.findChildren(QPushButton, "exportGatedButton")
+    assert panel.property("adoptionModule") == "bioinformatics"
+    assert panel.property("resultSemanticKey") == ResultSemanticKey.TESTING_SUMMARY_ONLY.value
+    assert panel.property("reportStatusKey") == ReportStatusKey.DRAFT.value
+    assert panel.property("exportGate") == "disabled_empty_result"
+    assert panel.property("reportReadyPackageAllowed") is False
+    assert [button.property("exportFormatKey") for button in buttons] == [
+        "export.format.markdown",
+        "export.format.html",
+        "export.format.docx",
+    ]
+    assert all(not button.isEnabled() for button in buttons)
 
 
 def test_bioinformatics_legacy_routes_are_mapped_to_target_pages() -> None:

@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+import os
+
+import pytest
+
 from app.shared.result_report_export_shell import (
     DEFAULT_DISCLAIMER,
     ExportGateState,
     ResultPreviewState,
     empty_result_preview_state,
     export_actions,
+    make_result_report_export_adoption_panel,
     report_ready_future_state,
     testing_summary_state as build_testing_summary_state,
 )
 from app.shared.semantic_keys import ReportStatusKey, ResultSemanticKey
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 def test_empty_result_state_gates_all_exports() -> None:
@@ -57,3 +64,20 @@ def test_disclaimer_blocks_formal_result_claims() -> None:
     assert "不构成正式统计结果" in DEFAULT_DISCLAIMER
     assert "正式图表" in DEFAULT_DISCLAIMER
     assert "report-ready" in DEFAULT_DISCLAIMER
+
+
+def test_adoption_panel_uses_empty_state_by_default() -> None:
+    try:
+        from PySide6.QtWidgets import QApplication, QPushButton
+    except Exception as exc:  # pragma: no cover - optional GUI runtime.
+        pytest.skip(f"PySide6 UI runtime unavailable: {exc}")
+
+    QApplication.instance() or QApplication([])
+    panel = make_result_report_export_adoption_panel(module="meta_analysis")
+    buttons = panel.findChildren(QPushButton, "exportGatedButton")
+
+    assert panel.property("adoptionModule") == "meta_analysis"
+    assert panel.property("exportGate") == ExportGateState.DISABLED_EMPTY_RESULT.value
+    assert panel.property("reportReadyPackageAllowed") is False
+    assert all(button.property("formalActionEnabled") is False for button in buttons)
+    assert all(not button.isEnabled() for button in buttons)
