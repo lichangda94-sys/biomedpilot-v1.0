@@ -9,6 +9,12 @@ from app.shared.feature_status import FeatureItem, feature_item_from_availabilit
 from app.version import APP_VERSION
 
 from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_analysis_project
+from app.meta_analysis.search_config_draft import (
+    MetaSeedConceptGuard,
+    MetaSeedSearchConfigDraft,
+    build_meta_seed_search_config_draft,
+    save_meta_seed_search_config_draft,
+)
 from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
 
 try:
@@ -18,6 +24,7 @@ try:
         QLabel,
         QListWidget,
         QListWidgetItem,
+        QPlainTextEdit,
         QPushButton,
         QStackedWidget,
         QVBoxLayout,
@@ -76,14 +83,22 @@ def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
     return MetaWorkspaceLayoutState(
         title="Meta 分析模块",
         status_label=version_status,
-        description="主线保留 Meta 入口和项目壳；具体 PICO、检索、筛选、提取、统计和报告功能在 dev/meta-analysis 开发。",
+        description="主线保留 Meta 入口、项目壳和 seed 检索配置草稿；正式检索、筛选、提取、统计和报告功能仍在 dev/meta-analysis 开发。",
         navigation_items=(
             MetaWorkspaceNavigationItem("project_home", "Meta 项目首页", "项目绑定、状态摘要和分支边界说明。", "workflow_home"),
             MetaWorkspaceNavigationItem("project_contract", "项目契约", "创建和打开 Meta 项目的最小 manifest contract。", "project_contract"),
+            MetaWorkspaceNavigationItem(
+                "search_config_draft",
+                "Seed 检索草稿",
+                "中文研究问题映射到 PICO/PECO 草稿、英文 PubMed query draft 和 query guard。",
+                "search_config_draft",
+                "Draft only",
+                "仅草稿",
+            ),
             MetaWorkspaceNavigationItem("dev_branch", "功能开发线", "完整 Meta workflow 位于 dev/meta-analysis。", "dev_branch"),
         ),
         default_page_key="workflow_home",
-        testing_notice="当前 mainline 只保留 Meta 模块壳和接口；完整功能请在 dev/meta-analysis 分支开发和验收。",
+        testing_notice="当前 mainline 只生成和保存 seed 检索配置草稿；不会执行 PubMed/Embase/WOS/中文数据库检索，也不会标记正式检索完成。",
         version_status_label=version_status,
     )
 
@@ -97,6 +112,7 @@ if QWidget is not None:
             self._on_back = on_back
             self._current_project_dir: Path | None = None
             self._current_meta_project: MetaProjectSummary | None = None
+            self._current_search_config_draft: MetaSeedSearchConfigDraft | None = None
             self._layout_state = meta_workspace_layout_state()
             self._page_keys: list[str] = []
             self._build_ui()
@@ -147,7 +163,26 @@ if QWidget is not None:
                 "current_page_key": self.current_page_key(),
                 "project_dir": str(self._current_project_dir or ""),
                 "contract_version": META_ANALYSIS_MAINLINE_CONTRACT_VERSION,
+                "search_config_draft_available": "search_config_draft" in self._page_keys,
             }
+
+        def generate_seed_search_config_preview(self, question: str) -> dict[str, object]:
+            draft = build_meta_seed_search_config_draft(question)
+            self._current_search_config_draft = draft
+            self._render_seed_search_config_draft(draft)
+            return draft.to_dict()
+
+        def save_seed_search_config_preview(self) -> Path:
+            if self._current_project_dir is None:
+                raise ValueError("请先绑定 Meta 项目，再保存检索配置草稿。")
+            if self._current_search_config_draft is None:
+                question = self._search_question_input.toPlainText() if hasattr(self, "_search_question_input") else ""
+                if not question.strip():
+                    raise ValueError("请先输入中文研究问题并生成草稿。")
+                self._current_search_config_draft = build_meta_seed_search_config_draft(question)
+            path = save_meta_seed_search_config_draft(self._current_project_dir, self._current_search_config_draft)
+            self._search_config_status_label.setText(f"已保存草稿：{path}；状态仍为 draft/not_executed。")
+            return path
 
         def _build_ui(self) -> None:
             root = QVBoxLayout(self)
@@ -199,6 +234,8 @@ if QWidget is not None:
             self._navigation_list.setCurrentRow(0)
 
         def _page(self, item: MetaWorkspaceNavigationItem) -> QFrame:
+            if item.page_key == "search_config_draft":
+                return self._search_config_draft_page(item)
             frame = QFrame()
             frame.setObjectName(f"metaMainlinePage_{item.page_key}")
             layout = QVBoxLayout(frame)
@@ -214,6 +251,74 @@ if QWidget is not None:
             layout.addWidget(note)
             layout.addStretch(1)
             return frame
+
+        def _search_config_draft_page(self, item: MetaWorkspaceNavigationItem) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName(f"metaMainlinePage_{item.page_key}")
+            layout = QVBoxLayout(frame)
+            heading = QLabel(item.label)
+            heading.setStyleSheet("font-size: 18px; font-weight: 700;")
+            body = QLabel("输入中文研究问题后，本地 seed helper 会生成 PICO/PECO 草稿、英文 PubMed query draft 和 query guard。")
+            body.setWordWrap(True)
+            notice = QLabel("Draft only：需要用户确认；不执行在线检索；保存后不标记正式检索完成。")
+            notice.setObjectName("metaSearchConfigDraftNotice")
+            notice.setWordWrap(True)
+            self._search_question_input = QPlainTextEdit()
+            self._search_question_input.setObjectName("metaSearchQuestionInput")
+            self._search_question_input.setPlaceholderText("例如：肥胖与乳腺癌风险的Meta分析")
+            self._search_question_input.setMaximumHeight(90)
+            button_row = QHBoxLayout()
+            generate_button = QPushButton("生成检索配置草稿")
+            generate_button.setObjectName("metaGenerateSearchConfigDraftButton")
+            save_button = QPushButton("保存草稿")
+            save_button.setObjectName("metaSaveSearchConfigDraftButton")
+            generate_button.clicked.connect(
+                lambda: self.generate_seed_search_config_preview(self._search_question_input.toPlainText())
+            )
+            save_button.clicked.connect(self.save_seed_search_config_preview)
+            button_row.addWidget(generate_button)
+            button_row.addWidget(save_button)
+            button_row.addStretch(1)
+            self._search_config_status_label = QLabel("尚未生成检索配置草稿。")
+            self._search_config_status_label.setObjectName("metaSearchConfigDraftStatus")
+            self._search_config_status_label.setWordWrap(True)
+            self._search_config_summary_label = QLabel("")
+            self._search_config_summary_label.setObjectName("metaSearchConfigDraftSummary")
+            self._search_config_summary_label.setWordWrap(True)
+            self._search_config_guard_label = QLabel("")
+            self._search_config_guard_label.setObjectName("metaSearchConfigDraftGuards")
+            self._search_config_guard_label.setWordWrap(True)
+            layout.addWidget(heading)
+            layout.addWidget(body)
+            layout.addWidget(notice)
+            layout.addWidget(self._search_question_input)
+            layout.addLayout(button_row)
+            layout.addWidget(self._search_config_status_label)
+            layout.addWidget(self._search_config_summary_label)
+            layout.addWidget(self._search_config_guard_label)
+            layout.addStretch(1)
+            return frame
+
+        def _render_seed_search_config_draft(self, draft: MetaSeedSearchConfigDraft) -> None:
+            if not hasattr(self, "_search_config_summary_label"):
+                return
+            self._search_config_status_label.setText("已生成 draft；需要用户确认，尚未执行任何在线检索。")
+            summary = [
+                f"Population: {_labels(draft.population)}",
+                f"Exposure/Intervention: {_labels(draft.exposure_or_intervention)}",
+                f"Outcome: {_labels(draft.outcome)}",
+                f"Intent: {draft.detected_intent}",
+                f"PubMed query draft: {draft.pubmed_query_draft or '未生成'}",
+                f"Search status: {draft.search_execution_status}; formal completed: {draft.formal_search_completed}",
+            ]
+            guards = [
+                f"{guard.preferred_label_en}: expansion={guard.query_expansion_allowed}, "
+                f"standalone={guard.standalone_search_allowed}, filter_only={guard.filter_only}, "
+                f"in_query={guard.included_in_pubmed_topic_query}"
+                for guard in draft.detected_concepts
+            ]
+            self._search_config_summary_label.setText("\n".join(summary))
+            self._search_config_guard_label.setText("Query guard:\n" + ("\n".join(guards) if guards else "未检测到 seed term。"))
 
         def _refresh_summary(self) -> None:
             if self._current_meta_project is not None:
@@ -240,3 +345,7 @@ else:  # pragma: no cover
 
         def set_project_record(self, record) -> None:
             self._current_project_dir = Path(record.project_dir).expanduser().resolve()
+
+
+def _labels(guards: tuple[MetaSeedConceptGuard, ...]) -> str:
+    return ", ".join(guard.preferred_label_en for guard in guards) or "未识别"

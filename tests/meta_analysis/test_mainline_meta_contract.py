@@ -29,8 +29,13 @@ def test_mainline_meta_layout_is_shell_contract() -> None:
     state = meta_workspace_layout_state()
 
     assert state.default_page_key == "workflow_home"
-    assert [item.page_key for item in state.navigation_items] == ["workflow_home", "project_contract", "dev_branch"]
-    assert "dev/meta-analysis" in state.testing_notice
+    assert [item.page_key for item in state.navigation_items] == [
+        "workflow_home",
+        "project_contract",
+        "search_config_draft",
+        "dev_branch",
+    ]
+    assert "不会执行 PubMed/Embase/WOS/中文数据库检索" in state.testing_notice
 
 
 def test_meta_project_contract_can_create_and_open_project(tmp_path) -> None:
@@ -61,6 +66,20 @@ def test_mainline_meta_workspace_binds_project_record(qt_app, tmp_path) -> None:
     widget = MetaAnalysisWorkspaceWidget()
     widget.set_project_record(record)
 
-    assert widget.page_keys() == ("workflow_home", "project_contract", "dev_branch")
+    assert widget.page_keys() == ("workflow_home", "project_contract", "search_config_draft", "dev_branch")
     assert widget.current_project_dir() == project.project_root
     assert "Meta UI" in widget._status_label.text()
+
+
+def test_mainline_meta_workspace_generates_seed_search_config_preview(qt_app) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    widget = MetaAnalysisWorkspaceWidget()
+    draft = widget.generate_seed_search_config_preview("肥胖与乳腺癌风险的Meta分析")
+
+    assert draft["draft_status"] == "draft_needs_user_confirmation"
+    assert draft["search_execution_status"] == "not_executed"
+    assert draft["formal_search_completed"] is False
+    assert "metaSearchConfigDraftSummary" == widget._search_config_summary_label.objectName()
+    assert "breast cancer" in draft["pubmed_query_draft"].lower()
+    assert "meta-analysis" not in draft["pubmed_query_draft"].lower()
