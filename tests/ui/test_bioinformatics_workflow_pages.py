@@ -4112,6 +4112,12 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     assert downstream is not None
     assert "B9.6 plot artifact" in downstream.text()
     assert "B9.7 report-ready gate" in downstream.text()
+    plot_status = widget.findChild(QLabel, "formalDegPlotStatus")
+    assert plot_status is not None
+    assert "Formal DEG plot gate passed" in plot_status.text()
+    plot_button = widget.findChild(QPushButton, "formalDegPlotButton")
+    assert plot_button is not None
+    assert plot_button.isEnabled()
 
     exported = widget.export_formal_deg_review_csv()
 
@@ -4119,6 +4125,12 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     assert exported["status"] == "passed"
     assert exported["report_ready_eligible"] is False
     assert Path(str(exported["export_path"])).is_file()
+    assert "未生成 report-ready" in widget.status_message()
+    plot_result = widget.generate_formal_deg_plot_artifact()
+    assert plot_result is not None
+    assert plot_result["status"] == "passed"
+    assert plot_result["report_ready_eligible"] is False
+    assert plot_result["plot_artifact"]["source_result_semantics"] == "formal_computed_result"
     assert "未生成 report-ready" in widget.status_message()
 
 

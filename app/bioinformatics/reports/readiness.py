@@ -30,6 +30,7 @@ def evaluate_report_ready_gate(project_root: str | Path, *, include_result_ids: 
     checks["limitations_included"] = True
     checks["no_clinical_advice"] = True
     checks["plot_artifacts_registered_if_figures_included"] = all(_plots_registered(entry) for entry in selected)
+    checks["included_results_marked_report_ready_eligible"] = all(bool(entry.get("report_ready_eligible")) for entry in selected)
     if not checks["result_index_exists"]:
         blockers.append("result_index_missing_or_empty")
     for name, passed in checks.items():

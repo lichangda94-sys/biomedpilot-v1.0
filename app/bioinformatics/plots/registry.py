@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.registry import load_registry, save_registry
 
 from .basic_renderers import build_basic_plot_spec
@@ -23,6 +24,7 @@ def create_plot_artifact(project_root: str | Path, source_result_id: str, plot_t
         plot_type=plot_type,
         source_result_id=source_result_id,
         source_result_semantics=str(source.get("result_semantics") or ""),
+        plot_semantics=normalize_result_semantics(source.get("canonical_result_semantics") or source.get("result_semantics")),
         input_package_id=str(source.get("input_package_id") or ""),
         task_run_id=str(source.get("task_run_id") or ""),
         parameters_manifest=parameters or {},

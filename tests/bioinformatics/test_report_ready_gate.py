@@ -71,9 +71,36 @@ def test_report_gate_passes_complete_formal_result(tmp_path) -> None:
             engine_version="1",
             dependency_snapshot={"scipy": {"available": True}},
             validation_status="passed",
+            report_ready_eligible=True,
         ),
     )
 
     gate = evaluate_report_ready_gate(tmp_path)
 
     assert gate["status"] == "eligible_for_internal_report"
+
+
+def test_report_gate_blocks_formal_result_not_explicitly_report_ready(tmp_path) -> None:
+    register_result(
+        tmp_path,
+        ResultIndexEntry(
+            result_id="formal",
+            task_run_id="task",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            input_package_id="pkg",
+            source_dataset_id="dataset",
+            source_repository_manifest="manifest",
+            parameters_manifest={"method": "welch"},
+            engine_name="python",
+            engine_version="1",
+            dependency_snapshot={"scipy": {"available": True}},
+            validation_status="passed",
+            report_ready_eligible=False,
+        ),
+    )
+
+    gate = evaluate_report_ready_gate(tmp_path)
+
+    assert gate["status"] == "blocked"
+    assert "included_results_marked_report_ready_eligible" in gate["blockers"]

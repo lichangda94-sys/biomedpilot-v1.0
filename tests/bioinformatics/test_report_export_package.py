@@ -21,6 +21,7 @@ def test_report_export_package_contains_required_manifests(tmp_path) -> None:
             engine_version="1",
             dependency_snapshot={"scipy": {"available": True}},
             validation_status="passed",
+            report_ready_eligible=True,
         ),
     )
 

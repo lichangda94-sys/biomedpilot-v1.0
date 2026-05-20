@@ -12,6 +12,8 @@ REQUIRED_PLOT_FIELDS = (
     "plot_type",
     "source_result_id",
     "source_result_semantics",
+    "plot_semantics",
+    "plot_artifact_scope",
     "input_package_id",
     "task_run_id",
     "parameters_manifest",
@@ -34,6 +36,11 @@ def validate_plot_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     if artifact.get("plot_type") not in PLOT_TYPES:
         blockers.append(f"unsupported_plot_type:{artifact.get('plot_type')}")
     semantics = normalize_result_semantics(artifact.get("source_result_semantics"))
+    plot_semantics = normalize_result_semantics(artifact.get("plot_semantics") or artifact.get("source_result_semantics"))
+    if plot_semantics != semantics:
+        blockers.append("plot_semantics_must_inherit_source_result_semantics")
+    if artifact.get("plot_artifact_scope") == "formal_deg_plot" and semantics != "formal_computed_result":
+        blockers.append("formal_deg_plot_requires_formal_computed_result_source")
     if semantics == "preflight_only":
         blockers.append("preflight_only_source_cannot_generate_formal_plot")
     if semantics == "testing_level":

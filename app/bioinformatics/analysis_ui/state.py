@@ -257,7 +257,13 @@ def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate
     result_blockers = []
     if not result_entries:
         result_blockers.append("result_index_missing_or_empty")
-    plot_eligible = [entry for entry in result_entries if normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics")) not in {"preflight_only", "configured_not_run", "blocked", "failed"}]
+    plot_eligible = [
+        entry
+        for entry in result_entries
+        if normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics")) == "formal_computed_result"
+        and str(entry.get("task_type") or "").lower() == "deg"
+        and any(isinstance(item, dict) and item.get("artifact_type") == "deg_result_table" for item in entry.get("output_artifacts", []) or [])
+    ]
     preflight_sources = [entry for entry in result_entries if normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics")) == "preflight_only"]
     return [
         {
@@ -270,9 +276,9 @@ def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate
         {
             "gate": "Plot artifact",
             "status": "available" if plot_eligible else "blocked_missing_result_schema",
-            "basis": f"{len(plot_eligible)} source-result-driven candidates",
+            "basis": f"{len(plot_eligible)} formal DEG result candidates",
             "blockers": compact_list(["preflight_only_source_cannot_generate_formal_plot"] if preflight_sources and not plot_eligible else []),
-            "warnings": "No formal plotting upgrade; plot inherits source semantics.",
+            "warnings": "Formal DEG plot artifacts require formal_computed_result DEG sources and inherit source semantics.",
         },
         {
             "gate": "Report-ready export",
@@ -408,8 +414,10 @@ def _plot_status(entry: dict[str, Any], semantics: str) -> str:
         return "blocked: preflight-only source"
     if entry.get("plot_artifacts"):
         return "registered"
-    if semantics in {"formal_computed_result", "testing_level", "exploratory", "imported_external_result"}:
-        return "spec candidate; inherits semantics"
+    if semantics == "formal_computed_result" and str(entry.get("task_type") or "").lower() == "deg":
+        return "formal DEG plot artifact candidate; inherits semantics"
+    if semantics in {"testing_level", "exploratory", "imported_external_result"}:
+        return "blocked: not a formal DEG plot source"
     return "blocked: missing result schema"
 
 

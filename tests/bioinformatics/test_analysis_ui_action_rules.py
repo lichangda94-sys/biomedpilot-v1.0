@@ -86,6 +86,28 @@ def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export()
     assert "unverified_testing_exploratory_or_imported_results_present" in report["disabled_reason"]
 
 
+def test_formal_deg_plot_action_requires_formal_result_with_deg_table() -> None:
+    rows = build_action_rows(
+        packages=[],
+        results=[
+            {
+                "result_id": "formal",
+                "task_type": "deg",
+                "result_semantics": "formal_computed_result",
+                "output_artifacts": [{"artifact_type": "deg_result_table", "path": "results/tables/formal.tsv"}],
+            }
+        ],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+    )
+
+    plot = _row(rows, "plot_spec")
+    assert plot["enabled"] is True
+    assert plot["button_behavior"] == "enabled_formal_deg_plot_artifact_only"
+    assert "does not create report-ready output" in plot["next_action"]
+
+
 def test_imported_deg_review_is_review_only_not_formal() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "deg_imported_result", "blockers": [], "warnings": ["imported_deg_is_external_result_not_biomedpilot_recomputed"]}],
@@ -99,6 +121,9 @@ def test_imported_deg_review_is_review_only_not_formal() -> None:
     assert imported["enabled"] is True
     assert imported["button_behavior"] == "enabled_review_only"
     assert "imported_external_result" in imported["next_action"]
+    formal_plot = _row(rows, "plot_spec")
+    assert formal_plot["enabled"] is False
+    assert "formal_deg_plot_requires_formal_computed_result_source" in formal_plot["disabled_reason"]
 
 
 def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:

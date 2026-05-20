@@ -254,23 +254,27 @@ def _plot_action(results: list[dict[str, Any]]) -> dict[str, Any]:
     for entry in results:
         semantics = normalize_result_semantics(entry.get("canonical_result_semantics") or entry.get("result_semantics"))
         result_id = str(entry.get("result_id") or entry.get("result_name") or "")
-        if semantics == "preflight_only":
-            blocked_sources.append(f"{result_id}:preflight_only_source_cannot_generate_formal_plot")
-        elif semantics in {"formal_computed_result", "testing_level", "exploratory", "imported_external_result"}:
+        task_type = str(entry.get("task_type") or "").lower()
+        has_deg_table = any(isinstance(item, dict) and item.get("artifact_type") == "deg_result_table" for item in entry.get("output_artifacts", []) or [])
+        if semantics == "formal_computed_result" and task_type == "deg" and has_deg_table:
             eligible.append(result_id or "result")
+        elif semantics == "preflight_only":
+            blocked_sources.append(f"{result_id}:preflight_only_source_cannot_generate_formal_plot")
+        elif semantics in {"testing_level", "exploratory", "imported_external_result"}:
+            blocked_sources.append(f"{result_id}:formal_deg_plot_requires_formal_computed_result_source")
     if eligible:
         return {
             "action_id": "plot_spec",
-            "label": "Generate plot spec",
+            "label": "Generate formal DEG plot artifact",
             "state": "available",
-            "button_behavior": "enabled_spec_only_source_result_driven",
+            "button_behavior": "enabled_formal_deg_plot_artifact_only",
             "enabled": True,
             "normal_user_visible": True,
             "disabled_reason": "",
-            "next_action": "Use result-index source; generated plots inherit source semantics and are not formal upgrades.",
+            "next_action": "Use formal_computed_result DEG source only; plot artifact inherits source semantics and does not create report-ready output.",
         }
     reason = "; ".join(blocked_sources) if blocked_sources else "No plot-eligible source result in result index."
-    return _disabled("plot_spec", "Generate plot spec", "blocked_missing_result_schema", reason, "Register a plot-eligible result-index source.")
+    return _disabled("plot_spec", "Generate formal DEG plot artifact", "blocked_missing_result_schema", reason, "Register a formal_computed_result DEG result with a DEG result table.")
 
 
 def _markdown_draft_action(results: list[dict[str, Any]], tasks: list[dict[str, Any]]) -> dict[str, Any]:

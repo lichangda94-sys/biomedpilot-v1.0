@@ -15,6 +15,8 @@ class PlotArtifact:
     plot_type: str
     source_result_id: str
     source_result_semantics: str
+    plot_semantics: str = ""
+    plot_artifact_scope: str = "inherited_semantics_plot"
     input_package_id: str = ""
     task_run_id: str = ""
     parameters_manifest: dict[str, Any] = field(default_factory=dict)

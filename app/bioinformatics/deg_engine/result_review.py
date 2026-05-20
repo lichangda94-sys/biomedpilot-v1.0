@@ -239,7 +239,7 @@ def _guard_copy() -> str:
 
 def _disabled_downstream() -> dict[str, str]:
     return {
-        "plot": "Waiting for B9.6 plot artifact gate; volcano/heatmap are disabled here.",
+        "plot": "B9.6 plot artifact gate can register formal DEG plot artifacts only from this formal_computed_result source.",
         "report_ready": "Waiting for B9.7 report-ready gate; export table is not report-ready.",
         "gsea": "GSEA is not entered from B9.5.",
         "survival": "Survival/KM/Cox/log-rank are not entered from B9.5.",
