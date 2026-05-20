@@ -250,12 +250,20 @@ class MainWindow(QMainWindow):
         return frame
 
     def _build_labtools_page(self) -> QWidget:
-        page = QWidget()
+        page = QScrollArea()
         page.setObjectName("labtoolsShellPage")
+        page.setWidgetResizable(True)
         page.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
         page.setProperty("pageKey", "home")
         page.setProperty("semanticKey", PageKey.LABTOOLS_HOME.value)
-        root = QVBoxLayout(page)
+        page.setProperty("usabilityRole", "scrollable_shell_page")
+        page.setAccessibleName("LabTools shell page")
+        content = QWidget()
+        content.setObjectName("labtoolsShellContent")
+        content.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        content.setProperty("pageKey", "home")
+        content.setProperty("semanticKey", PageKey.LABTOOLS_HOME.value)
+        root = QVBoxLayout(content)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
         title = QLabel("LabTools / 实验工具")
@@ -386,6 +394,7 @@ class MainWindow(QMainWindow):
             )
         )
         root.addStretch(1)
+        page.setWidget(content)
         return page
 
     def _labtools_primary_entry_card(self, *, title: str, page_key: str, semantic_key: str, status_key: str, rows: list[str]) -> QFrame:
@@ -474,12 +483,20 @@ class MainWindow(QMainWindow):
 
     def _build_settings_page(self) -> QWidget:
         profile = SettingsProfile()
-        page = QWidget()
+        page = QScrollArea()
         page.setObjectName("settingsPage")
+        page.setWidgetResizable(True)
         page.setProperty("moduleKey", ModuleKey.SETTINGS.value)
         page.setProperty("pageKey", "settings")
         page.setProperty("semanticKey", ModuleKey.SETTINGS.value)
-        root = QVBoxLayout(page)
+        page.setProperty("usabilityRole", "scrollable_shell_page")
+        page.setAccessibleName("Settings shell page")
+        content = QWidget()
+        content.setObjectName("settingsContent")
+        content.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        content.setProperty("pageKey", "settings")
+        content.setProperty("semanticKey", ModuleKey.SETTINGS.value)
+        root = QVBoxLayout(content)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
         title = QLabel("Settings / 设置中心")
@@ -524,6 +541,7 @@ class MainWindow(QMainWindow):
         body.addWidget(stack, 1)
         root.addLayout(body, 1)
         root.addStretch(1)
+        page.setWidget(content)
         return page
 
     def _build_settings_general_page(self, profile: SettingsProfile) -> QWidget:

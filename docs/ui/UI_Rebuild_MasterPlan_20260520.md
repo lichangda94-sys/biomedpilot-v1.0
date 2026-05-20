@@ -24,7 +24,7 @@ Priority order:
 
 ## 2. Current Phase Boundary
 
-Current checkpoint after UI-B9c: selective semantic page key adoption and focused test migration expansion.
+Current checkpoint after UI-C0: low-fidelity shell usability pass.
 
 Completed:
 
@@ -44,6 +44,7 @@ Completed:
 - UI-B9a: semantic key registry.
 - UI-B9b: key adoption / test migration.
 - UI-B9c: selective key adoption / test migration expansion.
+- UI-C0: low-fidelity shell usability pass.
 
 Partially completed:
 
@@ -63,7 +64,7 @@ Current hard boundary:
 Recommended next stage:
 
 - UI-B8b formal resource replacement only after brand/resource confirmation, or
-- module-specific selective key adoption follow-up if a new shell surface is added.
+- UI-C1 module-specific usability follow-up if a new shell surface needs deeper calibration.
 
 ## 3. Rebuild Principles
 
@@ -359,13 +360,15 @@ Critical rules:
 
 ## 11. Immediate Next Stage
 
-After UI-B0, proceed to UI-B1:
+After UI-C0, proceed only with one of the following confirmed next stages:
 
 ```text
-Design tokens / theme / basic primitives
+UI-C1: module-specific usability follow-up, if deeper shell calibration is needed
+UI-B8b: formal resource replacement, only after brand/resource confirmation
+UI-B10: packaging / desktop entry, only when explicitly authorized
 ```
 
-Do not proceed directly to UI-B2 until UI-B1 creates enough shared token and component foundation.
+Do not treat UI-C0 as permission to replace icons, bind App icons, update Finder/LaunchServices metadata, or run packaged app validation.
 
 ## 12. UI-B0 Completion Statement
 

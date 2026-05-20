@@ -7,12 +7,13 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QScrollArea
 
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import ModuleKey, PageKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
+    QScrollArea = None  # type: ignore[assignment]
     MainWindow = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
@@ -39,7 +40,12 @@ def labtools_window(qt_app):
 
 def test_labtools_entry_is_reachable_from_global_shell(labtools_window) -> None:
     assert labtools_window.current_workspace_key() == "labtools"
+    page = labtools_window.findChild(QScrollArea, "labtoolsShellPage")
     title = labtools_window.findChild(QLabel, "labtoolsShellTitle")
+    assert page is not None
+    assert page.widgetResizable()
+    assert page.property("usabilityRole") == "scrollable_shell_page"
+    assert page.accessibleName() == "LabTools shell page"
     assert title is not None
     assert title.property("moduleKey") == ModuleKey.LABTOOLS.value
     assert title.property("semanticKey") == ModuleKey.LABTOOLS.value

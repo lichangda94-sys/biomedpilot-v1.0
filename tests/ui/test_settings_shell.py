@@ -8,13 +8,14 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QListWidget, QPushButton, QStackedWidget, QToolButton
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel, QListWidget, QPushButton, QScrollArea, QStackedWidget, QToolButton
 
     from app.shell.main_window import MainWindow
     from app.shared.semantic_keys import ModuleKey, PageKey
 except Exception as exc:  # pragma: no cover - depends on optional local GUI runtime.
     QApplication = None  # type: ignore[assignment]
     Qt = None  # type: ignore[assignment]
+    QScrollArea = None  # type: ignore[assignment]
     MainWindow = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
@@ -42,8 +43,13 @@ def settings_window(qt_app):
 def test_settings_shell_exposes_secondary_navigation(settings_window) -> None:
     nav = settings_window.findChild(QListWidget, "settingsSecondaryNav")
     stack = settings_window.findChild(QStackedWidget, "settingsContentStack")
+    page = settings_window.findChild(QScrollArea, "settingsPage")
 
     assert settings_window.current_workspace_key() == "settings"
+    assert page is not None
+    assert page.widgetResizable()
+    assert page.property("usabilityRole") == "scrollable_shell_page"
+    assert page.accessibleName() == "Settings shell page"
     assert nav is not None
     assert [nav.item(index).data(Qt.UserRole + 1) for index in range(nav.count())] == [
         PageKey.SETTINGS_GENERAL.value,

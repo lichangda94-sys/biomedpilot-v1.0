@@ -66,3 +66,7 @@ def test_sidebar_buttons_expose_semantic_nav_keys(qt_app) -> None:
 
     assert [button.property("pageKey") for button in buttons] == [item.key for item in COMMON_SIDEBAR_ITEMS]
     assert [button.property("semanticKey") for button in buttons] == [item.semantic_key for item in COMMON_SIDEBAR_ITEMS]
+    assert [button.property("usabilityRole") for button in buttons[:5]] == ["primary_navigation"] * 5
+    assert [button.property("usabilityRole") for button in buttons[5:]] == ["auxiliary_navigation"] * 2
+    assert all(button.accessibleName() for button in buttons)
+    assert all(button.minimumHeight() >= 36 for button in buttons)

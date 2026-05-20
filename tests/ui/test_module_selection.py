@@ -107,6 +107,8 @@ def test_three_module_cards_are_visible(qt_app, local_session: LocalSession) -> 
         ModuleKey.META_ANALYSIS.value,
         ModuleKey.LABTOOLS.value,
     ]
+    assert all(card.property("usabilityRole") == "module_entry_card" for card in module_cards)
+    assert all(card.accessibleName() for card in module_cards)
     assert [label.property("semanticKey") for label in module_titles] == [card.property("moduleKey") for card in module_cards]
     assert len(icons) == 3
     assert len(visible_icons) == 3
@@ -120,6 +122,8 @@ def test_bioinformatics_button_triggers_callback(qt_app, local_session: LocalSes
     assert button.property("moduleKey") == ModuleKey.BIOINFORMATICS.value
     assert button.property("navKey") == NavKey.BIOINFORMATICS.value
     assert button.property("semanticKey") == ModuleKey.BIOINFORMATICS.value
+    assert button.property("usabilityRole") == "module_entry_action"
+    assert button.accessibleName()
     assert not button.icon().isNull()
     button.click()
 

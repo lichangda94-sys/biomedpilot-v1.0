@@ -40,6 +40,9 @@ def test_welcome_page_uses_existing_icons_without_replacing_resources(qt_app) ->
     assert brand_icon is not None
     assert brand_icon.pixmap() is not None and not brand_icon.pixmap().isNull()
     assert enter_button is not None and not enter_button.icon().isNull()
+    assert enter_button.isDefault()
+    assert enter_button.accessibleName() == "Enter local workspace"
+    assert enter_button.property("usabilityRole") == "primary_entry_action"
 
 
 def test_welcome_page_removes_visible_credential_flow(qt_app) -> None:
