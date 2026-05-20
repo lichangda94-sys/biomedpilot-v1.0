@@ -63,6 +63,9 @@
         },
         "report_label_allowed": {
           "type": "boolean"
+        },
+        "profile_hint_allowed": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

@@ -23,8 +23,8 @@ def test_shared_core_pollution_inventory_artifacts_exist_and_do_not_modify_runti
     assert len(manual_review) > 0
     assert (TERMS / "mini_medical_terms_index.json").exists()
     assert (TERMS / "zh_term_overrides.json").exists()
-    assert not (TERMS / "meta_analysis" / "meta_migrated_from_shared_terms.json").exists()
-    assert not (TERMS / "meta_analysis" / "legacy_meta_compatibility_map.json").exists()
+    assert (TERMS / "meta_analysis" / "meta_migrated_from_shared_terms.json").exists()
+    assert (TERMS / "meta_analysis" / "legacy_meta_compatibility_map.json").exists()
 
 
 def test_shared_core_pollution_inventory_classifies_known_meta_terms() -> None:
@@ -84,6 +84,7 @@ def test_scope_usage_schema_contains_required_fields_and_allowed_values() -> Non
         "compatibility_alias",
         "active_in_shared",
     } <= set(schema["properties"]["migration"]["required"])
+    assert "profile_hint_allowed" in schema["properties"]["usage"]["properties"]
 
 
 def test_inventory_docs_exist() -> None:

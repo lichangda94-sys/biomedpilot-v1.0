@@ -53,6 +53,7 @@ Other usage fields:
 - `usage.pdf_extraction_target`
 - `usage.analysis_plan_allowed`
 - `usage.report_label_allowed`
+- `usage.profile_hint_allowed`
 
 ## Context Fields
 
