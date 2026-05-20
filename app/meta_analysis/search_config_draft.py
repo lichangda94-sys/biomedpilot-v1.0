@@ -79,6 +79,7 @@ class MetaUserEditedSearchPlan:
     edited_pubmed_query_draft: str
     user_notes: str
     guard_overrides: tuple[MetaSearchPlanGuardOverride, ...]
+    guard_override_confirmed: bool
     updated_at: str
 
     def to_dict(self) -> dict[str, object]:
@@ -148,6 +149,7 @@ def build_user_edited_search_plan(
     edited_pubmed_query_draft: str | None = None,
     user_notes: str = "",
     guard_overrides: list[dict[str, str]] | tuple[dict[str, str], ...] | None = None,
+    guard_override_confirmed: bool = False,
 ) -> MetaUserEditedSearchPlan:
     selected_ids = tuple(selected_concept_ids if selected_concept_ids is not None else _included_concept_ids(draft))
     included_blocks = tuple(included_pubmed_query_blocks if included_pubmed_query_blocks is not None else draft.pubmed_query_blocks)
@@ -167,6 +169,7 @@ def build_user_edited_search_plan(
         edited_pubmed_query_draft=edited_query,
         user_notes=user_notes.strip(),
         guard_overrides=overrides,
+        guard_override_confirmed=bool(guard_override_confirmed),
         updated_at=_now(),
     )
 
@@ -218,6 +221,7 @@ def reject_meta_seed_search_config_draft(
             "edited_pubmed_query_draft": "",
             "user_notes": user_notes.strip(),
             "guard_overrides": [],
+            "guard_override_confirmed": False,
             "updated_at": _now(),
         },
         "confirmed_search_plan": None,

@@ -14,6 +14,10 @@ from app.meta_analysis.search_config_draft import (
     save_meta_seed_search_config_draft,
     save_rejected_search_config_draft,
 )
+from app.meta_analysis.search_execution_preflight import (
+    build_pubmed_search_execution_plan,
+    save_pubmed_search_execution_plan,
+)
 
 
 def test_meta_seed_search_config_draft_handles_four_chinese_examples() -> None:
@@ -206,3 +210,84 @@ def test_guard_override_records_warning_and_not_safe_by_default() -> None:
     assert "not automatically considered safe" in edited.guard_overrides[0].warning
     assert any("Guard override requested for meta_effect:hazard_ratio" in warning for warning in confirmed.warnings)
     assert "hazard ratio" not in draft.pubmed_query_draft.lower()
+
+
+def test_pubmed_search_execution_preflight_generates_plan_without_retrieval(tmp_path) -> None:
+    project = create_meta_analysis_project("PubMed Preflight", tmp_path)
+    draft = build_meta_seed_search_config_draft("糖尿病前期与甲状腺癌风险的关系")
+    edited = build_user_edited_search_plan(
+        draft,
+        edited_pubmed_query_draft=f"{draft.pubmed_query_draft} AND humans[Filter]",
+        user_notes="Ready for preflight only.",
+    )
+    save_confirmed_search_plan(project.project_root, draft, edited, user_confirmed=True)
+
+    plan_path = save_pubmed_search_execution_plan(project.project_root)
+    payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    config = json.loads((project.project_root / "meta_project_config.json").read_text(encoding="utf-8"))
+
+    assert plan_path.name == "search_execution_plan.json"
+    assert payload["plan_status"] == "preflight_ready"
+    assert payload["database"] == "PubMed"
+    assert payload["execution_mode"] == "manual_preflight_only"
+    assert payload["search_execution_status"] == "not_executed"
+    assert payload["online_retrieval_executed"] is False
+    assert "humans[Filter]" in payload["query"]
+    assert payload["fields"] == ["MeSH Terms", "Title/Abstract", "Filter"]
+    assert payload["limits"] == ["none_applied_by_executor"]
+    assert any("PubMed was not queried" in warning for warning in payload["warnings"])
+    assert config["search_execution_preflight"]["search_execution_status"] == "not_executed"
+
+
+def test_pubmed_search_execution_preflight_requires_confirmed_plan_and_nonempty_query(tmp_path) -> None:
+    project = create_meta_analysis_project("Invalid Preflight", tmp_path)
+    draft = build_meta_seed_search_config_draft("二甲双胍治疗2型糖尿病的疗效")
+    edited = build_user_edited_search_plan(draft, edited_pubmed_query_draft="")
+    confirmed_path = save_confirmed_search_plan(project.project_root, draft, edited, user_confirmed=True)
+
+    with pytest.raises(ValueError, match="Confirmed PubMed query draft is empty"):
+        build_pubmed_search_execution_plan(confirmed_path)
+
+    confirmed_payload = json.loads(confirmed_path.read_text(encoding="utf-8"))
+    confirmed_payload["review_status"] = "needs_edit"
+    confirmed_path.write_text(json.dumps(confirmed_payload, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="review_status=user_confirmed"):
+        build_pubmed_search_execution_plan(confirmed_path)
+
+
+def test_pubmed_search_execution_preflight_requires_guard_override_confirmation(tmp_path) -> None:
+    project = create_meta_analysis_project("Override Preflight", tmp_path)
+    draft = build_meta_seed_search_config_draft("肥胖与乳腺癌风险的Meta分析，报告HR")
+    edited = build_user_edited_search_plan(
+        draft,
+        guard_overrides=[
+            {
+                "concept_id": "meta_effect:hazard_ratio",
+                "requested_action": "include_in_pubmed_topic_query",
+                "reason": "Reviewer wants HR in the manual strategy.",
+            }
+        ],
+    )
+    confirmed_path = save_confirmed_search_plan(project.project_root, draft, edited, user_confirmed=True)
+
+    with pytest.raises(ValueError, match="Guard override warnings must be explicitly confirmed"):
+        build_pubmed_search_execution_plan(confirmed_path)
+
+    confirmed_edited = build_user_edited_search_plan(
+        draft,
+        guard_overrides=[
+            {
+                "concept_id": "meta_effect:hazard_ratio",
+                "requested_action": "include_in_pubmed_topic_query",
+                "reason": "Reviewer explicitly confirmed the guard warning.",
+            }
+        ],
+        guard_override_confirmed=True,
+    )
+    save_confirmed_search_plan(project.project_root, draft, confirmed_edited, user_confirmed=True)
+    plan = build_pubmed_search_execution_plan(project.project_root)
+
+    assert plan.guard_override_confirmed is True
+    assert any("Guard override requested for meta_effect:hazard_ratio" in warning for warning in plan.warnings)
+    assert plan.online_retrieval_executed is False

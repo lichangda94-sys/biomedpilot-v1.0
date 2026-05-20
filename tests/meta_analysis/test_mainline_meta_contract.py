@@ -100,3 +100,19 @@ def test_mainline_meta_workspace_confirms_seed_search_plan(qt_app, tmp_path) -> 
     assert confirmed_path.name == "confirmed_search_plan.json"
     assert confirmed_path.exists()
     assert "仍未执行在线检索" in widget._search_config_status_label.text()
+
+
+def test_mainline_meta_workspace_generates_pubmed_preflight_after_confirmation(qt_app, tmp_path) -> None:
+    from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
+
+    project = create_meta_analysis_project("Meta Preflight UI", tmp_path)
+    widget = MetaAnalysisWorkspaceWidget()
+    widget.set_project_dir(project.project_root)
+    widget.generate_seed_search_config_preview("糖尿病前期与甲状腺癌风险的关系")
+    widget.confirm_seed_search_config_plan()
+
+    preflight_path = widget.generate_pubmed_search_execution_preflight()
+
+    assert preflight_path.name == "search_execution_plan.json"
+    assert preflight_path.exists()
+    assert "仍未联网检索或下载题录" in widget._search_config_status_label.text()

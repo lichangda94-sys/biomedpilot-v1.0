@@ -18,6 +18,7 @@ from app.meta_analysis.search_config_draft import (
     save_meta_seed_search_config_draft,
     save_rejected_search_config_draft,
 )
+from app.meta_analysis.search_execution_preflight import save_pubmed_search_execution_plan
 from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
 
 try:
@@ -219,6 +220,13 @@ if QWidget is not None:
             self._search_config_status_label.setText(f"已拒绝草稿：{path}；不会进入后续 workflow。")
             return path
 
+        def generate_pubmed_search_execution_preflight(self) -> Path:
+            if self._current_project_dir is None:
+                raise ValueError("请先绑定 Meta 项目，再生成 PubMed 检索执行预检。")
+            path = save_pubmed_search_execution_plan(self._current_project_dir)
+            self._search_config_status_label.setText(f"已生成 PubMed preflight：{path}；仍未联网检索或下载题录。")
+            return path
+
         def _build_ui(self) -> None:
             root = QVBoxLayout(self)
             root.setContentsMargins(18, 18, 18, 18)
@@ -311,16 +319,20 @@ if QWidget is not None:
             confirm_button.setObjectName("metaConfirmSearchPlanButton")
             reject_button = QPushButton("拒绝草稿")
             reject_button.setObjectName("metaRejectSearchDraftButton")
+            preflight_button = QPushButton("生成执行预检")
+            preflight_button.setObjectName("metaGenerateSearchPreflightButton")
             generate_button.clicked.connect(
                 lambda: self.generate_seed_search_config_preview(self._search_question_input.toPlainText())
             )
             save_button.clicked.connect(self.save_seed_search_config_preview)
             confirm_button.clicked.connect(self.confirm_seed_search_config_plan)
             reject_button.clicked.connect(self.reject_seed_search_config_draft)
+            preflight_button.clicked.connect(self.generate_pubmed_search_execution_preflight)
             button_row.addWidget(generate_button)
             button_row.addWidget(save_button)
             button_row.addWidget(confirm_button)
             button_row.addWidget(reject_button)
+            button_row.addWidget(preflight_button)
             button_row.addStretch(1)
             self._search_config_status_label = QLabel("尚未生成检索配置草稿。")
             self._search_config_status_label.setObjectName("metaSearchConfigDraftStatus")
