@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 from pathlib import Path
 
 from app.bioinformatics.download import dataset_download_service
 from app.bioinformatics.download import DatasetDownloadService, GeoStudyTextInput, GeoTextSummaryService
+from app.bioinformatics.gse_file_download_candidates import (
+    build_gse_file_download_candidates,
+    save_gse_file_download_candidate_selection,
+)
 from app.bioinformatics.search_center.models import UnifiedDatasetCandidate
 from app.shared.ai_gateway.models import AIGatewayResponse
 
@@ -164,6 +169,23 @@ class _FakeGeoRemoteAssetDownloader:
         return {"status": "success", "local_path": str(path), "bytes_downloaded": path.stat().st_size}
 
 
+class _FakeStandardDownloader:
+    def download_file(self, entry: dict[str, object], target_dir: Path) -> dict[str, object]:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        file_name = str(entry.get("file_name") or entry.get("filename") or "downloaded.json")
+        path = target_dir / Path(file_name).name
+        if file_name.endswith(".tsv"):
+            path.write_text("gene\tTCGA-AB-1234-01A\nTP53\t12\n", encoding="utf-8")
+        else:
+            path.write_text('{"downloaded": true}\n', encoding="utf-8")
+        return {
+            "status": "success",
+            "local_path": str(path),
+            "bytes_downloaded": path.stat().st_size,
+            "source_url": str(entry.get("url") or entry.get("download_url") or entry.get("source_url") or "https://example.org/file"),
+        }
+
+
 def test_geo_candidate_download_task_writes_request_receipt_and_plan_record(tmp_path: Path) -> None:
     root = tmp_path / "project"
     service = DatasetDownloadService()
@@ -225,6 +247,9 @@ def test_geo_candidate_execute_download_registers_downloaded_file_as_reference(t
     assert record["metadata"]["ready_for_recognition"] == "ready"
     assert record["metadata"]["asset_manifest_path"] == str(manifest_path)
     assert record["metadata"]["asset_manifest_summary"]["expression_matrix_status"] == "remote_discovered"
+    assert record["metadata"]["source_manifest_path"]
+    source_manifest = json.loads(Path(record["metadata"]["source_manifest_path"]).read_text(encoding="utf-8"))
+    assert source_manifest["summary"]["sha256_recorded_count"] == 1
 
 
 def test_geo_manifest_assets_download_updates_manifest_and_registers_files(tmp_path: Path) -> None:
@@ -263,6 +288,50 @@ def test_geo_manifest_assets_download_updates_manifest_and_registers_files(tmp_p
     assert record["metadata"]["asset_manifest_summary"]["expression_matrix_status"] == "downloaded"
 
 
+def test_geo_manifest_assets_download_respects_candidate_selection_manifest(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    service = DatasetDownloadService(
+        geo_downloader=_FakeGeoDownloader(),
+        geo_asset_discoverer=_FakeGeoAssetDiscoverer(),
+        geo_asset_downloader=_FakeGeoRemoteAssetDownloader(),
+    )
+    metadata = service.create_candidate_download_task(
+        project_root=root,
+        candidate=_candidate(),
+        original_chinese_topic="脑胶质瘤",
+        execute_download=True,
+    )
+    draft = build_gse_file_download_candidates(project_root=root, accession="GSE33630")
+    series_id = next(row["candidate_id"] for row in draft["candidates"] if row["file_name"].endswith("_series_matrix.txt.gz"))
+    selection_path = save_gse_file_download_candidate_selection(
+        project_root=root,
+        accession="GSE33630",
+        selected_candidate_ids=(series_id,),
+    )
+
+    result = service.download_geo_manifest_assets(project_root=root, accession_or_project="GSE33630")
+
+    assert metadata.status == "geo_metadata_downloaded"
+    assert result.success
+    assert len(result.downloaded_files) == 1
+    assert Path(result.downloaded_files[0]).name.endswith("_series_matrix.txt.gz")
+    receipt = json.loads(Path(result.receipt_path).read_text(encoding="utf-8"))
+    assert receipt["download_result"]["selection_applied"] is True
+    assert receipt["download_result"]["selection_manifest_path"] == str(selection_path)
+    assert receipt["download_result"]["selected_file_names"] == ["GSE33630-GPL570_series_matrix.txt.gz"]
+    request = json.loads(Path(result.request_path).read_text(encoding="utf-8"))
+    assert request["metadata"]["download_candidate_selection_applied"] is True
+    assert request["metadata"]["selected_file_names"] == ["GSE33630-GPL570_series_matrix.txt.gz"]
+    manifest = json.loads(Path(str(result.details["asset_manifest_path"])).read_text(encoding="utf-8"))
+    statuses = {asset["file_name"]: asset["status"] for asset in manifest["assets"]}
+    assert statuses["GSE33630-GPL570_series_matrix.txt.gz"] == "downloaded"
+    assert statuses["GSE33630_counts.tsv.gz"] == "remote_discovered"
+    assert result.acquisition_summary is not None
+    record = json.loads(result.acquisition_summary.record_path.read_text(encoding="utf-8"))
+    assert record["source_files"] == list(result.downloaded_files)
+    assert record["metadata"]["download_candidate_selection_path"] == str(selection_path)
+
+
 def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:
     service = DatasetDownloadService()
     tcga = service.create_candidate_download_task(
@@ -286,9 +355,23 @@ def test_tcga_and_gtex_download_tasks_do_not_fake_files(tmp_path: Path) -> None:
     assert "创建组织下载清单" in gtex.message
 
 
-def test_tcga_and_gtex_execute_download_creates_manifests_without_fake_data_files(tmp_path: Path) -> None:
+def test_tcga_and_gtex_execute_download_downloads_real_files_and_records_manifest(tmp_path: Path) -> None:
     root = tmp_path / "project"
-    service = DatasetDownloadService()
+    service = DatasetDownloadService(gdc_file_downloader=_FakeStandardDownloader(), gtex_file_downloader=_FakeStandardDownloader())
+    gtex_candidate = replace(
+        _candidate("gtex", "GTEX-THYROID"),
+        source_specific_metadata={
+            **_candidate("gtex", "GTEX-THYROID").source_specific_metadata,
+            "download_assets": [
+                {
+                    "url": "https://example.org/gtex_thyroid_tpm.tsv",
+                    "file_name": "gtex_thyroid_tpm.tsv",
+                    "asset_type": "gtex_tissue_expression",
+                    "role": "gtex_tissue_expression",
+                }
+            ],
+        },
+    )
 
     tcga = service.create_candidate_download_task(
         project_root=root,
@@ -298,17 +381,17 @@ def test_tcga_and_gtex_execute_download_creates_manifests_without_fake_data_file
     )
     gtex = service.create_candidate_download_task(
         project_root=root,
-        candidate=_candidate("gtex", "GTEX-THYROID"),
+        candidate=gtex_candidate,
         original_chinese_topic="甲状腺癌",
         execute_download=True,
     )
 
     assert tcga.success
     assert gtex.success
-    assert tcga.status == "tcga_gdc_download_manifest_created"
-    assert gtex.status == "gtex_download_manifest_created"
-    assert tcga.downloaded_files == ()
-    assert gtex.downloaded_files == ()
+    assert tcga.status == "tcga_gdc_files_downloaded"
+    assert gtex.status == "gtex_files_downloaded"
+    assert len(tcga.downloaded_files) == 1
+    assert len(gtex.downloaded_files) == 1
     tcga_manifest = Path(str(tcga.details["download_manifest_path"]))
     gtex_manifest = Path(str(gtex.details["download_manifest_path"]))
     assert tcga_manifest.exists()
@@ -317,15 +400,57 @@ def test_tcga_and_gtex_execute_download_creates_manifests_without_fake_data_file
     tcga_payload = json.loads(tcga_manifest.read_text(encoding="utf-8"))
     gtex_payload = json.loads(gtex_manifest.read_text(encoding="utf-8"))
     assert tcga_payload["file_manifest_entries"][0]["file_id"] == "tcga-file-1"
-    assert tcga_payload["status"] == "pending_data_file_download"
-    assert gtex_payload["recommended_assets"][0]["input_eligible"] is False
-    assert gtex_payload["status"] == "pending_data_file_download"
+    assert tcga_payload["status"] == "downloaded"
+    assert gtex_payload["recommended_assets"][0]["input_eligible"] is True
+    assert gtex_payload["status"] == "downloaded"
+    assert tcga.details["file_records"][0]["sha256"]
+    assert gtex.details["file_records"][0]["sha256"]
     assert tcga.acquisition_summary is not None
     tcga_record_path = root / "acquisition" / "records" / f"{tcga.acquisition_summary.acquisition_id}.json"
     tcga_record = json.loads(tcga_record_path.read_text(encoding="utf-8"))
-    assert tcga_record["strategy"] == "plan_only"
+    assert tcga_record["strategy"] == "reference"
+    assert tcga_record["source_files"] == list(tcga.downloaded_files)
     assert tcga_record["metadata"]["download_manifest_path"] == str(tcga_manifest)
-    assert tcga_record["metadata"]["ready_for_recognition"] == "pending_source_download"
+    assert tcga_record["metadata"]["ready_for_recognition"] == "pending_expression_matrix_build"
+    assert tcga_record["metadata"]["analysis_gate_status"] == "waiting_b6_4_expression_matrix_build"
+    assert tcga_record["metadata"]["source_manifest_path"]
+    source_manifest = json.loads(Path(tcga_record["metadata"]["source_manifest_path"]).read_text(encoding="utf-8"))
+    assert source_manifest["summary"]["real_file_count"] == 1
+
+
+def test_tcga_execute_download_blocks_controlled_and_raw_files(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    service = DatasetDownloadService(gdc_file_downloader=_FakeStandardDownloader())
+    candidate = _candidate("tcga_gdc", "TCGA-THCA")
+    metadata = dict(candidate.source_specific_metadata)
+    metadata["file_manifest_entries"] = [
+        *metadata["file_manifest_entries"],
+        {
+            "file_id": "controlled-bam",
+            "file_name": "TCGA-THCA.bam",
+            "md5sum": "",
+            "file_size": 10,
+            "state": "released",
+            "access": "controlled",
+            "data_category": "Sequencing Reads",
+            "data_type": "Aligned Reads",
+            "workflow_type": "BWA",
+        },
+    ]
+    candidate = replace(candidate, source_specific_metadata=metadata)
+
+    result = service.create_candidate_download_task(
+        project_root=root,
+        candidate=candidate,
+        original_chinese_topic="甲状腺癌",
+        execute_download=True,
+    )
+
+    assert result.success
+    assert len(result.downloaded_files) == 1
+    statuses = [record["status"] for record in result.details["file_records"]]
+    assert "blocked" in statuses
+    assert any(record["message"] == "controlled_access_blocked" for record in result.details["file_records"])
 
 
 def test_geo_supplementary_role_detects_cpm_and_exp_workbooks() -> None:

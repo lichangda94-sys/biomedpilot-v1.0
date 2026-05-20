@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
+from app.bioinformatics.acquisition_file_records import build_file_record, write_source_manifest
 from app.bioinformatics.legacy.geo_processing.module1_contracts import build_download_plan_payload
 
 
@@ -30,6 +31,7 @@ class AcquisitionSummary:
     plan_path: Path
     record_path: Path
     handoff_path: Path
+    source_files: tuple[str, ...]
     registered_files: tuple[str, ...]
     copied_files: tuple[str, ...]
     referenced_paths: tuple[str, ...]
@@ -44,6 +46,7 @@ def register_acquisition(
     strategy: AcquisitionStrategy,
     selected_paths: list[str | Path] | None = None,
     metadata: dict[str, object] | None = None,
+    file_records: list[dict[str, object]] | None = None,
 ) -> AcquisitionSummary:
     root = Path(project_root).expanduser().resolve()
     _ensure_acquisition_dirs(root)
@@ -75,7 +78,41 @@ def register_acquisition(
     else:
         raise ValueError(f"Unsupported acquisition strategy: {strategy}")
 
-    plan = _build_plan(root, acquisition_id, source_type, source_label, strategy, selected, metadata or {})
+    metadata = dict(metadata or {})
+    file_record_paths = copied_files if strategy == "copy" else referenced_paths if strategy == "reference" else []
+    normalized_file_records = list(file_records or [])
+    if not normalized_file_records:
+        normalized_file_records = [
+            build_file_record(
+                path,
+                source=source_type,
+                role=_file_role_from_source_type(source_type),
+                status="copied" if strategy == "copy" else "referenced",
+                source_path=_source_path_for_record(path, selected),
+            )
+            for path in file_record_paths
+        ]
+    if normalized_file_records and not metadata.get("source_manifest_path"):
+        manifest_path = root / "acquisition" / "source_manifests" / f"{acquisition_id}_source_manifest.json"
+        manifest = write_source_manifest(
+            manifest_path,
+            acquisition_id=acquisition_id,
+            source_type=source_type,
+            source_label=source_label,
+            source=source_type,
+            file_records=normalized_file_records,
+            receipt_path=str(metadata.get("download_receipt_path") or ""),
+            request_path=str(metadata.get("download_request_path") or ""),
+        )
+        metadata["source_manifest_path"] = str(manifest_path)
+        metadata["file_records_summary"] = manifest.get("summary", {})
+    elif normalized_file_records and metadata.get("file_records_summary") is None:
+        metadata["file_records_summary"] = {
+            "file_count": len(normalized_file_records),
+            "real_file_count": len(normalized_file_records),
+        }
+
+    plan = _build_plan(root, acquisition_id, source_type, source_label, strategy, selected, metadata)
     record = {
         "schema_version": "biomedpilot.acquisition_record.v1",
         "acquisition_id": acquisition_id,
@@ -84,11 +121,12 @@ def register_acquisition(
         "strategy": strategy,
         "created_at": created_at,
         "status": "planned" if strategy == "plan_only" else "registered",
+        "source_files": registered_files,
         "registered_files": registered_files,
         "copied_files": copied_files,
         "referenced_paths": referenced_paths,
         "warnings": warnings,
-        "metadata": dict(metadata or {}),
+        "metadata": metadata,
     }
     handoff = {
         "schema_version": "biomedpilot.acquisition_handoff.v1",
@@ -99,6 +137,7 @@ def register_acquisition(
         "created_at": created_at,
         "next_stage": "data_recognition" if strategy != "plan_only" and not warnings else "complete_acquisition_inputs",
         "raw_data_locations": _raw_locations(root),
+        "source_files": registered_files,
         "registered_files": registered_files,
         "copied_files": copied_files,
         "referenced_paths": referenced_paths,
@@ -172,6 +211,7 @@ def acquisition_summary_from_payload(
         plan_path=plan_path,
         record_path=record_path,
         handoff_path=handoff_path,
+        source_files=tuple(str(item) for item in record.get("source_files", record.get("registered_files", [])) or []),
         registered_files=tuple(str(item) for item in record.get("registered_files", []) or []),
         copied_files=tuple(str(item) for item in record.get("copied_files", []) or []),
         referenced_paths=tuple(str(item) for item in record.get("referenced_paths", []) or []),
@@ -234,7 +274,7 @@ def _copy_selected_path(source: Path, target_root: Path) -> list[str]:
 
 
 def _ensure_acquisition_dirs(root: Path) -> None:
-    for relative in ("acquisition/plans", "acquisition/handoffs", "acquisition/records"):
+    for relative in ("acquisition/plans", "acquisition/handoffs", "acquisition/records", "acquisition/source_manifests"):
         (root / relative).mkdir(parents=True, exist_ok=True)
     for relative in ("raw_data/local_import", "raw_data/geo", "raw_data/tcga", "raw_data/gtex"):
         (root / relative).mkdir(parents=True, exist_ok=True)
@@ -257,6 +297,26 @@ def _raw_locations(root: Path) -> dict[str, str]:
         "tcga": str(root / "raw_data" / "tcga"),
         "gtex": str(root / "raw_data" / "gtex"),
     }
+
+
+def _file_role_from_source_type(source_type: str) -> str:
+    if "geo" in source_type:
+        return "geo_acquisition_file"
+    if "tcga" in source_type:
+        return "tcga_acquisition_file"
+    if "gtex" in source_type:
+        return "gtex_acquisition_file"
+    return "local_import_file"
+
+
+def _source_path_for_record(local_path: str, selected: list[Path]) -> str:
+    path = Path(local_path)
+    for source in selected:
+        if source.is_file() and source.name == path.name:
+            return str(source)
+        if source.is_dir() and path.name:
+            return str(source)
+    return str(path)
 
 
 def _now() -> str:

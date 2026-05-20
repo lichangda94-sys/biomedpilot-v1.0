@@ -12,6 +12,10 @@ from app.bioinformatics.project_readiness import load_readiness_artifacts
 STANDARDIZED_REGISTRY = Path("manifests") / "standardized_assets_registry.json"
 ANALYSIS_READY_MANIFEST = Path("standardized_data") / "analysis_ready_assets" / "analysis_ready_manifest.json"
 DATA_PROCESSING_TASK_PLAN = Path("manifests") / "data_processing_task_plan.json"
+REPOSITORY_MANIFEST = Path("standardized_data") / "repositories" / "repository_manifest.json"
+REPOSITORY_VALIDATION_REPORT = Path("standardized_data") / "repositories" / "validation_report.json"
+REPOSITORY_ASSET_LINEAGE = Path("standardized_data") / "repositories" / "asset_lineage.jsonl"
+ANALYSIS_INPUT_REPOSITORY = Path("standardized_data") / "repositories" / "analysis_input_repository"
 EXCLUDED_STANDARDIZATION_TYPES = {
     "unknown",
     "unsupported",
@@ -57,7 +61,9 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
                     in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "sample_metadata", "phenotype_metadata", "clinical_metadata", "survival_metadata", "gmt_gene_set"},
                 }
             )
+    assets.extend(_supplemental_manifest_assets(root, len(assets) + 1))
     assets = _assign_unique_asset_ids(_dedupe_standardized_assets(assets))
+    assets = [_normalize_repository_asset(asset) for asset in assets]
     warnings.extend(_content_block_warnings(assets))
     readiness = load_readiness_artifacts(root).get("capability_matrix") or {}
     usable = [
@@ -66,12 +72,27 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
         if isinstance(row, dict) and row.get("can_run")
     ]
     missing = sorted({missing for row in readiness.get("rows", []) or [] if isinstance(row, dict) for missing in row.get("missing_inputs", []) or []})  # type: ignore[union-attr]
+    default_asset_selection = _default_asset_selection(assets)
+    repository_manifest = {
+        "schema_version": "biomedpilot.repository_manifest.v1",
+        "generated_at": _now(),
+        "project_root": str(root),
+        "assets": assets,
+        "default_asset_selection": default_asset_selection,
+        "source_state": {
+            "recognition_current": current_recognition.get("current") or {},
+            "source_state_hash": str((current_recognition.get("current") or {}).get("run_id") or ""),
+        },
+        "warnings": warnings,
+    }
+    analysis_input_packages = _analysis_input_packages(assets)
     registry = {
-        "schema_version": "biomedpilot.standardized_assets_registry.v1",
+        "schema_version": "biomedpilot.standardized_assets_registry.v2",
         "generated_at": _now(),
         "project_root": str(root),
         "assets": assets,
         "standardized_assets": assets,
+        "default_asset_selection": default_asset_selection,
         "current_recognition_run": current_recognition.get("current") or {},
         "warnings": warnings,
     }
@@ -87,6 +108,9 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
         "generated_at": registry["generated_at"],
         "exists": bool(assets),
         "standardized_assets": assets,
+        "assets": assets,
+        "analysis_input_packages": analysis_input_packages,
+        "repository_manifest_path": str(root / REPOSITORY_MANIFEST),
         "usable_analyses": usable,
         "missing_assets": missing,
         "warnings": warnings,
@@ -94,12 +118,27 @@ def generate_standardized_assets(project_root: str | Path) -> dict[str, object]:
     _write_json(root / STANDARDIZED_REGISTRY, registry)
     _write_json(root / ANALYSIS_READY_MANIFEST, manifest)
     _write_json(root / DATA_PROCESSING_TASK_PLAN, processing_plan)
-    return {"registry": registry, "analysis_ready_manifest": manifest, "data_processing_task_plan": processing_plan}
+    _write_repository_state(root, repository_manifest, analysis_input_packages)
+    return {
+        "registry": registry,
+        "analysis_ready_manifest": manifest,
+        "data_processing_task_plan": processing_plan,
+        "repository_manifest": repository_manifest,
+    }
 
 
 def _load_current_recognition_run(root: Path) -> dict[str, object]:
     current_path = root / CURRENT_RECOGNITION_RUN
     if not current_path.exists():
+        legacy_report_path = root / "logs" / "recognition" / "recognition_report.json"
+        if legacy_report_path.exists():
+            report = _read_json(legacy_report_path)
+            return {
+                "current": {"recognition_report_path": str(legacy_report_path), "source": "legacy_recognition_report"},
+                "recognition_report": report,
+                "recognized_files": report,
+                "warnings": [],
+            }
         return {
             "current": None,
             "recognition_report": {},
@@ -137,6 +176,8 @@ def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str
     if not any(str(block.get("block_type") or "") in material_block_types for block in blocks):
         return []
     assets: list[dict[str, object]] = []
+    has_deg_block = any(str(block.get("block_type") or "") == "deg_comparisons" for block in blocks)
+    has_expression_block = any(str(block.get("block_type") or "").endswith("_expression_matrix") for block in blocks)
     source_file = str(item.get("original_path") or item.get("file_name") or "")
     file_path = str(item.get("route_path") or item.get("original_path") or "")
     species = str(item.get("species") or _profile_value(item, "species") or "")
@@ -217,6 +258,8 @@ def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str
                 )
             )
         elif block_type == "gene_annotation":
+            if has_deg_block and not has_expression_block:
+                continue
             assets.append(
                 _block_asset(
                     "gene_annotation",
@@ -233,6 +276,8 @@ def _content_block_standardized_assets(item: dict[str, object]) -> list[dict[str
                 )
             )
         elif block_type == "gene_identifier":
+            if has_deg_block and not has_expression_block:
+                continue
             assets.append(
                 _block_asset(
                     "gene_identifier_metadata",
@@ -310,6 +355,189 @@ def _block_asset(
     if source_origin:
         asset["source_origin"] = source_origin
     return asset
+
+
+def _normalize_repository_asset(asset: dict[str, object]) -> dict[str, object]:
+    normalized = dict(asset)
+    asset_type = str(normalized.get("asset_type") or "")
+    source_origin = str(normalized.get("source_origin") or "")
+    if source_origin == "imported_deg_result" or asset_type in {"deg_result_table", "differential_result_table"}:
+        normalized.setdefault("asset_type", "differential_result_table")
+        normalized["asset_role"] = "imported_result"
+        normalized["repository"] = "imported_result_repository"
+        normalized.setdefault("result_semantics", "imported_external_result")
+    elif asset_type in {"count_matrix", "raw_count_matrix", "expression_matrix", "normalized_expression_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+        normalized["asset_role"] = "expression_matrix"
+        normalized["repository"] = "expression_repository"
+    elif asset_type in {"sample_metadata", "tcga_sample_metadata", "gtex_sample_metadata", "phenotype_metadata"}:
+        normalized["asset_role"] = "sample_metadata"
+        normalized["repository"] = "sample_metadata_repository"
+    elif asset_type in {"clinical_metadata", "survival_metadata", "tcga_clinical_metadata"}:
+        normalized["asset_role"] = "clinical_metadata"
+        normalized["repository"] = "clinical_repository"
+    elif asset_type in {"gene_annotation", "platform_annotation", "gene_identifier_metadata"}:
+        normalized["asset_role"] = "feature_annotation"
+        normalized["repository"] = "feature_annotation_repository"
+        if str(normalized.get("gene_id_type") or "") in {"probe_id", "ID_REF"}:
+            normalized["validation_status"] = "blocked"
+            normalized.setdefault("blockers", ["probe_mapping_missing"])
+    elif asset_type in {"group_design", "comparison_config"}:
+        normalized["asset_type"] = "group_design"
+        normalized["asset_role"] = "group_design"
+        normalized["repository"] = "group_design_repository"
+    else:
+        normalized["asset_role"] = normalized.get("asset_role") or asset_type
+        normalized["repository"] = normalized.get("repository") or f"{asset_type}_repository"
+    if asset_type == "count_matrix":
+        normalized.setdefault("expression_value_type", "count")
+    elif asset_type == "raw_count_matrix":
+        normalized.setdefault("expression_value_type", "count")
+    elif asset_type == "normalized_expression_matrix":
+        value_type = str(normalized.get("value_type") or "")
+        normalized.setdefault("expression_value_type", value_type.upper() if value_type else "normalized_expression")
+    elif asset_type == "gtex_expression_matrix":
+        normalized.setdefault("expression_value_type", "TPM")
+    normalized.setdefault("path", normalized.get("file_path") or normalized.get("source_file") or "")
+    normalized.setdefault("file_path", normalized.get("path") or normalized.get("source_file") or "")
+    normalized.setdefault("validation_status", "passed" if normalized.get("analysis_ready") else "registered")
+    return normalized
+
+
+def _supplemental_manifest_assets(root: Path, start_index: int) -> list[dict[str, object]]:
+    assets: list[dict[str, object]] = []
+    group_design_path = root / "manifests" / "group_comparison_design.json"
+    confirmation_path = root / "manifests" / "standardization_confirmation.json"
+    confirmation = _read_json(confirmation_path) if confirmation_path.exists() else {}
+    confirmed_group = confirmation.get("confirmed_group_design") if isinstance(confirmation.get("confirmed_group_design"), dict) else {}
+    if group_design_path.exists() or confirmed_group.get("group_confirmed"):
+        assets.append(
+            {
+                "asset_id": _asset_id("group_design", start_index),
+                "asset_type": "group_design",
+                "label_zh": "分组与比较设计",
+                "file_path": str(group_design_path if group_design_path.exists() else confirmation_path),
+                "source_file": str(group_design_path if group_design_path.exists() else confirmation_path),
+                "materialize_strategy": "manifest_reference",
+                "validation_status": "passed",
+                "analysis_ready": True,
+                "recommended_for": ["differential_expression"],
+            }
+        )
+    gene = confirmation.get("gene_id_type_confirmed") if isinstance(confirmation.get("gene_id_type_confirmed"), dict) else {}
+    gene_id_type = str(gene.get("gene_id_type") or "")
+    if gene.get("confirmed") and gene_id_type:
+        assets.append(
+            {
+                "asset_id": _asset_id("gene_identifier_metadata", start_index + len(assets)),
+                "asset_type": "gene_identifier_metadata",
+                "label_zh": "基因标识元数据",
+                "file_path": str(confirmation_path),
+                "source_file": str(confirmation_path),
+                "materialize_strategy": "manifest_reference",
+                "validation_status": "blocked" if gene.get("requires_platform_mapping") else "passed",
+                "analysis_ready": True,
+                "gene_id_type": gene_id_type,
+                "recommended_for": ["gene_id_tracking", "id_conversion_planning"],
+            }
+        )
+    return assets
+
+
+def _default_asset_selection(assets: list[dict[str, object]]) -> dict[str, object]:
+    expression_assets = [
+        asset
+        for asset in assets
+        if str(asset.get("repository") or "") == "expression_repository"
+        and str(asset.get("asset_type") or "") in {"count_matrix", "raw_count_matrix", "expression_matrix", "normalized_expression_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
+    ]
+    count_assets = [asset for asset in expression_assets if str(asset.get("expression_value_type") or asset.get("value_type") or "").lower() == "count"]
+    selected = count_assets[0] if len(count_assets) == 1 else expression_assets[0] if len(expression_assets) == 1 else None
+    if not isinstance(selected, dict):
+        return {}
+    selected["default_selected"] = True
+    return {"expression": {"asset_id": str(selected.get("asset_id") or ""), "selection_state": "recommended_default"}}
+
+
+def _analysis_input_packages(assets: list[dict[str, object]]) -> list[dict[str, object]]:
+    expression_assets = [asset for asset in assets if str(asset.get("repository") or "") == "expression_repository"]
+    sample_assets = [asset for asset in assets if str(asset.get("repository") or "") == "sample_metadata_repository"]
+    group_assets = [asset for asset in assets if str(asset.get("repository") or "") == "group_design_repository"]
+    feature_assets = [asset for asset in assets if str(asset.get("repository") or "") == "feature_annotation_repository"]
+    imported_assets = [asset for asset in assets if str(asset.get("repository") or "") == "imported_result_repository"]
+    packages: list[dict[str, object]] = []
+    if imported_assets and not expression_assets:
+        packages.append(
+            {
+                "package_type": "enrichment_from_imported_result",
+                "status": "available",
+                "task_semantics": "exploratory",
+                "source_asset_id": imported_assets[0].get("asset_id", ""),
+                "warnings": ["imported_deg_is_external_result_not_biomedpilot_recomputed"],
+                "blockers": [],
+            }
+        )
+        return packages
+    if expression_assets:
+        blockers: list[str] = []
+        expression = expression_assets[0]
+        gene_id_type = str(expression.get("gene_id_type") or "")
+        if not sample_assets:
+            blockers.append("missing_sample_metadata")
+        if not group_assets:
+            blockers.append("missing_group_design")
+        if (gene_id_type in {"probe_id", "ID_REF"} and not feature_assets) or any(str(asset.get("validation_status") or "") == "blocked" for asset in feature_assets):
+            blockers.append("probe_mapping_missing")
+        packages.append(
+            {
+                "package_type": "deg_recompute",
+                "status": "blocked" if blockers else "available",
+                "task_semantics": "formal_candidate" if not blockers else "preflight_only",
+                "source_asset_id": expression.get("asset_id", ""),
+                "blockers": blockers,
+                "warnings": [],
+            }
+        )
+    if imported_assets:
+        packages.append(
+            {
+                "package_type": "deg_imported_result",
+                "status": "available",
+                "task_semantics": "exploratory",
+                "source_asset_id": imported_assets[0].get("asset_id", ""),
+                "warnings": ["imported_deg_is_external_result_not_biomedpilot_recomputed"],
+                "blockers": [],
+            }
+        )
+    return packages
+
+
+def _write_repository_state(root: Path, repository_manifest: dict[str, object], analysis_input_packages: list[dict[str, object]]) -> None:
+    _write_repository_json(root / REPOSITORY_MANIFEST, repository_manifest)
+    _write_repository_json(
+        root / REPOSITORY_VALIDATION_REPORT,
+        {
+            "schema_version": "biomedpilot.repository_validation_report.v1",
+            "generated_at": repository_manifest.get("generated_at", ""),
+            "status": "passed",
+            "warnings": repository_manifest.get("warnings", []),
+        },
+    )
+    lineage_path = root / REPOSITORY_ASSET_LINEAGE
+    lineage_path.parent.mkdir(parents=True, exist_ok=True)
+    with lineage_path.open("w", encoding="utf-8") as handle:
+        for asset in repository_manifest.get("assets", []) or []:
+            if isinstance(asset, dict):
+                handle.write(json.dumps({"asset_id": asset.get("asset_id", ""), "source_file": asset.get("source_file", "")}, ensure_ascii=False) + "\n")
+    package_dir = root / ANALYSIS_INPUT_REPOSITORY
+    package_dir.mkdir(parents=True, exist_ok=True)
+    for index, package in enumerate(analysis_input_packages, start=1):
+        package_id = str(package.get("package_type") or f"package_{index}")
+        _write_repository_json(package_dir / f"{package_id}.json", package)
+
+
+def _write_repository_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _content_blocks(item: dict[str, object]) -> list[dict[str, object]]:
@@ -403,7 +631,7 @@ def _processing_tasks_from_assets(assets: list[dict[str, object]]) -> list[dict[
     for asset in assets:
         asset_type = str(asset.get("asset_type") or "")
         file_path = str(asset.get("file_path") or "")
-        if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+        if asset_type in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix"}:
             tasks.append(_processing_task("expression_matrix_cleaning", "表达矩阵清洗", file_path, asset_type, "pending_confirmation"))
             tasks.append(_processing_task("gene_annotation_mapping", "基因注释映射", file_path, asset_type, "pending_annotation_source"))
         elif asset_type in {"platform_annotation", "gene_annotation", "platform_reference_hint"}:

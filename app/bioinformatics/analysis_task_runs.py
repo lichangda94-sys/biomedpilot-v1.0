@@ -7,6 +7,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from app.bioinformatics.analysis_inputs.contracts import (
+    AnalysisTaskRunManifest,
+    create_task_run_manifest,
+    validate_task_run_manifest,
+)
 from app.bioinformatics.deg_task_plan import DEG_TASK_PLAN, build_deg_task_plan_context, load_deg_task_plan
 from app.bioinformatics.group_comparison_design import GROUP_COMPARISON_DESIGN, load_group_comparison_design
 from app.bioinformatics.standardized_asset_selection import resolve_standardized_assets

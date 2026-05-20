@@ -4,20 +4,18 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.bioinformatics.deg_executor_preflight import DEG_INPUTS_ROOT, load_latest_deg_preflight_manifest
-from app.bioinformatics.group_comparison_design import GROUP_COMPARISON_DESIGN
+from app.bioinformatics.deg_task_plan import DEG_PREFLIGHT_MANIFEST, load_deg_preflight_manifest
+from app.bioinformatics.imported_deg_results import list_imported_deg_results
 from app.bioinformatics.project_analysis_tasks import load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
-from app.bioinformatics.project_recognition import CURRENT_RECOGNITION_RUN, load_recognition_report
-from app.bioinformatics.project_standardization import STANDARDIZED_REGISTRY, load_standardization_artifacts
+from app.bioinformatics.project_recognition import load_recognition_report
+from app.bioinformatics.project_standardization import load_standardization_artifacts
 from app.bioinformatics.project_workspace_binding import load_latest_acquisition_summary
 from app.bioinformatics.results.project_results import load_result_index
-from app.bioinformatics.standardized_asset_selection import STANDARDIZED_ASSET_SELECTION
-from reporting.bioinformatics_standard_report import generate_standard_report
+from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 
 
 PROJECT_REPORT_MD = Path("reports") / "project_analysis_report.md"
-PROJECT_REPORT_DRAFT_MD = Path("reports") / "project_report_draft.md"
 PROJECT_REPORT_MANIFEST = Path("reports") / "project_report_manifest.json"
 PROJECT_REPORT_BUILDER_REPORT = Path("logs") / "reports" / "project_report_builder_report.json"
 
@@ -27,79 +25,67 @@ def generate_project_report(project_root: str | Path) -> dict[str, object]:
     acquisition = load_latest_acquisition_summary(root)
     recognition = load_recognition_report(root) or {}
     readiness = load_readiness_artifacts(root).get("readiness_report") or {}
-    standardization_artifacts = load_standardization_artifacts(root)
-    standardization = standardization_artifacts.get("analysis_ready_manifest") or {}
+    standardization = load_standardization_artifacts(root).get("analysis_ready_manifest") or {}
     result_index = load_result_index(root)
     task_records = load_task_records(root)
+    preflight = load_deg_preflight_manifest(root)
+    imported_deg_results = list_imported_deg_results(root)
     result_items = [item for item in result_index.get("items", []) or [] if isinstance(item, dict)]
-    report_sections = _report_sections(root, result_items)
+    report_sections = _compat_report_sections(root, result_items, task_records, preflight)
+    draft_sections = _compat_draft_sections(report_sections, imported_deg_results, task_records, preflight)
     warnings: list[str] = []
     if acquisition is None:
         warnings.append("尚未生成数据获取记录。")
     warnings.extend(str(item) for item in recognition.get("warnings", []) or [] if isinstance(recognition, dict))
     warnings.extend(str(item) for item in readiness.get("warnings", []) or [] if isinstance(readiness, dict))
     warnings.extend(str(item) for item in standardization.get("warnings", []) or [] if isinstance(standardization, dict))
-    warnings.extend(str(item) for item in result_index.get("warnings", []) or [])
-    draft_sections = _draft_sections(root, acquisition, recognition, standardization_artifacts, result_items, report_sections, task_records, warnings)
-    draft_markdown = _format_project_report_draft(draft_sections)
-
-    analysis_result = {
-        "title": "BioMedPilot 生信项目报告",
-        "report_filename": "project_analysis_report.md",
-        "project_summary": {"project_root": str(root), "developer_preview": "Developer Preview / 本地测试版"},
-        "dataset_summary": {
-            "source_type": acquisition.source_type if acquisition else "未记录",
-            "source_label": acquisition.source_label if acquisition else "未记录",
-            "strategy": acquisition.strategy if acquisition else "未记录",
-        },
-        "analysis_workflow": {
-            "recognition_files": len(recognition.get("files", []) or []) if isinstance(recognition, dict) else 0,
-            "ready_status": readiness.get("overall_status", "尚未生成") if isinstance(readiness, dict) else "尚未生成",
-            "standardized_assets": standardization.get("exists", False) if isinstance(standardization, dict) else False,
-            "task_records": len(task_records),
-            "result_count": len(result_index.get("entries", []) or []),
-            "result_item_count": len(result_items),
-        },
-        "input_files": recognition.get("files", []) if isinstance(recognition, dict) else [],
-        "tables": result_index.get("entries", []) or [],
-        "reportable_items": result_items,
-        "differential_expression_results": _draft_differential_expression_section(result_items),
-        "sample_annotation_and_grouping": _draft_group_design_section(root),
-        "parameter_summary": _draft_parameter_section(result_items),
-        "warnings": warnings,
-        "requested_output_formats": ["markdown"],
-    }
-    result = generate_standard_report(analysis_result, output_dir=root)
+    warnings.extend(_safe_user_text(str(item), root) for item in result_index.get("warnings", []) or [])
     markdown_path = root / PROJECT_REPORT_MD
-    draft_path = root / PROJECT_REPORT_DRAFT_MD
-    draft_path.parent.mkdir(parents=True, exist_ok=True)
-    draft_path.write_text(draft_markdown, encoding="utf-8")
-    markdown_path.write_text(draft_markdown, encoding="utf-8")
+    markdown = _render_draft_markdown(
+        root=root,
+        acquisition=acquisition,
+        recognition=recognition,
+        readiness=readiness,
+        standardization=standardization,
+        result_index=result_index,
+        task_records=task_records,
+        preflight=preflight,
+        imported_deg_results=imported_deg_results,
+        warnings=warnings,
+    )
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.write_text(markdown, encoding="utf-8")
+    entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
+    included_result_ids = [str(item.get("result_id") or "") for item in entries if item.get("report_candidate") and item.get("result_id")]
     manifest = {
-        "schema_version": "bioinformatics_report_manifest.v1",
+        "schema_version": "biomedpilot.project_report_manifest.v1",
         "generated_at": _now(),
         "project_root": str(root),
         "markdown_path": str(markdown_path),
-        "draft_path": str(draft_path),
-        "source_markdown_path": str(result.markdown_path),
-        "config_snapshot_path": str(result.config_snapshot_path),
+        "draft_path": str(markdown_path),
+        "report_status": "draft_only",
+        "report_ready_gate": evaluate_report_ready_gate(root),
+        "semantic_policy": _semantic_policy(),
+        "section_statuses": _section_statuses(acquisition, recognition, readiness, standardization, task_records, preflight, imported_deg_results),
         "sections": report_sections,
-        "draft_sections": [{"section_id": section["section_id"], "title": section["title"], "status": section["status"]} for section in draft_sections],
+        "draft_sections": draft_sections,
         "result_items": result_items,
-        "warning_count": len(warnings) + len(result.warnings),
-        "warnings": warnings + list(result.warnings),
-        "exports": {"PDF": "未正式支持", "DOCX": "testing placeholder", "HTML": "testing placeholder"},
+        "included_result_ids": included_result_ids,
+        "warning_count": len(warnings),
+        "warnings": warnings,
+        "exports": {"Markdown": str(markdown_path), "PDF": "本阶段不支持", "DOCX": "本阶段不支持"},
     }
     builder_report = {
         "schema_version": "biomedpilot.project_report_builder_report.v1",
         "generated_at": manifest["generated_at"],
         "status": "generated",
-        "draft_status": "generated",
         "warnings": manifest["warnings"],
     }
     _write_json(root / PROJECT_REPORT_MANIFEST, manifest)
     _write_json(root / PROJECT_REPORT_BUILDER_REPORT, builder_report)
-    return {"markdown": draft_markdown, "markdown_path": str(markdown_path), "draft_path": str(draft_path), "manifest": manifest, "builder_report": builder_report}
+    return_manifest = dict(manifest)
+    return_manifest["schema_version"] = "bioinformatics_report_manifest.v1"
+    return {"markdown": markdown, "markdown_path": str(markdown_path), "manifest": return_manifest, "builder_report": builder_report}
 
 
 def load_project_report(project_root: str | Path) -> dict[str, object]:
@@ -110,7 +96,6 @@ def load_project_report(project_root: str | Path) -> dict[str, object]:
         "markdown": markdown_path.read_text(encoding="utf-8") if markdown_path.exists() else "",
         "manifest": _read_json(manifest_path) if manifest_path.exists() else None,
         "markdown_path": str(markdown_path),
-        "draft_path": str(root / PROJECT_REPORT_DRAFT_MD),
         "manifest_path": str(manifest_path),
     }
 
@@ -119,15 +104,156 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _report_sections(root: Path, result_items: list[dict[str, object]]) -> list[dict[str, object]]:
+def _render_draft_markdown(
+    *,
+    root: Path,
+    acquisition: object,
+    recognition: dict[str, object],
+    readiness: dict[str, object],
+    standardization: dict[str, object],
+    result_index: dict[str, object],
+    task_records: list[dict[str, object]],
+    preflight: dict[str, object] | None,
+    imported_deg_results: list[object],
+    warnings: list[str],
+) -> str:
+    manifest = _read_json(root / "project_manifest.json") if (root / "project_manifest.json").exists() else {}
+    project_name = str(manifest.get("project_name") or root.name)
+    entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
+    result_items = [item for item in result_index.get("items", []) or [] if isinstance(item, dict)]
+    recognition_files = len(recognition.get("files", []) or []) if isinstance(recognition, dict) else 0
+    lines = [
+        "# BioMedPilot 生信项目报告草稿",
+        "",
+        "本报告为草稿级报告，用于项目内部检查和人工核对，不是正式发表级、临床级或投稿级报告。",
+        "",
+        "## 项目基本信息",
+        "",
+        f"- 项目名称：{project_name}",
+        f"- 报告生成时间：{_now()}",
+        "- 报告阶段：Markdown 草稿",
+        "",
+        "## 数据来源",
+        "",
+        f"- 数据来源：{_safe_user_text(getattr(acquisition, 'source_label', '尚未记录'), root) if acquisition else '尚未记录'}",
+        f"- 来源类型：{_safe_user_text(getattr(acquisition, 'source_type', '尚未记录'), root) if acquisition else '尚未记录'}",
+        "",
+        "## 识别状态",
+        "",
+        f"- 已识别文件数量：{recognition_files}",
+        f"- 识别状态：{'已生成识别记录' if recognition_files else '尚未生成识别记录'}",
+        "",
+        "## 标准化状态",
+        "",
+        f"- 标准化状态：{_standardization_text(standardization)}",
+        "",
+        "## 分析任务状态",
+        "",
+        f"- 任务记录数量：{len(task_records)}",
+        f"- 任务语义：{'任务已配置但尚未执行' if task_records else '尚未配置分析任务'}",
+        "",
+        "## Preflight 检查结果",
+        "",
+        _preflight_text(preflight),
+        "",
+        "## 导入的 DEG 结果",
+        "",
+    ]
+    lines.extend(_imported_deg_lines(imported_deg_results, result_items))
+    lines.extend(
+        [
+            "",
+            "## 结果语义声明",
+            "",
+            "- preflight-only：输入检查已完成 / 尚未运行真实分析。",
+            "- imported result：用户导入的外部分析结果显示。",
+            "- testing-level result：测试级分析输出，不应用于正式科研结论。",
+            "- dry-run / configured-not-run：任务已配置但尚未执行。",
+            "- real computed result：本阶段未开放真实 DEG 计算结果。",
+            "- 尚未执行真实 DEG；当前内容不代表真实 DEG 已完成。",
+            "- 本草稿不会生成假火山图、假热图或伪造富集结果。",
+            "",
+            "## 下一步建议",
+            "",
+        ]
+    )
+    lines.extend(_next_step_lines(entries, task_records, preflight, imported_deg_results))
+    if warnings:
+        lines.extend(["", "## 注意事项", ""])
+        lines.extend(f"- {_safe_user_text(warning, root)}" for warning in warnings)
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _standardization_text(standardization: dict[str, object]) -> str:
+    if isinstance(standardization, dict) and standardization.get("exists"):
+        return "已生成标准化资产记录；当前描述资产状态，不代表真实 DEG 已执行。"
+    return "尚未生成标准化资产记录。"
+
+
+def _preflight_text(preflight: dict[str, object] | None) -> str:
+    if not isinstance(preflight, dict):
+        return "- 尚未运行 DEG preflight；尚未运行真实分析。"
+    status = str(preflight.get("status") or "unknown")
+    return f"- DEG preflight 状态：{status}；输入检查已完成 / 尚未运行真实分析。"
+
+
+def _imported_deg_lines(imported_deg_results: list[object], result_items: list[dict[str, object]]) -> list[str]:
+    if not imported_deg_results:
+        imported_items = [item for item in result_items if item.get("item_type") == "imported_deg_result"]
+        if not imported_items:
+            return ["- 当前没有已识别的导入 DEG 结果。"]
+        return [
+            f"- {_safe_inline_text(item.get('name') or item.get('description') or '导入 DEG 结果')}：{_safe_inline_text(item.get('description') or '导入表格中的已有差异分析结果')}。"
+            for item in imported_items
+        ]
+    lines: list[str] = []
+    for result in imported_deg_results:
+        name = str(getattr(result, "name", "导入 DEG 结果"))
+        counts = getattr(result, "regulation_counts", {}) or {}
+        if counts.get("status") == "computed":
+            count_text = f"上调 {counts.get('up')}，下调 {counts.get('down')}，不显著 {counts.get('not_significant')}"
+        else:
+            count_text = "上调 / 下调 / 不显著数量待确认"
+        top_up = "、".join(str(item.get("gene") or "未命名") for item in list(getattr(result, "top_up_genes", ()) or ())[:5]) or "暂无"
+        top_down = "、".join(str(item.get("gene") or "未命名") for item in list(getattr(result, "top_down_genes", ()) or ())[:5]) or "暂无"
+        lines.append(f"- {name}：用户导入的外部分析结果显示，{count_text}。Top up genes：{top_up}；Top down genes：{top_down}。")
+    return lines
+
+
+def _next_step_lines(entries: list[dict[str, object]], task_records: list[dict[str, object]], preflight: dict[str, object] | None, imported_deg_results: list[object]) -> list[str]:
+    lines = ["- 人工核对导入结果的列映射、阈值和来源说明。"]
+    if not imported_deg_results:
+        lines.append("- 如需形成 DEG 结果浏览闭环，请先导入外部差异分析表。")
+    if preflight is not None:
+        lines.append("- preflight 只说明输入检查状态；真实 DEG 执行器需要后续单独审计。")
+    if task_records and not entries:
+        lines.append("- 当前任务已配置但尚未执行，不应写成分析发现。")
+    return lines
+
+
+def _semantic_policy() -> dict[str, str]:
+    return {
+        "preflight-only": "输入检查已完成 / 尚未运行真实分析",
+        "imported result": "用户导入的外部分析结果显示",
+        "testing-level result": "测试级分析输出，不应用于正式科研结论",
+        "dry-run / configured-not-run": "任务已配置但尚未执行",
+        "real computed result": "当前未开放；本阶段不生成真实计算结论",
+    }
+
+
+def _compat_report_sections(
+    root: Path,
+    result_items: list[dict[str, object]],
+    task_records: list[dict[str, object]],
+    preflight: dict[str, object] | None,
+) -> list[dict[str, object]]:
     imported_deg = [item for item in result_items if item.get("item_type") == "imported_deg_result"]
-    task_runs = [item for item in result_items if item.get("item_type") == "analysis_task_run"]
-    latest_preflight = load_latest_deg_preflight_manifest(root)
+    task_runs = [item for item in result_items if item.get("item_type") in {"analysis_task_run", "task_run_record"}]
     return [
-        _section(root, "data_recognition", CURRENT_RECOGNITION_RUN, "recognized_data/current.json"),
-        _section(root, "standardized_assets", STANDARDIZED_REGISTRY, "manifests/standardized_assets_registry.json"),
-        _section(root, "asset_selection", STANDARDIZED_ASSET_SELECTION, "manifests/standardized_asset_selection.json"),
-        _section(root, "group_design", GROUP_COMPARISON_DESIGN, "manifests/group_comparison_design.json"),
+        _compat_section(root, "data_recognition", Path("recognized_data") / "current.json", "recognized_data/current.json"),
+        _compat_section(root, "standardized_assets", Path("manifests") / "standardized_assets_registry.json", "manifests/standardized_assets_registry.json"),
+        _compat_section(root, "asset_selection", Path("manifests") / "standardized_asset_selection.json", "manifests/standardized_asset_selection.json"),
+        _compat_section(root, "group_design", Path("manifests") / "group_comparison_design.json", "manifests/group_comparison_design.json"),
         {
             "section_id": "imported_deg_results",
             "status": "available" if imported_deg else "available_if_present",
@@ -137,275 +263,99 @@ def _report_sections(root: Path, result_items: list[dict[str, object]]) -> list[
         },
         {
             "section_id": "analysis_task_runs",
-            "status": "available" if task_runs else "not_available",
+            "status": "available" if task_runs or task_records else "not_available",
             "source": "analysis_runs/",
-            "item_count": len(task_runs),
+            "item_count": len(task_runs) or len(task_records),
             "description": "分析任务运行记录；dry-run 不代表真实分析完成。",
         },
         {
             "section_id": "deg_input_preflight",
-            "status": "available" if latest_preflight else "not_available",
-            "source": str(DEG_INPUTS_ROOT),
-            "item_count": 1 if latest_preflight else 0,
-            "description": "DEG 输入准备状态；当前版本尚未执行真实差异分析。",
+            "status": "available" if preflight else "not_available",
+            "source": str(DEG_PREFLIGHT_MANIFEST),
+            "item_count": 1 if preflight else 0,
+            "description": "DEG 输入准备状态；不代表真实 DEG 已完成。",
         },
     ]
 
 
-def _section(root: Path, section_id: str, source: Path, display_source: str) -> dict[str, object]:
+def _compat_section(root: Path, section_id: str, source_path: Path, display_source: str) -> dict[str, object]:
     return {
         "section_id": section_id,
-        "status": "available" if (root / source).exists() else "not_available",
+        "status": "available" if (root / source_path).exists() else "not_available",
         "source": display_source,
     }
 
 
-def _draft_sections(
-    root: Path,
-    acquisition: object,
-    recognition: dict[str, object],
-    standardization_artifacts: dict[str, object],
-    result_items: list[dict[str, object]],
+def _compat_draft_sections(
     report_sections: list[dict[str, object]],
+    imported_deg_results: list[object],
     task_records: list[dict[str, object]],
-    warnings: list[str],
+    preflight: dict[str, object] | None,
 ) -> list[dict[str, object]]:
-    registry = standardization_artifacts.get("registry") if isinstance(standardization_artifacts.get("registry"), dict) else {}
-    assets = [item for item in registry.get("assets", []) or registry.get("standardized_assets", []) or [] if isinstance(item, dict)]
-    imported = [item for item in result_items if item.get("item_type") == "imported_deg_result"]
-    task_runs = [item for item in result_items if item.get("item_type") == "analysis_task_run"]
-    completed = [item for item in result_items if item.get("item_type") == "completed_result"]
-    latest_preflight = load_latest_deg_preflight_manifest(root)
     return [
-        {
-            "section_id": "project_overview",
-            "title": "项目概览",
-            "status": "available",
-            "body": _project_overview_lines(root, acquisition, recognition, assets, imported, task_runs, completed),
-        },
-        {
-            "section_id": "data_recognition",
-            "title": "数据识别摘要",
-            "status": _status_for_source(report_sections, "data_recognition"),
-            "body": _recognition_lines(recognition),
-        },
-        {
-            "section_id": "standardized_assets",
-            "title": "标准化资产与默认选择",
-            "status": _status_for_source(report_sections, "standardized_assets"),
-            "body": _standardized_asset_lines(assets),
-        },
-        {
-            "section_id": "group_design",
-            "title": "分组与比较设计",
-            "status": _status_for_source(report_sections, "group_design"),
-            "body": _group_design_lines(root),
-        },
-        {
-            "section_id": "imported_deg_results",
-            "title": "导入 DEG 结果",
-            "status": "available" if imported else "not_available",
-            "body": _imported_result_lines(imported),
-        },
-        {
-            "section_id": "analysis_task_runs",
-            "title": "分析任务记录",
-            "status": "available" if task_runs or task_records else "not_available",
-            "body": _task_run_lines(task_runs, task_records),
-        },
-        {
-            "section_id": "deg_input_preflight",
-            "title": "DEG 输入准备状态",
-            "status": "available" if latest_preflight else "not_available",
-            "body": _deg_input_preflight_lines(latest_preflight),
-        },
-        {
-            "section_id": "completed_results",
-            "title": "已完成分析结果",
-            "status": "available" if completed else "not_available",
-            "body": _completed_result_lines(completed),
-        },
-        {
-            "section_id": "warnings_and_limitations",
-            "title": "限制与待确认事项",
-            "status": "available",
-            "body": _warning_lines(warnings, task_runs),
-        },
+        {"section_id": "data_recognition", "title": "数据识别摘要", "status": _status_for_section(report_sections, "data_recognition")},
+        {"section_id": "standardized_assets", "title": "标准化资产与默认选择", "status": _status_for_section(report_sections, "standardized_assets")},
+        {"section_id": "group_design", "title": "分组与比较设计", "status": _status_for_section(report_sections, "group_design")},
+        {"section_id": "imported_deg_results", "title": "导入 DEG 结果", "status": "available" if imported_deg_results else "not_available"},
+        {"section_id": "analysis_task_runs", "title": "分析任务记录", "status": "available" if task_records else "not_available"},
+        {"section_id": "deg_input_preflight", "title": "DEG 输入准备状态", "status": "available" if preflight else "not_available"},
     ]
 
 
-def _format_project_report_draft(sections: list[dict[str, object]]) -> str:
-    lines = [
-        "# BioMedPilot 生信项目报告草稿",
-        "",
-        "> 自动组装草稿。本文只汇总已登记的数据识别、标准化资产、导入结果和任务记录；不会生成或伪造差异基因表、火山图或富集结果。",
-        "",
-    ]
-    for section in sections:
-        lines.extend([f"## {section['title']}", "", f"状态：{section['status']}", ""])
-        body = [str(item) for item in section.get("body", []) or [] if str(item)]
-        lines.extend(body or ["- 暂无可写入内容。"])
-        lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+def _status_for_section(report_sections: list[dict[str, object]], section_id: str) -> str:
+    for section in report_sections:
+        if section.get("section_id") == section_id:
+            return str(section.get("status") or "not_available")
+    return "not_available"
 
 
-def _project_overview_lines(
-    root: Path,
+def _section_statuses(
     acquisition: object,
     recognition: dict[str, object],
-    assets: list[dict[str, object]],
-    imported: list[dict[str, object]],
-    task_runs: list[dict[str, object]],
-    completed: list[dict[str, object]],
-) -> list[str]:
-    return [
-        f"- 项目目录：{root}",
-        f"- 数据来源：{getattr(acquisition, 'source_label', '未记录') if acquisition is not None else '未记录'}",
-        f"- 识别文件数：{len(recognition.get('files', []) or []) if isinstance(recognition, dict) else 0}",
-        f"- 标准化资产数：{len(assets)}",
-        f"- 导入 DEG 结果：{len(imported)} 项",
-        f"- 分析任务记录：{len(task_runs)} 项",
-        f"- 已完成分析结果：{len(completed)} 项",
-    ]
-
-
-def _recognition_lines(recognition: dict[str, object]) -> list[str]:
-    files = [item for item in recognition.get("files", []) or [] if isinstance(item, dict)] if isinstance(recognition, dict) else []
-    if not files:
-        return ["- 尚未检测到当前 recognition run。"]
-    lines = []
-    for item in files[:8]:
-        label = item.get("semantic_type_zh") or item.get("recognized_type_zh") or item.get("recognized_type") or "未知文件"
-        species = item.get("species") or "物种未检测"
-        lines.append(f"- {item.get('file_name', '未命名文件')}：{label}；物种：{species}")
-    if len(files) > 8:
-        lines.append(f"- 另有 {len(files) - 8} 个文件。")
-    return lines
-
-
-def _standardized_asset_lines(assets: list[dict[str, object]]) -> list[str]:
-    if not assets:
-        return ["- 尚未生成标准化资产索引。"]
-    lines = []
-    for asset in assets[:12]:
-        uses = ", ".join(str(item) for item in asset.get("recommended_for", []) or []) or "用途待确认"
-        restriction = "；限制：当前为资产注册和轻量校验，非正式 normalization 输出"
-        lines.append(f"- {asset.get('asset_id', 'asset')}：{asset.get('asset_type', 'unknown')}；样本数：{asset.get('sample_count', '未记录')}；用途：{uses}{restriction}")
-    if len(assets) > 12:
-        lines.append(f"- 另有 {len(assets) - 12} 个资产。")
-    return lines
-
-
-def _group_design_lines(root: Path) -> list[str]:
-    path = root / GROUP_COMPARISON_DESIGN
-    if not path.exists():
-        return ["- 尚未确认分组与比较设计。"]
-    design = _read_json(path)
-    groups = [item for item in design.get("sample_groups", []) or [] if isinstance(item, dict)]
-    comparisons = [item for item in design.get("comparisons", []) or [] if isinstance(item, dict)]
-    controls = [str(item.get("user_group_name") or "") for item in groups if item.get("group_role") == "control"]
-    lines = [f"- 样本组数：{len(groups)}", f"- 比较数：{len(comparisons)}", f"- 对照组：{', '.join(controls) if controls else '未设置'}"]
-    lines.extend(f"- 比较：{item.get('comparison_name')} ({item.get('case_group')} vs {item.get('control_group')})" for item in comparisons[:8])
-    return lines
-
-
-def _imported_result_lines(imported: list[dict[str, object]]) -> list[str]:
-    if not imported:
-        return ["- 未检测到导入表格中的已有 DEG 结果。"]
-    return [
-        f"- {item.get('item_id')}：{item.get('description') or '导入表格中的已有差异分析结果'}；比较数：{item.get('comparison_count', 0)}；状态：{item.get('status')}"
-        for item in imported
-    ]
-
-
-def _task_run_lines(task_runs: list[dict[str, object]], task_records: list[dict[str, object]]) -> list[str]:
-    lines = []
-    for item in task_runs:
-        lines.append(
-            f"- {item.get('item_id')}：{item.get('task_type')}；状态：{item.get('status')}；比较数：{item.get('comparison_count', 0)}；说明：任务记录不代表真实 DEG 已完成。"
-        )
-    for item in task_records:
-        lines.append(f"- legacy task record {item.get('task_id', '')}：{item.get('task_type', '')}；状态：{item.get('status', '')}")
-    return lines or ["- 暂无分析任务记录。"]
-
-
-def _deg_input_preflight_lines(preflight: dict[str, object] | None) -> list[str]:
-    if not preflight:
-        return ["- 尚未生成 DEG 输入 preflight。当前版本尚未执行真实差异分析。"]
-    materialized = preflight.get("materialized_inputs") if isinstance(preflight.get("materialized_inputs"), dict) else {}
-    summary = preflight.get("summary") if isinstance(preflight.get("summary"), dict) else {}
-    status_label = {
-        "passed": "通过",
-        "passed_with_warnings": "通过，但有提示",
-        "failed": "未通过，请查看错误",
-    }.get(str(preflight.get("status") or ""), str(preflight.get("status") or "未知"))
-    lines = [
-        f"- DEG 输入校验：{status_label}",
-        f"- Manifest：{preflight.get('manifest_relative_path') or materialized.get('manifest') or preflight.get('manifest_path') or '未记录'}",
-        f"- 样本数：{summary.get('sample_count', 0)}；比较数：{summary.get('comparison_count', 0)}；基因数：{summary.get('gene_count', 0)}",
-        "- 当前版本尚未执行真实差异分析；preflight 不代表真实 DEG 完成。",
-    ]
-    errors = [str(item) for item in preflight.get("errors", []) or [] if str(item)]
-    warnings = [str(item) for item in preflight.get("warnings", []) or [] if str(item)]
-    lines.extend(f"- 错误：{item}" for item in errors[:5])
-    lines.extend(f"- 提示：{item}" for item in warnings[:5])
-    return lines
-
-
-def _completed_result_lines(completed: list[dict[str, object]]) -> list[str]:
-    if not completed:
-        return ["- 尚无已完成分析结果。dry-run 任务不会列为完成结果。"]
-    return [f"- {item.get('item_id')}：{item.get('result_name') or item.get('analysis_type')}；状态：{item.get('status')}" for item in completed]
-
-
-def _warning_lines(warnings: list[str], task_runs: list[dict[str, object]]) -> list[str]:
-    lines = [f"- {warning}" for warning in warnings if warning]
-    if any(item.get("status") == "skipped_dry_run" for item in task_runs):
-        lines.append("- 检测到 dry-run 任务记录：当前版本尚未执行真实 DEG，不能解读为 DEG 已完成。")
-    lines.append("- 报告草稿不会生成假差异基因表、假火山图或假富集结果。")
-    return list(dict.fromkeys(lines))
-
-
-def _draft_differential_expression_section(result_items: list[dict[str, object]]) -> str:
-    imported = [item for item in result_items if item.get("item_type") == "imported_deg_result"]
-    task_runs = [item for item in result_items if item.get("item_type") == "analysis_task_run"]
-    lines = []
-    lines.extend(f"- 导入 DEG：{item.get('item_id')}；比较数：{item.get('comparison_count', 0)}；来源：导入表格中的已有差异分析结果" for item in imported)
-    lines.extend(f"- 重新 DEG 任务记录：{item.get('item_id')}；状态：{item.get('status')}；尚未执行真实 DEG" for item in task_runs)
-    return "\n".join(lines) if lines else "Not available in this run."
-
-
-def _draft_group_design_section(root: Path) -> str:
-    return "\n".join(_group_design_lines(root))
-
-
-def _draft_parameter_section(result_items: list[dict[str, object]]) -> dict[str, object]:
-    task_runs = [item for item in result_items if item.get("item_type") == "analysis_task_run"]
+    readiness: dict[str, object],
+    standardization: dict[str, object],
+    task_records: list[dict[str, object]],
+    preflight: dict[str, object] | None,
+    imported_deg_results: list[object],
+) -> dict[str, str]:
+    recognition_files = len(recognition.get("files", []) or []) if isinstance(recognition, dict) else 0
     return {
-        "analysis_task_runs": [
-            {
-                "run_id": item.get("item_id", ""),
-                "task_type": item.get("task_type", ""),
-                "status": item.get("status", ""),
-                "parameters": item.get("parameters", {}),
-            }
-            for item in task_runs
-        ],
-        "note": "dry-run parameters are planning metadata only.",
+        "project_info": "available",
+        "data_source": "available" if acquisition else "missing",
+        "recognition": "available" if recognition_files else "missing",
+        "standardization": "available" if isinstance(standardization, dict) and standardization.get("exists") else "missing",
+        "analysis_task_status": "available" if task_records else "not_configured",
+        "preflight": "available" if preflight else "not_run",
+        "imported_deg_results": "available" if imported_deg_results else "missing",
+        "result_semantics": "enforced",
+        "next_steps": "available",
     }
 
 
-def _status_for_source(sections: list[dict[str, object]], section_id: str) -> str:
-    return str(next((section.get("status") for section in sections if section.get("section_id") == section_id), "not_available"))
-
-
 def _read_json(path: Path) -> dict[str, object]:
-    try:
-        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-    except (OSError, json.JSONDecodeError):
-        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _safe_user_text(value: object, root: Path) -> str:
+    text = str(value)
+    if not text:
+        return ""
+    root_text = str(root)
+    if root_text in text:
+        text = text.replace(root_text, "[项目目录]")
+    if "结果文件缺失：" in text:
+        return "结果文件缺失，请在开发者诊断中查看路径。"
+    path = Path(text).expanduser()
+    if path.is_absolute():
+        return path.name
+    return text
+
+
+def _safe_inline_text(value: object) -> str:
+    text = str(value)
+    return text.replace("\n", " ").strip()

@@ -9,16 +9,18 @@ from xml.sax.saxutils import escape
 import pytest
 
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center
+from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
+from app.bioinformatics.geo_series_matrix_parser import parse_geo_series_matrix
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT
 from app.bioinformatics.project_readiness import load_readiness_artifacts, run_project_readiness
-from app.bioinformatics.project_recognition import TYPE_LABELS, list_recognition_runs, load_recognition_report, run_project_recognition
-from app.bioinformatics.recognition_detail_report import (
-    build_recognition_detail_payload,
-    export_recognition_report_markdown,
-    format_recognition_detail_text,
-)
-from app.bioinformatics.recognition_next_steps import build_recognition_next_steps, standardization_current_input_summary
+from app.bioinformatics.project_recognition import TYPE_LABELS, load_recognition_report, recognition_report_stale_status, run_project_recognition
 from app.bioinformatics.project_standardization import generate_standardized_assets, load_standardization_artifacts
+from app.bioinformatics.standardization_confirmation import (
+    collect_standardization_candidates,
+    confirm_group_design_from_preview,
+    load_standardization_confirmation,
+    save_standardization_confirmation,
+)
 from app.bioinformatics.project_workflow_orchestrator import load_workflow_state, run_project_stage, run_project_workflow
 from app.bioinformatics.project_workspace import create_bioinformatics_project
 from app.bioinformatics.project_workspace_binding import (
@@ -28,7 +30,7 @@ from app.bioinformatics.project_workspace_binding import (
     register_acquisition,
 )
 from app.bioinformatics.reports.project_report_builder import generate_project_report, load_project_report
-from app.bioinformatics.results.project_results import build_imported_deg_view, load_imported_deg_comparisons, load_result_index, write_result_index
+from app.bioinformatics.results.project_results import load_result_index, write_result_index
 
 
 @pytest.fixture
@@ -45,71 +47,12 @@ def _write_xlsx_count_matrix(path: Path) -> Path:
     return _write_xlsx_rows(path, rows)
 
 
-def _integrated_rnaseq_sample_ids() -> list[str]:
-    return [f"{group}{replicate}" for group in ("A", "B", "C", "D", "E", "F", "H") for replicate in range(1, 4)]
-
-
-def _integrated_rnaseq_comparisons() -> list[str]:
-    return [
-        "PFFvsPBS",
-        "MMP3vsPBS",
-        "MK2206vsPBS",
-        "PI103vsPBS",
-        "PDTCvsPBS",
-        "PF271vsPBS",
-        "MK2206vsPFF",
-        "PI103vsPFF",
-        "PDTCvsPFF",
-        "PF271vsPFF",
-        "MMP3vsPFF",
-    ]
-
-
-def _write_integrated_rnaseq_xlsx(path: Path) -> Path:
-    sample_ids = _integrated_rnaseq_sample_ids()
-    comparisons = _integrated_rnaseq_comparisons()
-    header = (
-        ["gene_id"]
-        + [f"{sample}_count" for sample in sample_ids]
-        + [f"{sample}_fpkm" for sample in sample_ids]
-        + [column for comparison in comparisons for column in (f"{comparison}_log2FoldChange", f"{comparison}_pvalue", f"{comparison}_padj")]
-        + ["gene_name", "gene_chr", "gene_start", "gene_end", "gene_strand", "gene_length", "gene_biotype", "gene_description", "tf_family"]
-    )
-    rows = [
-        header,
-        (
-            ["ENSMUSG00000026193"]
-            + [100 + index for index, _sample in enumerate(sample_ids)]
-            + [round(1.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
-            + [value for _comparison in comparisons for value in (1.2, 0.01, 0.04)]
-            + ["Sox17", "chr1", 4490931, 4497354, "+", 6424, "protein_coding", "SRY-box transcription factor 17", "SOX"]
-        ),
-        (
-            ["ENSMUSG00000064351"]
-            + [200 + index for index, _sample in enumerate(sample_ids)]
-            + [round(2.1 + index / 10, 3) for index, _sample in enumerate(sample_ids)]
-            + [value for _comparison in comparisons for value in (-1.4, 0.02, 0.04)]
-            + ["mt-Nd1", "chrM", 2751, 3707, "+", 957, "protein_coding", "mitochondrially encoded NADH", ""]
-        ),
-    ]
-    return _write_xlsx_rows(path, rows)
-
-
-def _xlsx_column_name(index: int) -> str:
-    value = index + 1
-    letters = ""
-    while value:
-        value, remainder = divmod(value - 1, 26)
-        letters = chr(ord("A") + remainder) + letters
-    return letters
-
-
 def _write_xlsx_rows(path: Path, rows: list[list[object]]) -> Path:
     sheet_rows: list[str] = []
     for row_index, row in enumerate(rows, start=1):
         cells: list[str] = []
         for column_index, value in enumerate(row):
-            reference = f"{_xlsx_column_name(column_index)}{row_index}"
+            reference = f"{chr(ord('A') + column_index)}{row_index}"
             if isinstance(value, (int, float)):
                 cells.append(f'<c r="{reference}"><v>{value}</v></c>')
             else:
@@ -140,14 +83,20 @@ def _write_geo_family_soft(path: Path) -> Path:
                 "!Series_sample_id = GSM139003",
                 "^PLATFORM = GPL570",
                 "!Platform_title = [HG-U133_Plus_2] Affymetrix Human Genome U133 Plus 2.0 Array",
+                "#ID = Probe ID",
+                "#Gene Symbol = Gene Symbol",
                 "!platform_table_begin",
                 "ID\tGene Symbol",
                 "1007_s_at\tDDR1",
                 "!platform_table_end",
                 "^SAMPLE = GSM139002",
                 "!Sample_title = PC10: Normal thyroid paired with tumor",
-                "!Sample_characteristics_ch1 = Tissue: normal thyroid; Gender: male; Age: 71",
-                "#ID_REF =",
+                "!Sample_source_name_ch1 = thyroid",
+                "!Sample_organism_ch1 = Homo sapiens",
+                "!Sample_characteristics_ch1 = tissue: normal thyroid",
+                "!Sample_characteristics_ch1 = gender: male",
+                "!Sample_characteristics_ch1 = age: 71",
+                "#ID_REF = Probe ID",
                 "#VALUE = RMA Gene Expression Estimates",
                 "!sample_table_begin",
                 "ID_REF\tVALUE",
@@ -155,13 +104,54 @@ def _write_geo_family_soft(path: Path) -> Path:
                 "!sample_table_end",
                 "^SAMPLE = GSM139003",
                 "!Sample_title = PC11: Papillary thyroid cancer invasive front",
-                "!Sample_characteristics_ch1 = Tissue: tumor; Gender: female; Age: 55",
-                "#ID_REF =",
+                "!Sample_source_name_ch1 = thyroid cancer",
+                "!Sample_organism_ch1 = Homo sapiens",
+                "!Sample_characteristics_ch1 = tissue: tumor",
+                "!Sample_characteristics_ch1 = gender: female",
+                "!Sample_characteristics_ch1 = age: 55",
+                "#ID_REF = Probe ID",
                 "#VALUE = RMA Gene Expression Estimates",
                 "!sample_table_begin",
                 "ID_REF\tVALUE",
                 "1007_s_at\t9.1",
                 "!sample_table_end",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_geo_family_soft_metadata_only(path: Path) -> Path:
+    path.write_text(
+        "\n".join(
+            [
+                "^DATABASE = GeoMiame",
+                "!Database_name = Gene Expression Omnibus (GEO)",
+                "^SERIES = GSE6005",
+                "!Series_title = Metadata-only GEO family SOFT",
+                "!Series_geo_accession = GSE6005",
+                "!Series_sample_id = GSM200001",
+                "!Series_sample_id = GSM200002",
+                "^PLATFORM = GPL570",
+                "!Platform_title = [HG-U133_Plus_2] Affymetrix Human Genome U133 Plus 2.0 Array",
+                "#ID = Probe ID",
+                "#Gene Symbol = Gene Symbol",
+                "!platform_table_begin",
+                "ID\tGene Symbol",
+                "1007_s_at\tDDR1",
+                "!platform_table_end",
+                "^SAMPLE = GSM200001",
+                "!Sample_title = untreated thyroid sample",
+                "!Sample_source_name_ch1 = thyroid",
+                "!Sample_characteristics_ch1 = tissue: normal thyroid",
+                "!Sample_characteristics_ch1 = treatment: untreated",
+                "^SAMPLE = GSM200002",
+                "!Sample_title = treated thyroid sample",
+                "!Sample_source_name_ch1 = thyroid",
+                "!Sample_characteristics_ch1 = tissue: normal thyroid",
+                "!Sample_characteristics_ch1 = treatment: treated",
                 "",
             ]
         ),
@@ -181,6 +171,8 @@ def _write_geo_series_matrix(path: Path) -> Path:
                 "!Sample_title = Normal sample 1",
                 "!Sample_geo_accession = GSM100001",
                 "!Sample_geo_accession = GSM100002",
+                "!Sample_organism_ch1 = Homo sapiens",
+                "!Sample_organism_ch1 = Homo sapiens",
                 "!Sample_characteristics_ch1 = tissue: tumor",
                 "!Sample_characteristics_ch1 = tissue: normal",
                 "!Sample_source_name_ch1 = thyroid cancer tissue",
@@ -201,10 +193,6 @@ def _asset_by_role(record: dict[str, object]) -> dict[str, dict[str, object]]:
     return {str(asset.get("role") or asset.get("asset_type")): asset for asset in record.get("detected_assets", []) if isinstance(asset, dict)}
 
 
-def _block_by_type(record: dict[str, object]) -> dict[str, dict[str, object]]:
-    return {str(block.get("block_type")): block for block in record.get("content_blocks", []) if isinstance(block, dict)}
-
-
 def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, tmp_path: Path) -> None:
     source = tmp_path / "expression_matrix.tsv"
     source.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
@@ -223,6 +211,38 @@ def test_acquisition_binding_generates_plan_record_handoff(project_root: Path, t
     assert summary.referenced_paths == (str(source.resolve()),)
     artifacts = read_acquisition_artifacts(project_root)
     assert artifacts["record"]["strategy"] == "reference"  # type: ignore[index]
+    manifest_path = Path(str(artifacts["record"]["metadata"]["source_manifest_path"]))  # type: ignore[index]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["summary"]["real_file_count"] == 1
+    assert manifest["file_records"][0]["sha256"]
+    assert manifest["file_records"][0]["status"] == "referenced"
+
+
+def test_acquisition_binding_preserves_multifile_source_files(project_root: Path, tmp_path: Path) -> None:
+    sources = []
+    for name in ("GSE6004_family.soft", "expression_matrix.tsv", "sample_metadata.tsv", "clinical.tsv"):
+        source = tmp_path / name
+        source.write_text("id\tvalue\nA\t1\n", encoding="utf-8")
+        sources.append(source)
+
+    summary = register_acquisition(
+        project_root,
+        source_type="local_import",
+        source_label="本地数据导入",
+        strategy="reference",
+        selected_paths=sources,
+    )
+
+    expected = tuple(str(path.resolve()) for path in sources)
+    assert summary.source_files == expected
+    assert summary.referenced_paths == expected
+    artifacts = read_acquisition_artifacts(project_root)
+    assert artifacts["record"]["source_files"] == list(expected)  # type: ignore[index]
+    assert artifacts["handoff"]["source_files"] == list(expected)  # type: ignore[index]
+    manifest_path = Path(str(artifacts["record"]["metadata"]["source_manifest_path"]))  # type: ignore[index]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["summary"]["real_file_count"] == 4
+    assert manifest["summary"]["sha256_recorded_count"] == 4
 
 
 def test_gse_acquisition_plan_is_plan_only(project_root: Path) -> None:
@@ -247,14 +267,74 @@ def test_plan_only_project_is_not_ready(project_root: Path) -> None:
     assert not any(row["analysis_type"] == "reporting" and row["can_run"] for row in matrix_rows)
 
 
+def test_b5_16_multifile_readiness_keeps_file_level_statuses(project_root: Path, tmp_path: Path) -> None:
+    expression = tmp_path / "expression_matrix.tsv"
+    metadata = tmp_path / "sample_metadata.tsv"
+    raw = tmp_path / "reads.fastq.gz"
+    expression.write_text("gene\tcase_1\tcontrol_1\nTP53\t2\t1\n", encoding="utf-8")
+    metadata.write_text("sample_id\tgroup\ncase_1\tcase\ncontrol_1\tcontrol\n", encoding="utf-8")
+    raw.write_text("@SEQ\nACGT\n+\n!!!!\n", encoding="utf-8")
+    register_acquisition(
+        project_root,
+        source_type="local_import",
+        source_label="本地数据导入",
+        strategy="reference",
+        selected_paths=[expression, metadata, raw],
+    )
+
+    recognition = run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+
+    assert len(recognition["files"]) == 3  # type: ignore[index]
+    assert len(report["file_statuses"]) == 3  # type: ignore[index]
+    statuses = {item["file_name"]: item for item in report["file_statuses"]}  # type: ignore[index]
+    assert statuses["expression_matrix.tsv"]["status_color"] == "green"
+    assert statuses["sample_metadata.tsv"]["status_color"] in {"green", "yellow"}
+    assert statuses["reads.fastq.gz"]["status_color"] == "red"
+    assert statuses["reads.fastq.gz"]["can_enter_standardization"] is False
+    dataset = report["dataset_readiness"]  # type: ignore[index]
+    assert dataset["has_expression_matrix"] is True
+    assert dataset["has_sample_metadata"] is True
+    assert dataset["can_enter_standardization_confirmation"] is True
+
+
+def test_b5_16_gsea_gene_set_not_data_check_missing_item(project_root: Path) -> None:
+    expression = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text("gene\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
+
+    run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    rows = readiness["capability_matrix"]["rows"]  # type: ignore[index]
+    gsea = next(row for row in rows if row["analysis_type"] == "gsea")
+    missing_for_non_gsea = {
+        item
+        for row in rows
+        if row["analysis_type"] != "gsea"
+        for item in row["missing_inputs"]
+    }
+
+    assert report["gsea_gene_set_status"]["label"] == "GSEA 基因集：未选择"  # type: ignore[index]
+    assert report["gsea_gene_set_status"]["blocks_current_data_check"] is False  # type: ignore[index]
+    assert report["gsea_gene_set_status"]["blocks_standardization"] is False  # type: ignore[index]
+    assert report["gsea_gene_set_status"]["blocks_deg_preflight"] is False  # type: ignore[index]
+    assert gsea["missing_inputs"] == ["gsea_gene_set_selection"]
+    assert "gmt_gene_set" not in missing_for_non_gsea
+    assert "GMT" not in " ".join(str(item) for item in report["warnings"])  # type: ignore[index]
+
+
 def test_recognition_readiness_standardization_chain(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
-    raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    raw_file.write_text("gene\ts1\ts2\nTP53\t1.2\t2.4\n", encoding="utf-8")
 
     recognition = run_project_recognition(project_root)
     assert load_recognition_report(project_root) is not None
-    assert recognition["files"][0]["recognized_type"] == "expression_matrix"  # type: ignore[index]
+    assert recognition["files"][0]["recognized_type"] == "normalized_expression_matrix"  # type: ignore[index]
+    assert recognition["schema_version"] == "biomedpilot.recognition_report.v2"
+    assert recognition["files"][0]["standardization_status"] == "eligible"  # type: ignore[index]
     assert TYPE_LABELS["unknown"] == "未知文件"
 
     readiness = run_project_readiness(project_root)
@@ -282,6 +362,90 @@ def test_recognition_classifies_xlsx_gene_count_matrix(project_root: Path) -> No
     assert recognition["files"][0]["content_profile"]["possible_table_role"] == "raw_count_matrix"  # type: ignore[index]
 
 
+def test_mixed_detected_expression_assets_allow_standardization_but_not_deg(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_xlsx_count_matrix(source)
+    recognition_path = project_root / "logs" / "recognition" / "recognition_report.json"
+    recognition_path.parent.mkdir(parents=True, exist_ok=True)
+    recognition_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.recognition_report.v1",
+                "files": [
+                    {
+                        "file_name": source.name,
+                        "original_path": str(source),
+                        "recognized_type": "tabular_text_file",
+                        "recognized_type_zh": "RNA-seq 综合表达结果表",
+                        "recognized_roles": [],
+                        "detected_assets": [
+                            {"asset_type": "raw_count_matrix", "label_zh": "count 矩阵", "input_eligible": True},
+                            {"asset_type": "normalized_expression_matrix", "label_zh": "FPKM 矩阵", "input_eligible": True},
+                            {"asset_type": "differential_result_table", "label_zh": "差异分析结果", "input_eligible": False},
+                            {"asset_type": "gene_annotation", "label_zh": "基因注释", "input_eligible": True},
+                        ],
+                        "route_path": str(source),
+                    }
+                ],
+                "type_counts": {"tabular_text_file": 1},
+                "warnings": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert report["has_core_input"] is True
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert {"sample_metadata", "comparison_config"} <= set(diff_row["missing_inputs"])
+    assert diff_row["can_run"] is False
+
+    standardization = generate_standardized_assets(project_root)
+    asset_types = {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert {"raw_count_matrix", "normalized_expression_matrix", "gene_annotation"} <= asset_types
+
+
+def test_count_matrix_without_group_is_standardization_ready_not_deg_ready(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "counts.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,A1_count,A2_count,B1_count\nTP53,12,15,18\nEGFR,40,41,43\n", encoding="utf-8")
+
+    run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "raw_count_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert "comparison_config" in diff_row["missing_inputs"]
+    assert diff_row["can_run"] is False
+
+
+def test_fpkm_expression_matrix_without_group_is_standardization_ready_not_deg_ready(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "fpkm_matrix.csv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene,A1_FPKM,A2_FPKM,B1_FPKM\nTP53,1.2,1.5,1.8\nEGFR,4.0,4.1,4.3\n", encoding="utf-8")
+
+    run_project_recognition(project_root)
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
+
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
+    assert {"expression_matrix", "normalized_expression_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
+    assert "comparison_config" in diff_row["missing_inputs"]
+    assert diff_row["can_run"] is False
+
+
 def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "geo" / "GSE315375" / "supplementary" / "GSE315375_exp_tyroid_controlX5.xlsx"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
@@ -304,283 +468,6 @@ def test_recognition_classifies_xlsx_tumor_control_expression_workbook(project_r
     assert assets["normalized_expression_matrix"]["input_eligible"] is True
     assert record["content_profile"]["delimiter"] == "xlsx"  # type: ignore[index]
     assert "differential_result_table" not in record["recognized_roles"]  # type: ignore[operator]
-
-
-def test_recognition_detects_integrated_rnaseq_result_table_blocks(project_root: Path) -> None:
-    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
-    raw_file.parent.mkdir(parents=True, exist_ok=True)
-    sample_ids = _integrated_rnaseq_sample_ids()
-    _write_integrated_rnaseq_xlsx(raw_file)
-
-    recognition = run_project_recognition(project_root)
-    record = recognition["files"][0]  # type: ignore[index]
-    blocks = _block_by_type(record)  # type: ignore[arg-type]
-    sample_columns = set(record["content_profile"]["sample_columns"])  # type: ignore[index]
-
-    assert record["semantic_type"] == "rna_seq_integrated_result_table"
-    assert record["semantic_type_zh"] == "RNA-seq 综合表达结果表"
-    assert record["file_kind"] == record["recognized_type"]
-    assert record["species"] == "Mus musculus"
-    assert record["species_group"] == "mouse"
-    assert record["gene_id_type"] == "ensembl_mouse_gene_id"
-    assert blocks["gene_identifier"]["gene_id_type"] == "ensembl_mouse_gene_id"
-    assert blocks["count_expression_matrix"]["sample_count"] == 21
-    assert blocks["count_expression_matrix"]["inferred_sample_ids"] == sample_ids
-    assert blocks["count_expression_matrix"]["inferred_groups"] == ["A", "B", "C", "D", "E", "F", "H"]
-    assert blocks["count_expression_matrix"]["replicate_count_by_group"]["A"] == 3
-    assert blocks["fpkm_expression_matrix"]["sample_count"] == 21
-    assert blocks["fpkm_expression_matrix"]["matches_count_sample_ids"] is True
-    assert blocks["deg_comparisons"]["comparison_count"] >= 10
-    assert blocks["deg_comparisons"]["complete_comparison_count"] >= 10
-    assert all(comparison["is_complete"] for comparison in blocks["deg_comparisons"]["comparisons"])
-    assert {"gene_chr", "gene_start", "gene_end", "gene_strand", "gene_length", "gene_biotype", "gene_description", "tf_family"} <= set(blocks["gene_annotation"]["annotation_fields"])
-    assert "gene_start" not in sample_columns
-    assert "gene_end" not in sample_columns
-    assert "gene_length" not in sample_columns
-    assert not any(column.endswith(("_log2FoldChange", "_pvalue", "_padj")) for column in sample_columns)
-    assert {f"{sample}_count" for sample in sample_ids} <= sample_columns
-    assert {f"{sample}_fpkm" for sample in sample_ids} <= sample_columns
-
-
-def test_integrated_rnaseq_current_run_is_standardization_ready_but_not_deg_ready(project_root: Path) -> None:
-    raw_file = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
-    raw_file.parent.mkdir(parents=True, exist_ok=True)
-    _write_integrated_rnaseq_xlsx(raw_file)
-
-    recognition = run_project_recognition(project_root)
-    readiness = run_project_readiness(project_root)
-    report = readiness["readiness_report"]  # type: ignore[index]
-    diff_row = next(row for row in readiness["capability_matrix"]["rows"] if row["analysis_type"] == "differential_expression")  # type: ignore[index]
-
-    assert recognition["files"][0]["semantic_type"] == "rna_seq_integrated_result_table"  # type: ignore[index]
-    assert report["has_core_input"] is True
-    assert report["standardization_ready"] is True
-    assert report["deg_ready"] is False
-    assert {"expression_matrix", "count_matrix", "raw_count_matrix", "normalized_expression_matrix"} <= set(report["available_inputs"])  # type: ignore[arg-type]
-    assert "comparison_config" in diff_row["missing_inputs"]
-    assert diff_row["can_run"] is False
-
-
-def test_recognition_detail_report_exports_user_summary_without_matrix_rows(project_root: Path) -> None:
-    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
-    raw_file.parent.mkdir(parents=True, exist_ok=True)
-    _write_integrated_rnaseq_xlsx(raw_file)
-
-    recognition = run_project_recognition(project_root)
-    run = next(item for item in list_recognition_runs(project_root) if item.get("is_current"))
-    record = recognition["files"][0]  # type: ignore[index]
-
-    payload = build_recognition_detail_payload(project_root, run, record)  # type: ignore[arg-type]
-    text = format_recognition_detail_text(payload)
-    export_path = export_recognition_report_markdown(project_root, run, record)  # type: ignore[arg-type]
-    markdown = export_path.read_text(encoding="utf-8")
-
-    assert "RNA-seq 综合表达结果表" in text
-    assert "Mus musculus" in text
-    assert "Ensembl mouse gene ID" in text
-    assert "Count 表达矩阵" in text
-    assert "FPKM 表达矩阵" in text
-    assert "PFFvsPBS" in text
-    assert "gene annotation" in text.lower()
-    assert "ENSMUSG 前缀对应 Ensembl mouse gene ID" in text
-    sample_section = text.split("样本列与分组推断", 1)[1].split("DEG comparison 识别", 1)[0]
-    assert "gene_start" not in sample_section
-    assert "PFFvsPBS_log2FoldChange" not in sample_section
-    assert "暂无识别警告" in text
-    assert export_path.name == "recognition_report_user.md"
-    assert "Technical Appendix" in markdown
-    assert "SRY-box transcription factor 17" not in markdown
-    assert "mitochondrially encoded NADH" not in markdown
-
-
-def test_recognition_detail_report_handles_unknown_table_without_human_default(project_root: Path) -> None:
-    run = {
-        "run_id": "manual_unknown",
-        "recognition_report": {
-            "files": [
-                {
-                    "file_name": "unknown.tsv",
-                    "recognized_type": "tabular_text_file",
-                    "recognized_type_zh": "表格文本文件",
-                    "content_profile": {"sample_columns": []},
-                }
-            ],
-            "warnings": [],
-        },
-    }
-
-    payload = build_recognition_detail_payload(project_root, run)
-    text = format_recognition_detail_text(payload)
-
-    assert "未检测到明确的数据内容块" in text
-    assert "未检测到明确物种信息" in text
-    assert "不默认推断为 Homo sapiens" in text
-    assert "物种：未检测到明确物种信息" in text
-
-
-def test_recognition_next_steps_reflect_current_assets_and_species(project_root: Path) -> None:
-    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
-    raw_file.parent.mkdir(parents=True, exist_ok=True)
-    _write_integrated_rnaseq_xlsx(raw_file)
-
-    recognition = run_project_recognition(project_root)
-    run = next(item for item in list_recognition_runs(project_root) if item.get("is_current"))
-    files = [recognition["files"][0]]  # type: ignore[index]
-
-    before_standardization = build_recognition_next_steps(project_root, run, files)  # type: ignore[arg-type]
-    assert before_standardization["primary_action"]["label"] == "继续数据标准化"  # type: ignore[index]
-    assert "查看已有 DEG 结果" in before_standardization["direct_available"]  # type: ignore[operator]
-    assert "重新差异表达分析需要确认分组" in before_standardization["needs_confirmation"]  # type: ignore[operator]
-    assert any("TCGA/GTEx" in item for item in before_standardization["not_recommended"])  # type: ignore[union-attr]
-
-    generate_standardized_assets(project_root)
-    after_standardization = build_recognition_next_steps(project_root, run, files)  # type: ignore[arg-type]
-    assert after_standardization["primary_action"]["label"] == "进入分析任务中心"  # type: ignore[index]
-    assert "count_matrix" in after_standardization["asset_types"]  # type: ignore[operator]
-
-
-def test_recognition_next_steps_handle_unknown_and_human_tables(project_root: Path) -> None:
-    unknown_run = {
-        "run_id": "unknown_run",
-        "recognition_report": {
-            "files": [{"file_name": "unknown.tsv", "recognized_type": "tabular_text_file", "recognized_type_zh": "表格文本文件"}],
-            "warnings": [],
-        },
-    }
-    unknown_steps = build_recognition_next_steps(project_root, unknown_run)
-
-    assert unknown_steps["primary_action"]["label"] == "返回数据导入"  # type: ignore[index]
-    assert any("未检测到明确表达矩阵" in item for item in unknown_steps["not_recommended"])  # type: ignore[union-attr]
-
-    human_run = {
-        "run_id": "human_run",
-        "recognition_report": {
-            "files": [
-                {
-                    "file_name": "human.tsv",
-                    "species": "Homo sapiens",
-                    "species_group": "human",
-                    "content_blocks": [{"block_type": "count_expression_matrix", "sample_columns": ["A_count"], "sample_count": 1}],
-                }
-            ],
-            "warnings": [],
-        },
-    }
-    human_steps = build_recognition_next_steps(project_root, human_run)
-
-    assert not any("小鼠" in item for item in human_steps["not_recommended"])  # type: ignore[union-attr]
-
-
-def test_standardization_current_input_summary_does_not_scan_history(project_root: Path) -> None:
-    raw_file = project_root / "raw_data" / "local_import" / "expression.tsv"
-    raw_file.parent.mkdir(parents=True, exist_ok=True)
-    raw_file.write_text("gene\tA1\nTP53\t1\n", encoding="utf-8")
-    run_project_recognition(project_root)
-    (project_root / "recognized_data" / "current.json").unlink()
-
-    summary = standardization_current_input_summary(project_root)
-
-    assert "尚未选择当前识别结果" in summary
-    assert "历史识别记录" in summary
-
-
-def test_standardization_task_center_and_results_use_integrated_content_blocks(project_root: Path) -> None:
-    raw_file = project_root / "raw_data" / "local_import" / "integrated_rnaseq_results.xlsx"
-    raw_file.parent.mkdir(parents=True, exist_ok=True)
-    _write_integrated_rnaseq_xlsx(raw_file)
-
-    recognition = run_project_recognition(project_root)
-    standardization = generate_standardized_assets(project_root)
-    assets = standardization["registry"]["assets"]  # type: ignore[index]
-    by_type = {str(asset["asset_type"]): asset for asset in assets}  # type: ignore[index]
-
-    assert (project_root / "recognized_data" / "current.json").exists()
-    assert recognition["files"][0]["semantic_type"] == "rna_seq_integrated_result_table"  # type: ignore[index]
-    assert {"count_matrix", "normalized_expression_matrix", "deg_result_table", "gene_annotation", "gene_identifier_metadata"} <= set(by_type)
-    assert by_type["count_matrix"]["source_block_type"] == "count_expression_matrix"
-    assert by_type["count_matrix"]["sample_count"] == 21
-    assert by_type["count_matrix"]["value_type"] == "count"
-    assert "differential_expression" in by_type["count_matrix"]["recommended_for"]
-    assert by_type["normalized_expression_matrix"]["source_block_type"] == "fpkm_expression_matrix"
-    assert by_type["normalized_expression_matrix"]["value_type"] == "fpkm"
-    assert "heatmap" in by_type["normalized_expression_matrix"]["recommended_for"]
-    assert by_type["deg_result_table"]["comparison_count"] >= 10
-    assert "volcano_plot" in by_type["deg_result_table"]["recommended_for"]
-    assert "gene_biotype" in by_type["gene_annotation"]["annotation_fields"]
-    assert any("检测到 count 与 FPKM" in warning for warning in standardization["registry"]["warnings"])  # type: ignore[index]
-
-    center = load_analysis_task_center(project_root)
-    capabilities = {str(item["task_id"]): item for item in center["capabilities"]}  # type: ignore[index]
-    assert capabilities["differential_expression_recompute"]["status"] == "ready_with_group_confirmation"
-    assert capabilities["deg_result_browse"]["status"] == "available"
-    assert capabilities["volcano_plot"]["status"] == "available"
-    assert capabilities["heatmap"]["status"] == "available"
-    assert capabilities["correlation"]["status"] == "available"
-    assert capabilities["gene_annotation_display"]["status"] == "available"
-    assert capabilities["human_cohort_integration"]["status"] == "not_available"
-    assert "TCGA/GTEx" in capabilities["human_cohort_integration"]["reason"]
-
-    comparisons = load_imported_deg_comparisons(project_root)
-    assert {item["comparison_name"] for item in comparisons} >= {"PFFvsPBS", "MMP3vsPBS"}
-    view = build_imported_deg_view(project_root, comparison_name="PFFvsPBS")
-    assert view["source"] == "imported_deg_result"
-    assert view["source_label"] == "导入文件中的已有差异分析结果"
-    assert view["original_columns"] == {"log2fc": "PFFvsPBS_log2FoldChange", "pvalue": "PFFvsPBS_pvalue", "padj": "PFFvsPBS_padj"}
-    assert view["columns"] == ["gene_id", "gene_name", "log2FC", "p value", "adjusted p value", "gene_biotype", "gene_description"]
-    assert view["statistics"]["total_genes"] == 2  # type: ignore[index]
-    assert view["statistics"]["significant_genes"] == 2  # type: ignore[index]
-    assert view["statistics"]["upregulated"] == 1  # type: ignore[index]
-    assert view["statistics"]["downregulated"] == 1  # type: ignore[index]
-    assert view["enrichment_species"] == "mouse"
-    assert "gene_start" not in view["columns"]
-    assert "gene_end" not in view["columns"]
-    assert "gene_length" not in view["columns"]
-    result_index = load_result_index(project_root)
-    assert any(item.get("analysis_type") == "imported_deg_result" for item in result_index["entries"])  # type: ignore[index]
-
-
-def test_standardization_requires_current_recognition_run(project_root: Path) -> None:
-    legacy_report = project_root / "logs" / "recognition" / "recognition_report.json"
-    legacy_report.parent.mkdir(parents=True, exist_ok=True)
-    legacy_report.write_text(
-        json.dumps(
-            {
-                "files": [
-                    {
-                        "file_name": "legacy.tsv",
-                        "original_path": str(project_root / "raw_data" / "legacy.tsv"),
-                        "recognized_type": "expression_matrix",
-                        "recognized_roles": ["expression_matrix"],
-                    }
-                ]
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-
-    standardization = generate_standardized_assets(project_root)
-
-    assert standardization["registry"]["assets"] == []  # type: ignore[index]
-    assert any("current.json" in warning for warning in standardization["registry"]["warnings"])  # type: ignore[index]
-
-
-def test_legacy_unknown_recognized_data_is_archived_as_history(project_root: Path) -> None:
-    unknown_file = project_root / "recognized_data" / "unknown" / "legacy_unknown.tsv"
-    unknown_file.parent.mkdir(parents=True, exist_ok=True)
-    unknown_file.write_text("legacy", encoding="utf-8")
-    (unknown_file.parent / ".DS_Store").write_text("system", encoding="utf-8")
-
-    runs = list_recognition_runs(project_root)
-
-    assert len(runs) == 1
-    run = runs[0]
-    assert run["batch_name"] == "旧版识别记录"
-    assert run["legacy"] is True
-    assert run["recognized_file_count"] == 1
-    report = json.loads(Path(str(run["recognition_report_path"])).read_text(encoding="utf-8"))
-    assert [item["file_name"] for item in report["files"]] == ["legacy_unknown.tsv"]
-    assert not (project_root / "recognized_data" / "current.json").exists()
 
 
 def test_recognition_ignores_partial_download_files(project_root: Path) -> None:
@@ -636,6 +523,22 @@ def test_recognition_dedupes_raw_file_also_registered_by_reference(project_root:
 
 def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Path) -> None:
     source = _write_geo_family_soft(tmp_path / "GSE6004_family.soft")
+    parsed = parse_geo_family_soft(source)
+    assert parsed["geoparse_status"] == "parsed"
+    assert parsed["sample_count"] == 2
+    assert parsed["sample_block_count"] == 2
+    assert parsed["sample_accessions"] == ["GSM139002", "GSM139003"]
+    assert parsed["sample_titles"]["GSM139002"] == "PC10: Normal thyroid paired with tumor"  # type: ignore[index]
+    assert "tissue" in parsed["sample_metadata_fields"]  # type: ignore[operator]
+    assert "thyroid" in parsed["source_name_ch1"]["GSM139002"]  # type: ignore[index]
+    assert "tissue: normal thyroid" in parsed["characteristics_ch1"]["GSM139002"]  # type: ignore[index]
+    assert parsed["platform_block_presence"] is True
+    assert parsed["platform_annotation_presence"] is True
+    assert parsed["expression_table_presence"] is True
+    assert any("Homo sapiens" in item for item in parsed["species_evidence"])  # type: ignore[operator]
+    assert any("ID_REF" in item or "Gene Symbol" in item for item in parsed["gene_id_evidence"])  # type: ignore[operator]
+    assert parsed["parser_depth"] == "table_parsed"
+
     register_acquisition(
         project_root,
         source_type="local_import",
@@ -649,8 +552,25 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
 
     assert record["recognized_type"] == "geo_soft_container"
     assert record["recognized_type_zh"] == "GEO SOFT 容器"
-    assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
-    assert {asset["asset_type"] for asset in record["detected_assets"]} >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
+    assert record["file_format"] == "SOFT"
+    assert record["container_type"] == "geo_family_soft"
+    assert record["parser_depth"] == "table_parsed"
+    assert record["sample_count"] == 2
+    assert record["sample_block_count"] == 2
+    assert record["platform_count"] == 1
+    assert record["platform_block_presence"] is True
+    assert record["platform_annotation_presence"] is True
+    assert record["expression_table_presence"] is True
+    assert any("Homo sapiens" in item for item in record["species_evidence"])  # type: ignore[operator]
+    assert any("ID_REF" in item or "Gene Symbol" in item for item in record["gene_id_evidence"])  # type: ignore[operator]
+    assert record["can_enter_standardization"] is True
+    assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "phenotype_metadata", "platform_annotation", "clinical_metadata"}
+    assert {asset["asset_type"] for asset in record["detected_assets"]} >= {"expression_matrix", "sample_metadata", "phenotype_metadata", "platform_annotation", "clinical_metadata"}
+    assets = _asset_by_role(record)
+    assert assets["expression_matrix"]["requires_user_confirmation"] is True
+    assert assets["expression_matrix"]["input_eligible"] is True
+    assert "完整解析" not in record["reason"]
+    assert "完整表达矩阵" not in record["reason"]
     assert recognition["type_counts"]["geo_soft_container"] == 1  # type: ignore[index]
     assert recognition["type_counts"]["expression_matrix"] == 1  # type: ignore[index]
     assert recognition["type_counts"]["sample_metadata"] == 1  # type: ignore[index]
@@ -667,6 +587,33 @@ def test_geo_family_soft_is_multirole_container(project_root: Path, tmp_path: Pa
     assert asset_types >= {"expression_matrix", "sample_metadata", "platform_annotation", "clinical_metadata"}
     task_types = {task["task_type"] for task in standardization["data_processing_task_plan"]["tasks"]}  # type: ignore[index]
     assert {"expression_matrix_cleaning", "gene_annotation_mapping", "sample_annotation_review"} <= task_types
+
+
+def test_geo_family_soft_metadata_only_does_not_unlock_standardization(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft_metadata_only(source)
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "geo_soft_container"
+    assert record["parser_depth"] == "table_parsed"
+    assert record["sample_count"] == 2
+    assert record["platform_annotation_presence"] is True
+    assert record["expression_table_presence"] is False
+    assert record["can_enter_standardization"] is False
+    assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+    assert "sample_metadata" in record["recognized_roles"]  # type: ignore[operator]
+    assert "platform_annotation" in record["recognized_roles"]  # type: ignore[operator]
+    assert "尚未确认表达矩阵" in record["reason"]
+    assert "完整解析" not in record["reason"]
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    assert report["standardization_ready"] is False
+    assert report["has_core_input"] is False
+    assert "expression_matrix" not in report["available_inputs"]
 
 
 def test_recognition_skips_organized_geo_soft_duplicate(project_root: Path) -> None:
@@ -691,29 +638,87 @@ def test_recognition_skips_organized_geo_soft_duplicate(project_root: Path) -> N
     assert len([asset for asset in soft_assets if asset["asset_type"] == "sample_metadata"]) == 1
 
 
+def test_geo_family_soft_and_xlsx_results_stay_file_scoped(project_root: Path) -> None:
+    soft = project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    xlsx = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    soft.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft_metadata_only(soft)
+    _write_xlsx_count_matrix(xlsx)
+
+    recognition = run_project_recognition(project_root)
+    by_name = {record["file_name"]: record for record in recognition["files"]}  # type: ignore[index]
+    soft_record = by_name["GSE6005_family.soft"]
+    xlsx_record = by_name["GSE236866_Processed_data_tau_with_inhibitors.xlsx"]
+
+    assert soft_record["recognized_type"] == "geo_soft_container"
+    assert soft_record["expression_table_presence"] is False
+    assert "raw_count_matrix" not in soft_record["recognized_roles"]  # type: ignore[operator]
+    assert "normalized_expression_matrix" not in soft_record["recognized_roles"]  # type: ignore[operator]
+    assert "differential_result_table" not in soft_record["recognized_roles"]  # type: ignore[operator]
+    assert xlsx_record["recognized_type"] == "raw_count_matrix"
+    assert "parser_depth" not in xlsx_record
+    assert "sample_count" not in xlsx_record
+
+
 def test_geo_series_matrix_detects_multirole_assets(project_root: Path) -> None:
     source = project_root / "raw_data" / "local_import" / "GSE12345-GPL570_series_matrix.txt"
     source.parent.mkdir(parents=True, exist_ok=True)
     _write_geo_series_matrix(source)
+
+    parsed = parse_geo_series_matrix(source)
+    assert parsed["series_accession"] == "GSE12345"
+    assert parsed["platform_accessions"] == ["GPL570"]
+    assert parsed["sample_accessions"] == ["GSM100001", "GSM100002"]
+    assert parsed["sample_titles"]["GSM100001"] == "Tumor sample 1"  # type: ignore[index]
+    assert parsed["sample_count"] == 2
+    assert parsed["expression_matrix_presence"] is True
+    assert parsed["expression_matrix_dimensions"] == {"rows": 2, "columns": 3, "sample_columns": 2}
+    assert parsed["id_column"] == "ID_REF"
+    assert parsed["sample_columns"] == ["GSM100001", "GSM100002"]
+    assert parsed["gene_id_type_candidate"] == "probe_id"
+    assert parsed["expression_value_type_candidate"] == "normalized_or_log_expression"
+    assert any(item["species"] == "Homo sapiens" and item["source_field"] == "Sample_organism_ch1" for item in parsed["species_evidence"])  # type: ignore[index]
 
     recognition = run_project_recognition(project_root)
     record = recognition["files"][0]  # type: ignore[index]
     assets = _asset_by_role(record)  # type: ignore[arg-type]
 
     assert record["recognized_type"] == "geo_series_matrix_container"
+    assert record["file_format"] == "TXT"
+    assert record["container_type"] == "geo_series_matrix"
+    assert record["parser_depth"] == "matrix_previewed"
+    assert record["series_accession"] == "GSE12345"
+    assert record["platform_accessions"] == ["GPL570"]
+    assert record["sample_count"] == 2
+    assert record["sample_accessions"] == ["GSM100001", "GSM100002"]
+    assert record["expression_matrix_presence"] is True
+    assert record["expression_matrix_dimensions"] == {"rows": 2, "columns": 3, "sample_columns": 2}
+    assert record["id_column"] == "ID_REF"
+    assert record["sample_columns"] == ["GSM100001", "GSM100002"]
+    assert record["expression_value_type_candidate"] == "normalized_or_log_expression"
+    assert record["gene_id_type_candidate"] == "probe_id"
+    assert record["requires_user_confirmation"] is True
+    assert record["can_enter_standardization"] is True
     assert set(record["recognized_roles"]) >= {"expression_matrix", "sample_metadata", "platform_reference_hint"}  # type: ignore[arg-type]
     assert {"phenotype_metadata", "clinical_metadata"} & set(record["recognized_roles"])  # type: ignore[arg-type]
     assert assets["expression_matrix"]["input_eligible"] is True
-    assert assets["expression_matrix"]["location"]["start_line"] == 11  # type: ignore[index]
-    assert assets["expression_matrix"]["location"]["header_line"] == 12  # type: ignore[index]
-    assert assets["expression_matrix"]["location"]["end_line"] == 15  # type: ignore[index]
+    assert assets["expression_matrix"]["requires_user_confirmation"] is True
+    assert assets["expression_matrix"]["location"]["start_line"] == 13  # type: ignore[index]
+    assert assets["expression_matrix"]["location"]["header_line"] == 14  # type: ignore[index]
+    assert assets["expression_matrix"]["location"]["end_line"] == 17  # type: ignore[index]
     assert "ID_REF header" in assets["expression_matrix"]["evidence"]
     assert assets["sample_metadata"]["input_eligible"] is True
     assert assets["platform_reference_hint"]["input_eligible"] is False
     assert assets["platform_reference_hint"]["platform_id"] == "GPL570"
+    assert (project_root / "logs" / "recognition" / "recognized_files.json").exists()
     assert recognition["group_preview"]["status"] == "preview_only"  # type: ignore[index]
     assert recognition["group_preview"]["selected_preview_field"] == "tissue"  # type: ignore[index]
     assert (project_root / GROUP_PREVIEW_REPORT).exists()
+
+    readiness = run_project_readiness(project_root)
+    report = readiness["readiness_report"]  # type: ignore[index]
+    assert report["standardization_ready"] is True
+    assert report["deg_ready"] is False
 
 
 def test_geo_series_matrix_header_without_rows_is_metadata_not_expression(project_root: Path) -> None:
@@ -740,7 +745,293 @@ def test_geo_series_matrix_header_without_rows_is_metadata_not_expression(projec
     assert record["recognized_type"] == "geo_series_matrix_container"
     assert "sample_metadata" in record["recognized_roles"]  # type: ignore[operator]
     assert "expression_matrix" not in record["recognized_roles"]  # type: ignore[operator]
+    assert record["expression_matrix_presence"] is False
+    assert record["can_enter_standardization"] is False
     assert record["content_profile"]["table_data_row_count"] == 0  # type: ignore[index]
+
+    readiness = run_project_readiness(project_root)
+    assert readiness["readiness_report"]["standardization_ready"] is False  # type: ignore[index]
+
+
+def test_geo_series_matrix_gzip_parser_extracts_metadata_and_matrix(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n".join(
+        [
+            "!Series_title\tDemo gzipped series",
+            "!Series_geo_accession\tGSE99999",
+            "!Series_summary\tDemo summary",
+            "!Series_overall_design\tcase control design",
+            "!Series_platform_id\tGPL96",
+            "!Sample_title\tcase sample\tcontrol sample",
+            "!Sample_geo_accession\tGSM900001\tGSM900002",
+            "!Sample_source_name_ch1\tblood case\tblood control",
+            "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+            "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+            "!Sample_treatment_protocol_ch1\ttreated\tuntreated",
+            "!series_matrix_table_begin",
+            "ID_REF\tGSM900001\tGSM900002",
+            "1007_s_at\t10\t12",
+            "1053_at\t15\t18",
+            "!series_matrix_table_end",
+            "",
+        ]
+    )
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write(content)
+
+    parsed = parse_geo_series_matrix(source)
+
+    assert parsed["file_format"] == "TXT.GZ"
+    assert parsed["series_accession"] == "GSE99999"
+    assert parsed["series_summary"] == "Demo summary"
+    assert parsed["overall_design"] == "case control design"
+    assert parsed["platform_accessions"] == ["GPL96"]
+    assert parsed["sample_accessions"] == ["GSM900001", "GSM900002"]
+    assert parsed["sample_titles"]["GSM900001"] == "case sample"  # type: ignore[index]
+    assert parsed["sample_source_name_ch1"]["GSM900001"] == "blood case"  # type: ignore[index]
+    assert "characteristics_ch1" in parsed["sample_metadata_fields"]  # type: ignore[operator]
+    assert {"source_name_ch1", "disease", "treatment_protocol_ch1"} <= set(parsed["phenotype_candidate_fields"])  # type: ignore[arg-type]
+    assert parsed["phenotype_candidate_values_preview"]["disease"] == ["asthma", "control"]  # type: ignore[index]
+    assert parsed["expression_matrix_presence"] is True
+    assert parsed["expression_matrix_dimensions"] == {"rows": 2, "columns": 3, "sample_columns": 2}
+    assert parsed["expression_value_type_candidate"] == "count_like_candidate"
+    assert parsed["gene_id_type_candidate"] == "probe_id"
+
+
+def test_geo_series_matrix_species_conflict_warns(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99998_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99998",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_organism_ch1\tHomo sapiens\tMus musculus",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "1007_s_at\t1.2\t2.3",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = parse_geo_series_matrix(source)
+
+    assert {item["species"] for item in parsed["species_evidence"]} >= {"Homo sapiens", "Mus musculus"}  # type: ignore[index]
+    assert any("Conflicting Sample_organism_ch1" in warning for warning in parsed["warnings"])  # type: ignore[operator]
+
+
+def test_geo_series_matrix_unknown_expression_values_still_standardization_ready(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99997_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99997",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_characteristics_ch1\tcondition: case\tcondition: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "1007_s_at\tpresent\tabsent",
+                "1053_at\tabsent\tpresent",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+    readiness = run_project_readiness(project_root)["readiness_report"]  # type: ignore[index]
+
+    assert record["expression_matrix_presence"] is True
+    assert record["expression_value_type_candidate"] == "unknown"
+    assert record["requires_user_confirmation"] is True
+    assert any("Expression value type is unknown" in warning for warning in record["warnings"])  # type: ignore[operator]
+    assert readiness["standardization_ready"] is True
+    assert readiness["deg_ready"] is False
+
+
+def test_standardization_confirmation_candidates_and_manifest_for_series_matrix(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99999_series_matrix.txt.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n".join(
+        [
+            "!Series_title\tDemo gzipped series",
+            "!Series_geo_accession\tGSE99999",
+            "!Series_platform_id\tGPL96",
+            "!Sample_title\tcase sample\tcontrol sample",
+            "!Sample_geo_accession\tGSM900001\tGSM900002",
+            "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+            "!Sample_characteristics_ch1\tdisease: asthma\tdisease: control",
+            "!series_matrix_table_begin",
+            "ID_REF\tGSM900001\tGSM900002",
+            "1007_s_at\t10\t12",
+            "1053_at\t15\t18",
+            "!series_matrix_table_end",
+            "",
+        ]
+    )
+    with gzip.open(source, "wt", encoding="utf-8") as handle:
+        handle.write(content)
+
+    run_project_recognition(project_root)
+    candidates = collect_standardization_candidates(project_root)
+    expression = candidates["expression_matrix_candidates"][0]  # type: ignore[index]
+    species = candidates["species_candidates"][0]  # type: ignore[index]
+    gene = candidates["gene_id_candidates"][0]  # type: ignore[index]
+
+    assert expression["source_file"] == "GSE99999_series_matrix.txt.gz"
+    assert expression["source_parser"] == "geo_series_matrix"
+    assert expression["expression_value_type_candidate"] == "count_like_candidate"
+    assert expression["requires_user_confirmation"] is True
+    assert species["species"] == "Homo sapiens"
+    assert species["source_field"] == "Sample_organism_ch1"
+    assert gene["gene_id_type"] == "probe_id"
+    assert gene["gene_id_type"] != "gene_symbol"
+
+    manifest = save_standardization_confirmation(project_root, selected_expression_candidate_id=str(expression["candidate_id"]))
+    assert manifest["readiness"]["deg_preflight_ready"] is False  # type: ignore[index]
+    manifest = save_standardization_confirmation(
+        project_root,
+        expression_value_type="count_like_candidate",
+        expression_value_type_confirmed=True,
+        species="Homo sapiens",
+        species_confirmed=True,
+        gene_id_type="probe_id",
+        gene_id_type_confirmed=True,
+    )
+    assert manifest["readiness"]["deg_preflight_ready"] is False  # type: ignore[index]
+    manifest = confirm_group_design_from_preview(project_root)
+    assert manifest["confirmed_group_design"]["group_confirmed"] is True  # type: ignore[index]
+    assert manifest["readiness"]["deg_preflight_ready"] is True  # type: ignore[index]
+    assert (project_root / "manifests" / "standardization_confirmation.json").exists()
+    loaded = load_standardization_confirmation(project_root)
+    assert loaded is not None
+    assert loaded["readiness"]["standardization_confirmed"] is True  # type: ignore[index]
+    standardization = generate_standardized_assets(project_root)
+    registry = standardization["registry"]  # type: ignore[index]
+    manifest = standardization["analysis_ready_manifest"]  # type: ignore[index]
+    repository_manifest = standardization["repository_manifest"]  # type: ignore[index]
+
+    assert registry["schema_version"] == "biomedpilot.standardized_assets_registry.v2"
+    assert repository_manifest["schema_version"] == "biomedpilot.repository_manifest.v1"
+    assert (project_root / "standardized_data" / "repositories" / "repository_manifest.json").exists()
+    assert (project_root / "standardized_data" / "repositories" / "validation_report.json").exists()
+    assert (project_root / "standardized_data" / "repositories" / "asset_lineage.jsonl").exists()
+    repository_names = {asset["repository"] for asset in registry["assets"]}  # type: ignore[index]
+    assert {"expression_repository", "sample_metadata_repository", "group_design_repository", "feature_annotation_repository"} <= repository_names
+    deg_packages = [package for package in manifest["analysis_input_packages"] if package["package_type"] == "deg_recompute"]  # type: ignore[index]
+    assert deg_packages and deg_packages[0]["status"] == "blocked"
+    assert "probe_mapping_missing" in deg_packages[0]["blockers"]
+
+
+def test_standardization_confirmation_unknown_expression_value_blocks_deg_preflight(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "GSE99997_series_matrix.txt"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "\n".join(
+            [
+                "!Series_geo_accession\tGSE99997",
+                "!Series_platform_id\tGPL96",
+                "!Sample_geo_accession\tGSM1\tGSM2",
+                "!Sample_organism_ch1\tHomo sapiens\tHomo sapiens",
+                "!Sample_characteristics_ch1\tcondition: case\tcondition: control",
+                "!series_matrix_table_begin",
+                "ID_REF\tGSM1\tGSM2",
+                "1007_s_at\tpresent\tabsent",
+                "1053_at\tabsent\tpresent",
+                "!series_matrix_table_end",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    run_project_recognition(project_root)
+    candidates = collect_standardization_candidates(project_root)
+    expression = candidates["expression_matrix_candidates"][0]  # type: ignore[index]
+    save_standardization_confirmation(
+        project_root,
+        selected_expression_candidate_id=str(expression["candidate_id"]),
+        expression_value_type="unknown",
+        expression_value_type_confirmed=True,
+        species="Homo sapiens",
+        species_confirmed=True,
+        gene_id_type="probe_id",
+        gene_id_type_confirmed=True,
+    )
+    manifest = confirm_group_design_from_preview(project_root)
+
+    assert manifest["readiness"]["standardization_confirmed"] is True  # type: ignore[index]
+    assert manifest["readiness"]["deg_preflight_ready"] is False  # type: ignore[index]
+    assert any("unknown" in warning for warning in manifest["warnings"])  # type: ignore[operator]
+
+
+def test_standardization_confirmation_filters_family_soft_and_detects_xlsx_candidates(project_root: Path) -> None:
+    soft_metadata = project_root / "raw_data" / "local_import" / "GSE6005_family.soft"
+    soft_expression = project_root / "raw_data" / "local_import" / "GSE6004_family.soft"
+    xlsx = project_root / "raw_data" / "local_import" / "GSE236866_Processed_data_tau_with_inhibitors.xlsx"
+    soft_metadata.parent.mkdir(parents=True, exist_ok=True)
+    _write_geo_family_soft_metadata_only(soft_metadata)
+    _write_geo_family_soft(soft_expression)
+    _write_xlsx_count_matrix(xlsx)
+
+    run_project_recognition(project_root)
+    candidates = collect_standardization_candidates(project_root)
+    expression_sources = {item["source_file"] for item in candidates["expression_matrix_candidates"]}  # type: ignore[index]
+    by_source = {item["source_file"]: item for item in candidates["expression_matrix_candidates"]}  # type: ignore[index]
+
+    assert "GSE6005_family.soft" not in expression_sources
+    assert "GSE6004_family.soft" in expression_sources
+    assert by_source["GSE6004_family.soft"]["requires_user_confirmation"] is True
+    assert by_source["GSE6004_family.soft"]["source_parser"] == "geo_family_soft"
+    assert "GSE236866_Processed_data_tau_with_inhibitors.xlsx" in expression_sources
+    assert by_source["GSE236866_Processed_data_tau_with_inhibitors.xlsx"]["source_parser"] == "xlsx"
+
+
+def test_standardization_confirmation_detects_mixed_xlsx_fpkm_and_imported_deg(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "mixed.xlsx"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("placeholder", encoding="utf-8")
+    recognition_path = project_root / "logs" / "recognition" / "recognition_report.json"
+    recognition_path.parent.mkdir(parents=True, exist_ok=True)
+    recognition_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.recognition_report.v1",
+                "files": [
+                    {
+                        "file_name": source.name,
+                        "original_path": str(source),
+                        "recognized_type": "tabular_text_file",
+                        "recognized_type_zh": "RNA-seq 综合表达结果表",
+                        "recognized_roles": [],
+                        "detected_assets": [
+                            {"asset_type": "raw_count_matrix", "label_zh": "count 矩阵", "input_eligible": True},
+                            {"asset_type": "normalized_expression_matrix", "label_zh": "FPKM 矩阵", "input_eligible": True},
+                            {"asset_type": "differential_result_table", "label_zh": "差异分析结果", "input_eligible": False},
+                        ],
+                        "route_path": str(source),
+                    }
+                ],
+                "warnings": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    candidates = collect_standardization_candidates(project_root)
+    value_types = {item["expression_value_type_candidate"] for item in candidates["expression_matrix_candidates"]}  # type: ignore[index]
+
+    assert {"count", "FPKM"} <= value_types
+    assert candidates["imported_deg_candidates"]  # type: ignore[index]
+    manifest = save_standardization_confirmation(project_root)
+    assert manifest["readiness"]["imported_result_ready"] is True  # type: ignore[index]
 
 
 def test_csv_expression_matrix_content_profile(project_root: Path) -> None:
@@ -827,11 +1118,118 @@ def test_differential_result_table_not_counted_as_expression_input(project_root:
     assert assets["differential_result_table"]["input_eligible"] is False
     readiness = run_project_readiness(project_root)["readiness_report"]  # type: ignore[index]
     assert readiness["has_core_input"] is False
+    assert readiness["standardization_ready"] is False
+    assert readiness["deg_ready"] is False
     assert "expression_matrix" not in readiness["available_inputs"]
     standardization = generate_standardized_assets(project_root)
-    standardized_assets = standardization["registry"]["assets"]  # type: ignore[index]
-    assert any(asset["asset_type"] == "deg_result_table" for asset in standardized_assets)
-    assert not any(asset["asset_type"] in {"expression_matrix", "raw_count_matrix", "normalized_expression_matrix"} for asset in standardized_assets)
+    assets = standardization["registry"]["assets"]  # type: ignore[index]
+    assert [asset["asset_role"] for asset in assets] == ["imported_result"]
+    assert assets[0]["repository"] == "imported_result_repository"
+    assert standardization["analysis_ready_manifest"]["analysis_input_packages"][0]["package_type"] == "enrichment_from_imported_result"  # type: ignore[index]
+
+
+def test_recognition_v2_marks_stale_when_source_file_changes(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("gene\tS1\tS2\nTP53\t1\t2\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    assert recognition["schema_version"] == "biomedpilot.recognition_report.v2"
+    assert recognition_report_stale_status(project_root)["is_stale"] is False
+
+    source.write_text("gene\tS1\tS2\nTP53\t1\t2\nEGFR\t3\t4\n", encoding="utf-8")
+    loaded = load_recognition_report(project_root)
+
+    assert loaded is not None
+    assert loaded["report_status"] == "stale"
+    assert loaded["stale_status"]["reason"] == "source_files_changed"  # type: ignore[index]
+
+
+def test_raw_heavy_file_is_blocked_before_filename_fallback(project_root: Path) -> None:
+    source = project_root / "raw_data" / "local_import" / "sample_counts.fastq.gz"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("@SEQ\nACGT\n+\n!!!!\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "raw_heavy_file"
+    assert record["standardization_status"] == "blocked"
+    assert record["risk_profile"]["raw_heavy"] is True  # type: ignore[index]
+
+
+def test_tcga_expression_recognition_uses_barcode_sample_type(project_root: Path) -> None:
+    source = project_root / "raw_data" / "tcga" / "TCGA-THCA" / "tcga_expression.tsv"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "gene_id\tTCGA-AB-1234-01A\tTCGA-ZZ-9999-11A\n"
+        "ENSG00000141510\t12\t5\n"
+        "ENSG00000146648\t40\t18\n",
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    record = recognition["files"][0]  # type: ignore[index]
+
+    assert record["recognized_type"] == "tcga_expression_matrix"
+    assert record["standardization_status"] == "eligible"
+    assert record["metadata_profile"]["tcga_sample_type_summary"]["tumor_sample_count"] == 1  # type: ignore[index]
+    assert record["metadata_profile"]["tcga_sample_type_summary"]["normal_sample_count"] == 1  # type: ignore[index]
+    standardization = generate_standardized_assets(project_root)
+    repositories = {asset["repository"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert {"expression_repository", "sample_metadata_repository"} <= repositories
+
+
+def test_tcga_clinical_and_gdc_manifest_are_not_expression_inputs(project_root: Path) -> None:
+    clinical = project_root / "raw_data" / "tcga" / "TCGA-THCA" / "clinical.tsv"
+    manifest = project_root / "raw_data" / "tcga" / "TCGA-THCA" / "gdc_manifest.tsv"
+    clinical.parent.mkdir(parents=True, exist_ok=True)
+    clinical.write_text(
+        "case_submitter_id\tage_at_diagnosis\tgender\tajcc_pathologic_stage\tvital_status\tdays_to_death\n"
+        "TCGA-AB-1234\t21915\tfemale\tStage II\tDead\t120\n",
+        encoding="utf-8",
+    )
+    manifest.write_text("id\tfilename\tmd5\tsize\tstate\nuuid-1\tfile.tsv\tabc\t123\treleased\n", encoding="utf-8")
+
+    recognition = run_project_recognition(project_root)
+    by_name = {record["file_name"]: record for record in recognition["files"]}  # type: ignore[index]
+
+    assert by_name["clinical.tsv"]["recognized_type"] == "tcga_clinical_metadata"
+    assert by_name["clinical.tsv"]["standardization_status"] == "eligible"
+    assert by_name["gdc_manifest.tsv"]["recognized_type"] == "gdc_manifest"
+    assert by_name["gdc_manifest.tsv"]["standardization_status"] == "reference_only"
+    standardization = generate_standardized_assets(project_root)
+    repositories = {asset["repository"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert "clinical_repository" in repositories
+    assert "gdc_manifest" not in {asset["asset_type"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+
+
+def test_gtex_expression_and_sample_metadata_recognition(project_root: Path) -> None:
+    expression = project_root / "raw_data" / "gtex" / "Thyroid" / "gtex_tpm.tsv"
+    metadata = project_root / "raw_data" / "gtex" / "Thyroid" / "gtex_sample_attributes.tsv"
+    expression.parent.mkdir(parents=True, exist_ok=True)
+    expression.write_text(
+        "Name\tGTEX-1117F-0226-SM-5GZZ7\tGTEX-2222B-0226-SM-5GZZ8\n"
+        "ENSG00000141510\t2.4\t2.8\n"
+        "ENSG00000146648\t5.1\t5.4\n",
+        encoding="utf-8",
+    )
+    metadata.write_text(
+        "SAMPID\tSMTS\tSMTSD\tSEX\tAGE\n"
+        "GTEX-1117F-0226-SM-5GZZ7\tThyroid\tThyroid\t1\t50-59\n",
+        encoding="utf-8",
+    )
+
+    recognition = run_project_recognition(project_root)
+    by_name = {record["file_name"]: record for record in recognition["files"]}  # type: ignore[index]
+
+    assert by_name["gtex_tpm.tsv"]["recognized_type"] == "gtex_expression_matrix"
+    assert by_name["gtex_tpm.tsv"]["matrix_profile"]["value_type_candidate"] == "TPM"
+    assert by_name["gtex_sample_attributes.tsv"]["recognized_type"] == "gtex_sample_metadata"
+    assert by_name["gtex_sample_attributes.tsv"]["standardization_status"] == "eligible"
+    standardization = generate_standardized_assets(project_root)
+    repositories = {asset["repository"] for asset in standardization["registry"]["assets"]}  # type: ignore[index]
+    assert {"expression_repository", "sample_metadata_repository"} <= repositories
 
 
 def test_gzip_text_expression_matrix_is_recognized(project_root: Path) -> None:
@@ -869,7 +1267,7 @@ def test_gzip_csv_expression_matrix_with_entrez_rowname_and_symbol_annotation(pr
 def test_workflow_and_task_center_do_not_run_analysis(project_root: Path) -> None:
     raw_file = project_root / "raw_data" / "local_import" / "expression_matrix.tsv"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
-    raw_file.write_text("gene\ts1\nTP53\t1\n", encoding="utf-8")
+    raw_file.write_text("gene\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
     run_project_recognition(project_root)
     run_project_readiness(project_root)
 
