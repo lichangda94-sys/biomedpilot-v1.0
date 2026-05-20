@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
+from app.shared.semantic_keys import AnalysisStatusKey, ReportStatusKey, ResultSemanticKey
 
 
 def bioinformatics_features() -> list[FeatureItem]:
@@ -21,10 +23,80 @@ def bioinformatics_step_features() -> list[FeatureAvailability]:
     return [feature for feature in list_features("bioinformatics") if feature.feature_id in step_ids]
 
 
+@dataclass(frozen=True)
+class BioinformaticsIAPage:
+    key: str
+    label: str
+    status_key: str
+    semantic_key: str
+    boundary: str
+
+
+def bioinformatics_target_ia_pages() -> tuple[BioinformaticsIAPage, ...]:
+    return (
+        BioinformaticsIAPage(
+            "project_home",
+            "Project Home / 项目首页",
+            "shell_only",
+            "feature.status.shell_only",
+            "项目创建、打开和项目状态汇总；不执行分析。",
+        ),
+        BioinformaticsIAPage(
+            "data_source",
+            "Data Source / 数据来源",
+            "testing",
+            "feature.status.testing",
+            "GEO、本地导入与后续 TCGA/GTEx 入口；TCGA+GTEx 不自动合并。",
+        ),
+        BioinformaticsIAPage(
+            "data_check_preparation",
+            "Data Check & Preparation / 数据检查与准备",
+            "preflight_only",
+            AnalysisStatusKey.PREFLIGHT_ONLY.value,
+            "resolver-first / preflight-first；未形成 standardized repository 与 analysis input package 前不开放正式分析。",
+        ),
+        BioinformaticsIAPage(
+            "group_design",
+            "Group & Design / 分组与设计",
+            "preflight_only",
+            AnalysisStatusKey.PREFLIGHT_ONLY.value,
+            "服务 DEG、GSEA/ORA、相关性、生存与临床关联；不是 DEG 专属页面。",
+        ),
+        BioinformaticsIAPage(
+            "analysis_tasks",
+            "Analysis Tasks / 分析任务",
+            "blocked",
+            AnalysisStatusKey.BLOCKED.value,
+            "只显示 gated 任务卡；不得把预检包装成正式 DEG/GSEA/生存分析执行。",
+        ),
+        BioinformaticsIAPage(
+            "results",
+            "Results / 结果浏览",
+            "testing",
+            ResultSemanticKey.TESTING_SUMMARY_ONLY.value,
+            "区分 imported_external_result 与未来 formal_computed_result；不生成假结果或假图。",
+        ),
+        BioinformaticsIAPage(
+            "report_export",
+            "Report / Export / 报告导出",
+            "draft",
+            ReportStatusKey.TESTING_SUMMARY.value,
+            "仅允许测试摘要和报告草稿边界；不声明 report-ready 正式报告。",
+        ),
+        BioinformaticsIAPage(
+            "settings_resources",
+            "Settings Resources / 生信资源设置",
+            "shell_only",
+            "resource.status.not_configured",
+            "GO/KEGG/MSigDB、R/Python 包和外部资源检测归 Settings 管理。",
+        ),
+    )
+
+
 try:
-    from PySide6.QtWidgets import QFrame, QLabel, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QStackedWidget, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
-    QFrame = QLabel = QStackedWidget = QVBoxLayout = QWidget = None
+    QFrame = QHBoxLayout = QLabel = QPushButton = QStackedWidget = QVBoxLayout = QWidget = None
     _WORKSPACE_IMPORT_ERROR: Exception | None = None
 else:
     try:
@@ -61,6 +133,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             self._stack = QStackedWidget()
             root = QVBoxLayout(self)
             root.setContentsMargins(0, 0, 0, 0)
+            root.addWidget(self._build_target_ia_shell())
             root.addWidget(self._stack)
             self._project_home_page = BioinformaticsProjectHomeWidget(
                 on_continue=self.show_data_source,
@@ -134,6 +207,58 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             ):
                 self._stack.addWidget(page)
             self._stack.setCurrentWidget(self._project_home_page)
+
+        def target_ia_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in bioinformatics_target_ia_pages())
+
+        def _build_target_ia_shell(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("bioinformaticsTargetIAShell")
+            frame.setStyleSheet("QFrame#bioinformaticsTargetIAShell { border-bottom: 1px solid #D8DEE9; background: #F8FAFC; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(16, 12, 16, 12)
+            layout.setSpacing(8)
+
+            title = QLabel("Bioinformatics / 生信分析目标 IA shell")
+            title.setObjectName("bioinformaticsIATitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            boundary = QLabel(
+                "目标收束：resolver-first / preflight-first / result-schema-first。"
+                "分析任务为 gated copy，不启用正式分析执行器，不生成假结果或假图。"
+            )
+            boundary.setObjectName("bioinformaticsIABoundary")
+            boundary.setWordWrap(True)
+            layout.addWidget(boundary)
+
+            row = QHBoxLayout()
+            row.setSpacing(8)
+            for page in bioinformatics_target_ia_pages():
+                item = QPushButton(page.label)
+                item.setObjectName("bioinformaticsIANavItem")
+                item.setProperty("pageKey", page.key)
+                item.setProperty("statusKey", page.status_key)
+                item.setProperty("semanticKey", page.semantic_key)
+                item.setToolTip(page.boundary)
+                item.setEnabled(False)
+                row.addWidget(item)
+            layout.addLayout(row)
+
+            status_row = QHBoxLayout()
+            status_row.setSpacing(8)
+            for text in (
+                "preflight/gated",
+                "imported_external_result != formal_computed_result",
+                "report draft / testing summary only",
+            ):
+                label = QLabel(text)
+                label.setObjectName("bioinformaticsIABoundaryChip")
+                label.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; background: #FFFFFF;")
+                status_row.addWidget(label)
+            status_row.addStretch(1)
+            layout.addLayout(status_row)
+            return frame
 
         def show_project_home(self) -> None:
             self._stack.setCurrentWidget(self._project_home_page)
