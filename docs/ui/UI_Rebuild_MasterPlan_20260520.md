@@ -24,11 +24,40 @@ Priority order:
 
 ## 2. Current Phase Boundary
 
-Current phase: UI-B0.
+Current checkpoint after UI-A4.2: low-fidelity rebuild shell checkpoint.
 
-UI-B0 only creates governance documents. It does not modify UI code, business code, tests, resources, i18n runtime, packaging scripts, dist bundles, or desktop `.app` entries.
+Completed:
 
-The next code-capable phase is UI-B1, and only after UI-B0 documents are accepted enough to govern token and component names.
+- UI-B0: governance documents.
+- UI-B1: design tokens, theme and basic primitives.
+- UI-B2: Welcome / Dashboard / Sidebar / About / Test Feedback low-fidelity shell.
+- UI-B3: Settings secondary navigation and external capability management shell.
+- UI-B4: LabTools IA shell.
+- UI-B5 shell: Bioinformatics target IA shell and gated/preflight copy.
+- UI-B6 shell: Meta Analysis target IA shell and active Meta type display.
+- UI-B7 shell: shared Result / Report / Export semantic shell.
+
+Partially completed:
+
+- UI-B8a resource inventory / placeholder strategy is complete.
+- UI-B8b formal resource replacement has not started.
+- UI-B9a semantic key registry is complete.
+- Full UI-B9 i18n adoption / language switch has not started.
+
+Not started:
+
+- UI-B10 packaging / desktop entry.
+
+Current hard boundary:
+
+- Do not handle App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation, or desktop `.app` overwrite before UI-B10.
+- Do not treat UI-B8a as resource replacement; it is only inventory and placeholder policy.
+- Do not treat UI-B9a as full i18n; it is only critical key and semantic enum foundation.
+
+Recommended next stage:
+
+- UI-B5.1 Bioinformatics legacy page routing calibration, or
+- UI-B9b key adoption / test migration.
 
 ## 3. Rebuild Principles
 
