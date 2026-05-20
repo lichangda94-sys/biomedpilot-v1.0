@@ -6,6 +6,7 @@ from typing import Any
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
 from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate
+from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
@@ -30,7 +31,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     report_gate = evaluate_report_ready_gate(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
-    deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency)
+    deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
@@ -39,6 +40,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         deg_dependency=deg_dependency,
         deg_ready_gate=deg_gates["deg_ready_gate"],
         parameter_gate=deg_gates["parameter_gate"],
+        confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
         survival_dependency=survival_dependency,
         report_gate=report_gate,
@@ -152,12 +154,15 @@ def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survi
     return rows
 
 
-def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependency: dict[str, Any]) -> dict[str, Any]:
+def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependency: dict[str, Any], project_root: str | Path | None = None) -> dict[str, Any]:
     deg_package = next((item for item in packages if item.get("package_type") == "deg_recompute"), None)
+    confirmation = load_deg_parameter_confirmation(project_root) if project_root is not None else {}
+    confirmed_parameters = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
     if not deg_package:
         deg_ready_gate = {"status": "blocked", "blockers": ["missing_deg_recompute_input_package"], "warnings": []}
         parameter_gate = {"status": "blocked", "blockers": ["missing_deg_ready_package"], "warnings": []}
         result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
+        confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
     else:
         deg_ready = build_deg_ready_package(deg_package).to_dict()
         deg_ready_gate = {
@@ -168,19 +173,31 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
             "warnings": list(deg_ready.get("warnings", []) or []),
             "package": deg_ready,
         }
-        parameter_gate = build_deg_parameter_manifest(deg_ready, dependency_snapshot=deg_dependency)
+        parameter_gate = build_deg_parameter_manifest(
+            deg_ready,
+            method=str(confirmed_parameters.get("method") or "welch_t_test"),
+            log2fc_threshold=float(confirmed_parameters.get("log2fc_threshold") or 1.0),
+            p_value_threshold=float(confirmed_parameters.get("p_value_threshold") or 0.05),
+            fdr_threshold=float(confirmed_parameters.get("fdr_threshold") or 0.05),
+            pseudocount=float(confirmed_parameters.get("pseudocount") or 1e-9),
+            dependency_snapshot=deg_dependency,
+        )
         result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
+        confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
     gate_rows = [
         _formal_deg_gate_row("Resolver package", "passed" if deg_package and not deg_package.get("blockers") else "blocked", list(deg_package.get("blockers", []) or []) if deg_package else ["missing_deg_recompute_input_package"]),
         _formal_deg_gate_row("DEG-ready matrix", deg_ready_gate.get("status"), deg_ready_gate.get("blockers", []), deg_ready_gate.get("warnings", [])),
         _formal_deg_gate_row("Dependency policy", deg_dependency.get("status"), deg_dependency.get("blockers", []), deg_dependency.get("warnings", []), basis=str(deg_dependency.get("dependency_policy") or "")),
         _formal_deg_gate_row("Parameter manifest", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", [])),
+        _formal_deg_gate_row("User parameter confirmation", confirmation_gate.get("status"), confirmation_gate.get("blockers", []), confirmation_gate.get("warnings", []), basis="User must confirm comparison, method, thresholds, value type, dependency versions and output plan."),
         _formal_deg_gate_row("Result schema gate", result_schema_gate.get("status"), result_schema_gate.get("blockers", []), result_schema_gate.get("warnings", [])),
         _formal_deg_gate_row("B9.2 controlled activation", "passed", [], [], basis="Enabled only for audited two-group controlled DEG MVP."),
     ]
     return {
         "deg_ready_gate": deg_ready_gate,
         "parameter_gate": parameter_gate,
+        "confirmation_gate": confirmation_gate,
+        "parameter_confirmation": confirmation,
         "result_schema_gate": result_schema_gate,
         "gate_rows": gate_rows,
     }

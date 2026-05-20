@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from app.bioinformatics.deg_engine import run_formal_controlled_deg
+from app.bioinformatics.deg_engine import run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.results.registry import load_registry
 
 
@@ -25,10 +25,13 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
         default_expression="expr",
     )
     _patch_backend(monkeypatch)
+    dependency = {"status": "passed", "engine_candidate": "python_scipy_statsmodels", "blockers": [], "packages": {}}
+    confirmation = save_deg_parameter_confirmation(tmp_path, dependency_snapshot=dependency)
+    assert confirmation["status"] == "confirmed"
 
     result = run_formal_controlled_deg(
         tmp_path,
-        dependency_snapshot={"status": "passed", "engine_candidate": "python_scipy_statsmodels", "blockers": []},
+        dependency_snapshot=dependency,
     )
 
     assert result["status"] == "passed"
@@ -43,6 +46,34 @@ def test_formal_controlled_deg_runner_registers_result_index_v2(tmp_path: Path, 
     assert entry["plot_artifacts"] == []
     assert entry["report_artifacts"] == []
     assert (tmp_path / entry["output_artifacts"][0]["path"]).is_file()
+
+
+def test_formal_controlled_deg_runner_requires_user_parameter_confirmation(tmp_path: Path, monkeypatch) -> None:
+    matrix = tmp_path / "matrix.tsv"
+    matrix.write_text("gene\tcase1\tcase2\tctrl1\tctrl2\nTP53\t10\t12\t5\t6\n", encoding="utf-8")
+    sample = tmp_path / "sample.tsv"
+    sample.write_text("sample_id\tgroup\ncase1\tcase\ncase2\tcase\nctrl1\tcontrol\nctrl2\tcontrol\n", encoding="utf-8")
+    group = tmp_path / "group.json"
+    group.write_text(json.dumps({"group_design": {"sample_group_assignments": {"case1": "case", "case2": "case", "ctrl1": "control", "ctrl2": "control"}}}), encoding="utf-8")
+    _write_standardized_state(
+        tmp_path,
+        [
+            _asset("expr", "raw_count_matrix", "expression_repository", matrix, value_type="count", gene_id_type="symbol"),
+            _asset("sample", "sample_metadata", "sample_metadata_repository", sample),
+            _asset("group", "group_design", "group_design_repository", group),
+        ],
+        default_expression="expr",
+    )
+    _patch_backend(monkeypatch)
+
+    result = run_formal_controlled_deg(
+        tmp_path,
+        dependency_snapshot={"status": "passed", "engine_candidate": "python_scipy_statsmodels", "blockers": [], "packages": {}},
+    )
+
+    assert result["status"] == "blocked"
+    assert "formal_deg_parameter_confirmation_missing" in result["blockers"]
+    assert load_registry(tmp_path)["results"] == []
 
 
 def test_formal_controlled_deg_runner_blocks_missing_dependencies_without_result(tmp_path: Path) -> None:

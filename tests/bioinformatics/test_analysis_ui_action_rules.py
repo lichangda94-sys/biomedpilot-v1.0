@@ -19,15 +19,19 @@ def test_can_run_task_does_not_enable_formal_deg() -> None:
         deg_dependency={"status": "passed", "blockers": []},
         deg_ready_gate={"status": "passed", "blockers": []},
         parameter_gate={"status": "passed", "blockers": []},
+        confirmation_gate={"status": "blocked", "blockers": ["formal_deg_parameter_confirmation_missing"]},
         result_schema_gate={"status": "passed", "blockers": []},
         survival_dependency={"status": "preflight_only", "blockers": ["lifelines_missing_formal_survival_disabled"]},
         report_gate={"status": "blocked", "blockers": ["result_index_missing_or_empty"]},
     )
 
     formal_deg = _row(rows, "formal_deg")
-    assert formal_deg["enabled"] is True
-    assert formal_deg["state"] == "enabled_formal_deg"
-    assert formal_deg["button_behavior"] == "enabled_controlled_two_group_mvp"
+    assert formal_deg["enabled"] is False
+    assert formal_deg["state"] == "blocked_missing_user_confirmation"
+    assert "formal_deg_parameter_confirmation_missing" in formal_deg["disabled_reason"]
+    confirmation = _row(rows, "formal_deg_parameter_confirmation")
+    assert confirmation["enabled"] is True
+    assert confirmation["state"] == "requires_user_confirmation"
 
     preflight = _row(rows, "deg_preflight")
     assert preflight["enabled"] is True
@@ -42,6 +46,25 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
     assert "KM/Cox/log-rank" in _row(rows, "km_cox_logrank")["label"]
+
+
+def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:
+    rows = build_action_rows(
+        packages=[{"package_type": "deg_recompute", "status": "config_only", "blockers": [], "warnings": []}],
+        deg_dependency={"status": "passed", "blockers": []},
+        deg_ready_gate={"status": "passed", "blockers": []},
+        parameter_gate={"status": "passed", "blockers": []},
+        confirmation_gate={"status": "passed", "blockers": []},
+        result_schema_gate={"status": "passed", "blockers": []},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+    )
+
+    formal_deg = _row(rows, "formal_deg")
+    assert formal_deg["enabled"] is True
+    assert formal_deg["state"] == "enabled_formal_deg"
+    assert formal_deg["button_behavior"] == "enabled_controlled_two_group_mvp"
+    assert _row(rows, "formal_deg_parameter_confirmation")["state"] == "confirmed"
 
 
 def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export() -> None:
@@ -84,6 +107,7 @@ def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
         deg_dependency={"status": "blocked", "blockers": ["missing_python_package:statsmodels"]},
         deg_ready_gate={"status": "blocked", "blockers": ["sample_group_mismatch"]},
         parameter_gate={"status": "blocked", "blockers": ["missing_fdr_policy"]},
+        confirmation_gate={"status": "blocked", "blockers": ["formal_deg_parameter_confirmation_missing"]},
         result_schema_gate={"status": "blocked", "blockers": ["missing_output_artifact"]},
         survival_dependency={"status": "preflight_only"},
         report_gate={"status": "blocked"},
@@ -94,6 +118,7 @@ def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
     assert "missing_python_package:statsmodels" in reason
     assert "sample_group_mismatch" in reason
     assert "missing_fdr_policy" in reason
+    assert "formal_deg_parameter_confirmation_missing" in reason
     assert "missing_output_artifact" in reason
     assert "controlled DEG MVP" in reason
 

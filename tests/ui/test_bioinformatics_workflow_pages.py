@@ -2943,7 +2943,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     widget.refresh_project(project_summary)
 
     buttons = {button.text() for button in widget.findChildren(QPushButton)}
-    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "查看已导入差异分析结果", "继续：结果浏览"}.issubset(buttons)
+    assert {"刷新任务状态", "确认分组与比较设计", "进入差异分析配置", "确认 formal DEG 参数", "查看已导入差异分析结果", "继续：结果浏览"}.issubset(buttons)
     assert widget.findChild(QLabel, "analysisTaskInputSummary") is not None
     assert "核心输入" in widget.findChild(QLabel, "analysisTaskInputSummary").text()
     assert "下一步建议" in widget.findChild(QLabel, "analysisTaskNextStep").text()
@@ -2983,6 +2983,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     action_table = widget.findChild(QTableWidget, "analysisActionGateTable")
     assert action_table is not None
     action_text = _table_text(action_table)
+    assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
     assert "disabled" in action_text
     assert "Run formal GSEA" not in action_text
@@ -3003,8 +3004,18 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert formal_deg_gate is not None
     formal_deg_gate_text = _table_text(formal_deg_gate)
     assert "Parameter manifest" in formal_deg_gate_text
+    assert "User parameter confirmation" in formal_deg_gate_text
     assert "Result schema gate" in formal_deg_gate_text
     assert "B9.2 controlled activation" in formal_deg_gate_text
+
+    confirmation_table = widget.findChild(QTableWidget, "analysisFormalDegConfirmationTable")
+    assert confirmation_table is not None
+    confirmation_text = _table_text(confirmation_table)
+    assert "Comparison" in confirmation_text
+    assert "Method" in confirmation_text
+    assert "Thresholds" in confirmation_text
+    assert "Dependency snapshot" in confirmation_text
+    assert "Output plan" in confirmation_text
 
     gate_table = widget.findChild(QTableWidget, "analysisGatePreviewTable")
     assert gate_table is not None

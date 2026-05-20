@@ -53,7 +53,7 @@ from app.bioinformatics.comparison_config import (
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
-from app.bioinformatics.deg_engine import run_formal_controlled_deg
+from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -5397,7 +5397,16 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
             return None
-        result = run_formal_controlled_deg(self._project_root)
+        confirmation = load_deg_parameter_confirmation(self._project_root)
+        parameter_manifest = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+        result = run_formal_controlled_deg(
+            self._project_root,
+            method=str(parameter_manifest.get("method") or "welch_t_test"),
+            log2fc_threshold=float(parameter_manifest.get("log2fc_threshold") or 1.0),
+            p_value_threshold=float(parameter_manifest.get("p_value_threshold") or 0.05),
+            fdr_threshold=float(parameter_manifest.get("fdr_threshold") or 0.05),
+            pseudocount=float(parameter_manifest.get("pseudocount") or 1e-9),
+        )
         self.refresh_task_center()
         if result.get("status") == "passed":
             self._status_label.setText("已完成两组 controlled DEG MVP，并写入 result index v2。未生成 GSEA、plot、report-ready 或 survival 输出。")
@@ -5405,6 +5414,30 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG gate 未通过"
             self._status_label.setText(f"两组 controlled DEG 未运行：{blockers}")
         return result
+
+    def confirm_formal_deg_parameters(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            confirmation = save_deg_parameter_confirmation(
+                self._project_root,
+                method=self._formal_deg_method_input.currentText(),
+                log2fc_threshold=float(self._formal_deg_log2fc_input.text() or "1.0"),
+                p_value_threshold=float(self._formal_deg_pvalue_input.text() or "0.05"),
+                fdr_threshold=float(self._formal_deg_fdr_input.text() or "0.05"),
+            )
+        except ValueError:
+            self._status_label.setText("Formal DEG 参数确认失败：threshold 必须是数字。")
+            return None
+        self.refresh_task_center()
+        if confirmation.get("status") == "confirmed":
+            plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+            self._status_label.setText(f"已确认 formal DEG 参数；task-run id：{plan.get('task_run_id', '')}。确认后仍只允许运行两组 controlled DEG MVP。")
+        else:
+            blockers = "；".join(str(item) for item in confirmation.get("blockers", []) or []) or "formal DEG gate 未通过"
+            self._status_label.setText(f"Formal DEG 参数未确认：{blockers}")
+        return confirmation
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -5516,6 +5549,9 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        self._formal_deg_confirm_button = _button("确认 formal DEG 参数", "secondaryButton", self.confirm_formal_deg_parameters)
+        self._formal_deg_confirm_button.setEnabled(False)
+        actions.addWidget(self._formal_deg_confirm_button)
         self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
         self._formal_deg_button.setEnabled(False)
         actions.addWidget(self._formal_deg_button)
@@ -5556,6 +5592,38 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         root.addWidget(dependency_card)
         _set_table_widths(self._dependency_table, [150, 130, 110, 280, 260, 220])
         self._dependency_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        confirm_card, confirm_layout = _card("Formal DEG user confirmation")
+        confirm_layout.addWidget(_muted("运行正式 DEG 前，用户必须确认 comparison、method、thresholds、value type compatibility、dependency snapshot、输出位置和 task-run id。"))
+        confirm_controls = QHBoxLayout()
+        self._formal_deg_method_input = QComboBox()
+        self._formal_deg_method_input.addItems(["welch_t_test", "mann_whitney"])
+        self._formal_deg_method_input.setObjectName("formalDegMethodInput")
+        self._formal_deg_log2fc_input = QLineEdit("1.0")
+        self._formal_deg_log2fc_input.setObjectName("formalDegLog2fcThresholdInput")
+        self._formal_deg_log2fc_input.setPlaceholderText("log2FC")
+        self._formal_deg_pvalue_input = QLineEdit("0.05")
+        self._formal_deg_pvalue_input.setObjectName("formalDegPvalueThresholdInput")
+        self._formal_deg_pvalue_input.setPlaceholderText("p-value")
+        self._formal_deg_fdr_input = QLineEdit("0.05")
+        self._formal_deg_fdr_input.setObjectName("formalDegFdrThresholdInput")
+        self._formal_deg_fdr_input.setPlaceholderText("FDR")
+        confirm_controls.addWidget(QLabel("Method"))
+        confirm_controls.addWidget(self._formal_deg_method_input)
+        confirm_controls.addWidget(QLabel("log2FC"))
+        confirm_controls.addWidget(self._formal_deg_log2fc_input)
+        confirm_controls.addWidget(QLabel("p-value"))
+        confirm_controls.addWidget(self._formal_deg_pvalue_input)
+        confirm_controls.addWidget(QLabel("FDR"))
+        confirm_controls.addWidget(self._formal_deg_fdr_input)
+        confirm_controls.addStretch(1)
+        confirm_layout.addLayout(confirm_controls)
+        self._formal_deg_confirmation_table = _table(["确认项", "当前值", "状态"])
+        self._formal_deg_confirmation_table.setObjectName("analysisFormalDegConfirmationTable")
+        confirm_layout.addWidget(self._formal_deg_confirmation_table)
+        root.addWidget(confirm_card)
+        _set_table_widths(self._formal_deg_confirmation_table, [180, 520, 240])
+        self._formal_deg_confirmation_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
 
         gate_card, gate_layout = _card("Result / plot / report gate preview")
         gate_layout.addWidget(_muted("Result semantics、plot source 和 report-ready gate 均来自 B8 contracts；preflight/testing/imported 不会升级为 formal result。"))
@@ -5616,12 +5684,17 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
+        confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
+        self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
+        self._formal_deg_confirm_button.setToolTip(str(confirmation_action.get("disabled_reason") or confirmation_action.get("next_action") or "确认 formal DEG 参数"))
         self._formal_deg_button.setEnabled(bool(formal_action.get("enabled")))
         if formal_action.get("enabled"):
             self._formal_deg_button.setToolTip("运行两组 controlled DEG MVP；只写 result index v2，不生成 GSEA/plot/report-ready/survival。")
         else:
             self._formal_deg_button.setToolTip(str(formal_action.get("disabled_reason") or "formal DEG gate 未通过"))
         _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
+        self._sync_confirmation_controls(analysis_state)
+        _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
         _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
         _fill_table(self._gate_table, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
@@ -5629,6 +5702,23 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._records.setPlainText(_json(payload))
+
+    def _sync_confirmation_controls(self, analysis_state: dict[str, object]) -> None:
+        diagnostics = analysis_state.get("developer_diagnostics") if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}
+        formal_state = diagnostics.get("formal_deg_gate_state") if isinstance(diagnostics.get("formal_deg_gate_state"), dict) else {}
+        parameter_gate = formal_state.get("parameter_gate") if isinstance(formal_state.get("parameter_gate"), dict) else {}
+        method = str(parameter_gate.get("method") or "welch_t_test")
+        index = self._formal_deg_method_input.findText(method)
+        if index >= 0:
+            self._formal_deg_method_input.setCurrentIndex(index)
+        for widget, key, default in (
+            (self._formal_deg_log2fc_input, "log2fc_threshold", "1.0"),
+            (self._formal_deg_pvalue_input, "p_value_threshold", "0.05"),
+            (self._formal_deg_fdr_input, "fdr_threshold", "0.05"),
+        ):
+            value = parameter_gate.get(key, default)
+            if not widget.hasFocus():
+                widget.setText(str(value))
 
 
 class BioinformaticsDegConfigWidget(QWidget):
@@ -10361,6 +10451,42 @@ def _analysis_ui_gate_rows(rows: object) -> list[list[object]]:
         ]
         for row in rows
         if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_confirmation_rows(formal_state: object) -> list[list[object]]:
+    if not isinstance(formal_state, dict):
+        return [["Confirmation", "missing formal DEG gate state", "blocked"]]
+    parameter = formal_state.get("parameter_gate") if isinstance(formal_state.get("parameter_gate"), dict) else {}
+    confirmation = formal_state.get("parameter_confirmation") if isinstance(formal_state.get("parameter_confirmation"), dict) else {}
+    dependency = parameter.get("dependency_snapshot") if isinstance(parameter.get("dependency_snapshot"), dict) else {}
+    packages = dependency.get("packages") if isinstance(dependency.get("packages"), dict) else {}
+    output_plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+    confirmation_gate = formal_state.get("confirmation_gate") if isinstance(formal_state.get("confirmation_gate"), dict) else {}
+    return [
+        [
+            "Comparison",
+            f"{parameter.get('case_group', '')} ({len(parameter.get('case_samples', []) or [])}) vs {parameter.get('control_group', '')} ({len(parameter.get('control_samples', []) or [])}); case={', '.join(parameter.get('case_samples', []) or [])}; control={', '.join(parameter.get('control_samples', []) or [])}",
+            parameter.get("status", "blocked"),
+        ],
+        ["Method", parameter.get("method", ""), parameter.get("method_family", "")],
+        [
+            "Thresholds",
+            f"log2FC={parameter.get('log2fc_threshold', '')}; p={parameter.get('p_value_threshold', '')}; FDR={parameter.get('fdr_threshold', '')}; pseudocount={parameter.get('pseudocount', '')}",
+            parameter.get("fdr_policy", ""),
+        ],
+        ["Value type compatibility", f"{parameter.get('value_type', '')}; {parameter.get('value_type_policy', '')}", parameter.get("gene_mapping_policy", "")],
+        [
+            "Dependency snapshot",
+            "; ".join(f"{name}={status.get('version', '')}" for name, status in packages.items() if isinstance(status, dict) and name in {"numpy", "pandas", "scipy", "statsmodels"}),
+            dependency.get("status", "blocked"),
+        ],
+        [
+            "Output plan",
+            f"task_run_id={output_plan.get('task_run_id', 'not confirmed')}; result={output_plan.get('result_table_path', 'not confirmed')}; log={output_plan.get('task_run_log_path', 'not confirmed')}",
+            confirmation.get("status", "not confirmed"),
+        ],
+        ["Confirmation gate", "; ".join(str(item) for item in confirmation_gate.get("blockers", []) or []) if isinstance(confirmation_gate.get("blockers"), list | tuple) else "None", confirmation_gate.get("status", "blocked")],
     ]
 
 

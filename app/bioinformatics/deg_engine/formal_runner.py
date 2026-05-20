@@ -12,6 +12,7 @@ from app.bioinformatics.results.models import ResultIndexEntry
 from app.bioinformatics.results.registry import register_result
 
 from . import python_backend
+from .confirmation import confirmed_output_plan, load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from .dependency_check import check_deg_backend_dependencies
 from .models import DEG_ENGINE_NAME, DEG_ENGINE_VERSION, REQUIRED_DEG_RESULT_COLUMNS
 from .parameter_gate import build_deg_parameter_manifest
@@ -25,6 +26,10 @@ def run_formal_controlled_deg(
     project_root: str | Path,
     *,
     method: str = "welch_t_test",
+    log2fc_threshold: float = 1.0,
+    p_value_threshold: float = 0.05,
+    fdr_threshold: float = 0.05,
+    pseudocount: float = 1e-9,
     dependency_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
@@ -40,13 +45,25 @@ def run_formal_controlled_deg(
         return _blocked(*[str(item) for item in deg_ready.get("blockers", []) or []], deg_ready_package=deg_ready)
 
     dependency = dependency_snapshot or check_deg_backend_dependencies()
-    parameter_manifest = build_deg_parameter_manifest(deg_ready, method=method, dependency_snapshot=dependency)
+    parameter_manifest = build_deg_parameter_manifest(
+        deg_ready,
+        method=method,
+        log2fc_threshold=log2fc_threshold,
+        p_value_threshold=p_value_threshold,
+        fdr_threshold=fdr_threshold,
+        pseudocount=pseudocount,
+        dependency_snapshot=dependency,
+    )
     if parameter_manifest.get("blockers"):
         return _blocked(*[str(item) for item in parameter_manifest.get("blockers", []) or []], deg_ready_package=deg_ready, parameter_manifest=parameter_manifest, dependency_snapshot=dependency)
 
     schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_manifest, dependency_snapshot=dependency)
     if schema_gate.get("status") != "passed":
         return _blocked(*[str(item) for item in schema_gate.get("blockers", []) or []], deg_ready_package=deg_ready, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, result_schema_gate=schema_gate)
+    confirmation = load_deg_parameter_confirmation(root)
+    confirmation_gate = validate_deg_parameter_confirmation(confirmation, parameter_manifest=parameter_manifest, dependency_snapshot=dependency)
+    if confirmation_gate.get("status") != "passed":
+        return _blocked(*[str(item) for item in confirmation_gate.get("blockers", []) or []], deg_ready_package=deg_ready, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, result_schema_gate=schema_gate, confirmation_gate=confirmation_gate)
 
     bundle = python_backend.run_controlled_deg(
         deg_ready,
@@ -65,8 +82,9 @@ def run_formal_controlled_deg(
     if bundle_validation.get("status") != "passed":
         return _blocked(*[str(item) for item in bundle_validation.get("blockers", []) or []], deg_ready_package=deg_ready, parameter_manifest=parameter_manifest, dependency_snapshot=dependency, result_bundle=bundle)
 
-    result_id = f"formal-deg-{uuid4().hex[:10]}"
-    task_run_id = f"task-run-{uuid4().hex[:10]}"
+    output_plan = confirmed_output_plan(confirmation)
+    result_id = str(output_plan.get("result_id") or f"formal-deg-{uuid4().hex[:10]}")
+    task_run_id = str(output_plan.get("task_run_id") or f"task-run-{uuid4().hex[:10]}")
     output_path = _write_deg_table(root, result_id, bundle.get("rows", []) or [])
     log_path = _write_run_log(root, result_id, bundle, parameter_manifest)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")

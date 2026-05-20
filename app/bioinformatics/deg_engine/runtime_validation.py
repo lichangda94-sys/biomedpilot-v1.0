@@ -16,6 +16,7 @@ from typing import Any
 from app.bioinformatics.results.registry import RESULT_INDEX
 from app.version import app_version_summary
 
+from .confirmation import save_deg_parameter_confirmation
 from .dependency_check import REQUIRED_PACKAGES, check_deg_backend_dependencies
 from .formal_runner import run_formal_controlled_deg
 from .result_schema import validate_formal_deg_result_index_entry
@@ -138,6 +139,14 @@ def _run_fixture(dependency_snapshot: dict[str, Any]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="biomedpilot_b9_3_formal_deg_") as tmpdir:
         root = Path(tmpdir)
         _write_fixture_project(root)
+        confirmation = save_deg_parameter_confirmation(root, dependency_snapshot=dependency_snapshot)
+        if confirmation.get("status") != "confirmed":
+            return {
+                "status": "blocked",
+                "graceful_missing_dependency_block": bool(dependency_snapshot.get("blockers")),
+                "blockers": list(confirmation.get("blockers", []) or []),
+                "warnings": list(confirmation.get("warnings", []) or []),
+            }
         try:
             result = run_formal_controlled_deg(root, dependency_snapshot=dependency_snapshot)
         except Exception as exc:  # pragma: no cover - indicates a B9.3 regression.

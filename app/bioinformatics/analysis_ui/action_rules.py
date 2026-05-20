@@ -16,6 +16,7 @@ def build_action_rows(
     deg_dependency: dict[str, Any] | None = None,
     deg_ready_gate: dict[str, Any] | None = None,
     parameter_gate: dict[str, Any] | None = None,
+    confirmation_gate: dict[str, Any] | None = None,
     result_schema_gate: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
@@ -26,6 +27,7 @@ def build_action_rows(
     deg_dependency = deg_dependency or {}
     deg_ready_gate = deg_ready_gate or {}
     parameter_gate = parameter_gate or {}
+    confirmation_gate = confirmation_gate or {}
     result_schema_gate = result_schema_gate or {}
     survival_dependency = survival_dependency or {}
     report_gate = report_gate or {}
@@ -37,7 +39,8 @@ def build_action_rows(
 
     rows: list[dict[str, Any]] = []
     rows.append(_deg_preflight_action(deg_package))
-    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate))
+    rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
+    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
     rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
@@ -86,6 +89,7 @@ def _formal_deg_action(
     dependency: dict[str, Any],
     deg_ready_gate: dict[str, Any],
     parameter_gate: dict[str, Any],
+    confirmation_gate: dict[str, Any],
     result_schema_gate: dict[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
@@ -118,6 +122,10 @@ def _formal_deg_action(
         blockers.extend(_list(result_schema_gate.get("blockers")) or ["result_schema_gate_not_passed"])
         if state == "hidden_until_ready":
             state = "blocked_missing_result_schema"
+    if confirmation_gate.get("status") != "passed":
+        blockers.extend(_list(confirmation_gate.get("blockers")) or ["formal_deg_parameter_confirmation_missing"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_user_confirmation"
     if state == "hidden_until_ready":
         return {
             "action_id": "formal_deg",
@@ -127,9 +135,55 @@ def _formal_deg_action(
             "enabled": True,
             "normal_user_visible": True,
             "disabled_reason": "",
-            "next_action": "Run audited two-group controlled DEG MVP and register result index v2 output.",
+            "next_action": "Run audited two-group controlled DEG MVP with confirmed parameters and register result index v2 output.",
         }
-    return _disabled("formal_deg", "Run controlled two-group DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter and result schema gates.")
+    return _disabled("formal_deg", "Run controlled two-group DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter, user confirmation and result schema gates.")
+
+
+def _formal_deg_confirmation_action(
+    package: dict[str, Any] | None,
+    dependency: dict[str, Any],
+    deg_ready_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+    confirmation_gate: dict[str, Any],
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not package:
+        blockers.append("missing_deg_recompute_input_package")
+    else:
+        blockers.extend(_list(package.get("blockers")))
+    if dependency.get("status") != "passed":
+        blockers.extend(_list(dependency.get("blockers")) or ["deg_backend_dependency_not_passed"])
+    if deg_ready_gate.get("status") != "passed":
+        blockers.extend(_list(deg_ready_gate.get("blockers")) or ["deg_ready_gate_not_passed"])
+    if parameter_gate.get("status") != "passed":
+        blockers.extend(_list(parameter_gate.get("blockers")) or ["parameter_gate_not_passed"])
+    if result_schema_gate.get("status") != "passed":
+        blockers.extend(_list(result_schema_gate.get("blockers")) or ["result_schema_gate_not_passed"])
+    if blockers:
+        return _disabled("formal_deg_parameter_confirmation", "Confirm formal DEG parameters", "blocked_missing_parameters", "; ".join(dict.fromkeys(blockers)), "Resolve formal DEG gates before confirmation.")
+    if confirmation_gate.get("status") == "passed":
+        return {
+            "action_id": "formal_deg_parameter_confirmation",
+            "label": "Confirm formal DEG parameters",
+            "state": "confirmed",
+            "button_behavior": "enabled_reconfirm_parameters_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Parameters are confirmed; re-confirm only if comparison, method, thresholds or dependencies changed.",
+        }
+    return {
+        "action_id": "formal_deg_parameter_confirmation",
+        "label": "Confirm formal DEG parameters",
+        "state": "requires_user_confirmation",
+        "button_behavior": "enabled_parameter_confirmation_only",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": "Review comparison, method, thresholds, value type policy, dependencies and output plan before formal DEG.",
+    }
 
 
 def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str, Any]]) -> dict[str, Any]:
