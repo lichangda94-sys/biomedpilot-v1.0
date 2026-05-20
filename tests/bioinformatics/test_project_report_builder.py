@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.bioinformatics.deg_executor_preflight import run_deg_executor_preflight
+from app.bioinformatics.deg_task_plan import build_deg_preflight
 from app.bioinformatics.imported_deg_results import mark_imported_deg_report_candidates
 from app.bioinformatics.project_recognition import run_project_recognition
 from app.bioinformatics.project_workspace import create_bioinformatics_project
@@ -23,13 +23,13 @@ def test_project_report_builder_enforces_imported_deg_semantics(tmp_path: Path) 
     )
     run_project_recognition(project_root)
     entries = mark_imported_deg_report_candidates(project_root)
-    preflight = run_deg_executor_preflight(project_root)
+    preflight = build_deg_preflight(project_root)
 
     payload = generate_project_report(project_root)
     markdown = Path(str(payload["markdown_path"])).read_text(encoding="utf-8")
     manifest = payload["manifest"]
 
-    assert preflight["status"] == "failed"
+    assert preflight.status == "blocked"
     assert "输入检查已完成 / 尚未运行真实分析" in markdown
     assert "用户导入的外部分析结果显示" in markdown
     assert "测试级分析输出，不应用于正式科研结论" in markdown
@@ -40,7 +40,7 @@ def test_project_report_builder_enforces_imported_deg_semantics(tmp_path: Path) 
     assert manifest["section_statuses"]["imported_deg_results"] == "available"  # type: ignore[index]
     assert (project_root / "reports" / "project_report_manifest.json").is_file()
     saved_manifest = json.loads((project_root / "reports" / "project_report_manifest.json").read_text(encoding="utf-8"))
-    assert saved_manifest["schema_version"] == "bioinformatics_report_manifest.v1"
+    assert saved_manifest["schema_version"] == "biomedpilot.project_report_manifest.v1"
 
 
 def test_project_report_builder_handles_missing_empty_and_old_result_index(tmp_path: Path) -> None:

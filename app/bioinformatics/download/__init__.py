@@ -6,10 +6,13 @@ from .dataset_download_service import (
     DatasetDownloadService,
     GeoAssetManifestDiscoverer,
     GeoRemoteAssetDownloader,
+    GdcDataFileDownloader,
     HttpsGeoFamilySoftDownloader,
     HttpsGeoAssetManifestDiscoverer,
     HttpsGeoRemoteAssetDownloader,
+    HttpsUrlFileDownloader,
     LegacyGeoFamilySoftDownloader,
+    StandardRemoteFileDownloader,
 )
 from .geo_text_summary_service import GeoStudyTextInput, GeoStudyTextSummary, GeoTextSummaryService
 from .geo_page_profile_service import (
@@ -31,6 +34,7 @@ __all__ = [
     "DatasetDownloadService",
     "GeoAssetManifestDiscoverer",
     "GeoRemoteAssetDownloader",
+    "GdcDataFileDownloader",
     "GeoStudyTextInput",
     "GeoStudyTextSummary",
     "GeoTextSummaryService",
@@ -45,7 +49,9 @@ __all__ = [
     "HttpsGeoFamilySoftDownloader",
     "HttpsGeoAssetManifestDiscoverer",
     "HttpsGeoRemoteAssetDownloader",
+    "HttpsUrlFileDownloader",
     "LegacyGeoFamilySoftDownloader",
+    "StandardRemoteFileDownloader",
     "build_geo_dataset_profile",
     "build_geo_metadata_profile",
 ]
