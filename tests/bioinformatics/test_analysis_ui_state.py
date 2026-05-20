@@ -34,10 +34,15 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
 
     formal_deg = _action(state, "formal_deg")
     assert formal_deg["enabled"] is False
-    assert "b9_1_activation_required" in formal_deg["disabled_reason"]
+    assert "b9_2_activation_required" in formal_deg["disabled_reason"]
+    assert "missing_case_samples" in formal_deg["disabled_reason"]
     assert _action(state, "formal_gsea")["enabled"] is False
     assert _action(state, "km_cox_logrank")["enabled"] is False
     assert _action(state, "report_ready_export")["state"] == "blocked_report_ready_gate"
+    formal_gate_text = "\n".join(str(row) for row in state["formal_deg_gate_rows"])
+    assert "Parameter manifest" in formal_gate_text
+    assert "Result schema gate" in formal_gate_text
+    assert "b9_2_activation_required" in formal_gate_text
 
 
 def test_analysis_center_state_shows_package_repair_guidance_for_deg_blockers(tmp_path: Path) -> None:
@@ -106,6 +111,7 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
     assert "missing_python_package:statsmodels" in text
     assert "lifelines_missing_formal_survival_disabled" in text
     assert "no install action" in text
+    assert "required_in_packaged_app_for_formal_deg" in text
 
 
 def _action(state: dict[str, object], action_id: str) -> dict[str, object]:

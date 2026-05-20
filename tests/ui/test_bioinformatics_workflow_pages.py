@@ -2996,7 +2996,15 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "scipy" in dependency_text
     assert "statsmodels" in dependency_text
     assert "Detect only" in dependency_text
+    assert "required_in_packaged_app_for_formal_deg" in dependency_text
     assert "安装" not in dependency_text
+
+    formal_deg_gate = widget.findChild(QTableWidget, "analysisFormalDegGateTable")
+    assert formal_deg_gate is not None
+    formal_deg_gate_text = _table_text(formal_deg_gate)
+    assert "Parameter manifest" in formal_deg_gate_text
+    assert "Result schema gate" in formal_deg_gate_text
+    assert "b9_2_activation_required" in formal_deg_gate_text
 
     gate_table = widget.findChild(QTableWidget, "analysisGatePreviewTable")
     assert gate_table is not None
@@ -4124,6 +4132,7 @@ def test_settings_page_runs_geo_legacy_environment_check(qt_app, monkeypatch) ->
     assert "statsmodels" in dep_text
     assert "lifelines" in dep_text
     assert "Detect only" in dep_text
+    assert "required_in_packaged_app_for_formal_deg" in dep_text
     assert "安装" not in dep_text
 
 

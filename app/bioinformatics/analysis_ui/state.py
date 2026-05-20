@@ -5,7 +5,9 @@ from typing import Any
 
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
+from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
+from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
@@ -28,12 +30,16 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     report_gate = evaluate_report_ready_gate(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
+    deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
         tasks=tasks,
         results=result_entries,
         deg_dependency=deg_dependency,
+        deg_ready_gate=deg_gates["deg_ready_gate"],
+        parameter_gate=deg_gates["parameter_gate"],
+        result_schema_gate=deg_gates["result_schema_gate"],
         survival_dependency=survival_dependency,
         report_gate=report_gate,
     )
@@ -56,6 +62,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "package_rows": package_rows,
         "action_rows": action_rows,
         "dependency_rows": dependency_rows,
+        "formal_deg_gate_rows": deg_gates["gate_rows"],
         "result_rows": result_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
@@ -67,6 +74,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "result_index": result_index,
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
+            "formal_deg_gate_state": deg_gates,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
         },
@@ -119,6 +127,7 @@ def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survi
                 "blockers": "None",
                 "warnings": "Optional R backend is detect-first and not called in B8.9.",
                 "action": "Detect only; no install action.",
+                "packaging_impact": "optional_not_bundled_for_b9_1",
                 "raw_blockers": [],
                 "raw_warnings": ["optional_r_backend_not_configured"],
             }
@@ -135,11 +144,56 @@ def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survi
                 "blockers": "None",
                 "warnings": "Survival R backend is design-only; no KM/Cox/log-rank execution.",
                 "action": "Detect only; no install action.",
+                "packaging_impact": "optional_not_bundled_for_b9_1",
                 "raw_blockers": [],
                 "raw_warnings": ["survival_r_backend_not_configured"],
             }
         )
     return rows
+
+
+def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependency: dict[str, Any]) -> dict[str, Any]:
+    deg_package = next((item for item in packages if item.get("package_type") == "deg_recompute"), None)
+    if not deg_package:
+        deg_ready_gate = {"status": "blocked", "blockers": ["missing_deg_recompute_input_package"], "warnings": []}
+        parameter_gate = {"status": "blocked", "blockers": ["missing_deg_ready_package"], "warnings": []}
+        result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
+    else:
+        deg_ready = build_deg_ready_package(deg_package).to_dict()
+        deg_ready_gate = {
+            "schema_version": deg_ready.get("schema_version", ""),
+            "status": "passed" if not deg_ready.get("blockers") else "blocked",
+            "deg_ready_package_id": deg_ready.get("deg_ready_package_id", ""),
+            "blockers": list(deg_ready.get("blockers", []) or []),
+            "warnings": list(deg_ready.get("warnings", []) or []),
+            "package": deg_ready,
+        }
+        parameter_gate = build_deg_parameter_manifest(deg_ready, dependency_snapshot=deg_dependency)
+        result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_gate, dependency_snapshot=deg_dependency)
+    gate_rows = [
+        _formal_deg_gate_row("Resolver package", "passed" if deg_package and not deg_package.get("blockers") else "blocked", list(deg_package.get("blockers", []) or []) if deg_package else ["missing_deg_recompute_input_package"]),
+        _formal_deg_gate_row("DEG-ready matrix", deg_ready_gate.get("status"), deg_ready_gate.get("blockers", []), deg_ready_gate.get("warnings", [])),
+        _formal_deg_gate_row("Dependency policy", deg_dependency.get("status"), deg_dependency.get("blockers", []), deg_dependency.get("warnings", []), basis=str(deg_dependency.get("dependency_policy") or "")),
+        _formal_deg_gate_row("Parameter manifest", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", [])),
+        _formal_deg_gate_row("Result schema gate", result_schema_gate.get("status"), result_schema_gate.get("blockers", []), result_schema_gate.get("warnings", [])),
+        _formal_deg_gate_row("B9.2 activation", "blocked", ["b9_2_activation_required"], [], basis="B9.1 hardens gates only; formal execution remains disabled."),
+    ]
+    return {
+        "deg_ready_gate": deg_ready_gate,
+        "parameter_gate": parameter_gate,
+        "result_schema_gate": result_schema_gate,
+        "gate_rows": gate_rows,
+    }
+
+
+def _formal_deg_gate_row(gate: str, status: object, blockers: object, warnings: object = (), *, basis: str = "") -> dict[str, Any]:
+    return {
+        "gate": gate,
+        "status": str(status or "blocked"),
+        "basis": basis,
+        "blockers": compact_list(blockers if isinstance(blockers, list | tuple) else []),
+        "warnings": compact_list(warnings if isinstance(warnings, list | tuple) else []),
+    }
 
 
 def build_result_gate_rows(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -264,6 +318,7 @@ def _dependency_row(dependency_id: str, label: str, status: dict[str, Any], *, r
         "blockers": blocker or "None",
         "warnings": "Detect-first only; no auto-install.",
         "action": "Detect only; no install action.",
+        "packaging_impact": str(status.get("packaging_impact") or ("required_in_packaged_app_for_formal_deg" if required else "optional")),
         "raw_blockers": [blocker] if blocker else [],
         "raw_warnings": ["detect_first_no_install"],
     }

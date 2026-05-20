@@ -5533,19 +5533,24 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
         dependency_card, dependency_layout = _card("Dependency status")
         dependency_layout.addWidget(_muted("Detect-first only：显示缺失依赖并阻断 formal action，不自动安装。"))
-        self._dependency_table = _table(["依赖", "状态", "版本", "Blockers", "操作"])
+        self._dependency_table = _table(["依赖", "状态", "版本", "Blockers", "打包影响", "操作"])
         self._dependency_table.setObjectName("analysisDependencyTable")
         dependency_layout.addWidget(self._dependency_table)
         root.addWidget(dependency_card)
-        _set_table_widths(self._dependency_table, [150, 130, 110, 310, 240])
+        _set_table_widths(self._dependency_table, [150, 130, 110, 280, 260, 220])
         self._dependency_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
         gate_card, gate_layout = _card("Result / plot / report gate preview")
         gate_layout.addWidget(_muted("Result semantics、plot source 和 report-ready gate 均来自 B8 contracts；preflight/testing/imported 不会升级为 formal result。"))
+        self._formal_deg_gate_table = _table(["Formal DEG gate", "状态", "依据", "Blockers", "Warnings"])
+        self._formal_deg_gate_table.setObjectName("analysisFormalDegGateTable")
+        gate_layout.addWidget(self._formal_deg_gate_table)
         self._gate_table = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
         self._gate_table.setObjectName("analysisGatePreviewTable")
         gate_layout.addWidget(self._gate_table)
         root.addWidget(gate_card)
+        _set_table_widths(self._formal_deg_gate_table, [170, 170, 230, 320, 300])
+        self._formal_deg_gate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         _set_table_widths(self._gate_table, [170, 170, 230, 320, 300])
         self._gate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
@@ -5594,6 +5599,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
         _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
+        _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
         _fill_table(self._gate_table, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
         self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}, "analysis_center_state": analysis_state})
@@ -6530,11 +6536,11 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
 
         analysis_dep_card, analysis_dep_layout = _card("Analysis dependency detection")
         analysis_dep_layout.addWidget(_muted("Detect-first only：不自动安装 scipy/statsmodels/R/lifelines；缺失时显示 blocker 并禁用 formal analysis。"))
-        self._analysis_dependency_status = _table(["依赖", "状态", "版本", "Blockers", "操作"])
+        self._analysis_dependency_status = _table(["依赖", "状态", "版本", "Blockers", "打包影响", "操作"])
         self._analysis_dependency_status.setObjectName("analysisDependencyStatusTable")
         analysis_dep_layout.addWidget(self._analysis_dependency_status)
         root.addWidget(analysis_dep_card)
-        _set_table_widths(self._analysis_dependency_status, [150, 130, 110, 310, 240])
+        _set_table_widths(self._analysis_dependency_status, [150, 130, 110, 280, 260, 220])
         self._analysis_dependency_status.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         _fill_table(self._analysis_dependency_status, _analysis_ui_dependency_rows(build_dependency_rows()))
 
@@ -10306,6 +10312,7 @@ def _analysis_ui_dependency_rows(rows: object) -> list[list[object]]:
             row.get("status", ""),
             row.get("version", ""),
             row.get("blockers", ""),
+            row.get("packaging_impact", ""),
             row.get("action", ""),
         ]
         for row in rows

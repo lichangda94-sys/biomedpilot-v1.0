@@ -5,7 +5,7 @@ from typing import Any
 from app.bioinformatics.results.models import normalize_result_semantics
 
 
-FORMAL_DISABLED_REASON = "Formal executor is not activated in B8.9; proceed through B9.1 dependency activation planning."
+FORMAL_DISABLED_REASON = "Formal executor is not activated in B9.1; proceed through B9.2 audited formal DEG execution activation."
 
 
 def build_action_rows(
@@ -14,6 +14,9 @@ def build_action_rows(
     tasks: list[dict[str, Any]] | None = None,
     results: list[dict[str, Any]] | None = None,
     deg_dependency: dict[str, Any] | None = None,
+    deg_ready_gate: dict[str, Any] | None = None,
+    parameter_gate: dict[str, Any] | None = None,
+    result_schema_gate: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
@@ -21,6 +24,9 @@ def build_action_rows(
     tasks = tasks or []
     results = results or []
     deg_dependency = deg_dependency or {}
+    deg_ready_gate = deg_ready_gate or {}
+    parameter_gate = parameter_gate or {}
+    result_schema_gate = result_schema_gate or {}
     survival_dependency = survival_dependency or {}
     report_gate = report_gate or {}
 
@@ -31,7 +37,7 @@ def build_action_rows(
 
     rows: list[dict[str, Any]] = []
     rows.append(_deg_preflight_action(deg_package))
-    rows.append(_formal_deg_action(deg_package, deg_dependency))
+    rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate))
     rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
@@ -75,7 +81,13 @@ def _deg_preflight_action(package: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def _formal_deg_action(package: dict[str, Any] | None, dependency: dict[str, Any]) -> dict[str, Any]:
+def _formal_deg_action(
+    package: dict[str, Any] | None,
+    dependency: dict[str, Any],
+    deg_ready_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> dict[str, Any]:
     blockers: list[str] = []
     state = "hidden_until_ready"
     if not package:
@@ -94,10 +106,22 @@ def _formal_deg_action(package: dict[str, Any] | None, dependency: dict[str, Any
     if dependency.get("status") != "passed":
         blockers.extend(dependency_blockers or ["deg_backend_dependency_not_passed"])
         state = "blocked_missing_backend"
-    blockers.extend(["parameters_gate_not_connected_for_formal_deg", "formal_result_schema_gate_not_connected", "b9_1_activation_required"])
+    if deg_ready_gate.get("status") != "passed":
+        blockers.extend(_list(deg_ready_gate.get("blockers")) or ["deg_ready_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_input_package"
+    if parameter_gate.get("status") != "passed":
+        blockers.extend(_list(parameter_gate.get("blockers")) or ["parameter_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_parameters"
+    if result_schema_gate.get("status") != "passed":
+        blockers.extend(_list(result_schema_gate.get("blockers")) or ["result_schema_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_result_schema"
+    blockers.append("b9_2_activation_required")
     if state == "hidden_until_ready":
-        state = "blocked_missing_result_schema"
-    return _disabled("formal_deg", "Run formal DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve B8 gates, then plan B9.1 formal DEG activation.")
+        state = "formal_ready_but_not_activated"
+    return _disabled("formal_deg", "Run formal DEG", state, "; ".join(dict.fromkeys(blockers + [FORMAL_DISABLED_REASON])), "Resolve resolver, DEG-ready, dependency, parameter and result schema gates; B9.2 activation is still required.")
 
 
 def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str, Any]]) -> dict[str, Any]:

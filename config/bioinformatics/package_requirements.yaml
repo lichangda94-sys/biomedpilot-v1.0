@@ -6,6 +6,13 @@ runtime:
   python:
     required_for_report_v1: true
     external_dependencies_required: false
+    formal_deg_required_packages:
+      numpy: Required for numeric matrix handling in formal DEG.
+      pandas: Required for tabular input/output handling in formal DEG.
+      scipy: Required for statistical tests; missing scipy blocks formal DEG.
+      statsmodels: Required for multiple-testing correction/FDR; missing statsmodels blocks formal DEG.
+    dependency_policy: detect-first; no automatic installation from Settings or Analysis Center.
+    packaging_impact: packaged app must include required formal DEG packages before formal DEG activation can be enabled.
   r:
     required_for_report_v1: false
     required_for_real_analysis: true

@@ -17,14 +17,18 @@ def test_can_run_task_does_not_enable_formal_deg() -> None:
         tasks=[{"task_type": "differential_expression", "can_run": True}],
         results=[],
         deg_dependency={"status": "passed", "blockers": []},
+        deg_ready_gate={"status": "passed", "blockers": []},
+        parameter_gate={"status": "passed", "blockers": []},
+        result_schema_gate={"status": "passed", "blockers": []},
         survival_dependency={"status": "preflight_only", "blockers": ["lifelines_missing_formal_survival_disabled"]},
         report_gate={"status": "blocked", "blockers": ["result_index_missing_or_empty"]},
     )
 
     formal_deg = _row(rows, "formal_deg")
     assert formal_deg["enabled"] is False
-    assert "b9_1_activation_required" in formal_deg["disabled_reason"]
-    assert "Formal executor is not activated" in formal_deg["disabled_reason"]
+    assert "b9_2_activation_required" in formal_deg["disabled_reason"]
+    assert formal_deg["state"] == "formal_ready_but_not_activated"
+    assert "B9.2 audited formal DEG execution activation" in formal_deg["disabled_reason"]
 
     preflight = _row(rows, "deg_preflight")
     assert preflight["enabled"] is True
@@ -73,6 +77,26 @@ def test_imported_deg_review_is_review_only_not_formal() -> None:
     assert imported["enabled"] is True
     assert imported["button_behavior"] == "enabled_review_only"
     assert "imported_external_result" in imported["next_action"]
+
+
+def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
+    rows = build_action_rows(
+        packages=[{"package_type": "deg_recompute", "blockers": ["display_value_type_not_allowed_for_count_model_deg"]}],
+        deg_dependency={"status": "blocked", "blockers": ["missing_python_package:statsmodels"]},
+        deg_ready_gate={"status": "blocked", "blockers": ["sample_group_mismatch"]},
+        parameter_gate={"status": "blocked", "blockers": ["missing_fdr_policy"]},
+        result_schema_gate={"status": "blocked", "blockers": ["missing_output_artifact"]},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+    )
+
+    reason = str(_row(rows, "formal_deg")["disabled_reason"])
+    assert "display_value_type_not_allowed_for_count_model_deg" in reason
+    assert "missing_python_package:statsmodels" in reason
+    assert "sample_group_mismatch" in reason
+    assert "missing_fdr_policy" in reason
+    assert "missing_output_artifact" in reason
+    assert "b9_2_activation_required" in reason
 
 
 def _row(rows: list[dict[str, object]], action_id: str) -> dict[str, object]:
