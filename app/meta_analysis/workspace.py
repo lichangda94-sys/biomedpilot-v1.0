@@ -6,6 +6,7 @@ from typing import Callable
 
 from app.shared.feature_availability import FeatureAvailability, FeatureAvailabilityStatus, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
+from app.shared.ui_components.primitives import make_status_chip
 from app.version import APP_VERSION
 
 from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_analysis_project
@@ -69,6 +70,54 @@ class MetaWorkspaceLayoutState:
     version_status_label: str = ""
     entry_title: str = "Meta 分析模块"
     developer_info_label: str = "开发者信息"
+
+
+@dataclass(frozen=True)
+class MetaTargetIAPage:
+    key: str
+    label: str
+    status_key: str
+    boundary: str
+
+
+@dataclass(frozen=True)
+class MetaActiveType:
+    type_id: str
+    label_zh: str
+    effect_size: str
+    group: str
+    status_key: str = "testing"
+
+
+def meta_target_ia_pages() -> tuple[MetaTargetIAPage, ...]:
+    return (
+        MetaTargetIAPage("project_home", "Project Home / 项目首页", "shell_only", "项目状态总览；不声明生产级系统综述能力。"),
+        MetaTargetIAPage("question_meta_type", "Question & Meta Type / 研究问题与 Meta 类型", "testing", "选择 active Meta 类型，控制后续 extraction schema、质量评价和统计任务。"),
+        MetaTargetIAPage("search_strategy", "Search Strategy / 检索策略", "testing", "检索策略和检索计划；不是自动系统综述结论。"),
+        MetaTargetIAPage("import_dedup", "Import & Deduplication / 文献导入与去重", "testing", "导入、文献库和去重壳层；保留人工审核。"),
+        MetaTargetIAPage("screening", "Screening / 文献筛选", "testing", "标题摘要、全文筛选和排除理由；AI 仅辅助建议。"),
+        MetaTargetIAPage("fulltext_extraction", "Full-text & Extraction / 全文与数据提取", "testing", "按 Meta 类型加载不同数据提取结构；需要人工复核。"),
+        MetaTargetIAPage("quality_assessment", "Quality Assessment / 质量评价", "planned", "按 Meta 类型选择评价工具；当前仅目标 IA 壳层。"),
+        MetaTargetIAPage("analysis_tasks", "Meta Analysis Tasks / 统计分析", "planned", "显示类型专属统计任务边界；不启用 Network Meta。"),
+        MetaTargetIAPage("result_report", "Result & Report / 结果与报告", "shell_only", "仅展示测试边界，不生成生产级结果或投稿级系统综述。"),
+        MetaTargetIAPage("report_export", "Report Export / 报告导出", "shell_only", "报告草稿边界；不声明投稿级输出。"),
+        MetaTargetIAPage("meta_settings", "Meta Settings / Meta 设置", "shell_only", "Meta 偏好、日志和外部资源检测入口。"),
+    )
+
+
+def meta_active_types_v1() -> tuple[MetaActiveType, ...]:
+    return (
+        MetaActiveType("binary_outcome_meta", "二分类结局 Meta", "OR / RR / RD", "结局型 Meta"),
+        MetaActiveType("continuous_outcome_meta", "连续结局 Meta", "MD / SMD / WMD", "结局型 Meta"),
+        MetaActiveType("survival_outcome_meta", "生存结局 Meta", "HR", "结局型 Meta"),
+        MetaActiveType("prevalence_incidence_meta", "患病率 / 发生率 Meta", "event / total / rate", "流行病学 Meta"),
+        MetaActiveType("diagnostic_accuracy_meta", "诊断准确性 Meta", "TP / FP / FN / TN", "诊断与关联 Meta"),
+        MetaActiveType("exposure_disease_risk_meta", "暴露-疾病风险 Meta", "OR / RR / HR", "诊断与关联 Meta"),
+        MetaActiveType("biomarker_expression_difference_meta", "生物标志物表达差异 Meta", "表达差异 / 组间比较", "诊断与关联 Meta"),
+        MetaActiveType("correlation_meta", "相关性 Meta", "r / Fisher z", "关联与预后 Meta"),
+        MetaActiveType("prognostic_factor_meta", "预后因素 Meta", "HR / OR", "关联与预后 Meta"),
+        MetaActiveType("dose_response_meta", "剂量反应 Meta", "testing schema only", "Testing schema"),
+    )
 
 
 def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
@@ -172,6 +221,7 @@ if QWidget is not None:
                 back.clicked.connect(self._on_back)
                 header_layout.addWidget(back)
             root.addWidget(header)
+            root.addWidget(self._build_target_ia_shell())
 
             self._status_label = QLabel("")
             self._status_label.setObjectName("metaProjectStatus")
@@ -190,6 +240,87 @@ if QWidget is not None:
             self._navigation_list.currentRowChanged.connect(self._page_stack.setCurrentIndex)
             self._build_pages()
             self._refresh_summary()
+
+        def target_ia_page_keys(self) -> tuple[str, ...]:
+            return tuple(page.key for page in meta_target_ia_pages())
+
+        def active_meta_type_ids(self) -> tuple[str, ...]:
+            return tuple(meta_type.type_id for meta_type in meta_active_types_v1())
+
+        def _build_target_ia_shell(self) -> QFrame:
+            frame = QFrame()
+            frame.setObjectName("metaTargetIAShell")
+            frame.setStyleSheet("QFrame#metaTargetIAShell { border: 1px solid #D8DEE9; border-radius: 8px; background: #F8FAFC; }")
+            layout = QVBoxLayout(frame)
+            layout.setContentsMargins(16, 14, 16, 14)
+            layout.setSpacing(10)
+
+            title = QLabel("Meta Analysis / Meta 分析目标 IA shell")
+            title.setObjectName("metaTargetIATitle")
+            title.setStyleSheet("font-weight: 750;")
+            layout.addWidget(title)
+
+            boundary = QLabel(
+                "Developer Preview / testing：目标 IA 只展示结构和状态边界。"
+                "AI suggestion 仅为人工可审核建议，不自动生成结论；当前不启用 Network Meta，不声明生产级系统综述能力。"
+            )
+            boundary.setObjectName("metaTargetIABoundary")
+            boundary.setWordWrap(True)
+            layout.addWidget(boundary)
+
+            page_row = QHBoxLayout()
+            page_row.setSpacing(8)
+            for page in meta_target_ia_pages():
+                item = QPushButton(page.label)
+                item.setObjectName("metaTargetIANavItem")
+                item.setProperty("pageKey", page.key)
+                item.setProperty("statusKey", page.status_key)
+                item.setToolTip(page.boundary)
+                item.setEnabled(False)
+                page_row.addWidget(item)
+            layout.addLayout(page_row)
+
+            type_groups: dict[str, list[MetaActiveType]] = {}
+            for meta_type in meta_active_types_v1():
+                type_groups.setdefault(meta_type.group, []).append(meta_type)
+            for group, meta_types in type_groups.items():
+                group_label = QLabel(group)
+                group_label.setObjectName("metaTypeGroupTitle")
+                group_label.setStyleSheet("font-weight: 700;")
+                layout.addWidget(group_label)
+                type_row = QHBoxLayout()
+                type_row.setSpacing(8)
+                for meta_type in meta_types:
+                    card = QFrame()
+                    card.setObjectName("metaActiveTypeCard")
+                    card.setProperty("typeId", meta_type.type_id)
+                    card.setProperty("statusKey", meta_type.status_key)
+                    card.setStyleSheet("QFrame#metaActiveTypeCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #FFFFFF; }")
+                    card_layout = QVBoxLayout(card)
+                    card_layout.setContentsMargins(10, 8, 10, 8)
+                    card_layout.setSpacing(6)
+                    card_layout.addWidget(make_status_chip(status_key=meta_type.status_key))
+                    type_id = QLabel(meta_type.type_id)
+                    type_id.setObjectName("metaActiveTypeId")
+                    type_id.setWordWrap(True)
+                    label = QLabel(meta_type.label_zh)
+                    label.setObjectName("metaActiveTypeLabel")
+                    label.setWordWrap(True)
+                    effect = QLabel(meta_type.effect_size)
+                    effect.setObjectName("metaActiveTypeEffect")
+                    effect.setWordWrap(True)
+                    card_layout.addWidget(type_id)
+                    card_layout.addWidget(label)
+                    card_layout.addWidget(effect)
+                    type_row.addWidget(card)
+                layout.addLayout(type_row)
+
+            planned = QLabel("Network Meta：planned only / not enabled，不属于当前 active Meta 类型。")
+            planned.setObjectName("metaNetworkMetaBoundary")
+            planned.setWordWrap(True)
+            planned.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 6px 8px; background: #FFF7E6;")
+            layout.addWidget(planned)
+            return frame
 
         def _build_pages(self) -> None:
             for item in self._layout_state.navigation_items:
