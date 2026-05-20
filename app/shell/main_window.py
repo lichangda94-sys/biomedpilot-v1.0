@@ -258,23 +258,173 @@ class MainWindow(QMainWindow):
         title.setObjectName("labtoolsShellTitle")
         title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
-        note = QLabel("低保真目标壳层：通用计算器、试剂制备、实验记录、实验模块和外部图像引擎配置。本阶段不接入实验计算业务。")
+        note = QLabel("低保真 IA 壳层：LabTools 一级入口只保留通用计算器、试剂制备、实验模块。本阶段不接入真实实验计算、完整库存、云端协作或局域网共享。")
+        note.setObjectName("labtoolsScopeNote")
         note.setWordWrap(True)
         root.addWidget(note)
-        root.addWidget(
-            self._list_card(
-                "目标入口",
-                [
-                    "通用计算器：planned shell",
-                    "试剂制备：planned shell",
-                    "实验记录：planned shell",
-                    "ImageJ/Fiji 外部引擎：Settings 统一检测与配置",
+
+        entry_row = QHBoxLayout()
+        entry_row.setSpacing(14)
+        entry_row.addWidget(
+            self._labtools_primary_entry_card(
+                title="通用计算器",
+                status_key="shell_only",
+                rows=[
+                    "跨实验场景的公式型动态求解器。",
+                    "不包含 Western Blot、PCR/qPCR、ELISA、MTT/CCK-8/AlamarBlue 等实验专属计算。",
                 ],
             )
         )
-        root.addWidget(self._list_card("当前状态", ["Developer Preview / planned", "仅用于全局导航验收。"]))
+        entry_row.addWidget(
+            self._labtools_primary_entry_card(
+                title="试剂制备",
+                status_key="planned",
+                rows=[
+                    "模板 -> 本次配制 -> 配制单 -> 配制记录。",
+                    "可预留材料记录联动，但不实现完整库存系统。",
+                ],
+            )
+        )
+        entry_row.addWidget(
+            self._labtools_primary_entry_card(
+                title="实验模块",
+                status_key="testing",
+                rows=[
+                    "按真实实验目的和流程组织。",
+                    "实验专属计算、记录、数据处理和图像分析辅助归入对应实验模块。",
+                ],
+            )
+        )
+        root.addLayout(entry_row)
+
+        module_grid = QGridLayout()
+        module_grid.setHorizontalSpacing(14)
+        module_grid.setVerticalSpacing(14)
+        for index, (module_title, status_key, rows) in enumerate(
+            (
+                (
+                    "细胞实验",
+                    "testing",
+                    ["细胞培养与传代", "接种 / 铺板记录", "MTT / CCK-8 / AlamarBlue 归属此类"],
+                ),
+                (
+                    "蛋白实验",
+                    "planned",
+                    ["蛋白样本与定量", "Western Blot 完整流程", "SDS-PAGE 配胶归入 Western Blot"],
+                ),
+                (
+                    "核酸实验",
+                    "planned",
+                    ["样本与核酸提取记录", "PCR", "qPCR 与 plate layout"],
+                ),
+                (
+                    "免疫与吸光度实验",
+                    "planned",
+                    ["ELISA", "标准曲线与浓度计算", "结果记录与导出"],
+                ),
+                (
+                    "免疫组化",
+                    "shell_only",
+                    ["切片 / 染色记录", "图像记录辅助", "结果记录"],
+                ),
+            )
+        ):
+            module_grid.addWidget(
+                self._labtools_experiment_module_card(module_title, status_key=status_key, rows=rows),
+                index // 2,
+                index % 2,
+            )
+        root.addLayout(module_grid)
+
+        root.addWidget(
+            self._labtools_boundary_card(
+                "外部图像分析引擎",
+                [
+                    "不作为 LabTools 一级入口。",
+                    "引擎检测、路径、版本和安装提示统一在 Settings / 外部能力中管理。",
+                    "LabTools 仅在具体实验模块中显示图像分析辅助的 planned / shell-only 状态。",
+                ],
+            )
+        )
+        root.addWidget(
+            self._labtools_boundary_card(
+                "当前不实施范围",
+                [
+                    "不实现完整库存系统。",
+                    "不做云端协作。",
+                    "不做局域网共享。",
+                    "不重写真实实验计算逻辑。",
+                ],
+            )
+        )
         root.addStretch(1)
         return page
+
+    def _labtools_primary_entry_card(self, *, title: str, status_key: str, rows: list[str]) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsPrimaryEntryCard")
+        frame.setStyleSheet("QFrame#labtoolsPrimaryEntryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QHBoxLayout()
+        title_label = QLabel(title)
+        title_label.setObjectName("labtoolsPrimaryEntryTitle")
+        title_label.setStyleSheet("font-weight: 700;")
+        header.addWidget(title_label)
+        header.addStretch(1)
+        header.addWidget(make_status_chip(status_key=status_key))
+        layout.addLayout(header)
+        for row in rows:
+            label = QLabel(row)
+            label.setObjectName("labtoolsEntryDetail")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        button = make_button("查看壳层", role="secondary")
+        button.setObjectName("labtoolsEntryButton")
+        button.setEnabled(False)
+        layout.addWidget(button)
+        return frame
+
+    def _labtools_experiment_module_card(self, title: str, *, status_key: str, rows: list[str]) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsExperimentModuleCard")
+        frame.setStyleSheet("QFrame#labtoolsExperimentModuleCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
+        header = QHBoxLayout()
+        title_label = QLabel(title)
+        title_label.setObjectName("labtoolsExperimentModuleTitle")
+        title_label.setStyleSheet("font-weight: 700;")
+        header.addWidget(title_label)
+        header.addStretch(1)
+        header.addWidget(make_status_chip(status_key=status_key))
+        layout.addLayout(header)
+        for row in rows:
+            label = QLabel(row)
+            label.setObjectName("labtoolsExperimentModuleDetail")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        return frame
+
+    def _labtools_boundary_card(self, title: str, rows: list[str]) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsBoundaryCard")
+        frame.setStyleSheet("QFrame#labtoolsBoundaryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
+        header = QLabel(title)
+        header.setObjectName("labtoolsBoundaryTitle")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        for row in rows:
+            label = QLabel(row)
+            label.setObjectName("labtoolsBoundaryDetail")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        return frame
 
     def _build_settings_page(self) -> QWidget:
         profile = SettingsProfile()
