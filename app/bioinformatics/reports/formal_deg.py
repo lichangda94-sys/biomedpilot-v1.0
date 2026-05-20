@@ -85,9 +85,13 @@ def evaluate_formal_deg_report_ready_gate(
         "selected_result_id": str((selected or {}).get("result_id") or result_id or ""),
         "result_index_path": str(root / RESULT_INDEX),
         "confirmation_path": str(root / CONFIRMATION_PATH),
+        "confirmation_created_at": str(confirmation.get("created_at") or "") if isinstance(confirmation, dict) else "",
+        "dependency_versions": _dependency_versions((selected or {}).get("dependency_snapshot") if isinstance((selected or {}).get("dependency_snapshot"), dict) else {}),
         "allow_table_only_report": allow_table_only_report,
+        "table_only_report_mode_statement": _table_only_statement() if allow_table_only_report else "",
         "max_confirmation_age_days": max_confirmation_age_days,
         "checks": checks,
+        "package_layout": ["formal_deg_report.md", "tables/", "plots/", "manifests/", "logs/", "README_limitations.md"],
         "limitations_required": _limitations(),
         "provenance_required": _provenance(selected or {}, root),
         "blockers": list(dict.fromkeys(blockers)),
@@ -115,7 +119,7 @@ def create_formal_deg_report_ready_package(
     registry = load_registry(root)
     entries = [entry for entry in registry.get("results", []) if isinstance(entry, dict)]
     selected = next(entry for entry in entries if str(entry.get("result_id") or "") == str(gate["selected_result_id"]))
-    package_dir = root / "report_package" / "formal_deg"
+    package_dir = _next_package_dir(root, str(selected.get("result_id") or "formal_deg"))
     tables_dir = package_dir / "tables"
     plots_dir = package_dir / "plots"
     manifests_dir = package_dir / "manifests"
@@ -126,20 +130,30 @@ def create_formal_deg_report_ready_package(
     if table_path.is_file():
         shutil.copy2(table_path, tables_dir / table_path.name)
     _copy_artifacts(root, selected.get("log_artifacts", []) or [], logs_dir)
+    _write_plot_artifact_files(plots_dir, selected.get("plot_artifacts", []) or [])
+    _write_json(manifests_dir / "result_index_snapshot.json", registry)
     _write_json(manifests_dir / "formal_deg_result_entry.json", selected)
     _write_json(manifests_dir / "formal_deg_parameter_confirmation.json", load_deg_parameter_confirmation(root))
     _write_json(manifests_dir / "dependency_snapshot.json", selected.get("dependency_snapshot", {}))
     _write_json(manifests_dir / "plot_artifacts.json", selected.get("plot_artifacts", []) or [])
     _write_json(manifests_dir / "validation_report.json", gate)
+    _write_json(manifests_dir / "gate_snapshot.json", gate)
     _write_json(manifests_dir / "provenance.json", gate.get("provenance_required", {}))
     _write_json(manifests_dir / "warnings.json", {"warnings": gate.get("warnings", []), "result_warnings": selected.get("warnings", []) or []})
+    inventory = _package_inventory(package_dir)
+    _write_json(manifests_dir / "package_inventory.json", inventory)
     (package_dir / "README_limitations.md").write_text(_limitations_markdown(), encoding="utf-8")
     (package_dir / "formal_deg_report.md").write_text(_formal_deg_report_markdown(selected, gate), encoding="utf-8")
+    inventory = _package_inventory(package_dir)
+    _write_json(manifests_dir / "package_inventory.json", inventory)
     manifest = {
         "schema_version": FORMAL_DEG_REPORT_PACKAGE_SCHEMA_VERSION,
         "created_at": _now(),
         "status": "formal_deg_report_ready_package_created",
         "package_path": str(package_dir),
+        "user_visible_package_path": str(package_dir),
+        "overwrite_policy": "create_new_timestamped_package_directory",
+        "package_inventory": inventory,
         "section_scope": "formal_deg_only",
         "included_result_ids": [str(selected.get("result_id") or "")],
         "excluded_result_semantics": ["imported_external_result", "testing_level", "exploratory", "preflight_only"],
@@ -263,7 +277,9 @@ def _provenance(entry: dict[str, Any], root: Path) -> dict[str, Any]:
         "input_package_id": str(entry.get("input_package_id") or ""),
         "source_repository_manifest": str(entry.get("source_repository_manifest") or ""),
         "parameter_confirmation_path": str(root / CONFIRMATION_PATH),
+        "parameter_confirmation_created_at": str(load_deg_parameter_confirmation(root).get("created_at") or ""),
         "dependency_snapshot_present": bool(entry.get("dependency_snapshot")),
+        "dependency_versions": _dependency_versions(entry.get("dependency_snapshot") if isinstance(entry.get("dependency_snapshot"), dict) else {}),
         "result_index_path": str(root / RESULT_INDEX),
         "result_table_path": str(_deg_table_path(root, entry)) if entry else "",
         "plot_artifact_count": len(entry.get("plot_artifacts", []) or []) if entry else 0,
@@ -296,6 +312,8 @@ def _formal_deg_report_markdown(entry: dict[str, Any], gate: dict[str, Any]) -> 
     for name in ("numpy", "pandas", "scipy", "statsmodels"):
         status = packages.get(name) if isinstance(packages.get(name), dict) else {}
         lines.append(f"- {name}: {status.get('version', '')}")
+    if gate.get("allow_table_only_report"):
+        lines.extend(["", "## Table-Only Report Mode", "", f"- {_table_only_statement()}"])
     warning_lines = [f"- {item}" for item in [*(entry.get("warnings", []) or []), *(gate.get("warnings", []) or [])]] or ["- None"]
     lines.extend(["", "## Warnings", "", *warning_lines, "", "## Limitations", "", *[f"- {item}" for item in _limitations()], "", "## Provenance", ""])
     for key, value in (gate.get("provenance_required", {}) or {}).items():
@@ -313,6 +331,10 @@ def _limitations() -> list[str]:
     ]
 
 
+def _table_only_statement() -> str:
+    return "No plot artifact is included by explicit table-only report mode. This does not mean plot generation failed, and it must not imply that volcano or heatmap figures were generated."
+
+
 def _limitations_markdown() -> str:
     return "# Limitations\n\n" + "\n".join(f"- {item}" for item in _limitations()) + "\n"
 
@@ -328,6 +350,62 @@ def _copy_artifacts(root: Path, artifacts: object, target_dir: Path) -> None:
             path = root / path
         if path.is_file():
             shutil.copy2(path, target_dir / path.name)
+
+
+def _write_plot_artifact_files(target_dir: Path, artifacts: object) -> None:
+    if not isinstance(artifacts, list | tuple):
+        return
+    for index, artifact in enumerate(artifacts):
+        if not isinstance(artifact, dict):
+            continue
+        plot_id = str(artifact.get("plot_id") or f"plot_{index}")
+        _write_json(target_dir / f"{_safe_name(plot_id)}.plot_artifact.json", artifact)
+
+
+def _next_package_dir(root: Path, result_id: str) -> Path:
+    base = root / "report_package" / "formal_deg" / _safe_name(result_id)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    candidate = base / stamp
+    suffix = 1
+    while candidate.exists():
+        suffix += 1
+        candidate = base / f"{stamp}_{suffix}"
+    return candidate
+
+
+def _package_inventory(package_dir: Path) -> dict[str, Any]:
+    files = sorted(str(path.relative_to(package_dir)) for path in package_dir.rglob("*") if path.is_file())
+    return {
+        "package_root": str(package_dir),
+        "required_directories": {
+            name: (package_dir / name).is_dir() for name in ("tables", "plots", "manifests", "logs")
+        },
+        "required_files": {
+            "formal_deg_report.md": (package_dir / "formal_deg_report.md").is_file(),
+            "README_limitations.md": (package_dir / "README_limitations.md").is_file(),
+            "manifests/result_index_snapshot.json": (package_dir / "manifests" / "result_index_snapshot.json").is_file(),
+            "manifests/formal_deg_parameter_confirmation.json": (package_dir / "manifests" / "formal_deg_parameter_confirmation.json").is_file(),
+            "manifests/dependency_snapshot.json": (package_dir / "manifests" / "dependency_snapshot.json").is_file(),
+            "manifests/plot_artifacts.json": (package_dir / "manifests" / "plot_artifacts.json").is_file(),
+            "manifests/gate_snapshot.json": (package_dir / "manifests" / "gate_snapshot.json").is_file(),
+            "manifests/provenance.json": (package_dir / "manifests" / "provenance.json").is_file(),
+            "manifests/warnings.json": (package_dir / "manifests" / "warnings.json").is_file(),
+        },
+        "files": files,
+    }
+
+
+def _dependency_versions(snapshot: dict[str, Any]) -> dict[str, str]:
+    packages = snapshot.get("packages") if isinstance(snapshot.get("packages"), dict) else {}
+    return {
+        name: str(status.get("version") or "")
+        for name, status in packages.items()
+        if isinstance(status, dict) and name in {"numpy", "pandas", "scipy", "statsmodels"}
+    }
+
+
+def _safe_name(value: str) -> str:
+    return "".join(char if char.isalnum() or char in {"-", "_", "."} else "_" for char in value) or "formal_deg"
 
 
 def _parse_datetime(value: object) -> datetime | None:

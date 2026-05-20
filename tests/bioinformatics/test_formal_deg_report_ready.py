@@ -30,13 +30,33 @@ def test_formal_deg_report_ready_package_requires_formal_plot_and_updates_result
     assert manifest["gsea_enabled"] is False
     assert manifest["survival_enabled"] is False
     assert manifest["clinical_conclusion_enabled"] is False
+    assert manifest["overwrite_policy"] == "create_new_timestamped_package_directory"
     package = Path(str(manifest["package_path"]))
     report = (package / "formal_deg_report.md").read_text(encoding="utf-8")
     assert "Formal DEG Report-Ready Section" in report
     assert "does not include GSEA" in report
     assert "clinical conclusions" in report
+    assert (package / "tables").is_dir()
+    assert (package / "plots").is_dir()
+    assert (package / "manifests").is_dir()
+    assert (package / "logs").is_dir()
+    assert (package / "README_limitations.md").is_file()
+    assert (package / "manifests" / "result_index_snapshot.json").is_file()
     assert (package / "manifests" / "formal_deg_parameter_confirmation.json").is_file()
+    assert (package / "manifests" / "dependency_snapshot.json").is_file()
     assert (package / "manifests" / "plot_artifacts.json").is_file()
+    assert (package / "manifests" / "gate_snapshot.json").is_file()
+    assert (package / "manifests" / "package_inventory.json").is_file()
+    assert (package / "manifests" / "provenance.json").is_file()
+    assert (package / "manifests" / "warnings.json").is_file()
+    assert (package / "plots" / "formal-report-volcano_plot-artifact.plot_artifact.json").is_file()
+    assert (package / "logs" / "formal-report_run_log.json").is_file()
+    inventory = json.loads((package / "manifests" / "package_inventory.json").read_text(encoding="utf-8"))
+    assert inventory["required_directories"]["tables"] is True
+    assert inventory["required_files"]["manifests/result_index_snapshot.json"] is True
+    gate_snapshot = json.loads((package / "manifests" / "gate_snapshot.json").read_text(encoding="utf-8"))
+    assert gate_snapshot["confirmation_created_at"]
+    assert gate_snapshot["dependency_versions"]["scipy"] == "1.17.1"
     entry = load_registry(tmp_path)["results"][0]
     assert entry["report_ready_eligible"] is True
     assert entry["report_artifacts"][0]["artifact_type"] == "formal_deg_report_ready_package"
@@ -58,6 +78,29 @@ def test_formal_deg_report_ready_blocks_without_plot_unless_table_only_mode_is_e
     assert table_only["status"] == "formal_deg_report_ready_package_created"
     assert table_only["allow_table_only_report"] is True
     assert "formal_deg_table_only_report_mode_no_plot_artifact" in table_only["gate"]["warnings"]
+    package = Path(str(table_only["package_path"]))
+    report = (package / "formal_deg_report.md").read_text(encoding="utf-8")
+    assert "Table-Only Report Mode" in report
+    assert "does not mean plot generation failed" in report
+    assert "must not imply that volcano or heatmap figures were generated" in report
+
+
+def test_formal_deg_report_ready_package_uses_new_directory_instead_of_overwriting(tmp_path: Path) -> None:
+    table = _write_deg_table(tmp_path)
+    parameters = _parameters()
+    dependency = _dependency()
+    _register_formal(tmp_path, table, parameters=parameters, dependency=dependency)
+    _write_confirmation(tmp_path, parameters=parameters, dependency=dependency)
+    create_formal_deg_plot_artifact(tmp_path, result_id="formal-report", plot_type="volcano_plot")
+
+    first = create_formal_deg_report_ready_package(tmp_path, result_id="formal-report")
+    second = create_formal_deg_report_ready_package(tmp_path, result_id="formal-report")
+
+    assert first["status"] == "formal_deg_report_ready_package_created"
+    assert second["status"] == "formal_deg_report_ready_package_created"
+    assert first["package_path"] != second["package_path"]
+    assert Path(str(first["package_path"])).is_dir()
+    assert Path(str(second["package_path"])).is_dir()
 
 
 def test_formal_deg_report_ready_blocks_imported_testing_and_preflight_results(tmp_path: Path) -> None:
@@ -106,6 +149,9 @@ def _write_deg_table(root: Path) -> Path:
 
 
 def _register_formal(root: Path, table: Path, *, parameters: dict[str, object], dependency: dict[str, object]) -> None:
+    log_path = root / "analysis" / "formal_deg" / "formal-report_run_log.json"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(json.dumps({"schema_version": "biomedpilot.formal_deg_run_log.v1", "result_id": "formal-report"}, indent=2), encoding="utf-8")
     register_result(
         root,
         ResultIndexEntry(

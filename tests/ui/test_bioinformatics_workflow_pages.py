@@ -4228,6 +4228,9 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     assert manifest["section_scope"] == "formal_deg_only"
     assert manifest["gsea_enabled"] is False
     assert manifest["survival_enabled"] is False
+    assert "user_visible_package_path" in manifest
+    assert Path(str(manifest["user_visible_package_path"])).is_dir()
+    assert "输出位置：" in widget.status_message()
     assert "仅包含 formal DEG section" in widget.status_message()
 
 

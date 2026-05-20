@@ -6390,7 +6390,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         result = create_formal_deg_report_ready_package(self._project_root, result_id=result_id or None, allow_table_only_report=allow_table_only)
         if result.get("status") == "formal_deg_report_ready_package_created":
             self.refresh_results()
-            self._status_label.setText("已生成 formal DEG report-ready package；仅包含 formal DEG section，未生成 GSEA、survival 或临床结论。")
+            self._status_label.setText(
+                "已生成 formal DEG report-ready package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                "仅包含 formal DEG section，未生成 GSEA、survival 或临床结论。"
+            )
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG report-ready gate 未通过"
             self._status_label.setText(f"formal DEG report-ready package 未生成：{blockers}")
@@ -6479,12 +6483,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         plot_controls.addStretch(1)
         review_layout.addLayout(plot_controls)
         report_controls = QHBoxLayout()
-        self._formal_deg_table_only_report = QCheckBox("允许 table-only report mode")
+        self._formal_deg_table_only_report = QCheckBox("允许无图 table-only report mode")
         self._formal_deg_table_only_report.setObjectName("formalDegTableOnlyReportMode")
         self._formal_deg_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
         self._formal_deg_report_button = _button("生成 formal DEG report-ready package", "secondaryButton", self.generate_formal_deg_report_ready_package)
         self._formal_deg_report_button.setObjectName("formalDegReportReadyButton")
-        self._formal_deg_report_status = _muted("Formal DEG report-ready gate 需要完整 result index、未过期 confirmation、passed dependency/table validation 和 formal plot artifact。")
+        self._formal_deg_report_status = _muted("Formal DEG report-ready gate 需要完整 result index、未过期 confirmation、passed dependency/table validation 和 formal plot artifact；无图 table-only 模式需显式勾选，且不表示 volcano/heatmap 已生成。")
         self._formal_deg_report_status.setObjectName("formalDegReportReadyStatus")
         report_controls.addWidget(self._formal_deg_table_only_report)
         report_controls.addWidget(self._formal_deg_report_button)
@@ -6652,6 +6656,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._formal_deg_report_button.setEnabled(True)
             self._formal_deg_report_status.setText(
                 f"Formal DEG report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"confirmation={gate.get('confirmation_created_at', '')}；deps={gate.get('dependency_versions', {})}；"
                 "package scope=formal DEG only；GSEA/survival/clinical conclusions disabled."
             )
         else:
