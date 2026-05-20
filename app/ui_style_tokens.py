@@ -1,22 +1,67 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from enum import StrEnum
 
-COLORS = {
-    "background": "#F5F7F9",
+
+@dataclass(frozen=True)
+class StatusVisualToken:
+    key: str
+    label: str
+    background: str
+    border: str
+    text: str
+    icon_hint: str = ""
+
+
+@dataclass(frozen=True)
+class ButtonVisualToken:
+    role: str
+    background: str
+    border: str
+    text: str
+    hover_background: str
+
+
+class UIStatusKey(StrEnum):
+    DEVELOPER_PREVIEW = "developer_preview"
+    TESTING = "testing"
+    PLANNED = "planned"
+    SHELL_ONLY = "shell_only"
+    PREFLIGHT_ONLY = "preflight_only"
+    BLOCKED = "blocked"
+    AVAILABLE = "available"
+    NOT_CONFIGURED = "not_configured"
+    MISSING = "missing"
+    FAILED = "failed"
+    DRAFT = "draft"
+    REPORT_READY = "report_ready"
+
+
+COLORS: dict[str, str] = {
+    "background": "#F8FAFC",
     "surface": "#FFFFFF",
-    "surface_muted": "#F8FAFC",
-    "border": "#DDE3EA",
-    "text": "#1F2933",
-    "muted": "#6B7280",
+    "surface_muted": "#F1F5F9",
+    "border": "#CBD5E1",
+    "text": "#0F172A",
+    "muted": "#64748B",
     "bio": "#12324A",
     "bio_soft": "#EAF2F8",
     "bio_accent": "#1BAE9F",
     "meta": "#6B4FD8",
     "meta_soft": "#F0EDFF",
+    "labtools": "#7A4E12",
+    "labtools_soft": "#FFF4DE",
+    "focus": "#2563EB",
     "warning_soft": "#FFF7E6",
     "warning": "#D99A00",
+    "warning_border": "#F5D899",
     "success": "#22A66B",
+    "success_soft": "#E7F7F5",
+    "success_border": "#BCE7E2",
     "danger": "#D43832",
+    "danger_soft": "#FFF1F0",
+    "danger_border": "#FFD0CC",
 }
 
 SPACING = {
@@ -35,9 +80,12 @@ CONTROL_HEIGHT = {
 }
 
 RADIUS = {
-    "sm": 8,
-    "md": 14,
-    "lg": 20,
+    "sm": 6,
+    "md": 8,
+    "lg": 8,
+    "control": 6,
+    "card": 8,
+    "panel": 8,
 }
 
 FONT_SIZE = {
@@ -49,6 +97,152 @@ FONT_SIZE = {
     "caption": 11,
     "hero": 24,
 }
+
+THEME_PALETTE = {
+    "window": COLORS["background"],
+    "window_text": COLORS["text"],
+    "base": COLORS["surface"],
+    "alternate_base": COLORS["surface_muted"],
+    "tooltip_base": COLORS["surface"],
+    "tooltip_text": COLORS["text"],
+    "text": COLORS["text"],
+    "button": COLORS["surface"],
+    "button_text": COLORS["text"],
+    "bright_text": "#FFFFFF",
+    "highlight": COLORS["focus"],
+    "highlighted_text": "#FFFFFF",
+    "disabled_text": "#94A3B8",
+    "selection_background": "#DBEAFE",
+}
+
+STATUS_TOKENS: dict[str, StatusVisualToken] = {
+    UIStatusKey.DEVELOPER_PREVIEW.value: StatusVisualToken(UIStatusKey.DEVELOPER_PREVIEW.value, "Developer Preview", "#EEF6FF", "#BFDBFE", "#1E3A8A", "preview"),
+    UIStatusKey.TESTING.value: StatusVisualToken(UIStatusKey.TESTING.value, "测试中", COLORS["success_soft"], COLORS["success_border"], "#0E6F66", "flask"),
+    UIStatusKey.PLANNED.value: StatusVisualToken(UIStatusKey.PLANNED.value, "后续开放", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "calendar"),
+    UIStatusKey.SHELL_ONLY.value: StatusVisualToken(UIStatusKey.SHELL_ONLY.value, "Shell only", "#F5F3FF", "#DDD6FE", "#5B21B6", "layout"),
+    UIStatusKey.PREFLIGHT_ONLY.value: StatusVisualToken(UIStatusKey.PREFLIGHT_ONLY.value, "仅预检", "#EFF6FF", "#BFDBFE", "#1D4ED8", "checklist"),
+    UIStatusKey.BLOCKED.value: StatusVisualToken(UIStatusKey.BLOCKED.value, "已阻塞", COLORS["warning_soft"], COLORS["warning_border"], "#92400E", "blocked"),
+    UIStatusKey.AVAILABLE.value: StatusVisualToken(UIStatusKey.AVAILABLE.value, "可用", "#ECFDF3", "#BBF7D0", "#166534", "check"),
+    UIStatusKey.NOT_CONFIGURED.value: StatusVisualToken(UIStatusKey.NOT_CONFIGURED.value, "未配置", COLORS["surface_muted"], COLORS["border"], COLORS["muted"], "settings"),
+    UIStatusKey.MISSING.value: StatusVisualToken(UIStatusKey.MISSING.value, "缺失", COLORS["warning_soft"], COLORS["warning_border"], "#92400E", "missing"),
+    UIStatusKey.FAILED.value: StatusVisualToken(UIStatusKey.FAILED.value, "失败", COLORS["danger_soft"], COLORS["danger_border"], COLORS["danger"], "alert"),
+    UIStatusKey.DRAFT.value: StatusVisualToken(UIStatusKey.DRAFT.value, "草稿", "#F8FAFC", COLORS["border"], COLORS["text"], "draft"),
+    UIStatusKey.REPORT_READY.value: StatusVisualToken(UIStatusKey.REPORT_READY.value, "Report-ready", "#ECFDF3", "#86EFAC", "#14532D", "report"),
+}
+
+BUTTON_TOKENS: dict[str, ButtonVisualToken] = {
+    "primary": ButtonVisualToken("primary", COLORS["bio"], COLORS["bio"], "#FFFFFF", "#0D273B"),
+    "primary_action": ButtonVisualToken("primary_action", COLORS["bio_accent"], COLORS["bio_accent"], "#FFFFFF", "#138F83"),
+    "secondary": ButtonVisualToken("secondary", COLORS["bio_soft"], "#D6E2EA", COLORS["bio"], "#F4F8FB"),
+    "ghost": ButtonVisualToken("ghost", "transparent", "transparent", COLORS["bio"], COLORS["surface_muted"]),
+    "danger": ButtonVisualToken("danger", "#FFFFFF", COLORS["danger_border"], COLORS["danger"], "#FFF7F7"),
+}
+
+
+def get_status_token(status_key: str | UIStatusKey) -> StatusVisualToken:
+    key = status_key.value if isinstance(status_key, UIStatusKey) else str(status_key)
+    return STATUS_TOKENS.get(key, STATUS_TOKENS[UIStatusKey.NOT_CONFIGURED.value])
+
+
+def get_button_token(role: str) -> ButtonVisualToken:
+    return BUTTON_TOKENS.get(role, BUTTON_TOKENS["secondary"])
+
+
+def status_chip_stylesheet(status_key: str | UIStatusKey) -> str:
+    token = get_status_token(status_key)
+    return (
+        "QLabel {"
+        f"color: {token.text};"
+        f"background: {token.background};"
+        f"border: 1px solid {token.border};"
+        f"border-radius: {RADIUS['sm']}px;"
+        "padding: 5px 9px;"
+        f"font-size: {FONT_SIZE['secondary']}px;"
+        "font-weight: 700;"
+        "}"
+    )
+
+
+def button_stylesheet(role: str) -> str:
+    token = get_button_token(role)
+    border = "0" if token.border == "transparent" else f"1px solid {token.border}"
+    return f"""
+    QPushButton {{
+        color: {token.text};
+        background: {token.background};
+        border: {border};
+        border-radius: {RADIUS["sm"]}px;
+        padding: 7px 12px;
+        min-height: {CONTROL_HEIGHT["button"] - 16}px;
+        font-size: {FONT_SIZE["body"]}px;
+        font-weight: 650;
+    }}
+    QPushButton:hover {{
+        background: {token.hover_background};
+    }}
+    QPushButton:disabled {{
+        color: {COLORS["muted"]};
+        background: {COLORS["surface_muted"]};
+        border: 1px solid {COLORS["border"]};
+    }}
+    """
+
+
+def card_stylesheet() -> str:
+    return f"""
+    QFrame {{
+        background: {COLORS["surface"]};
+        border: 1px solid {COLORS["border"]};
+        border-radius: {RADIUS["md"]}px;
+    }}
+    """
+
+
+def global_app_stylesheet() -> str:
+    return f"""
+        QWidget {{
+            background-color: {COLORS["background"]};
+            color: {COLORS["text"]};
+        }}
+        QFrame, QGroupBox, QTabWidget::pane {{
+            background-color: {COLORS["surface"]};
+            color: {COLORS["text"]};
+        }}
+        QLabel {{
+            background: transparent;
+            color: {COLORS["text"]};
+        }}
+        QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QComboBox,
+        QTableWidget, QTreeWidget, QListWidget {{
+            background-color: {COLORS["surface"]};
+            color: {COLORS["text"]};
+            selection-background-color: {THEME_PALETTE["selection_background"]};
+            selection-color: {COLORS["text"]};
+        }}
+        QPushButton {{
+            background-color: {COLORS["surface"]};
+            color: {COLORS["text"]};
+            border: 1px solid {COLORS["border"]};
+            border-radius: {RADIUS["sm"]}px;
+            padding: 6px 10px;
+        }}
+        QPushButton:hover {{
+            background-color: {COLORS["surface_muted"]};
+        }}
+        QPushButton:disabled {{
+            background-color: {COLORS["background"]};
+            color: {THEME_PALETTE["disabled_text"]};
+        }}
+        QHeaderView::section {{
+            background-color: {COLORS["surface_muted"]};
+            color: {COLORS["text"]};
+            border: 1px solid {COLORS["border"]};
+            padding: 4px;
+        }}
+        QScrollArea, QScrollArea > QWidget > QWidget {{
+            background-color: {COLORS["background"]};
+        }}
+        """
 
 
 def login_stylesheet() -> str:
