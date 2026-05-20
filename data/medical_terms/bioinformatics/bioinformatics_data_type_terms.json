@@ -229,6 +229,29 @@
       ],
       "shared_core_allowed": false,
       "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_data_modality:gene_expression_profiling",
+      "preferred_label": "gene expression profiling",
+      "synonyms": [
+        "expression profiling",
+        "mRNA expression profiling",
+        "transcript expression profiling",
+        "GEO expression profiling"
+      ],
+      "term_type": "data_modality",
+      "concept_type": "expression_profiling_assay",
+      "data_category": "omics_assay",
+      "standalone_search_allowed": "conditional",
+      "bioinformatics_usage": [
+        "dataset_search",
+        "geo_query_expansion",
+        "data_type_detection",
+        "analysis_readiness_check"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false,
+      "notes": "Bioinformatics-scoped GEO/omics assay term. This scoped concept is not stored in shared core and is not a Meta PICO term."
     }
   ]
 }

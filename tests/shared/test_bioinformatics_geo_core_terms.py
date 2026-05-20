@@ -78,6 +78,25 @@ def test_geo_core_data_type_terms_separate_normalized_expression_from_raw_counts
     assert all(term["meta_scope_allowed"] is False for term in terms)
 
 
+def test_gene_expression_profiling_is_bioinformatics_scoped_data_modality() -> None:
+    terms = _terms("bioinformatics_data_type_terms.json")
+    by_id = {term["concept_id"]: term for term in terms}
+    gene_expression = by_id["bio_data_modality:gene_expression_profiling"]
+
+    assert gene_expression["preferred_label"] == "gene expression profiling"
+    assert gene_expression["concept_type"] == "expression_profiling_assay"
+    assert gene_expression["data_category"] == "omics_assay"
+    assert {
+        "dataset_search",
+        "geo_query_expansion",
+        "data_type_detection",
+        "analysis_readiness_check",
+    } <= set(gene_expression["bioinformatics_usage"])
+    assert gene_expression["shared_core_allowed"] is False
+    assert gene_expression["meta_scope_allowed"] is False
+    assert gene_expression["standalone_search_allowed"] in {"conditional", False}
+
+
 def test_geo_core_dataset_registry_and_stop_terms_are_scoped() -> None:
     registry = _terms("bioinformatics_dataset_registry_terms.json")
     stop_terms = _terms("bioinformatics_stop_terms.json")

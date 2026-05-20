@@ -6,7 +6,9 @@ Date: 2026-05-20
 
 `gene expression profiling` should route to Bioinformatics scoped vocabulary as `expression_profiling_assay` or `omics_assay` vocabulary.
 
-Recommended target file for a future approved implementation: `data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json`.
+Implemented target file: `data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json`.
+
+Implemented concept id: `bio_data_modality:gene_expression_profiling`.
 
 ## Usage
 
@@ -23,6 +25,12 @@ Recommended target file for a future approved implementation: `data/medical_term
 - It must not become a Meta PICO main term.
 - It must not remain active shared core after a future cleanup phase.
 
-## Non-Actions
+## Implementation Status
 
-No Bioinformatics runtime file, shared core file, or Meta scoped vocabulary file was modified in this phase.
+- Bioinformatics scoped vocabulary updated: yes.
+- Shared core modified: no.
+- Meta seed modified: no.
+- Loader modified: no.
+- Online retrieval or PDF extraction enabled: no.
+
+The legacy shared-core mini entries for this wording remain a separate shared-core cleanup concern. The new scoped Bioinformatics concept is not added to shared core and is not loaded as a Meta PICO term.

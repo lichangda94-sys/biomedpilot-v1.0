@@ -23,7 +23,14 @@
     "Meta PICO outcome",
     "Meta study design"
   ],
-  "execution_status": "decision_recorded_only_not_written_to_runtime",
-  "runtime_files_modified": false,
-  "manual_review_required_before_runtime_change": true
+  "execution_status": "implemented_without_shared_core_or_meta_seed_changes",
+  "runtime_files_modified": true,
+  "manual_review_required_before_runtime_change": false,
+  "implementation_status": "implemented_in_bioinformatics_scoped_vocabulary",
+  "implemented_date": "2026-05-20",
+  "implemented_concept_id": "bio_data_modality:gene_expression_profiling",
+  "implemented_target_file": "data/medical_terms/bioinformatics/bioinformatics_data_type_terms.json",
+  "shared_core_modified": false,
+  "meta_seed_modified": false,
+  "loader_modified": false
 }

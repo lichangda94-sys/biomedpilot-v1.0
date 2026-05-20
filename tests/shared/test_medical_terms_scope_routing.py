@@ -63,12 +63,18 @@ def test_scope_find_terms_prefers_meta_migrated_terms_only_in_meta_scope() -> No
 def test_survival_data_and_gene_expression_scope_routing() -> None:
     meta_survival_data = find_terms("survival data", "meta_analysis")
     meta_overall = find_terms("overall survival", "meta_analysis")
+    bio_gene_expression = find_terms("gene expression profiling", "bioinformatics")
+    shared_gene_expression = find_terms("gene expression profiling", "shared_core")
 
     assert {term.concept_id for term in meta_survival_data} == {"meta_data_context:survival_data"}
     assert meta_survival_data[0].usage["query_expansion_allowed"] is False
     assert "survival data" not in {term.lower() for term in meta_overall[0].terms}
     assert not find_terms("gene expression profiling", "meta_analysis")
-    assert find_terms("gene expression profiling", "bioinformatics")
+    assert "bio_data_modality:gene_expression_profiling" in {term.concept_id for term in bio_gene_expression}
+    assert next(
+        term for term in bio_gene_expression if term.concept_id == "bio_data_modality:gene_expression_profiling"
+    ).source == "bioinformatics_data_type_terms.json"
+    assert "bio_data_modality:gene_expression_profiling" not in {term.concept_id for term in shared_gene_expression}
 
 
 def test_bioinformatics_scope_keeps_geo_gtex_expression_terms() -> None:
