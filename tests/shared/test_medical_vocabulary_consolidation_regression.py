@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import subprocess
-import sys
 from collections import Counter
 from pathlib import Path
 
@@ -124,26 +122,9 @@ def test_zh_overrides_for_curated_cores_have_mappable_audit_fields() -> None:
         assert item.get("preferred_label_en")
 
 
-def test_sqlite_index_is_consistent_with_json_runtime_vocabulary(tmp_path: Path) -> None:
+def test_sqlite_index_is_consistent_with_json_runtime_vocabulary() -> None:
     mini = _mini()
-    index_path = MEDICAL_TERMS / "medical_terms_index.sqlite"
-    if not index_path.exists():
-        index_path = tmp_path / "medical_terms_index.sqlite"
-        subprocess.run(
-            [
-                sys.executable,
-                "scripts/update_medical_term_index.py",
-                "--output",
-                str(index_path),
-                "--build-report-output",
-                str(tmp_path / "medical_terms_index_build_report.json"),
-                "--metadata-output",
-                str(tmp_path / "source_metadata.json"),
-            ],
-            check=True,
-        )
-
-    with sqlite3.connect(index_path) as conn:
+    with sqlite3.connect(MEDICAL_TERMS / "medical_terms_index.sqlite") as conn:
         sqlite_count = conn.execute("SELECT COUNT(*) FROM ontology_terms").fetchone()[0]
         sqlite_ids = {row[0] for row in conn.execute("SELECT concept_id FROM ontology_terms")}
         meta_payload = conn.execute(

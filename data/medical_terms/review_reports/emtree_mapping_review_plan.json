@@ -1,0 +1,41 @@
+{
+  "plan_name": "emtree_mapping_review_plan",
+  "plan_date": "2026-05-20",
+  "phase": "handoff_gap_remediation_task_6",
+  "current_mapping_count": 190,
+  "needs_review_count": 190,
+  "concept_type_counts": {
+    "disease": 50,
+    "effect_measure": 14,
+    "exposure": 35,
+    "intervention": 30,
+    "outcome": 37,
+    "research_intent": 12,
+    "study_design": 12
+  },
+  "automatic_emtree_guessing_allowed": false,
+  "embase_search_enabled": false,
+  "priority_review_order": [
+    "disease",
+    "exposure",
+    "intervention",
+    "outcome",
+    "study_design",
+    "effect_measure",
+    "research_intent"
+  ],
+  "required_mapping_fields": [
+    "concept_id",
+    "emtree_terms",
+    "source",
+    "reviewer",
+    "review_status",
+    "review_notes"
+  ],
+  "rules": [
+    "Do not automatically guess Emtree terms.",
+    "Keep emtree_review_status=needs_review when no reliable reviewed mapping exists.",
+    "Prioritize disease/exposure/intervention/outcome seeds before Embase support.",
+    "Do not block current PubMed-only workflows on Emtree completion."
+  ]
+}

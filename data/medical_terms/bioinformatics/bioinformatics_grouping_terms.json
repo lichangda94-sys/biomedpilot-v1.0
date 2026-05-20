@@ -1,0 +1,163 @@
+{
+  "schema_version": "biomedpilot.bioinformatics_grouping_terms.v1",
+  "scope": "bioinformatics_geo_core",
+  "target_contexts": [
+    "bioinformatics"
+  ],
+  "shared_core_allowed": false,
+  "meta_scope_allowed": false,
+  "terms": [
+    {
+      "concept_id": "bio_grouping:adjacent_normal",
+      "preferred_label": "adjacent normal",
+      "synonyms": [
+        "paired normal",
+        "tumor adjacent normal"
+      ],
+      "term_type": "sample_status",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:untreated",
+      "preferred_label": "untreated",
+      "synonyms": [
+        "no treatment"
+      ],
+      "term_type": "treatment_status",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:vehicle",
+      "preferred_label": "vehicle",
+      "synonyms": [
+        "vehicle control"
+      ],
+      "term_type": "treatment_status",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:sham",
+      "preferred_label": "sham",
+      "synonyms": [
+        "sham control",
+        "sham operated"
+      ],
+      "term_type": "treatment_status",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:resistant",
+      "preferred_label": "resistant",
+      "synonyms": [
+        "drug resistant",
+        "therapy resistant"
+      ],
+      "term_type": "treatment_status",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:wild_type",
+      "preferred_label": "wild type",
+      "synonyms": [
+        "wild-type",
+        "WT"
+      ],
+      "term_type": "grouping_term",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:mutant",
+      "preferred_label": "mutant",
+      "synonyms": [
+        "mutation",
+        "mutated"
+      ],
+      "term_type": "grouping_term",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:knockdown",
+      "preferred_label": "knockdown",
+      "synonyms": [
+        "KD",
+        "siRNA knockdown",
+        "shRNA knockdown"
+      ],
+      "term_type": "grouping_term",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    },
+    {
+      "concept_id": "bio_grouping:overexpression",
+      "preferred_label": "overexpression",
+      "synonyms": [
+        "over-expression",
+        "OE"
+      ],
+      "term_type": "grouping_term",
+      "standalone_search_allowed": false,
+      "bioinformatics_usage": [
+        "group_detection",
+        "sample_annotation",
+        "comparison_suggestion"
+      ],
+      "shared_core_allowed": false,
+      "meta_scope_allowed": false
+    }
+  ]
+}

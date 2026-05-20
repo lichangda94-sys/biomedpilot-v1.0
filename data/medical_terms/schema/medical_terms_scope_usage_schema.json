@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biomedpilot.local/schemas/medical_terms_scope_usage_schema.json",
+  "title": "BioMedPilot Medical Terms Scope Usage Annotation",
+  "type": "object",
+  "required": [
+    "scope",
+    "usage",
+    "requires_context",
+    "migration"
+  ],
+  "properties": {
+    "scope": {
+      "type": "object",
+      "required": [
+        "shared_core_allowed",
+        "bioinformatics_allowed",
+        "meta_analysis_allowed"
+      ],
+      "properties": {
+        "shared_core_allowed": {
+          "type": "boolean"
+        },
+        "bioinformatics_allowed": {
+          "type": "boolean"
+        },
+        "meta_analysis_allowed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "usage": {
+      "type": "object",
+      "required": [
+        "query_expansion_allowed",
+        "standalone_search_allowed",
+        "filter_only",
+        "pdf_extraction_target",
+        "analysis_plan_allowed",
+        "report_label_allowed"
+      ],
+      "properties": {
+        "query_expansion_allowed": {
+          "enum": [
+            true,
+            false,
+            "conditional",
+            "filter_only"
+          ]
+        },
+        "standalone_search_allowed": {
+          "type": "boolean"
+        },
+        "filter_only": {
+          "type": "boolean"
+        },
+        "pdf_extraction_target": {
+          "type": "boolean"
+        },
+        "analysis_plan_allowed": {
+          "type": "boolean"
+        },
+        "report_label_allowed": {
+          "type": "boolean"
+        },
+        "profile_hint_allowed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "requires_context": {
+      "type": "object",
+      "required": [
+        "requires_population_or_disease",
+        "requires_intervention_or_exposure",
+        "requires_qualified_term"
+      ],
+      "properties": {
+        "requires_population_or_disease": {
+          "type": "boolean"
+        },
+        "requires_intervention_or_exposure": {
+          "type": "boolean"
+        },
+        "requires_qualified_term": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "migration": {
+      "type": "object",
+      "required": [
+        "legacy_concept_id",
+        "new_concept_id",
+        "migration_status",
+        "compatibility_alias",
+        "active_in_shared"
+      ],
+      "properties": {
+        "legacy_concept_id": {
+          "type": "string"
+        },
+        "new_concept_id": {
+          "type": "string"
+        },
+        "migration_status": {
+          "enum": [
+            "not_migrated",
+            "candidate_for_migration",
+            "mirrored_to_meta_scoped",
+            "mirrored_to_bioinformatics_scoped",
+            "deprecated_in_shared",
+            "removed_from_shared",
+            "manual_review_required"
+          ]
+        },
+        "compatibility_alias": {
+          "type": "boolean"
+        },
+        "active_in_shared": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

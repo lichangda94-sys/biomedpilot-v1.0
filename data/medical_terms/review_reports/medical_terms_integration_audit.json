@@ -1,0 +1,97 @@
+{
+  "audit_name": "medical_terms_integration_audit",
+  "audit_date": "2026-05-20",
+  "shared_core_modified": false,
+  "shared_core_pollution_detected": true,
+  "bioinformatics_scope_available": true,
+  "bioinformatics_scope_isolation_passed": true,
+  "meta_scope_available": true,
+  "meta_scope_isolation_passed": true,
+  "meta_seed_terms_available": true,
+  "meta_search_draft_available": true,
+  "meta_review_gate_available": true,
+  "meta_pubmed_preflight_available": true,
+  "pubmed_online_search_enabled": false,
+  "embase_search_enabled": false,
+  "web_of_science_search_enabled": false,
+  "cochrane_search_enabled": false,
+  "chinese_database_search_enabled": false,
+  "chinese_pdf_extraction_enabled": false,
+  "english_pdf_extraction_ui_enabled": false,
+  "automatic_screening_enabled": false,
+  "automatic_included_studies_enabled": false,
+  "meta_statistics_pipeline_advanced": false,
+  "shared_promotion_auto_merge_enabled": false,
+  "audit_artifacts": {
+    "markdown_report": "docs/medical_terms/medical_terms_integration_audit_20260520.md",
+    "integration_tests": "tests/shared/test_medical_terms_integration_audit.py"
+  },
+  "validation": {
+    "git_diff_check": "pass",
+    "tests/shared/test_medical_terms_integration_audit.py": "5 passed",
+    "tests/shared/test_meta_seed_terms.py": "9 passed",
+    "tests/shared/test_query_intelligence_service.py": "21 passed",
+    "tests/meta_analysis": "17 passed",
+    "tests/bioinformatics": "238 passed",
+    "app.main_smoke_test": "pass"
+  },
+  "scope_checks": {
+    "shared_core_negative_terms_checked": [
+      "overall survival",
+      "progression-free survival",
+      "hazard ratio",
+      "odds ratio",
+      "cohort study",
+      "randomized controlled trial",
+      "GSE",
+      "GSM",
+      "TPM",
+      "FPKM",
+      "series matrix",
+      "sample metadata"
+    ],
+    "bioinformatics_expected_terms_checked": [
+      "Homo sapiens",
+      "Mus musculus",
+      "Rattus norvegicus",
+      "GTEx parent/subtype tissues",
+      "TPM",
+      "FPKM",
+      "raw counts",
+      "count matrix",
+      "grouping terms",
+      "platform annotation",
+      "scoped stop terms"
+    ],
+    "meta_chinese_questions_checked": [
+      "糖尿病前期与甲状腺癌风险的关系",
+      "二甲双胍治疗2型糖尿病的疗效",
+      "放射性碘治疗甲状腺癌复发的影响",
+      "肥胖与乳腺癌风险的Meta分析"
+    ]
+  },
+  "issues": [
+    {
+      "id": "shared_core_contains_meta_scope_terms",
+      "severity": "medium",
+      "status": "reported_not_fixed_in_this_stage",
+      "message": "mini_medical_terms_index.json currently contains Meta-specific outcome/effect/study-design terms such as overall survival, progression-free survival, hazard ratio, odds ratio, cohort study, and randomized controlled trial. The stage explicitly forbids modifying mini_medical_terms_index.json, so this is documented as an integration audit issue rather than fixed here."
+    }
+  ],
+  "warnings": [
+    {
+      "id": "pubmed_executor_not_implemented",
+      "message": "PubMed online retrieval remains intentionally disabled; current artifact is a preflight execution plan only."
+    }
+  ],
+  "fixes": [
+    {
+      "id": "meta_matcher_short_latin_token_boundary_fix",
+      "description": "Added Latin token boundary matching for Meta seed Chinese matcher so short effect tokens such as SE do not match inside Bioinformatics identifiers such as GSE."
+    },
+    {
+      "id": "preflight_plan_status_boundary_fix",
+      "description": "Renamed PubMed preflight plan_status from preflight_ready to draft_execution_plan to make non-executing status explicit."
+    }
+  ]
+}

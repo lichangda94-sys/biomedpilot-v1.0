@@ -1,0 +1,454 @@
+[
+  {
+    "concept_id": "meta_disease:breast_cancer",
+    "zh_terms": [
+      "乳腺癌"
+    ],
+    "preferred_label_en": "breast cancer",
+    "synonyms_en": [
+      "breast neoplasm",
+      "mammary carcinoma"
+    ],
+    "mesh_terms": [
+      "Breast Neoplasms"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "breast cancer",
+      "breast neoplasm",
+      "mammary carcinoma"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "source_evidence": [
+      {
+        "raw_zh_term": "乳腺癌",
+        "source_file": "disease_new2.dic",
+        "source_type": "disease_dictionary"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  },
+  {
+    "concept_id": "meta_disease:thyroid_cancer",
+    "zh_terms": [
+      "甲状腺癌"
+    ],
+    "preferred_label_en": "thyroid cancer",
+    "synonyms_en": [
+      "thyroid neoplasm",
+      "thyroid carcinoma"
+    ],
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "thyroid cancer",
+      "thyroid carcinoma",
+      "thyroid neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "source_evidence": [
+      {
+        "raw_zh_term": "甲状腺癌",
+        "source_file": "disease_new2.dic",
+        "source_type": "disease_dictionary"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  },
+  {
+    "concept_id": "meta_disease:type_2_diabetes_mellitus",
+    "zh_terms": [
+      "2型糖尿病"
+    ],
+    "preferred_label_en": "type 2 diabetes mellitus",
+    "synonyms_en": [
+      "type 2 diabetes",
+      "T2DM",
+      "non-insulin-dependent diabetes mellitus"
+    ],
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 2"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "T2DM",
+      "non-insulin-dependent diabetes mellitus",
+      "type 2 diabetes",
+      "type 2 diabetes mellitus"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "source_evidence": [
+      {
+        "raw_zh_term": "2型糖尿病",
+        "source_file": "disease_new2.dic",
+        "source_type": "disease_dictionary"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  },
+  {
+    "concept_id": "meta_exposure:obesity",
+    "zh_terms": [
+      "肥胖"
+    ],
+    "preferred_label_en": "obesity",
+    "synonyms_en": [
+      "obese",
+      "adiposity"
+    ],
+    "mesh_terms": [
+      "Obesity"
+    ],
+    "emtree_terms": [],
+    "related_terms_en": [
+      "overweight"
+    ],
+    "measurement_terms_en": [
+      "BMI",
+      "body mass index"
+    ],
+    "free_text_terms_en": [
+      "adiposity",
+      "obesity",
+      "obese"
+    ],
+    "concept_type": "risk_factor",
+    "pico_roles": [
+      "exposure"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "blocked_synonyms": [
+        "BMI",
+        "body mass index"
+      ],
+      "downgraded_related_terms": [
+        "overweight"
+      ]
+    },
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "肥胖",
+        "source_file": "disease_new2.dic",
+        "source_type": "disease_dictionary"
+      },
+      {
+        "raw_zh_term": "肥胖",
+        "source_file": "symptom_new2.dic",
+        "source_type": "symptom_dictionary"
+      }
+    ],
+    "review_status": "needs_type_fix",
+    "shared_promotion_decision": "blocked_from_shared_promotion",
+    "notes": "Obesity remains Meta-only until shared disease/phenotype and Meta risk_factor/exposure semantics are reconciled. BMI/body mass index are measurement terms, and overweight is a related lower-weight-state term rather than a strong synonym."
+  },
+  {
+    "concept_id": "meta_exposure:prediabetes",
+    "zh_terms": [
+      "糖尿病前期"
+    ],
+    "preferred_label_en": "prediabetes",
+    "synonyms_en": [
+      "pre-diabetes",
+      "prediabetic state",
+      "impaired fasting glucose",
+      "impaired glucose tolerance",
+      "IFG",
+      "IGT"
+    ],
+    "mesh_terms": [
+      "Prediabetic State"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "IFG",
+      "IGT",
+      "impaired fasting glucose",
+      "impaired glucose tolerance",
+      "pre-diabetes",
+      "prediabetes",
+      "prediabetic state"
+    ],
+    "concept_type": "phenotype_risk_state",
+    "pico_roles": [
+      "exposure"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "avoid_expansion_to": [
+        "type 2 diabetes mellitus"
+      ]
+    },
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "糖尿病前期",
+        "source_file": "disease_new2.dic",
+        "source_type": "disease_dictionary"
+      }
+    ],
+    "review_status": "needs_type_fix",
+    "notes": "Prediabetes is a metabolic/phenotype risk state, not a generic exposure; PICO exposure role is retained with guarded expansion."
+  },
+  {
+    "concept_id": "meta_intervention:metformin",
+    "zh_terms": [
+      "二甲双胍"
+    ],
+    "preferred_label_en": "metformin",
+    "synonyms_en": [
+      "metformin hydrochloride"
+    ],
+    "mesh_terms": [
+      "Metformin"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "metformin",
+      "metformin hydrochloride"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "二甲双胍",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  },
+  {
+    "concept_id": "meta_intervention:radioactive_iodine_therapy",
+    "zh_terms": [
+      "放射性碘治疗"
+    ],
+    "preferred_label_en": "radioactive iodine therapy",
+    "synonyms_en": [
+      "radioiodine therapy",
+      "I-131 therapy",
+      "radioactive iodine ablation",
+      "RAI"
+    ],
+    "mesh_terms": [
+      "Radioisotopes",
+      "Iodine Radioisotopes"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "I-131 therapy",
+      "RAI",
+      "radioactive iodine ablation",
+      "radioactive iodine therapy",
+      "radioiodine therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "放射性碘治疗",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  },
+  {
+    "concept_id": "meta_outcome:recurrence",
+    "zh_terms": [
+      "复发"
+    ],
+    "preferred_label_en": "recurrence",
+    "synonyms_en": [
+      "relapse",
+      "disease recurrence"
+    ],
+    "mesh_terms": [
+      "Recurrence"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "disease recurrence",
+      "recurrence",
+      "relapse"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": "conditional",
+    "query_expansion_guard": {
+      "mode": "requires_population_or_disease_context",
+      "reason": "Outcome term should not expand as an unconditional topic."
+    },
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "复发",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "needs_expansion_guard",
+    "notes": "Recurrence is a valid Meta outcome seed but requires population/disease context before query expansion."
+  },
+  {
+    "concept_id": "meta_study_design:meta_analysis",
+    "zh_terms": [
+      "Meta分析"
+    ],
+    "preferred_label_en": "meta-analysis",
+    "synonyms_en": [
+      "systematic review",
+      "meta analysis"
+    ],
+    "mesh_terms": [
+      "Meta-Analysis as Topic"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "meta analysis",
+      "meta-analysis",
+      "systematic review"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "filter_only",
+      "reason": "Review marker can filter retrieval but must not become a topic expansion."
+    },
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "Meta分析",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  }
+]
