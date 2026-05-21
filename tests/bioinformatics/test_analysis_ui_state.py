@@ -42,6 +42,9 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
     assert "B9.2 controlled activation" in formal_gate_text
+    assert state["legacy_asset_pipeline"]["formal_analysis_enabled"] is False
+    assert state["legacy_asset_pipeline"]["writes_result_index"] is False
+    assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False
 
 
 def test_analysis_center_state_shows_package_repair_guidance_for_deg_blockers(tmp_path: Path) -> None:
@@ -110,6 +113,69 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
     assert "lifelines_missing_formal_survival_disabled" in text
     assert "no install action" in text
     assert "required_in_packaged_app_for_formal_deg" in text
+
+
+def test_legacy_asset_pipeline_state_is_review_only_and_does_not_upgrade_inputs(tmp_path: Path) -> None:
+    adapter_dir = tmp_path / "acquisition" / "legacy_adapter_manifests"
+    adapter_dir.mkdir(parents=True)
+    (adapter_dir / "geo.json").write_text(json.dumps({"adapter_id": "geo", "source": "geo"}), encoding="utf-8")
+    candidate_path = tmp_path / "standardized_data" / "asset_candidates" / "legacy_acquisition_asset_candidates.json"
+    candidate_path.parent.mkdir(parents=True)
+    candidate_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.legacy_standardized_asset_candidate_bundle.v1",
+                "status": "candidate_only",
+                "candidate_count": 1,
+                "warnings": ["candidate_only_not_repository_asset"],
+                "blockers": [],
+                "downstream_contract": {
+                    "writes_analysis_input_repository": False,
+                    "writes_result_index": False,
+                    "ready_for_formal_analysis": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    selection_path = tmp_path / "standardized_data" / "asset_candidates" / "legacy_asset_selection_manifest.json"
+    selection_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.legacy_asset_selection_manifest.v1",
+                "status": "selection_recorded_preflight_only",
+                "confirmed_by_user": True,
+                "selected_assets": {"expression": {"asset_id": "expr"}},
+                "validation": {
+                    "status": "passed_with_downstream_blockers",
+                    "selection_blockers": [],
+                    "downstream_blockers": ["missing_group_design_selection"],
+                    "warnings": ["selected_legacy_asset_is_not_analysis_ready_until_downstream_gates_pass"],
+                },
+                "formal_analysis_ready": False,
+                "result_semantics": "not_a_result",
+                "report_ready_eligible": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    before = _file_set(tmp_path)
+
+    state = build_analysis_center_state(tmp_path)
+
+    pipeline = state["legacy_asset_pipeline"]
+    assert pipeline["status"] == "blocked"
+    assert pipeline["artifact_count"] == 3
+    assert pipeline["formal_analysis_enabled"] is False
+    assert pipeline["writes_analysis_input_repository"] is False
+    assert pipeline["writes_result_index"] is False
+    assert pipeline["report_ready_eligible"] is False
+    assert "missing_group_design_selection" in pipeline["blockers"]
+    assert "B8 resolver" in pipeline["boundary_message"]
+    review = _action(state, "legacy_asset_pipeline_review")
+    assert review["enabled"] is True
+    assert review["button_behavior"] == "enabled_review_only_no_formal_execution"
+    assert _file_set(tmp_path) == before
 
 
 def _action(state: dict[str, object], action_id: str) -> dict[str, object]:

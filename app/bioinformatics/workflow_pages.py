@@ -5578,6 +5578,15 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _set_table_widths(self._package_table, [180, 110, 110, 110, 200, 260, 260, 320])
         self._package_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
 
+        legacy_card, legacy_layout = _card("Legacy asset pipeline")
+        legacy_layout.addWidget(_muted("B16 legacy 链路仅用于 acquisition / standardization 收敛；不能绕过 B8 resolver 或直接生成 formal result。"))
+        self._legacy_pipeline_table = _table(["阶段", "状态", "Artifact", "数量", "Blockers / Warnings", "下一步"])
+        self._legacy_pipeline_table.setObjectName("analysisLegacyAssetPipelineTable")
+        legacy_layout.addWidget(self._legacy_pipeline_table)
+        root.addWidget(legacy_card)
+        _set_table_widths(self._legacy_pipeline_table, [210, 150, 320, 80, 360, 340])
+        self._legacy_pipeline_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
         action_card, action_layout = _card("Action matrix and disabled reasons")
         action_layout.addWidget(_muted("Formal actions stay disabled until B8 gates pass and later activation stages explicitly enable execution."))
         self._action_table = _table(["动作", "状态", "按钮", "Disabled reason", "下一步"])
@@ -5685,6 +5694,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
         _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
         _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
+        _fill_table(self._legacy_pipeline_table, _analysis_ui_legacy_pipeline_rows(analysis_state.get("legacy_asset_pipeline", {})))
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
         confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
@@ -10633,6 +10643,41 @@ def _analysis_ui_package_rows(rows: object) -> list[list[object]]:
         for row in rows
         if isinstance(row, dict)
     ]
+
+
+def _analysis_ui_legacy_pipeline_rows(state: object) -> list[list[object]]:
+    if not isinstance(state, dict):
+        return []
+    rows = state.get("rows")
+    if not isinstance(rows, list):
+        return []
+    table_rows: list[list[object]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        issues = "；".join(str(item) for item in (row.get("blockers"), row.get("warnings")) if str(item) and str(item) != "None")
+        table_rows.append(
+            [
+                row.get("label", ""),
+                row.get("status", ""),
+                row.get("artifact_path", ""),
+                row.get("count_summary", ""),
+                issues or "None",
+                row.get("next_action", ""),
+            ]
+        )
+    if table_rows:
+        table_rows.append(
+            [
+                "Formal boundary",
+                "disabled",
+                "",
+                "",
+                "writes_analysis_input_repository=False；writes_result_index=False；report_ready_eligible=False",
+                state.get("boundary_message", ""),
+            ]
+        )
+    return table_rows
 
 
 def _analysis_ui_action_rows(rows: object, *, normal_user_only: bool = False) -> list[list[object]]:

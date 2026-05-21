@@ -2943,6 +2943,20 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     workflow_pages.run_project_recognition(project_summary.project_root)
     workflow_pages.run_project_readiness(project_summary.project_root)
     workflow_pages.generate_standardized_assets(project_summary.project_root)
+    legacy_candidates = project_summary.project_root / "standardized_data" / "asset_candidates" / "legacy_acquisition_asset_candidates.json"
+    legacy_candidates.parent.mkdir(parents=True, exist_ok=True)
+    legacy_candidates.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.legacy_standardized_asset_candidate_bundle.v1",
+                "status": "candidate_only",
+                "candidate_count": 1,
+                "warnings": ["candidate_only_not_repository_asset"],
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     widget = BioinformaticsAnalysisTaskCenterWidget()
     widget.refresh_project(project_summary)
@@ -2985,9 +2999,20 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Blockers" not in package_text
     assert "sample metadata" in package_text or "Return to" in package_text or "raw count matrix" in package_text
 
+    legacy_table = widget.findChild(QTableWidget, "analysisLegacyAssetPipelineTable")
+    assert legacy_table is not None
+    legacy_text = _table_text(legacy_table)
+    assert "Standardized asset candidates" in legacy_text
+    assert "candidate_only" in legacy_text
+    assert "Formal boundary" in legacy_text
+    assert "writes_result_index=False" in legacy_text
+    assert "formal result" not in legacy_text.lower()
+
     action_table = widget.findChild(QTableWidget, "analysisActionGateTable")
     assert action_table is not None
     action_text = _table_text(action_table)
+    assert "Review legacy asset pipeline" in action_text
+    assert "enabled_review_only_no_formal_execution" in action_text
     assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
     assert "disabled" in action_text
