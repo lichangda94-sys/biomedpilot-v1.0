@@ -26,6 +26,7 @@ def build_action_rows(
     ora_parameter_gate: dict[str, Any] | None = None,
     ora_result_schema_gate: dict[str, Any] | None = None,
     ora_dependency: dict[str, Any] | None = None,
+    ora_plot_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -43,6 +44,7 @@ def build_action_rows(
     ora_parameter_gate = ora_parameter_gate or {}
     ora_result_schema_gate = ora_result_schema_gate or {}
     ora_dependency = ora_dependency or {}
+    ora_plot_gate = ora_plot_gate or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -57,8 +59,8 @@ def build_action_rows(
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_ora_readiness_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
     rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
-    rows.append(_constant_disabled_action("ora_plot", "Generate ORA plot artifact", "hidden_until_ready", "ORA plot artifacts are not activated in B10.1."))
-    rows.append(_constant_disabled_action("ora_report_ready", "Add ORA to report-ready package", "hidden_until_ready", "ORA report-ready integration is not activated in B10.1."))
+    rows.append(_ora_plot_action(ora_plot_gate))
+    rows.append(_constant_disabled_action("ora_report_ready", "Add ORA to report-ready package", "hidden_until_ready", "ORA report-ready integration is not activated before B10.4."))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
     rows.append(_constant_disabled_action("survival_formal", "Run formal survival analysis", "hidden_until_ready", "Survival remains design/preflight only; no KM/Cox/log-rank/HR output."))
@@ -294,6 +296,29 @@ def _ora_blockers(
     if dependency.get("status") != "passed":
         blockers.extend(_list(dependency.get("blockers")) or ["ora_dependency_snapshot_not_passed"])
     return list(dict.fromkeys(blockers))
+
+
+def _ora_plot_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        warnings = _list(gate.get("warnings"))
+        return {
+            "action_id": "ora_plot",
+            "label": "Generate ORA plot artifact/spec",
+            "state": "available",
+            "button_behavior": "enabled_ora_plot_spec_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Create ORA plot artifact/spec only; no PNG/SVG/PDF rendering and no report-ready output." + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
+        }
+    blockers = _list(gate.get("blockers")) or ["ora_plot_gate_not_passed"]
+    return _disabled(
+        "ora_plot",
+        "Generate ORA plot artifact/spec",
+        "blocked_ora_plot_gate",
+        "; ".join(blockers),
+        "Register a valid ORA enrichment result before creating a spec-only ORA plot artifact.",
+    )
 
 
 def _immune_action(package: dict[str, Any] | None, tasks: list[dict[str, Any]]) -> dict[str, Any]:

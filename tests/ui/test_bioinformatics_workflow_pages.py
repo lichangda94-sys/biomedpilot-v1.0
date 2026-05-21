@@ -4194,6 +4194,12 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
     downstream = widget.findChild(QLabel, "oraReviewDownstream")
     assert downstream is not None
     assert "GSEA remains disabled" in downstream.text()
+    plot_status = widget.findChild(QLabel, "oraPlotStatus")
+    assert plot_status is not None
+    assert "ORA plot gate passed" in plot_status.text()
+    plot_button = widget.findChild(QPushButton, "oraPlotButton")
+    assert plot_button is not None
+    assert plot_button.isEnabled()
 
     exported = widget.export_ora_review_csv()
 
@@ -4202,6 +4208,13 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
     assert exported["report_ready_eligible"] is False
     assert Path(str(exported["export_path"])).is_file()
     assert "未生成 report-ready" in widget.status_message()
+    plot_result = widget.generate_ora_plot_artifact()
+    assert plot_result is not None
+    assert plot_result["status"] == "passed"
+    assert plot_result["report_ready_eligible"] is False
+    assert plot_result["plot_artifact"]["image_artifacts"] == []
+    assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
+    assert "未生成 PNG/SVG/PDF" in widget.status_message()
 
 
 def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_summary) -> None:

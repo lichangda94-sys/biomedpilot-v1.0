@@ -88,6 +88,32 @@ enrichment_plot:
   size: gene_count
   base_size: 13
 
+b10_3_ora_plot_artifact_gate:
+  status: spec_only_no_image_dependency
+  allowed_plot_types:
+    - ora_barplot
+    - ora_dotplot
+  source_policy:
+    formal_ora_result: formal_computed_result
+    imported_derived_ora_result: imported_external_result
+    forbidden:
+      - preflight_only
+      - testing_level
+      - exploratory
+      - configured_not_run
+      - blocked
+      - failed
+      - raw_expression
+      - deg_without_ora_result
+  rendering: spec_only_no_image_dependency
+  image_artifacts: []
+  report_ready_eligible: false
+  disabled_capabilities:
+    - GSEA_plot
+    - KM_survival_plot
+    - PNG_SVG_PDF_rendering
+    - ORA_report_ready_auto_include
+
 survival_plot:
   p_value: true
   risk_table: true

@@ -151,6 +151,25 @@ def test_ora_readiness_can_be_reviewed_but_execution_stays_disabled() -> None:
     assert run["button_behavior"] == "enabled_controlled_ora_mvp"
 
 
+def test_ora_plot_action_is_enabled_only_when_plot_gate_passes() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        ora_plot_gate={"status": "passed", "warnings": ["imported_ora_derived_plot_not_biomedpilot_recomputed_formal_plot"]},
+    )
+
+    plot = _row(rows, "ora_plot")
+    assert plot["enabled"] is True
+    assert plot["button_behavior"] == "enabled_ora_plot_spec_only"
+    assert "no PNG/SVG/PDF" in plot["next_action"]
+
+    blocked = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"}, ora_plot_gate={"status": "blocked", "blockers": ["ora_result_not_found"]})
+    assert _row(blocked, "ora_plot")["enabled"] is False
+    assert "ora_result_not_found" in _row(blocked, "ora_plot")["disabled_reason"]
+
+
 def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "deg_recompute", "blockers": ["display_value_type_not_allowed_for_count_model_deg"]}],

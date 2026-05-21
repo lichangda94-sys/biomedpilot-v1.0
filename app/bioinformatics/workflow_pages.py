@@ -56,7 +56,7 @@ from app.bioinformatics.analysis_ui import build_analysis_center_state, build_de
 from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.enrichment import build_ora_result_review, export_ora_review_table, run_controlled_ora
-from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
+from app.bioinformatics.plots import build_formal_deg_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_ora_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
@@ -6393,6 +6393,22 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def export_ora_review_csv(self) -> dict[str, object] | None:
         return self._export_ora_review("csv")
 
+    def generate_ora_plot_artifact(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._ora_review.get("selected_result_id") or "")
+        plot_type = self._ora_plot_type.currentText() if hasattr(self, "_ora_plot_type") else "ora_barplot"
+        result = create_ora_plot_artifact(self._project_root, result_id=result_id or None, plot_type=plot_type)
+        if result.get("status") == "passed":
+            self.refresh_results()
+            self._status_label.setText(f"已注册 ORA {plot_type} plot artifact/spec；未生成 PNG/SVG/PDF、report-ready、GSEA 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "ORA plot gate 未通过"
+            self._status_label.setText(f"ORA plot artifact/spec 未生成：{blockers}")
+            self._render_ora_plot_gate(result)
+        return result
+
     def generate_formal_deg_plot_artifact(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -6575,9 +6591,23 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ora_controls.addWidget(_button("导出 ORA CSV", "secondaryButton", self.export_ora_review_csv))
         ora_controls.addStretch(1)
         ora_layout.addLayout(ora_controls)
+        ora_plot_controls = QHBoxLayout()
+        self._ora_plot_type = QComboBox()
+        self._ora_plot_type.setObjectName("oraPlotType")
+        self._ora_plot_type.addItems(["ora_barplot", "ora_dotplot"])
+        ora_plot_controls.addWidget(QLabel("ORA plot spec"))
+        ora_plot_controls.addWidget(self._ora_plot_type)
+        self._ora_plot_button = _button("生成 ORA plot artifact/spec", "secondaryButton", self.generate_ora_plot_artifact)
+        self._ora_plot_button.setObjectName("oraPlotButton")
+        ora_plot_controls.addWidget(self._ora_plot_button)
+        self._ora_plot_status = _muted("ORA plot artifact 当前仅生成 spec，不渲染 PNG/SVG/PDF，不进入 report-ready。")
+        self._ora_plot_status.setObjectName("oraPlotStatus")
+        ora_plot_controls.addWidget(self._ora_plot_status)
+        ora_plot_controls.addStretch(1)
+        ora_layout.addLayout(ora_plot_controls)
         self._ora_summary_label = _muted("ORA summary：暂无 controlled ORA result。")
         self._ora_summary_label.setObjectName("oraReviewSummary")
-        self._ora_downstream_label = _muted("ORA plot/report-ready disabled：等待 B10.3/B15；GSEA/survival 禁用。")
+        self._ora_downstream_label = _muted("ORA plot waits for ORA result gate；report-ready/GSEA/survival 禁用。")
         self._ora_downstream_label.setObjectName("oraReviewDownstream")
         ora_layout.addWidget(self._ora_summary_label)
         ora_layout.addWidget(self._ora_downstream_label)
@@ -6645,6 +6675,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._ora_review = ora_review
         self._render_ora_review(ora_review)
+        ora_plot_gate = build_ora_plot_gate(
+            self._project_root,
+            result_id=str(ora_review.get("selected_result_id") or "") or None,
+            plot_type=self._ora_plot_type.currentText(),
+        ) if self._project_root else {}
+        self._render_ora_plot_gate(ora_plot_gate)
         plot_gate = build_formal_deg_plot_gate(
             self._project_root,
             result_id=str(review.get("selected_result_id") or "") or None,
@@ -6807,6 +6843,25 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
             ],
         )
+
+    def _render_ora_plot_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_ora_plot_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "passed":
+            existing = gate.get("existing_plot_artifacts", []) if isinstance(gate.get("existing_plot_artifacts"), list) else []
+            self._ora_plot_button.setEnabled(True)
+            self._ora_plot_status.setText(
+                f"ORA plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
+                "spec_only_no_image_dependency；does not render PNG/SVG/PDF；report-ready remains disabled."
+            )
+        else:
+            self._ora_plot_button.setEnabled(False)
+            reason = "；".join(blockers) or "ORA plot gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._ora_plot_status.setText(f"ORA plot disabled：{reason}")
 
 
 class BioinformaticsReportViewerWidget(QWidget):
