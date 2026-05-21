@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.app_identity import load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
+from app.app_identity import MODULE_ICON_PATHS, load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
 from app.shell.dashboard import DashboardModel
 from app.shell.login import LocalSession
 from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
@@ -219,9 +219,15 @@ class ModuleSelectionWidget(QWidget):
         icon_label.setObjectName("moduleIcon")
         icon_label.setFixedSize(64, 64)
         icon_label.setAlignment(Qt.AlignCenter)
-        icon = load_module_pixmap(icon_key, 60)
+        icon_source = MODULE_ICON_PATHS.get(module_key) or MODULE_ICON_PATHS.get(icon_key)
+        icon = load_module_pixmap(module_key, 60)
         if icon.isNull():
             icon = load_ui02_module_selection_pixmap("workspace", 60)
+            icon_label.setProperty("iconFallback", True)
+        else:
+            icon_label.setProperty("iconFallback", False)
+        icon_label.setProperty("moduleKey", module_key)
+        icon_label.setProperty("iconSource", str(icon_source) if icon_source is not None else "")
         icon_label.setPixmap(icon)
         icon_label.setVisible(not icon.isNull())
         title_label = QLabel(title)

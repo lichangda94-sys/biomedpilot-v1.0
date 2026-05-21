@@ -6,8 +6,13 @@ from collections.abc import Callable
 from app.shared.semantic_keys import NavKey
 
 try:
+    from PySide6.QtCore import QSize
     from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout
+    from app.app_identity import MODULE_ICON_PATHS, load_module_icon
 except Exception:  # pragma: no cover
+    QSize = None
+    MODULE_ICON_PATHS = {}
+    load_module_icon = None
     QFrame = QLabel = QPushButton = QVBoxLayout = None
 
 
@@ -27,6 +32,13 @@ COMMON_SIDEBAR_ITEMS = (
     SidebarItem("test_feedback", "Test Feedback / 测试反馈", NavKey.TEST_FEEDBACK.value),
     SidebarItem("about", "About / 关于", NavKey.ABOUT.value),
 )
+
+SIDEBAR_MODULE_ICON_KEYS = {
+    "bioinformatics": "module.bioinformatics",
+    "meta_analysis": "module.meta_analysis",
+    "labtools": "module.labtools",
+    "settings": "module.settings",
+}
 
 
 if QFrame is not None:
@@ -72,6 +84,15 @@ if QFrame is not None:
                 button.setAccessibleName(item.label)
                 button.setToolTip(item.label)
                 button.setMinimumHeight(36)
+                module_icon_key = SIDEBAR_MODULE_ICON_KEYS.get(item.key)
+                if module_icon_key is not None:
+                    icon = load_module_icon(module_icon_key)
+                    if not icon.isNull():
+                        button.setIcon(icon)
+                        button.setIconSize(QSize(18, 18))
+                    button.setProperty("moduleKey", module_icon_key)
+                    button.setProperty("iconSource", str(MODULE_ICON_PATHS.get(module_icon_key, "")))
+                    button.setProperty("iconFallback", icon.isNull())
                 button.clicked.connect(callback)
                 layout.addWidget(button)
             layout.addStretch(1)

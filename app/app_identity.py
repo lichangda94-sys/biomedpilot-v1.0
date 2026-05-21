@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QApplication
 
+from app.shared.semantic_keys import ModuleKey
+
 
 APP_NAME = "BioMedPilot / 医研智析"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -16,8 +18,20 @@ UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_modul
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
 APP_ICON_PNG_PATH = APP_ICON_DIR / "biomedpilot_app_icon.png"
 APP_ICON_ICNS_PATH = APP_ICON_DIR / "biomedpilot_app_icon.icns"
-BIOINFORMATICS_MODULE_ICON_PATH = MODULE_ICON_DIR / "bioinformatics_module_icon.png"
-META_ANALYSIS_MODULE_ICON_PATH = MODULE_ICON_DIR / "meta_analysis_module_icon.png"
+BIOINFORMATICS_MODULE_ICON_PATH = MODULE_ICON_DIR / "module_bioinformatics.svg"
+META_ANALYSIS_MODULE_ICON_PATH = MODULE_ICON_DIR / "module_meta_analysis.svg"
+LABTOOLS_MODULE_ICON_PATH = MODULE_ICON_DIR / "module_labtools.svg"
+SETTINGS_MODULE_ICON_PATH = MODULE_ICON_DIR / "module_settings.svg"
+MODULE_ICON_PATHS = {
+    ModuleKey.BIOINFORMATICS.value: BIOINFORMATICS_MODULE_ICON_PATH,
+    ModuleKey.META_ANALYSIS.value: META_ANALYSIS_MODULE_ICON_PATH,
+    ModuleKey.LABTOOLS.value: LABTOOLS_MODULE_ICON_PATH,
+    ModuleKey.SETTINGS.value: SETTINGS_MODULE_ICON_PATH,
+    "bioinformatics": BIOINFORMATICS_MODULE_ICON_PATH,
+    "meta_analysis": META_ANALYSIS_MODULE_ICON_PATH,
+    "labtools": LABTOOLS_MODULE_ICON_PATH,
+    "settings": SETTINGS_MODULE_ICON_PATH,
+}
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
     "brand": UI01_LOGIN_ICON_DIR / "brand.png",
@@ -85,8 +99,10 @@ class IconAssetStatus:
 
 ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("app.main", "主 App 图标", "应用入口", APP_ICON_PNG_PATH, ("QApplication", "MainWindow", "macOS app/window icon")),
-    IconAssetSlot("module.bioinformatics", "生信分析模块图标", "模块入口", BIOINFORMATICS_MODULE_ICON_PATH, ("UI-02 模块选择首页",)),
-    IconAssetSlot("module.meta_analysis", "Meta 分析模块图标", "模块入口", META_ANALYSIS_MODULE_ICON_PATH, ("UI-02 模块选择首页",)),
+    IconAssetSlot("module.bioinformatics", "生信分析模块图标", "模块入口", BIOINFORMATICS_MODULE_ICON_PATH, ("UI-02 模块选择首页", "Sidebar module navigation")),
+    IconAssetSlot("module.meta_analysis", "Meta 分析模块图标", "模块入口", META_ANALYSIS_MODULE_ICON_PATH, ("UI-02 模块选择首页", "Sidebar module navigation")),
+    IconAssetSlot("module.labtools", "LabTools 模块图标", "模块入口", LABTOOLS_MODULE_ICON_PATH, ("UI-02 模块选择首页", "Sidebar module navigation")),
+    IconAssetSlot("module.settings", "设置中心模块图标", "模块入口", SETTINGS_MODULE_ICON_PATH, ("Sidebar module navigation",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -142,10 +158,7 @@ def load_app_icon() -> QIcon:
 
 
 def load_module_icon(module_key: str) -> QIcon:
-    path = {
-        "bioinformatics": BIOINFORMATICS_MODULE_ICON_PATH,
-        "meta_analysis": META_ANALYSIS_MODULE_ICON_PATH,
-    }.get(module_key)
+    path = MODULE_ICON_PATHS.get(module_key)
     if path is None or not path.exists():
         return QIcon()
     icon = QIcon(str(path))
