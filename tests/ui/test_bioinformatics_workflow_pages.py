@@ -2995,7 +2995,10 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "gsea_source_result_missing" in action_text or "gsea_input_gate_not_passed" in action_text
     assert "disabled" in action_text
     assert "Run formal GSEA" not in action_text
-    assert "KM/Cox/log-rank" not in action_text
+    assert "Run KM/log-rank" in action_text
+    assert "Run Cox model" in action_text
+    assert "Generate KM plot" in action_text
+    assert "disabled until B13" in action_text or "disabled until B14" in action_text
     assert "Export report-ready package" in action_text
     assert "blocked_report_ready_gate" in action_text
 
@@ -3038,6 +3041,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert survival_table is not None
     survival_text = _table_text(survival_table)
     assert "Survival design preflight" in survival_text
+    assert "Survival / clinical input resolver" in survival_text
+    assert "OS_time / OS_event / censoring gate" in survival_text
+    assert "Clinical variable typing / missingness" in survival_text
     assert "KM/Cox/log-rank/HR" in survival_text
     assert "disabled" in survival_text
 

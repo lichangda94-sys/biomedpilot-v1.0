@@ -36,6 +36,7 @@ def build_action_rows(
     gsea_parameter_gate: dict[str, Any] | None = None,
     gsea_result_schema_gate: dict[str, Any] | None = None,
     gsea_dependency: dict[str, Any] | None = None,
+    survival_clinical_state: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -63,6 +64,7 @@ def build_action_rows(
     gsea_parameter_gate = gsea_parameter_gate or {}
     gsea_result_schema_gate = gsea_result_schema_gate or {}
     gsea_dependency = gsea_dependency or {}
+    survival_clinical_state = survival_clinical_state or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -83,7 +85,15 @@ def build_action_rows(
     rows.append(_gsea_plot_action(gsea_plot_gate))
     rows.append(_gsea_report_ready_action(gsea_report_gate))
     rows.append(_immune_action(immune_package, tasks))
+    rows.append(_survival_clinical_input_readiness_action(survival_clinical_state))
+    rows.append(_survival_outcome_preflight_action(survival_clinical_state))
+    rows.append(_clinical_variable_review_action(survival_clinical_state))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
+    rows.append(_constant_disabled_action("run_km_logrank", "Run KM/log-rank", "disabled_b12_contract", "B12 only hardens inputs; KM/log-rank remains disabled until B13."))
+    rows.append(_constant_disabled_action("run_cox_model", "Run Cox model", "disabled_b12_contract", "B12 only hardens inputs; Cox/HR remains disabled until B14."))
+    rows.append(_constant_disabled_action("generate_km_plot", "Generate KM plot", "disabled_b12_contract", "KM plot generation is disabled; no survival plot artifact in B12."))
+    rows.append(_constant_disabled_action("survival_report_ready", "Export survival report-ready package", "disabled_b12_contract", "Survival report-ready is disabled; no full integrated report in B12."))
+    rows.append(_constant_disabled_action("clinical_association_statistics", "Run clinical association statistics", "disabled_b12_contract", "Clinical association p-values are disabled; input/variable audit only."))
     rows.append(_constant_disabled_action("survival_formal", "Run formal survival analysis", "hidden_until_ready", "Survival remains design/preflight only; no KM/Cox/log-rank/HR output."))
     rows.append(_constant_disabled_action("km_cox_logrank", "KM/Cox/log-rank", "hidden_until_ready", "KM plot, Cox model and log-rank p-value are disabled until a later audited stage."))
     rows.append(_plot_action(results))
@@ -522,6 +532,56 @@ def _survival_preflight_action(package: dict[str, Any] | None, dependency: dict[
         "disabled_reason": "; ".join(dep_blockers),
         "next_action": "Preflight/design only; formal survival remains disabled.",
     }
+
+
+def _survival_clinical_input_readiness_action(state: dict[str, Any]) -> dict[str, Any]:
+    input_state = state.get("input_resolver") if isinstance(state.get("input_resolver"), dict) else {}
+    blockers = _list(input_state.get("blockers"))
+    if not input_state:
+        return _disabled("survival_clinical_input_readiness", "Review survival/clinical input readiness", "blocked_missing_input_package", "missing survival/clinical input resolver state", "Open or standardize a project first.")
+    return {
+        "action_id": "survival_clinical_input_readiness",
+        "label": "Review survival/clinical input readiness",
+        "state": "gate_review_available" if blockers else "preflight_only",
+        "button_behavior": "enabled_gate_review_only",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": "Review clinical asset, sample metadata, expression asset and case/sample mapping. This does not run KM/log-rank/Cox.",
+    }
+
+
+def _survival_outcome_preflight_action(state: dict[str, Any]) -> dict[str, Any]:
+    outcome = state.get("outcome_gate") if isinstance(state.get("outcome_gate"), dict) else {}
+    blockers = _list(outcome.get("blockers"))
+    if outcome.get("status") == "passed":
+        return {
+            "action_id": "survival_outcome_preflight",
+            "label": "Run survival outcome preflight",
+            "state": "preflight_only",
+            "button_behavior": "enabled_preflight_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review OS_time/OS_event/censoring only; KM/log-rank/Cox remain disabled.",
+        }
+    return _disabled("survival_outcome_preflight", "Run survival outcome preflight", "blocked_missing_input_package", "; ".join(blockers or ["survival_outcome_gate_not_passed"]), "Resolve clinical input and outcome field blockers.")
+
+
+def _clinical_variable_review_action(state: dict[str, Any]) -> dict[str, Any]:
+    audit = state.get("clinical_variable_audit") if isinstance(state.get("clinical_variable_audit"), dict) else {}
+    if audit.get("variables"):
+        return {
+            "action_id": "clinical_variable_review",
+            "label": "Review clinical variables",
+            "state": "preflight_only",
+            "button_behavior": "enabled_review_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review variable type and missingness only; clinical association statistics remain disabled.",
+        }
+    return _disabled("clinical_variable_review", "Review clinical variables", "blocked_missing_input_package", "; ".join(_list(audit.get("blockers")) or ["missing_clinical_asset"]), "Provide a standardized clinical asset.")
 
 
 def _plot_action(results: list[dict[str, Any]]) -> dict[str, Any]:

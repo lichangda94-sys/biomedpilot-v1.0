@@ -20,6 +20,7 @@ from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
 from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate
+from app.bioinformatics.survival_clinical import audit_clinical_variables, build_survival_outcome_gate, resolve_survival_clinical_inputs
 
 from .action_rules import build_action_rows
 from .labels import compact_list, label_package_type, label_semantics, label_status, repair_guidance
@@ -45,6 +46,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     ora_plot_gate = build_ora_plot_gate(root)
     gsea_plot_gate = build_gsea_plot_gate(root)
     gsea_gates = build_gsea_gate_state(project_root=root)
+    survival_clinical_state = build_survival_clinical_gate_state(project_root=root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
@@ -73,11 +75,12 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_parameter_gate=gsea_gates["parameter_gate"],
         gsea_result_schema_gate=gsea_gates["result_schema_gate"],
         gsea_dependency=gsea_gates["dependency_snapshot"],
+        survival_clinical_state=survival_clinical_state,
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
-    survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency)
+    survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, survival_clinical_state=survival_clinical_state)
     blockers = _dedupe(
         [*resolver.get("blockers", [])]
         + [item for row in package_rows for item in row["raw_blockers"]]
@@ -126,6 +129,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "gsea_plot_gate": gsea_plot_gate,
             "gsea_report_ready_gate": gsea_report_gate,
             "gsea_gate_state": gsea_gates,
+            "survival_clinical_state": survival_clinical_state,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
@@ -386,6 +390,43 @@ def build_gsea_gate_state(*, project_root: str | Path) -> dict[str, Any]:
     }
 
 
+def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str, Any]:
+    input_state = resolve_survival_clinical_inputs(project_root)
+    outcome_gate = build_survival_outcome_gate(project_root, input_state) if input_state.get("clinical_asset") else {"status": "blocked", "blockers": ["missing_clinical_asset"], "warnings": []}
+    variable_audit = audit_clinical_variables(project_root, input_state) if input_state.get("clinical_asset") else {"status": "blocked", "blockers": ["missing_clinical_asset"], "warnings": [], "variables": [], "summary": {}}
+    gate_rows = [
+        _formal_deg_gate_row(
+            "Survival/clinical input resolver",
+            input_state.get("status"),
+            input_state.get("blockers", []),
+            input_state.get("warnings", []),
+            basis=f"mapped cases={input_state.get('mapped_case_count', 0)}; mapped samples={input_state.get('mapped_sample_count', 0)}",
+        ),
+        _formal_deg_gate_row(
+            "OS_time / OS_event / censoring gate",
+            outcome_gate.get("status"),
+            outcome_gate.get("blockers", []),
+            outcome_gate.get("warnings", []),
+            basis=f"time={outcome_gate.get('time_field', '')}; event={outcome_gate.get('event_field', '')}; events={outcome_gate.get('event_count', 0)}",
+        ),
+        _formal_deg_gate_row(
+            "Clinical variable typing / missingness",
+            variable_audit.get("status"),
+            variable_audit.get("blockers", []),
+            variable_audit.get("warnings", []),
+            basis=f"variables={variable_audit.get('variable_count', 0)}; candidates={variable_audit.get('summary', {})}",
+        ),
+        _formal_deg_gate_row(
+            "Formal survival / clinical statistics",
+            "hidden_until_ready",
+            ["b13_or_b14_formal_activation_required"],
+            [],
+            basis="KM/log-rank/Cox/HR/clinical association p-values remain disabled.",
+        ),
+    ]
+    return {"input_resolver": input_state, "outcome_gate": outcome_gate, "clinical_variable_audit": variable_audit, "gate_rows": gate_rows}
+
+
 def _formal_deg_gate_row(gate: str, status: object, blockers: object, warnings: object = (), *, basis: str = "") -> dict[str, Any]:
     return {
         "gate": gate,
@@ -493,14 +534,54 @@ def build_gate_preview_rows(
     ]
 
 
-def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dependency: dict[str, Any]) -> list[dict[str, Any]]:
+def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dependency: dict[str, Any], survival_clinical_state: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     package = next((item for item in packages if item.get("package_type") == "tcga_clinical_survival_preflight"), None)
+    survival_clinical_state = survival_clinical_state or {}
+    input_state = survival_clinical_state.get("input_resolver") if isinstance(survival_clinical_state.get("input_resolver"), dict) else {}
+    outcome_gate = survival_clinical_state.get("outcome_gate") if isinstance(survival_clinical_state.get("outcome_gate"), dict) else {}
+    variable_audit = survival_clinical_state.get("clinical_variable_audit") if isinstance(survival_clinical_state.get("clinical_variable_audit"), dict) else {}
     blockers = _list(package.get("blockers")) if package else ["missing_survival_preflight_package"]
     warnings = _list(package.get("warnings")) if package else []
     dep_blockers = _list(survival_dependency.get("blockers"))
     package_status = str(package.get("status") or "missing") if package else "missing"
     asset_status = "clinical asset present" if package and package.get("clinical_asset") else "clinical asset missing"
     return [
+        {
+            "row_id": "survival_clinical_input_resolver",
+            "label": "Survival / clinical input resolver",
+            "status": str(input_state.get("status") or "blocked"),
+            "asset_status": f"clinical={bool(input_state.get('clinical_asset'))}; expression={bool(input_state.get('expression_asset'))}; sample_metadata={bool(input_state.get('sample_metadata_asset'))}",
+            "backend_status": "not used for input resolver",
+            "disabled_reason": compact_list(input_state.get("blockers", []) or []),
+            "warnings": compact_list(input_state.get("warnings", []) or []),
+        },
+        {
+            "row_id": "case_sample_mapping",
+            "label": "Case/sample mapping",
+            "status": str(input_state.get("case_sample_mapping_status") or "blocked"),
+            "asset_status": f"mapped cases={input_state.get('mapped_case_count', 0)}; mapped samples={input_state.get('mapped_sample_count', 0)}",
+            "backend_status": "not used for mapping",
+            "disabled_reason": compact_list(input_state.get("blockers", []) or []),
+            "warnings": compact_list([*input_state.get("unmapped_cases", [])[:3], *input_state.get("unmapped_samples", [])[:3]] if isinstance(input_state.get("unmapped_cases"), list) and isinstance(input_state.get("unmapped_samples"), list) else input_state.get("warnings", []) or []),
+        },
+        {
+            "row_id": "survival_outcome_gate",
+            "label": "OS_time / OS_event / censoring gate",
+            "status": str(outcome_gate.get("status") or "blocked"),
+            "asset_status": f"time={outcome_gate.get('time_field', '')}; event={outcome_gate.get('event_field', '')}; events={outcome_gate.get('event_count', 0)}; censored={outcome_gate.get('censored_count', 0)}",
+            "backend_status": "not used for KM/Cox",
+            "disabled_reason": compact_list(outcome_gate.get("blockers", []) or []),
+            "warnings": compact_list(outcome_gate.get("warnings", []) or []),
+        },
+        {
+            "row_id": "clinical_variable_audit",
+            "label": "Clinical variable typing / missingness",
+            "status": str(variable_audit.get("status") or "blocked"),
+            "asset_status": f"variables={variable_audit.get('variable_count', 0)}; candidates={variable_audit.get('summary', {})}",
+            "backend_status": "not used for statistics",
+            "disabled_reason": compact_list(variable_audit.get("blockers", []) or []),
+            "warnings": compact_list(variable_audit.get("warnings", []) or []),
+        },
         {
             "row_id": "survival_preflight",
             "label": "Survival design preflight",

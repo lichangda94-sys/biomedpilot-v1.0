@@ -48,3 +48,17 @@ output:
   multivariate_table_template: "{analysis_id}_cox_multivariate_results.csv"
   km_plot_template: "{analysis_id}_{gene}_KM.png"
   forest_plot_template: "{analysis_id}_cox_forest.png"
+
+survival_clinical_preflight:
+  minimum_event_count: 5
+  maximum_missing_rate_warning: 0.3
+  maximum_missing_rate_blocker: 0.5
+  formal_execution_enabled: false
+  forbidden_outputs:
+    - KM plot
+    - log-rank p-value
+    - Cox hazard ratio
+    - HR
+    - survival p-value
+    - clinical advice
+    - treatment recommendation

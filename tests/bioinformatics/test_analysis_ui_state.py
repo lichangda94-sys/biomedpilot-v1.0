@@ -118,6 +118,36 @@ def test_dependency_rows_are_detect_only_and_include_formal_blockers() -> None:
     assert "required_in_packaged_app_for_formal_deg" in text
 
 
+def test_analysis_center_state_shows_b12_survival_clinical_input_hardening(tmp_path: Path) -> None:
+    matrix = tmp_path / "expr.tsv"
+    matrix.write_text("gene_id\tS1\tS2\nTP53\t10\t20\n", encoding="utf-8")
+    sample = tmp_path / "sample.tsv"
+    sample.write_text("sample_id\tcase_id\tgroup\nS1\tC1\tcase\nS2\tC2\tcontrol\n", encoding="utf-8")
+    clinical = tmp_path / "clinical.tsv"
+    clinical.write_text("case_id\tOS_time\tOS_event\tstage\tage\nC1\t10\t1\tII\t50\nC2\t20\t0\tIII\t60\n", encoding="utf-8")
+    assets = [
+        _asset("expr", "normalized_expression_matrix", "expression_repository", matrix, value_type="TPM", gene_id_type="symbol"),
+        _asset("sample", "sample_metadata", "sample_metadata_repository", sample),
+        _asset("clinical", "clinical_metadata", "clinical_repository", clinical),
+    ]
+    _write_standardized_state(tmp_path, assets, default_expression="expr")
+
+    state = build_analysis_center_state(tmp_path)
+
+    diagnostics = state["developer_diagnostics"]["survival_clinical_state"]
+    assert diagnostics["input_resolver"]["case_sample_mapping_status"] == "passed"
+    row_text = "\n".join(str(row) for row in state["survival_clinical_rows"])
+    assert "Survival / clinical input resolver" in row_text
+    assert "OS_time / OS_event / censoring gate" in row_text
+    assert "Clinical variable typing / missingness" in row_text
+    assert "mapped cases=2" in row_text
+    assert _action(state, "survival_clinical_input_readiness")["enabled"] is True
+    assert _action(state, "run_km_logrank")["enabled"] is False
+    assert _action(state, "run_cox_model")["enabled"] is False
+    assert _action(state, "generate_km_plot")["enabled"] is False
+    assert _action(state, "survival_report_ready")["enabled"] is False
+
+
 def _action(state: dict[str, object], action_id: str) -> dict[str, object]:
     return next(row for row in state["action_rows"] if row["action_id"] == action_id)  # type: ignore[index]
 

@@ -5682,11 +5682,11 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
         survival_card, survival_layout = _card("Survival / clinical preflight")
         survival_layout.addWidget(_muted("Survival/clinical association 仅显示设计和 preflight 状态；KM/Cox/log-rank/HR/KM plot 禁用。"))
-        self._survival_table = _table(["项目", "状态", "资产/字段", "Backend", "禁用原因"])
+        self._survival_table = _table(["项目", "状态", "资产/字段", "Backend", "禁用原因", "Warnings"])
         self._survival_table.setObjectName("analysisSurvivalClinicalTable")
         survival_layout.addWidget(self._survival_table)
         root.addWidget(survival_card)
-        _set_table_widths(self._survival_table, [190, 140, 190, 190, 360])
+        _set_table_widths(self._survival_table, [190, 140, 240, 160, 320, 260])
         self._survival_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
 
         developer_card, developer_layout = _card("开发者诊断")
@@ -11253,6 +11253,7 @@ def _analysis_ui_survival_rows(rows: object) -> list[list[object]]:
             row.get("asset_status", ""),
             row.get("backend_status", ""),
             row.get("disabled_reason", ""),
+            row.get("warnings", ""),
         ]
         for row in rows
         if isinstance(row, dict)
