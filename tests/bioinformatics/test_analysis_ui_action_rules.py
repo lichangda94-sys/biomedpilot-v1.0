@@ -46,7 +46,7 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert "gsea_input_gate_not_passed" in _row(rows, "formal_gsea")["disabled_reason"]
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
-    assert "KM/Cox/log-rank" in _row(rows, "km_cox_logrank")["label"]
+    assert "KM/log-rank" in _row(rows, "km_cox_logrank")["label"]
     assert _row(rows, "run_ora_enrichment")["enabled"] is False
     assert _row(rows, "ora_plot")["enabled"] is False
     assert _row(rows, "ora_report_ready")["enabled"] is False

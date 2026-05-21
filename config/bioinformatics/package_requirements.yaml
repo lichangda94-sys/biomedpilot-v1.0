@@ -11,8 +11,10 @@ runtime:
       pandas: Required for tabular input/output handling in formal DEG.
       scipy: Required for statistical tests; missing scipy blocks formal DEG.
       statsmodels: Required for multiple-testing correction/FDR; missing statsmodels blocks formal DEG.
+    formal_survival_required_packages:
+      lifelines: Required dependency gate for B13 controlled two-group KM/log-rank and B14 single-variable Cox MVP; missing lifelines blocks execution.
     dependency_policy: detect-first; no automatic installation from Settings or Analysis Center.
-    packaging_impact: packaged app must include required formal DEG packages before formal DEG activation can be enabled.
+    packaging_impact: packaged app must include required formal DEG packages before DEG activation and lifelines before B13 KM/log-rank execution can be enabled.
   r:
     required_for_report_v1: false
     required_for_real_analysis: true

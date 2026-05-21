@@ -142,8 +142,8 @@ def test_analysis_center_state_shows_b12_survival_clinical_input_hardening(tmp_p
     assert "Clinical variable typing / missingness" in row_text
     assert "mapped cases=2" in row_text
     assert _action(state, "survival_clinical_input_readiness")["enabled"] is True
-    assert _action(state, "run_km_logrank")["enabled"] is False
-    assert _action(state, "run_cox_model")["enabled"] is False
+    assert _action(state, "km_cox_logrank")["enabled"] is False
+    assert _action(state, "cox_univariate")["enabled"] is False
     assert _action(state, "generate_km_plot")["enabled"] is False
     assert _action(state, "survival_report_ready")["enabled"] is False
 

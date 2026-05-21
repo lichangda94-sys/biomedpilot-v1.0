@@ -20,7 +20,19 @@ from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
 from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate
-from app.bioinformatics.survival_clinical import audit_clinical_variables, build_survival_outcome_gate, resolve_survival_clinical_inputs
+from app.bioinformatics.survival_clinical import (
+    audit_clinical_variables,
+    audit_cox_multivariate_design,
+    build_cox_univariate_parameter_manifest,
+    build_km_logrank_parameter_manifest,
+    build_survival_outcome_gate,
+    load_cox_univariate_confirmation,
+    load_km_logrank_confirmation,
+    resolve_survival_clinical_inputs,
+    validate_cox_univariate_confirmation,
+    validate_km_logrank_confirmation,
+)
+from app.bioinformatics.survival_clinical._io import read_table
 
 from .action_rules import build_action_rows
 from .labels import compact_list, label_package_type, label_semantics, label_status, repair_guidance
@@ -58,6 +70,10 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
         survival_dependency=survival_dependency,
+        km_parameter_gate=survival_clinical_state["km_parameter_gate"],
+        km_confirmation_gate=survival_clinical_state["km_confirmation_gate"],
+        cox_parameter_gate=survival_clinical_state["cox_parameter_gate"],
+        cox_confirmation_gate=survival_clinical_state["cox_confirmation_gate"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
         ora_input_gate=ora_gates["input_gate"],
@@ -394,6 +410,33 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
     input_state = resolve_survival_clinical_inputs(project_root)
     outcome_gate = build_survival_outcome_gate(project_root, input_state) if input_state.get("clinical_asset") else {"status": "blocked", "blockers": ["missing_clinical_asset"], "warnings": []}
     variable_audit = audit_clinical_variables(project_root, input_state) if input_state.get("clinical_asset") else {"status": "blocked", "blockers": ["missing_clinical_asset"], "warnings": [], "variables": [], "summary": {}}
+    runtime_variable_audit = _clinical_variable_audit_for_runtime(variable_audit)
+    runtime_package = _survival_runtime_package(input_state, outcome_gate)
+    clinical_rows = read_table(_clinical_asset_path(Path(project_root), input_state))
+    grouping_variable, group_a, group_b = _default_km_grouping(clinical_rows, runtime_package)
+    dependency = check_survival_backend_dependencies()
+    km_parameter_gate = build_km_logrank_parameter_manifest(
+        runtime_package,
+        outcome_gate=outcome_gate,
+        clinical_variable_audit=runtime_variable_audit,
+        grouping_variable=grouping_variable,
+        group_a=group_a,
+        group_b=group_b,
+        dependency_snapshot=dependency,
+    )
+    km_confirmation = load_km_logrank_confirmation(project_root)
+    km_confirmation_gate = validate_km_logrank_confirmation(km_confirmation, km_parameter_gate)
+    covariate = _default_cox_covariate(clinical_rows, runtime_package, runtime_variable_audit)
+    cox_parameter_gate = build_cox_univariate_parameter_manifest(
+        runtime_package,
+        outcome_gate=outcome_gate,
+        clinical_variable_audit=runtime_variable_audit,
+        covariate=covariate,
+        dependency_snapshot=dependency,
+    )
+    cox_confirmation = load_cox_univariate_confirmation(project_root)
+    cox_confirmation_gate = validate_cox_univariate_confirmation(cox_confirmation, cox_parameter_gate)
+    cox_multivariate_design = audit_cox_multivariate_design(runtime_package, runtime_variable_audit)
     gate_rows = [
         _formal_deg_gate_row(
             "Survival/clinical input resolver",
@@ -417,14 +460,146 @@ def build_survival_clinical_gate_state(*, project_root: str | Path) -> dict[str,
             basis=f"variables={variable_audit.get('variable_count', 0)}; candidates={variable_audit.get('summary', {})}",
         ),
         _formal_deg_gate_row(
-            "Formal survival / clinical statistics",
-            "hidden_until_ready",
-            ["b13_or_b14_formal_activation_required"],
-            [],
-            basis="KM/log-rank/Cox/HR/clinical association p-values remain disabled.",
+            "B13 KM/log-rank parameters",
+            km_parameter_gate.get("status"),
+            km_parameter_gate.get("blockers", []),
+            km_parameter_gate.get("warnings", []),
+        ),
+        _formal_deg_gate_row(
+            "B13 KM/log-rank user confirmation",
+            km_confirmation_gate.get("status"),
+            km_confirmation_gate.get("blockers", []),
+            km_confirmation_gate.get("warnings", []),
+        ),
+        _formal_deg_gate_row(
+            "B14 Cox univariate parameters",
+            cox_parameter_gate.get("status"),
+            cox_parameter_gate.get("blockers", []),
+            cox_parameter_gate.get("warnings", []),
+        ),
+        _formal_deg_gate_row(
+            "B14 Cox user confirmation",
+            cox_confirmation_gate.get("status"),
+            cox_confirmation_gate.get("blockers", []),
+            cox_confirmation_gate.get("warnings", []),
+        ),
+        _formal_deg_gate_row(
+            "B14 Cox multivariate design audit",
+            "blocked" if cox_multivariate_design.get("blockers") else "design_only",
+            cox_multivariate_design.get("blockers", []),
+            cox_multivariate_design.get("warnings", []),
+            basis="design audit only; no multivariate execution",
+        ),
+        _formal_deg_gate_row(
+            "Survival dependency",
+            dependency.get("status"),
+            dependency.get("blockers", []),
+            dependency.get("warnings", []),
+            basis="lifelines detect-first; no install action",
         ),
     ]
-    return {"input_resolver": input_state, "outcome_gate": outcome_gate, "clinical_variable_audit": variable_audit, "gate_rows": gate_rows}
+    return {
+        "input_resolver": input_state,
+        "outcome_gate": outcome_gate,
+        "clinical_variable_audit": variable_audit,
+        "clinical_variable_runtime_audit": runtime_variable_audit,
+        "runtime_package": runtime_package,
+        "km_parameter_gate": km_parameter_gate,
+        "km_confirmation_gate": km_confirmation_gate,
+        "km_parameter_confirmation": km_confirmation,
+        "cox_parameter_gate": cox_parameter_gate,
+        "cox_confirmation_gate": cox_confirmation_gate,
+        "cox_parameter_confirmation": cox_confirmation,
+        "cox_multivariate_design": cox_multivariate_design,
+        "gate_rows": gate_rows,
+    }
+
+
+def _survival_runtime_package(input_state: dict[str, Any], outcome_gate: dict[str, Any]) -> dict[str, Any]:
+    event_coding = outcome_gate.get("event_coding") if isinstance(outcome_gate.get("event_coding"), dict) else {}
+    return {
+        **input_state,
+        "survival_package_id": str(input_state.get("survival_clinical_input_id") or ""),
+        "time_field": str(outcome_gate.get("time_field") or ""),
+        "event_field": str(outcome_gate.get("event_field") or ""),
+        "time_unit": str(outcome_gate.get("time_unit") or "days"),
+        "event_coding": event_coding,
+        "censoring_policy": str(outcome_gate.get("censoring_policy") or "event=1 observed, event=0 censored; ambiguous coding blocks"),
+        "missingness_report": {},
+        "event_count": int(outcome_gate.get("event_count") or 0),
+        "sample_count": int(outcome_gate.get("sample_count") or input_state.get("sample_count") or 0),
+    }
+
+
+def _clinical_variable_audit_for_runtime(variable_audit: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(variable_audit.get("variable_mapping"), dict):
+        return variable_audit
+    mapping: dict[str, dict[str, Any]] = {}
+    variables = variable_audit.get("variables") if isinstance(variable_audit.get("variables"), list) else []
+    type_map = {
+        "binary": "binary_variable",
+        "categorical": "categorical_variable",
+        "continuous": "continuous_variable",
+        "ordinal": "ordinal_variable",
+        "time_to_event": "time_to_event_variable",
+        "identifier": "identifier",
+        "unknown": "unknown_variable",
+        "date": "date_variable",
+        "text": "unknown_variable",
+    }
+    for item in variables:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("variable_name") or "")
+        if not name:
+            continue
+        source_type = str(item.get("variable_type") or "")
+        mapping[name] = {
+            **item,
+            "variable_type": type_map.get(source_type, source_type or "unknown_variable"),
+            "missing_fraction": item.get("missing_rate", item.get("missing_fraction", 0.0)),
+        }
+    return {**variable_audit, "variable_mapping": mapping}
+
+
+def _clinical_asset_path(root: Path, input_state: dict[str, Any]) -> Path | None:
+    asset = input_state.get("clinical_asset") if isinstance(input_state.get("clinical_asset"), dict) else {}
+    value = str(asset.get("path") or asset.get("file_path") or "")
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else root / path
+
+
+def _default_km_grouping(rows: list[dict[str, str]], survival_package: dict[str, Any]) -> tuple[str, str, str]:
+    excluded = {str(survival_package.get("time_field") or ""), str(survival_package.get("event_field") or "")}
+    identifier_fields = {"sample_id", "case_id", "barcode", "tcga_barcode", "patient_barcode", "participant_barcode", "bcr_patient_barcode"}
+    for field in rows[0].keys() if rows else []:
+        if field in excluded or field in identifier_fields:
+            continue
+        values = sorted({str(row.get(field) or "").strip() for row in rows if str(row.get(field) or "").strip()})
+        if len(values) == 2:
+            return field, values[0], values[1]
+    return "", "", ""
+
+
+def _default_cox_covariate(rows: list[dict[str, str]], survival_package: dict[str, Any], audit: dict[str, Any]) -> str:
+    excluded = {str(survival_package.get("time_field") or ""), str(survival_package.get("event_field") or "")}
+    identifier_fields = {"sample_id", "case_id", "barcode", "tcga_barcode", "patient_barcode", "participant_barcode", "bcr_patient_barcode"}
+    variables = audit.get("variables") if isinstance(audit.get("variables"), list) else []
+    for spec in variables:
+        if not isinstance(spec, dict):
+            continue
+        name = str(spec.get("variable_name") or "")
+        variable_type = str(spec.get("variable_type") or "")
+        if name in excluded or name in identifier_fields:
+            continue
+        if variable_type in {"binary", "categorical", "continuous", "ordinal"} and not spec.get("blockers"):
+            return name
+    for field in rows[0].keys() if rows else []:
+        if field not in excluded and field not in identifier_fields:
+            return field
+    return ""
 
 
 def _formal_deg_gate_row(gate: str, status: object, blockers: object, warnings: object = (), *, basis: str = "") -> dict[str, Any]:
@@ -540,6 +715,11 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
     input_state = survival_clinical_state.get("input_resolver") if isinstance(survival_clinical_state.get("input_resolver"), dict) else {}
     outcome_gate = survival_clinical_state.get("outcome_gate") if isinstance(survival_clinical_state.get("outcome_gate"), dict) else {}
     variable_audit = survival_clinical_state.get("clinical_variable_audit") if isinstance(survival_clinical_state.get("clinical_variable_audit"), dict) else {}
+    km_parameter_gate = survival_clinical_state.get("km_parameter_gate") if isinstance(survival_clinical_state.get("km_parameter_gate"), dict) else {}
+    km_confirmation_gate = survival_clinical_state.get("km_confirmation_gate") if isinstance(survival_clinical_state.get("km_confirmation_gate"), dict) else {}
+    cox_parameter_gate = survival_clinical_state.get("cox_parameter_gate") if isinstance(survival_clinical_state.get("cox_parameter_gate"), dict) else {}
+    cox_confirmation_gate = survival_clinical_state.get("cox_confirmation_gate") if isinstance(survival_clinical_state.get("cox_confirmation_gate"), dict) else {}
+    cox_multivariate_design = survival_clinical_state.get("cox_multivariate_design") if isinstance(survival_clinical_state.get("cox_multivariate_design"), dict) else {}
     blockers = _list(package.get("blockers")) if package else ["missing_survival_preflight_package"]
     warnings = _list(package.get("warnings")) if package else []
     dep_blockers = _list(survival_dependency.get("blockers"))
@@ -593,12 +773,57 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
         },
         {
             "row_id": "km_cox_logrank",
-            "label": "KM/Cox/log-rank/HR",
-            "status": "hidden_until_ready",
+            "label": "Two-group KM/log-rank",
+            "status": str(km_parameter_gate.get("status") or "blocked"),
             "asset_status": package_status,
             "backend_status": str(survival_dependency.get("status") or "unknown"),
-            "disabled_reason": "Survival statistics are disabled in B8.9; no KM plot, HR, Cox or log-rank p-value.",
-            "warnings": "design/preflight only",
+            "disabled_reason": compact_list(_list(km_parameter_gate.get("blockers")) + _list(km_confirmation_gate.get("blockers")) + _list(survival_dependency.get("blockers"))),
+            "warnings": compact_list(_list(km_parameter_gate.get("warnings"))),
+        },
+        {
+            "row_id": "km_plot_artifact",
+            "label": "KM plot artifact/spec",
+            "status": "available_after_survival_km_logrank_result",
+            "asset_status": "spec-only no image dependency",
+            "backend_status": "not matplotlib/R/survminer",
+            "disabled_reason": "Requires formal_computed_result survival_km_logrank source; image_artifacts=[] in B13.",
+            "warnings": "No PNG/SVG/PDF generated in B13.",
+        },
+        {
+            "row_id": "cox_hr",
+            "label": "Single-variable Cox",
+            "status": str(cox_parameter_gate.get("status") or "blocked"),
+            "asset_status": package_status,
+            "backend_status": str(survival_dependency.get("status") or "unknown"),
+            "disabled_reason": compact_list(_list(cox_parameter_gate.get("blockers")) + _list(cox_confirmation_gate.get("blockers")) + _list(survival_dependency.get("blockers"))),
+            "warnings": compact_list(_list(cox_parameter_gate.get("warnings"))),
+        },
+        {
+            "row_id": "cox_forest_plot",
+            "label": "Cox forest plot artifact/spec",
+            "status": "available_after_cox_univariate_result",
+            "asset_status": "spec-only no image dependency",
+            "backend_status": "not matplotlib/R/ggplot2",
+            "disabled_reason": "Requires formal_computed_result cox_univariate source; image_artifacts=[] in B14.",
+            "warnings": "No PNG/SVG/PDF generated in B14.",
+        },
+        {
+            "row_id": "cox_multivariate_design",
+            "label": "Multivariate Cox design audit",
+            "status": "blocked" if cox_multivariate_design.get("blockers") else "design_only",
+            "asset_status": f"event_per_variable={cox_multivariate_design.get('event_per_variable', '')}",
+            "backend_status": "execution disabled",
+            "disabled_reason": compact_list(_list(cox_multivariate_design.get("blockers"))),
+            "warnings": compact_list(_list(cox_multivariate_design.get("warnings"))),
+        },
+        {
+            "row_id": "risk_score",
+            "label": "Risk score / nomogram",
+            "status": "disabled",
+            "asset_status": package_status,
+            "backend_status": "not enabled",
+            "disabled_reason": "Risk score, nomogram and clinical risk grouping are not implemented in B14.",
+            "warnings": "No prognosis or treatment recommendation.",
         },
         {
             "row_id": "clinical_association",
