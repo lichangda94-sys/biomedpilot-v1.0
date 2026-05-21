@@ -1,33 +1,45 @@
-# CODEX.md - ReleaseBuild
+# CODEX.md - Integration
 
 ## 当前工作区
 
-路径：/Users/changdali/Developer/biomedpilot v1.0/ReleaseBuild
-分支：dev/release-internal-test
+路径：/Users/changdali/Developer/biomedpilot v1.0/Integration
+分支：dev/integration
 
 ## 职责
 
-本工作区只负责从已验证 MainLine 或已验证发布源同步内部测试打包候选、预打包验证、打包 smoke、包内 metadata 检查和发布前检查。
+本工作区只做阶段性合并、冲突解决、全量测试和内部测试版准备。
 
-ReleaseBuild 不做功能开发，不直接吸收未经 Integration 或 MainLine 验证的单一模块分支工作，不把预检或测试级输出描述为正式结果。
+ReleaseBuild 相关内容只能作为已验证打包候选和预发布检查输入纳入；Integration 不直接发布、不推送远程。
 
-## 当前第一任务
+## 集成板块规则
 
-执行 ReleaseBuild sync from MainLine pre-package validation：从 MainLine 确认源同步、验证、记录报告，不执行正式打包。
+- Bioinformatics Analysis 负责生信分析模块主流程：项目首页 -> 数据选择 -> 数据识别 -> 数据标准化 -> 分析任务中心 -> 结果浏览 -> 项目报告。
+- Meta Analysis 当前是 Developer Preview / testing；统计、报告、handoff 和 AI/OCR 输出都必须保留 draft / testing-level / human-review wording。
+- LabTools 在 Integration 中同时保留桌面 UI 入口和顶层 `labtools` 公共后端包。
+- AI Gateway 负责本地模型接入、模块策略、隐私策略和审计。
+- AI 默认关闭。
+- 本地模型必须通过 `AIGateway.generate()`。
+- 不得直接调用 Ollama HTTP。
+- 不保存 raw prompt / raw response。
+- 只保存必要审计摘要。
+- AI 只生成草稿或建议。
+- 用户确认后才允许进入检索、筛选、提取或报告流程。
+- AI 不得自动执行下载、分析或最终结论生成。
 
 ## 禁止事项
 
-- 不要在 ReleaseBuild 做功能开发。
-- 不要修改其他 worktree。
-- 不要执行正式打包，除非任务明确授权。
-- 不要覆盖 `dist/BioMedPilot.app` 或桌面入口。
+- 不要在 Integration 直接开发大功能。
+- 不要不记录冲突处理。
+- 不要把 dry-run 或 testing 结果写成 production。
+- 不要在测试失败时打包成内部测试版。
+- 不要执行 PubMed 文献检索作为生信数据结果。
+- 不要把 Meta 文献候选混入生信。
+- 不要生成假 DEG、假火山图、假富集结果。
+- 不要让 AI 直接执行下载或分析。
+- 不要在主 UI 暴露大量 manifest、schema、branch、asset id、raw path。
+- 不要让 Meta active services 重新依赖 `app/meta_analysis/legacy/**`。
+- 不要覆盖 `dist/BioMedPilot.app` 或桌面入口，除非任务明确授权。
 - 不要推送远程。
-- 不要生成假 DEG。
-- 不要把 PubMed 放进 Bioinformatics 数据检索。
-- 不要把 GEO / TCGA / GTEx 表达分析放进 Meta。
-- 不要绕过 AI Gateway。
-- 不要保存 raw prompt / response。
-- 不要在主 UI 暴露 manifest、schema、branch、raw path。
 
 ## 测试
 
@@ -40,5 +52,3 @@ ReleaseBuild 不做功能开发，不直接吸收未经 Integration 或 MainLine
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/shared -q`
 - `QT_QPA_PLATFORM=offscreen python3 -m pytest tests/bioinformatics -q`
 - `python3 scripts/run_tests.py`
-
-正式打包命令和桌面入口刷新需要单独确认。

@@ -1,0 +1,1177 @@
+{
+  "plan_name": "shared_core_strategy_a_execution_plan",
+  "plan_date": "2026-05-20",
+  "phase": "handoff_gap_remediation_task_2",
+  "strategy": "A_deprecate_in_shared",
+  "execution_status": "not_executed",
+  "user_confirmation_required": true,
+  "mini_medical_terms_index_modified": false,
+  "zh_term_overrides_modified": false,
+  "terms_to_mark_count": 48,
+  "category_counts": {
+    "Diagnostic outcome / accuracy": 10,
+    "Meta PICO framework": 7,
+    "Meta analysis context": 4,
+    "Meta design / filter": 9,
+    "Meta outcome": 2,
+    "Meta quality tools": 7,
+    "Meta screening/exclusion marker": 5,
+    "meta_analysis_context": 1,
+    "meta_data_context_or_extraction_context": 1,
+    "meta_design_filter": 1,
+    "meta_outcome": 1
+  },
+  "has_compatibility_map_count": 48,
+  "items": [
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_follow_up"
+      ],
+      "preferred_label_en": "follow-up",
+      "category": "Meta analysis context",
+      "redirect_to": "meta_context:follow_up",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_follow_up",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_context:follow_up",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_setting"
+      ],
+      "preferred_label_en": "setting",
+      "category": "Meta analysis context",
+      "redirect_to": "meta_context:setting",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_setting",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_context:setting",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_subgroup"
+      ],
+      "preferred_label_en": "subgroup",
+      "category": "Meta analysis context",
+      "redirect_to": "meta_context:subgroup",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_subgroup",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_context:subgroup",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:modality_survival_data"
+      ],
+      "preferred_label_en": "survival data",
+      "category": "meta_data_context_or_extraction_context",
+      "redirect_to": "meta_data_context:survival_data",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:modality_survival_data",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_data_context:survival_data",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_area_under_curve"
+      ],
+      "preferred_label_en": "area under the curve",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:area_under_the_curve",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_area_under_curve",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:area_under_the_curve",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_diagnostic_accuracy"
+      ],
+      "preferred_label_en": "diagnostic accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:diagnostic_accuracy",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_diagnostic_accuracy",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:diagnostic_accuracy",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_diagnostic_odds_ratio"
+      ],
+      "preferred_label_en": "diagnostic odds ratio",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:diagnostic_odds_ratio",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_diagnostic_odds_ratio",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:diagnostic_odds_ratio",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_negative_likelihood_ratio"
+      ],
+      "preferred_label_en": "negative likelihood ratio",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:negative_likelihood_ratio",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_negative_likelihood_ratio",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:negative_likelihood_ratio",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_negative_predictive_value"
+      ],
+      "preferred_label_en": "negative predictive value",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:negative_predictive_value",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_negative_predictive_value",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:negative_predictive_value",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_positive_likelihood_ratio"
+      ],
+      "preferred_label_en": "positive likelihood ratio",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:positive_likelihood_ratio",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_positive_likelihood_ratio",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:positive_likelihood_ratio",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_positive_predictive_value"
+      ],
+      "preferred_label_en": "positive predictive value",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:positive_predictive_value",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_positive_predictive_value",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:positive_predictive_value",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_receiver_operating_characteristic"
+      ],
+      "preferred_label_en": "receiver operating characteristic",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:receiver_operating_characteristic",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_receiver_operating_characteristic",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:receiver_operating_characteristic",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_sensitivity"
+      ],
+      "preferred_label_en": "sensitivity",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:sensitivity",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_sensitivity",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:sensitivity",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_specificity"
+      ],
+      "preferred_label_en": "specificity",
+      "category": "Diagnostic outcome / accuracy",
+      "redirect_to": "meta_diagnostic_outcome:specificity",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_specificity",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_diagnostic_outcome:specificity",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:effect_size_core"
+      ],
+      "preferred_label_en": "effect size",
+      "category": "meta_analysis_context",
+      "redirect_to": "meta_effect:effect_size",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:effect_size_core",
+          "legacy_reference_detected": true,
+          "legacy_reference_paths": [
+            "app/shared/query_intelligence/medical_terms/term_lookup.py"
+          ]
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_effect:effect_size",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_endpoint"
+      ],
+      "preferred_label_en": "endpoint",
+      "category": "Meta outcome",
+      "redirect_to": "meta_outcome:endpoint",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_endpoint",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_outcome:endpoint",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_outcomes_core",
+        "mini:meta_analysis_overall_survival"
+      ],
+      "preferred_label_en": "overall survival",
+      "category": "meta_outcome",
+      "redirect_to": "meta_outcome:overall_survival",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_outcomes_core",
+          "legacy_reference_detected": true,
+          "legacy_reference_paths": [
+            "app/shared/query_intelligence/medical_terms/term_lookup.py"
+          ]
+        },
+        {
+          "legacy_concept_id": "mini:meta_analysis_overall_survival",
+          "legacy_reference_detected": true,
+          "legacy_reference_paths": [
+            "tests/shared/test_medical_vocabulary_consolidation_regression.py"
+          ]
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_outcome:overall_survival",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_recurrence"
+      ],
+      "preferred_label_en": "recurrence",
+      "category": "Meta outcome",
+      "redirect_to": "meta_outcome:recurrence",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_recurrence",
+          "legacy_reference_detected": true,
+          "legacy_reference_paths": [
+            "app/shared/query_intelligence/medical_terms/term_lookup.py"
+          ]
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_outcome:recurrence",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_comparator"
+      ],
+      "preferred_label_en": "comparator",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:comparator",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_comparator",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:comparator",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_control"
+      ],
+      "preferred_label_en": "control",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:control",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_control",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:control",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_intervention"
+      ],
+      "preferred_label_en": "intervention",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:intervention",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_intervention",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:intervention",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_outcome"
+      ],
+      "preferred_label_en": "outcome",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:outcome",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_outcome",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:outcome",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_patient"
+      ],
+      "preferred_label_en": "patient",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:patient",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_patient",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:patient",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_population"
+      ],
+      "preferred_label_en": "population",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:population",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_population",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:population",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_study_design"
+      ],
+      "preferred_label_en": "study design",
+      "category": "Meta PICO framework",
+      "redirect_to": "meta_pico:study_design",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_study_design",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_pico:study_design",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_ahrq_checklist"
+      ],
+      "preferred_label_en": "AHRQ checklist",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:ahrq_checklist",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_ahrq_checklist",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:ahrq_checklist",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_cochrane_risk_of_bias"
+      ],
+      "preferred_label_en": "Cochrane Risk of Bias",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:cochrane_risk_of_bias",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_cochrane_risk_of_bias",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:cochrane_risk_of_bias",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_grade"
+      ],
+      "preferred_label_en": "GRADE",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:grade",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_grade",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:grade",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_jbi_critical_appraisal"
+      ],
+      "preferred_label_en": "JBI critical appraisal",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:jbi_critical_appraisal",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_jbi_critical_appraisal",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:jbi_critical_appraisal",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_newcastle_ottawa_scale"
+      ],
+      "preferred_label_en": "Newcastle-Ottawa Scale",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:newcastle_ottawa_scale",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_newcastle_ottawa_scale",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:newcastle_ottawa_scale",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_quadas_2"
+      ],
+      "preferred_label_en": "QUADAS-2",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:quadas_2",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_quadas_2",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:quadas_2",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_robins_i"
+      ],
+      "preferred_label_en": "ROBINS-I",
+      "category": "Meta quality tools",
+      "redirect_to": "meta_quality_tool:robins_i",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_robins_i",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_quality_tool:robins_i",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_risk"
+      ],
+      "preferred_label_en": "risk",
+      "category": "Meta analysis context",
+      "redirect_to": "meta_research_intent:risk",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_risk",
+          "legacy_reference_detected": true,
+          "legacy_reference_paths": [
+            "app/shared/query_intelligence/medical_terms/term_lookup.py"
+          ]
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_research_intent:risk",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_animal_study"
+      ],
+      "preferred_label_en": "animal study",
+      "category": "Meta screening/exclusion marker",
+      "redirect_to": "meta_screening_marker:animal_study",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_animal_study",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_screening_marker:animal_study",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_duplicate_publication"
+      ],
+      "preferred_label_en": "duplicate publication",
+      "category": "Meta screening/exclusion marker",
+      "redirect_to": "meta_screening_marker:duplicate_publication",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_duplicate_publication",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_screening_marker:duplicate_publication",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_in_vitro_study"
+      ],
+      "preferred_label_en": "in vitro study",
+      "category": "Meta screening/exclusion marker",
+      "redirect_to": "meta_screening_marker:in_vitro_study",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_in_vitro_study",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_screening_marker:in_vitro_study",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_non_human_study"
+      ],
+      "preferred_label_en": "non-human study",
+      "category": "Meta screening/exclusion marker",
+      "redirect_to": "meta_screening_marker:non_human_study",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_non_human_study",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_screening_marker:non_human_study",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_preprint"
+      ],
+      "preferred_label_en": "preprint",
+      "category": "Meta screening/exclusion marker",
+      "redirect_to": "meta_screening_marker:preprint",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_preprint",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_screening_marker:preprint",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_case_report"
+      ],
+      "preferred_label_en": "case report",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:case_report",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_case_report",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:case_report",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_comment"
+      ],
+      "preferred_label_en": "comment",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:comment",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_comment",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:comment",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_conference_abstract"
+      ],
+      "preferred_label_en": "conference abstract",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:conference_abstract",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_conference_abstract",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:conference_abstract",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_editorial"
+      ],
+      "preferred_label_en": "editorial",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:editorial",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_editorial",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:editorial",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_letter"
+      ],
+      "preferred_label_en": "letter",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:letter",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_letter",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:letter",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_meta_analysis"
+      ],
+      "preferred_label_en": "meta-analysis",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:meta_analysis",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_meta_analysis",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:meta_analysis",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_protocol"
+      ],
+      "preferred_label_en": "protocol",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:protocol",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_protocol",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:protocol",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:study_design_core"
+      ],
+      "preferred_label_en": "randomized controlled trial",
+      "category": "meta_design_filter",
+      "redirect_to": "meta_study_design:randomized_controlled_trial",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:study_design_core",
+          "legacy_reference_detected": true,
+          "legacy_reference_paths": [
+            "app/shared/query_intelligence/medical_terms/term_lookup.py"
+          ]
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:randomized_controlled_trial",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_review"
+      ],
+      "preferred_label_en": "review",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:review",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_review",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:review",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    },
+    {
+      "legacy_concept_ids": [
+        "mini:meta_analysis_systematic_review"
+      ],
+      "preferred_label_en": "systematic review",
+      "category": "Meta design / filter",
+      "redirect_to": "meta_study_design:systematic_review",
+      "compatibility_map_present": true,
+      "legacy_references": [
+        {
+          "legacy_concept_id": "mini:meta_analysis_systematic_review",
+          "legacy_reference_detected": false,
+          "legacy_reference_paths": []
+        }
+      ],
+      "planned_fields": {
+        "deprecated": true,
+        "active_in_shared": false,
+        "redirect_to": "meta_study_design:systematic_review",
+        "deprecation_reason": "migrated_to_meta_scoped_vocabulary"
+      },
+      "execution_status": "not_executed_requires_user_confirmation"
+    }
+  ],
+  "execution_order": [
+    "Confirm user approval for Strategy A.",
+    "Create backup or checkpoint of mini_medical_terms_index.json.",
+    "Apply deprecated=true, active_in_shared=false, and redirect_to for mapped legacy rows only.",
+    "Run scope routing, Meta, Bioinformatics, and smoke tests.",
+    "Verify legacy Meta IDs resolve through compatibility map in Meta scope and are inactive outside Meta scope.",
+    "Commit only after validation passes."
+  ],
+  "rollback_strategy": [
+    "Revert the Strategy A commit if scope routing or downstream tests fail.",
+    "Restore active_in_shared fields to previous values from the checkpoint.",
+    "Keep meta_migrated_from_shared_terms.json and legacy_meta_compatibility_map.json unchanged during rollback unless separately approved."
+  ],
+  "test_requirements": [
+    "git diff --check",
+    "python3 -m pytest tests/shared/test_medical_terms_scope_routing.py -q",
+    "python3 -m pytest tests/shared/test_meta_scoped_mirror_from_shared.py -q",
+    "python3 -m pytest tests/shared/test_medical_terms_integration_audit.py -q",
+    "python3 -m pytest tests/meta_analysis -q",
+    "python3 -m pytest tests/bioinformatics -q",
+    "python3 -m app.main --smoke-test"
+  ],
+  "blocked_actions_in_this_phase": [
+    "Do not modify mini_medical_terms_index.json.",
+    "Do not write active_in_shared=false.",
+    "Do not mark deprecated.",
+    "Do not delete shared core rows."
+  ]
+}

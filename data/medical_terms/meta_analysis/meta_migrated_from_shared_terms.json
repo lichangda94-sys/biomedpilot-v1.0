@@ -1,0 +1,2201 @@
+{
+  "schema_version": "biomedpilot.meta_migrated_from_shared_terms.v1",
+  "stage": "S3_meta_scoped_mirror",
+  "generated_date": "2026-05-20",
+  "source": "data/medical_terms/review_reports/shared_core_pollution_manual_review.jsonl",
+  "shared_core_runtime_modified": false,
+  "terms_count": 48,
+  "excluded_from_meta_mirror_count": 1,
+  "terms": [
+    {
+      "concept_id": "meta_context:follow_up",
+      "preferred_label_en": "follow-up",
+      "zh_terms": [
+        "随访",
+        "随访时间",
+        "随访期"
+      ],
+      "synonyms_en": [
+        "follow up",
+        "follow-up period"
+      ],
+      "concept_type": "context_term",
+      "category": "Meta analysis context",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_follow_up",
+        "new_concept_id": "meta_context:follow_up",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_follow_up"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_context:setting",
+      "preferred_label_en": "setting",
+      "zh_terms": [
+        "研究场景",
+        "研究环境",
+        "医疗场景"
+      ],
+      "synonyms_en": [
+        "study setting",
+        "clinical setting"
+      ],
+      "concept_type": "context_term",
+      "category": "Meta analysis context",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true,
+        "profile_hint_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_setting",
+        "new_concept_id": "meta_context:setting",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_setting"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_context:subgroup",
+      "preferred_label_en": "subgroup",
+      "zh_terms": [
+        "亚组",
+        "亚组分析人群",
+        "分层人群"
+      ],
+      "synonyms_en": [
+        "subgroup population",
+        "stratum"
+      ],
+      "concept_type": "context_term",
+      "category": "Meta analysis context",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_subgroup",
+        "new_concept_id": "meta_context:subgroup",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_subgroup"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_data_context:survival_data",
+      "preferred_label_en": "survival data",
+      "zh_terms": [
+        "生存数据",
+        "生存信息"
+      ],
+      "synonyms_en": [
+        "survival metadata"
+      ],
+      "concept_type": "data_context",
+      "category": "meta_data_context_or_extraction_context",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": true
+      },
+      "migration": {
+        "legacy_concept_id": "mini:modality_survival_data",
+        "new_concept_id": "meta_data_context:survival_data",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:modality_survival_data"
+      ],
+      "review_status": "s3_mirrored_from_shared_core",
+      "notes": "Context/extraction term only; not an overall survival synonym and not a PubMed topic term."
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:area_under_the_curve",
+      "preferred_label_en": "area under the curve",
+      "zh_terms": [
+        "曲线下面积",
+        "AUC值"
+      ],
+      "synonyms_en": [
+        "area under curve"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_area_under_curve",
+        "new_concept_id": "meta_diagnostic_outcome:area_under_the_curve",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_area_under_curve"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:diagnostic_accuracy",
+      "preferred_label_en": "diagnostic accuracy",
+      "zh_terms": [
+        "诊断准确性",
+        "诊断准确度"
+      ],
+      "synonyms_en": [
+        "diagnostic test accuracy"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_diagnostic_accuracy",
+        "new_concept_id": "meta_diagnostic_outcome:diagnostic_accuracy",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_diagnostic_accuracy"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:diagnostic_odds_ratio",
+      "preferred_label_en": "diagnostic odds ratio",
+      "zh_terms": [
+        "诊断优势比",
+        "诊断比值比"
+      ],
+      "synonyms_en": [
+        "diagnostic OR"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "effect"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_diagnostic_odds_ratio",
+        "new_concept_id": "meta_diagnostic_outcome:diagnostic_odds_ratio",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_diagnostic_odds_ratio"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:negative_likelihood_ratio",
+      "preferred_label_en": "negative likelihood ratio",
+      "zh_terms": [
+        "阴性似然比",
+        "阴性似然率"
+      ],
+      "synonyms_en": [],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "effect"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_negative_likelihood_ratio",
+        "new_concept_id": "meta_diagnostic_outcome:negative_likelihood_ratio",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_negative_likelihood_ratio"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:negative_predictive_value",
+      "preferred_label_en": "negative predictive value",
+      "zh_terms": [
+        "阴性预测值",
+        "阴性预报值"
+      ],
+      "synonyms_en": [],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_negative_predictive_value",
+        "new_concept_id": "meta_diagnostic_outcome:negative_predictive_value",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_negative_predictive_value"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:positive_likelihood_ratio",
+      "preferred_label_en": "positive likelihood ratio",
+      "zh_terms": [
+        "阳性似然比",
+        "阳性似然率"
+      ],
+      "synonyms_en": [],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "effect"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_positive_likelihood_ratio",
+        "new_concept_id": "meta_diagnostic_outcome:positive_likelihood_ratio",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_positive_likelihood_ratio"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:positive_predictive_value",
+      "preferred_label_en": "positive predictive value",
+      "zh_terms": [
+        "阳性预测值",
+        "阳性预报值"
+      ],
+      "synonyms_en": [],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_positive_predictive_value",
+        "new_concept_id": "meta_diagnostic_outcome:positive_predictive_value",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_positive_predictive_value"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:receiver_operating_characteristic",
+      "preferred_label_en": "receiver operating characteristic",
+      "zh_terms": [
+        "受试者工作特征曲线",
+        "ROC曲线"
+      ],
+      "synonyms_en": [
+        "ROC curve"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_receiver_operating_characteristic",
+        "new_concept_id": "meta_diagnostic_outcome:receiver_operating_characteristic",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_receiver_operating_characteristic"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:sensitivity",
+      "preferred_label_en": "sensitivity",
+      "zh_terms": [
+        "敏感性",
+        "灵敏度"
+      ],
+      "synonyms_en": [
+        "true positive rate"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_sensitivity",
+        "new_concept_id": "meta_diagnostic_outcome:sensitivity",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_sensitivity"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_diagnostic_outcome:specificity",
+      "preferred_label_en": "specificity",
+      "zh_terms": [
+        "特异性",
+        "特异度"
+      ],
+      "synonyms_en": [
+        "true negative rate"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "category": "Diagnostic outcome / accuracy",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_specificity",
+        "new_concept_id": "meta_diagnostic_outcome:specificity",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_specificity"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_effect:effect_size",
+      "preferred_label_en": "effect size",
+      "zh_terms": [
+        "效应量"
+      ],
+      "synonyms_en": [
+        "effect estimate"
+      ],
+      "concept_type": "effect_measure",
+      "category": "meta_analysis_context",
+      "pico_roles": [
+        "effect"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": true,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:effect_size_core",
+        "new_concept_id": "meta_effect:effect_size",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:effect_size_core"
+      ],
+      "review_status": "s3_mirrored_from_shared_core",
+      "notes": "Broad effect-size container mirrored as Meta analysis context; individual effect measures remain separate Meta seed concepts."
+    },
+    {
+      "concept_id": "meta_outcome:endpoint",
+      "preferred_label_en": "endpoint",
+      "zh_terms": [
+        "终点",
+        "研究终点",
+        "临床终点"
+      ],
+      "synonyms_en": [
+        "clinical endpoint",
+        "study endpoint"
+      ],
+      "concept_type": "outcome",
+      "category": "Meta outcome",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_endpoint",
+        "new_concept_id": "meta_outcome:endpoint",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_endpoint"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_outcome:overall_survival",
+      "preferred_label_en": "overall survival",
+      "zh_terms": [
+        "总生存",
+        "总生存期"
+      ],
+      "synonyms_en": [
+        "survival overall"
+      ],
+      "concept_type": "outcome",
+      "category": "meta_outcome",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_outcomes_core",
+        "new_concept_id": "meta_outcome:overall_survival",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_outcomes_core",
+        "mini:meta_analysis_overall_survival"
+      ],
+      "review_status": "s3_mirrored_from_shared_core",
+      "notes": "Consolidates duplicate shared legacy concepts; broad mini:meta_outcomes_core synonyms are not copied to avoid cross-concept pollution."
+    },
+    {
+      "concept_id": "meta_outcome:recurrence",
+      "preferred_label_en": "recurrence",
+      "zh_terms": [
+        "复发",
+        "复发事件"
+      ],
+      "synonyms_en": [
+        "relapse",
+        "recurrent event"
+      ],
+      "concept_type": "outcome",
+      "category": "Meta outcome",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": "conditional",
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": true,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": true,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_recurrence",
+        "new_concept_id": "meta_outcome:recurrence",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_recurrence"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:comparator",
+      "preferred_label_en": "comparator",
+      "zh_terms": [
+        "对照组",
+        "比较组",
+        "参照组"
+      ],
+      "synonyms_en": [
+        "comparison group",
+        "reference group"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "comparator"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_comparator",
+        "new_concept_id": "meta_pico:comparator",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_comparator"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:control",
+      "preferred_label_en": "control",
+      "zh_terms": [
+        "控制组",
+        "对照",
+        "空白对照"
+      ],
+      "synonyms_en": [
+        "control group",
+        "controls"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "comparator"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true,
+        "profile_hint_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_control",
+        "new_concept_id": "meta_pico:control",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_control"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:intervention",
+      "preferred_label_en": "intervention",
+      "zh_terms": [
+        "干预",
+        "治疗干预",
+        "干预措施"
+      ],
+      "synonyms_en": [
+        "intervention arm",
+        "treatment intervention"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "intervention"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_intervention",
+        "new_concept_id": "meta_pico:intervention",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_intervention"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:outcome",
+      "preferred_label_en": "outcome",
+      "zh_terms": [
+        "结局",
+        "研究结局",
+        "终点结局"
+      ],
+      "synonyms_en": [
+        "clinical outcome",
+        "endpoint outcome"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "outcome"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_outcome",
+        "new_concept_id": "meta_pico:outcome",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_outcome"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:patient",
+      "preferred_label_en": "patient",
+      "zh_terms": [
+        "患者",
+        "病人",
+        "受试者"
+      ],
+      "synonyms_en": [
+        "patients",
+        "participant"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "population"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true,
+        "profile_hint_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_patient",
+        "new_concept_id": "meta_pico:patient",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_patient"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:population",
+      "preferred_label_en": "population",
+      "zh_terms": [
+        "研究人群",
+        "人群",
+        "目标人群"
+      ],
+      "synonyms_en": [
+        "study population",
+        "participants"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "population"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true,
+        "profile_hint_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_population",
+        "new_concept_id": "meta_pico:population",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_population"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_pico:study_design",
+      "preferred_label_en": "study design",
+      "zh_terms": [
+        "研究设计",
+        "研究类型",
+        "设计类型"
+      ],
+      "synonyms_en": [
+        "study type",
+        "research design"
+      ],
+      "concept_type": "pico_term",
+      "category": "Meta PICO framework",
+      "pico_roles": [
+        "study_design"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_study_design",
+        "new_concept_id": "meta_pico:study_design",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_study_design"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:ahrq_checklist",
+      "preferred_label_en": "AHRQ checklist",
+      "zh_terms": [
+        "AHRQ清单",
+        "AHRQ评价清单"
+      ],
+      "synonyms_en": [
+        "Agency for Healthcare Research and Quality checklist"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_ahrq_checklist",
+        "new_concept_id": "meta_quality_tool:ahrq_checklist",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_ahrq_checklist"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:cochrane_risk_of_bias",
+      "preferred_label_en": "Cochrane Risk of Bias",
+      "zh_terms": [
+        "Cochrane偏倚风险工具",
+        "Cochrane风险偏倚",
+        "RoB 2"
+      ],
+      "synonyms_en": [
+        "Cochrane risk-of-bias tool",
+        "Risk of Bias 2"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_cochrane_risk_of_bias",
+        "new_concept_id": "meta_quality_tool:cochrane_risk_of_bias",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_cochrane_risk_of_bias"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:grade",
+      "preferred_label_en": "GRADE",
+      "zh_terms": [
+        "GRADE证据评价",
+        "GRADE分级"
+      ],
+      "synonyms_en": [
+        "Grading of Recommendations Assessment Development and Evaluation"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_grade",
+        "new_concept_id": "meta_quality_tool:grade",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_grade"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:jbi_critical_appraisal",
+      "preferred_label_en": "JBI critical appraisal",
+      "zh_terms": [
+        "JBI质量评价",
+        "JBI评价工具"
+      ],
+      "synonyms_en": [
+        "Joanna Briggs Institute critical appraisal"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_jbi_critical_appraisal",
+        "new_concept_id": "meta_quality_tool:jbi_critical_appraisal",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_jbi_critical_appraisal"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:newcastle_ottawa_scale",
+      "preferred_label_en": "Newcastle-Ottawa Scale",
+      "zh_terms": [
+        "Newcastle-Ottawa量表",
+        "NOS量表",
+        "纽卡斯尔渥太华量表"
+      ],
+      "synonyms_en": [
+        "Newcastle Ottawa Scale"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_newcastle_ottawa_scale",
+        "new_concept_id": "meta_quality_tool:newcastle_ottawa_scale",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_newcastle_ottawa_scale"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:quadas_2",
+      "preferred_label_en": "QUADAS-2",
+      "zh_terms": [
+        "QUADAS-2工具",
+        "诊断准确性质量评价工具"
+      ],
+      "synonyms_en": [
+        "Quality Assessment of Diagnostic Accuracy Studies 2"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_quadas_2",
+        "new_concept_id": "meta_quality_tool:quadas_2",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_quadas_2"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_quality_tool:robins_i",
+      "preferred_label_en": "ROBINS-I",
+      "zh_terms": [
+        "ROBINS-I工具",
+        "非随机研究偏倚风险工具"
+      ],
+      "synonyms_en": [
+        "Risk Of Bias In Non-randomized Studies of Interventions"
+      ],
+      "concept_type": "quality_assessment",
+      "category": "Meta quality tools",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_robins_i",
+        "new_concept_id": "meta_quality_tool:robins_i",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_robins_i"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_research_intent:risk",
+      "preferred_label_en": "risk",
+      "zh_terms": [
+        "风险",
+        "发生风险"
+      ],
+      "synonyms_en": [
+        "disease risk"
+      ],
+      "concept_type": "research_intent",
+      "category": "Meta analysis context",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": false,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true,
+        "profile_hint_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_risk",
+        "new_concept_id": "meta_research_intent:risk",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_risk"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_screening_marker:animal_study",
+      "preferred_label_en": "animal study",
+      "zh_terms": [
+        "动物研究",
+        "动物实验"
+      ],
+      "synonyms_en": [
+        "animal experiment",
+        "animal-only study"
+      ],
+      "concept_type": "screening_marker",
+      "category": "Meta screening/exclusion marker",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_animal_study",
+        "new_concept_id": "meta_screening_marker:animal_study",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_animal_study"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_screening_marker:duplicate_publication",
+      "preferred_label_en": "duplicate publication",
+      "zh_terms": [
+        "重复发表",
+        "重复出版"
+      ],
+      "synonyms_en": [
+        "duplicate report"
+      ],
+      "concept_type": "screening_marker",
+      "category": "Meta screening/exclusion marker",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_duplicate_publication",
+        "new_concept_id": "meta_screening_marker:duplicate_publication",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_duplicate_publication"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_screening_marker:in_vitro_study",
+      "preferred_label_en": "in vitro study",
+      "zh_terms": [
+        "体外研究",
+        "细胞实验"
+      ],
+      "synonyms_en": [
+        "cell experiment",
+        "in-vitro study"
+      ],
+      "concept_type": "screening_marker",
+      "category": "Meta screening/exclusion marker",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_in_vitro_study",
+        "new_concept_id": "meta_screening_marker:in_vitro_study",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_in_vitro_study"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_screening_marker:non_human_study",
+      "preferred_label_en": "non-human study",
+      "zh_terms": [
+        "非人类研究",
+        "非人体研究"
+      ],
+      "synonyms_en": [
+        "nonhuman study"
+      ],
+      "concept_type": "screening_marker",
+      "category": "Meta screening/exclusion marker",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_non_human_study",
+        "new_concept_id": "meta_screening_marker:non_human_study",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_non_human_study"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_screening_marker:preprint",
+      "preferred_label_en": "preprint",
+      "zh_terms": [
+        "预印本",
+        "预印本论文"
+      ],
+      "synonyms_en": [
+        "preprint article"
+      ],
+      "concept_type": "screening_marker",
+      "category": "Meta screening/exclusion marker",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_preprint",
+        "new_concept_id": "meta_screening_marker:preprint",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_preprint"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:case_report",
+      "preferred_label_en": "case report",
+      "zh_terms": [
+        "病例报告",
+        "个案报告"
+      ],
+      "synonyms_en": [
+        "case reports"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_case_report",
+        "new_concept_id": "meta_study_design:case_report",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_case_report"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:comment",
+      "preferred_label_en": "comment",
+      "zh_terms": [
+        "评论",
+        "评论文章"
+      ],
+      "synonyms_en": [
+        "commentary"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_comment",
+        "new_concept_id": "meta_study_design:comment",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_comment"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:conference_abstract",
+      "preferred_label_en": "conference abstract",
+      "zh_terms": [
+        "会议摘要",
+        "会议论文摘要"
+      ],
+      "synonyms_en": [
+        "meeting abstract"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_conference_abstract",
+        "new_concept_id": "meta_study_design:conference_abstract",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_conference_abstract"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:editorial",
+      "preferred_label_en": "editorial",
+      "zh_terms": [
+        "社论",
+        "编辑部文章"
+      ],
+      "synonyms_en": [
+        "editorial article"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_editorial",
+        "new_concept_id": "meta_study_design:editorial",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_editorial"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:letter",
+      "preferred_label_en": "letter",
+      "zh_terms": [
+        "信件",
+        "读者来信"
+      ],
+      "synonyms_en": [
+        "letter to editor"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_letter",
+        "new_concept_id": "meta_study_design:letter",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_letter"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:meta_analysis",
+      "preferred_label_en": "meta-analysis",
+      "zh_terms": [
+        "Meta分析",
+        "荟萃分析"
+      ],
+      "synonyms_en": [
+        "meta analysis"
+      ],
+      "concept_type": "study_design",
+      "category": "Meta design / filter",
+      "pico_roles": [
+        "study_design"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_meta_analysis",
+        "new_concept_id": "meta_study_design:meta_analysis",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_meta_analysis"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:protocol",
+      "preferred_label_en": "protocol",
+      "zh_terms": [
+        "研究方案",
+        "试验方案"
+      ],
+      "synonyms_en": [
+        "study protocol",
+        "review protocol"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_protocol",
+        "new_concept_id": "meta_study_design:protocol",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_protocol"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:randomized_controlled_trial",
+      "preferred_label_en": "randomized controlled trial",
+      "zh_terms": [
+        "随机对照试验"
+      ],
+      "synonyms_en": [
+        "randomised controlled trial"
+      ],
+      "concept_type": "study_design",
+      "category": "meta_design_filter",
+      "pico_roles": [
+        "study_design"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:study_design_core",
+        "new_concept_id": "meta_study_design:randomized_controlled_trial",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:study_design_core"
+      ],
+      "review_status": "s3_mirrored_from_shared_core",
+      "notes": "Broad study_design_core is mapped to the RCT canonical concept only; other study designs are not copied from this broad legacy row."
+    },
+    {
+      "concept_id": "meta_study_design:review",
+      "preferred_label_en": "review",
+      "zh_terms": [
+        "综述",
+        "综述文章"
+      ],
+      "synonyms_en": [
+        "review article"
+      ],
+      "concept_type": "publication_type",
+      "category": "Meta design / filter",
+      "pico_roles": [],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true,
+        "profile_hint_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_review",
+        "new_concept_id": "meta_study_design:review",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_review"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    },
+    {
+      "concept_id": "meta_study_design:systematic_review",
+      "preferred_label_en": "systematic review",
+      "zh_terms": [
+        "系统综述",
+        "系统评价"
+      ],
+      "synonyms_en": [
+        "systematic literature review"
+      ],
+      "concept_type": "study_design",
+      "category": "Meta design / filter",
+      "pico_roles": [
+        "study_design"
+      ],
+      "scope": {
+        "shared_core_allowed": false,
+        "bioinformatics_allowed": false,
+        "meta_analysis_allowed": true
+      },
+      "usage": {
+        "query_expansion_allowed": false,
+        "standalone_search_allowed": false,
+        "filter_only": true,
+        "pdf_extraction_target": false,
+        "analysis_plan_allowed": false,
+        "report_label_allowed": true
+      },
+      "requires_context": {
+        "requires_population_or_disease": false,
+        "requires_intervention_or_exposure": false,
+        "requires_qualified_term": false
+      },
+      "migration": {
+        "legacy_concept_id": "mini:meta_analysis_systematic_review",
+        "new_concept_id": "meta_study_design:systematic_review",
+        "migration_status": "mirrored_to_meta_scoped",
+        "compatibility_alias": true,
+        "active_in_shared": true
+      },
+      "source_current_location": "data/medical_terms/mini_medical_terms_index.json",
+      "legacy_concept_ids": [
+        "mini:meta_analysis_systematic_review"
+      ],
+      "review_status": "s3_mirrored_from_shared_core"
+    }
+  ]
+}

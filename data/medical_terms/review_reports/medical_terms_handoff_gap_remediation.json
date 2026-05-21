@@ -1,0 +1,188 @@
+{
+  "report_name": "medical_terms_handoff_gap_remediation",
+  "report_date": "2026-05-20",
+  "phase": "handoff_gap_remediation",
+  "purpose": "Close governance gaps exposed by the medical terms final handoff without expanding vocabularies or enabling new business features.",
+  "tasks": [
+    {
+      "task": "Task 1",
+      "title": "Vocabulary Consumer Adoption Audit",
+      "status": "complete",
+      "outputs": [
+        "scripts/audit_vocabulary_consumers.py",
+        "docs/medical_terms/vocabulary_consumer_adoption_audit_20260520.md",
+        "data/medical_terms/review_reports/vocabulary_consumer_adoption_audit.json"
+      ],
+      "notes": "73 findings; 13 current manual review items; previous needs_scope_loader_migration resolved to 0."
+    },
+    {
+      "task": "Task 2",
+      "title": "Shared Core Strategy A Execution Plan",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/shared_core_strategy_a_execution_plan_20260520.md",
+        "data/medical_terms/review_reports/shared_core_strategy_a_execution_plan.json"
+      ],
+      "notes": "Plan only; no shared core fields written."
+    },
+    {
+      "task": "Task 3",
+      "title": "gene expression profiling Routing Decision",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/gene_expression_profiling_routing_decision_20260520.md",
+        "data/medical_terms/review_reports/gene_expression_profiling_routing_decision.json"
+      ],
+      "notes": "Decision recorded for Bioinformatics scoped routing; no runtime write."
+    },
+    {
+      "task": "Task 4",
+      "title": "Documentation Source-of-Truth Cleanup",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/medical_terms_source_of_truth_index_20260520.md",
+        "data/medical_terms/review_reports/medical_terms_document_status_index.json"
+      ],
+      "notes": "Index generated; old docs not deleted or edited."
+    },
+    {
+      "task": "Task 5",
+      "title": "Meta Seed Expansion Governance",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/meta_seed_expansion_governance_20260520.md",
+        "data/medical_terms/review_reports/meta_seed_expansion_governance.json"
+      ],
+      "notes": "Curated-only rules recorded."
+    },
+    {
+      "task": "Task 6",
+      "title": "Emtree Mapping Review Plan",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/emtree_mapping_review_plan_20260520.md",
+        "data/medical_terms/review_reports/emtree_mapping_review_plan.json"
+      ],
+      "notes": "No Emtree terms guessed."
+    },
+    {
+      "task": "Task 7",
+      "title": "Bioinformatics GEO Long-tail Candidate Intake Policy",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/bioinformatics_geo_long_tail_intake_policy_20260520.md",
+        "data/medical_terms/review_reports/bioinformatics_geo_long_tail_intake_policy.json"
+      ],
+      "notes": "Candidate queue policy recorded."
+    },
+    {
+      "task": "Task 8",
+      "title": "Medical Terms Candidate Archive Policy",
+      "status": "complete",
+      "outputs": [
+        "docs/medical_terms/medical_terms_candidate_archive_policy_20260520.md",
+        "data/medical_terms/review_reports/medical_terms_candidate_archive_policy.json"
+      ],
+      "notes": "Lifecycle states recorded."
+    }
+  ],
+  "new_files_expected": [
+    "scripts/audit_vocabulary_consumers.py",
+    "docs/medical_terms/vocabulary_consumer_adoption_audit_20260520.md",
+    "data/medical_terms/review_reports/vocabulary_consumer_adoption_audit.json",
+    "docs/medical_terms/shared_core_strategy_a_execution_plan_20260520.md",
+    "data/medical_terms/review_reports/shared_core_strategy_a_execution_plan.json",
+    "docs/medical_terms/gene_expression_profiling_routing_decision_20260520.md",
+    "data/medical_terms/review_reports/gene_expression_profiling_routing_decision.json",
+    "docs/medical_terms/medical_terms_source_of_truth_index_20260520.md",
+    "data/medical_terms/review_reports/medical_terms_document_status_index.json",
+    "docs/medical_terms/meta_seed_expansion_governance_20260520.md",
+    "data/medical_terms/review_reports/meta_seed_expansion_governance.json",
+    "docs/medical_terms/emtree_mapping_review_plan_20260520.md",
+    "data/medical_terms/review_reports/emtree_mapping_review_plan.json",
+    "docs/medical_terms/bioinformatics_geo_long_tail_intake_policy_20260520.md",
+    "data/medical_terms/review_reports/bioinformatics_geo_long_tail_intake_policy.json",
+    "docs/medical_terms/medical_terms_candidate_archive_policy_20260520.md",
+    "data/medical_terms/review_reports/medical_terms_candidate_archive_policy.json",
+    "docs/medical_terms/medical_terms_handoff_gap_remediation_20260520.md",
+    "data/medical_terms/review_reports/medical_terms_handoff_gap_remediation.json",
+    "tests/shared/test_medical_terms_handoff_gap_remediation.py"
+  ],
+  "actions_not_executed": [
+    "No Meta seed expansion.",
+    "No Bioinformatics term expansion.",
+    "No mini_medical_terms_index.json modification.",
+    "No zh_term_overrides.json modification.",
+    "No shared core deprecated marking.",
+    "No physical shared core deletion.",
+    "No online retrieval.",
+    "No PDF extraction UI or extraction workflow.",
+    "No automatic screening or included studies."
+  ],
+  "user_confirmation_required_for_next_actions": [
+    "Execute Shared Core Strategy A deprecation fields.",
+    "Promote gene expression profiling into Bioinformatics scoped runtime file.",
+    "Start Emtree manual review batch.",
+    "Archive closed candidate batches."
+  ],
+  "boundaries": {
+    "mini_medical_terms_index_modified": false,
+    "zh_term_overrides_modified": false,
+    "meta_seed_expanded": false,
+    "bioinformatics_terms_expanded": false,
+    "online_search_enabled": false,
+    "pdf_extraction_enabled": false,
+    "loader_modified": false
+  },
+  "manual_review_required": {
+    "consumer_adoption_findings": 13,
+    "gene_expression_profiling_runtime_promotion": true,
+    "shared_core_strategy_a_execution": true,
+    "emtree_mapping_review": true
+  },
+  "test_results": [
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    },
+    {
+      "command": "python3 -m pytest tests/shared/test_medical_terms_handoff_gap_remediation.py -q",
+      "result": "8 passed"
+    },
+    {
+      "command": "python3 -m pytest tests/shared/test_medical_terms_scope_routing.py -q",
+      "result": "6 passed"
+    },
+    {
+      "command": "python3 -m pytest tests/shared/test_medical_terms_integration_audit.py -q",
+      "result": "5 passed"
+    },
+    {
+      "command": "python3 -m pytest tests/shared/test_meta_seed_terms.py -q",
+      "result": "9 passed"
+    },
+    {
+      "command": "python3 -m pytest tests/shared/test_query_intelligence_service.py -q",
+      "result": "21 passed"
+    },
+    {
+      "command": "python3 -m pytest tests/meta_analysis -q",
+      "result": "17 passed"
+    },
+    {
+      "command": "python3 -m pytest tests/bioinformatics -q",
+      "result": "238 passed"
+    },
+    {
+      "command": "python3 -m app.main --smoke-test",
+      "result": "passed"
+    }
+  ],
+  "follow_up_recommendations": [
+    "Keep consumer adoption audit current when adding new vocabulary scripts or tests.",
+    "Ask for explicit approval before Strategy A shared-core deprecation.",
+    "Route gene expression profiling to Bioinformatics only after a dedicated vocabulary patch.",
+    "Keep Meta seed expansion curated and capped at 50-100 terms per batch.",
+    "Do not implement Embase retrieval until Emtree mappings are manually reviewed for high-priority seeds."
+  ]
+}

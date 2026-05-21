@@ -1,0 +1,51 @@
+[
+  {
+    "concept_id": "meta_study_design:meta_analysis",
+    "zh_terms": [
+      "Meta分析"
+    ],
+    "preferred_label_en": "meta-analysis",
+    "synonyms_en": [
+      "systematic review",
+      "meta analysis"
+    ],
+    "mesh_terms": [
+      "Meta-Analysis as Topic"
+    ],
+    "emtree_terms": [],
+    "free_text_terms_en": [
+      "meta analysis",
+      "meta-analysis",
+      "systematic review"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "meta_profiles": [],
+    "query_usage": {
+      "english_database_search": true,
+      "chinese_database_search": false,
+      "english_pdf_extraction": true,
+      "chinese_pdf_extraction": false
+    },
+    "query_expansion_allowed": false,
+    "query_expansion_guard": {
+      "mode": "filter_only",
+      "reason": "Review marker can filter retrieval but must not become a topic expansion."
+    },
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "source_evidence": [
+      {
+        "raw_zh_term": "Meta分析",
+        "source_file": "medical_terms_development_plan_for_codex.md",
+        "source_type": "stage_plan_rule_seed"
+      }
+    ],
+    "review_status": "approved",
+    "notes": "Generated from reviewed high-confidence Meta Chinese candidate rules; not promoted to shared core."
+  }
+]

@@ -1,0 +1,138 @@
+{
+  "index_name": "medical_terms_source_of_truth_index",
+  "index_date": "2026-05-20",
+  "phase": "handoff_gap_remediation_task_4",
+  "old_documents_deleted": false,
+  "superseded_notes_written_to_old_documents": false,
+  "current_source_of_truth": {
+    "GEO current audit": "data/medical_terms/bioinformatics/audits/geo_core_terms_coverage_audit.json",
+    "GTEx current audit": "data/medical_terms/bioinformatics/audits/gtex_terms_coverage_audit.json",
+    "Meta seed current list": "data/medical_terms/meta_analysis/meta_seed_terms.json",
+    "Scope mirror": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+    "Legacy compatibility": "data/medical_terms/meta_analysis/legacy_meta_compatibility_map.json",
+    "Shared cleanup decision": "data/medical_terms/review_reports/shared_core_cleanup_decision.json",
+    "Final handoff": "docs/medical_terms/medical_terms_phase_final_handoff_20260520.md"
+  },
+  "document_status": [
+    {
+      "document": "docs/medical_terms/bioinformatics_vocabulary_coverage_audit_summary.md",
+      "status": "superseded_or_historical",
+      "superseded_by": "medical_terms_phase_final_handoff_20260520.md",
+      "notes": "May describe pre-fix Bioinformatics state; use machine-readable audit JSON files for current status."
+    },
+    {
+      "document": "docs/medical_terms/gene_expression_profiling_routing_decision_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/geo_core_terms_coverage_audit.md",
+      "status": "superseded_or_historical",
+      "superseded_by": "medical_terms_phase_final_handoff_20260520.md",
+      "notes": "May describe pre-fix Bioinformatics state; use machine-readable audit JSON files for current status."
+    },
+    {
+      "document": "docs/medical_terms/gtex_terms_coverage_audit.md",
+      "status": "superseded_or_historical",
+      "superseded_by": "medical_terms_phase_final_handoff_20260520.md",
+      "notes": "May describe pre-fix Bioinformatics state; use machine-readable audit JSON files for current status."
+    },
+    {
+      "document": "docs/medical_terms/loader_routing_compatibility_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/manual_review_required_report.md",
+      "status": "historical_review_artifact",
+      "superseded_by": "shared_core_cleanup_decision_20260520.md",
+      "notes": "Historical manual review artifact; not current runtime source of truth."
+    },
+    {
+      "document": "docs/medical_terms/medical_terms_integration_audit_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/medical_terms_phase_final_handoff_20260520.md",
+      "status": "current_handoff",
+      "superseded_by": null,
+      "notes": "Top-level handoff summary."
+    },
+    {
+      "document": "docs/medical_terms/medical_terms_scope_usage_schema_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/meta_scoped_mirror_from_shared_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/meta_search_draft_review_gate_20260518.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/meta_seed_expansion_batch2_audit_20260519.md",
+      "status": "current_audit_summary",
+      "superseded_by": null,
+      "notes": "Current curated Meta seed audit summary; machine-readable seed JSON remains source of truth."
+    },
+    {
+      "document": "docs/medical_terms/meta_seed_mvp_audit_20260518.md",
+      "status": "current_audit_summary",
+      "superseded_by": null,
+      "notes": "Current curated Meta seed audit summary; machine-readable seed JSON remains source of truth."
+    },
+    {
+      "document": "docs/medical_terms/meta_seed_search_config_integration_20260518.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/shared_core_cleanup_decision_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/shared_core_pollution_inventory_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/shared_core_pollution_manual_review_required.md",
+      "status": "historical_review_artifact",
+      "superseded_by": "shared_core_cleanup_decision_20260520.md",
+      "notes": "Historical manual review artifact; not current runtime source of truth."
+    },
+    {
+      "document": "docs/medical_terms/shared_core_strategy_a_execution_plan_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/tcga_terms_coverage_audit.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    },
+    {
+      "document": "docs/medical_terms/vocabulary_consumer_adoption_audit_20260520.md",
+      "status": "current_reference",
+      "superseded_by": null,
+      "notes": "Current phase reference or governance document."
+    }
+  ]
+}

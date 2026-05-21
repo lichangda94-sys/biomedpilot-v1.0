@@ -1,0 +1,104 @@
+{
+  "schema_version": "biomedpilot.medical_terms.sqlite.v6",
+  "build_status": "success",
+  "build_time": "2026-05-11T14:21:25.123987+00:00",
+  "input_sources": [
+    {
+      "vocabulary_name": "MONDO",
+      "source_url": "https://purl.obolibrary.org/obo/mondo.owl",
+      "local_path": "data/medical_terms/raw/mondo.owl",
+      "version": "local-source-if-present",
+      "license": "CC BY 4.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "source_available": false,
+      "included_in_package": false,
+      "included_in_optional_full_index": false,
+      "parsed_terms_count": 0
+    },
+    {
+      "vocabulary_name": "DOID",
+      "source_url": "https://purl.obolibrary.org/obo/doid.obo",
+      "local_path": "data/medical_terms/raw/doid.obo",
+      "version": "local-source-if-present",
+      "license": "CC0 1.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "source_available": false,
+      "included_in_package": false,
+      "included_in_optional_full_index": false,
+      "parsed_terms_count": 0
+    },
+    {
+      "vocabulary_name": "NCIt",
+      "source_url": "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/Thesaurus.owl.zip",
+      "local_path": "data/medical_terms/raw/Thesaurus.owl.zip",
+      "version": "local-source-if-present",
+      "license": "CC BY 4.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "source_available": false,
+      "included_in_package": false,
+      "included_in_optional_full_index": false,
+      "parsed_terms_count": 0
+    },
+    {
+      "vocabulary_name": "MeSH",
+      "source_url": "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2024.xml",
+      "local_path": "data/medical_terms/raw/desc2024.xml",
+      "version": "local-source-if-present",
+      "license": "NLM terms apply",
+      "downloaded_at": null,
+      "processed_at": null,
+      "source_available": false,
+      "included_in_package": false,
+      "included_in_optional_full_index": false,
+      "parsed_terms_count": 0
+    },
+    {
+      "vocabulary_name": "EFO",
+      "source_url": "https://www.ebi.ac.uk/efo/efo.owl",
+      "local_path": "data/medical_terms/raw/efo.owl",
+      "version": "local-source-if-present",
+      "license": "Apache 2.0",
+      "downloaded_at": null,
+      "processed_at": null,
+      "source_available": false,
+      "included_in_package": false,
+      "included_in_optional_full_index": false,
+      "parsed_terms_count": 0
+    }
+  ],
+  "source_available": {
+    "MONDO": false,
+    "DOID": false,
+    "NCIt": false,
+    "MeSH": false,
+    "EFO": false
+  },
+  "source_missing": [
+    "MONDO",
+    "DOID",
+    "NCIt",
+    "MeSH",
+    "EFO"
+  ],
+  "terms_count": 572,
+  "synonyms_count": 7905,
+  "crossrefs_count": 1032,
+  "warnings": [
+    "MONDO source missing: data/medical_terms/raw/mondo.owl",
+    "DOID source missing: data/medical_terms/raw/doid.obo",
+    "NCIt source missing: data/medical_terms/raw/Thesaurus.owl.zip",
+    "MeSH source missing: data/medical_terms/raw/desc2024.xml",
+    "EFO source missing: data/medical_terms/raw/efo.owl",
+    "No local ontology source files were parsed; built a mini-derived sqlite index for optional runtime validation."
+  ],
+  "fallback_mode": "mini_vocabulary_only",
+  "index_kind": "mini-derived sqlite index",
+  "generated_files": [
+    "data/medical_terms/medical_terms_index.sqlite",
+    "data/medical_terms/medical_terms_index_build_report.json"
+  ],
+  "runtime_contract": "sqlite-first optional enhancement; JSON mini vocabulary remains fallback"
+}

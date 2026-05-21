@@ -1,0 +1,3346 @@
+{
+  "inventory_name": "shared_core_pollution_inventory",
+  "inventory_date": "2026-05-20",
+  "source": "data/medical_terms/mini_medical_terms_index.json",
+  "runtime_modified": false,
+  "total_suspected_pollution_terms": 177,
+  "category_counts": {
+    "ambiguous_or_qualified_term": 1,
+    "bioinformatics_technical_term": 65,
+    "meta_effect_measure": 27,
+    "meta_outcome": 26,
+    "meta_research_intent": 1,
+    "meta_study_design": 15,
+    "needs_manual_review": 42
+  },
+  "items": [
+    {
+      "concept_id": "mini:modality_survival_data",
+      "preferred_label_en": "survival data",
+      "zh_terms": [
+        "生存数据",
+        "生存信息",
+        "survival data"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "ambiguous_or_qualified_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "qualified_term_only_manual_review",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:data_modality_core",
+      "preferred_label_en": "gene expression profiling",
+      "zh_terms": [
+        "表达谱",
+        "转录组",
+        "RNA测序",
+        "芯片",
+        "单细胞",
+        "空间转录组",
+        "甲基化",
+        "miRNA",
+        "lncRNA",
+        "circRNA",
+        "蛋白质组",
+        "代谢组",
+        "ATAC测序",
+        "ChIP测序",
+        "全基因组测序",
+        "外显子测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "app/shared/query_intelligence/medical_terms/term_lookup.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:modality_atac_seq",
+      "preferred_label_en": "ATAC-seq",
+      "zh_terms": [
+        "ATAC测序",
+        "ATAC-seq",
+        "染色质开放性测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_bisulfite_sequencing",
+      "preferred_label_en": "bisulfite sequencing",
+      "zh_terms": [
+        "亚硫酸氢盐测序",
+        "重亚硫酸盐测序",
+        "bisulfite sequencing"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_bulk_rna_seq",
+      "preferred_label_en": "bulk RNA-seq",
+      "zh_terms": [
+        "bulk RNA测序",
+        "bulk RNA-seq",
+        "bulk转录组",
+        "bulk RNA测序数据"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_cell_clustering",
+      "preferred_label_en": "cell clustering",
+      "zh_terms": [
+        "细胞聚类",
+        "单细胞聚类",
+        "cell clustering"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_cell_type_annotation",
+      "preferred_label_en": "cell type annotation",
+      "zh_terms": [
+        "细胞类型注释",
+        "细胞注释",
+        "cell type annotation"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_chip_seq",
+      "preferred_label_en": "ChIP-seq",
+      "zh_terms": [
+        "ChIP测序",
+        "ChIP-seq",
+        "染色质免疫沉淀测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_chromatin_accessibility",
+      "preferred_label_en": "chromatin accessibility",
+      "zh_terms": [
+        "染色质开放性",
+        "染色质可及性",
+        "chromatin accessibility"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_circrna_profiling",
+      "preferred_label_en": "circRNA profiling",
+      "zh_terms": [
+        "circRNA表达谱",
+        "环状RNA表达谱",
+        "circRNA profiling"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_cite_seq",
+      "preferred_label_en": "CITE-seq",
+      "zh_terms": [
+        "CITE-seq",
+        "细胞索引转录组表位测序",
+        "CITE测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_clinical_metadata",
+      "preferred_label_en": "clinical metadata",
+      "zh_terms": [
+        "临床信息",
+        "临床数据",
+        "clinical metadata"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_cnv",
+      "preferred_label_en": "copy number variation",
+      "zh_terms": [
+        "拷贝数变异",
+        "拷贝数改变",
+        "CNV"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_crispr_screen",
+      "preferred_label_en": "CRISPR screen",
+      "zh_terms": [
+        "CRISPR筛选",
+        "CRISPR screen",
+        "CRISPR筛查"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_cut_and_run",
+      "preferred_label_en": "CUT&RUN",
+      "zh_terms": [
+        "CUT&RUN",
+        "CUT and RUN",
+        "CUT&RUN测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_cut_and_tag",
+      "preferred_label_en": "CUT&Tag",
+      "zh_terms": [
+        "CUT&Tag",
+        "CUT and Tag",
+        "CUT&Tag测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_dna_methylation_array",
+      "preferred_label_en": "DNA methylation array",
+      "zh_terms": [
+        "DNA甲基化芯片",
+        "甲基化芯片",
+        "DNA methylation array"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_drug_screen",
+      "preferred_label_en": "drug screen",
+      "zh_terms": [
+        "药物筛选",
+        "drug screen",
+        "药物敏感性筛选"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_expression_array",
+      "preferred_label_en": "expression array",
+      "zh_terms": [
+        "表达芯片",
+        "表达阵列",
+        "基因表达芯片"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_expression_profiling",
+      "preferred_label_en": "expression profiling",
+      "zh_terms": [
+        "表达谱",
+        "基因表达谱",
+        "表达谱分析",
+        "表达分析"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_gene_signature",
+      "preferred_label_en": "gene signature",
+      "zh_terms": [
+        "基因签名",
+        "基因特征",
+        "gene signature"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_germline_variant",
+      "preferred_label_en": "germline variant",
+      "zh_terms": [
+        "胚系变异",
+        "germline variant",
+        "生殖系变异"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_glycomics",
+      "preferred_label_en": "glycomics",
+      "zh_terms": [
+        "糖组学",
+        "糖组",
+        "glycomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_histone_modification_profiling",
+      "preferred_label_en": "histone modification profiling",
+      "zh_terms": [
+        "组蛋白修饰谱",
+        "组蛋白修饰分析",
+        "histone modification profiling"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_immune_infiltration",
+      "preferred_label_en": "immune infiltration",
+      "zh_terms": [
+        "免疫浸润",
+        "免疫细胞浸润",
+        "immune infiltration"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_lipidomics",
+      "preferred_label_en": "lipidomics",
+      "zh_terms": [
+        "脂质组",
+        "脂质组学",
+        "lipidomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_lncrna_profiling",
+      "preferred_label_en": "lncRNA profiling",
+      "zh_terms": [
+        "lncRNA表达谱",
+        "长链非编码RNA表达谱",
+        "lncRNA profiling"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_long_read_rna_seq",
+      "preferred_label_en": "long-read RNA-seq",
+      "zh_terms": [
+        "长读长RNA测序",
+        "长读长转录组",
+        "长读长RNA-seq"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_mass_spectrometry_proteomics",
+      "preferred_label_en": "mass spectrometry proteomics",
+      "zh_terms": [
+        "质谱蛋白组",
+        "质谱蛋白质组",
+        "MS蛋白组"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_metabolomics",
+      "preferred_label_en": "metabolomics",
+      "zh_terms": [
+        "代谢组",
+        "代谢组学",
+        "metabolomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_methylation_profiling",
+      "preferred_label_en": "methylation profiling",
+      "zh_terms": [
+        "甲基化",
+        "甲基化分析",
+        "甲基化谱",
+        "DNA甲基化"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_microarray",
+      "preferred_label_en": "microarray",
+      "zh_terms": [
+        "芯片",
+        "表达芯片",
+        "基因芯片",
+        "微阵列"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_microrna_profiling",
+      "preferred_label_en": "microRNA profiling",
+      "zh_terms": [
+        "microRNA表达谱",
+        "miRNA表达谱",
+        "microRNA profiling"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_mirna_seq",
+      "preferred_label_en": "miRNA-seq",
+      "zh_terms": [
+        "miRNA测序",
+        "microRNA测序",
+        "miRNA-seq"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_mrna_expression_profiling",
+      "preferred_label_en": "mRNA expression profiling",
+      "zh_terms": [
+        "mRNA表达谱",
+        "信使RNA表达谱",
+        "mRNA表达分析"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_multiome_atac_gene_expression",
+      "preferred_label_en": "multiome ATAC + gene expression",
+      "zh_terms": [
+        "ATAC和基因表达multiome",
+        "multiome ATAC + gene expression",
+        "单细胞ATAC加表达"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_mutation_profiling",
+      "preferred_label_en": "mutation profiling",
+      "zh_terms": [
+        "突变谱",
+        "突变分析",
+        "mutation profiling"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_panel_sequencing",
+      "preferred_label_en": "panel sequencing",
+      "zh_terms": [
+        "panel测序",
+        "基因panel测序",
+        "panel sequencing"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_pathway_activity",
+      "preferred_label_en": "pathway activity",
+      "zh_terms": [
+        "通路活性",
+        "通路活性分析",
+        "pathway activity"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_perturb_seq",
+      "preferred_label_en": "Perturb-seq",
+      "zh_terms": [
+        "Perturb-seq",
+        "扰动测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_phenotype_data",
+      "preferred_label_en": "phenotype data",
+      "zh_terms": [
+        "表型数据",
+        "表型信息",
+        "phenotype data"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_phosphoproteomics",
+      "preferred_label_en": "phosphoproteomics",
+      "zh_terms": [
+        "磷酸化蛋白组",
+        "磷酸化蛋白质组",
+        "phosphoproteomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_polya_rna_seq",
+      "preferred_label_en": "polyA RNA-seq",
+      "zh_terms": [
+        "polyA RNA测序",
+        "polyA RNA-seq",
+        "polyA选择RNA测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_proteomics",
+      "preferred_label_en": "proteomics",
+      "zh_terms": [
+        "蛋白组",
+        "蛋白质组",
+        "蛋白组学",
+        "proteomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_ribo_depleted_rna_seq",
+      "preferred_label_en": "ribo-depleted RNA-seq",
+      "zh_terms": [
+        "去核糖体RNA测序",
+        "ribo-depleted RNA-seq",
+        "核糖体去除RNA测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_rna_seq",
+      "preferred_label_en": "RNA-seq",
+      "zh_terms": [
+        "RNA测序",
+        "RNA-seq",
+        "RNA测序数据",
+        "转录组测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_rnai_screen",
+      "preferred_label_en": "RNAi screen",
+      "zh_terms": [
+        "RNAi筛选",
+        "RNAi screen",
+        "RNA干扰筛选"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_rrbs",
+      "preferred_label_en": "reduced representation bisulfite sequencing",
+      "zh_terms": [
+        "简化代表性亚硫酸氢盐测序",
+        "RRBS",
+        "简化甲基化测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_scatac_seq",
+      "preferred_label_en": "single-cell ATAC-seq",
+      "zh_terms": [
+        "单细胞ATAC测序",
+        "scATAC-seq",
+        "单细胞染色质开放性测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_scrna_seq",
+      "preferred_label_en": "single-cell RNA-seq",
+      "zh_terms": [
+        "单细胞",
+        "单细胞RNA测序",
+        "单细胞转录组",
+        "单细胞测序",
+        "scRNA-seq"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_sequencing",
+      "preferred_label_en": "sequencing",
+      "zh_terms": [
+        "测序",
+        "sequencing",
+        "高通量测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_shrna_screen",
+      "preferred_label_en": "shRNA screen",
+      "zh_terms": [
+        "shRNA筛选",
+        "shRNA screen",
+        "短发夹RNA筛选"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_single_cell_multiomics",
+      "preferred_label_en": "single-cell multiomics",
+      "zh_terms": [
+        "单细胞多组学",
+        "单细胞multiomics",
+        "single-cell multiomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_single_cell_proteogenomics",
+      "preferred_label_en": "single-cell proteogenomics",
+      "zh_terms": [
+        "单细胞蛋白基因组学",
+        "单细胞蛋白基因组",
+        "single-cell proteogenomics"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_small_rna_seq",
+      "preferred_label_en": "small RNA-seq",
+      "zh_terms": [
+        "小RNA测序",
+        "small RNA-seq",
+        "小RNA-seq"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_snp_array",
+      "preferred_label_en": "SNP array",
+      "zh_terms": [
+        "SNP芯片",
+        "SNP array",
+        "基因分型芯片"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_snrna_seq",
+      "preferred_label_en": "single-nucleus RNA-seq",
+      "zh_terms": [
+        "单核RNA测序",
+        "单核转录组",
+        "snRNA-seq"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_somatic_mutation",
+      "preferred_label_en": "somatic mutation",
+      "zh_terms": [
+        "体细胞突变",
+        "somatic mutation",
+        "体细胞变异"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_spatial_transcriptomics",
+      "preferred_label_en": "spatial transcriptomics",
+      "zh_terms": [
+        "空间转录组",
+        "空间转录组学",
+        "空间表达谱",
+        "空间RNA测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_targeted_sequencing",
+      "preferred_label_en": "targeted sequencing",
+      "zh_terms": [
+        "靶向测序",
+        "目标区域测序",
+        "targeted sequencing"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_total_rna_seq",
+      "preferred_label_en": "total RNA-seq",
+      "zh_terms": [
+        "total RNA测序",
+        "总RNA测序",
+        "total RNA-seq"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_transcriptome_profiling",
+      "preferred_label_en": "transcriptome profiling",
+      "zh_terms": [
+        "转录组分析",
+        "转录组测序分析",
+        "转录组表达谱"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_tumor_microenvironment",
+      "preferred_label_en": "tumor microenvironment",
+      "zh_terms": [
+        "肿瘤微环境",
+        "TME",
+        "tumor microenvironment"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_wes",
+      "preferred_label_en": "whole exome sequencing",
+      "zh_terms": [
+        "全外显子",
+        "全外显子测序",
+        "WES"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_wgbs",
+      "preferred_label_en": "whole-genome bisulfite sequencing",
+      "zh_terms": [
+        "全基因组亚硫酸氢盐测序",
+        "WGBS",
+        "全基因组甲基化测序"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:modality_wgs",
+      "preferred_label_en": "whole genome sequencing",
+      "zh_terms": [
+        "全基因组",
+        "全基因组测序",
+        "WGS"
+      ],
+      "concept_type": "data_modality",
+      "pollution_category": "bioinformatics_technical_term",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/bioinformatics/",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:effect_size_core",
+      "preferred_label_en": "effect size",
+      "zh_terms": [
+        "效应量",
+        "标准化均数差",
+        "均数差",
+        "加权均数差",
+        "置信区间"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "app/shared/query_intelligence/medical_terms/term_lookup.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_begg_test",
+      "preferred_label_en": "Begg test",
+      "zh_terms": [
+        "Begg检验",
+        "Begg秩相关检验"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_beta_coefficient",
+      "preferred_label_en": "beta coefficient",
+      "zh_terms": [
+        "回归系数",
+        "β系数"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_confidence_interval",
+      "preferred_label_en": "confidence interval",
+      "zh_terms": [
+        "置信区间",
+        "可信区间"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_correlation_coefficient",
+      "preferred_label_en": "correlation coefficient",
+      "zh_terms": [
+        "相关系数",
+        "相关性系数"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_egger_test",
+      "preferred_label_en": "Egger test",
+      "zh_terms": [
+        "Egger检验",
+        "Egger回归检验"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_fixed_effect_model",
+      "preferred_label_en": "fixed-effect model",
+      "zh_terms": [
+        "固定效应模型",
+        "固定效应"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_funnel_plot",
+      "preferred_label_en": "funnel plot",
+      "zh_terms": [
+        "漏斗图",
+        "漏斗图分析"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_hazard_ratio",
+      "preferred_label_en": "hazard ratio",
+      "zh_terms": [
+        "风险比",
+        "危险比",
+        "风险率"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_heterogeneity",
+      "preferred_label_en": "heterogeneity",
+      "zh_terms": [
+        "异质性",
+        "研究异质性"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_i_squared",
+      "preferred_label_en": "I-squared",
+      "zh_terms": [
+        "I方",
+        "I2",
+        "I²"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_leave_one_out_analysis",
+      "preferred_label_en": "leave-one-out analysis",
+      "zh_terms": [
+        "逐一剔除分析",
+        "留一法分析"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_mean_difference",
+      "preferred_label_en": "mean difference",
+      "zh_terms": [
+        "均数差",
+        "平均差"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_meta_regression",
+      "preferred_label_en": "meta-regression",
+      "zh_terms": [
+        "Meta回归",
+        "元回归"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_odds_ratio",
+      "preferred_label_en": "odds ratio",
+      "zh_terms": [
+        "优势比",
+        "比值比",
+        "胜算比"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_p_value",
+      "preferred_label_en": "p value",
+      "zh_terms": [
+        "P值",
+        "显著性P值"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_publication_bias",
+      "preferred_label_en": "publication bias",
+      "zh_terms": [
+        "发表偏倚",
+        "出版偏倚"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_random_effects_model",
+      "preferred_label_en": "random-effects model",
+      "zh_terms": [
+        "随机效应模型",
+        "随机效应"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_relative_risk",
+      "preferred_label_en": "relative risk",
+      "zh_terms": [
+        "相对危险度",
+        "相对风险"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_risk_difference",
+      "preferred_label_en": "risk difference",
+      "zh_terms": [
+        "风险差",
+        "绝对风险差"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_risk_ratio",
+      "preferred_label_en": "risk ratio",
+      "zh_terms": [
+        "风险比值",
+        "相对风险比"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_sensitivity_analysis",
+      "preferred_label_en": "sensitivity analysis",
+      "zh_terms": [
+        "敏感性分析",
+        "稳健性分析"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_standard_error",
+      "preferred_label_en": "standard error",
+      "zh_terms": [
+        "标准误",
+        "标准误差"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_standardized_mean_difference",
+      "preferred_label_en": "standardized mean difference",
+      "zh_terms": [
+        "标准化均数差",
+        "标准化平均差"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_subgroup_analysis",
+      "preferred_label_en": "subgroup analysis",
+      "zh_terms": [
+        "亚组分析",
+        "分层分析"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_tau_squared",
+      "preferred_label_en": "tau-squared",
+      "zh_terms": [
+        "tau方",
+        "τ²",
+        "tau2"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_weighted_mean_difference",
+      "preferred_label_en": "weighted mean difference",
+      "zh_terms": [
+        "加权均数差",
+        "加权平均差"
+      ],
+      "concept_type": "effect_measure",
+      "pollution_category": "meta_effect_measure",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_adverse_event",
+      "preferred_label_en": "adverse event",
+      "zh_terms": [
+        "不良事件",
+        "不良反应"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_cancer_specific_survival",
+      "preferred_label_en": "cancer-specific survival",
+      "zh_terms": [
+        "癌症特异性生存",
+        "肿瘤特异性生存"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_complete_response",
+      "preferred_label_en": "complete response",
+      "zh_terms": [
+        "完全缓解",
+        "完全反应"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_complication",
+      "preferred_label_en": "complication",
+      "zh_terms": [
+        "并发症",
+        "并发事件"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_disease_free_survival",
+      "preferred_label_en": "disease-free survival",
+      "zh_terms": [
+        "无病生存",
+        "无病生存期"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_disease_specific_survival",
+      "preferred_label_en": "disease-specific survival",
+      "zh_terms": [
+        "疾病特异性生存",
+        "疾病特异性生存期"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_event_free_survival",
+      "preferred_label_en": "event-free survival",
+      "zh_terms": [
+        "无事件生存",
+        "无事件生存期"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_hospitalization",
+      "preferred_label_en": "hospitalization",
+      "zh_terms": [
+        "住院",
+        "住院率"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_incidence",
+      "preferred_label_en": "incidence",
+      "zh_terms": [
+        "发病率",
+        "发生率"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_metastasis",
+      "preferred_label_en": "metastasis",
+      "zh_terms": [
+        "转移",
+        "远处转移"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_mortality",
+      "preferred_label_en": "mortality",
+      "zh_terms": [
+        "死亡率",
+        "病死率"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_objective_response_rate",
+      "preferred_label_en": "objective response rate",
+      "zh_terms": [
+        "客观缓解率",
+        "客观反应率"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_overall_survival",
+      "preferred_label_en": "overall survival",
+      "zh_terms": [
+        "总生存",
+        "总生存期"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "tests/shared/test_medical_vocabulary_consolidation_regression.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_partial_response",
+      "preferred_label_en": "partial response",
+      "zh_terms": [
+        "部分缓解",
+        "部分反应"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_prevalence",
+      "preferred_label_en": "prevalence",
+      "zh_terms": [
+        "患病率",
+        "流行率"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_progression_free_survival",
+      "preferred_label_en": "progression-free survival",
+      "zh_terms": [
+        "无进展生存",
+        "无进展生存期"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_progressive_disease",
+      "preferred_label_en": "progressive disease",
+      "zh_terms": [
+        "疾病进展",
+        "病情进展"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_quality_of_life",
+      "preferred_label_en": "quality of life",
+      "zh_terms": [
+        "生活质量",
+        "生命质量"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_recurrence",
+      "preferred_label_en": "recurrence",
+      "zh_terms": [
+        "复发",
+        "复发事件"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "app/shared/query_intelligence/medical_terms/term_lookup.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_recurrence_free_survival",
+      "preferred_label_en": "recurrence-free survival",
+      "zh_terms": [
+        "无复发生存",
+        "无复发生存期"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_risk",
+      "preferred_label_en": "risk",
+      "zh_terms": [
+        "风险",
+        "发生风险"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "app/shared/query_intelligence/medical_terms/term_lookup.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_serious_adverse_event",
+      "preferred_label_en": "serious adverse event",
+      "zh_terms": [
+        "严重不良事件",
+        "严重不良反应"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_stable_disease",
+      "preferred_label_en": "stable disease",
+      "zh_terms": [
+        "疾病稳定",
+        "病情稳定"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_symptom_score",
+      "preferred_label_en": "symptom score",
+      "zh_terms": [
+        "症状评分",
+        "症状量表评分"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_treatment_response",
+      "preferred_label_en": "treatment response",
+      "zh_terms": [
+        "治疗反应",
+        "疗效反应"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_outcomes_core",
+      "preferred_label_en": "overall survival",
+      "zh_terms": [
+        "总生存",
+        "无进展生存",
+        "无病生存",
+        "无复发生存",
+        "死亡率",
+        "复发率",
+        "发生率",
+        "患病率",
+        "风险",
+        "优势比",
+        "相对危险度",
+        "风险比",
+        "敏感性",
+        "特异性",
+        "诊断准确性",
+        "曲线下面积"
+      ],
+      "concept_type": "outcome",
+      "pollution_category": "meta_outcome",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "app/shared/query_intelligence/medical_terms/term_lookup.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_exposure",
+      "preferred_label_en": "exposure",
+      "zh_terms": [
+        "暴露",
+        "风险因素",
+        "暴露因素"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "meta_research_intent",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_case_cohort_study",
+      "preferred_label_en": "case-cohort study",
+      "zh_terms": [
+        "病例队列研究",
+        "病例-队列研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_case_control_study",
+      "preferred_label_en": "case-control study",
+      "zh_terms": [
+        "病例对照研究",
+        "病例-对照研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_clinical_trial",
+      "preferred_label_en": "clinical trial",
+      "zh_terms": [
+        "临床试验",
+        "临床研究试验"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_cohort_study",
+      "preferred_label_en": "cohort study",
+      "zh_terms": [
+        "队列研究",
+        "队列"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_cross_sectional_study",
+      "preferred_label_en": "cross-sectional study",
+      "zh_terms": [
+        "横断面研究",
+        "横截面研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_diagnostic_accuracy_study",
+      "preferred_label_en": "diagnostic accuracy study",
+      "zh_terms": [
+        "诊断准确性研究",
+        "诊断试验准确性研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_nested_case_control_study",
+      "preferred_label_en": "nested case-control study",
+      "zh_terms": [
+        "巢式病例对照研究",
+        "嵌套病例对照研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_observational_study",
+      "preferred_label_en": "observational study",
+      "zh_terms": [
+        "观察性研究",
+        "观察研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_prognostic_study",
+      "preferred_label_en": "prognostic study",
+      "zh_terms": [
+        "预后研究",
+        "预后因素研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_prospective_cohort",
+      "preferred_label_en": "prospective cohort",
+      "zh_terms": [
+        "前瞻性队列",
+        "前瞻性队列研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_randomized_controlled_trial",
+      "preferred_label_en": "randomized controlled trial",
+      "zh_terms": [
+        "随机对照试验",
+        "随机临床试验",
+        "RCT研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_real_world_study",
+      "preferred_label_en": "real-world study",
+      "zh_terms": [
+        "真实世界研究",
+        "真实世界证据研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_registry_study",
+      "preferred_label_en": "registry study",
+      "zh_terms": [
+        "登记研究",
+        "注册登记研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:meta_analysis_retrospective_cohort",
+      "preferred_label_en": "retrospective cohort",
+      "zh_terms": [
+        "回顾性队列",
+        "回顾性队列研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "medium",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": false
+    },
+    {
+      "concept_id": "mini:study_design_core",
+      "preferred_label_en": "randomized controlled trial",
+      "zh_terms": [
+        "随机对照试验",
+        "队列研究",
+        "病例对照研究",
+        "横断面研究",
+        "诊断准确性研究",
+        "预后研究",
+        "观察性研究"
+      ],
+      "concept_type": "study_design",
+      "pollution_category": "meta_study_design",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "data/medical_terms/meta_analysis/meta_migrated_from_shared_terms.json",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": true,
+      "legacy_reference_paths": [
+        "app/shared/query_intelligence/medical_terms/term_lookup.py"
+      ],
+      "recommended_action": "mirror_to_scoped_then_deprecate_shared",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_ahrq_checklist",
+      "preferred_label_en": "AHRQ checklist",
+      "zh_terms": [
+        "AHRQ清单",
+        "AHRQ评价清单"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_animal_study",
+      "preferred_label_en": "animal study",
+      "zh_terms": [
+        "动物研究",
+        "动物实验"
+      ],
+      "concept_type": "exclusion_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_area_under_curve",
+      "preferred_label_en": "area under the curve",
+      "zh_terms": [
+        "曲线下面积",
+        "AUC值"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_case_report",
+      "preferred_label_en": "case report",
+      "zh_terms": [
+        "病例报告",
+        "个案报告"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_cochrane_risk_of_bias",
+      "preferred_label_en": "Cochrane Risk of Bias",
+      "zh_terms": [
+        "Cochrane偏倚风险工具",
+        "Cochrane风险偏倚",
+        "RoB 2"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_comment",
+      "preferred_label_en": "comment",
+      "zh_terms": [
+        "评论",
+        "评论文章"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_comparator",
+      "preferred_label_en": "comparator",
+      "zh_terms": [
+        "对照组",
+        "比较组",
+        "参照组"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_conference_abstract",
+      "preferred_label_en": "conference abstract",
+      "zh_terms": [
+        "会议摘要",
+        "会议论文摘要"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_control",
+      "preferred_label_en": "control",
+      "zh_terms": [
+        "控制组",
+        "对照",
+        "空白对照"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_diagnostic_accuracy",
+      "preferred_label_en": "diagnostic accuracy",
+      "zh_terms": [
+        "诊断准确性",
+        "诊断准确度"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_diagnostic_odds_ratio",
+      "preferred_label_en": "diagnostic odds ratio",
+      "zh_terms": [
+        "诊断优势比",
+        "诊断比值比"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_duplicate_publication",
+      "preferred_label_en": "duplicate publication",
+      "zh_terms": [
+        "重复发表",
+        "重复出版"
+      ],
+      "concept_type": "exclusion_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_editorial",
+      "preferred_label_en": "editorial",
+      "zh_terms": [
+        "社论",
+        "编辑部文章"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_endpoint",
+      "preferred_label_en": "endpoint",
+      "zh_terms": [
+        "终点",
+        "研究终点",
+        "临床终点"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_follow_up",
+      "preferred_label_en": "follow-up",
+      "zh_terms": [
+        "随访",
+        "随访时间",
+        "随访期"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_grade",
+      "preferred_label_en": "GRADE",
+      "zh_terms": [
+        "GRADE证据评价",
+        "GRADE分级"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_in_vitro_study",
+      "preferred_label_en": "in vitro study",
+      "zh_terms": [
+        "体外研究",
+        "细胞实验"
+      ],
+      "concept_type": "exclusion_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_intervention",
+      "preferred_label_en": "intervention",
+      "zh_terms": [
+        "干预",
+        "治疗干预",
+        "干预措施"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_jbi_critical_appraisal",
+      "preferred_label_en": "JBI critical appraisal",
+      "zh_terms": [
+        "JBI质量评价",
+        "JBI评价工具"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_letter",
+      "preferred_label_en": "letter",
+      "zh_terms": [
+        "信件",
+        "读者来信"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_meta_analysis",
+      "preferred_label_en": "meta-analysis",
+      "zh_terms": [
+        "Meta分析",
+        "荟萃分析"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_negative_likelihood_ratio",
+      "preferred_label_en": "negative likelihood ratio",
+      "zh_terms": [
+        "阴性似然比",
+        "阴性似然率"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_negative_predictive_value",
+      "preferred_label_en": "negative predictive value",
+      "zh_terms": [
+        "阴性预测值",
+        "阴性预报值"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_newcastle_ottawa_scale",
+      "preferred_label_en": "Newcastle-Ottawa Scale",
+      "zh_terms": [
+        "Newcastle-Ottawa量表",
+        "NOS量表",
+        "纽卡斯尔渥太华量表"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_non_human_study",
+      "preferred_label_en": "non-human study",
+      "zh_terms": [
+        "非人类研究",
+        "非人体研究"
+      ],
+      "concept_type": "exclusion_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_outcome",
+      "preferred_label_en": "outcome",
+      "zh_terms": [
+        "结局",
+        "研究结局",
+        "终点结局"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_patient",
+      "preferred_label_en": "patient",
+      "zh_terms": [
+        "患者",
+        "病人",
+        "受试者"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_population",
+      "preferred_label_en": "population",
+      "zh_terms": [
+        "研究人群",
+        "人群",
+        "目标人群"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_positive_likelihood_ratio",
+      "preferred_label_en": "positive likelihood ratio",
+      "zh_terms": [
+        "阳性似然比",
+        "阳性似然率"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_positive_predictive_value",
+      "preferred_label_en": "positive predictive value",
+      "zh_terms": [
+        "阳性预测值",
+        "阳性预报值"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_preprint",
+      "preferred_label_en": "preprint",
+      "zh_terms": [
+        "预印本",
+        "预印本论文"
+      ],
+      "concept_type": "exclusion_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_protocol",
+      "preferred_label_en": "protocol",
+      "zh_terms": [
+        "研究方案",
+        "试验方案"
+      ],
+      "concept_type": "exclusion_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_quadas_2",
+      "preferred_label_en": "QUADAS-2",
+      "zh_terms": [
+        "QUADAS-2工具",
+        "诊断准确性质量评价工具"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_receiver_operating_characteristic",
+      "preferred_label_en": "receiver operating characteristic",
+      "zh_terms": [
+        "受试者工作特征曲线",
+        "ROC曲线"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_review",
+      "preferred_label_en": "review",
+      "zh_terms": [
+        "综述",
+        "综述文章"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_robins_i",
+      "preferred_label_en": "ROBINS-I",
+      "zh_terms": [
+        "ROBINS-I工具",
+        "非随机研究偏倚风险工具"
+      ],
+      "concept_type": "quality_assessment",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_sensitivity",
+      "preferred_label_en": "sensitivity",
+      "zh_terms": [
+        "敏感性",
+        "灵敏度"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_setting",
+      "preferred_label_en": "setting",
+      "zh_terms": [
+        "研究场景",
+        "研究环境",
+        "医疗场景"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_specificity",
+      "preferred_label_en": "specificity",
+      "zh_terms": [
+        "特异性",
+        "特异度"
+      ],
+      "concept_type": "diagnostic_accuracy",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_study_design",
+      "preferred_label_en": "study design",
+      "zh_terms": [
+        "研究设计",
+        "研究类型",
+        "设计类型"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_subgroup",
+      "preferred_label_en": "subgroup",
+      "zh_terms": [
+        "亚组",
+        "亚组分析人群",
+        "分层人群"
+      ],
+      "concept_type": "pico_term",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": false,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    },
+    {
+      "concept_id": "mini:meta_analysis_systematic_review",
+      "preferred_label_en": "systematic review",
+      "zh_terms": [
+        "系统综述",
+        "系统评价"
+      ],
+      "concept_type": "publication_type",
+      "pollution_category": "needs_manual_review",
+      "current_location": "mini_medical_terms_index.json",
+      "recommended_target": "manual_review",
+      "migration_risk": "high",
+      "exists_in_meta_seed": true,
+      "legacy_reference_detected": false,
+      "legacy_reference_paths": [],
+      "recommended_action": "manual_review_before_migration",
+      "manual_review_required": true
+    }
+  ]
+}

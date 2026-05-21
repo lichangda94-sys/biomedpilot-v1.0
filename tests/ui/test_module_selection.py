@@ -164,9 +164,8 @@ def test_meta_module_card_mentions_current_workflow(qt_app, local_session: Local
 
     descriptions = [label.text() for label in widget.findChildren(QLabel, "moduleDescription")]
 
-    assert any("中文 18 步工作流" in text for text in descriptions)
-    assert any("文献获取" in text for text in descriptions)
-    assert any("testing-level / 待开发" in text for text in descriptions)
+    assert any("仅保留 Meta 入口壳" in text for text in descriptions)
+    assert any("不得视为已接入完整流程" in text for text in descriptions)
 
 
 def test_logout_button_triggers_callback(qt_app, local_session: LocalSession) -> None:

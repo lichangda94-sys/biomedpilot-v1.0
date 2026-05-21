@@ -1,0 +1,5455 @@
+[
+  {
+    "concept_id": "meta_disease:breast_cancer",
+    "preferred_label_en": "breast cancer",
+    "zh_terms": [
+      "乳腺癌"
+    ],
+    "synonyms_en": [
+      "breast neoplasm",
+      "mammary carcinoma"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Breast Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "breast cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:thyroid_cancer",
+    "preferred_label_en": "thyroid cancer",
+    "zh_terms": [
+      "甲状腺癌"
+    ],
+    "synonyms_en": [
+      "thyroid neoplasm",
+      "thyroid carcinoma"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Thyroid Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "thyroid cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:type_2_diabetes_mellitus",
+    "preferred_label_en": "type 2 diabetes mellitus",
+    "zh_terms": [
+      "2型糖尿病",
+      "二型糖尿病"
+    ],
+    "synonyms_en": [
+      "type 2 diabetes",
+      "T2DM"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 2"
+    ],
+    "pubmed_free_text_terms": [
+      "type 2 diabetes mellitus"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:type_1_diabetes_mellitus",
+    "preferred_label_en": "type 1 diabetes mellitus",
+    "zh_terms": [
+      "1型糖尿病",
+      "一型糖尿病"
+    ],
+    "synonyms_en": [
+      "type 1 diabetes",
+      "T1DM"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Diabetes Mellitus, Type 1"
+    ],
+    "pubmed_free_text_terms": [
+      "type 1 diabetes mellitus"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:lung_cancer",
+    "preferred_label_en": "lung cancer",
+    "zh_terms": [
+      "肺癌"
+    ],
+    "synonyms_en": [
+      "lung neoplasm",
+      "pulmonary carcinoma"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Lung Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "lung cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:colorectal_cancer",
+    "preferred_label_en": "colorectal cancer",
+    "zh_terms": [
+      "结直肠癌",
+      "大肠癌"
+    ],
+    "synonyms_en": [
+      "colon cancer",
+      "rectal cancer"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Colorectal Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "colorectal cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:hepatocellular_carcinoma",
+    "preferred_label_en": "hepatocellular carcinoma",
+    "zh_terms": [
+      "肝细胞癌"
+    ],
+    "synonyms_en": [
+      "HCC",
+      "liver cancer"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Carcinoma, Hepatocellular"
+    ],
+    "pubmed_free_text_terms": [
+      "hepatocellular carcinoma"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:hypertension",
+    "preferred_label_en": "hypertension",
+    "zh_terms": [
+      "高血压"
+    ],
+    "synonyms_en": [
+      "high blood pressure"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hypertension"
+    ],
+    "pubmed_free_text_terms": [
+      "hypertension"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:coronary_artery_disease",
+    "preferred_label_en": "coronary artery disease",
+    "zh_terms": [
+      "冠心病",
+      "冠状动脉疾病"
+    ],
+    "synonyms_en": [
+      "CAD",
+      "coronary heart disease"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Coronary Artery Disease"
+    ],
+    "pubmed_free_text_terms": [
+      "coronary artery disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:chronic_kidney_disease",
+    "preferred_label_en": "chronic kidney disease",
+    "zh_terms": [
+      "慢性肾病",
+      "慢性肾脏病"
+    ],
+    "synonyms_en": [
+      "CKD",
+      "chronic renal disease"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Renal Insufficiency, Chronic"
+    ],
+    "pubmed_free_text_terms": [
+      "chronic kidney disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:stroke",
+    "preferred_label_en": "stroke",
+    "zh_terms": [
+      "卒中",
+      "脑卒中"
+    ],
+    "synonyms_en": [
+      "cerebrovascular accident"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "pubmed_free_text_terms": [
+      "stroke"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:pancreatic_cancer",
+    "preferred_label_en": "pancreatic cancer",
+    "zh_terms": [
+      "胰腺癌"
+    ],
+    "synonyms_en": [
+      "pancreatic neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Pancreatic Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "pancreatic cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:prostate_cancer",
+    "preferred_label_en": "prostate cancer",
+    "zh_terms": [
+      "前列腺癌"
+    ],
+    "synonyms_en": [
+      "prostatic neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Prostatic Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "prostate cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:glioma",
+    "preferred_label_en": "glioma",
+    "zh_terms": [
+      "胶质瘤",
+      "脑胶质瘤"
+    ],
+    "synonyms_en": [
+      "brain glioma"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Glioma"
+    ],
+    "pubmed_free_text_terms": [
+      "glioma"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:gastric_cancer",
+    "preferred_label_en": "gastric cancer",
+    "zh_terms": [
+      "胃癌"
+    ],
+    "synonyms_en": [
+      "stomach cancer",
+      "gastric neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Stomach Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "gastric cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:obesity",
+    "preferred_label_en": "obesity",
+    "zh_terms": [
+      "肥胖"
+    ],
+    "synonyms_en": [
+      "adiposity"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Obesity"
+    ],
+    "pubmed_free_text_terms": [
+      "obesity"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:prediabetes",
+    "preferred_label_en": "prediabetes",
+    "zh_terms": [
+      "糖尿病前期"
+    ],
+    "synonyms_en": [
+      "pre-diabetes"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Prediabetic State"
+    ],
+    "pubmed_free_text_terms": [
+      "prediabetes"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:smoking",
+    "preferred_label_en": "smoking",
+    "zh_terms": [
+      "吸烟"
+    ],
+    "synonyms_en": [
+      "tobacco smoking"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Smoking"
+    ],
+    "pubmed_free_text_terms": [
+      "smoking"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:alcohol_consumption",
+    "preferred_label_en": "alcohol consumption",
+    "zh_terms": [
+      "饮酒",
+      "酒精摄入"
+    ],
+    "synonyms_en": [
+      "alcohol intake"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Alcohol Drinking"
+    ],
+    "pubmed_free_text_terms": [
+      "alcohol consumption"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:physical_activity",
+    "preferred_label_en": "physical activity",
+    "zh_terms": [
+      "体力活动",
+      "运动"
+    ],
+    "synonyms_en": [
+      "exercise"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Exercise"
+    ],
+    "pubmed_free_text_terms": [
+      "physical activity"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:body_mass_index",
+    "preferred_label_en": "body mass index",
+    "zh_terms": [
+      "体质指数",
+      "BMI"
+    ],
+    "synonyms_en": [
+      "BMI"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Body Mass Index"
+    ],
+    "pubmed_free_text_terms": [
+      "body mass index"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:blood_pressure",
+    "preferred_label_en": "blood pressure",
+    "zh_terms": [
+      "血压"
+    ],
+    "synonyms_en": [
+      "systolic blood pressure",
+      "diastolic blood pressure"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Blood Pressure"
+    ],
+    "pubmed_free_text_terms": [
+      "blood pressure"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:ldl_cholesterol",
+    "preferred_label_en": "LDL cholesterol",
+    "zh_terms": [
+      "低密度脂蛋白胆固醇",
+      "LDL胆固醇"
+    ],
+    "synonyms_en": [
+      "low-density lipoprotein cholesterol"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Cholesterol, LDL"
+    ],
+    "pubmed_free_text_terms": [
+      "LDL cholesterol"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:hyperglycemia",
+    "preferred_label_en": "hyperglycemia",
+    "zh_terms": [
+      "高血糖"
+    ],
+    "synonyms_en": [
+      "high blood glucose"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hyperglycemia"
+    ],
+    "pubmed_free_text_terms": [
+      "hyperglycemia"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_exposure:air_pollution",
+    "preferred_label_en": "air pollution",
+    "zh_terms": [
+      "空气污染"
+    ],
+    "synonyms_en": [
+      "ambient air pollution"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Air Pollution"
+    ],
+    "pubmed_free_text_terms": [
+      "air pollution"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:metformin",
+    "preferred_label_en": "metformin",
+    "zh_terms": [
+      "二甲双胍"
+    ],
+    "synonyms_en": [],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Metformin"
+    ],
+    "pubmed_free_text_terms": [
+      "metformin"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:radioactive_iodine_therapy",
+    "preferred_label_en": "radioactive iodine therapy",
+    "zh_terms": [
+      "放射性碘治疗",
+      "碘131治疗"
+    ],
+    "synonyms_en": [
+      "radioiodine therapy",
+      "I-131 therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Radioisotopes"
+    ],
+    "pubmed_free_text_terms": [
+      "radioactive iodine therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:chemotherapy",
+    "preferred_label_en": "chemotherapy",
+    "zh_terms": [
+      "化疗"
+    ],
+    "synonyms_en": [
+      "antineoplastic chemotherapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Drug Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "chemotherapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:radiotherapy",
+    "preferred_label_en": "radiotherapy",
+    "zh_terms": [
+      "放疗"
+    ],
+    "synonyms_en": [
+      "radiation therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Radiotherapy"
+    ],
+    "pubmed_free_text_terms": [
+      "radiotherapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:surgery",
+    "preferred_label_en": "surgery",
+    "zh_terms": [
+      "手术"
+    ],
+    "synonyms_en": [
+      "surgical treatment"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Surgical Procedures, Operative"
+    ],
+    "pubmed_free_text_terms": [
+      "surgery"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:immunotherapy",
+    "preferred_label_en": "immunotherapy",
+    "zh_terms": [
+      "免疫治疗"
+    ],
+    "synonyms_en": [
+      "immune checkpoint therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Immunotherapy"
+    ],
+    "pubmed_free_text_terms": [
+      "immunotherapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:statin_therapy",
+    "preferred_label_en": "statin therapy",
+    "zh_terms": [
+      "他汀治疗"
+    ],
+    "synonyms_en": [
+      "statins"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hydroxymethylglutaryl-CoA Reductase Inhibitors"
+    ],
+    "pubmed_free_text_terms": [
+      "statin therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:aspirin",
+    "preferred_label_en": "aspirin",
+    "zh_terms": [
+      "阿司匹林"
+    ],
+    "synonyms_en": [],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Aspirin"
+    ],
+    "pubmed_free_text_terms": [
+      "aspirin"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:insulin_therapy",
+    "preferred_label_en": "insulin therapy",
+    "zh_terms": [
+      "胰岛素治疗"
+    ],
+    "synonyms_en": [
+      "insulin treatment"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Insulin"
+    ],
+    "pubmed_free_text_terms": [
+      "insulin therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_intervention:lifestyle_intervention",
+    "preferred_label_en": "lifestyle intervention",
+    "zh_terms": [
+      "生活方式干预"
+    ],
+    "synonyms_en": [
+      "lifestyle modification"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Life Style"
+    ],
+    "pubmed_free_text_terms": [
+      "lifestyle intervention"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:recurrence",
+    "preferred_label_en": "recurrence",
+    "zh_terms": [
+      "复发"
+    ],
+    "synonyms_en": [
+      "relapse",
+      "disease recurrence"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Recurrence"
+    ],
+    "pubmed_free_text_terms": [
+      "recurrence"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:mortality",
+    "preferred_label_en": "mortality",
+    "zh_terms": [
+      "死亡率",
+      "病死率"
+    ],
+    "synonyms_en": [
+      "death"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Mortality"
+    ],
+    "pubmed_free_text_terms": [
+      "mortality"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:overall_survival",
+    "preferred_label_en": "overall survival",
+    "zh_terms": [
+      "总生存期",
+      "OS"
+    ],
+    "synonyms_en": [
+      "OS"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "overall survival"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:progression_free_survival",
+    "preferred_label_en": "progression-free survival",
+    "zh_terms": [
+      "无进展生存期",
+      "PFS"
+    ],
+    "synonyms_en": [
+      "PFS"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "progression-free survival"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:disease_free_survival",
+    "preferred_label_en": "disease-free survival",
+    "zh_terms": [
+      "无病生存期",
+      "DFS"
+    ],
+    "synonyms_en": [
+      "DFS"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "disease-free survival"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:recurrence_free_survival",
+    "preferred_label_en": "recurrence-free survival",
+    "zh_terms": [
+      "无复发生存期",
+      "RFS"
+    ],
+    "synonyms_en": [
+      "RFS"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "recurrence-free survival"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:adverse_event",
+    "preferred_label_en": "adverse event",
+    "zh_terms": [
+      "不良事件"
+    ],
+    "synonyms_en": [
+      "adverse events"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Drug-Related Side Effects and Adverse Reactions"
+    ],
+    "pubmed_free_text_terms": [
+      "adverse event"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:cardiovascular_event",
+    "preferred_label_en": "cardiovascular event",
+    "zh_terms": [
+      "心血管事件"
+    ],
+    "synonyms_en": [
+      "cardiac event"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Cardiovascular Diseases"
+    ],
+    "pubmed_free_text_terms": [
+      "cardiovascular event"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:major_adverse_cardiovascular_event",
+    "preferred_label_en": "major adverse cardiovascular event",
+    "zh_terms": [
+      "主要不良心血管事件",
+      "MACE"
+    ],
+    "synonyms_en": [
+      "MACE"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "major adverse cardiovascular event"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:treatment_response",
+    "preferred_label_en": "treatment response",
+    "zh_terms": [
+      "治疗反应",
+      "疗效"
+    ],
+    "synonyms_en": [
+      "response rate"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Treatment Outcome"
+    ],
+    "pubmed_free_text_terms": [
+      "treatment response"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:quality_of_life",
+    "preferred_label_en": "quality of life",
+    "zh_terms": [
+      "生活质量"
+    ],
+    "synonyms_en": [
+      "QoL"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Quality of Life"
+    ],
+    "pubmed_free_text_terms": [
+      "quality of life"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_outcome:hospitalization",
+    "preferred_label_en": "hospitalization",
+    "zh_terms": [
+      "住院"
+    ],
+    "synonyms_en": [
+      "hospital admission"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hospitalization"
+    ],
+    "pubmed_free_text_terms": [
+      "hospitalization"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:hazard_ratio",
+    "preferred_label_en": "hazard ratio",
+    "zh_terms": [
+      "风险比",
+      "HR"
+    ],
+    "synonyms_en": [
+      "HR"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "hazard ratio",
+      "HR"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:odds_ratio",
+    "preferred_label_en": "odds ratio",
+    "zh_terms": [
+      "比值比",
+      "OR"
+    ],
+    "synonyms_en": [
+      "OR"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "odds ratio",
+      "OR"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:risk_ratio",
+    "preferred_label_en": "risk ratio",
+    "zh_terms": [
+      "风险比值",
+      "RR"
+    ],
+    "synonyms_en": [
+      "RR"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "risk ratio",
+      "RR"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:relative_risk",
+    "preferred_label_en": "relative risk",
+    "zh_terms": [
+      "相对危险度"
+    ],
+    "synonyms_en": [
+      "RR"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "relative risk",
+      "RR"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:mean_difference",
+    "preferred_label_en": "mean difference",
+    "zh_terms": [
+      "均数差",
+      "MD"
+    ],
+    "synonyms_en": [
+      "MD"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "mean difference",
+      "MD"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:standardized_mean_difference",
+    "preferred_label_en": "standardized mean difference",
+    "zh_terms": [
+      "标准化均数差",
+      "SMD"
+    ],
+    "synonyms_en": [
+      "SMD"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "standardized mean difference",
+      "SMD"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:confidence_interval",
+    "preferred_label_en": "confidence interval",
+    "zh_terms": [
+      "置信区间",
+      "CI"
+    ],
+    "synonyms_en": [
+      "CI",
+      "95% CI"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "confidence interval",
+      "CI",
+      "95% CI"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:p_value",
+    "preferred_label_en": "p value",
+    "zh_terms": [
+      "P值",
+      "P 值"
+    ],
+    "synonyms_en": [
+      "P"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "p value",
+      "P"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_effect:sample_size",
+    "preferred_label_en": "sample size",
+    "zh_terms": [
+      "样本量"
+    ],
+    "synonyms_en": [
+      "n",
+      "number of patients"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "sample size",
+      "n",
+      "number of patients"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:meta_analysis",
+    "preferred_label_en": "meta-analysis",
+    "zh_terms": [
+      "Meta分析",
+      "荟萃分析"
+    ],
+    "synonyms_en": [
+      "meta analysis"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Meta-Analysis as Topic"
+    ],
+    "pubmed_free_text_terms": [
+      "meta-analysis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:systematic_review",
+    "preferred_label_en": "systematic review",
+    "zh_terms": [
+      "系统评价"
+    ],
+    "synonyms_en": [
+      "systematic literature review"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Systematic Reviews as Topic"
+    ],
+    "pubmed_free_text_terms": [
+      "systematic review"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:randomized_controlled_trial",
+    "preferred_label_en": "randomized controlled trial",
+    "zh_terms": [
+      "随机对照试验",
+      "RCT"
+    ],
+    "synonyms_en": [
+      "RCT"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Randomized Controlled Trial"
+    ],
+    "pubmed_free_text_terms": [
+      "randomized controlled trial"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:cohort_study",
+    "preferred_label_en": "cohort study",
+    "zh_terms": [
+      "队列研究"
+    ],
+    "synonyms_en": [
+      "prospective cohort",
+      "retrospective cohort"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Cohort Studies"
+    ],
+    "pubmed_free_text_terms": [
+      "cohort study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:case_control_study",
+    "preferred_label_en": "case-control study",
+    "zh_terms": [
+      "病例对照研究"
+    ],
+    "synonyms_en": [
+      "case control study"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Case-Control Studies"
+    ],
+    "pubmed_free_text_terms": [
+      "case-control study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:cross_sectional_study",
+    "preferred_label_en": "cross-sectional study",
+    "zh_terms": [
+      "横断面研究"
+    ],
+    "synonyms_en": [
+      "cross sectional study"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Cross-Sectional Studies"
+    ],
+    "pubmed_free_text_terms": [
+      "cross-sectional study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_study_design:diagnostic_accuracy_study",
+    "preferred_label_en": "diagnostic accuracy study",
+    "zh_terms": [
+      "诊断准确性研究"
+    ],
+    "synonyms_en": [
+      "diagnostic test accuracy study"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "diagnostic accuracy study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:risk_factor",
+    "preferred_label_en": "risk factor",
+    "zh_terms": [
+      "危险因素"
+    ],
+    "synonyms_en": [
+      "risk factors"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "risk factor",
+      "risk factors"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:risk",
+    "preferred_label_en": "risk",
+    "zh_terms": [
+      "风险"
+    ],
+    "synonyms_en": [
+      "risk association"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "risk",
+      "risk association"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:prognostic_value",
+    "preferred_label_en": "prognostic value",
+    "zh_terms": [
+      "预后价值"
+    ],
+    "synonyms_en": [
+      "prognostic factor"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "prognostic value",
+      "prognostic factor"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:diagnostic_value",
+    "preferred_label_en": "diagnostic value",
+    "zh_terms": [
+      "诊断价值"
+    ],
+    "synonyms_en": [
+      "diagnostic performance"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "diagnostic value",
+      "diagnostic performance"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:efficacy",
+    "preferred_label_en": "efficacy",
+    "zh_terms": [
+      "疗效"
+    ],
+    "synonyms_en": [
+      "treatment efficacy"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "efficacy",
+      "treatment efficacy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:safety",
+    "preferred_label_en": "safety",
+    "zh_terms": [
+      "安全性"
+    ],
+    "synonyms_en": [
+      "treatment safety"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "safety",
+      "treatment safety"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_research_intent:association",
+    "preferred_label_en": "association",
+    "zh_terms": [
+      "关系",
+      "相关性"
+    ],
+    "synonyms_en": [
+      "association"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "association",
+      "association"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_approved"
+  },
+  {
+    "concept_id": "meta_disease:heart_failure",
+    "preferred_label_en": "heart failure",
+    "zh_terms": [
+      "心力衰竭",
+      "心衰"
+    ],
+    "synonyms_en": [
+      "cardiac failure"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Heart Failure"
+    ],
+    "pubmed_free_text_terms": [
+      "heart failure"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:atrial_fibrillation",
+    "preferred_label_en": "atrial fibrillation",
+    "zh_terms": [
+      "心房颤动",
+      "房颤"
+    ],
+    "synonyms_en": [
+      "AF"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Atrial Fibrillation"
+    ],
+    "pubmed_free_text_terms": [
+      "atrial fibrillation"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:myocardial_infarction",
+    "preferred_label_en": "myocardial infarction",
+    "zh_terms": [
+      "心肌梗死"
+    ],
+    "synonyms_en": [
+      "MI",
+      "heart attack"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Myocardial Infarction"
+    ],
+    "pubmed_free_text_terms": [
+      "myocardial infarction"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:chronic_obstructive_pulmonary_disease",
+    "preferred_label_en": "chronic obstructive pulmonary disease",
+    "zh_terms": [
+      "慢性阻塞性肺疾病",
+      "慢阻肺"
+    ],
+    "synonyms_en": [
+      "COPD"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Pulmonary Disease, Chronic Obstructive"
+    ],
+    "pubmed_free_text_terms": [
+      "chronic obstructive pulmonary disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:asthma",
+    "preferred_label_en": "asthma",
+    "zh_terms": [
+      "哮喘"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Asthma"
+    ],
+    "pubmed_free_text_terms": [
+      "asthma"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:obstructive_sleep_apnea",
+    "preferred_label_en": "obstructive sleep apnea",
+    "zh_terms": [
+      "阻塞性睡眠呼吸暂停",
+      "睡眠呼吸暂停"
+    ],
+    "synonyms_en": [
+      "OSA"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Sleep Apnea, Obstructive"
+    ],
+    "pubmed_free_text_terms": [
+      "obstructive sleep apnea"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:depression",
+    "preferred_label_en": "depression",
+    "zh_terms": [
+      "抑郁",
+      "抑郁症"
+    ],
+    "synonyms_en": [
+      "depressive disorder"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Depression"
+    ],
+    "pubmed_free_text_terms": [
+      "depression"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:anxiety_disorder",
+    "preferred_label_en": "anxiety disorder",
+    "zh_terms": [
+      "焦虑障碍",
+      "焦虑症"
+    ],
+    "synonyms_en": [
+      "anxiety"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Anxiety Disorders"
+    ],
+    "pubmed_free_text_terms": [
+      "anxiety disorder"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:alzheimer_disease",
+    "preferred_label_en": "Alzheimer disease",
+    "zh_terms": [
+      "阿尔茨海默病",
+      "阿尔兹海默病"
+    ],
+    "synonyms_en": [
+      "Alzheimer dementia"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Alzheimer Disease"
+    ],
+    "pubmed_free_text_terms": [
+      "Alzheimer disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:parkinson_disease",
+    "preferred_label_en": "Parkinson disease",
+    "zh_terms": [
+      "帕金森病"
+    ],
+    "synonyms_en": [
+      "Parkinsons disease"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Parkinson Disease"
+    ],
+    "pubmed_free_text_terms": [
+      "Parkinson disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:osteoporosis",
+    "preferred_label_en": "osteoporosis",
+    "zh_terms": [
+      "骨质疏松",
+      "骨质疏松症"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Osteoporosis"
+    ],
+    "pubmed_free_text_terms": [
+      "osteoporosis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:osteoarthritis",
+    "preferred_label_en": "osteoarthritis",
+    "zh_terms": [
+      "骨关节炎"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Osteoarthritis"
+    ],
+    "pubmed_free_text_terms": [
+      "osteoarthritis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:rheumatoid_arthritis",
+    "preferred_label_en": "rheumatoid arthritis",
+    "zh_terms": [
+      "类风湿关节炎"
+    ],
+    "synonyms_en": [
+      "RA"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Arthritis, Rheumatoid"
+    ],
+    "pubmed_free_text_terms": [
+      "rheumatoid arthritis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:systemic_lupus_erythematosus",
+    "preferred_label_en": "systemic lupus erythematosus",
+    "zh_terms": [
+      "系统性红斑狼疮"
+    ],
+    "synonyms_en": [
+      "SLE"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Lupus Erythematosus, Systemic"
+    ],
+    "pubmed_free_text_terms": [
+      "systemic lupus erythematosus"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:inflammatory_bowel_disease",
+    "preferred_label_en": "inflammatory bowel disease",
+    "zh_terms": [
+      "炎症性肠病"
+    ],
+    "synonyms_en": [
+      "IBD"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Inflammatory Bowel Diseases"
+    ],
+    "pubmed_free_text_terms": [
+      "inflammatory bowel disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:crohn_disease",
+    "preferred_label_en": "Crohn disease",
+    "zh_terms": [
+      "克罗恩病"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Crohn Disease"
+    ],
+    "pubmed_free_text_terms": [
+      "Crohn disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:ulcerative_colitis",
+    "preferred_label_en": "ulcerative colitis",
+    "zh_terms": [
+      "溃疡性结肠炎"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Colitis, Ulcerative"
+    ],
+    "pubmed_free_text_terms": [
+      "ulcerative colitis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:nonalcoholic_fatty_liver_disease",
+    "preferred_label_en": "nonalcoholic fatty liver disease",
+    "zh_terms": [
+      "非酒精性脂肪性肝病",
+      "脂肪肝"
+    ],
+    "synonyms_en": [
+      "NAFLD"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Non-alcoholic Fatty Liver Disease"
+    ],
+    "pubmed_free_text_terms": [
+      "nonalcoholic fatty liver disease"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:cirrhosis",
+    "preferred_label_en": "liver cirrhosis",
+    "zh_terms": [
+      "肝硬化"
+    ],
+    "synonyms_en": [
+      "cirrhosis"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Liver Cirrhosis"
+    ],
+    "pubmed_free_text_terms": [
+      "liver cirrhosis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:hepatitis_b",
+    "preferred_label_en": "hepatitis B",
+    "zh_terms": [
+      "乙型肝炎",
+      "乙肝"
+    ],
+    "synonyms_en": [
+      "HBV infection"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hepatitis B"
+    ],
+    "pubmed_free_text_terms": [
+      "hepatitis B"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:hepatitis_c",
+    "preferred_label_en": "hepatitis C",
+    "zh_terms": [
+      "丙型肝炎",
+      "丙肝"
+    ],
+    "synonyms_en": [
+      "HCV infection"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hepatitis C"
+    ],
+    "pubmed_free_text_terms": [
+      "hepatitis C"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:gestational_diabetes_mellitus",
+    "preferred_label_en": "gestational diabetes mellitus",
+    "zh_terms": [
+      "妊娠期糖尿病"
+    ],
+    "synonyms_en": [
+      "GDM"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Diabetes, Gestational"
+    ],
+    "pubmed_free_text_terms": [
+      "gestational diabetes mellitus"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:polycystic_ovary_syndrome",
+    "preferred_label_en": "polycystic ovary syndrome",
+    "zh_terms": [
+      "多囊卵巢综合征"
+    ],
+    "synonyms_en": [
+      "PCOS"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Polycystic Ovary Syndrome"
+    ],
+    "pubmed_free_text_terms": [
+      "polycystic ovary syndrome"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:endometriosis",
+    "preferred_label_en": "endometriosis",
+    "zh_terms": [
+      "子宫内膜异位症"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Endometriosis"
+    ],
+    "pubmed_free_text_terms": [
+      "endometriosis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:ovarian_cancer",
+    "preferred_label_en": "ovarian cancer",
+    "zh_terms": [
+      "卵巢癌"
+    ],
+    "synonyms_en": [
+      "ovarian neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Ovarian Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "ovarian cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:cervical_cancer",
+    "preferred_label_en": "cervical cancer",
+    "zh_terms": [
+      "宫颈癌"
+    ],
+    "synonyms_en": [
+      "cervical neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Uterine Cervical Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "cervical cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:endometrial_cancer",
+    "preferred_label_en": "endometrial cancer",
+    "zh_terms": [
+      "子宫内膜癌"
+    ],
+    "synonyms_en": [
+      "endometrial neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Endometrial Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "endometrial cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:esophageal_cancer",
+    "preferred_label_en": "esophageal cancer",
+    "zh_terms": [
+      "食管癌"
+    ],
+    "synonyms_en": [
+      "esophageal neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Esophageal Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "esophageal cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:renal_cell_carcinoma",
+    "preferred_label_en": "renal cell carcinoma",
+    "zh_terms": [
+      "肾细胞癌",
+      "肾癌"
+    ],
+    "synonyms_en": [
+      "RCC"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Carcinoma, Renal Cell"
+    ],
+    "pubmed_free_text_terms": [
+      "renal cell carcinoma"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:bladder_cancer",
+    "preferred_label_en": "bladder cancer",
+    "zh_terms": [
+      "膀胱癌"
+    ],
+    "synonyms_en": [
+      "bladder neoplasm"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Urinary Bladder Neoplasms"
+    ],
+    "pubmed_free_text_terms": [
+      "bladder cancer"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:leukemia",
+    "preferred_label_en": "leukemia",
+    "zh_terms": [
+      "白血病"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Leukemia"
+    ],
+    "pubmed_free_text_terms": [
+      "leukemia"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:lymphoma",
+    "preferred_label_en": "lymphoma",
+    "zh_terms": [
+      "淋巴瘤"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Lymphoma"
+    ],
+    "pubmed_free_text_terms": [
+      "lymphoma"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:melanoma",
+    "preferred_label_en": "melanoma",
+    "zh_terms": [
+      "黑色素瘤"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Melanoma"
+    ],
+    "pubmed_free_text_terms": [
+      "melanoma"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:sepsis",
+    "preferred_label_en": "sepsis",
+    "zh_terms": [
+      "脓毒症"
+    ],
+    "synonyms_en": [],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Sepsis"
+    ],
+    "pubmed_free_text_terms": [
+      "sepsis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_disease:acute_kidney_injury",
+    "preferred_label_en": "acute kidney injury",
+    "zh_terms": [
+      "急性肾损伤"
+    ],
+    "synonyms_en": [
+      "AKI"
+    ],
+    "concept_type": "disease",
+    "pico_roles": [
+      "population",
+      "disease"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Acute Kidney Injury"
+    ],
+    "pubmed_free_text_terms": [
+      "acute kidney injury"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:dietary_pattern",
+    "preferred_label_en": "dietary pattern",
+    "zh_terms": [
+      "膳食模式",
+      "饮食模式"
+    ],
+    "synonyms_en": [
+      "diet pattern"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Diet"
+    ],
+    "pubmed_free_text_terms": [
+      "dietary pattern"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:mediterranean_diet",
+    "preferred_label_en": "Mediterranean diet",
+    "zh_terms": [
+      "地中海饮食"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Diet, Mediterranean"
+    ],
+    "pubmed_free_text_terms": [
+      "Mediterranean diet"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:salt_intake",
+    "preferred_label_en": "salt intake",
+    "zh_terms": [
+      "盐摄入",
+      "钠摄入"
+    ],
+    "synonyms_en": [
+      "sodium intake"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Sodium, Dietary"
+    ],
+    "pubmed_free_text_terms": [
+      "salt intake"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:sugar_sweetened_beverage",
+    "preferred_label_en": "sugar-sweetened beverage",
+    "zh_terms": [
+      "含糖饮料"
+    ],
+    "synonyms_en": [
+      "SSB"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "sugar-sweetened beverage"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:coffee_consumption",
+    "preferred_label_en": "coffee consumption",
+    "zh_terms": [
+      "咖啡摄入",
+      "饮用咖啡"
+    ],
+    "synonyms_en": [
+      "coffee intake"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Coffee"
+    ],
+    "pubmed_free_text_terms": [
+      "coffee consumption"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:tea_consumption",
+    "preferred_label_en": "tea consumption",
+    "zh_terms": [
+      "茶摄入",
+      "饮茶"
+    ],
+    "synonyms_en": [
+      "tea intake"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Tea"
+    ],
+    "pubmed_free_text_terms": [
+      "tea consumption"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:vitamin_d_level",
+    "preferred_label_en": "vitamin D level",
+    "zh_terms": [
+      "维生素D水平"
+    ],
+    "synonyms_en": [
+      "25-hydroxyvitamin D"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Vitamin D"
+    ],
+    "pubmed_free_text_terms": [
+      "vitamin D level"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:insulin_resistance",
+    "preferred_label_en": "insulin resistance",
+    "zh_terms": [
+      "胰岛素抵抗"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Insulin Resistance"
+    ],
+    "pubmed_free_text_terms": [
+      "insulin resistance"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:metabolic_syndrome",
+    "preferred_label_en": "metabolic syndrome",
+    "zh_terms": [
+      "代谢综合征"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Metabolic Syndrome"
+    ],
+    "pubmed_free_text_terms": [
+      "metabolic syndrome"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:dyslipidemia",
+    "preferred_label_en": "dyslipidemia",
+    "zh_terms": [
+      "血脂异常"
+    ],
+    "synonyms_en": [
+      "lipid disorder"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Dyslipidemias"
+    ],
+    "pubmed_free_text_terms": [
+      "dyslipidemia"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:triglycerides",
+    "preferred_label_en": "triglycerides",
+    "zh_terms": [
+      "甘油三酯"
+    ],
+    "synonyms_en": [
+      "TG"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Triglycerides"
+    ],
+    "pubmed_free_text_terms": [
+      "triglycerides"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:hdl_cholesterol",
+    "preferred_label_en": "HDL cholesterol",
+    "zh_terms": [
+      "高密度脂蛋白胆固醇",
+      "HDL胆固醇"
+    ],
+    "synonyms_en": [
+      "high-density lipoprotein cholesterol"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Cholesterol, HDL"
+    ],
+    "pubmed_free_text_terms": [
+      "HDL cholesterol"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:c_reactive_protein",
+    "preferred_label_en": "C-reactive protein",
+    "zh_terms": [
+      "C反应蛋白",
+      "CRP"
+    ],
+    "synonyms_en": [
+      "CRP"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "C-Reactive Protein"
+    ],
+    "pubmed_free_text_terms": [
+      "C-reactive protein"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:interleukin_6",
+    "preferred_label_en": "interleukin-6",
+    "zh_terms": [
+      "白细胞介素6",
+      "IL-6"
+    ],
+    "synonyms_en": [
+      "IL-6"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Interleukin-6"
+    ],
+    "pubmed_free_text_terms": [
+      "interleukin-6"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:occupational_exposure",
+    "preferred_label_en": "occupational exposure",
+    "zh_terms": [
+      "职业暴露"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Occupational Exposure"
+    ],
+    "pubmed_free_text_terms": [
+      "occupational exposure"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:night_shift_work",
+    "preferred_label_en": "night shift work",
+    "zh_terms": [
+      "夜班工作"
+    ],
+    "synonyms_en": [
+      "shift work"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Shift Work Schedule"
+    ],
+    "pubmed_free_text_terms": [
+      "night shift work"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:sleep_duration",
+    "preferred_label_en": "sleep duration",
+    "zh_terms": [
+      "睡眠时间",
+      "睡眠时长"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Sleep"
+    ],
+    "pubmed_free_text_terms": [
+      "sleep duration"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:sedentary_behavior",
+    "preferred_label_en": "sedentary behavior",
+    "zh_terms": [
+      "久坐行为"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Sedentary Behavior"
+    ],
+    "pubmed_free_text_terms": [
+      "sedentary behavior"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:education_level",
+    "preferred_label_en": "education level",
+    "zh_terms": [
+      "教育水平"
+    ],
+    "synonyms_en": [
+      "educational attainment"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Educational Status"
+    ],
+    "pubmed_free_text_terms": [
+      "education level"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:socioeconomic_status",
+    "preferred_label_en": "socioeconomic status",
+    "zh_terms": [
+      "社会经济地位"
+    ],
+    "synonyms_en": [
+      "SES"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Socioeconomic Factors"
+    ],
+    "pubmed_free_text_terms": [
+      "socioeconomic status"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:family_history",
+    "preferred_label_en": "family history",
+    "zh_terms": [
+      "家族史"
+    ],
+    "synonyms_en": [],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Family History"
+    ],
+    "pubmed_free_text_terms": [
+      "family history"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:genetic_variant",
+    "preferred_label_en": "genetic variant",
+    "zh_terms": [
+      "遗传变异"
+    ],
+    "synonyms_en": [
+      "genetic polymorphism"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Genetic Variation"
+    ],
+    "pubmed_free_text_terms": [
+      "genetic variant"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:hormone_replacement_therapy",
+    "preferred_label_en": "hormone replacement therapy",
+    "zh_terms": [
+      "激素替代治疗"
+    ],
+    "synonyms_en": [
+      "HRT"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hormone Replacement Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "hormone replacement therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:oral_contraceptive_use",
+    "preferred_label_en": "oral contraceptive use",
+    "zh_terms": [
+      "口服避孕药使用"
+    ],
+    "synonyms_en": [
+      "oral contraceptives"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Contraceptives, Oral"
+    ],
+    "pubmed_free_text_terms": [
+      "oral contraceptive use"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_exposure:breastfeeding",
+    "preferred_label_en": "breastfeeding",
+    "zh_terms": [
+      "母乳喂养"
+    ],
+    "synonyms_en": [
+      "breast feeding"
+    ],
+    "concept_type": "exposure",
+    "pico_roles": [
+      "exposure"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Breast Feeding"
+    ],
+    "pubmed_free_text_terms": [
+      "breastfeeding"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:ace_inhibitor",
+    "preferred_label_en": "ACE inhibitor",
+    "zh_terms": [
+      "ACE抑制剂"
+    ],
+    "synonyms_en": [
+      "angiotensin-converting enzyme inhibitor"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Angiotensin-Converting Enzyme Inhibitors"
+    ],
+    "pubmed_free_text_terms": [
+      "ACE inhibitor"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:angiotensin_receptor_blocker",
+    "preferred_label_en": "angiotensin receptor blocker",
+    "zh_terms": [
+      "血管紧张素受体阻滞剂",
+      "ARB"
+    ],
+    "synonyms_en": [
+      "ARB"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Angiotensin Receptor Antagonists"
+    ],
+    "pubmed_free_text_terms": [
+      "angiotensin receptor blocker"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:beta_blocker",
+    "preferred_label_en": "beta-blocker",
+    "zh_terms": [
+      "β受体阻滞剂",
+      "贝塔受体阻滞剂"
+    ],
+    "synonyms_en": [
+      "beta adrenergic blocker"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Adrenergic beta-Antagonists"
+    ],
+    "pubmed_free_text_terms": [
+      "beta-blocker"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:sglt2_inhibitor",
+    "preferred_label_en": "SGLT2 inhibitor",
+    "zh_terms": [
+      "SGLT2抑制剂"
+    ],
+    "synonyms_en": [
+      "sodium-glucose cotransporter 2 inhibitor"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "SGLT2 inhibitor"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:glp1_receptor_agonist",
+    "preferred_label_en": "GLP-1 receptor agonist",
+    "zh_terms": [
+      "GLP-1受体激动剂"
+    ],
+    "synonyms_en": [
+      "glucagon-like peptide-1 receptor agonist"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "GLP-1 receptor agonist"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:anticoagulation",
+    "preferred_label_en": "anticoagulation",
+    "zh_terms": [
+      "抗凝治疗"
+    ],
+    "synonyms_en": [
+      "anticoagulant therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Anticoagulants"
+    ],
+    "pubmed_free_text_terms": [
+      "anticoagulation"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:antiplatelet_therapy",
+    "preferred_label_en": "antiplatelet therapy",
+    "zh_terms": [
+      "抗血小板治疗"
+    ],
+    "synonyms_en": [
+      "antiplatelet agents"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Platelet Aggregation Inhibitors"
+    ],
+    "pubmed_free_text_terms": [
+      "antiplatelet therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:proton_pump_inhibitor",
+    "preferred_label_en": "proton pump inhibitor",
+    "zh_terms": [
+      "质子泵抑制剂",
+      "PPI"
+    ],
+    "synonyms_en": [
+      "PPI"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Proton Pump Inhibitors"
+    ],
+    "pubmed_free_text_terms": [
+      "proton pump inhibitor"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:antibiotic_therapy",
+    "preferred_label_en": "antibiotic therapy",
+    "zh_terms": [
+      "抗生素治疗"
+    ],
+    "synonyms_en": [
+      "antibacterial therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Anti-Bacterial Agents"
+    ],
+    "pubmed_free_text_terms": [
+      "antibiotic therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:corticosteroid",
+    "preferred_label_en": "corticosteroid",
+    "zh_terms": [
+      "糖皮质激素",
+      "皮质类固醇"
+    ],
+    "synonyms_en": [
+      "glucocorticoid"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Glucocorticoids"
+    ],
+    "pubmed_free_text_terms": [
+      "corticosteroid"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:nonsteroidal_anti_inflammatory_drug",
+    "preferred_label_en": "nonsteroidal anti-inflammatory drug",
+    "zh_terms": [
+      "非甾体抗炎药",
+      "NSAID"
+    ],
+    "synonyms_en": [
+      "NSAID"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Anti-Inflammatory Agents, Non-Steroidal"
+    ],
+    "pubmed_free_text_terms": [
+      "nonsteroidal anti-inflammatory drug"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:targeted_therapy",
+    "preferred_label_en": "targeted therapy",
+    "zh_terms": [
+      "靶向治疗"
+    ],
+    "synonyms_en": [
+      "molecular targeted therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Molecular Targeted Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "targeted therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:endocrine_therapy",
+    "preferred_label_en": "endocrine therapy",
+    "zh_terms": [
+      "内分泌治疗"
+    ],
+    "synonyms_en": [
+      "hormonal therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hormone Antagonists"
+    ],
+    "pubmed_free_text_terms": [
+      "endocrine therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:neoadjuvant_therapy",
+    "preferred_label_en": "neoadjuvant therapy",
+    "zh_terms": [
+      "新辅助治疗"
+    ],
+    "synonyms_en": [
+      "preoperative therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Neoadjuvant Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "neoadjuvant therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:adjuvant_therapy",
+    "preferred_label_en": "adjuvant therapy",
+    "zh_terms": [
+      "辅助治疗"
+    ],
+    "synonyms_en": [
+      "postoperative therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Adjuvant Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "adjuvant therapy"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:screening",
+    "preferred_label_en": "screening",
+    "zh_terms": [
+      "筛查"
+    ],
+    "synonyms_en": [
+      "mass screening"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Mass Screening"
+    ],
+    "pubmed_free_text_terms": [
+      "screening"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:vaccination",
+    "preferred_label_en": "vaccination",
+    "zh_terms": [
+      "疫苗接种"
+    ],
+    "synonyms_en": [
+      "immunization"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Vaccination"
+    ],
+    "pubmed_free_text_terms": [
+      "vaccination"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:rehabilitation",
+    "preferred_label_en": "rehabilitation",
+    "zh_terms": [
+      "康复治疗"
+    ],
+    "synonyms_en": [
+      "rehabilitative therapy"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Rehabilitation"
+    ],
+    "pubmed_free_text_terms": [
+      "rehabilitation"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:dietary_intervention",
+    "preferred_label_en": "dietary intervention",
+    "zh_terms": [
+      "饮食干预"
+    ],
+    "synonyms_en": [
+      "nutrition intervention"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Diet Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "dietary intervention"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_intervention:exercise_intervention",
+    "preferred_label_en": "exercise intervention",
+    "zh_terms": [
+      "运动干预"
+    ],
+    "synonyms_en": [
+      "exercise training"
+    ],
+    "concept_type": "intervention",
+    "pico_roles": [
+      "intervention"
+    ],
+    "query_expansion_allowed": true,
+    "standalone_search_allowed": "conditional",
+    "requires_pairing_with": [],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Exercise Therapy"
+    ],
+    "pubmed_free_text_terms": [
+      "exercise intervention"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:incidence",
+    "preferred_label_en": "incidence",
+    "zh_terms": [
+      "发病率"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Incidence"
+    ],
+    "pubmed_free_text_terms": [
+      "incidence"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:prevalence",
+    "preferred_label_en": "prevalence",
+    "zh_terms": [
+      "患病率"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Prevalence"
+    ],
+    "pubmed_free_text_terms": [
+      "prevalence"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:remission",
+    "preferred_label_en": "remission",
+    "zh_terms": [
+      "缓解"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Remission Induction"
+    ],
+    "pubmed_free_text_terms": [
+      "remission"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:complete_response",
+    "preferred_label_en": "complete response",
+    "zh_terms": [
+      "完全缓解",
+      "CR"
+    ],
+    "synonyms_en": [
+      "CR"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "complete response"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:partial_response",
+    "preferred_label_en": "partial response",
+    "zh_terms": [
+      "部分缓解",
+      "PR"
+    ],
+    "synonyms_en": [
+      "PR"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "partial response"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:objective_response_rate",
+    "preferred_label_en": "objective response rate",
+    "zh_terms": [
+      "客观缓解率",
+      "ORR"
+    ],
+    "synonyms_en": [
+      "ORR"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "objective response rate"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:disease_control_rate",
+    "preferred_label_en": "disease control rate",
+    "zh_terms": [
+      "疾病控制率",
+      "DCR"
+    ],
+    "synonyms_en": [
+      "DCR"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "disease control rate"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:pathologic_complete_response",
+    "preferred_label_en": "pathologic complete response",
+    "zh_terms": [
+      "病理完全缓解",
+      "pCR"
+    ],
+    "synonyms_en": [
+      "pCR"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "pathologic complete response"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:complication",
+    "preferred_label_en": "complication",
+    "zh_terms": [
+      "并发症"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Postoperative Complications"
+    ],
+    "pubmed_free_text_terms": [
+      "complication"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:bleeding",
+    "preferred_label_en": "bleeding",
+    "zh_terms": [
+      "出血"
+    ],
+    "synonyms_en": [
+      "hemorrhage"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Hemorrhage"
+    ],
+    "pubmed_free_text_terms": [
+      "bleeding"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:infection",
+    "preferred_label_en": "infection",
+    "zh_terms": [
+      "感染"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Infection"
+    ],
+    "pubmed_free_text_terms": [
+      "infection"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:thrombosis",
+    "preferred_label_en": "thrombosis",
+    "zh_terms": [
+      "血栓形成"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Thrombosis"
+    ],
+    "pubmed_free_text_terms": [
+      "thrombosis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:stroke_outcome",
+    "preferred_label_en": "stroke outcome",
+    "zh_terms": [
+      "卒中事件"
+    ],
+    "synonyms_en": [
+      "stroke event"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Stroke"
+    ],
+    "pubmed_free_text_terms": [
+      "stroke outcome"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:myocardial_infarction_outcome",
+    "preferred_label_en": "myocardial infarction outcome",
+    "zh_terms": [
+      "心肌梗死事件"
+    ],
+    "synonyms_en": [
+      "MI event"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Myocardial Infarction"
+    ],
+    "pubmed_free_text_terms": [
+      "myocardial infarction outcome"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:renal_function_decline",
+    "preferred_label_en": "renal function decline",
+    "zh_terms": [
+      "肾功能下降"
+    ],
+    "synonyms_en": [
+      "decline in kidney function"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "renal function decline"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:acute_kidney_injury_outcome",
+    "preferred_label_en": "acute kidney injury outcome",
+    "zh_terms": [
+      "急性肾损伤结局"
+    ],
+    "synonyms_en": [
+      "AKI outcome"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Acute Kidney Injury"
+    ],
+    "pubmed_free_text_terms": [
+      "acute kidney injury outcome"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:progression",
+    "preferred_label_en": "progression",
+    "zh_terms": [
+      "进展"
+    ],
+    "synonyms_en": [
+      "disease progression"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Disease Progression"
+    ],
+    "pubmed_free_text_terms": [
+      "progression"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:metastasis",
+    "preferred_label_en": "metastasis",
+    "zh_terms": [
+      "转移"
+    ],
+    "synonyms_en": [
+      "distant metastasis"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Neoplasm Metastasis"
+    ],
+    "pubmed_free_text_terms": [
+      "metastasis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:readmission",
+    "preferred_label_en": "readmission",
+    "zh_terms": [
+      "再入院"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Patient Readmission"
+    ],
+    "pubmed_free_text_terms": [
+      "readmission"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:length_of_stay",
+    "preferred_label_en": "length of stay",
+    "zh_terms": [
+      "住院时间"
+    ],
+    "synonyms_en": [
+      "hospital stay"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Length of Stay"
+    ],
+    "pubmed_free_text_terms": [
+      "length of stay"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:pain_score",
+    "preferred_label_en": "pain score",
+    "zh_terms": [
+      "疼痛评分"
+    ],
+    "synonyms_en": [
+      "pain intensity"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Pain Measurement"
+    ],
+    "pubmed_free_text_terms": [
+      "pain score"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:body_weight_change",
+    "preferred_label_en": "body weight change",
+    "zh_terms": [
+      "体重变化"
+    ],
+    "synonyms_en": [
+      "weight change"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Body Weight"
+    ],
+    "pubmed_free_text_terms": [
+      "body weight change"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:glycemic_control",
+    "preferred_label_en": "glycemic control",
+    "zh_terms": [
+      "血糖控制"
+    ],
+    "synonyms_en": [
+      "glucose control"
+    ],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "glycemic control"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:blood_pressure_control",
+    "preferred_label_en": "blood pressure control",
+    "zh_terms": [
+      "血压控制"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [
+      "Blood Pressure"
+    ],
+    "pubmed_free_text_terms": [
+      "blood pressure control"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_outcome:biochemical_recurrence",
+    "preferred_label_en": "biochemical recurrence",
+    "zh_terms": [
+      "生化复发"
+    ],
+    "synonyms_en": [],
+    "concept_type": "outcome",
+    "pico_roles": [
+      "outcome"
+    ],
+    "query_expansion_allowed": "conditional",
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": false,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "biochemical recurrence"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_effect:rate_ratio",
+    "preferred_label_en": "rate ratio",
+    "zh_terms": [
+      "率比"
+    ],
+    "synonyms_en": [
+      "rate ratio"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "rate ratio",
+      "rate ratio"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_effect:prevalence_ratio",
+    "preferred_label_en": "prevalence ratio",
+    "zh_terms": [
+      "患病率比"
+    ],
+    "synonyms_en": [
+      "PRR"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "prevalence ratio",
+      "PRR"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_effect:incidence_rate_ratio",
+    "preferred_label_en": "incidence rate ratio",
+    "zh_terms": [
+      "发病率比",
+      "IRR"
+    ],
+    "synonyms_en": [
+      "IRR"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "incidence rate ratio",
+      "IRR"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_effect:weighted_mean_difference",
+    "preferred_label_en": "weighted mean difference",
+    "zh_terms": [
+      "加权均数差",
+      "WMD"
+    ],
+    "synonyms_en": [
+      "WMD"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "weighted mean difference",
+      "WMD"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_effect:standard_error",
+    "preferred_label_en": "standard error",
+    "zh_terms": [
+      "标准误",
+      "SE"
+    ],
+    "synonyms_en": [
+      "SE"
+    ],
+    "concept_type": "effect_measure",
+    "pico_roles": [
+      "effect"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [],
+    "filter_only": true,
+    "pdf_extraction_target": true,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "standard error",
+      "SE"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_study_design:prospective_study",
+    "preferred_label_en": "prospective study",
+    "zh_terms": [
+      "前瞻性研究"
+    ],
+    "synonyms_en": [
+      "prospective cohort"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Prospective Studies"
+    ],
+    "pubmed_free_text_terms": [
+      "prospective study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_study_design:retrospective_study",
+    "preferred_label_en": "retrospective study",
+    "zh_terms": [
+      "回顾性研究"
+    ],
+    "synonyms_en": [
+      "retrospective cohort"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Retrospective Studies"
+    ],
+    "pubmed_free_text_terms": [
+      "retrospective study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_study_design:observational_study",
+    "preferred_label_en": "observational study",
+    "zh_terms": [
+      "观察性研究"
+    ],
+    "synonyms_en": [],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Observational Studies as Topic"
+    ],
+    "pubmed_free_text_terms": [
+      "observational study"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_study_design:clinical_trial",
+    "preferred_label_en": "clinical trial",
+    "zh_terms": [
+      "临床试验"
+    ],
+    "synonyms_en": [],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [
+      "Clinical Trial"
+    ],
+    "pubmed_free_text_terms": [
+      "clinical trial"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_study_design:network_meta_analysis",
+    "preferred_label_en": "network meta-analysis",
+    "zh_terms": [
+      "网状Meta分析",
+      "网络Meta分析"
+    ],
+    "synonyms_en": [
+      "network meta analysis"
+    ],
+    "concept_type": "study_design",
+    "pico_roles": [
+      "study_design"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "network meta-analysis"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_research_intent:protective_factor",
+    "preferred_label_en": "protective factor",
+    "zh_terms": [
+      "保护因素"
+    ],
+    "synonyms_en": [
+      "protective association"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "protective factor",
+      "protective association"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_research_intent:predictor",
+    "preferred_label_en": "predictor",
+    "zh_terms": [
+      "预测因素"
+    ],
+    "synonyms_en": [
+      "predictive factor"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "predictor",
+      "predictive factor"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_research_intent:biomarker_value",
+    "preferred_label_en": "biomarker value",
+    "zh_terms": [
+      "标志物价值",
+      "生物标志物价值"
+    ],
+    "synonyms_en": [
+      "biomarker utility"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "biomarker value",
+      "biomarker utility"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_research_intent:dose_response",
+    "preferred_label_en": "dose-response relationship",
+    "zh_terms": [
+      "剂量反应关系"
+    ],
+    "synonyms_en": [
+      "dose response"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "dose-response relationship",
+      "dose response"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  },
+  {
+    "concept_id": "meta_research_intent:cost_effectiveness",
+    "preferred_label_en": "cost-effectiveness",
+    "zh_terms": [
+      "成本效果"
+    ],
+    "synonyms_en": [
+      "economic evaluation"
+    ],
+    "concept_type": "research_intent",
+    "pico_roles": [
+      "research_intent"
+    ],
+    "query_expansion_allowed": false,
+    "standalone_search_allowed": false,
+    "requires_pairing_with": [
+      "population_or_disease"
+    ],
+    "filter_only": true,
+    "pdf_extraction_target": false,
+    "mesh_terms": [],
+    "pubmed_free_text_terms": [
+      "cost-effectiveness",
+      "economic evaluation"
+    ],
+    "emtree_terms": [],
+    "emtree_review_status": "needs_review",
+    "review_status": "seed_batch_2_curated"
+  }
+]

@@ -1,0 +1,443 @@
+{
+  "schema_version": "tcga_terms_coverage_audit.v1",
+  "generated_at": "2026-05-18",
+  "summary": {
+    "total": 33,
+    "complete": 33,
+    "partial": 0,
+    "missing": 0,
+    "needs_review": 0
+  },
+  "items": [
+    {
+      "project_code": "TCGA-ACC",
+      "cancer_name_en": "adrenocortical carcinoma",
+      "cancer_name_zh": "肾上腺皮质癌",
+      "mapped_concept_ids": [
+        "mini:adrenocortical_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-BLCA",
+      "cancer_name_en": "bladder urothelial carcinoma",
+      "cancer_name_zh": "膀胱尿路上皮癌",
+      "mapped_concept_ids": [
+        "mini:bladder_cancer",
+        "mini:bladder_urothelial_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-BRCA",
+      "cancer_name_en": "breast invasive carcinoma",
+      "cancer_name_zh": "乳腺癌",
+      "mapped_concept_ids": [
+        "mini:breast_cancer",
+        "mini:breast_invasive_ductal_carcinoma",
+        "mini:invasive_lobular_breast_carcinoma",
+        "mini:triple_negative_breast_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-CESC",
+      "cancer_name_en": "cervical squamous cell carcinoma and endocervical adenocarcinoma",
+      "cancer_name_zh": "宫颈癌",
+      "mapped_concept_ids": [
+        "mini:cervical_cancer",
+        "mini:cervical_squamous_cell_carcinoma",
+        "mini:endocervical_adenocarcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-CHOL",
+      "cancer_name_en": "cholangiocarcinoma",
+      "cancer_name_zh": "胆管癌",
+      "mapped_concept_ids": [
+        "mini:cholangiocarcinoma",
+        "mini:intrahepatic_cholangiocarcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-COAD",
+      "cancer_name_en": "colon adenocarcinoma",
+      "cancer_name_zh": "结肠癌",
+      "mapped_concept_ids": [
+        "mini:colon_cancer",
+        "mini:colorectal_adenocarcinoma",
+        "mini:colorectal_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-DLBC",
+      "cancer_name_en": "diffuse large B-cell lymphoma",
+      "cancer_name_zh": "弥漫大B细胞淋巴瘤",
+      "mapped_concept_ids": [
+        "mini:diffuse_large_b_cell_lymphoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-ESCA",
+      "cancer_name_en": "esophageal carcinoma",
+      "cancer_name_zh": "食管癌",
+      "mapped_concept_ids": [
+        "mini:esophageal_cancer",
+        "mini:esophageal_squamous_cell_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-GBM",
+      "cancer_name_en": "glioblastoma",
+      "cancer_name_zh": "胶质母细胞瘤",
+      "mapped_concept_ids": [
+        "mini:glioblastoma",
+        "mini:glioma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-HNSC",
+      "cancer_name_en": "head and neck squamous cell carcinoma",
+      "cancer_name_zh": "头颈鳞癌",
+      "mapped_concept_ids": [
+        "mini:head_and_neck_squamous_cell_carcinoma",
+        "mini:laryngeal_cancer",
+        "mini:nasopharyngeal_carcinoma",
+        "mini:oral_squamous_cell_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-KICH",
+      "cancer_name_en": "kidney chromophobe",
+      "cancer_name_zh": "肾嫌色细胞癌",
+      "mapped_concept_ids": [
+        "mini:kidney_cancer",
+        "mini:kidney_chromophobe_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-KIRC",
+      "cancer_name_en": "kidney renal clear cell carcinoma",
+      "cancer_name_zh": "肾透明细胞癌",
+      "mapped_concept_ids": [
+        "mini:kidney_cancer",
+        "mini:kidney_clear_cell_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-KIRP",
+      "cancer_name_en": "kidney renal papillary cell carcinoma",
+      "cancer_name_zh": "肾乳头状细胞癌",
+      "mapped_concept_ids": [
+        "mini:kidney_cancer",
+        "mini:kidney_papillary_cell_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-LAML",
+      "cancer_name_en": "acute myeloid leukemia",
+      "cancer_name_zh": "急性髓系白血病",
+      "mapped_concept_ids": [
+        "mini:acute_myeloid_leukemia",
+        "mini:leukemia"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-LGG",
+      "cancer_name_en": "lower grade glioma",
+      "cancer_name_zh": "低级别胶质瘤",
+      "mapped_concept_ids": [
+        "mini:glioma",
+        "mini:lower_grade_glioma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-LIHC",
+      "cancer_name_en": "liver hepatocellular carcinoma",
+      "cancer_name_zh": "肝细胞癌",
+      "mapped_concept_ids": [
+        "mini:hepatocellular_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-LUAD",
+      "cancer_name_en": "lung adenocarcinoma",
+      "cancer_name_zh": "肺腺癌",
+      "mapped_concept_ids": [
+        "mini:lung_adenocarcinoma",
+        "mini:lung_cancer",
+        "mini:non_small_cell_lung_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-LUSC",
+      "cancer_name_en": "lung squamous cell carcinoma",
+      "cancer_name_zh": "肺鳞癌",
+      "mapped_concept_ids": [
+        "mini:lung_cancer",
+        "mini:lung_squamous_cell_carcinoma",
+        "mini:non_small_cell_lung_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-MESO",
+      "cancer_name_en": "mesothelioma",
+      "cancer_name_zh": "间皮瘤",
+      "mapped_concept_ids": [
+        "mini:mesothelioma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-OV",
+      "cancer_name_en": "ovarian serous cystadenocarcinoma",
+      "cancer_name_zh": "卵巢浆液性囊腺癌",
+      "mapped_concept_ids": [
+        "mini:ovarian_cancer",
+        "mini:ovarian_serous_carcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": false,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-PAAD",
+      "cancer_name_en": "pancreatic adenocarcinoma",
+      "cancer_name_zh": "胰腺癌",
+      "mapped_concept_ids": [
+        "mini:pancreatic_cancer",
+        "mini:pancreatic_ductal_adenocarcinoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-PCPG",
+      "cancer_name_en": "pheochromocytoma and paraganglioma",
+      "cancer_name_zh": "嗜铬细胞瘤和副神经节瘤",
+      "mapped_concept_ids": [
+        "mini:pheochromocytoma_paraganglioma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-PRAD",
+      "cancer_name_en": "prostate adenocarcinoma",
+      "cancer_name_zh": "前列腺癌",
+      "mapped_concept_ids": [
+        "mini:prostate_adenocarcinoma",
+        "mini:prostate_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-READ",
+      "cancer_name_en": "rectum adenocarcinoma",
+      "cancer_name_zh": "直肠癌",
+      "mapped_concept_ids": [
+        "mini:colorectal_adenocarcinoma",
+        "mini:colorectal_cancer",
+        "mini:rectal_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-SARC",
+      "cancer_name_en": "sarcoma",
+      "cancer_name_zh": "肉瘤",
+      "mapped_concept_ids": [
+        "mini:sarcoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-SKCM",
+      "cancer_name_en": "skin cutaneous melanoma",
+      "cancer_name_zh": "皮肤黑色素瘤",
+      "mapped_concept_ids": [
+        "mini:melanoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": false,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-STAD",
+      "cancer_name_en": "stomach adenocarcinoma",
+      "cancer_name_zh": "胃癌",
+      "mapped_concept_ids": [
+        "mini:gastric_adenocarcinoma",
+        "mini:gastric_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-TGCT",
+      "cancer_name_en": "testicular germ cell tumor",
+      "cancer_name_zh": "睾丸生殖细胞肿瘤",
+      "mapped_concept_ids": [
+        "mini:testicular_germ_cell_tumor"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-THCA",
+      "cancer_name_en": "thyroid carcinoma",
+      "cancer_name_zh": "甲状腺癌",
+      "mapped_concept_ids": [
+        "mini:anaplastic_thyroid_carcinoma",
+        "mini:follicular_thyroid_carcinoma",
+        "mini:medullary_thyroid_carcinoma",
+        "mini:papillary_thyroid_carcinoma",
+        "mini:poorly_differentiated_thyroid_carcinoma",
+        "mini:thyroid_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-THYM",
+      "cancer_name_en": "thymoma",
+      "cancer_name_zh": "胸腺瘤",
+      "mapped_concept_ids": [
+        "mini:thymoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-UCEC",
+      "cancer_name_en": "uterine corpus endometrial carcinoma",
+      "cancer_name_zh": "子宫内膜癌",
+      "mapped_concept_ids": [
+        "mini:endometrial_cancer"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-UCS",
+      "cancer_name_en": "uterine carcinosarcoma",
+      "cancer_name_zh": "子宫癌肉瘤",
+      "mapped_concept_ids": [
+        "mini:uterine_carcinosarcoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    },
+    {
+      "project_code": "TCGA-UVM",
+      "cancer_name_en": "uveal melanoma",
+      "cancer_name_zh": "葡萄膜黑色素瘤",
+      "mapped_concept_ids": [
+        "mini:uveal_melanoma"
+      ],
+      "project_code_covered": true,
+      "zh_name_covered": true,
+      "status": "complete",
+      "review_notes": ""
+    }
+  ]
+}

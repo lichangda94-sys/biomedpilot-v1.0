@@ -60,6 +60,8 @@
 - 比例浓度基准换算
 - 物质的量单位换算
 - 更多单位别名归一化
+- 快速计算 UI 字段级单位白名单 helper
+- 摩尔计算开关关闭时隐藏摩尔浓度与 MW 单位
 
 ### 2.3 新增统一显示与 warning policy
 
@@ -115,6 +117,10 @@
 - `PreparationResult` 新增 `direct_stage_groups`
 - `as_text()` 输出中新增按阶段分组展示
 - 通用步骤中新增阶段执行提示
+- 新增 UI 组分类型契约与别名兼容：
+  - `commercial_or_existing_reagent` -> `commercial_reagent`
+  - `auto_fill_solvent` -> `solvent`
+  - `other`
 
 整改后效果：
 
@@ -182,9 +188,12 @@
 本次新增覆盖点：
 
 - 动态求解器单未知项求解
+- 动态求解器主要反向求解路径
 - 多未知项报错
 - 极小值显示与 warning
 - 新单位换算
+- 快速计算 UI 单位白名单
+- 组分类型 UI contract alias
 - `addition_order / stage_label` 阶段分组
 - 固定损耗量模式
 - `PreparationRecordStore` 读写与坏 JSON 处理
@@ -214,7 +223,7 @@
 
 结果：
 
-- `pytest`: `133 passed`
+- `pytest`: `141 passed`
 - `smoke-test`: `passed`
 
 ## 6. 整改结论
