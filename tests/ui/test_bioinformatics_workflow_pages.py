@@ -3032,7 +3032,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert survival_table is not None
     survival_text = _table_text(survival_table)
     assert "Survival design preflight" in survival_text
-    assert "KM/Cox/log-rank/HR" in survival_text
+    assert "Two-group KM/log-rank" in survival_text
+    assert "Cox / HR" in survival_text
+    assert "Cox, HR" in survival_text
     assert "disabled" in survival_text
 
 

@@ -19,6 +19,8 @@ def build_action_rows(
     confirmation_gate: dict[str, Any] | None = None,
     result_schema_gate: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
+    km_parameter_gate: dict[str, Any] | None = None,
+    km_confirmation_gate: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
@@ -31,6 +33,8 @@ def build_action_rows(
     confirmation_gate = confirmation_gate or {}
     result_schema_gate = result_schema_gate or {}
     survival_dependency = survival_dependency or {}
+    km_parameter_gate = km_parameter_gate or {}
+    km_confirmation_gate = km_confirmation_gate or {}
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
 
@@ -47,8 +51,9 @@ def build_action_rows(
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
-    rows.append(_constant_disabled_action("survival_formal", "Run formal survival analysis", "hidden_until_ready", "Survival remains design/preflight only; no KM/Cox/log-rank/HR output."))
-    rows.append(_constant_disabled_action("km_cox_logrank", "KM/Cox/log-rank", "hidden_until_ready", "KM plot, Cox model and log-rank p-value are disabled until a later audited stage."))
+    rows.append(_km_parameter_confirmation_action(survival_package, km_parameter_gate, km_confirmation_gate))
+    rows.append(_km_logrank_action(survival_package, survival_dependency, km_parameter_gate, km_confirmation_gate))
+    rows.append(_constant_disabled_action("survival_formal", "Run Cox / multivariable survival", "hidden_until_ready", "Cox, HR, multivariable models and clinical conclusions are disabled after B13."))
     rows.append(_plot_action(results))
     rows.append(_markdown_draft_action(results, tasks))
     rows.append(_report_ready_action(report_gate, formal_deg_report_gate))
@@ -248,6 +253,71 @@ def _survival_preflight_action(package: dict[str, Any] | None, dependency: dict[
         "disabled_reason": "; ".join(dep_blockers),
         "next_action": "Preflight/design only; formal survival remains disabled.",
     }
+
+
+def _km_parameter_confirmation_action(package: dict[str, Any] | None, parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any]) -> dict[str, Any]:
+    if not package:
+        return _disabled("km_logrank_parameter_confirmation", "Confirm KM/log-rank parameters", "blocked_missing_input_package", "missing survival preflight package", "Build clinical metadata first.")
+    package_blockers = _list(package.get("blockers"))
+    if package_blockers:
+        return _disabled("km_logrank_parameter_confirmation", "Confirm KM/log-rank parameters", "blocked_missing_input_package", "; ".join(package_blockers), "Repair B12 survival/clinical input gates first.")
+    if parameter_gate.get("status") == "passed" and confirmation_gate.get("status") == "passed":
+        return {
+            "action_id": "km_logrank_parameter_confirmation",
+            "label": "Confirm KM/log-rank parameters",
+            "state": "confirmed",
+            "button_behavior": "enabled_reconfirm_parameters_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "KM/log-rank parameters are confirmed; re-confirm if groups, fields or dependency snapshot changed.",
+        }
+    if parameter_gate.get("status") == "passed":
+        return {
+            "action_id": "km_logrank_parameter_confirmation",
+            "label": "Confirm KM/log-rank parameters",
+            "state": "requires_user_confirmation",
+            "button_behavior": "enabled_parameter_confirmation_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review time/event fields, grouping, sample counts, event counts and dependency snapshot before KM/log-rank.",
+        }
+    blockers = _list(parameter_gate.get("blockers")) or ["km_parameter_gate_not_passed"]
+    return _disabled("km_logrank_parameter_confirmation", "Confirm KM/log-rank parameters", "blocked_missing_parameters", "; ".join(blockers), "Resolve KM/log-rank parameter gate first.")
+
+
+def _km_logrank_action(package: dict[str, Any] | None, dependency: dict[str, Any], parameter_gate: dict[str, Any], confirmation_gate: dict[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = []
+    state = "hidden_until_ready"
+    if not package:
+        blockers.append("missing_survival_preflight_package")
+        state = "blocked_missing_input_package"
+    else:
+        blockers.extend(_list(package.get("blockers")))
+    if parameter_gate.get("status") != "passed":
+        blockers.extend(_list(parameter_gate.get("blockers")) or ["km_parameter_gate_not_passed"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_parameters"
+    if confirmation_gate.get("status") != "passed":
+        blockers.extend(_list(confirmation_gate.get("blockers")) or ["km_logrank_parameter_confirmation_missing"])
+        if state == "hidden_until_ready":
+            state = "blocked_missing_user_confirmation"
+    if dependency.get("status") != "passed":
+        blockers.extend(_list(dependency.get("blockers")) or ["blocked_missing_backend"])
+        state = "blocked_missing_backend"
+    if not blockers:
+        return {
+            "action_id": "km_cox_logrank",
+            "label": "Run two-group KM/log-rank",
+            "state": "enabled_controlled_km_logrank",
+            "button_behavior": "enabled_two_group_km_logrank_mvp",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run B13 controlled two-group KM/log-rank only; no Cox, HR, report-ready or clinical conclusion.",
+        }
+    return _disabled("km_cox_logrank", "Run two-group KM/log-rank", state, "; ".join(dict.fromkeys(blockers)), "Resolve B12 input, KM parameter, confirmation and lifelines dependency gates.")
 
 
 def _plot_action(results: list[dict[str, Any]]) -> dict[str, Any]:
