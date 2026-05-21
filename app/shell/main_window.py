@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.app_identity import APP_NAME, icon_asset_statuses, icon_asset_summary, load_app_icon
+from app.app_identity import APP_NAME, LABTOOLS_ICON_PATHS, icon_asset_statuses, icon_asset_summary, load_app_icon, load_labtools_pixmap
 from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
@@ -371,6 +371,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
         header = QHBoxLayout()
+        header.addWidget(self._labtools_icon_label(semantic_key, object_name="labtoolsEntryIcon", size=34))
         title_label = QLabel(title)
         title_label.setObjectName("labtoolsPrimaryEntryTitle")
         title_label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
@@ -381,6 +382,8 @@ class MainWindow(QMainWindow):
         header.addStretch(1)
         header.addWidget(make_status_chip(status_key=status_key))
         layout.addLayout(header)
+        if semantic_key == PageKey.LABTOOLS_EXPERIMENT_MODULES.value:
+            layout.addLayout(self._labtools_experiment_category_icon_row())
         for row in rows:
             label = QLabel(row)
             label.setObjectName("labtoolsEntryDetail")
@@ -395,6 +398,55 @@ class MainWindow(QMainWindow):
         button.setEnabled(False)
         layout.addWidget(button)
         return frame
+
+    def _labtools_icon_label(self, semantic_key: str, *, object_name: str, size: int = 28) -> QLabel:
+        label = QLabel()
+        label.setObjectName(object_name)
+        label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        label.setProperty("semanticKey", semantic_key)
+        label.setProperty("iconSource", str(LABTOOLS_ICON_PATHS.get(semantic_key, "")))
+        label.setFixedSize(size + 8, size + 8)
+        label.setAlignment(Qt.AlignCenter)
+        pixmap = load_labtools_pixmap(semantic_key, size)
+        if pixmap.isNull():
+            label.setText("•")
+            label.setProperty("iconFallback", True)
+        else:
+            label.setPixmap(pixmap)
+            label.setProperty("iconFallback", False)
+        return label
+
+    def _labtools_experiment_category_icon_row(self) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
+        categories = (
+            ("细胞实验", PageKey.LABTOOLS_CELL_EXPERIMENTS.value),
+            ("蛋白实验", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value),
+            ("核酸实验", PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value),
+            ("免疫与吸光度", PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value),
+            ("免疫组化", PageKey.LABTOOLS_IHC.value),
+        )
+        for title, semantic_key in categories:
+            chip = QFrame()
+            chip.setObjectName("labtoolsExperimentCategoryIconChip")
+            chip.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            chip.setProperty("semanticKey", semantic_key)
+            chip.setStyleSheet("QFrame#labtoolsExperimentCategoryIconChip { border: 0; background: transparent; }")
+            chip_layout = QVBoxLayout(chip)
+            chip_layout.setContentsMargins(0, 0, 0, 0)
+            chip_layout.setSpacing(2)
+            chip_layout.addWidget(self._labtools_icon_label(semantic_key, object_name="labtoolsCategoryIcon", size=24), alignment=Qt.AlignCenter)
+            text = QLabel(title)
+            text.setObjectName("labtoolsCategoryIconLabel")
+            text.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            text.setProperty("semanticKey", semantic_key)
+            text.setAlignment(Qt.AlignCenter)
+            text.setStyleSheet("font-size: 11px; color: #64748B;")
+            chip_layout.addWidget(text)
+            row.addWidget(chip)
+        row.addStretch(1)
+        return row
 
     def _labtools_experiment_module_card(self, title: str, *, page_key: str, semantic_key: str, status_key: str, rows: list[str]) -> QFrame:
         frame = QFrame()

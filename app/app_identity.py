@@ -6,13 +6,14 @@ from dataclasses import dataclass
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QApplication
 
-from app.shared.semantic_keys import ModuleKey
+from app.shared.semantic_keys import ModuleKey, PageKey
 
 
 APP_NAME = "BioMedPilot / 医研智析"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "app"
 MODULE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "modules"
+LABTOOLS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "labtools"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -31,6 +32,16 @@ MODULE_ICON_PATHS = {
     "meta_analysis": META_ANALYSIS_MODULE_ICON_PATH,
     "labtools": LABTOOLS_MODULE_ICON_PATH,
     "settings": SETTINGS_MODULE_ICON_PATH,
+}
+LABTOOLS_ICON_PATHS = {
+    PageKey.LABTOOLS_GENERAL_CALCULATORS.value: LABTOOLS_ICON_DIR / "labtools_general_calculator.svg",
+    PageKey.LABTOOLS_REAGENT_PREPARATION.value: LABTOOLS_ICON_DIR / "labtools_reagent_preparation.svg",
+    PageKey.LABTOOLS_EXPERIMENT_MODULES.value: LABTOOLS_ICON_DIR / "labtools_experiment_modules.svg",
+    PageKey.LABTOOLS_CELL_EXPERIMENTS.value: LABTOOLS_ICON_DIR / "labtools_cell_experiments.svg",
+    PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value: LABTOOLS_ICON_DIR / "labtools_protein_experiments.svg",
+    PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value: LABTOOLS_ICON_DIR / "labtools_nucleic_acid_experiments.svg",
+    PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value: LABTOOLS_ICON_DIR / "labtools_immuno_absorbance.svg",
+    PageKey.LABTOOLS_IHC.value: LABTOOLS_ICON_DIR / "labtools_ihc.svg",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -103,6 +114,14 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("module.meta_analysis", "Meta 分析模块图标", "模块入口", META_ANALYSIS_MODULE_ICON_PATH, ("UI-02 模块选择首页", "Sidebar module navigation")),
     IconAssetSlot("module.labtools", "LabTools 模块图标", "模块入口", LABTOOLS_MODULE_ICON_PATH, ("UI-02 模块选择首页", "Sidebar module navigation")),
     IconAssetSlot("module.settings", "设置中心模块图标", "模块入口", SETTINGS_MODULE_ICON_PATH, ("Sidebar module navigation",)),
+    IconAssetSlot("labtools.general_calculators", "LabTools 通用计算器图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_GENERAL_CALCULATORS.value], ("LabTools 首页一级入口",)),
+    IconAssetSlot("labtools.reagent_preparation", "LabTools 试剂制备图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_REAGENT_PREPARATION.value], ("LabTools 首页一级入口",)),
+    IconAssetSlot("labtools.experiment_modules", "LabTools 实验模块图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_EXPERIMENT_MODULES.value], ("LabTools 首页一级入口",)),
+    IconAssetSlot("labtools.cell_experiments", "LabTools 细胞实验图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_CELL_EXPERIMENTS.value], ("LabTools 实验模块分类",)),
+    IconAssetSlot("labtools.protein_experiments", "LabTools 蛋白实验图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value], ("LabTools 实验模块分类",)),
+    IconAssetSlot("labtools.nucleic_acid_experiments", "LabTools 核酸实验图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value], ("LabTools 实验模块分类",)),
+    IconAssetSlot("labtools.immuno_absorbance", "LabTools 免疫与吸光度实验图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value], ("LabTools 实验模块分类",)),
+    IconAssetSlot("labtools.ihc", "LabTools 免疫组化图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_IHC.value], ("LabTools 实验模块分类",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -167,6 +186,19 @@ def load_module_icon(module_key: str) -> QIcon:
 
 def load_module_pixmap(module_key: str, size: int = 72) -> QPixmap:
     icon = load_module_icon(module_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_labtools_icon(semantic_key: str) -> QIcon:
+    path = LABTOOLS_ICON_PATHS.get(semantic_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_labtools_pixmap(semantic_key: str, size: int = 48) -> QPixmap:
+    icon = load_labtools_icon(semantic_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 
