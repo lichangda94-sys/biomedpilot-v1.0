@@ -8,6 +8,7 @@ from .executor import run_controlled_ora
 from .review import build_ora_result_review
 from .export import export_ora_review_table
 from .result_schema import build_ora_result_schema_gate, validate_ora_result_index_entry, validate_ora_result_table_row
+from .closure_audit import audit_enrichment_layer_closure
 
 __all__ = [
     "build_ora_gene_set_resource_gate",
@@ -15,6 +16,7 @@ __all__ = [
     "build_ora_parameter_manifest",
     "build_ora_result_schema_gate",
     "build_ora_result_review",
+    "audit_enrichment_layer_closure",
     "check_ora_backend_dependencies",
     "export_ora_review_table",
     "run_controlled_ora",
