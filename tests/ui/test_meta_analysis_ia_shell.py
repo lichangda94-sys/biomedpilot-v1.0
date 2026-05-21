@@ -127,7 +127,7 @@ def test_meta_workspace_groups_ten_active_meta_types(meta_workspace) -> None:
         "Testing schema",
     ]
     assert all(card.property("statusKey") == "testing" for card in cards)
-    assert all(card.minimumHeight() >= 128 for card in cards)
+    assert all(card.minimumHeight() >= 154 for card in cards)
     assert all(card.property("moduleKey") == ModuleKey.META_ANALYSIS.value for card in cards)
     assert all(card.property("semanticKey") == FeatureStatusKey.TESTING.value for card in cards)
     assert all(button.property("interactionMode") == "schema_shell" for button in select_buttons)
