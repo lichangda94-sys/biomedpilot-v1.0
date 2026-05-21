@@ -57,8 +57,9 @@ from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_f
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.enrichment import build_ora_result_review, export_ora_review_table, run_controlled_ora
 from app.bioinformatics.gsea import build_gsea_result_review, export_gsea_review_table, run_controlled_preranked_gsea
-from app.bioinformatics.plots import build_formal_deg_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_ora_plot_artifact
+from app.bioinformatics.plots import build_formal_deg_plot_gate, build_gsea_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_gsea_plot_artifact, create_ora_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
+from app.bioinformatics.reports.gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_gate
 from app.bioinformatics.reports.ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
@@ -6422,6 +6423,43 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def export_gsea_review_csv(self) -> dict[str, object] | None:
         return self._export_gsea_review("csv")
 
+    def generate_gsea_plot_artifact(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._gsea_review.get("selected_result_id") or "")
+        plot_type = self._gsea_plot_type.currentText() if hasattr(self, "_gsea_plot_type") else "gsea_enrichment_curve_spec"
+        result = create_gsea_plot_artifact(self._project_root, result_id=result_id or None, plot_type=plot_type)
+        if result.get("status") == "passed":
+            self.refresh_results()
+            self._status_label.setText(f"已注册 GSEA {plot_type} plot artifact/spec；未生成 PNG/SVG/PDF、完整报告、survival 或临床解释。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "GSEA plot gate 未通过"
+            self._status_label.setText(f"GSEA plot artifact/spec 未生成：{blockers}")
+            self._render_gsea_plot_gate(result)
+        return result
+
+    def generate_gsea_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._gsea_review.get("selected_result_id") or "")
+        allow_table_only = bool(self._gsea_table_only_report.isChecked()) if hasattr(self, "_gsea_table_only_report") else False
+        result = create_gsea_report_ready_package(self._project_root, result_id=result_id or None, allow_table_only_report=allow_table_only)
+        if result.get("status") in {"gsea_report_ready_package_created", "imported_derived_gsea_report_package_created"}:
+            self.refresh_results()
+            imported_note = "；imported-derived 来源已明确标注" if result.get("status") == "imported_derived_gsea_report_package_created" else ""
+            self._status_label.setText(
+                "已生成 GSEA report-ready package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}{imported_note}；"
+                "仅包含 GSEA section，未生成 survival、完整综合报告或临床结论。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "GSEA report-ready gate 未通过"
+            self._status_label.setText(f"GSEA report package 未生成：{blockers}")
+            self._render_gsea_report_gate(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
+        return result
+
     def generate_ora_plot_artifact(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -6720,6 +6758,33 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         gsea_controls.addWidget(_button("导出 GSEA CSV", "secondaryButton", self.export_gsea_review_csv))
         gsea_controls.addStretch(1)
         gsea_layout.addLayout(gsea_controls)
+        gsea_plot_controls = QHBoxLayout()
+        self._gsea_plot_type = QComboBox()
+        self._gsea_plot_type.setObjectName("gseaPlotType")
+        self._gsea_plot_type.addItems(["gsea_enrichment_curve_spec", "gsea_nes_barplot_spec"])
+        gsea_plot_controls.addWidget(QLabel("GSEA plot spec"))
+        gsea_plot_controls.addWidget(self._gsea_plot_type)
+        self._gsea_plot_button = _button("生成 GSEA plot artifact/spec", "secondaryButton", self.generate_gsea_plot_artifact)
+        self._gsea_plot_button.setObjectName("gseaPlotButton")
+        gsea_plot_controls.addWidget(self._gsea_plot_button)
+        self._gsea_plot_status = _muted("GSEA plot artifact 当前仅生成 spec，不渲染 PNG/SVG/PDF，不进入完整报告。")
+        self._gsea_plot_status.setObjectName("gseaPlotStatus")
+        gsea_plot_controls.addWidget(self._gsea_plot_status)
+        gsea_plot_controls.addStretch(1)
+        gsea_layout.addLayout(gsea_plot_controls)
+        gsea_report_controls = QHBoxLayout()
+        self._gsea_table_only_report = QCheckBox("允许无图 GSEA table-only report mode")
+        self._gsea_table_only_report.setObjectName("gseaTableOnlyReportMode")
+        self._gsea_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._gsea_report_button = _button("生成 GSEA report package", "secondaryButton", self.generate_gsea_report_ready_package)
+        self._gsea_report_button.setObjectName("gseaReportReadyButton")
+        self._gsea_report_status = _muted("GSEA report-ready gate 需要完整 GSEA result index、passed dependency/table/gene set/task log 和 GSEA plot artifact；无图 GSEA table-only 模式需显式勾选。")
+        self._gsea_report_status.setObjectName("gseaReportReadyStatus")
+        gsea_report_controls.addWidget(self._gsea_table_only_report)
+        gsea_report_controls.addWidget(self._gsea_report_button)
+        gsea_report_controls.addWidget(self._gsea_report_status)
+        gsea_report_controls.addStretch(1)
+        gsea_layout.addLayout(gsea_report_controls)
         self._gsea_summary_label = _muted("GSEA summary：暂无 controlled preranked GSEA result。")
         self._gsea_summary_label.setObjectName("gseaReviewSummary")
         self._gsea_downstream_label = _muted("GSEA plot/report-ready disabled：等待 B11.3 plot artifact / 后续 report gate。")
@@ -6797,6 +6862,18 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._gsea_review = gsea_review
         self._render_gsea_review(gsea_review)
+        gsea_plot_gate = build_gsea_plot_gate(
+            self._project_root,
+            result_id=str(gsea_review.get("selected_result_id") or "") or None,
+            plot_type=self._gsea_plot_type.currentText(),
+        ) if self._project_root else {}
+        self._render_gsea_plot_gate(gsea_plot_gate)
+        gsea_report_gate = evaluate_gsea_report_ready_gate(
+            self._project_root,
+            result_id=str(gsea_review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._gsea_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_gsea_report_gate(gsea_report_gate)
         ora_plot_gate = build_ora_plot_gate(
             self._project_root,
             result_id=str(ora_review.get("selected_result_id") or "") or None,
@@ -6823,7 +6900,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._render_formal_deg_report_gate(report_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -7029,6 +7106,45 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
             ],
         )
+
+    def _render_gsea_plot_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_gsea_plot_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "passed":
+            existing = gate.get("existing_plot_artifacts", []) if isinstance(gate.get("existing_plot_artifacts"), list) else []
+            self._gsea_plot_button.setEnabled(True)
+            self._gsea_plot_status.setText(
+                f"GSEA plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
+                "spec_only_no_image_dependency；does not render PNG/SVG/PDF；full report remains disabled."
+            )
+        else:
+            self._gsea_plot_button.setEnabled(False)
+            reason = "；".join(blockers) or "GSEA plot gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._gsea_plot_status.setText(f"GSEA plot disabled：{reason}")
+
+    def _render_gsea_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_gsea_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") in {"eligible_for_gsea_report_ready", "eligible_for_imported_derived_gsea_report_package"}:
+            self._gsea_report_button.setEnabled(True)
+            imported_note = "；imported-derived source will stay labeled" if gate.get("status") == "eligible_for_imported_derived_gsea_report_package" else ""
+            self._gsea_report_status.setText(
+                f"GSEA report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"deps={gate.get('dependency_versions', {})}；table-only={gate.get('allow_table_only_report', False)}{imported_note}；"
+                "package scope=GSEA only；survival/full report/clinical conclusions disabled."
+            )
+        else:
+            self._gsea_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "GSEA report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._gsea_report_status.setText(f"GSEA report-ready disabled：{reason}")
 
     def _render_ora_plot_gate(self, gate: dict[str, object]) -> None:
         if not hasattr(self, "_ora_plot_status"):

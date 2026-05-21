@@ -28,6 +28,8 @@ def build_action_rows(
     ora_dependency: dict[str, Any] | None = None,
     ora_plot_gate: dict[str, Any] | None = None,
     ora_report_gate: dict[str, Any] | None = None,
+    gsea_plot_gate: dict[str, Any] | None = None,
+    gsea_report_gate: dict[str, Any] | None = None,
     gsea_input_gate: dict[str, Any] | None = None,
     gsea_rank_metric_gate: dict[str, Any] | None = None,
     gsea_gene_set_gate: dict[str, Any] | None = None,
@@ -53,6 +55,8 @@ def build_action_rows(
     ora_dependency = ora_dependency or {}
     ora_plot_gate = ora_plot_gate or {}
     ora_report_gate = ora_report_gate or {}
+    gsea_plot_gate = gsea_plot_gate or {}
+    gsea_report_gate = gsea_report_gate or {}
     gsea_input_gate = gsea_input_gate or {}
     gsea_rank_metric_gate = gsea_rank_metric_gate or {}
     gsea_gene_set_gate = gsea_gene_set_gate or {}
@@ -76,6 +80,8 @@ def build_action_rows(
     rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
     rows.append(_ora_plot_action(ora_plot_gate))
     rows.append(_ora_report_ready_action(ora_report_gate))
+    rows.append(_gsea_plot_action(gsea_plot_gate))
+    rows.append(_gsea_report_ready_action(gsea_report_gate))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
     rows.append(_constant_disabled_action("survival_formal", "Run formal survival analysis", "hidden_until_ready", "Survival remains design/preflight only; no KM/Cox/log-rank/HR output."))
@@ -431,6 +437,45 @@ def _ora_report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
         "; ".join(blockers),
         "Resolve ORA result index, table, gene set, dependency, task log, plot/table-only and provenance gates.",
     )
+
+
+def _gsea_plot_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        warnings = _list(gate.get("warnings"))
+        return {
+            "action_id": "gsea_plot",
+            "label": "Generate GSEA plot artifact/spec",
+            "state": "available",
+            "button_behavior": "enabled_gsea_plot_spec_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Create GSEA plot artifact/spec only; no PNG/SVG/PDF rendering and no report-ready output." + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
+        }
+    blockers = _list(gate.get("blockers")) or ["gsea_plot_gate_not_passed"]
+    return _disabled("gsea_plot", "Generate GSEA plot artifact/spec", "blocked_gsea_plot_gate", "; ".join(blockers), "Register a valid GSEA preranked result before creating a spec-only GSEA plot artifact.")
+
+
+def _gsea_report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") in {"eligible_for_gsea_report_ready", "eligible_for_imported_derived_gsea_report_package"}:
+        warnings = _list(gate.get("warnings"))
+        imported = gate.get("status") == "eligible_for_imported_derived_gsea_report_package"
+        return {
+            "action_id": "gsea_report_ready",
+            "label": "Export GSEA report-ready package" if not imported else "Export imported-derived GSEA package",
+            "state": "available_imported_derived" if imported else "available",
+            "button_behavior": "enabled_imported_derived_gsea_report_package" if imported else "enabled_gsea_report_ready_package",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": (
+                "Export GSEA-only package with explicit imported-derived warning; no formal recomputed GSEA label, survival or clinical conclusions."
+                if imported
+                else "Export GSEA-only report-ready package; no survival, full integrated report or clinical conclusions."
+            ) + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
+        }
+    blockers = _list(gate.get("blockers")) or ["gsea_report_ready_gate_not_passed"]
+    return _disabled("gsea_report_ready", "Export GSEA report-ready package", "blocked_gsea_report_ready_gate", "; ".join(blockers), "Resolve GSEA result index, table, gene set, dependency, task log, plot/table-only and provenance gates.")
 
 
 def _immune_action(package: dict[str, Any] | None, tasks: list[dict[str, Any]]) -> dict[str, Any]:

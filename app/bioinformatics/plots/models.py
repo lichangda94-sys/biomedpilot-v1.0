@@ -6,7 +6,7 @@ from typing import Any
 
 
 PLOT_ARTIFACT_SCHEMA_VERSION = "biomedpilot.plot_artifact.v1"
-PLOT_TYPES = {"volcano_plot", "deg_heatmap", "ora_barplot", "ora_dotplot", "correlation_scatter", "km_plot"}
+PLOT_TYPES = {"volcano_plot", "deg_heatmap", "ora_barplot", "ora_dotplot", "gsea_enrichment_curve_spec", "gsea_nes_barplot_spec", "correlation_scatter", "km_plot"}
 
 
 @dataclass(frozen=True)

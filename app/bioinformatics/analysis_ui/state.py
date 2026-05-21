@@ -14,11 +14,12 @@ from app.bioinformatics.gsea import build_gsea_gene_set_resource_gate, build_gse
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
+from app.bioinformatics.reports.gsea import evaluate_gsea_report_ready_gate
 from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
-from app.bioinformatics.plots import build_ora_plot_gate
+from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate
 
 from .action_rules import build_action_rows
 from .labels import compact_list, label_package_type, label_semantics, label_status, repair_guidance
@@ -36,11 +37,13 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     report_gate = evaluate_report_ready_gate(root)
     formal_deg_report_gate = evaluate_formal_deg_report_ready_gate(root)
     ora_report_gate = evaluate_ora_report_ready_gate(root)
+    gsea_report_gate = evaluate_gsea_report_ready_gate(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
     ora_gates = build_ora_gate_state(project_root=root)
     ora_plot_gate = build_ora_plot_gate(root)
+    gsea_plot_gate = build_gsea_plot_gate(root)
     gsea_gates = build_gsea_gate_state(project_root=root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
@@ -62,6 +65,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         ora_dependency=ora_gates["dependency_snapshot"],
         ora_plot_gate=ora_plot_gate,
         ora_report_gate=ora_report_gate,
+        gsea_plot_gate=gsea_plot_gate,
+        gsea_report_gate=gsea_report_gate,
         gsea_input_gate=gsea_gates["input_gate"],
         gsea_rank_metric_gate=gsea_gates["rank_metric_gate"],
         gsea_gene_set_gate=gsea_gates["gene_set_gate"],
@@ -77,14 +82,14 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         [*resolver.get("blockers", [])]
         + [item for row in package_rows for item in row["raw_blockers"]]
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
-        + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate) for item in gate.get("blockers", []) or []]
+        + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
     )
     warnings = _dedupe(
         [*resolver.get("warnings", [])]
         + [item for row in package_rows for item in row["raw_warnings"]]
         + [item for row in dependency_rows for item in row["raw_warnings"]]
-        + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate) for item in gate.get("warnings", []) or []]
+        + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("warnings", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
     )
     return {
@@ -118,6 +123,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,
             "ora_report_ready_gate": ora_report_gate,
+            "gsea_plot_gate": gsea_plot_gate,
+            "gsea_report_ready_gate": gsea_report_gate,
             "gsea_gate_state": gsea_gates,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,

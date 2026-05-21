@@ -4265,6 +4265,131 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
     assert "未生成 GSEA、survival、完整综合报告或临床结论" in widget.status_message()
 
 
+def test_results_browser_gsea_plot_and_report_package_gate(qt_app, project_summary) -> None:
+    root = project_summary.project_root
+    deg_table = root / "results" / "tables" / "deg_for_gsea_ui.tsv"
+    gsea_table = root / "results" / "tables" / "gsea_ui.tsv"
+    deg_table.parent.mkdir(parents=True, exist_ok=True)
+    deg_table.write_text(
+        "feature_id\tgene_symbol\tlog2_fold_change\tp_value\tadjusted_p_value\n"
+        + "\n".join(f"GENE{i}\tGENE{i}\t{2.0 if i <= 6 else -1.5}\t0.01\t0.02" for i in range(1, 13))
+        + "\n",
+        encoding="utf-8",
+    )
+    gsea_table.write_text(
+        "term_id\tterm_name\tset_size\toverlap_size\tenrichment_score\tnormalized_enrichment_score\tp_value\tadjusted_p_value\tleading_edge_genes\trank_metric\twarnings\n"
+        "TERM_POS\tPositive\t10\t4\t0.8\t1.6\t0.01\t0.02\tGENE1;GENE2\tsigned_log10_fdr_by_log2fc\t\n",
+        encoding="utf-8",
+    )
+    gene_set_path = root / "user_data" / "bioinformatics" / "gene_sets" / "custom" / "sets-gsea-ui.gmt"
+    gene_set_path.parent.mkdir(parents=True, exist_ok=True)
+    gene_set_path.write_text("TERM_POS\tPositive\tGENE1\tGENE2\tGENE3\tGENE4\n", encoding="utf-8")
+    gene_set_registry = root / "user_data" / "bioinformatics" / "gene_sets" / "gene_set_registry.json"
+    gene_set_registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.gene_set_registry.v1",
+                "resources": [
+                    {
+                        "resource_id": "sets-gsea-ui",
+                        "name": "sets-gsea-ui",
+                        "collection_type": "Custom",
+                        "species": "unknown",
+                        "gene_id_type": "symbol",
+                        "status": "available",
+                        "local_path": str(gene_set_path.relative_to(root)),
+                        "source": "user_import",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    task_log = root / "analysis_runs" / "gsea" / "gsea-run-ui" / "task_run.json"
+    task_log.parent.mkdir(parents=True, exist_ok=True)
+    task_log.write_text(json.dumps({"task_run_id": "gsea-run-ui", "status": "completed"}), encoding="utf-8")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    register_result(
+        root,
+        ResultIndexEntry(
+            result_id="deg-gsea-ui",
+            task_run_id="deg-gsea-run-ui",
+            task_type="deg",
+            result_semantics="formal_computed_result",
+            parameters_manifest={"gene_id_type": "symbol"},
+            output_artifacts=({"artifact_type": "deg_result_table", "path": str(deg_table.relative_to(root))},),
+            validation_status="passed",
+        ),
+    )
+    register_result(
+        root,
+        {
+            "result_id": "gsea-ui",
+            "task_run_id": "gsea-run-ui",
+            "task_type": "gsea_preranked",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "gsea-input-ui",
+            "gsea_input_id": "gsea-input-ui",
+            "source_dataset_id": "dataset-ui",
+            "source_repository_manifest": "standardized_data/repositories/repository_manifest.json",
+            "source_deg_result_id": "deg-gsea-ui",
+            "source_result_semantics": "formal_computed_result",
+            "gene_set_resource_id": "sets-gsea-ui",
+            "parameters_manifest": {"gsea_parameter_id": "gsea-ui-params", "gene_set_resource_id": "sets-gsea-ui", "rank_metric": "signed_log10_fdr_by_log2fc", "permutation_type": "gene_set", "permutation_count": 100, "random_seed": 1, "fdr_threshold": 0.25},
+            "engine_name": "python_preranked_gsea_mvp",
+            "engine_version": "0.1.0",
+            "dependency_snapshot": {"status": "passed", "packages": {"numpy": {"version": "2"}, "pandas": {"version": "3"}, "scipy": {"version": "1"}, "statsmodels": {"version": "0.14"}}},
+            "output_artifacts": [{"artifact_type": "gsea_result_table", "path": str(gsea_table.relative_to(root))}],
+            "plot_artifacts": [],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "controlled_gsea_task_run_log", "path": "analysis_runs/gsea/gsea-run-ui/task_run.json"}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+        },
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "gseaReviewSummary")
+    assert summary is not None
+    assert "terms=1" in summary.text()
+    assert "source=deg-gsea-ui" in summary.text()
+    table = widget.findChild(QTableWidget, "gseaReviewTable")
+    assert table is not None
+    assert "Positive" in _table_text(table)
+    plot_status = widget.findChild(QLabel, "gseaPlotStatus")
+    assert plot_status is not None
+    assert "GSEA plot gate passed" in plot_status.text()
+    plot_button = widget.findChild(QPushButton, "gseaPlotButton")
+    assert plot_button is not None
+    assert plot_button.isEnabled()
+
+    plot_result = widget.generate_gsea_plot_artifact()
+    assert plot_result is not None
+    assert plot_result["status"] == "passed"
+    assert plot_result["plot_artifact"]["image_artifacts"] == []
+    assert "未生成 PNG/SVG/PDF" in widget.status_message()
+    report_status = widget.findChild(QLabel, "gseaReportReadyStatus")
+    assert report_status is not None
+    assert "GSEA report-ready gate passed" in report_status.text()
+    report_button = widget.findChild(QPushButton, "gseaReportReadyButton")
+    assert report_button is not None
+    assert report_button.isEnabled()
+    report_package = widget.generate_gsea_report_ready_package()
+    assert report_package is not None
+    assert report_package["status"] == "gsea_report_ready_package_created"
+    assert Path(str(report_package["package_path"])).is_dir()
+    assert "仅包含 GSEA section" in widget.status_message()
+
+
 def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_summary) -> None:
     table_path = project_summary.project_root / "results" / "tables" / "formal_deg_report.tsv"
     table_path.parent.mkdir(parents=True, exist_ok=True)
