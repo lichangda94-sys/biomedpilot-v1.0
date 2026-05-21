@@ -207,12 +207,23 @@ def test_meta_active_type_selection_remains_schema_shell(meta_workspace) -> None
 def test_meta_fulltext_extraction_tabs_match_c1_concept(meta_workspace) -> None:
     meta_workspace.show_target_ia_page("fulltext_extraction")
     tabs = meta_workspace.findChildren(QPushButton, "metaFulltextExtractionTab")
+    by_tab = {tab.property("tabKey"): tab for tab in tabs}
+    management_body = meta_workspace.findChild(QFrame, "metaFulltextManagementBody")
+    extraction_body = meta_workspace.findChild(QFrame, "metaExtractionDesignBody")
     confirm = meta_workspace.findChild(QPushButton, "metaConfirmExtractionButton")
     fields = meta_workspace.findChildren(QLabel, "metaExtractionFieldCell")
     labels = "\n".join(label.text() for label in meta_workspace.findChildren(QLabel))
 
     assert [tab.property("tabKey") for tab in tabs] == ["全文管理", "提取表设计", "提取完成核查", "历史记录"]
     assert "数据提取" not in [tab.property("tabKey") for tab in tabs]
+    assert management_body is not None
+    assert extraction_body is not None
+    assert not management_body.isHidden()
+    assert extraction_body.isHidden()
+    by_tab["提取表设计"].click()
+    assert by_tab["提取表设计"].isChecked()
+    assert management_body.isHidden()
+    assert not extraction_body.isHidden()
     assert confirm is not None
     assert confirm.property("actionSemantic") == "advance_to_extraction_stage"
     assert not confirm.isEnabled()

@@ -324,8 +324,8 @@ if QWidget is not None:
             preview = make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview")
             preview.setObjectName("metaDeveloperPreviewChip")
             layout.addWidget(preview)
-            result_panel = make_result_report_export_adoption_panel(module="meta_analysis")
-            layout.addWidget(result_panel)
+            self._result_export_panel = make_result_report_export_adoption_panel(module="meta_analysis")
+            layout.addWidget(self._result_export_panel)
 
             self._target_interaction_status = QLabel("")
             self._target_interaction_status.setObjectName("metaTargetInteractionStatus")
@@ -355,10 +355,16 @@ if QWidget is not None:
             self._fulltext_extraction_panel = self._build_fulltext_extraction_panel()
             layout.addWidget(self._fulltext_extraction_panel)
 
+            self._active_type_section = QFrame()
+            self._active_type_section.setObjectName("metaActiveTypeSection")
+            active_type_layout = QVBoxLayout(self._active_type_section)
+            active_type_layout.setContentsMargins(0, 0, 0, 0)
+            active_type_layout.setSpacing(10)
+
             self._active_type_status = QLabel("")
             self._active_type_status.setObjectName("metaActiveTypeInteractionStatus")
             self._active_type_status.setWordWrap(True)
-            layout.addWidget(self._active_type_status)
+            active_type_layout.addWidget(self._active_type_status)
 
             type_groups: dict[str, list[MetaActiveType]] = {}
             for meta_type in meta_active_types_v1():
@@ -367,7 +373,7 @@ if QWidget is not None:
                 group_label = QLabel(group)
                 group_label.setObjectName("metaTypeGroupTitle")
                 group_label.setStyleSheet("font-weight: 700;")
-                layout.addWidget(group_label)
+                active_type_layout.addWidget(group_label)
                 type_row = QHBoxLayout()
                 type_row.setSpacing(8)
                 for meta_type in meta_types:
@@ -407,7 +413,7 @@ if QWidget is not None:
                     card_layout.addWidget(effect)
                     card_layout.addWidget(select)
                     type_row.addWidget(card)
-                layout.addLayout(type_row)
+                active_type_layout.addLayout(type_row)
 
             planned = QLabel("Network Meta：planned only / not enabled，不属于当前 active Meta 类型。")
             planned.setObjectName("metaNetworkMetaBoundary")
@@ -416,7 +422,7 @@ if QWidget is not None:
             planned.setProperty("formalActionEnabled", False)
             planned.setWordWrap(True)
             planned.setStyleSheet("border: 1px solid #F5D899; border-radius: 6px; padding: 6px 8px; background: #FFF7E6;")
-            layout.addWidget(planned)
+            active_type_layout.addWidget(planned)
             network_button = QPushButton("Network Meta planned")
             network_button.setObjectName("metaNetworkMetaPlannedButton")
             network_button.setProperty("typeId", "network_meta_analysis")
@@ -424,7 +430,8 @@ if QWidget is not None:
             network_button.setProperty("interactionMode", "planned_disabled")
             network_button.setProperty("formalActionEnabled", False)
             network_button.setEnabled(False)
-            layout.addWidget(network_button)
+            active_type_layout.addWidget(network_button)
+            layout.addWidget(self._active_type_section)
             self._sync_target_interaction_state()
             self._sync_type_interaction_state()
             return frame
@@ -436,6 +443,7 @@ if QWidget is not None:
             frame.setProperty("pageKey", "fulltext_extraction")
             frame.setProperty("semanticKey", PageKey.META_FULLTEXT_EXTRACTION.value)
             frame.setProperty("statusKey", "testing")
+            frame.setMinimumHeight(360)
             frame.setStyleSheet("QFrame#metaFulltextExtractionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
             layout = QVBoxLayout(frame)
             layout.setContentsMargins(14, 12, 14, 12)
@@ -443,22 +451,53 @@ if QWidget is not None:
 
             tab_row = QHBoxLayout()
             tab_row.setSpacing(8)
+            self._fulltext_extraction_tabs: dict[str, QPushButton] = {}
             for index, tab in enumerate(("全文管理", "提取表设计", "提取完成核查", "历史记录")):
                 button = QPushButton(tab)
                 button.setObjectName("metaFulltextExtractionTab")
                 button.setCheckable(True)
-                button.setChecked(index == 1)
+                button.setChecked(index == 0)
+                button.setMinimumHeight(28)
                 button.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                 button.setProperty("pageKey", "fulltext_extraction")
                 button.setProperty("tabKey", tab)
+                button.clicked.connect(lambda _checked=False, tab_key=tab: self._select_fulltext_extraction_tab(tab_key))
+                self._fulltext_extraction_tabs[tab] = button
                 tab_row.addWidget(button)
             tab_row.addStretch(1)
             layout.addLayout(tab_row)
 
-            body = QHBoxLayout()
+            self._fulltext_management_body = QFrame()
+            self._fulltext_management_body.setObjectName("metaFulltextManagementBody")
+            self._fulltext_management_body.setStyleSheet("QFrame#metaFulltextManagementBody { border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; }")
+            management_layout = QVBoxLayout(self._fulltext_management_body)
+            management_layout.setContentsMargins(12, 10, 12, 10)
+            management_layout.setSpacing(8)
+            management_title = QLabel("全文管理")
+            management_title.setObjectName("metaFulltextManagementTitle")
+            management_title.setStyleSheet("font-weight: 700;")
+            management_layout.addWidget(management_title)
+            for text in (
+                "全文文件：待绑定 PDF / HTML；当前不自动抽取正文。",
+                "提取准备：仅做 shell 级状态核查，不生成研究数据。",
+                "下一步：确认全文齐备后进入提取表设计与人工提取阶段。",
+            ):
+                label = QLabel(text)
+                label.setObjectName("metaFulltextManagementStatus")
+                label.setWordWrap(True)
+                management_layout.addWidget(label)
+            management_layout.addStretch(1)
+            layout.addWidget(self._fulltext_management_body)
+
+            self._extraction_design_body = QFrame()
+            self._extraction_design_body.setObjectName("metaExtractionDesignBody")
+            self._extraction_design_body.setStyleSheet("QFrame#metaExtractionDesignBody { border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; }")
+            body = QHBoxLayout(self._extraction_design_body)
+            body.setContentsMargins(12, 10, 12, 10)
             body.setSpacing(12)
             structure = QFrame()
             structure.setObjectName("metaExtractionStructurePanel")
+            structure.setMinimumWidth(220)
             structure.setStyleSheet("QFrame#metaExtractionStructurePanel { border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; }")
             structure_layout = QVBoxLayout(structure)
             structure_layout.setContentsMargins(12, 10, 12, 10)
@@ -485,6 +524,7 @@ if QWidget is not None:
 
             fields = QFrame()
             fields.setObjectName("metaExtractionFieldStructure")
+            fields.setMinimumHeight(260)
             fields.setStyleSheet("QFrame#metaExtractionFieldStructure { border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; }")
             fields_layout = QVBoxLayout(fields)
             fields_layout.setContentsMargins(12, 10, 12, 10)
@@ -519,9 +559,12 @@ if QWidget is not None:
                     field_grid.addWidget(label, row, column)
             fields_layout.addLayout(field_grid)
             body.addWidget(fields, 3)
-            layout.addLayout(body)
+            layout.addWidget(self._extraction_design_body)
 
-            action_row = QHBoxLayout()
+            self._extraction_action_bar = QFrame()
+            self._extraction_action_bar.setObjectName("metaExtractionActionBar")
+            action_row = QHBoxLayout(self._extraction_action_bar)
+            action_row.setContentsMargins(0, 0, 0, 0)
             save = QPushButton("保存提取表设计")
             save.setObjectName("metaSaveExtractionDesignButton")
             save.setEnabled(False)
@@ -538,8 +581,20 @@ if QWidget is not None:
             action_row.addStretch(1)
             action_row.addWidget(confirm)
             action_row.addWidget(back)
-            layout.addLayout(action_row)
+            layout.addWidget(self._extraction_action_bar)
+            self._select_fulltext_extraction_tab("全文管理")
             return frame
+
+        def _select_fulltext_extraction_tab(self, tab_key: str) -> None:
+            for key, button in getattr(self, "_fulltext_extraction_tabs", {}).items():
+                button.setChecked(key == tab_key)
+            show_extraction_design = tab_key == "提取表设计"
+            if hasattr(self, "_fulltext_management_body"):
+                self._fulltext_management_body.setVisible(tab_key == "全文管理")
+            if hasattr(self, "_extraction_design_body"):
+                self._extraction_design_body.setVisible(show_extraction_design)
+            if hasattr(self, "_extraction_action_bar"):
+                self._extraction_action_bar.setVisible(show_extraction_design)
 
         def _sync_target_interaction_state(self) -> None:
             pages = {page.key: page for page in meta_target_ia_pages()}
@@ -552,6 +607,10 @@ if QWidget is not None:
                 )
             if hasattr(self, "_fulltext_extraction_panel"):
                 self._fulltext_extraction_panel.setVisible(self._current_target_page_key == "fulltext_extraction")
+            if hasattr(self, "_active_type_section"):
+                self._active_type_section.setVisible(self._current_target_page_key == "question_meta_type")
+            if hasattr(self, "_result_export_panel"):
+                self._result_export_panel.setVisible(self._current_target_page_key in {"result_report", "report_export"})
 
         def _sync_type_interaction_state(self) -> None:
             types = {meta_type.type_id: meta_type for meta_type in meta_active_types_v1()}
