@@ -21,4 +21,5 @@ def test_survival_dependency_missing_is_blocker_not_traceback() -> None:
     snapshot = check_survival_backend_dependencies()
 
     assert "python_lifelines" in snapshot
-    assert snapshot["warnings"] == ["survival_backend_detection_only_no_km_cox_logrank_execution"]
+    assert snapshot["warnings"] == ["survival_backend_detect_first_no_auto_install"]
+    assert snapshot["install_action"] == "none_detect_first_only"

@@ -45,7 +45,7 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert _row(rows, "formal_gsea")["state"] == "hidden_until_ready"
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
-    assert "KM/Cox/log-rank" in _row(rows, "km_cox_logrank")["label"]
+    assert "KM/log-rank" in _row(rows, "km_cox_logrank")["label"]
 
 
 def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:

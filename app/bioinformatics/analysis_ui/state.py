@@ -4,11 +4,22 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
+from app.bioinformatics.clinical_analysis import build_clinical_association_preflight, build_survival_package, build_survival_preflight
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
 from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
+from app.bioinformatics.survival_clinical import (
+    audit_cox_multivariate_design,
+    build_cox_univariate_parameter_manifest,
+    build_km_logrank_parameter_manifest,
+    load_cox_univariate_confirmation,
+    load_km_logrank_confirmation,
+    validate_cox_univariate_confirmation,
+    validate_km_logrank_confirmation,
+)
+from app.bioinformatics.survival_clinical._io import asset_path, read_table
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
@@ -34,6 +45,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
+    survival_gates = build_km_logrank_gate_state(packages=packages, survival_dependency=survival_dependency, project_root=root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
@@ -45,13 +57,17 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
         survival_dependency=survival_dependency,
+        km_parameter_gate=survival_gates["parameter_gate"],
+        km_confirmation_gate=survival_gates["confirmation_gate"],
+        cox_parameter_gate=survival_gates["cox_parameter_gate"],
+        cox_confirmation_gate=survival_gates["cox_confirmation_gate"],
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
-    survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency)
+    survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, km_gate_state=survival_gates)
     blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]])
     warnings = _dedupe([*resolver.get("warnings", [])] + [item for row in package_rows for item in row["raw_warnings"]] + [item for row in dependency_rows for item in row["raw_warnings"]])
     return {
@@ -83,6 +99,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
+            "km_logrank_gate_state": survival_gates,
         },
     }
 
@@ -207,6 +224,66 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
     }
 
 
+def build_km_logrank_gate_state(*, packages: list[dict[str, Any]], survival_dependency: dict[str, Any], project_root: str | Path | None = None) -> dict[str, Any]:
+    package = next((item for item in packages if item.get("package_type") == "tcga_clinical_survival_preflight"), None)
+    if not package:
+        parameter_gate = {"status": "blocked", "blockers": ["missing_survival_preflight_package"], "warnings": []}
+        confirmation_gate = validate_km_logrank_confirmation({}, parameter_gate)
+        cox_parameter_gate = {"status": "blocked", "blockers": ["missing_survival_preflight_package"], "warnings": []}
+        cox_confirmation_gate = validate_cox_univariate_confirmation({}, cox_parameter_gate)
+        return {"survival_package": {}, "outcome_gate": {}, "clinical_variable_audit": {}, "parameter_gate": parameter_gate, "confirmation_gate": confirmation_gate, "cox_parameter_gate": cox_parameter_gate, "cox_confirmation_gate": cox_confirmation_gate, "cox_multivariate_design": {}}
+    survival_package = build_survival_package(package)
+    outcome_gate = build_survival_preflight(survival_package)
+    clinical_rows = read_table(asset_path(package.get("clinical_asset") if isinstance(package.get("clinical_asset"), dict) else None))
+    audit = build_clinical_association_preflight(clinical_rows)
+    grouping_variable, group_a, group_b = _default_km_grouping(clinical_rows, survival_package.to_dict())
+    parameter_gate = build_km_logrank_parameter_manifest(
+        survival_package,
+        outcome_gate=outcome_gate,
+        clinical_variable_audit=audit,
+        grouping_variable=grouping_variable,
+        group_a=group_a,
+        group_b=group_b,
+        dependency_snapshot=survival_dependency,
+    )
+    confirmation = load_km_logrank_confirmation(project_root) if project_root is not None else {}
+    confirmation_gate = validate_km_logrank_confirmation(confirmation, parameter_gate)
+    covariate = _default_cox_covariate(clinical_rows, survival_package.to_dict(), audit)
+    cox_parameter_gate = build_cox_univariate_parameter_manifest(
+        survival_package,
+        outcome_gate=outcome_gate,
+        clinical_variable_audit=audit,
+        covariate=covariate,
+        dependency_snapshot=survival_dependency,
+    )
+    cox_confirmation = load_cox_univariate_confirmation(project_root) if project_root is not None else {}
+    cox_confirmation_gate = validate_cox_univariate_confirmation(cox_confirmation, cox_parameter_gate)
+    cox_multivariate_design = audit_cox_multivariate_design(survival_package, audit)
+    gate_rows = [
+        _formal_deg_gate_row("B12 survival input", "passed" if not survival_package.blockers else "blocked", list(survival_package.blockers), list(survival_package.warnings)),
+        _formal_deg_gate_row("B12 outcome gate", outcome_gate.get("status"), outcome_gate.get("blockers", []), outcome_gate.get("warnings", [])),
+        _formal_deg_gate_row("B13 KM/log-rank parameters", parameter_gate.get("status"), parameter_gate.get("blockers", []), parameter_gate.get("warnings", [])),
+        _formal_deg_gate_row("B13 user confirmation", confirmation_gate.get("status"), confirmation_gate.get("blockers", []), confirmation_gate.get("warnings", [])),
+        _formal_deg_gate_row("B14 Cox univariate parameters", cox_parameter_gate.get("status"), cox_parameter_gate.get("blockers", []), cox_parameter_gate.get("warnings", [])),
+        _formal_deg_gate_row("B14 Cox user confirmation", cox_confirmation_gate.get("status"), cox_confirmation_gate.get("blockers", []), cox_confirmation_gate.get("warnings", [])),
+        _formal_deg_gate_row("B14 Cox multivariate design audit", "blocked" if cox_multivariate_design.get("blockers") else "design_only", cox_multivariate_design.get("blockers", []), cox_multivariate_design.get("warnings", []), basis="design audit only; no multivariate execution"),
+        _formal_deg_gate_row("Survival dependency", survival_dependency.get("status"), survival_dependency.get("blockers", []), survival_dependency.get("warnings", []), basis="lifelines detect-first; no install action"),
+    ]
+    return {
+        "survival_package": survival_package.to_dict(),
+        "outcome_gate": outcome_gate,
+        "clinical_variable_audit": audit,
+        "parameter_gate": parameter_gate,
+        "confirmation_gate": confirmation_gate,
+        "parameter_confirmation": confirmation,
+        "cox_parameter_gate": cox_parameter_gate,
+        "cox_confirmation_gate": cox_confirmation_gate,
+        "cox_parameter_confirmation": cox_confirmation,
+        "cox_multivariate_design": cox_multivariate_design,
+        "gate_rows": gate_rows,
+    }
+
+
 def _formal_deg_gate_row(gate: str, status: object, blockers: object, warnings: object = (), *, basis: str = "") -> dict[str, Any]:
     return {
         "gate": gate,
@@ -301,8 +378,14 @@ def build_gate_preview_rows(*, result_entries: list[dict[str, Any]], report_gate
     ]
 
 
-def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dependency: dict[str, Any]) -> list[dict[str, Any]]:
+def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dependency: dict[str, Any], km_gate_state: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     package = next((item for item in packages if item.get("package_type") == "tcga_clinical_survival_preflight"), None)
+    km_gate_state = km_gate_state or {}
+    parameter_gate = km_gate_state.get("parameter_gate") if isinstance(km_gate_state.get("parameter_gate"), dict) else {}
+    confirmation_gate = km_gate_state.get("confirmation_gate") if isinstance(km_gate_state.get("confirmation_gate"), dict) else {}
+    cox_parameter_gate = km_gate_state.get("cox_parameter_gate") if isinstance(km_gate_state.get("cox_parameter_gate"), dict) else {}
+    cox_confirmation_gate = km_gate_state.get("cox_confirmation_gate") if isinstance(km_gate_state.get("cox_confirmation_gate"), dict) else {}
+    cox_multivariate_design = km_gate_state.get("cox_multivariate_design") if isinstance(km_gate_state.get("cox_multivariate_design"), dict) else {}
     blockers = _list(package.get("blockers")) if package else ["missing_survival_preflight_package"]
     warnings = _list(package.get("warnings")) if package else []
     dep_blockers = _list(survival_dependency.get("blockers"))
@@ -320,12 +403,57 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
         },
         {
             "row_id": "km_cox_logrank",
-            "label": "KM/Cox/log-rank/HR",
-            "status": "hidden_until_ready",
+            "label": "Two-group KM/log-rank",
+            "status": str(parameter_gate.get("status") or "blocked"),
             "asset_status": package_status,
             "backend_status": str(survival_dependency.get("status") or "unknown"),
-            "disabled_reason": "Survival statistics are disabled in B8.9; no KM plot, HR, Cox or log-rank p-value.",
-            "warnings": "design/preflight only",
+            "disabled_reason": compact_list(_list(parameter_gate.get("blockers")) + _list(confirmation_gate.get("blockers")) + _list(survival_dependency.get("blockers"))),
+            "warnings": compact_list(_list(parameter_gate.get("warnings"))),
+        },
+        {
+            "row_id": "km_plot_artifact",
+            "label": "KM plot artifact/spec",
+            "status": "available_after_survival_km_logrank_result",
+            "asset_status": "spec-only no image dependency",
+            "backend_status": "not matplotlib/R/survminer",
+            "disabled_reason": "Requires formal_computed_result survival_km_logrank source; image_artifacts=[] in B13.",
+            "warnings": "No PNG/SVG/PDF generated in B13.",
+        },
+        {
+            "row_id": "cox_hr",
+            "label": "Single-variable Cox",
+            "status": str(cox_parameter_gate.get("status") or "blocked"),
+            "asset_status": package_status,
+            "backend_status": str(survival_dependency.get("status") or "unknown"),
+            "disabled_reason": compact_list(_list(cox_parameter_gate.get("blockers")) + _list(cox_confirmation_gate.get("blockers")) + _list(survival_dependency.get("blockers"))),
+            "warnings": compact_list(_list(cox_parameter_gate.get("warnings"))),
+        },
+        {
+            "row_id": "cox_forest_plot",
+            "label": "Cox forest plot artifact/spec",
+            "status": "available_after_cox_univariate_result",
+            "asset_status": "spec-only no image dependency",
+            "backend_status": "not matplotlib/R/ggplot2",
+            "disabled_reason": "Requires formal_computed_result cox_univariate source; image_artifacts=[] in B14.",
+            "warnings": "No PNG/SVG/PDF generated in B14.",
+        },
+        {
+            "row_id": "cox_multivariate_design",
+            "label": "Multivariate Cox design audit",
+            "status": "blocked" if cox_multivariate_design.get("blockers") else "design_only",
+            "asset_status": f"event_per_variable={cox_multivariate_design.get('event_per_variable', '')}",
+            "backend_status": "execution disabled",
+            "disabled_reason": compact_list(_list(cox_multivariate_design.get("blockers"))),
+            "warnings": compact_list(_list(cox_multivariate_design.get("warnings"))),
+        },
+        {
+            "row_id": "risk_score",
+            "label": "Risk score / nomogram",
+            "status": "disabled",
+            "asset_status": package_status,
+            "backend_status": "not enabled",
+            "disabled_reason": "Risk score, nomogram and clinical risk grouping are not implemented in B14.",
+            "warnings": "No prognosis or treatment recommendation.",
         },
         {
             "row_id": "clinical_association",
@@ -337,6 +465,31 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
             "warnings": "No clinical advice.",
         },
     ]
+
+
+def _default_km_grouping(rows: list[dict[str, str]], survival_package: dict[str, Any]) -> tuple[str, str, str]:
+    excluded = {str(survival_package.get("time_field") or ""), str(survival_package.get("event_field") or "")}
+    for field in rows[0].keys() if rows else []:
+        if field in excluded or field in {"sample_id", "case_id", "barcode", "tcga_barcode", "patient_barcode", "participant_barcode"}:
+            continue
+        values = sorted({str(row.get(field) or "").strip() for row in rows if str(row.get(field) or "").strip()})
+        if len(values) == 2:
+            return field, values[0], values[1]
+    return "", "", ""
+
+
+def _default_cox_covariate(rows: list[dict[str, str]], survival_package: dict[str, Any], audit: dict[str, Any]) -> str:
+    excluded = {str(survival_package.get("time_field") or ""), str(survival_package.get("event_field") or "")}
+    mapping = audit.get("variable_mapping") if isinstance(audit.get("variable_mapping"), dict) else {}
+    for name, spec in mapping.items():
+        if name in excluded or name in {"sample_id", "case_id", "barcode", "tcga_barcode", "patient_barcode", "participant_barcode"}:
+            continue
+        if isinstance(spec, dict) and spec.get("variable_type") in {"binary_variable", "categorical_variable", "continuous_variable", "ordinal_variable"}:
+            return str(name)
+    for field in rows[0].keys() if rows else []:
+        if field not in excluded:
+            return field
+    return ""
 
 
 def _dependency_row(dependency_id: str, label: str, status: dict[str, Any], *, required: bool, blocker_if_missing: str = "") -> dict[str, Any]:

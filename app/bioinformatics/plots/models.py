@@ -6,7 +6,7 @@ from typing import Any
 
 
 PLOT_ARTIFACT_SCHEMA_VERSION = "biomedpilot.plot_artifact.v1"
-PLOT_TYPES = {"volcano_plot", "deg_heatmap", "ora_barplot", "ora_dotplot", "correlation_scatter", "km_plot"}
+PLOT_TYPES = {"volcano_plot", "deg_heatmap", "ora_barplot", "ora_dotplot", "correlation_scatter", "km_plot", "km_curve", "cox_forest_plot"}
 
 
 @dataclass(frozen=True)
@@ -15,11 +15,13 @@ class PlotArtifact:
     plot_type: str
     source_result_id: str
     source_result_semantics: str
+    source_task_type: str = ""
     plot_semantics: str = ""
     plot_artifact_scope: str = "inherited_semantics_plot"
     input_package_id: str = ""
     task_run_id: str = ""
     parameters_manifest: dict[str, Any] = field(default_factory=dict)
+    plot_parameters: dict[str, Any] = field(default_factory=dict)
     plot_spec_artifact: dict[str, Any] = field(default_factory=dict)
     image_artifacts: tuple[dict[str, Any], ...] = ()
     table_artifacts: tuple[dict[str, Any], ...] = ()
