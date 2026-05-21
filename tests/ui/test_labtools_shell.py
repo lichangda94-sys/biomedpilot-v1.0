@@ -76,50 +76,44 @@ def test_general_calculator_excludes_experiment_specific_workflows(labtools_wind
     )
     details = "\n".join(label.text() for label in general_card.findChildren(QLabel, "labtoolsEntryDetail"))
 
-    assert "跨实验场景" in details
-    assert "Western Blot" in details
-    assert "PCR/qPCR" in details
-    assert "ELISA" in details
-    assert "MTT/CCK-8/AlamarBlue" in details
-    assert "不包含" in details
+    assert "稀释计算" in details
+    assert "加样计算" in details
+    assert "单位换算" in details
+    assert "Western Blot" not in details
+    assert "PCR/qPCR" not in details
+    assert "ELISA" not in details
+    assert "MTT/CCK-8/AlamarBlue" not in details
 
 
-def test_labtools_experiment_modules_cover_five_categories(labtools_window) -> None:
+def test_labtools_home_does_not_render_experiment_categories_as_large_cards(labtools_window) -> None:
     module_titles = labtools_window.findChildren(QLabel, "labtoolsExperimentModuleTitle")
-    module_keys = [label.property("semanticKey") for label in module_titles]
-    module_details = "\n".join(label.text() for label in labtools_window.findChildren(QLabel, "labtoolsExperimentModuleDetail"))
-
-    assert module_keys == [
-        PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
-        PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
-        PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value,
-        PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
-        PageKey.LABTOOLS_IHC.value,
-    ]
-    assert all(label.property("moduleKey") == ModuleKey.LABTOOLS.value for label in module_titles)
-    assert "MTT / CCK-8 / AlamarBlue 归属此类" in module_details
-    assert "Western Blot 完整流程" in module_details
-    assert "PCR" in module_details
-    assert "qPCR" in module_details
-    assert "ELISA" in module_details
-
-
-def test_labtools_statuses_and_boundaries_are_explicit(labtools_window) -> None:
-    chips = labtools_window.findChildren(QLabel, "uiStatusChip")
-    status_keys = {chip.property("statusKey") for chip in chips}
     labels = "\n".join(label.text() for label in labtools_window.findChildren(QLabel))
 
-    assert {"planned", "testing", "shell_only"} <= status_keys
-    assert "不实现完整库存系统" in labels
-    assert "不做云端协作" in labels
-    assert "不做局域网共享" in labels
-    assert "不重写真实实验计算逻辑" in labels
+    assert module_titles == []
+    assert "细胞实验、蛋白实验、核酸实验、免疫与吸光度实验、免疫组化。" in labels
+    assert "说明与边界" not in labels
+
+
+def test_labtools_statuses_and_quick_access_are_explicit(labtools_window) -> None:
+    content = labtools_window.findChild(QFrame, "labtoolsShellContent") or labtools_window.findChild(QScrollArea, "labtoolsShellPage").widget()
+    chips = content.findChildren(QLabel, "uiStatusChip")
+    status_keys = {chip.property("statusKey") for chip in chips}
+    labels = "\n".join(label.text() for label in content.findChildren(QLabel))
+    quick_buttons = content.findChildren(QPushButton, "quickAccessButton")
+
+    assert {"planned", "testing", "shell_only", "developer_preview"} <= status_keys
+    assert [button.property("quickAccessKey") for button in quick_buttons] == ["使用指南", "常见问题", "意见反馈", "最近使用"]
+    assert "不实现完整库存系统" not in labels
+    assert "不做云端协作" not in labels
+    assert "不做局域网共享" not in labels
+    assert "不重写真实实验计算逻辑" not in labels
 
 
 def test_image_analysis_engine_points_to_settings_not_primary_labtools_entry(labtools_window) -> None:
-    primary_titles = [label.text() for label in labtools_window.findChildren(QLabel, "labtoolsPrimaryEntryTitle")]
-    boundary_labels = "\n".join(label.text() for label in labtools_window.findChildren(QLabel, "labtoolsBoundaryDetail"))
+    content = labtools_window.findChild(QScrollArea, "labtoolsShellPage").widget()
+    primary_titles = [label.text() for label in content.findChildren(QLabel, "labtoolsPrimaryEntryTitle")]
+    labels = "\n".join(label.text() for label in content.findChildren(QLabel))
 
     assert all("图像分析" not in title for title in primary_titles)
-    assert "Settings / 外部能力" in boundary_labels
-    assert "不作为 LabTools 一级入口" in boundary_labels
+    assert "图像分析" not in labels
+    assert content.findChildren(QLabel, "labtoolsBoundaryDetail") == []

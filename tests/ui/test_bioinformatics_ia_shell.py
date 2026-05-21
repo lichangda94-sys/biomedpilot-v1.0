@@ -82,14 +82,13 @@ def test_bioinformatics_target_ia_pages_are_consolidated() -> None:
 
 def test_bioinformatics_workspace_renders_target_ia_shell(bio_workspace) -> None:
     title = bio_workspace.findChild(QLabel, "bioinformaticsIATitle")
-    boundary = bio_workspace.findChild(QLabel, "bioinformaticsIABoundary")
+    subtitle = bio_workspace.findChild(QLabel, "bioinformaticsIASubtitle")
     nav_items = bio_workspace.findChildren(QPushButton, "bioinformaticsIANavItem")
 
     assert title is not None
-    assert title.text() == "Bioinformatics / 生信分析目标 IA shell"
-    assert boundary is not None
-    assert "resolver-first / preflight-first / result-schema-first" in boundary.text()
-    assert "不启用正式分析执行器" in boundary.text()
+    assert title.text() == "生信分析 / Bioinformatics"
+    assert subtitle is not None
+    assert "一站式分析与可视化" in subtitle.text()
     assert len(nav_items) == 9
     assert tuple(item.property("pageKey") for item in nav_items) == bio_workspace.target_ia_page_keys()
     assert tuple(item.property("pageKey") for item in nav_items if item.property("pageGroup") == "main_flow") == (
@@ -123,17 +122,18 @@ def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) 
     assert by_page["settings_resources"].property("semanticKey") == PageKey.BIO_SETTINGS_RESOURCES.value
 
 
-def test_bioinformatics_shell_copy_keeps_preflight_and_result_boundaries(bio_workspace) -> None:
+def test_bioinformatics_shell_copy_keeps_user_facing_flow_and_quick_access(bio_workspace) -> None:
     labels = "\n".join(label.text() for label in bio_workspace.findChildren(QLabel))
     tooltips = "\n".join(button.toolTip() for button in bio_workspace.findChildren(QPushButton, "bioinformaticsIANavItem"))
+    quick_buttons = bio_workspace.findChildren(QPushButton, "quickAccessButton")
 
-    assert "preflight/gated" in labels
-    assert "imported_external_result != formal_computed_result" in labels
-    assert "report draft / testing summary only" in labels
-    assert "TCGA+GTEx 不自动合并" in tooltips
-    assert "不得把预检包装成正式 DEG/GSEA/生存分析执行" in tooltips
-    assert "不生成假结果或假图" in tooltips
-    assert "不声明 report-ready 正式报告" in tooltips
+    assert "生信分析流程概览 / Workflow Overview" in labels
+    assert [button.property("quickAccessKey") for button in quick_buttons] == ["最近使用", "使用指南", "常见问题", "意见反馈"]
+    assert "Architecture Boundaries" not in labels
+    assert "resolver-first" not in labels
+    assert "preflight-first" not in labels
+    assert "result-schema-first" not in labels
+    assert "TCGA+GTEx 不自动合并" not in tooltips
 
 
 def test_bioinformatics_adopts_shared_result_report_export_shell(bio_workspace) -> None:
@@ -171,13 +171,27 @@ def test_bioinformatics_legacy_routes_are_mapped_to_target_pages() -> None:
 
 def test_bioinformatics_workspace_exposes_legacy_route_calibration(bio_workspace) -> None:
     route_items = bio_workspace.findChildren(QPushButton, "bioinformaticsLegacyRouteItem")
-    by_route = {item.property("routeKey"): item for item in route_items}
 
-    assert tuple(by_route) == bio_workspace.legacy_route_keys()
-    assert by_route["recognition"].property("targetPageKey") == "data_check_preparation"
-    assert by_route["workflow_status"].property("targetPageKey") == "project_logs_technical_details"
-    assert by_route["workflow_status"].property("routeVisibility") == "developer_diagnostic"
-    assert all(not item.isEnabled() for item in route_items)
+    assert route_items == []
+    calibration = {item["route_key"]: item for item in bio_workspace.legacy_route_calibration()}
+    assert tuple(calibration) == bio_workspace.legacy_route_keys()
+    assert calibration["recognition"]["target_page_key"] == "data_check_preparation"
+    assert calibration["workflow_status"]["target_page_key"] == "project_logs_technical_details"
+    assert calibration["workflow_status"]["visibility"] == "developer_diagnostic"
+
+
+def test_bioinformatics_result_report_highlights_step_six_without_meta_context(bio_workspace) -> None:
+    bio_workspace.show_results_browser()
+    nav_items = bio_workspace.findChildren(QPushButton, "bioinformaticsIANavItem")
+    by_page = {item.property("pageKey"): item for item in nav_items}
+    labels = "\n".join(label.text() for label in bio_workspace.findChildren(QLabel))
+
+    assert by_page["result_report"].isChecked()
+    assert by_page["result_report"].property("flowIndex") == 6
+    assert by_page["result_report"].property("moduleKey") == ModuleKey.BIOINFORMATICS.value
+    assert "PubMed" not in labels
+    assert "文献筛选" not in labels
+    assert "forest plot" not in labels
 
 
 def test_bioinformatics_legacy_navigation_sets_current_target_metadata(bio_workspace) -> None:

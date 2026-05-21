@@ -232,6 +232,31 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return frame
 
+    def _quick_access_card(self, *, module_key: str, object_name: str, items: tuple[str, ...]) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName(object_name)
+        frame.setProperty("moduleKey", module_key)
+        frame.setStyleSheet(f"QFrame#{object_name} {{ border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }}")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(12)
+        title = QLabel("快速入口")
+        title.setObjectName("quickAccessTitle")
+        title.setStyleSheet("font-weight: 700;")
+        layout.addWidget(title)
+        row = QHBoxLayout()
+        row.setSpacing(12)
+        for item in items:
+            button = make_button(item, role="secondary")
+            button.setObjectName("quickAccessButton")
+            button.setProperty("moduleKey", module_key)
+            button.setProperty("quickAccessKey", item)
+            button.setEnabled(False)
+            row.addWidget(button)
+        row.addStretch(1)
+        layout.addLayout(row)
+        return frame
+
     def _recent_projects_card(self) -> QFrame:
         frame = QFrame()
         frame.setStyleSheet("QFrame { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
@@ -272,10 +297,11 @@ class MainWindow(QMainWindow):
         title.setProperty("semanticKey", ModuleKey.LABTOOLS.value)
         title.setStyleSheet("font-size: 24px; font-weight: 700;")
         root.addWidget(title)
-        note = QLabel("低保真 IA 壳层：LabTools 一级入口只保留通用计算器、试剂制备、实验模块。本阶段不接入真实实验计算、完整库存、云端协作或局域网共享。")
-        note.setObjectName("labtoolsScopeNote")
-        note.setWordWrap(True)
-        root.addWidget(note)
+        subtitle = QLabel("通用计算、试剂配制与实验流程工具集合，为生物医学实验提供可靠的计算与规划支持。")
+        subtitle.setObjectName("labtoolsShellSubtitle")
+        subtitle.setWordWrap(True)
+        root.addWidget(subtitle)
+        root.addWidget(make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview"))
 
         entry_row = QHBoxLayout()
         entry_row.setSpacing(14)
@@ -286,8 +312,11 @@ class MainWindow(QMainWindow):
                 semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
                 status_key="shell_only",
                 rows=[
-                    "跨实验场景的公式型动态求解器。",
-                    "不包含 Western Blot、PCR/qPCR、ELISA、MTT/CCK-8/AlamarBlue 等实验专属计算。",
+                    "稀释计算",
+                    "加样计算",
+                    "分子量 / 摩尔量换算",
+                    "单位换算",
+                    "更多计算工具",
                 ],
             )
         )
@@ -298,8 +327,11 @@ class MainWindow(QMainWindow):
                 semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
                 status_key="planned",
                 rows=[
-                    "模板 -> 本次配制 -> 配制单 -> 配制记录。",
-                    "可预留材料记录联动，但不实现完整库存系统。",
+                    "溶液配制",
+                    "稀释系列",
+                    "缓冲液配方",
+                    "保存与稳定性提示",
+                    "更多配制工具",
                 ],
             )
         )
@@ -310,87 +342,17 @@ class MainWindow(QMainWindow):
                 semantic_key=PageKey.LABTOOLS_EXPERIMENT_MODULES.value,
                 status_key="testing",
                 rows=[
-                    "按真实实验目的和流程组织。",
-                    "实验专属计算、记录、数据处理和图像分析辅助归入对应实验模块。",
+                    "包含以下实验模块：",
+                    "细胞实验、蛋白实验、核酸实验、免疫与吸光度实验、免疫组化。",
                 ],
             )
         )
         root.addLayout(entry_row)
-
-        module_grid = QGridLayout()
-        module_grid.setHorizontalSpacing(14)
-        module_grid.setVerticalSpacing(14)
-        for index, (module_title, page_key, semantic_key, status_key, rows) in enumerate(
-            (
-                (
-                    "细胞实验",
-                    "cell_experiments",
-                    PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
-                    "testing",
-                    ["细胞培养与传代", "接种 / 铺板记录", "MTT / CCK-8 / AlamarBlue 归属此类"],
-                ),
-                (
-                    "蛋白实验",
-                    "protein_experiments",
-                    PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
-                    "planned",
-                    ["蛋白样本与定量", "Western Blot 完整流程", "SDS-PAGE 配胶归入 Western Blot"],
-                ),
-                (
-                    "核酸实验",
-                    "nucleic_acid_experiments",
-                    PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value,
-                    "planned",
-                    ["样本与核酸提取记录", "PCR", "qPCR 与 plate layout"],
-                ),
-                (
-                    "免疫与吸光度实验",
-                    "immuno_absorbance",
-                    PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
-                    "planned",
-                    ["ELISA", "标准曲线与浓度计算", "结果记录与导出"],
-                ),
-                (
-                    "免疫组化",
-                    "ihc",
-                    PageKey.LABTOOLS_IHC.value,
-                    "shell_only",
-                    ["切片 / 染色记录", "图像记录辅助", "结果记录"],
-                ),
-            )
-        ):
-            module_grid.addWidget(
-                self._labtools_experiment_module_card(
-                    module_title,
-                    page_key=page_key,
-                    semantic_key=semantic_key,
-                    status_key=status_key,
-                    rows=rows,
-                ),
-                index // 2,
-                index % 2,
-            )
-        root.addLayout(module_grid)
-
         root.addWidget(
-            self._labtools_boundary_card(
-                "外部图像分析引擎",
-                [
-                    "不作为 LabTools 一级入口。",
-                    "引擎检测、路径、版本和安装提示统一在 Settings / 外部能力中管理。",
-                    "LabTools 仅在具体实验模块中显示图像分析辅助的 planned / shell-only 状态。",
-                ],
-            )
-        )
-        root.addWidget(
-            self._labtools_boundary_card(
-                "当前不实施范围",
-                [
-                    "不实现完整库存系统。",
-                    "不做云端协作。",
-                    "不做局域网共享。",
-                    "不重写真实实验计算逻辑。",
-                ],
+            self._quick_access_card(
+                module_key=ModuleKey.LABTOOLS.value,
+                object_name="labtoolsQuickAccessCard",
+                items=("使用指南", "常见问题", "意见反馈", "最近使用"),
             )
         )
         root.addStretch(1)

@@ -24,7 +24,7 @@ Priority order:
 
 ## 2. Current Phase Boundary
 
-Current checkpoint after UI-B8b-prep: resource design / Figma / icon brief.
+Current checkpoint after UI-C1: low-to-mid fidelity visual calibration.
 
 Completed:
 
@@ -46,6 +46,7 @@ Completed:
 - UI-B9b: key adoption / test migration.
 - UI-B9c: selective key adoption / test migration expansion.
 - UI-C0: low-fidelity shell usability pass.
+- UI-C1: low-to-mid fidelity visual calibration from first concept image batch.
 
 Partially completed:
 
@@ -66,7 +67,7 @@ Current hard boundary:
 Recommended next stage:
 
 - UI-B8b formal resource replacement only after brand/resource owner confirmation and approved design exports, or
-- UI-C1 module-specific usability follow-up if a new shell surface needs deeper calibration.
+- UI-C2 module-specific visual/detail calibration if another concept batch needs implementation.
 
 ## 3. Rebuild Principles
 
@@ -362,15 +363,15 @@ Critical rules:
 
 ## 11. Immediate Next Stage
 
-After UI-B8b-prep, proceed only with one of the following confirmed next stages:
+After UI-C1, proceed only with one of the following confirmed next stages:
 
 ```text
-UI-C1: module-specific usability follow-up, if deeper shell calibration is needed
+UI-C2: module-specific visual/detail calibration, if another concept batch needs implementation
 UI-B8b: formal resource replacement, only after brand/resource owner approval and exported assets
 UI-B10: packaging / desktop entry, only when explicitly authorized
 ```
 
-Do not treat UI-B8b-prep as permission to replace icons, bind App icons, update Finder/LaunchServices metadata, or run packaged app validation.
+Do not treat UI-C1 as permission to replace icons, bind App icons, update Finder/LaunchServices metadata, or run packaged app validation.
 
 ## 12. UI-B0 Completion Statement
 

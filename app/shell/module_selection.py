@@ -5,6 +5,7 @@ from collections.abc import Callable
 from PySide6.QtCore import QSize, Signal, Qt
 from PySide6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -14,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.app_identity import icon_asset_summary, load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
+from app.app_identity import load_module_pixmap, load_ui02_module_selection_icon, load_ui02_module_selection_pixmap
 from app.shell.dashboard import DashboardModel
 from app.shell.login import LocalSession
 from app.shared.semantic_keys import BrandKey, ModuleKey, NavKey
@@ -86,7 +87,7 @@ class ModuleSelectionWidget(QWidget):
         self._session = session
         display = self.session_display()
         self._user_badge.setText(f"当前用户：{display['username']}")
-        self._tier_label.setText(f"当前账号等级：{display['tier']}")
+        self._tier_label.setText("Developer Preview / 本地测试版")
         self._license_label.setText(f"测试状态：{display['license_status']}")
 
     def _build_ui(self) -> None:
@@ -109,7 +110,7 @@ class ModuleSelectionWidget(QWidget):
             self._module_card(
                 title="Bioinformatics / 生信分析",
                 english_title="Resolver-first analysis workspace",
-                description="目标壳层入口：数据来源、准备检查、分析任务、结果与报告。正式按钮需遵守 preflight-first 与 result-schema-first 边界。",
+                description="从数据来源、准备检查、分组设计到结果与报告的生信工作流。",
                 button_text="进入生信分析模块",
                 object_name="bioModuleButton",
                 icon_key="bioinformatics",
@@ -122,7 +123,7 @@ class ModuleSelectionWidget(QWidget):
             self._module_card(
                 title="Meta Analysis / Meta 分析",
                 english_title="Systematic review workflow shell",
-                description="低保真入口壳：PICO、检索、筛选、提取、质量评价、统计与报告仍按 Developer Preview 边界呈现。",
+                description="围绕研究问题、Meta 类型、检索、筛选、提取与报告草稿的流程工作台。",
                 button_text="进入 Meta 分析模块",
                 object_name="metaModuleButton",
                 icon_key="meta_analysis",
@@ -135,7 +136,7 @@ class ModuleSelectionWidget(QWidget):
             self._module_card(
                 title="LabTools / 实验工具",
                 english_title="Calculators, reagents, records",
-                description="目标壳层入口：通用计算器、试剂制备、实验记录与外部图像引擎配置。本阶段不接入实验计算业务。",
+                description="通用计算器、试剂制备和实验模块三入口，按实验场景组织工具。",
                 button_text="进入 LabTools",
                 object_name="labtoolsModuleButton",
                 icon_key="labtools",
@@ -145,13 +146,8 @@ class ModuleSelectionWidget(QWidget):
             )
         )
 
-        info_row = QHBoxLayout()
-        info_row.setSpacing(SPACING["md"])
-        info_row.addWidget(self._build_recent_projects_card(), 1)
-        info_row.addWidget(self._build_support_panel(), 1)
-
         root.addLayout(module_row)
-        root.addLayout(info_row)
+        root.addWidget(self._build_recent_projects_card())
         root.addStretch(1)
         scroll.setWidget(content)
         outer.addWidget(scroll)
@@ -168,7 +164,7 @@ class ModuleSelectionWidget(QWidget):
         title = QLabel("萤火虫 / Firefly")
         title.setObjectName("dashboardTitle")
         title.setProperty("semanticKey", BrandKey.PRIMARY.value)
-        subtitle = QLabel("BioMedPilot / 医研智析低保真 Dashboard：选择 Bioinformatics、Meta Analysis 或 LabTools。")
+        subtitle = QLabel("BioMedPilot / 医研智析工作台：选择 Bioinformatics、Meta Analysis 或 LabTools。")
         subtitle.setObjectName("dashboardSubtitle")
         subtitle.setProperty("semanticKey", BrandKey.SECONDARY.value)
         subtitle.setWordWrap(True)
@@ -185,9 +181,11 @@ class ModuleSelectionWidget(QWidget):
         version.setObjectName("sessionBadge")
         layout.addWidget(version)
         layout.addWidget(self._ui02_icon_label("developer_preview", 24))
-        preview = QLabel("Developer Preview / 本地测试版")
-        preview.setObjectName("previewBadge")
-        layout.addWidget(preview)
+        self._tier_label = QLabel("Developer Preview / 本地测试版")
+        self._tier_label.setObjectName("previewBadge")
+        layout.addWidget(self._tier_label)
+        self._license_label = QLabel("")
+        self._license_label.setVisible(False)
         return frame
 
     def _module_card(
@@ -265,55 +263,50 @@ class ModuleSelectionWidget(QWidget):
 
     def _build_recent_projects_card(self) -> QFrame:
         frame = QFrame()
-        frame.setObjectName("supportCard")
+        frame.setObjectName("dashboardRecentProjectsCard")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(SPACING["lg"], SPACING["md"], SPACING["lg"], SPACING["md"])
-        layout.setSpacing(SPACING["sm"])
-        layout.addLayout(self._title_row("最近项目", "recent_projects"))
-        projects = list(self._dashboard.recent_projects[:3])
-        if not projects:
-            layout.addLayout(self._support_line_with_icon("暂无最近项目，本阶段保留入口占位。", "project_entry"))
-        for project in projects:
-            layout.addLayout(self._support_line_with_icon(project.display_label(), "project_entry"))
-        return frame
-
-    def _build_support_panel(self) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("supportCard")
-        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(SPACING["lg"], SPACING["lg"], SPACING["lg"], SPACING["lg"])
+        layout.setContentsMargins(SPACING["xl"], SPACING["lg"], SPACING["xl"], SPACING["lg"])
         layout.setSpacing(SPACING["md"])
+        title_row = self._title_row("最近项目 / Recent Projects", "recent_projects")
+        open_more = QPushButton("打开更多项目...")
+        open_more.setObjectName("dashboardOpenMoreProjectsButton")
+        open_more.setIcon(load_ui02_module_selection_icon("project_entry"))
+        open_more.setIconSize(QSize(18, 18))
+        open_more.setEnabled(False)
+        title_row.insertWidget(title_row.count() - 1, open_more)
+        layout.addLayout(title_row)
 
-        layout.addLayout(self._title_row("壳层状态", "settings"))
-        self._tier_label = self._support_line("")
-        self._license_label = self._support_line("")
-        layout.addWidget(self._tier_label)
-        layout.addWidget(self._license_label)
-        layout.addWidget(self._support_line("Welcome / Dashboard / Sidebar / About / Test Feedback：低保真可见。"))
-        layout.addWidget(self._support_line("业务功能入口遵守 Developer Preview、planned、blocked 状态。"))
-        icon_summary = icon_asset_summary()
-        layout.addWidget(
-            self._support_line(
-                f"图标资源：已生成 {icon_summary['generated']} / {icon_summary['total']}；"
-                f"待生成 {icon_summary['pending']}。详情见设置中心。"
-            )
-        )
-        layout.addSpacing(SPACING["md"])
+        table = QGridLayout()
+        table.setObjectName("dashboardRecentProjectsTable")
+        table.setHorizontalSpacing(SPACING["lg"])
+        table.setVerticalSpacing(SPACING["sm"])
+        headers = ("项目名称", "模块类型", "最近修改时间", "状态", "操作")
+        for column, header in enumerate(headers):
+            label = QLabel(header)
+            label.setObjectName("dashboardRecentProjectsHeader")
+            label.setStyleSheet("font-weight: 700; color: #64748B;")
+            table.addWidget(label, 0, column)
 
-        layout.addLayout(self._title_row("本地环境状态", "local_environment"))
-        environment = self._dashboard.environment
-        layout.addWidget(self._support_line(f"Python：{environment.python_version}"))
-        layout.addWidget(self._support_line(f"PySide6：{'可用' if environment.pyside6_available else '不可用'}"))
-        layout.addWidget(self._support_line("环境检查详情：设置中心后续统一接入。"))
-        layout.addStretch(1)
-
-        settings_button = QPushButton("设置中心见侧边栏")
-        settings_button.setObjectName("secondaryButton")
-        settings_button.setIcon(load_ui02_module_selection_icon("settings"))
-        settings_button.setIconSize(QSize(18, 18))
-        settings_button.setEnabled(False)
-        layout.addWidget(settings_button)
+        projects = list(self._dashboard.recent_projects[:5])
+        if not projects:
+            empty = QLabel("暂无最近项目")
+            empty.setObjectName("dashboardRecentProjectsEmpty")
+            table.addWidget(empty, 1, 0, 1, len(headers))
+        for row, project in enumerate(projects, start=1):
+            module_label = "生信分析" if project.project_type == "bioinformatics" else "Meta 分析"
+            for column, value in enumerate((project.project_name, module_label, project.updated_at)):
+                label = QLabel(value)
+                label.setObjectName("dashboardRecentProjectsCell")
+                table.addWidget(label, row, column)
+            status = QLabel("测试中")
+            status.setObjectName("dashboardRecentProjectsStatus")
+            status.setStyleSheet("color: #0E6F66; background: #E7F7F5; border: 1px solid #BCE7E2; border-radius: 6px; padding: 4px 8px;")
+            table.addWidget(status, row, 3)
+            open_button = QPushButton("打开")
+            open_button.setObjectName("dashboardRecentProjectOpenButton")
+            open_button.setEnabled(False)
+            table.addWidget(open_button, row, 4)
+        layout.addLayout(table)
         return frame
 
     def _support_line(self, text: str) -> QLabel:

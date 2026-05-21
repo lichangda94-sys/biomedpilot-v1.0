@@ -85,13 +85,20 @@ def test_module_selection_displays_global_shell_brand(qt_app, local_session: Loc
     assert "订阅 / VIP" not in labels
 
 
-def test_module_selection_displays_icon_asset_summary(qt_app, local_session: LocalSession) -> None:
+def test_module_selection_displays_recent_projects_table_without_status_footer(qt_app, local_session: LocalSession) -> None:
     widget = _widget(local_session)
 
-    support_text = "\n".join(label.text() for label in widget.findChildren(QLabel, "supportLine"))
+    labels = "\n".join(label.text() for label in widget.findChildren(QLabel))
+    recent = widget.findChild(QFrame, "dashboardRecentProjectsCard")
+    headers = [label.text() for label in widget.findChildren(QLabel, "dashboardRecentProjectsHeader")]
 
-    assert "图标资源：已生成" in support_text
-    assert "待生成" in support_text
+    assert recent is not None
+    assert headers == ["项目名称", "模块类型", "最近修改时间", "状态", "操作"]
+    assert "最近项目 / Recent Projects" in labels
+    assert "本地环境可用" not in labels
+    assert "外部引擎可选配置" not in labels
+    assert "分析资源可管理" not in labels
+    assert "测试反馈入口" not in labels
 
 
 def test_three_module_cards_are_visible(qt_app, local_session: LocalSession) -> None:

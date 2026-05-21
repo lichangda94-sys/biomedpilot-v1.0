@@ -7,6 +7,7 @@ from app.shared.feature_availability import FeatureAvailability, list_features
 from app.shared.feature_status import FeatureItem, feature_item_from_availability
 from app.shared.result_report_export_shell import make_result_report_export_adoption_panel
 from app.shared.semantic_keys import AnalysisStatusKey, ModuleKey, PageKey, ReportStatusKey, ResultSemanticKey
+from app.shared.ui_components.primitives import make_status_chip
 
 
 def bioinformatics_features() -> list[FeatureItem]:
@@ -301,6 +302,8 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             self._legacy_routes = bioinformatics_legacy_routes()
             self._legacy_route_by_key = {route.route_key: route for route in self._legacy_routes}
             self._current_route_key = "project_home"
+            self._current_target_flow_page_key = "project_home"
+            self._target_ia_buttons: dict[str, QPushButton] = {}
             self._stack = QStackedWidget()
             root = QVBoxLayout(self)
             root.setContentsMargins(0, 0, 0, 0)
@@ -411,31 +414,39 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             frame.setObjectName("bioinformaticsTargetIAShell")
             frame.setStyleSheet("QFrame#bioinformaticsTargetIAShell { border-bottom: 1px solid #D8DEE9; background: #F8FAFC; }")
             layout = QVBoxLayout(frame)
-            layout.setContentsMargins(16, 12, 16, 12)
-            layout.setSpacing(8)
+            layout.setContentsMargins(18, 16, 18, 16)
+            layout.setSpacing(12)
 
-            title = QLabel("Bioinformatics / 生信分析目标 IA shell")
+            header = QHBoxLayout()
+            title_col = QVBoxLayout()
+            title = QLabel("生信分析 / Bioinformatics")
             title.setObjectName("bioinformaticsIATitle")
-            title.setStyleSheet("font-weight: 750;")
-            layout.addWidget(title)
+            title.setStyleSheet("font-size: 22px; font-weight: 750;")
+            subtitle = QLabel("提供生信分析全流程工具，支持从数据来源到结果解读的一站式分析与可视化。")
+            subtitle.setObjectName("bioinformaticsIASubtitle")
+            subtitle.setWordWrap(True)
+            title_col.addWidget(title)
+            title_col.addWidget(subtitle)
+            header.addLayout(title_col, 1)
+            header.addWidget(make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview"))
+            layout.addLayout(header)
 
-            boundary = QLabel(
-                "目标收束：resolver-first / preflight-first / result-schema-first。"
-                "分析任务为 gated copy，不启用正式分析执行器，不生成假结果或假图。"
-            )
-            boundary.setObjectName("bioinformaticsIABoundary")
-            boundary.setWordWrap(True)
-            layout.addWidget(boundary)
-
-            main_title = QLabel("Main flow / 主流程：7 target pages")
+            main_card = QFrame()
+            main_card.setObjectName("bioinformaticsWorkflowOverviewCard")
+            main_card.setStyleSheet("QFrame#bioinformaticsWorkflowOverviewCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            main_layout = QVBoxLayout(main_card)
+            main_layout.setContentsMargins(14, 14, 14, 14)
+            main_layout.setSpacing(12)
+            main_title = QLabel("生信分析流程概览 / Workflow Overview")
             main_title.setObjectName("bioinformaticsIAMainFlowTitle")
             main_title.setStyleSheet("font-weight: 700;")
-            layout.addWidget(main_title)
+            main_layout.addWidget(main_title)
             row = QHBoxLayout()
             row.setSpacing(8)
             for page in bioinformatics_main_flow_pages():
                 item = QPushButton(page.label)
                 item.setObjectName("bioinformaticsIANavItem")
+                item.setCheckable(True)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
@@ -443,20 +454,30 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("statusKey", page.status_key)
                 item.setProperty("semanticKey", _BIO_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("statusSemanticKey", page.semantic_key)
-                item.setToolTip(page.boundary)
+                item.setProperty("formalActionEnabled", False)
+                item.setToolTip(page.label)
                 item.setEnabled(False)
+                self._target_ia_buttons[page.key] = item
                 row.addWidget(item)
-            layout.addLayout(row)
+            main_layout.addLayout(row)
+            layout.addWidget(main_card)
 
-            auxiliary_title = QLabel("Auxiliary / 辅助：settings and technical details")
+            auxiliary_card = QFrame()
+            auxiliary_card.setObjectName("bioinformaticsAuxiliaryCard")
+            auxiliary_card.setStyleSheet("QFrame#bioinformaticsAuxiliaryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            auxiliary_layout = QVBoxLayout(auxiliary_card)
+            auxiliary_layout.setContentsMargins(14, 14, 14, 14)
+            auxiliary_layout.setSpacing(10)
+            auxiliary_title = QLabel("辅助功能 / Auxiliary")
             auxiliary_title.setObjectName("bioinformaticsIAAuxiliaryTitle")
             auxiliary_title.setStyleSheet("font-weight: 700;")
-            layout.addWidget(auxiliary_title)
+            auxiliary_layout.addWidget(auxiliary_title)
             auxiliary_row = QHBoxLayout()
-            auxiliary_row.setSpacing(8)
+            auxiliary_row.setSpacing(10)
             for page in bioinformatics_auxiliary_pages():
                 item = QPushButton(page.label)
                 item.setObjectName("bioinformaticsIANavItem")
+                item.setCheckable(True)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
@@ -464,48 +485,53 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("statusKey", page.status_key)
                 item.setProperty("semanticKey", _BIO_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("statusSemanticKey", page.semantic_key)
-                item.setToolTip(page.boundary)
+                item.setProperty("formalActionEnabled", False)
+                item.setToolTip(page.label)
                 item.setEnabled(False)
+                self._target_ia_buttons[page.key] = item
                 auxiliary_row.addWidget(item)
             auxiliary_row.addStretch(1)
-            layout.addLayout(auxiliary_row)
+            auxiliary_layout.addLayout(auxiliary_row)
+            layout.addWidget(auxiliary_card)
 
-            status_row = QHBoxLayout()
-            status_row.setSpacing(8)
-            for text in (
-                "preflight/gated",
-                "imported_external_result != formal_computed_result",
-                "report draft / testing summary only",
-            ):
-                label = QLabel(text)
-                label.setObjectName("bioinformaticsIABoundaryChip")
-                label.setStyleSheet("border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 8px; background: #FFFFFF;")
-                status_row.addWidget(label)
-            status_row.addStretch(1)
-            layout.addLayout(status_row)
-            layout.addWidget(make_result_report_export_adoption_panel(module="bioinformatics"))
+            self._result_report_panel = make_result_report_export_adoption_panel(module="bioinformatics")
+            self._result_report_panel.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
+            self._result_report_panel.setProperty("pageKey", "result_report")
+            self._result_report_panel.setProperty("semanticKey", PageKey.BIO_RESULT_REPORT.value)
+            layout.addWidget(self._result_report_panel)
 
-            legacy_title = QLabel("Legacy page routing calibration / 旧页面路由校准")
-            legacy_title.setObjectName("bioinformaticsLegacyRouteTitle")
-            legacy_title.setStyleSheet("font-weight: 700;")
-            layout.addWidget(legacy_title)
-            legacy_routes = list(bioinformatics_legacy_routes())
-            for start in range(0, len(legacy_routes), 4):
-                route_row = QHBoxLayout()
-                route_row.setSpacing(8)
-                for route in legacy_routes[start : start + 4]:
-                    item = QPushButton(f"{route.route_key} -> {route.target_page_key}")
-                    item.setObjectName("bioinformaticsLegacyRouteItem")
-                    item.setProperty("routeKey", route.route_key)
-                    item.setProperty("targetPageKey", route.target_page_key)
-                    item.setProperty("legacyRouteStatus", route.legacy_status)
-                    item.setProperty("routeVisibility", route.visibility)
-                    item.setToolTip(route.boundary)
-                    item.setEnabled(False)
-                    route_row.addWidget(item)
-                route_row.addStretch(1)
-                layout.addLayout(route_row)
+            quick = QFrame()
+            quick.setObjectName("bioinformaticsQuickAccessCard")
+            quick.setStyleSheet("QFrame#bioinformaticsQuickAccessCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+            quick_layout = QVBoxLayout(quick)
+            quick_layout.setContentsMargins(14, 12, 14, 12)
+            quick_layout.setSpacing(8)
+            quick_title = QLabel("快速入口")
+            quick_title.setObjectName("quickAccessTitle")
+            quick_title.setStyleSheet("font-weight: 700;")
+            quick_layout.addWidget(quick_title)
+            quick_row = QHBoxLayout()
+            quick_row.setSpacing(8)
+            for text in ("最近使用", "使用指南", "常见问题", "意见反馈"):
+                button = QPushButton(text)
+                button.setObjectName("quickAccessButton")
+                button.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
+                button.setProperty("quickAccessKey", text)
+                button.setEnabled(False)
+                quick_row.addWidget(button)
+            quick_row.addStretch(1)
+            quick_layout.addLayout(quick_row)
+            layout.addWidget(quick)
+            self._sync_target_flow_state()
             return frame
+
+        def _sync_target_flow_state(self) -> None:
+            if not hasattr(self, "_target_ia_buttons"):
+                return
+            for key, button in self._target_ia_buttons.items():
+                button.setChecked(key == self._current_target_flow_page_key)
+            if hasattr(self, "_result_report_panel"):
+                self._result_report_panel.setVisible(self._current_target_flow_page_key == "result_report")
 
         def show_project_home(self) -> None:
             self._set_current_route("project_home")
@@ -645,6 +671,9 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
 
         def _set_current_route(self, route_key: str) -> None:
             self._current_route_key = route_key
+            if route_key in self._legacy_route_by_key:
+                self._current_target_flow_page_key = self._legacy_route_by_key[route_key].target_page_key
+            self._sync_target_flow_state()
 
 
     def _feature_row(feature: FeatureAvailability) -> QFrame:

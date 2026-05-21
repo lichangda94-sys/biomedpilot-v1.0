@@ -88,9 +88,8 @@ def test_meta_workspace_renders_target_ia_shell(meta_workspace) -> None:
     assert title is not None
     assert title.text() == "Meta Analysis / Meta 分析目标 IA shell"
     assert boundary is not None
-    assert "AI suggestion 仅为人工可审核建议" in boundary.text()
-    assert "当前不启用 Network Meta" in boundary.text()
-    assert "不声明生产级系统综述能力" in boundary.text()
+    assert "定义研究问题" in boundary.text()
+    assert "全文管理" in boundary.text()
     assert len(nav_items) == 11
     assert tuple(item.property("pageKey") for item in nav_items) == meta_workspace.target_ia_page_keys()
     assert all(item.isEnabled() for item in nav_items)
@@ -184,7 +183,7 @@ def test_meta_target_page_selection_updates_shell_state_only(meta_workspace) -> 
     assert by_page["screening"].property("pageGroup") == "main_flow"
     assert by_page["screening"].property("flowIndex") == 5
     assert status is not None
-    assert "Selected target page: screening · testing · shell selection only" in status.text()
+    assert "当前页面：Screening / 文献筛选 · testing" in status.text()
     assert meta_workspace.page_keys() == ("workflow_home", "project_contract", "dev_branch")
 
 
@@ -203,3 +202,19 @@ def test_meta_active_type_selection_remains_schema_shell(meta_workspace) -> None
     assert by_type["diagnostic_accuracy_meta"].property("interactionMode") == "schema_shell"
     assert status is not None
     assert "AI suggestion remains review-only" in status.text()
+
+
+def test_meta_fulltext_extraction_tabs_match_c1_concept(meta_workspace) -> None:
+    meta_workspace.show_target_ia_page("fulltext_extraction")
+    tabs = meta_workspace.findChildren(QPushButton, "metaFulltextExtractionTab")
+    confirm = meta_workspace.findChild(QPushButton, "metaConfirmExtractionButton")
+    fields = meta_workspace.findChildren(QLabel, "metaExtractionFieldCell")
+    labels = "\n".join(label.text() for label in meta_workspace.findChildren(QLabel))
+
+    assert [tab.property("tabKey") for tab in tabs] == ["全文管理", "提取表设计", "提取完成核查", "历史记录"]
+    assert "数据提取" not in [tab.property("tabKey") for tab in tabs]
+    assert confirm is not None
+    assert confirm.property("actionSemantic") == "advance_to_extraction_stage"
+    assert not confirm.isEnabled()
+    assert any(label.text() == "研究设计" for label in fields)
+    assert "当前提取表字段（Binary Outcome Meta 专用）" in labels

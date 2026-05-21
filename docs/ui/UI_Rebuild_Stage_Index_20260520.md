@@ -8,7 +8,7 @@ Scope: UI-B0 through UI-B10
 
 ## 1. Current Stage
 
-Current checkpoint: UI-B8b-prep resource design / Figma / icon brief.
+Current checkpoint: UI-C1 low-to-mid fidelity visual calibration.
 
 Completed stages:
 
@@ -30,6 +30,7 @@ Completed stages:
 - UI-B9b: key adoption / test migration.
 - UI-B9c: selective key adoption / test migration expansion.
 - UI-C0: low-fidelity shell usability pass.
+- UI-C1: low-to-mid fidelity visual calibration from first concept image batch.
 
 Partially completed stages:
 
@@ -50,7 +51,7 @@ Current forbidden scope:
 Recommended next stage:
 
 - UI-B8b formal resource replacement only after brand/resource owner confirmation and approved design exports, or
-- UI-C1 module-specific usability follow-up if needed.
+- UI-C2 module-specific visual/detail calibration if another concept batch needs implementation.
 
 ## 2. Stage Route
 
@@ -74,6 +75,7 @@ UI-B0: MasterPlan / Visual Style Guide / I18N Strategy / Stage Index
 -> UI-B9b: key adoption / test migration
 -> UI-B9c: selective key adoption / test migration expansion
 -> UI-C0: low-fidelity shell usability pass
+-> UI-C1: low-to-mid fidelity visual calibration
 -> UI-B10: packaging and desktop entry
 ```
 
@@ -98,8 +100,9 @@ Recommended execution order:
 17. UI-B8b formal resource replacement only after resource decisions and approved exports.
 18. UI-B9c selective key adoption / test migration expansion: completed.
 19. UI-C0 low-fidelity shell usability pass: completed.
-20. UI-C1 module-specific usability follow-up if needed.
-21. UI-B10 packaging and desktop entry last.
+20. UI-C1 low-to-mid fidelity visual calibration: completed.
+21. UI-C2 module-specific visual/detail calibration if needed.
+22. UI-B10 packaging and desktop entry last.
 
 UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. UI-B10 remains last.
 
@@ -122,6 +125,7 @@ UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. U
 | UI-B9b | UI-B9a key registry and focused test baseline | UI-B5.1 routing calibration | Full multilingual release, report template rewrite. |
 | UI-B9c | UI-B9b and current Bio/Meta/LabTools/Settings shell baselines | UI-B8b | Full translation, language switch, report template rewrite. |
 | UI-C0 | UI-B2-B9c low-fidelity shell baseline | UI-B8b | High-fidelity redesign, resource replacement, packaging. |
+| UI-C1 | UI-C0 and first local concept image batch | UI-B8b design review | Asset replacement, App icon, Finder icon, packaging, business workflow execution. |
 | UI-B10 | UI-B2-B9 stable enough for packaging | Packaging专项 only | Early desktop `.app` overwrite. |
 
 ## 4. Stage Acceptance Summary
@@ -147,6 +151,7 @@ UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. U
 | UI-B9b | Key adoption and high-risk test migration are in place; full language switch may still be future work. |
 | UI-B9c | Selective page key adoption covers Bioinformatics, Meta, LabTools and Settings shell surfaces. |
 | UI-C0 | Low-fidelity shell pages remain navigable, scrollable where needed and expose usability metadata. |
+| UI-C1 | First concept image batch is reflected in shell layout, flow navigation, quick access and user-facing cards without changing business execution. |
 | UI-B10 | Packaging, Info.plist, icon, LaunchServices and desktop entry are validated. |
 
 ## 5. Required Tests by Stage
@@ -171,6 +176,7 @@ UI-B8b and UI-B10 must not be inferred from UI-B8a or later shell calibration. U
 | UI-B9b | High-risk assertion migration tests and key adoption tests. |
 | UI-B9c | Semantic key registry tests plus Bio/Meta/LabTools/Settings focused shell tests. |
 | UI-C0 | Welcome, Dashboard/module selection, Sidebar, LabTools and Settings usability focused tests. |
+| UI-C1 | Dashboard, LabTools, Bioinformatics IA, Meta IA focused tests plus source smoke and UI/shared suite. |
 | UI-B10 | package smoke, app smoke, Info.plist, icon key, `open -W -n`, `-psn_*`, codesign if required. |
 
 Full test suites are not mandatory for every early phase unless the changed surface requires them.
@@ -196,7 +202,7 @@ Full test suites are not mandatory for every early phase unless the changed surf
 | `docs/ui/UI_Rebuild_MasterPlan_20260520.md` | current |
 | `docs/ui/UI_Visual_Style_Guide_v1_20260520.md` | current |
 | `docs/ui/UI_I18N_Strategy_v1_20260520.md` | current |
-| `docs/ui/UI_Rebuild_Stage_Index_20260520.md` | current implementation-plan index / UI-B8b-prep checkpoint |
+| `docs/ui/UI_Rebuild_Stage_Index_20260520.md` | current implementation-plan index / UI-C1 checkpoint |
 | `docs/ui/UI_A4_3_current_checkpoint_next_stage_planning_20260520.md` | current checkpoint summary |
 | `docs/ui/UI_B5_1_bioinformatics_legacy_page_routing_calibration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_B5_2_bioinformatics_target_page_consolidation_20260520.md` | completed stage checkpoint |
@@ -206,6 +212,7 @@ Full test suites are not mandatory for every early phase unless the changed surf
 | `docs/ui/UI_B9b_semantic_key_adoption_test_migration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_B9c_selective_key_adoption_test_migration_20260520.md` | completed stage checkpoint |
 | `docs/ui/UI_C0_low_fidelity_shell_usability_pass_20260520.md` | completed stage checkpoint |
+| `docs/ui/UI_C1_low_to_mid_fidelity_visual_calibration_20260521.md` | completed stage checkpoint |
 | `docs/ui/UI_A1_target_markdown_architecture_audit_20260520.md` | audit-only / planning input |
 | `docs/ui/UI_A2_visual_brand_resource_audit_20260520.md` | audit-only / planning input |
 | `docs/ui/UI_A3_i18n_readiness_audit_20260520.md` | audit-only / planning input |
@@ -216,7 +223,7 @@ Full test suites are not mandatory for every early phase unless the changed surf
 | `docs/packaging.md` | packaging-specific |
 | `docs/bioinformatics/**` | module-specific unless adopted by MasterPlan |
 
-## 8. Non-Goals for UI-B0 through UI-C0
+## 8. Non-Goals for UI-B0 through UI-C1
 
 - No desktop `.app` overwrite.
 - No packaged app launch.
@@ -234,11 +241,11 @@ Full test suites are not mandatory for every early phase unless the changed surf
 
 | category | checkpoint_status |
 |---|---|
-| Completed | UI-B0, UI-B1, UI-B2, UI-B3, UI-B4, UI-B5 shell, UI-B5.1, UI-B5.2, UI-B6 shell, UI-B6.1, UI-B7 shell, UI-B7.1, UI-B8a, UI-B8b-prep, UI-B9a, UI-B9b, UI-B9c, UI-C0. |
+| Completed | UI-B0, UI-B1, UI-B2, UI-B3, UI-B4, UI-B5 shell, UI-B5.1, UI-B5.2, UI-B6 shell, UI-B6.1, UI-B7 shell, UI-B7.1, UI-B8a, UI-B8b-prep, UI-B9a, UI-B9b, UI-B9c, UI-C0, UI-C1. |
 | Partial | Full UI-B9 i18n adoption / language switch remains future work. |
 | Not started | UI-B8b formal resource replacement; complete i18n adoption / language switch; UI-B10 packaging / desktop entry. |
 | Hard stop | App icon, Finder icon, Info.plist icon binding, LaunchServices, packaged app validation and desktop `.app` overwrite stay out of scope until UI-B10. |
-| Next recommended work | UI-B8b formal resource replacement after owner approval and exported assets, or UI-C1 module-specific usability follow-up if needed. |
+| Next recommended work | UI-B8b formal resource replacement after owner approval and exported assets, or UI-C2 module-specific visual/detail calibration if needed. |
 
 ## 9. UI-B0 Command Log
 
