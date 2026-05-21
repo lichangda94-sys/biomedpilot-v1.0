@@ -10,7 +10,7 @@ from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confir
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.enrichment import build_ora_gene_set_resource_gate, build_ora_input_gate, build_ora_parameter_manifest, build_ora_result_schema_gate, check_ora_backend_dependencies
-from app.bioinformatics.gsea import build_gsea_gene_set_resource_gate, build_gsea_parameter_manifest, build_gsea_preranked_input_gate, build_gsea_result_schema_gate
+from app.bioinformatics.gsea import build_gsea_gene_set_resource_gate, build_gsea_parameter_manifest, build_gsea_preranked_input_gate, build_gsea_result_schema_gate, check_gsea_backend_dependencies
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
@@ -67,6 +67,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_gene_set_gate=gsea_gates["gene_set_gate"],
         gsea_parameter_gate=gsea_gates["parameter_gate"],
         gsea_result_schema_gate=gsea_gates["result_schema_gate"],
+        gsea_dependency=gsea_gates["dependency_snapshot"],
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
@@ -77,14 +78,14 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for row in package_rows for item in row["raw_blockers"]]
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate) for item in gate.get("blockers", []) or []]
-        + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"]) for item in gate.get("blockers", []) or []]
+        + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
     )
     warnings = _dedupe(
         [*resolver.get("warnings", [])]
         + [item for row in package_rows for item in row["raw_warnings"]]
         + [item for row in dependency_rows for item in row["raw_warnings"]]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate) for item in gate.get("warnings", []) or []]
-        + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"]) for item in gate.get("warnings", []) or []]
+        + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
     )
     return {
         "schema_version": "biomedpilot.analysis_center_ui_state.v1",
@@ -314,6 +315,7 @@ def build_gsea_gate_state(*, project_root: str | Path) -> dict[str, Any]:
     rank_metric_gate = input_gate.get("rank_metric_gate") if isinstance(input_gate.get("rank_metric_gate"), dict) else {}
     gene_set_gate = build_gsea_gene_set_resource_gate(project_root, gsea_input=input_gate)
     parameter_gate = build_gsea_parameter_manifest(input_gate, gene_set_gate)
+    dependency = check_gsea_backend_dependencies()
     result_schema_gate = build_gsea_result_schema_gate(parameter_manifest=parameter_gate)
     gate_rows = [
         _formal_deg_gate_row(
@@ -345,18 +347,25 @@ def build_gsea_gate_state(*, project_root: str | Path) -> dict[str, Any]:
             basis=f"{parameter_gate.get('rank_metric') or 'missing'} / permutations planned={parameter_gate.get('permutation_count', '')}",
         ),
         _formal_deg_gate_row(
+            "GSEA dependency policy",
+            dependency.get("status"),
+            dependency.get("blockers", []),
+            dependency.get("warnings", []),
+            basis="Detect-first numpy/pandas/scipy/statsmodels; no install action.",
+        ),
+        _formal_deg_gate_row(
             "GSEA future result schema",
             result_schema_gate.get("status"),
             result_schema_gate.get("blockers", []),
             result_schema_gate.get("warnings", []),
-            basis="Defines future gsea_preranked result index v2 fields only.",
+            basis="Requires B11.2 gsea_preranked result index v2 fields.",
         ),
         _formal_deg_gate_row(
-            "B11.1 execution boundary",
-            "blocked",
-            ["b11_2_gsea_execution_required"],
+            "B11.2 controlled GSEA execution",
+            "passed" if not _dedupe([*input_gate.get("blockers", []), *rank_metric_gate.get("blockers", []), *gene_set_gate.get("blockers", []), *parameter_gate.get("blockers", []), *result_schema_gate.get("blockers", []), *dependency.get("blockers", [])]) else "blocked",
             [],
-            basis="B11.1 is gate-only: no GSEA result table, plot or report-ready.",
+            [],
+            basis="Enabled only for controlled preranked GSEA MVP; no phenotype permutation, plot or report-ready.",
         ),
     ]
     return {
@@ -364,6 +373,7 @@ def build_gsea_gate_state(*, project_root: str | Path) -> dict[str, Any]:
         "rank_metric_gate": rank_metric_gate,
         "gene_set_gate": gene_set_gate,
         "parameter_gate": parameter_gate,
+        "dependency_snapshot": dependency,
         "result_schema_gate": result_schema_gate,
         "gate_rows": gate_rows,
     }

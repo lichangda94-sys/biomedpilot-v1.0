@@ -56,6 +56,7 @@ from app.bioinformatics.analysis_ui import build_analysis_center_state, build_de
 from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.enrichment import build_ora_result_review, export_ora_review_table, run_controlled_ora
+from app.bioinformatics.gsea import build_gsea_result_review, export_gsea_review_table, run_controlled_preranked_gsea
 from app.bioinformatics.plots import build_formal_deg_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_ora_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
@@ -5433,6 +5434,19 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._status_label.setText(f"controlled ORA 未运行：{blockers}")
         return result
 
+    def run_controlled_gsea_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result = run_controlled_preranked_gsea(self._project_root)
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成 controlled preranked GSEA MVP，并写入 result index v2。未生成 plot、report-ready、survival 或临床解释。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "GSEA gate 未通过"
+            self._status_label.setText(f"controlled preranked GSEA 未运行：{blockers}")
+        return result
+
     def confirm_formal_deg_parameters(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5577,6 +5591,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._ora_button.setEnabled(False)
         self._ora_button.setObjectName("runControlledOraButton")
         actions.addWidget(self._ora_button)
+        self._gsea_button = _button("运行 controlled GSEA", "secondaryButton", self.run_controlled_gsea_task)
+        self._gsea_button.setEnabled(False)
+        self._gsea_button.setObjectName("runControlledGseaButton")
+        actions.addWidget(self._gsea_button)
         actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
         actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
@@ -5598,7 +5616,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._package_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
 
         action_card, action_layout = _card("Action matrix and disabled reasons")
-        action_layout.addWidget(_muted("Formal actions stay disabled until B8 gates pass and later activation stages explicitly enable execution."))
+        action_layout.addWidget(_muted("Formal actions stay disabled until their audited resolver, parameter, dependency and result-schema gates pass."))
         self._action_table = _table(["动作", "状态", "按钮", "Disabled reason", "下一步"])
         self._action_table.setObjectName("analysisActionGateTable")
         action_layout.addWidget(self._action_table)
@@ -5708,6 +5726,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
         confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
         ora_action = _analysis_ui_action(analysis_state.get("action_rows", []), "run_ora_enrichment")
+        gsea_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_gsea")
         self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
         self._formal_deg_confirm_button.setToolTip(str(confirmation_action.get("disabled_reason") or confirmation_action.get("next_action") or "确认 formal DEG 参数"))
         self._formal_deg_button.setEnabled(bool(formal_action.get("enabled")))
@@ -5717,6 +5736,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._formal_deg_button.setToolTip(str(formal_action.get("disabled_reason") or "formal DEG gate 未通过"))
         self._ora_button.setEnabled(bool(ora_action.get("enabled")))
         self._ora_button.setToolTip(str(ora_action.get("next_action") or ora_action.get("disabled_reason") or "controlled ORA gate 未通过"))
+        self._gsea_button.setEnabled(bool(gsea_action.get("enabled")))
+        self._gsea_button.setToolTip(str(gsea_action.get("next_action") or gsea_action.get("disabled_reason") or "controlled GSEA gate 未通过"))
         _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
         self._sync_confirmation_controls(analysis_state)
         _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
@@ -6343,6 +6364,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._formal_deg_review: dict[str, object] = {}
         self._ora_review: dict[str, object] = {}
+        self._gsea_review: dict[str, object] = {}
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -6393,6 +6415,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
 
     def export_ora_review_csv(self) -> dict[str, object] | None:
         return self._export_ora_review("csv")
+
+    def export_gsea_review_tsv(self) -> dict[str, object] | None:
+        return self._export_gsea_review("tsv")
+
+    def export_gsea_review_csv(self) -> dict[str, object] | None:
+        return self._export_gsea_review("csv")
 
     def generate_ora_plot_artifact(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -6491,6 +6519,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 ORA result"
             self._status_label.setText(f"ORA 表格未导出：{blockers}")
+        return result
+
+    def _export_gsea_review(self, file_format: str) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._gsea_review.get("selected_result_id") or "")
+        result = export_gsea_review_table(self._project_root, result_id=result_id, file_format=file_format)
+        if result.get("status") == "passed":
+            self._status_label.setText(f"已导出 GSEA {file_format.upper()} 表格；未生成 plot、report-ready、survival 或临床解释。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 controlled GSEA result"
+            self._status_label.setText(f"GSEA 表格未导出：{blockers}")
         return result
 
     def status_message(self) -> str:
@@ -6658,6 +6699,45 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._ora_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         root.addWidget(ora_card)
 
+        gsea_card, gsea_layout = _card("Controlled preranked GSEA result review")
+        self._gsea_guard_label = _muted("Preranked GSEA review shows statistical enrichment only from a DEG-derived rank metric and local gene sets; it is not pathway activation proof or clinical interpretation.")
+        self._gsea_guard_label.setObjectName("gseaReviewGuard")
+        gsea_layout.addWidget(self._gsea_guard_label)
+        gsea_controls = QHBoxLayout()
+        self._gsea_sort_input = QComboBox()
+        self._gsea_sort_input.setObjectName("gseaReviewSort")
+        self._gsea_sort_input.addItems(["adjusted_p_value", "p_value", "normalized_enrichment_score", "enrichment_score", "significance_label", "input_order"])
+        self._gsea_sort_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        self._gsea_filter_input = QComboBox()
+        self._gsea_filter_input.setObjectName("gseaReviewFilter")
+        self._gsea_filter_input.addItems(["all", "significant", "significant_positive", "significant_negative", "not_significant"])
+        self._gsea_filter_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        gsea_controls.addWidget(QLabel("Sort"))
+        gsea_controls.addWidget(self._gsea_sort_input)
+        gsea_controls.addWidget(QLabel("Filter"))
+        gsea_controls.addWidget(self._gsea_filter_input)
+        gsea_controls.addWidget(_button("导出 GSEA TSV", "secondaryButton", self.export_gsea_review_tsv))
+        gsea_controls.addWidget(_button("导出 GSEA CSV", "secondaryButton", self.export_gsea_review_csv))
+        gsea_controls.addStretch(1)
+        gsea_layout.addLayout(gsea_controls)
+        self._gsea_summary_label = _muted("GSEA summary：暂无 controlled preranked GSEA result。")
+        self._gsea_summary_label.setObjectName("gseaReviewSummary")
+        self._gsea_downstream_label = _muted("GSEA plot/report-ready disabled：等待 B11.3 plot artifact / 后续 report gate。")
+        self._gsea_downstream_label.setObjectName("gseaReviewDownstream")
+        gsea_layout.addWidget(self._gsea_summary_label)
+        gsea_layout.addWidget(self._gsea_downstream_label)
+        self._gsea_table = _table(["term_id", "term_name", "set_size", "overlap", "ES", "NES", "p-value", "FDR", "leading edge", "rank metric", "significance"])
+        self._gsea_table.setObjectName("gseaReviewTable")
+        gsea_layout.addWidget(self._gsea_table)
+        _set_table_widths(self._gsea_table, [130, 220, 90, 90, 90, 90, 110, 110, 240, 160, 150])
+        self._gsea_table.horizontalHeader().setSectionResizeMode(8, QHeaderView.Stretch)
+        self._gsea_provenance = _table(["Provenance", "Value"])
+        self._gsea_provenance.setObjectName("gseaReviewProvenanceTable")
+        gsea_layout.addWidget(self._gsea_provenance)
+        _set_table_widths(self._gsea_provenance, [190, 620])
+        self._gsea_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        root.addWidget(gsea_card)
+
         gate_card, gate_layout = _card("Result semantics / plot / report gates")
         gate_layout.addWidget(_muted("结果浏览只展示 result index 语义和 eligibility；不会把 testing/imported/preflight 输出升级为 formal result。"))
         self._gate_preview = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
@@ -6710,6 +6790,13 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._ora_review = ora_review
         self._render_ora_review(ora_review)
+        gsea_review = build_gsea_result_review(
+            self._project_root,
+            sort_by=self._gsea_sort_input.currentText(),
+            significance_filter=self._gsea_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._gsea_review = gsea_review
+        self._render_gsea_review(gsea_review)
         ora_plot_gate = build_ora_plot_gate(
             self._project_root,
             result_id=str(ora_review.get("selected_result_id") or "") or None,
@@ -6736,7 +6823,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._render_formal_deg_report_gate(report_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -6872,6 +6959,64 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._ora_provenance,
             [
                 ["ora_input_id", provenance.get("ora_input_id", "")],
+                ["source_deg_result_id", provenance.get("source_deg_result_id", "")],
+                ["source_result_semantics", provenance.get("source_result_semantics", "")],
+                ["gene_set_resource_id", provenance.get("gene_set_resource_id", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
+
+    def _render_gsea_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._gsea_summary_label.setText("GSEA summary：暂无 controlled preranked GSEA result；raw/preflight/testing/exploratory 不会混入此审阅区。")
+            self._gsea_downstream_label.setText("GSEA plot/report-ready disabled：等待 B11.3 plot artifact / 后续 report gate。")
+            _fill_table(self._gsea_table, [])
+            _fill_table(self._gsea_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._gsea_summary_label.setText(
+            "GSEA summary："
+            f"terms={summary.get('term_total', 0)}；significant={summary.get('significant_term_count', 0)}；"
+            f"top+NES={summary.get('top_positive_nes_term', '')}；top-NES={summary.get('top_negative_nes_term', '')}；"
+            f"source={summary.get('source_deg_result_id', '')} / {summary.get('source_result_semantics', '')}；"
+            f"rank={summary.get('rank_metric', '')}；gene_set={summary.get('gene_set_resource', '')}；"
+            f"permutations={summary.get('permutation_count', 0)}；seed={summary.get('random_seed', '')}；"
+            f"deps numpy={deps.get('numpy', '')}, pandas={deps.get('pandas', '')}, scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._gsea_downstream_label.setText("；".join(str(value) for value in downstream.values()) if downstream else "GSEA plot/report-ready/survival/clinical disabled.")
+        _fill_table(
+            self._gsea_table,
+            [
+                [
+                    row.get("term_id", ""),
+                    row.get("term_name", ""),
+                    row.get("set_size", ""),
+                    row.get("overlap_size", ""),
+                    row.get("enrichment_score", ""),
+                    row.get("normalized_enrichment_score", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("leading_edge_genes", ""),
+                    row.get("rank_metric", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._gsea_provenance,
+            [
+                ["gsea_input_id", provenance.get("gsea_input_id", "")],
                 ["source_deg_result_id", provenance.get("source_deg_result_id", "")],
                 ["source_result_semantics", provenance.get("source_result_semantics", "")],
                 ["gene_set_resource_id", provenance.get("gene_set_resource_id", "")],

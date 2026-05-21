@@ -25,9 +25,9 @@ def build_gsea_result_schema_gate(
     return {
         "schema_version": GSEA_RESULT_SCHEMA_GATE_VERSION,
         "status": "blocked" if blockers else "passed",
-        "gate_semantics": "future_gsea_preranked_result_index_v2_acceptance_gate_only",
+        "gate_semantics": "controlled_gsea_preranked_result_index_v2_acceptance_gate",
         "task_type": GSEA_TASK_TYPE,
-        "execution_enabled": False,
+        "execution_enabled": not blockers,
         "required_result_index_fields": list(REQUIRED_GSEA_RESULT_INDEX_FIELDS),
         "required_gsea_result_table_columns": list(REQUIRED_GSEA_RESULT_TABLE_COLUMNS),
         "plot_artifacts_allowed": False,
@@ -47,6 +47,13 @@ def validate_gsea_result_index_entry(entry: dict[str, Any]) -> dict[str, Any]:
         blockers.append(f"gsea_result_semantics_not_allowed:{semantics or 'unknown'}")
     if semantics == "formal_computed_result" and not entry.get("source_deg_result_id"):
         blockers.append("formal_gsea_missing_source_deg_result_id")
+    source_semantics = normalize_result_semantics(entry.get("source_result_semantics"), default="")
+    if source_semantics not in {"formal_computed_result", "imported_external_result"}:
+        blockers.append(f"gsea_source_result_semantics_not_allowed:{source_semantics or 'unknown'}")
+    if semantics == "formal_computed_result" and source_semantics != "formal_computed_result":
+        blockers.append("formal_gsea_requires_formal_deg_source_semantics")
+    if semantics == "imported_external_result" and source_semantics != "imported_external_result":
+        blockers.append("imported_gsea_requires_imported_source_semantics")
     if not entry.get("gsea_input_id") and not entry.get("input_package_id"):
         blockers.append("gsea_result_missing_input_package_or_gsea_input_id")
     if not entry.get("gene_set_resource_id"):
@@ -64,11 +71,11 @@ def validate_gsea_result_index_entry(entry: dict[str, Any]) -> dict[str, Any]:
     if entry.get("blockers"):
         blockers.append("gsea_result_has_blockers")
     if entry.get("report_ready_eligible"):
-        blockers.append("gsea_result_must_not_be_report_ready_in_b11_1")
+        blockers.append("gsea_result_must_not_be_report_ready_in_b11_2")
     if entry.get("plot_artifacts"):
-        warnings.append("gsea_plot_artifacts_not_activated_in_b11_1")
+        warnings.append("gsea_plot_artifacts_not_activated_in_b11_2")
     if entry.get("report_artifacts"):
-        warnings.append("gsea_report_artifacts_not_activated_in_b11_1")
+        warnings.append("gsea_report_artifacts_not_activated_in_b11_2")
     base = validate_result_entry(entry)
     blockers.extend(str(item) for item in base.get("blockers", []) or [])
     warnings.extend(str(item) for item in base.get("warnings", []) or [])

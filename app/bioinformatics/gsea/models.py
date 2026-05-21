@@ -9,6 +9,8 @@ GSEA_RESULT_SCHEMA_GATE_VERSION = "biomedpilot.gsea_result_schema_gate.v1"
 GSEA_TASK_TYPE = "gsea_preranked"
 GSEA_ENGINE_NAME = "biomedpilot_gsea_preranked_gate_only"
 GSEA_ENGINE_VERSION = "0.0.0-gate"
+CONTROLLED_GSEA_ENGINE_NAME = "python_preranked_gsea_mvp"
+CONTROLLED_GSEA_ENGINE_VERSION = "0.1.0"
 
 ALLOWED_GSEA_SOURCE_SEMANTICS = {"formal_computed_result", "imported_external_result"}
 ALLOWED_RANK_METRICS = {
@@ -36,6 +38,7 @@ REQUIRED_GSEA_RESULT_INDEX_FIELDS = (
     "input_package_id",
     "gsea_input_id",
     "source_deg_result_id",
+    "source_result_semantics",
     "gene_set_resource_id",
     "parameters_manifest",
     "engine_name",
@@ -47,10 +50,13 @@ REQUIRED_GSEA_RESULT_INDEX_FIELDS = (
     "validation_status",
     "warnings",
     "blockers",
+    "log_artifacts",
+    "failure_reason",
     "created_at",
     "updated_at",
     "schema_version",
     "report_ready_eligible",
+    "migration_status",
 )
 
 REQUIRED_GSEA_RESULT_TABLE_COLUMNS = (

@@ -42,14 +42,48 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     rows = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"})
 
     assert _row(rows, "formal_gsea")["enabled"] is False
-    assert _row(rows, "formal_gsea")["state"] == "disabled_b11_1_gate_only"
-    assert "b11_2_gsea_execution_required" in _row(rows, "formal_gsea")["disabled_reason"]
+    assert _row(rows, "formal_gsea")["state"] == "disabled_gsea_gate_not_passed"
+    assert "gsea_input_gate_not_passed" in _row(rows, "formal_gsea")["disabled_reason"]
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
     assert "KM/Cox/log-rank" in _row(rows, "km_cox_logrank")["label"]
     assert _row(rows, "run_ora_enrichment")["enabled"] is False
     assert _row(rows, "ora_plot")["enabled"] is False
     assert _row(rows, "ora_report_ready")["enabled"] is False
+
+
+def test_controlled_preranked_gsea_enabled_only_when_b11_2_gates_pass() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        gsea_input_gate={"status": "passed", "source_result_id": "deg-1", "source_result_semantics": "formal_computed_result", "blockers": []},
+        gsea_rank_metric_gate={"status": "passed", "blockers": []},
+        gsea_gene_set_gate={"status": "passed", "blockers": []},
+        gsea_parameter_gate={"status": "passed", "blockers": []},
+        gsea_result_schema_gate={"status": "passed", "blockers": []},
+        gsea_dependency={"status": "passed", "blockers": []},
+    )
+
+    run = _row(rows, "formal_gsea")
+    assert run["enabled"] is True
+    assert run["button_behavior"] == "enabled_controlled_preranked_gsea_mvp"
+
+    blocked = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        gsea_input_gate={"status": "passed", "source_result_id": "deg-1", "source_result_semantics": "formal_computed_result", "blockers": []},
+        gsea_rank_metric_gate={"status": "passed", "blockers": []},
+        gsea_gene_set_gate={"status": "passed", "blockers": []},
+        gsea_parameter_gate={"status": "passed", "blockers": []},
+        gsea_result_schema_gate={"status": "passed", "blockers": []},
+        gsea_dependency={"status": "blocked", "blockers": ["missing_python_package:statsmodels"]},
+    )
+    assert _row(blocked, "formal_gsea")["enabled"] is False
+    assert "missing_python_package:statsmodels" in _row(blocked, "formal_gsea")["disabled_reason"]
 
 
 def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:

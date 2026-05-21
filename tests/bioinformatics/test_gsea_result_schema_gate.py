@@ -9,7 +9,7 @@ def test_gsea_result_schema_gate_defines_future_result_contract() -> None:
     gate = build_gsea_result_schema_gate(parameter_manifest={"status": "passed", "blockers": []})
 
     assert gate["status"] == "passed"
-    assert gate["execution_enabled"] is False
+    assert gate["execution_enabled"] is True
     assert gate["task_type"] == "gsea_preranked"
     assert "normalized_enrichment_score" in gate["required_gsea_result_table_columns"]
     assert gate["report_ready_eligible"] is False
@@ -31,7 +31,7 @@ def test_validate_gsea_result_index_entry_blocks_non_gsea_and_report_ready() -> 
     entry["report_ready_eligible"] = True
     validation = validate_gsea_result_index_entry(entry)
     assert "gsea_result_task_type_must_be_gsea_preranked" in validation["blockers"]
-    assert "gsea_result_must_not_be_report_ready_in_b11_1" in validation["blockers"]
+    assert "gsea_result_must_not_be_report_ready_in_b11_2" in validation["blockers"]
 
 
 def test_validate_gsea_result_table_row_checks_required_columns_and_numeric_fields() -> None:
@@ -64,6 +64,7 @@ def _entry() -> dict[str, object]:
         "source_dataset_id": "dataset-1",
         "source_repository_manifest": "standardized_data/repositories/repository_manifest.json",
         "source_deg_result_id": "deg-1",
+        "source_result_semantics": "formal_computed_result",
         "gene_set_resource_id": "sets",
         "parameters_manifest": {"rank_metric": "signed_log10_fdr_by_log2fc"},
         "engine_name": "biomedpilot_gsea_preranked",
