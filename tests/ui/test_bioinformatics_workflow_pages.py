@@ -2990,6 +2990,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     action_text = _table_text(action_table)
     assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
+    assert "Review GSEA preranked readiness" in action_text
+    assert "Run GSEA preranked" in action_text
+    assert "b11_2_gsea_execution_required" in action_text
     assert "disabled" in action_text
     assert "Run formal GSEA" not in action_text
     assert "KM/Cox/log-rank" not in action_text
@@ -3026,6 +3029,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert gate_table is not None
     gate_text = _table_text(gate_table)
     assert "Report-ready export" in gate_text
+    assert "GSEA source DEG result" in gate_text
+    assert "GSEA rank metric" in gate_text
+    assert "B11.1 execution boundary" in gate_text
     assert "blocked_report_ready_gate" in gate_text
 
     survival_table = widget.findChild(QTableWidget, "analysisSurvivalClinicalTable")

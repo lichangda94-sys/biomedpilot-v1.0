@@ -114,3 +114,44 @@ b10_2_controlled_ora_execution:
     - report_ready_ORA_section
     - survival
     - clinical_interpretation
+
+b11_1_gsea_preranked_gate:
+  status: gate_only_no_execution
+  allowed_sources:
+    - formal_computed_result_deg
+    - imported_external_result_deg
+  forbidden_sources:
+    - raw_expression
+    - ora_result
+    - preflight_only
+    - testing_level
+    - exploratory
+    - dry_run
+    - developer_preview
+  rank_metrics:
+    - signed_log10_fdr_by_log2fc
+    - signed_log10_pvalue_by_log2fc
+    - log2_fold_change
+    - statistic
+    - custom_rank_column
+  default_rank_metric: signed_log10_fdr_by_log2fc
+  duplicate_gene_policy: keep_max_abs_rank
+  resource_policy:
+    local_gmt: true
+    project_registry: true
+    online_download: false
+    msigdb_requires_manual_license_acknowledgement: true
+  future_execution:
+    enabled: false
+    requires_stage: B11.2
+  outputs:
+    ranked_gene_list: true
+    gsea_result_table: false
+    gsea_plot: false
+    report_ready_gsea_section: false
+  disabled_capabilities:
+    - GSEA_execution
+    - GSEA_plot
+    - GSEA_report_ready
+    - survival
+    - clinical_interpretation

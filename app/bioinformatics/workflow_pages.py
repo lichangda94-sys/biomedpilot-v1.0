@@ -5721,7 +5721,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._sync_confirmation_controls(analysis_state)
         _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
         _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
-        _fill_table(self._gate_table, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or [])]))
+        _fill_table(self._gate_table, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
         _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
         self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}, "analysis_center_state": analysis_state})
 
@@ -6735,7 +6735,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._render_formal_deg_report_gate(report_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
-        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or [])]))
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or [])]))
         self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:

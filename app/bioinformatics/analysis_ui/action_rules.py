@@ -28,6 +28,11 @@ def build_action_rows(
     ora_dependency: dict[str, Any] | None = None,
     ora_plot_gate: dict[str, Any] | None = None,
     ora_report_gate: dict[str, Any] | None = None,
+    gsea_input_gate: dict[str, Any] | None = None,
+    gsea_rank_metric_gate: dict[str, Any] | None = None,
+    gsea_gene_set_gate: dict[str, Any] | None = None,
+    gsea_parameter_gate: dict[str, Any] | None = None,
+    gsea_result_schema_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -47,6 +52,11 @@ def build_action_rows(
     ora_dependency = ora_dependency or {}
     ora_plot_gate = ora_plot_gate or {}
     ora_report_gate = ora_report_gate or {}
+    gsea_input_gate = gsea_input_gate or {}
+    gsea_rank_metric_gate = gsea_rank_metric_gate or {}
+    gsea_gene_set_gate = gsea_gene_set_gate or {}
+    gsea_parameter_gate = gsea_parameter_gate or {}
+    gsea_result_schema_gate = gsea_result_schema_gate or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -57,7 +67,8 @@ def build_action_rows(
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
-    rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
+    rows.append(_gsea_readiness_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate))
+    rows.append(_gsea_run_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate))
     rows.append(_imported_deg_action(imported_package, results))
     rows.append(_ora_readiness_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
     rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
@@ -220,6 +231,66 @@ def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str,
             "next_action": "Review external result with imported_external_result semantics.",
         }
     return _disabled("imported_deg_review", "Review imported DEG", "blocked_missing_input_package", "missing imported DEG package/result", "Import an external DEG result if needed.")
+
+
+def _gsea_readiness_action(
+    input_gate: dict[str, Any],
+    rank_metric_gate: dict[str, Any],
+    gene_set_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> dict[str, Any]:
+    blockers = _gsea_blockers(input_gate, rank_metric_gate, gene_set_gate, parameter_gate, result_schema_gate)
+    if input_gate.get("source_result_id") or blockers:
+        return {
+            "action_id": "gsea_preranked_readiness_review",
+            "label": "Review GSEA preranked readiness",
+            "state": "gate_review_available" if blockers else "ready_for_future_execution",
+            "button_behavior": "enabled_gate_review_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review source DEG, rank metric, ranked gene count, local GMT overlap, parameters and future result schema. This does not run GSEA.",
+        }
+    return _disabled("gsea_preranked_readiness_review", "Review GSEA preranked readiness", "blocked_missing_result_schema", "gsea_source_result_missing", "Register a formal or imported DEG result before GSEA readiness review.")
+
+
+def _gsea_run_action(
+    input_gate: dict[str, Any],
+    rank_metric_gate: dict[str, Any],
+    gene_set_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> dict[str, Any]:
+    blockers = _gsea_blockers(input_gate, rank_metric_gate, gene_set_gate, parameter_gate, result_schema_gate)
+    reason = "; ".join(dict.fromkeys([*blockers, "b11_2_gsea_execution_required"])) or "b11_2_gsea_execution_required"
+    return _disabled(
+        "formal_gsea",
+        "Run GSEA preranked",
+        "disabled_b11_1_gate_only",
+        reason,
+        "B11.1 defines GSEA preranked gates only; formal GSEA execution, plot and report-ready remain disabled.",
+    )
+
+
+def _gsea_blockers(
+    input_gate: dict[str, Any],
+    rank_metric_gate: dict[str, Any],
+    gene_set_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    for gate, fallback in (
+        (input_gate, "gsea_input_gate_not_passed"),
+        (rank_metric_gate, "gsea_rank_metric_gate_not_passed"),
+        (gene_set_gate, "gsea_gene_set_gate_not_passed"),
+        (parameter_gate, "gsea_parameter_gate_not_passed"),
+        (result_schema_gate, "gsea_result_schema_gate_not_passed"),
+    ):
+        if gate.get("status") != "passed":
+            blockers.extend(_list(gate.get("blockers")) or [fallback])
+    return list(dict.fromkeys(blockers))
 
 
 def _ora_readiness_action(

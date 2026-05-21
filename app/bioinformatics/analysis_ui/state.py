@@ -10,6 +10,7 @@ from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confir
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
 from app.bioinformatics.enrichment import build_ora_gene_set_resource_gate, build_ora_input_gate, build_ora_parameter_manifest, build_ora_result_schema_gate, check_ora_backend_dependencies
+from app.bioinformatics.gsea import build_gsea_gene_set_resource_gate, build_gsea_parameter_manifest, build_gsea_preranked_input_gate, build_gsea_result_schema_gate
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
@@ -40,6 +41,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
     ora_gates = build_ora_gate_state(project_root=root)
     ora_plot_gate = build_ora_plot_gate(root)
+    gsea_gates = build_gsea_gate_state(project_root=root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
@@ -60,6 +62,11 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         ora_dependency=ora_gates["dependency_snapshot"],
         ora_plot_gate=ora_plot_gate,
         ora_report_gate=ora_report_gate,
+        gsea_input_gate=gsea_gates["input_gate"],
+        gsea_rank_metric_gate=gsea_gates["rank_metric_gate"],
+        gsea_gene_set_gate=gsea_gates["gene_set_gate"],
+        gsea_parameter_gate=gsea_gates["parameter_gate"],
+        gsea_result_schema_gate=gsea_gates["result_schema_gate"],
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
@@ -70,12 +77,14 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for row in package_rows for item in row["raw_blockers"]]
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate) for item in gate.get("blockers", []) or []]
+        + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"]) for item in gate.get("blockers", []) or []]
     )
     warnings = _dedupe(
         [*resolver.get("warnings", [])]
         + [item for row in package_rows for item in row["raw_warnings"]]
         + [item for row in dependency_rows for item in row["raw_warnings"]]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate) for item in gate.get("warnings", []) or []]
+        + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"]) for item in gate.get("warnings", []) or []]
     )
     return {
         "schema_version": "biomedpilot.analysis_center_ui_state.v1",
@@ -92,6 +101,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "dependency_rows": dependency_rows,
         "formal_deg_gate_rows": deg_gates["gate_rows"],
         "ora_gate_rows": ora_gates["gate_rows"],
+        "gsea_gate_rows": gsea_gates["gate_rows"],
         "result_rows": result_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
@@ -107,6 +117,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,
             "ora_report_ready_gate": ora_report_gate,
+            "gsea_gate_state": gsea_gates,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
@@ -293,6 +304,66 @@ def build_ora_gate_state(*, project_root: str | Path) -> dict[str, Any]:
         "gene_set_gate": gene_set_gate,
         "parameter_gate": parameter_gate,
         "dependency_snapshot": dependency,
+        "result_schema_gate": result_schema_gate,
+        "gate_rows": gate_rows,
+    }
+
+
+def build_gsea_gate_state(*, project_root: str | Path) -> dict[str, Any]:
+    input_gate = build_gsea_preranked_input_gate(project_root)
+    rank_metric_gate = input_gate.get("rank_metric_gate") if isinstance(input_gate.get("rank_metric_gate"), dict) else {}
+    gene_set_gate = build_gsea_gene_set_resource_gate(project_root, gsea_input=input_gate)
+    parameter_gate = build_gsea_parameter_manifest(input_gate, gene_set_gate)
+    result_schema_gate = build_gsea_result_schema_gate(parameter_manifest=parameter_gate)
+    gate_rows = [
+        _formal_deg_gate_row(
+            "GSEA source DEG result",
+            input_gate.get("status"),
+            input_gate.get("blockers", []),
+            input_gate.get("warnings", []),
+            basis=f"{input_gate.get('source_result_id') or 'missing'} / {input_gate.get('source_result_semantics') or 'missing'}",
+        ),
+        _formal_deg_gate_row(
+            "GSEA rank metric",
+            rank_metric_gate.get("status"),
+            rank_metric_gate.get("blockers", []),
+            rank_metric_gate.get("warnings", []),
+            basis=f"{rank_metric_gate.get('rank_metric') or input_gate.get('rank_metric') or 'missing'} / ranked genes={rank_metric_gate.get('ranked_gene_count', 0)}",
+        ),
+        _formal_deg_gate_row(
+            "GSEA gene set resource",
+            gene_set_gate.get("status"),
+            gene_set_gate.get("blockers", []),
+            gene_set_gate.get("warnings", []),
+            basis=f"{gene_set_gate.get('resource_name') or 'local GMT/project registry only'} / overlap terms={gene_set_gate.get('overlapping_term_count', 0)}",
+        ),
+        _formal_deg_gate_row(
+            "GSEA parameter manifest",
+            parameter_gate.get("status"),
+            parameter_gate.get("blockers", []),
+            parameter_gate.get("warnings", []),
+            basis=f"{parameter_gate.get('rank_metric') or 'missing'} / permutations planned={parameter_gate.get('permutation_count', '')}",
+        ),
+        _formal_deg_gate_row(
+            "GSEA future result schema",
+            result_schema_gate.get("status"),
+            result_schema_gate.get("blockers", []),
+            result_schema_gate.get("warnings", []),
+            basis="Defines future gsea_preranked result index v2 fields only.",
+        ),
+        _formal_deg_gate_row(
+            "B11.1 execution boundary",
+            "blocked",
+            ["b11_2_gsea_execution_required"],
+            [],
+            basis="B11.1 is gate-only: no GSEA result table, plot or report-ready.",
+        ),
+    ]
+    return {
+        "input_gate": input_gate,
+        "rank_metric_gate": rank_metric_gate,
+        "gene_set_gate": gene_set_gate,
+        "parameter_gate": parameter_gate,
         "result_schema_gate": result_schema_gate,
         "gate_rows": gate_rows,
     }

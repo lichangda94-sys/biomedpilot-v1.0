@@ -42,7 +42,8 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     rows = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"})
 
     assert _row(rows, "formal_gsea")["enabled"] is False
-    assert _row(rows, "formal_gsea")["state"] == "hidden_until_ready"
+    assert _row(rows, "formal_gsea")["state"] == "disabled_b11_1_gate_only"
+    assert "b11_2_gsea_execution_required" in _row(rows, "formal_gsea")["disabled_reason"]
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
     assert "KM/Cox/log-rank" in _row(rows, "km_cox_logrank")["label"]
