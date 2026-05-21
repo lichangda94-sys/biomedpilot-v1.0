@@ -18,7 +18,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.app_identity import APP_NAME, LABTOOLS_ICON_PATHS, icon_asset_statuses, icon_asset_summary, load_app_icon, load_labtools_pixmap
+from app.app_identity import (
+    APP_NAME,
+    LABTOOLS_ICON_PATHS,
+    SETTINGS_RESOURCE_ICON_PATHS,
+    icon_asset_statuses,
+    icon_asset_summary,
+    load_app_icon,
+    load_labtools_pixmap,
+    load_settings_resource_pixmap,
+)
 from app.bioinformatics.workspace import BioinformaticsWorkspaceWidget
 from app.meta_analysis.workspace import MetaAnalysisWorkspaceWidget
 from app.shell.dashboard import DashboardModel, build_dashboard_model
@@ -31,6 +40,23 @@ from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
 from app.shared.ui_components.primitives import diagnostic_disclosure_title, make_button, make_status_chip
+
+
+_SETTINGS_RESOURCE_SEMANTIC_KEYS = {
+    "resource_external_engine": PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+    "resource_image_analysis_engine": PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+    "resource_imagej_fiji": PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+    "resource_pdf_ocr": PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+    "resource_local_model": PageKey.SETTINGS_MODEL_ENGINE.value,
+    "resource_cloud_ai": PageKey.SETTINGS_MODEL_ENGINE.value,
+    "resource_python": PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+    "resource_r": PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value,
+    "resource_go": PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
+    "resource_kegg": PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
+    "resource_analysis_package": PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
+    "resource_plotting_package": PageKey.SETTINGS_ANALYSIS_RESOURCES.value,
+    "resource_developer_diagnostics": PageKey.SETTINGS_DEVELOPER_DIAGNOSTICS.value,
+}
 
 
 class MainWindow(QMainWindow):
@@ -594,10 +620,11 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
         root.addWidget(QLabel("检测优先：先显示本机状态，再由用户主动触发安装或更新；本阶段不执行真实安装、下载或云端配置。"))
-        for title, status_key, details in (
+        for title, status_key, resource_keys, details in (
             (
                 "Python 环境",
                 "available",
+                ["resource_python"],
                 [
                     ("检测目标", "Python executable / package visibility"),
                     ("后续动作", "用户触发安装或更新，当前禁用"),
@@ -606,6 +633,7 @@ class MainWindow(QMainWindow):
             (
                 "R 环境",
                 "not_configured",
+                ["resource_r"],
                 [
                     ("检测目标", "Rscript / R packages"),
                     ("后续动作", "检测后提示用户安装，当前禁用"),
@@ -614,6 +642,7 @@ class MainWindow(QMainWindow):
             (
                 "ImageJ/Fiji",
                 "not_configured",
+                ["resource_imagej_fiji"],
                 [
                     ("检测目标", "本地 ImageJ/Fiji executable"),
                     ("归属", "LabTools 外部图像引擎，不进入主任务页"),
@@ -622,13 +651,14 @@ class MainWindow(QMainWindow):
             (
                 "外部图像分析引擎",
                 "planned",
+                ["resource_image_analysis_engine", "resource_external_engine", "resource_pdf_ocr"],
                 [
                     ("检测目标", "engine path / version / capability manifest"),
                     ("边界", "仅壳层占位，不连接真实引擎"),
                 ],
             ),
         ):
-            root.addWidget(self._settings_capability_card(title, status_key=status_key, details=details))
+            root.addWidget(self._settings_capability_card(title, status_key=status_key, resource_keys=resource_keys, details=details))
         root.addStretch(1)
         return page
 
@@ -641,10 +671,11 @@ class MainWindow(QMainWindow):
         root = QVBoxLayout(page)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
-        for title, status_key, details in (
+        for title, status_key, resource_keys, details in (
             (
                 "GO / KEGG / MSigDB 资源",
                 "planned",
+                ["resource_go", "resource_kegg"],
                 [
                     ("检测目标", "本地资源 manifest 与版本"),
                     ("边界", "不自动下载数据库"),
@@ -653,6 +684,7 @@ class MainWindow(QMainWindow):
             (
                 "Bioinformatics resolver / input package",
                 "preflight_only",
+                ["resource_analysis_package"],
                 [
                     ("检测目标", "standardized repository 与 analysis input package"),
                     ("边界", "resolver-first，未通过预检不显示正式运行承诺"),
@@ -661,13 +693,14 @@ class MainWindow(QMainWindow):
             (
                 "Report / Export templates",
                 "developer_preview",
+                ["resource_plotting_package"],
                 [
                     ("检测目标", "Markdown / HTML / DOCX template availability"),
                     ("边界", "报告模板多语言化后再正式开放"),
                 ],
             ),
         ):
-            root.addWidget(self._settings_capability_card(title, status_key=status_key, details=details))
+            root.addWidget(self._settings_capability_card(title, status_key=status_key, resource_keys=resource_keys, details=details))
         root.addStretch(1)
         return page
 
@@ -684,6 +717,7 @@ class MainWindow(QMainWindow):
             self._settings_capability_card(
                 "本地 AI 模型",
                 status_key="not_configured",
+                resource_keys=["resource_local_model"],
                 details=[
                     ("当前配置", profile.local_ai_model),
                     ("检测目标", "local model gateway / provider availability"),
@@ -695,6 +729,7 @@ class MainWindow(QMainWindow):
             self._settings_capability_card(
                 "外部云端模型配置",
                 status_key="blocked",
+                resource_keys=["resource_cloud_ai"],
                 details=[
                     ("当前状态", "本阶段不配置云端服务"),
                     ("后续动作", "需要安全策略、密钥策略和用户确认流程"),
@@ -725,6 +760,7 @@ class MainWindow(QMainWindow):
         panel = self._settings_status_card(
             title="诊断信息",
             status_key="developer_preview",
+            resource_keys=["resource_developer_diagnostics"],
             rows=[
                 ("用途", "仅供开发者查看本地检测槽位、图标资源状态和壳层边界。"),
                 ("外部动作", "不会安装、下载、更新或连接云端。"),
@@ -738,16 +774,48 @@ class MainWindow(QMainWindow):
         root.addStretch(1)
         return page
 
-    def _settings_status_card(self, *, title: str, status_key: str, rows: list[tuple[str, str]]) -> QFrame:
+    def _settings_resource_icon_label(self, resource_key: str, *, status_key: str, size: int = 28) -> QLabel:
+        label = QLabel()
+        label.setObjectName("settingsResourceIcon")
+        label.setFixedSize(size + 8, size + 8)
+        label.setProperty("moduleKey", ModuleKey.SETTINGS.value)
+        label.setProperty("resourceKey", resource_key)
+        label.setProperty("semanticKey", _SETTINGS_RESOURCE_SEMANTIC_KEYS.get(resource_key, ""))
+        label.setProperty("statusKey", status_key)
+        icon_source = SETTINGS_RESOURCE_ICON_PATHS.get(resource_key)
+        pixmap = load_settings_resource_pixmap(resource_key, size=size)
+        if pixmap.isNull():
+            label.setText("·")
+            label.setAlignment(Qt.AlignCenter)
+            label.setProperty("iconFallback", True)
+        else:
+            label.setPixmap(pixmap)
+            label.setAlignment(Qt.AlignCenter)
+            label.setProperty("iconFallback", False)
+        label.setProperty("iconSource", str(icon_source) if icon_source is not None else "")
+        label.setToolTip(resource_key.replace("resource_", "").replace("_", " "))
+        return label
+
+    def _settings_status_card(
+        self,
+        *,
+        title: str,
+        status_key: str,
+        rows: list[tuple[str, str]],
+        resource_keys: list[str] | None = None,
+    ) -> QFrame:
         frame = QFrame()
         frame.setObjectName("settingsStatusCard")
         frame.setProperty("moduleKey", ModuleKey.SETTINGS.value)
         frame.setProperty("statusKey", status_key)
+        frame.setProperty("resourceKeys", tuple(resource_keys or ()))
         frame.setStyleSheet("QFrame#settingsStatusCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
         header = QHBoxLayout()
+        for resource_key in resource_keys or []:
+            header.addWidget(self._settings_resource_icon_label(resource_key, status_key=status_key))
         label = QLabel(title)
         label.setObjectName("settingsCardTitle")
         label.setProperty("moduleKey", ModuleKey.SETTINGS.value)
@@ -772,11 +840,19 @@ class MainWindow(QMainWindow):
         layout.addLayout(grid)
         return frame
 
-    def _settings_capability_card(self, title: str, *, status_key: str, details: list[tuple[str, str]]) -> QFrame:
-        frame = self._settings_status_card(title=title, status_key=status_key, rows=details)
+    def _settings_capability_card(
+        self,
+        title: str,
+        *,
+        status_key: str,
+        details: list[tuple[str, str]],
+        resource_keys: list[str] | None = None,
+    ) -> QFrame:
+        frame = self._settings_status_card(title=title, status_key=status_key, rows=details, resource_keys=resource_keys)
         frame.setObjectName("settingsCapabilityCard")
         frame.setProperty("moduleKey", ModuleKey.SETTINGS.value)
         frame.setProperty("statusKey", status_key)
+        frame.setProperty("resourceKeys", tuple(resource_keys or ()))
         frame.setStyleSheet("QFrame#settingsCapabilityCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
         actions = QHBoxLayout()
         detect_button = make_button("检测状态", role="secondary")

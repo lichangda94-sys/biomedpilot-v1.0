@@ -78,15 +78,23 @@ def test_p2_settings_png_exports_have_expected_sizes_and_transparent_canvas() ->
             assert image.getpixel((0, 0))[3] == 0
 
 
-def test_p2_settings_does_not_write_active_assets_or_non_p2_families() -> None:
+def test_p2_settings_production_manifest_remains_docs_only_and_active_pilot_stays_scoped() -> None:
     rows = _read_csv(MANIFEST_PATH)
 
-    assert not SETTINGS_ACTIVE_DIR.exists()
     assert all(row["resource_id"].startswith("resource_") for row in rows)
     assert all("status_" not in row["resource_id"] for row in rows)
     assert all(not row["resource_id"].startswith(("result_", "report_", "export_", "share_", "empty_")) for row in rows)
     assert all(row["resource_id"] != "app_icon_deferred" for row in rows)
     assert all("app_icon" not in row["resource_id"] for row in rows)
+    assert all(row["svg_path"].startswith(P2_ROOT) for row in rows)
+    assert all(not row["svg_path"].startswith("assets/") for row in rows)
+
+    if SETTINGS_ACTIVE_DIR.exists():
+        active_svg_names = {path.name for path in SETTINGS_ACTIVE_DIR.glob("*.svg")}
+        assert active_svg_names == {f"{row['resource_id']}.svg" for row in rows}
+        assert not any(path.name.startswith("status_") for path in SETTINGS_ACTIVE_DIR.glob("*"))
+        assert not any(path.name.startswith(("result_", "report_", "export_", "share_", "empty_")) for path in SETTINGS_ACTIVE_DIR.glob("*"))
+        assert not any("app_icon" in path.name for path in SETTINGS_ACTIVE_DIR.glob("*"))
 
 
 def test_p2_settings_semantic_risk_stays_guarded_for_external_capabilities() -> None:

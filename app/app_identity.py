@@ -16,6 +16,7 @@ MODULE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "modules"
 LABTOOLS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "labtools"
 BIOINFORMATICS_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "bioinformatics" / "pages"
 META_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "meta" / "pages"
+SETTINGS_RESOURCE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "settings" / "resources"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -67,6 +68,21 @@ META_PAGE_ICON_PATHS = {
     PageKey.META_ANALYSIS_TASKS.value: META_PAGE_ICON_DIR / "meta_page_analysis_tasks.svg",
     PageKey.META_RESULT_REPORT.value: META_PAGE_ICON_DIR / "meta_page_result_report.svg",
     PageKey.META_REPORT_EXPORT.value: META_PAGE_ICON_DIR / "meta_page_report_export.svg",
+}
+SETTINGS_RESOURCE_ICON_PATHS = {
+    "resource_external_engine": SETTINGS_RESOURCE_ICON_DIR / "resource_external_engine.svg",
+    "resource_image_analysis_engine": SETTINGS_RESOURCE_ICON_DIR / "resource_image_analysis_engine.svg",
+    "resource_imagej_fiji": SETTINGS_RESOURCE_ICON_DIR / "resource_imagej_fiji.svg",
+    "resource_pdf_ocr": SETTINGS_RESOURCE_ICON_DIR / "resource_pdf_ocr.svg",
+    "resource_local_model": SETTINGS_RESOURCE_ICON_DIR / "resource_local_model.svg",
+    "resource_cloud_ai": SETTINGS_RESOURCE_ICON_DIR / "resource_cloud_ai.svg",
+    "resource_python": SETTINGS_RESOURCE_ICON_DIR / "resource_python.svg",
+    "resource_r": SETTINGS_RESOURCE_ICON_DIR / "resource_r.svg",
+    "resource_go": SETTINGS_RESOURCE_ICON_DIR / "resource_go.svg",
+    "resource_kegg": SETTINGS_RESOURCE_ICON_DIR / "resource_kegg.svg",
+    "resource_analysis_package": SETTINGS_RESOURCE_ICON_DIR / "resource_analysis_package.svg",
+    "resource_plotting_package": SETTINGS_RESOURCE_ICON_DIR / "resource_plotting_package.svg",
+    "resource_developer_diagnostics": SETTINGS_RESOURCE_ICON_DIR / "resource_developer_diagnostics.svg",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -166,6 +182,19 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("meta.page.analysis_tasks", "Meta Analysis 统计分析图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_ANALYSIS_TASKS.value], ("Meta Analysis 目标 IA 导航",)),
     IconAssetSlot("meta.page.result_report", "Meta Analysis 结果与报告图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_RESULT_REPORT.value], ("Meta Analysis 目标 IA 导航",)),
     IconAssetSlot("meta.page.report_export", "Meta Analysis 报告导出图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_REPORT_EXPORT.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("settings.resource.external_engine", "Settings 外部引擎资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_external_engine"], ("Settings 外部能力资源卡片",)),
+    IconAssetSlot("settings.resource.image_analysis_engine", "Settings 图像分析引擎资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_image_analysis_engine"], ("Settings 外部能力资源卡片",)),
+    IconAssetSlot("settings.resource.imagej_fiji", "Settings ImageJ/Fiji 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_imagej_fiji"], ("Settings 外部能力资源卡片",)),
+    IconAssetSlot("settings.resource.pdf_ocr", "Settings PDF/OCR 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_pdf_ocr"], ("Settings 外部能力资源行",)),
+    IconAssetSlot("settings.resource.local_model", "Settings 本地模型资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_local_model"], ("Settings 模型与引擎资源卡片",)),
+    IconAssetSlot("settings.resource.cloud_ai", "Settings Cloud AI 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_cloud_ai"], ("Settings 模型与引擎资源卡片",)),
+    IconAssetSlot("settings.resource.python", "Settings Python 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_python"], ("Settings 外部能力资源卡片",)),
+    IconAssetSlot("settings.resource.r", "Settings R 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_r"], ("Settings 外部能力资源卡片",)),
+    IconAssetSlot("settings.resource.go", "Settings GO 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_go"], ("Settings 分析资源卡片",)),
+    IconAssetSlot("settings.resource.kegg", "Settings KEGG 资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_kegg"], ("Settings 分析资源卡片",)),
+    IconAssetSlot("settings.resource.analysis_package", "Settings 分析包资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_analysis_package"], ("Settings 分析资源卡片",)),
+    IconAssetSlot("settings.resource.plotting_package", "Settings 绘图包资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_plotting_package"], ("Settings 分析资源卡片",)),
+    IconAssetSlot("settings.resource.developer_diagnostics", "Settings 开发者诊断资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_developer_diagnostics"], ("Settings 开发者诊断折叠入口",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -269,6 +298,19 @@ def load_meta_page_icon(page_key: str) -> QIcon:
 
 def load_meta_page_pixmap(page_key: str, size: int = 32) -> QPixmap:
     icon = load_meta_page_icon(page_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_settings_resource_icon(resource_key: str) -> QIcon:
+    path = SETTINGS_RESOURCE_ICON_PATHS.get(resource_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_settings_resource_pixmap(resource_key: str, size: int = 32) -> QPixmap:
+    icon = load_settings_resource_icon(resource_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 

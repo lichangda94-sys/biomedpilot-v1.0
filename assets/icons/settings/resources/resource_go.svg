@@ -1,0 +1,12 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_go</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <circle cx='21' cy='24' r='5' fill='#EEF5FF' stroke='#2F80ED' stroke-width='3'/>
+      <circle cx='43' cy='24' r='5' fill='#EEF5FF' stroke='#1DA6A8' stroke-width='3'/>
+      <circle cx='32' cy='43' r='5' fill='#EEF5FF' stroke='#7A5AF8' stroke-width='3'/>
+      <path d='M25 27l5 10M39 27l-5 10M26 24h12' stroke='#35506B' stroke-width='3' stroke-linecap='round'/>
+      <path d='M14 43h8M42 43h8' stroke='#6B7C93' stroke-width='3' stroke-linecap='round'/>
+
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_cloud_ai</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <path d='M22 43h24c5 0 9-4 9-9s-4-9-9-9c-2-7-8-11-15-9-5 1-9 5-10 10-6 1-10 5-10 10s5 7 11 7z' fill='#F5FAFF' stroke='#35506B' stroke-width='3' stroke-linejoin='round'/>
+      <circle cx='28' cy='33' r='3' fill='#2F80ED'/>
+      <circle cx='37' cy='33' r='3' fill='#1DA6A8'/>
+      <path d='M31 37h3' stroke='#7A5AF8' stroke-width='3' stroke-linecap='round'/>
+
+  </g>
+</svg>

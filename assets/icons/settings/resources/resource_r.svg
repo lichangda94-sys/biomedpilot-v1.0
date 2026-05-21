@@ -1,0 +1,10 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64' fill='none'>
+  <title>resource_r</title>
+  <g stroke-linecap='round' stroke-linejoin='round'>
+
+      <ellipse cx='32' cy='32' rx='20' ry='14' fill='#F5FAFF' stroke='#35506B' stroke-width='3'/>
+      <path d='M24 39V26h11c4 0 7 2 7 6 0 3-2 5-5 6l6 7' fill='none' stroke='#2F80ED' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>
+      <path d='M29 32h7' stroke='#1DA6A8' stroke-width='3' stroke-linecap='round'/>
+
+  </g>
+</svg>
