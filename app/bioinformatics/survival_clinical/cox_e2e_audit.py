@@ -27,6 +27,7 @@ def audit_cox_univariate_e2e_acceptance(project_root: str | Path, result_id: str
     parameter_manifest = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
     if parameter_manifest.get("status") != "passed":
         blockers.append("cox_parameter_gate_not_passed")
+        blockers.extend(str(item) for item in parameter_manifest.get("blockers", []) or [])
     if confirmation is not None:
         blockers.extend(str(item) for item in validate_cox_univariate_confirmation(confirmation, parameter_manifest).get("blockers", []) or [])
     if (entry.get("dependency_snapshot") or {}).get("status") != "passed":

@@ -25,6 +25,7 @@ def audit_survival_km_e2e_acceptance(project_root: str | Path, result_id: str, *
     parameter_manifest = entry.get("parameters_manifest") if isinstance(entry.get("parameters_manifest"), dict) else {}
     if parameter_manifest.get("status") != "passed":
         blockers.append("km_parameter_gate_not_passed")
+        blockers.extend(str(item) for item in parameter_manifest.get("blockers", []) or [])
     if confirmation is not None:
         confirmation_gate = validate_km_logrank_confirmation(confirmation, parameter_manifest)
         blockers.extend(str(item) for item in confirmation_gate.get("blockers", []) or [])

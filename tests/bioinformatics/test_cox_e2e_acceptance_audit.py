@@ -34,3 +34,37 @@ def test_cox_e2e_blocks_preflight_source(tmp_path) -> None:
     audit = audit_cox_univariate_e2e_acceptance(tmp_path, "preflight")
 
     assert "preflight_testing_or_imported_source_blocked" in audit["blockers"]
+
+
+def test_cox_e2e_surfaces_missing_dependency_invalid_covariate_and_low_event_blockers(tmp_path) -> None:
+    register_result(
+        tmp_path,
+        {
+            "result_id": "cox-blocked",
+            "task_run_id": "task",
+            "task_type": "cox_univariate",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "surv",
+            "source_dataset_id": "surv",
+            "source_repository_manifest": "B12",
+            "parameters_manifest": {
+                "status": "blocked",
+                "cox_parameter_id": "cox-param",
+                "covariate": "case_id",
+                "blockers": ["identifier_not_allowed_as_covariate", "minimum_event_count_not_met"],
+            },
+            "engine_name": "engine",
+            "engine_version": "1",
+            "dependency_snapshot": {"status": "preflight_only", "blockers": ["lifelines_missing_formal_survival_disabled"]},
+            "output_artifacts": (),
+            "validation_status": "blocked",
+            "survival_clinical_input_id": "surv",
+            "survival_outcome_gate_id": "outcome",
+        },
+    )
+
+    audit = audit_cox_univariate_e2e_acceptance(tmp_path, "cox-blocked")
+
+    assert "missing_dependency" in audit["blockers"]
+    assert "identifier_not_allowed_as_covariate" in audit["blockers"]
+    assert "minimum_event_count_not_met" in audit["blockers"]
