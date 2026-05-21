@@ -96,6 +96,8 @@ def test_meta_workspace_renders_target_ia_shell(meta_workspace) -> None:
     assert all(item.property("interactionMode") == "select_only" for item in nav_items)
     assert all(item.property("formalActionEnabled") is False for item in nav_items)
     assert all(item.property("moduleKey") == ModuleKey.META_ANALYSIS.value for item in nav_items)
+    assert all(item.minimumHeight() >= 74 for item in nav_items)
+    assert all("\n" in item.text() for item in nav_items)
     assert {item.property("semanticKey") for item in nav_items} >= {
         PageKey.META_PROJECT_HOME.value,
         PageKey.META_RESULT_REPORT.value,
@@ -125,6 +127,7 @@ def test_meta_workspace_groups_ten_active_meta_types(meta_workspace) -> None:
         "Testing schema",
     ]
     assert all(card.property("statusKey") == "testing" for card in cards)
+    assert all(card.minimumHeight() >= 128 for card in cards)
     assert all(card.property("moduleKey") == ModuleKey.META_ANALYSIS.value for card in cards)
     assert all(card.property("semanticKey") == FeatureStatusKey.TESTING.value for card in cards)
     assert all(button.property("interactionMode") == "schema_shell" for button in select_buttons)
@@ -180,6 +183,8 @@ def test_meta_target_page_selection_updates_shell_state_only(meta_workspace) -> 
 
     assert meta_workspace.current_target_page_key() == "screening"
     assert by_page["screening"].isChecked()
+    assert by_page["screening"].property("currentStep") is True
+    assert by_page["project_home"].property("currentStep") is False
     assert by_page["screening"].property("pageGroup") == "main_flow"
     assert by_page["screening"].property("flowIndex") == 5
     assert status is not None
@@ -216,8 +221,10 @@ def test_meta_fulltext_extraction_tabs_match_c1_concept(meta_workspace) -> None:
 
     assert [tab.property("tabKey") for tab in tabs] == ["全文管理", "提取表设计", "提取完成核查", "历史记录"]
     assert "数据提取" not in [tab.property("tabKey") for tab in tabs]
+    assert all(tab.minimumHeight() >= 34 for tab in tabs)
     assert management_body is not None
     assert extraction_body is not None
+    assert management_body.minimumHeight() >= 260
     assert not management_body.isHidden()
     assert extraction_body.isHidden()
     by_tab["提取表设计"].click()

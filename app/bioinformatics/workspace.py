@@ -263,9 +263,9 @@ def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
 
 
 try:
-    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QStackedWidget, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
 except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
-    QFrame = QHBoxLayout = QLabel = QPushButton = QStackedWidget = QVBoxLayout = QWidget = None
+    QFrame = QGridLayout = QHBoxLayout = QLabel = QPushButton = QSizePolicy = QStackedWidget = QVBoxLayout = QWidget = None
     _WORKSPACE_IMPORT_ERROR: Exception | None = None
 else:
     try:
@@ -294,6 +294,45 @@ else:
 
 
 if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
+    _BIO_FLOW_BUTTON_STYLESHEET = """
+    QPushButton#bioinformaticsIANavItem {
+        border: 1px solid #C9D6E6;
+        border-radius: 8px;
+        background: #FFFFFF;
+        color: #42526B;
+        font-size: 12px;
+        font-weight: 650;
+        padding: 8px 10px;
+        text-align: left;
+    }
+    QPushButton#bioinformaticsIANavItem:disabled {
+        color: #42526B;
+        background: #FFFFFF;
+    }
+    QPushButton#bioinformaticsIANavItem[currentStep="true"] {
+        border: 2px solid #2F80ED;
+        background: #EAF3FF;
+        color: #123E73;
+        font-weight: 800;
+    }
+    QPushButton#bioinformaticsIANavItem[pageGroup="auxiliary"] {
+        background: #F8FAFC;
+    }
+    """
+
+    def _compact_flow_label(label: str) -> str:
+        parts = [part.strip() for part in label.split("/", 1)]
+        compact = "\n".join(parts) if len(parts) == 2 else label
+        return compact.replace("&", "&&")
+
+    def _bio_flow_button_text(page: BioinformaticsIAPage) -> str:
+        status = page.status_key.replace("_", " ")
+        return f"{page.flow_index:02d}\n{_compact_flow_label(page.label)}\n{status}"
+
+    def _refresh_dynamic_style(widget: QWidget) -> None:
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
 
     class BioinformaticsWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -441,12 +480,16 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             main_title.setObjectName("bioinformaticsIAMainFlowTitle")
             main_title.setStyleSheet("font-weight: 700;")
             main_layout.addWidget(main_title)
-            row = QHBoxLayout()
-            row.setSpacing(8)
-            for page in bioinformatics_main_flow_pages():
-                item = QPushButton(page.label)
+            flow_grid = QGridLayout()
+            flow_grid.setHorizontalSpacing(10)
+            flow_grid.setVerticalSpacing(10)
+            for index, page in enumerate(bioinformatics_main_flow_pages()):
+                item = QPushButton(_bio_flow_button_text(page))
                 item.setObjectName("bioinformaticsIANavItem")
                 item.setCheckable(True)
+                item.setMinimumHeight(76)
+                item.setMinimumWidth(132)
+                item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
@@ -454,12 +497,14 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("statusKey", page.status_key)
                 item.setProperty("semanticKey", _BIO_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("statusSemanticKey", page.semantic_key)
+                item.setProperty("currentStep", False)
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.label)
+                item.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
-                row.addWidget(item)
-            main_layout.addLayout(row)
+                flow_grid.addWidget(item, index // 4, index % 4)
+            main_layout.addLayout(flow_grid)
             layout.addWidget(main_card)
 
             auxiliary_card = QFrame()
@@ -475,9 +520,12 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             auxiliary_row = QHBoxLayout()
             auxiliary_row.setSpacing(10)
             for page in bioinformatics_auxiliary_pages():
-                item = QPushButton(page.label)
+                item = QPushButton(_compact_flow_label(page.label))
                 item.setObjectName("bioinformaticsIANavItem")
                 item.setCheckable(True)
+                item.setMinimumHeight(54)
+                item.setMinimumWidth(180)
+                item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
@@ -485,8 +533,10 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("statusKey", page.status_key)
                 item.setProperty("semanticKey", _BIO_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("statusSemanticKey", page.semantic_key)
+                item.setProperty("currentStep", False)
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.label)
+                item.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
                 auxiliary_row.addWidget(item)
@@ -517,6 +567,8 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 button.setObjectName("quickAccessButton")
                 button.setProperty("moduleKey", ModuleKey.BIOINFORMATICS.value)
                 button.setProperty("quickAccessKey", text)
+                button.setMinimumHeight(36)
+                button.setMinimumWidth(96)
                 button.setEnabled(False)
                 quick_row.addWidget(button)
             quick_row.addStretch(1)
@@ -529,7 +581,10 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
             if not hasattr(self, "_target_ia_buttons"):
                 return
             for key, button in self._target_ia_buttons.items():
-                button.setChecked(key == self._current_target_flow_page_key)
+                is_current = key == self._current_target_flow_page_key
+                button.setChecked(is_current)
+                button.setProperty("currentStep", is_current)
+                _refresh_dynamic_style(button)
             if hasattr(self, "_result_report_panel"):
                 self._result_report_panel.setVisible(self._current_target_flow_page_key == "result_report")
 

@@ -98,6 +98,8 @@ def test_bioinformatics_workspace_renders_target_ia_shell(bio_workspace) -> None
         bio_workspace.auxiliary_page_keys()
     )
     assert all(not item.isEnabled() for item in nav_items)
+    assert all(item.minimumHeight() >= 54 for item in nav_items)
+    assert all("\n" in item.text() for item in nav_items)
 
 
 def test_bioinformatics_nav_items_carry_status_and_semantic_keys(bio_workspace) -> None:
@@ -187,6 +189,8 @@ def test_bioinformatics_result_report_highlights_step_six_without_meta_context(b
     labels = "\n".join(label.text() for label in bio_workspace.findChildren(QLabel))
 
     assert by_page["result_report"].isChecked()
+    assert by_page["result_report"].property("currentStep") is True
+    assert by_page["project_home"].property("currentStep") is False
     assert by_page["result_report"].property("flowIndex") == 6
     assert by_page["result_report"].property("moduleKey") == ModuleKey.BIOINFORMATICS.value
     assert "PubMed" not in labels

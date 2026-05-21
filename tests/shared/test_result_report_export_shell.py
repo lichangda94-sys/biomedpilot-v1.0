@@ -68,16 +68,21 @@ def test_disclaimer_blocks_formal_result_claims() -> None:
 
 def test_adoption_panel_uses_empty_state_by_default() -> None:
     try:
-        from PySide6.QtWidgets import QApplication, QPushButton
+        from PySide6.QtWidgets import QApplication, QPushButton, QFrame
     except Exception as exc:  # pragma: no cover - optional GUI runtime.
         pytest.skip(f"PySide6 UI runtime unavailable: {exc}")
 
     QApplication.instance() or QApplication([])
     panel = make_result_report_export_adoption_panel(module="meta_analysis")
     buttons = panel.findChildren(QPushButton, "exportGatedButton")
+    empty_state = panel.findChild(QFrame, "resultPreviewEmptyState")
 
     assert panel.property("adoptionModule") == "meta_analysis"
     assert panel.property("exportGate") == ExportGateState.DISABLED_EMPTY_RESULT.value
     assert panel.property("reportReadyPackageAllowed") is False
+    assert panel.minimumHeight() >= 260
+    assert empty_state is not None
+    assert empty_state.minimumHeight() >= 128
+    assert all(button.minimumHeight() >= 36 for button in buttons)
     assert all(button.property("formalActionEnabled") is False for button in buttons)
     assert all(not button.isEnabled() for button in buttons)

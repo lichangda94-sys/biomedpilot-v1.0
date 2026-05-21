@@ -23,6 +23,7 @@ try:
         QListWidget,
         QListWidgetItem,
         QPushButton,
+        QSizePolicy,
         QStackedWidget,
         QVBoxLayout,
         QWidget,
@@ -165,6 +166,47 @@ def meta_workspace_layout_state() -> MetaWorkspaceLayoutState:
 
 
 if QWidget is not None:
+    _META_FLOW_BUTTON_STYLESHEET = """
+    QPushButton#metaTargetIANavItem {
+        border: 1px solid #C9D6E6;
+        border-radius: 8px;
+        background: #FFFFFF;
+        color: #42526B;
+        font-size: 12px;
+        font-weight: 650;
+        padding: 8px 10px;
+        text-align: left;
+    }
+    QPushButton#metaTargetIANavItem:checked,
+    QPushButton#metaTargetIANavItem[currentStep="true"] {
+        border: 2px solid #2F80ED;
+        background: #EAF3FF;
+        color: #123E73;
+        font-weight: 800;
+    }
+    QPushButton#metaTargetIANavItem[statusKey="planned"] {
+        border-color: #E8C56D;
+        background: #FFF8E6;
+    }
+    QPushButton#metaTargetIANavItem[currentStep="true"][statusKey="planned"] {
+        border-color: #B7791F;
+        background: #FFF3C4;
+    }
+    """
+
+    def _compact_flow_label(label: str) -> str:
+        parts = [part.strip() for part in label.split("/", 1)]
+        compact = "\n".join(parts) if len(parts) == 2 else label
+        return compact.replace("&", "&&")
+
+    def _meta_flow_button_text(page: MetaTargetIAPage) -> str:
+        status = page.status_key.replace("_", " ")
+        return f"{page.flow_index:02d}\n{_compact_flow_label(page.label)}\n{status}"
+
+    def _refresh_dynamic_style(widget: QWidget) -> None:
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -332,12 +374,16 @@ if QWidget is not None:
             self._target_interaction_status.setWordWrap(True)
             layout.addWidget(self._target_interaction_status)
 
-            page_row = QHBoxLayout()
-            page_row.setSpacing(8)
-            for page in meta_target_ia_pages():
-                item = QPushButton(page.label)
+            page_grid = QGridLayout()
+            page_grid.setHorizontalSpacing(10)
+            page_grid.setVerticalSpacing(10)
+            for index, page in enumerate(meta_target_ia_pages()):
+                item = QPushButton(_meta_flow_button_text(page))
                 item.setObjectName("metaTargetIANavItem")
                 item.setCheckable(True)
+                item.setMinimumHeight(74)
+                item.setMinimumWidth(138)
+                item.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 item.setProperty("pageKey", page.key)
                 item.setProperty("pageGroup", page.page_group)
                 item.setProperty("flowIndex", page.flow_index)
@@ -345,13 +391,15 @@ if QWidget is not None:
                 item.setProperty("statusKey", page.status_key)
                 item.setProperty("semanticKey", _META_PAGE_SEMANTIC_KEYS[page.key])
                 item.setProperty("statusSemanticKey", _META_STATUS_SEMANTIC_KEYS[page.status_key])
+                item.setProperty("currentStep", False)
                 item.setProperty("interactionMode", "select_only")
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.boundary)
+                item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
                 item.clicked.connect(lambda _checked=False, key=page.key: self.show_target_ia_page(key))
                 self._target_ia_buttons[page.key] = item
-                page_row.addWidget(item)
-            layout.addLayout(page_row)
+                page_grid.addWidget(item, index // 4, index % 4)
+            layout.addLayout(page_grid)
             self._fulltext_extraction_panel = self._build_fulltext_extraction_panel()
             layout.addWidget(self._fulltext_extraction_panel)
 
@@ -383,10 +431,12 @@ if QWidget is not None:
                     card.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                     card.setProperty("statusKey", meta_type.status_key)
                     card.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
+                    card.setMinimumHeight(128)
+                    card.setMinimumWidth(240)
                     card.setStyleSheet("QFrame#metaActiveTypeCard { border: 1px solid #CBD5E1; border-radius: 8px; background: #FFFFFF; }")
                     card_layout = QVBoxLayout(card)
-                    card_layout.setContentsMargins(10, 8, 10, 8)
-                    card_layout.setSpacing(6)
+                    card_layout.setContentsMargins(12, 10, 12, 10)
+                    card_layout.setSpacing(8)
                     card_layout.addWidget(make_status_chip(status_key=meta_type.status_key))
                     type_id = QLabel(meta_type.type_id)
                     type_id.setObjectName("metaActiveTypeId")
@@ -406,6 +456,7 @@ if QWidget is not None:
                     select.setProperty("semanticKey", FeatureStatusKey.TESTING.value)
                     select.setProperty("interactionMode", meta_type.interaction_mode)
                     select.setProperty("formalActionEnabled", False)
+                    select.setMinimumHeight(34)
                     select.clicked.connect(lambda _checked=False, type_id=meta_type.type_id: self.select_active_meta_type(type_id))
                     self._active_type_buttons[meta_type.type_id] = select
                     card_layout.addWidget(type_id)
@@ -457,7 +508,8 @@ if QWidget is not None:
                 button.setObjectName("metaFulltextExtractionTab")
                 button.setCheckable(True)
                 button.setChecked(index == 0)
-                button.setMinimumHeight(28)
+                button.setMinimumHeight(34)
+                button.setMinimumWidth(92)
                 button.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
                 button.setProperty("pageKey", "fulltext_extraction")
                 button.setProperty("tabKey", tab)
@@ -469,6 +521,7 @@ if QWidget is not None:
 
             self._fulltext_management_body = QFrame()
             self._fulltext_management_body.setObjectName("metaFulltextManagementBody")
+            self._fulltext_management_body.setMinimumHeight(260)
             self._fulltext_management_body.setStyleSheet("QFrame#metaFulltextManagementBody { border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; }")
             management_layout = QVBoxLayout(self._fulltext_management_body)
             management_layout.setContentsMargins(12, 10, 12, 10)
@@ -497,7 +550,7 @@ if QWidget is not None:
             body.setSpacing(12)
             structure = QFrame()
             structure.setObjectName("metaExtractionStructurePanel")
-            structure.setMinimumWidth(220)
+            structure.setMinimumWidth(260)
             structure.setStyleSheet("QFrame#metaExtractionStructurePanel { border: 1px solid #E2E8F0; border-radius: 8px; background: #F8FAFC; }")
             structure_layout = QVBoxLayout(structure)
             structure_layout.setContentsMargins(12, 10, 12, 10)
@@ -519,11 +572,13 @@ if QWidget is not None:
                 label = QLabel(f"{section}  {count}")
                 label.setObjectName("metaExtractionStructureItem")
                 label.setProperty("sectionKey", section)
+                label.setMinimumHeight(24)
                 structure_layout.addWidget(label)
             body.addWidget(structure, 1)
 
             fields = QFrame()
             fields.setObjectName("metaExtractionFieldStructure")
+            fields.setMinimumWidth(620)
             fields.setMinimumHeight(260)
             fields.setStyleSheet("QFrame#metaExtractionFieldStructure { border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; }")
             fields_layout = QVBoxLayout(fields)
@@ -540,6 +595,7 @@ if QWidget is not None:
                 header_label = QLabel(header)
                 header_label.setObjectName("metaExtractionFieldHeader")
                 header_label.setStyleSheet("font-weight: 700; color: #64748B;")
+                header_label.setMinimumHeight(26)
                 field_grid.addWidget(header_label, 0, column)
             for row, values in enumerate(
                 (
@@ -556,6 +612,7 @@ if QWidget is not None:
                 for column, value in enumerate(values):
                     label = QLabel(value)
                     label.setObjectName("metaExtractionFieldCell")
+                    label.setMinimumHeight(24)
                     field_grid.addWidget(label, row, column)
             fields_layout.addLayout(field_grid)
             body.addWidget(fields, 3)
@@ -567,15 +624,18 @@ if QWidget is not None:
             action_row.setContentsMargins(0, 0, 0, 0)
             save = QPushButton("保存提取表设计")
             save.setObjectName("metaSaveExtractionDesignButton")
+            save.setMinimumHeight(34)
             save.setEnabled(False)
             confirm = QPushButton("确认本次提取")
             confirm.setObjectName("metaConfirmExtractionButton")
             confirm.setProperty("moduleKey", ModuleKey.META_ANALYSIS.value)
             confirm.setProperty("pageKey", "fulltext_extraction")
             confirm.setProperty("actionSemantic", "advance_to_extraction_stage")
+            confirm.setMinimumHeight(34)
             confirm.setEnabled(False)
             back = QPushButton("返回全文管理")
             back.setObjectName("metaBackToFulltextButton")
+            back.setMinimumHeight(34)
             back.setEnabled(False)
             action_row.addWidget(save)
             action_row.addStretch(1)
@@ -600,7 +660,10 @@ if QWidget is not None:
             pages = {page.key: page for page in meta_target_ia_pages()}
             current = pages[self._current_target_page_key]
             for key, button in self._target_ia_buttons.items():
-                button.setChecked(key == self._current_target_page_key)
+                is_current = key == self._current_target_page_key
+                button.setChecked(is_current)
+                button.setProperty("currentStep", is_current)
+                _refresh_dynamic_style(button)
             if hasattr(self, "_target_interaction_status"):
                 self._target_interaction_status.setText(
                     f"当前页面：{current.label} · {current.status_key}"

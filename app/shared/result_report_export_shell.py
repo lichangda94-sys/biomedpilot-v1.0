@@ -113,6 +113,7 @@ def make_result_preview_empty_state(state: ResultReportExportState | None = None
     empty.setProperty("reportStatusKey", shell_state.report_status_key)
     empty.setProperty("semanticKey", shell_state.result_semantic_key)
     empty.setProperty("exportGate", shell_state.export_gate.value)
+    empty.setMinimumHeight(128)
     return empty
 
 
@@ -126,6 +127,7 @@ def make_report_draft_boundary(state: ResultReportExportState | None = None):
     card.setProperty("reportStatusKey", shell_state.report_status_key)
     card.setProperty("reportKey", ReportKey.STATUS.value)
     card.setProperty("semanticKey", shell_state.report_status_key)
+    card.setMinimumHeight(112)
     layout = QVBoxLayout(card)
     layout.setContentsMargins(16, 14, 16, 14)
     layout.setSpacing(8)
@@ -155,6 +157,8 @@ def make_export_buttons(state: ResultReportExportState, formats: tuple[ExportKey
         button.setProperty("resultSemanticKey", state.result_semantic_key)
         button.setProperty("formalActionEnabled", False)
         button.setProperty("reportReadyPackageAllowed", state.report_ready_package_allowed)
+        button.setMinimumHeight(36)
+        button.setMinimumWidth(104)
         button.setToolTip(action.gate_reason)
         button.setEnabled(action.enabled)
         buttons.append(button)
@@ -167,7 +171,7 @@ def make_result_report_export_adoption_panel(
     state: ResultReportExportState | None = None,
     formats: tuple[ExportKey, ...] = (ExportKey.MARKDOWN, ExportKey.HTML, ExportKey.DOCX),
 ):
-    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
 
     shell_state = state or empty_result_preview_state(module=module)
     frame = QFrame()
@@ -177,6 +181,7 @@ def make_result_report_export_adoption_panel(
     frame.setProperty("reportStatusKey", shell_state.report_status_key)
     frame.setProperty("exportGate", shell_state.export_gate.value)
     frame.setProperty("reportReadyPackageAllowed", shell_state.report_ready_package_allowed)
+    frame.setMinimumHeight(260)
     frame.setStyleSheet("QFrame#resultReportExportAdoptionPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
 
     layout = QVBoxLayout(frame)
@@ -191,8 +196,16 @@ def make_result_report_export_adoption_panel(
     detail.setWordWrap(True)
     layout.addWidget(title)
     layout.addWidget(detail)
-    layout.addWidget(make_result_preview_empty_state(shell_state))
-    layout.addWidget(make_report_draft_boundary(shell_state))
+
+    content_row = QHBoxLayout()
+    content_row.setSpacing(12)
+    preview = make_result_preview_empty_state(shell_state)
+    preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    boundary = make_report_draft_boundary(shell_state)
+    boundary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    content_row.addWidget(preview, 3)
+    content_row.addWidget(boundary, 2)
+    layout.addLayout(content_row)
 
     button_row = QHBoxLayout()
     button_row.setSpacing(8)

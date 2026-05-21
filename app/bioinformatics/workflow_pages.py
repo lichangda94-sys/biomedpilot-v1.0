@@ -4867,8 +4867,10 @@ def _table(headers: list[str]) -> QTableWidget:
     table = QTableWidget()
     table.setColumnCount(len(headers))
     table.setHorizontalHeaderLabels(headers)
-    table.setMinimumHeight(160)
+    table.setMinimumHeight(190)
     table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    table.verticalHeader().setDefaultSectionSize(34)
+    table.horizontalHeader().setMinimumHeight(36)
     return table
 
 
