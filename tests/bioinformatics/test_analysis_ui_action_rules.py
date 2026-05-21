@@ -140,14 +140,15 @@ def test_ora_readiness_can_be_reviewed_but_execution_stays_disabled() -> None:
         ora_gene_set_gate={"status": "passed", "validation_status": "passed", "blockers": []},
         ora_parameter_gate={"status": "passed", "blockers": []},
         ora_result_schema_gate={"status": "passed", "blockers": []},
+        ora_dependency={"status": "passed", "blockers": []},
     )
 
     readiness = _row(rows, "ora_readiness_review")
     assert readiness["enabled"] is True
     assert readiness["button_behavior"] == "enabled_gate_review_only"
     run = _row(rows, "run_ora_enrichment")
-    assert run["enabled"] is False
-    assert "b10_2_controlled_ora_execution_required" in run["disabled_reason"]
+    assert run["enabled"] is True
+    assert run["button_behavior"] == "enabled_controlled_ora_mvp"
 
 
 def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:

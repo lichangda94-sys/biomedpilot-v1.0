@@ -38,7 +38,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "missing_python_package:scipy" in formal_deg["disabled_reason"]
     assert _action(state, "formal_gsea")["enabled"] is False
     assert _action(state, "run_ora_enrichment")["enabled"] is False
-    assert "b10_2_controlled_ora_execution_required" in _action(state, "run_ora_enrichment")["disabled_reason"]
+    assert "ora_source_deg_result_missing" in _action(state, "run_ora_enrichment")["disabled_reason"]
     assert _action(state, "km_cox_logrank")["enabled"] is False
     assert _action(state, "report_ready_export")["state"] == "blocked_report_ready_gate"
     formal_gate_text = "\n".join(str(row) for row in state["formal_deg_gate_rows"])

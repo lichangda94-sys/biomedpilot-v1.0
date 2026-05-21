@@ -7,6 +7,8 @@ ORA_RESULT_SCHEMA_GATE_VERSION = "biomedpilot.ora_result_schema_gate.v1"
 ORA_RESULT_TASK_TYPE = "ora_enrichment"
 ORA_ENGINE_NAME = "biomedpilot_ora_gate_only"
 ORA_ENGINE_VERSION = "0.0.0-gate"
+CONTROLLED_ORA_ENGINE_NAME = "python_scipy_statsmodels_ora_mvp"
+CONTROLLED_ORA_ENGINE_VERSION = "0.1.0"
 
 ALLOWED_ORA_SOURCE_SEMANTICS = {"formal_computed_result", "imported_external_result"}
 ALLOWED_ORA_TEST_METHODS = {"hypergeometric", "fisher_exact"}
@@ -26,6 +28,7 @@ REQUIRED_ORA_RESULT_INDEX_FIELDS = (
     "source_dataset_id",
     "source_repository_manifest",
     "source_deg_result_id",
+    "source_result_semantics",
     "gene_set_resource_id",
     "parameters_manifest",
     "engine_name",
@@ -37,6 +40,8 @@ REQUIRED_ORA_RESULT_INDEX_FIELDS = (
     "validation_status",
     "warnings",
     "blockers",
+    "log_artifacts",
+    "failure_reason",
     "created_at",
     "updated_at",
     "schema_version",

@@ -4137,6 +4137,73 @@ def test_results_browser_formal_deg_review_table_summary_and_exports(qt_app, pro
     assert "未生成 report-ready" in widget.status_message()
 
 
+def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_summary) -> None:
+    table_path = project_summary.project_root / "results" / "tables" / "ora_ui.tsv"
+    table_path.parent.mkdir(parents=True, exist_ok=True)
+    table_path.write_text(
+        "term_id\tterm_name\tgene_set_size\toverlap_count\toverlap_genes\tbackground_size\tselected_gene_count\tp_value\tadjusted_p_value\tenrichment_ratio\tsource_gene_list\twarnings\n"
+        "TERM_A\tApoptosis\t2\t2\tTP53;BRCA1\t100\t10\t0.001\t0.003\t10\tselected\t\n",
+        encoding="utf-8",
+    )
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    register_result(
+        project_summary.project_root,
+        {
+            "result_id": "ora-ui",
+            "task_run_id": "ora-run-ui",
+            "task_type": "ora_enrichment",
+            "result_semantics": "formal_computed_result",
+            "input_package_id": "ora-input-ui",
+            "ora_input_id": "ora-input-ui",
+            "source_dataset_id": "dataset-ui",
+            "source_repository_manifest": "standardized_data/repositories/repository_manifest.json",
+            "source_deg_result_id": "formal-ui",
+            "source_result_semantics": "formal_computed_result",
+            "gene_set_resource_id": "sets-ui",
+            "parameters_manifest": {"test_method": "hypergeometric", "fdr_threshold": 0.05},
+            "engine_name": "python_scipy_statsmodels_ora_mvp",
+            "engine_version": "0.1",
+            "dependency_snapshot": {"packages": {"scipy": {"version": "1.17.1"}, "statsmodels": {"version": "0.14.6"}}},
+            "output_artifacts": [{"artifact_type": "ora_result_table", "path": str(table_path.relative_to(project_summary.project_root))}],
+            "plot_artifacts": [],
+            "report_artifacts": [],
+            "validation_status": "passed",
+            "warnings": [],
+            "blockers": [],
+            "log_artifacts": [{"artifact_type": "controlled_ora_task_run_log", "path": "analysis_runs/ora/ora-run-ui/task_run.json"}],
+            "failure_reason": "",
+            "created_at": now,
+            "updated_at": now,
+            "schema_version": "biomedpilot.result_index_entry.v1",
+            "report_ready_eligible": False,
+            "migration_status": "native_v2",
+        },
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    summary = widget.findChild(QLabel, "oraReviewSummary")
+    assert summary is not None
+    assert "terms=1" in summary.text()
+    assert "source=formal-ui" in summary.text()
+    assert "scipy=1.17.1" in summary.text()
+    table = widget.findChild(QTableWidget, "oraReviewTable")
+    assert table is not None
+    assert "Apoptosis" in _table_text(table)
+    downstream = widget.findChild(QLabel, "oraReviewDownstream")
+    assert downstream is not None
+    assert "GSEA remains disabled" in downstream.text()
+
+    exported = widget.export_ora_review_csv()
+
+    assert exported is not None
+    assert exported["status"] == "passed"
+    assert exported["report_ready_eligible"] is False
+    assert Path(str(exported["export_path"])).is_file()
+    assert "未生成 report-ready" in widget.status_message()
+
+
 def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_summary) -> None:
     table_path = project_summary.project_root / "results" / "tables" / "formal_deg_report.tsv"
     table_path.parent.mkdir(parents=True, exist_ok=True)

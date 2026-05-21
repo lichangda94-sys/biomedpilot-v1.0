@@ -75,6 +75,7 @@ def _ora_entry() -> dict[str, object]:
         "source_dataset_id": "dataset-1",
         "source_repository_manifest": "standardized_data/repositories/repository_manifest.json",
         "source_deg_result_id": "deg-1",
+        "source_result_semantics": "formal_computed_result",
         "gene_set_resource_id": "sets",
         "parameters_manifest": {"status": "passed"},
         "engine_name": "future_ora_engine",

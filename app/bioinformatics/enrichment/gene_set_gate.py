@@ -125,6 +125,13 @@ def _resolve_resource(root: Path, *, resource_id: str, resource_path: str | Path
             "source": "local_gmt",
             "local_path": str(path),
         }
+    local = [dict(item) for item in list_local_gene_sets(root)]
+    selected = next((item for item in local if item.get("selected_for_gsea") or item.get("selected_for_ora")), None)
+    if selected:
+        return selected
+    available = [item for item in local if str(item.get("status") or "") == "available"]
+    if len(available) == 1:
+        return available[0]
     return {}
 
 

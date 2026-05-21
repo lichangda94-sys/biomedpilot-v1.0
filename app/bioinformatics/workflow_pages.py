@@ -55,6 +55,7 @@ from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
 from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
+from app.bioinformatics.enrichment import build_ora_result_review, export_ora_review_table, run_controlled_ora
 from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
@@ -5418,6 +5419,19 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._status_label.setText(f"两组 controlled DEG 未运行：{blockers}")
         return result
 
+    def run_controlled_ora_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result = run_controlled_ora(self._project_root)
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成 controlled ORA MVP，并写入 result index v2。未生成 GSEA、plot、report-ready 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "ORA gate 未通过"
+            self._status_label.setText(f"controlled ORA 未运行：{blockers}")
+        return result
+
     def confirm_formal_deg_parameters(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5558,6 +5572,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
         self._formal_deg_button.setEnabled(False)
         actions.addWidget(self._formal_deg_button)
+        self._ora_button = _button("运行 controlled ORA", "secondaryButton", self.run_controlled_ora_task)
+        self._ora_button.setEnabled(False)
+        self._ora_button.setObjectName("runControlledOraButton")
+        actions.addWidget(self._ora_button)
         actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
         actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
@@ -5688,6 +5706,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
         confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
+        ora_action = _analysis_ui_action(analysis_state.get("action_rows", []), "run_ora_enrichment")
         self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
         self._formal_deg_confirm_button.setToolTip(str(confirmation_action.get("disabled_reason") or confirmation_action.get("next_action") or "确认 formal DEG 参数"))
         self._formal_deg_button.setEnabled(bool(formal_action.get("enabled")))
@@ -5695,6 +5714,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._formal_deg_button.setToolTip("运行两组 controlled DEG MVP；只写 result index v2，不生成 GSEA/plot/report-ready/survival。")
         else:
             self._formal_deg_button.setToolTip(str(formal_action.get("disabled_reason") or "formal DEG gate 未通过"))
+        self._ora_button.setEnabled(bool(ora_action.get("enabled")))
+        self._ora_button.setToolTip(str(ora_action.get("next_action") or ora_action.get("disabled_reason") or "controlled ORA gate 未通过"))
         _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
         self._sync_confirmation_controls(analysis_state)
         _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
@@ -6320,6 +6341,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self.setObjectName("bioinformaticsResultsBrowserPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
         self._formal_deg_review: dict[str, object] = {}
+        self._ora_review: dict[str, object] = {}
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -6364,6 +6386,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
 
     def export_formal_deg_review_csv(self) -> dict[str, object] | None:
         return self._export_formal_deg_review("csv")
+
+    def export_ora_review_tsv(self) -> dict[str, object] | None:
+        return self._export_ora_review("tsv")
+
+    def export_ora_review_csv(self) -> dict[str, object] | None:
+        return self._export_ora_review("csv")
 
     def generate_formal_deg_plot_artifact(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -6412,6 +6440,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         else:
             blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 formal DEG result"
             self._status_label.setText(f"formal DEG 表格未导出：{blockers}")
+        return result
+
+    def _export_ora_review(self, file_format: str) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._ora_review.get("selected_result_id") or "")
+        result = export_ora_review_table(self._project_root, result_id=result_id, file_format=file_format)
+        if result.get("status") == "passed":
+            self._status_label.setText(f"已导出 ORA {file_format.upper()} 表格；未生成 report-ready、plot、GSEA 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 ORA result"
+            self._status_label.setText(f"ORA 表格未导出：{blockers}")
         return result
 
     def status_message(self) -> str:
@@ -6513,6 +6554,45 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._formal_deg_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         root.addWidget(review_card)
 
+        ora_card, ora_layout = _card("Controlled ORA result review")
+        self._ora_guard_label = _muted("ORA is pathway over-representation analysis based on selected DEG genes; it does not prove pathway activation/inhibition and is not clinical interpretation.")
+        self._ora_guard_label.setObjectName("oraReviewGuard")
+        ora_layout.addWidget(self._ora_guard_label)
+        ora_controls = QHBoxLayout()
+        self._ora_sort_input = QComboBox()
+        self._ora_sort_input.setObjectName("oraReviewSort")
+        self._ora_sort_input.addItems(["adjusted_p_value", "p_value", "enrichment_ratio", "overlap_count", "significance_label", "input_order"])
+        self._ora_sort_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        self._ora_filter_input = QComboBox()
+        self._ora_filter_input.setObjectName("oraReviewFilter")
+        self._ora_filter_input.addItems(["all", "significant", "not_significant"])
+        self._ora_filter_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        ora_controls.addWidget(QLabel("Sort"))
+        ora_controls.addWidget(self._ora_sort_input)
+        ora_controls.addWidget(QLabel("Filter"))
+        ora_controls.addWidget(self._ora_filter_input)
+        ora_controls.addWidget(_button("导出 ORA TSV", "secondaryButton", self.export_ora_review_tsv))
+        ora_controls.addWidget(_button("导出 ORA CSV", "secondaryButton", self.export_ora_review_csv))
+        ora_controls.addStretch(1)
+        ora_layout.addLayout(ora_controls)
+        self._ora_summary_label = _muted("ORA summary：暂无 controlled ORA result。")
+        self._ora_summary_label.setObjectName("oraReviewSummary")
+        self._ora_downstream_label = _muted("ORA plot/report-ready disabled：等待 B10.3/B15；GSEA/survival 禁用。")
+        self._ora_downstream_label.setObjectName("oraReviewDownstream")
+        ora_layout.addWidget(self._ora_summary_label)
+        ora_layout.addWidget(self._ora_downstream_label)
+        self._ora_table = _table(["term_id", "term_name", "overlap", "gene_set_size", "selected", "ratio", "p-value", "FDR", "genes", "significance"])
+        self._ora_table.setObjectName("oraReviewTable")
+        ora_layout.addWidget(self._ora_table)
+        _set_table_widths(self._ora_table, [130, 220, 90, 110, 100, 90, 110, 110, 240, 130])
+        self._ora_table.horizontalHeader().setSectionResizeMode(8, QHeaderView.Stretch)
+        self._ora_provenance = _table(["Provenance", "Value"])
+        self._ora_provenance.setObjectName("oraReviewProvenanceTable")
+        ora_layout.addWidget(self._ora_provenance)
+        _set_table_widths(self._ora_provenance, [190, 620])
+        self._ora_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        root.addWidget(ora_card)
+
         gate_card, gate_layout = _card("Result semantics / plot / report gates")
         gate_layout.addWidget(_muted("结果浏览只展示 result index 语义和 eligibility；不会把 testing/imported/preflight 输出升级为 formal result。"))
         self._gate_preview = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
@@ -6558,6 +6638,13 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._formal_deg_review = review
         self._render_formal_deg_review(review)
+        ora_review = build_ora_result_review(
+            self._project_root,
+            sort_by=self._ora_sort_input.currentText(),
+            significance_filter=self._ora_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._ora_review = ora_review
+        self._render_ora_review(ora_review)
         plot_gate = build_formal_deg_plot_gate(
             self._project_root,
             result_id=str(review.get("selected_result_id") or "") or None,
@@ -6571,8 +6658,8 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ) if self._project_root else {}
         self._render_formal_deg_report_gate(report_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
-        _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or [])]))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -6665,6 +6752,61 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
+
+    def _render_ora_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._ora_summary_label.setText("ORA summary：暂无 controlled ORA result；raw/preflight/testing/exploratory 不会混入此审阅区。")
+            _fill_table(self._ora_table, [])
+            _fill_table(self._ora_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._ora_summary_label.setText(
+            "ORA summary："
+            f"terms={summary.get('term_total', 0)}；significant={summary.get('significant_term_count', 0)}；top={summary.get('top_term_by_fdr', '')}；"
+            f"source={summary.get('source_deg_result_id', '')} / {summary.get('source_result_semantics', '')}；"
+            f"gene_set={summary.get('gene_set_resource', '')}；method={summary.get('method', '')}；"
+            f"selected genes={summary.get('selected_gene_count', 0)}；background={summary.get('background_size', 0)}；"
+            f"deps scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._ora_downstream_label.setText("；".join(str(value) for value in downstream.values()) if downstream else "ORA plot/report-ready/GSEA/survival disabled.")
+        _fill_table(
+            self._ora_table,
+            [
+                [
+                    row.get("term_id", ""),
+                    row.get("term_name", ""),
+                    row.get("overlap_count", ""),
+                    row.get("gene_set_size", ""),
+                    row.get("selected_gene_count", ""),
+                    row.get("enrichment_ratio", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("overlap_genes", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._ora_provenance,
+            [
+                ["ora_input_id", provenance.get("ora_input_id", "")],
+                ["source_deg_result_id", provenance.get("source_deg_result_id", "")],
+                ["source_result_semantics", provenance.get("source_result_semantics", "")],
+                ["gene_set_resource_id", provenance.get("gene_set_resource_id", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
 
 
 class BioinformaticsReportViewerWidget(QWidget):

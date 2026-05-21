@@ -25,6 +25,7 @@ def build_action_rows(
     ora_gene_set_gate: dict[str, Any] | None = None,
     ora_parameter_gate: dict[str, Any] | None = None,
     ora_result_schema_gate: dict[str, Any] | None = None,
+    ora_dependency: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -41,6 +42,7 @@ def build_action_rows(
     ora_gene_set_gate = ora_gene_set_gate or {}
     ora_parameter_gate = ora_parameter_gate or {}
     ora_result_schema_gate = ora_result_schema_gate or {}
+    ora_dependency = ora_dependency or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -53,8 +55,8 @@ def build_action_rows(
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
     rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
     rows.append(_imported_deg_action(imported_package, results))
-    rows.append(_ora_readiness_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate))
-    rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate))
+    rows.append(_ora_readiness_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
+    rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
     rows.append(_constant_disabled_action("ora_plot", "Generate ORA plot artifact", "hidden_until_ready", "ORA plot artifacts are not activated in B10.1."))
     rows.append(_constant_disabled_action("ora_report_ready", "Add ORA to report-ready package", "hidden_until_ready", "ORA report-ready integration is not activated in B10.1."))
     rows.append(_immune_action(immune_package, tasks))
@@ -221,8 +223,9 @@ def _ora_readiness_action(
     gene_set_gate: dict[str, Any],
     parameter_gate: dict[str, Any],
     result_schema_gate: dict[str, Any],
+    dependency: dict[str, Any],
 ) -> dict[str, Any]:
-    blockers = _ora_blockers(ora_input_gate, gene_set_gate, parameter_gate, result_schema_gate)
+    blockers = _ora_blockers(ora_input_gate, gene_set_gate, parameter_gate, result_schema_gate, dependency)
     source_id = str(ora_input_gate.get("source_result_id") or "")
     if source_id:
         return {
@@ -249,15 +252,26 @@ def _ora_run_action(
     gene_set_gate: dict[str, Any],
     parameter_gate: dict[str, Any],
     result_schema_gate: dict[str, Any],
+    dependency: dict[str, Any],
 ) -> dict[str, Any]:
-    blockers = _ora_blockers(ora_input_gate, gene_set_gate, parameter_gate, result_schema_gate)
-    blockers.append("b10_2_controlled_ora_execution_required")
+    blockers = _ora_blockers(ora_input_gate, gene_set_gate, parameter_gate, result_schema_gate, dependency)
+    if not blockers:
+        return {
+            "action_id": "run_ora_enrichment",
+            "label": "Run controlled ORA enrichment",
+            "state": "enabled_controlled_ora",
+            "button_behavior": "enabled_controlled_ora_mvp",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run controlled ORA from eligible DEG result and validated local GMT; register result index v2 table only.",
+        }
     return _disabled(
         "run_ora_enrichment",
-        "Run ORA enrichment",
-        "hidden_until_ready",
+        "Run controlled ORA enrichment",
+        "blocked_controlled_ora_gate",
         "; ".join(dict.fromkeys(blockers)),
-        "B10.1 is gate-only; controlled ORA execution requires a later audited stage.",
+        "Resolve ORA source, local GMT resource, parameters, result schema and dependency gates.",
     )
 
 
@@ -266,6 +280,7 @@ def _ora_blockers(
     gene_set_gate: dict[str, Any],
     parameter_gate: dict[str, Any],
     result_schema_gate: dict[str, Any],
+    dependency: dict[str, Any],
 ) -> list[str]:
     blockers: list[str] = []
     if ora_input_gate.get("status") != "passed":
@@ -276,6 +291,8 @@ def _ora_blockers(
         blockers.extend(_list(parameter_gate.get("blockers")) or ["ora_parameter_gate_not_passed"])
     if result_schema_gate.get("status") != "passed":
         blockers.extend(_list(result_schema_gate.get("blockers")) or ["ora_result_schema_gate_not_passed"])
+    if dependency.get("status") != "passed":
+        blockers.extend(_list(dependency.get("blockers")) or ["ora_dependency_snapshot_not_passed"])
     return list(dict.fromkeys(blockers))
 
 

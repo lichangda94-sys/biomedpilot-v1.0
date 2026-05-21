@@ -89,3 +89,28 @@ b10_1_ora_gate:
     - fisher_exact
   multiple_testing_policy: BH
   report_ready_eligible: false
+
+b10_2_controlled_ora_execution:
+  status: controlled_ora_mvp_enabled
+  source_policy: result_index_deg_only
+  methods:
+    - hypergeometric
+    - fisher_exact
+  dependency_policy:
+    required:
+      - scipy
+      - statsmodels
+    install_action: none_detect_first_only
+  outputs:
+    result_table: true
+    result_index_v2: true
+    task_run_log: true
+    plot_artifacts: false
+    report_artifacts: false
+    report_ready_eligible: false
+  disabled_capabilities:
+    - GSEA
+    - ORA_plot
+    - report_ready_ORA_section
+    - survival
+    - clinical_interpretation
