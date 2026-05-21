@@ -4,15 +4,17 @@ Date: 2026-05-21
 
 ## Candidate
 
-Candidate commit: `f06b8f6abe01d75ed2a0d316c5558e46bad5df9f`
+Candidate commit: `ad394bd923de02247cc41ca93b9f9665a1dd31ab`
 
 Branch: `codex/releasebuild-formal-deg-carryover`
 
-Status: accepted as the current ReleaseBuild formal DEG internal-test candidate, pending human decision on whether to merge into `dev/release-internal-test`.
+Status: accepted as the current ReleaseBuild Bioinformatics analysis internal-test candidate, pending human decision on whether to merge into `dev/release-internal-test`.
 
 This candidate includes:
 
 - B9.14 Formal DEG MVP scoped carry-over from MainLine.
+- B10/B11 ORA and GSEA enrichment layer gates already present in ReleaseBuild.
+- B12/B13/B14/B14.8/B14.9 survival/clinical input, controlled KM/log-rank, and controlled Cox univariate closure gates.
 - Local integration-line carry-over from `dev/integration`, with Bioinformatics conflicts resolved in favor of the B9.14 ReleaseBuild formal DEG implementation.
 - ReleaseBuild packaging/signing behavior preserved.
 
@@ -33,6 +35,15 @@ Required gate steps:
 9. Controlled package LaunchServices smoke
 10. Controlled package codesign verification
 11. Controlled packaged formal DEG runtime check, expected `passed`
+
+B14.9 closure additionally requires:
+
+- ReleaseBuild UI distinguishes DEG / ORA / GSEA / KM / Cox / Cox multivariate disabled / survival report-ready disabled.
+- KM and Cox result semantics remain `formal_computed_result` only when controlled gates pass.
+- KM and Cox plot artifacts remain spec-only and source-result driven.
+- KM and Cox result/report state keeps `report_ready_eligible=False`.
+- Cox multivariate remains design audit only.
+- Survival/clinical report-ready remains disabled.
 
 Run:
 
@@ -58,7 +69,7 @@ Controlled DEG runtime package:
 - PySide6: not available, so this is not the full GUI package runtime
 - Purpose: validate the formal DEG dependency stack and controlled fixture runner inside a packaged app
 
-## Formal DEG Support Scope
+## Analysis Support Scope
 
 Supported in this candidate:
 
@@ -69,24 +80,41 @@ Supported in this candidate:
 - Formal DEG result schema
 - Result review and report-ready gating
 - Basic formal DEG plot/report artifacts under the controlled MVP boundary
+- Controlled ORA section-only enrichment layer
+- Controlled preranked GSEA section-only enrichment layer
+- Controlled two-group KM/log-rank MVP
+- Controlled single-variable Cox MVP
 
 Not supported:
 
-- GSEA execution
-- Survival analysis execution
+- Cox multivariate execution
+- Survival/clinical report-ready package
+- Real rendered KM/Cox PNG/SVG/PDF plots
 - R backend execution
 - DESeq2
 - edgeR
 - limma
-- Clinical conclusion, diagnosis, treatment recommendation, publication claim, regulatory claim, or production clinical-readiness claim
+- Clinical conclusion, prognosis, diagnosis, treatment recommendation, publication claim, regulatory claim, or production clinical-readiness claim
 
 ## Release Notes
 
 This is an internal-test candidate, not a public release.
 
-The formal DEG feature is limited to a controlled two-group MVP. It validates dependency availability, parameters, result schema, and fixture execution. It does not provide broad bioinformatics workflow coverage, does not run enrichment or survival analysis, does not call R/Bioconductor engines, and must not be described as clinical, regulatory, or publication-ready.
+The Bioinformatics analysis surface is limited to controlled MVP paths: two-group DEG, ORA, preranked GSEA, two-group KM/log-rank, and single-variable Cox. It validates dependency availability, parameters, result schema, fixture execution, result review, and section/package gates. It does not call R/Bioconductor engines and must not be described as clinical, regulatory, production, or publication-ready.
 
 The default GUI package is a valid UI smoke package and remains the package used for desktop manual inspection. Formal DEG computation is only proven in the controlled DEG runtime package until the default GUI Python runtime includes `scipy` and `statsmodels`.
+
+Survival/clinical notes:
+
+- KM/log-rank and Cox univariate are controlled MVP analysis outputs only.
+- Cox multivariate remains disabled/design audit only.
+- KM/Cox plot artifacts are spec-only.
+- Survival/clinical report-ready is disabled.
+- No clinical conclusion, prognosis, or treatment recommendation is generated.
+
+B14.9 closure evidence is recorded in:
+
+- `docs/bioinformatics/stage_B14_9_releasebuild_survival_clinical_closure_gate_20260521.md`
 
 ## Branch Decision
 
