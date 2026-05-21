@@ -4145,7 +4145,38 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
         "TERM_A\tApoptosis\t2\t2\tTP53;BRCA1\t100\t10\t0.001\t0.003\t10\tselected\t\n",
         encoding="utf-8",
     )
+    gene_set_path = project_summary.project_root / "user_data" / "bioinformatics" / "gene_sets" / "custom" / "sets-ui.gmt"
+    gene_set_path.parent.mkdir(parents=True, exist_ok=True)
+    gene_set_path.write_text("TERM_A\tApoptosis\tTP53\tBRCA1\n", encoding="utf-8")
+    gene_set_registry = project_summary.project_root / "user_data" / "bioinformatics" / "gene_sets" / "gene_set_registry.json"
+    gene_set_registry.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.gene_set_registry.v1",
+                "resources": [
+                    {
+                        "resource_id": "sets-ui",
+                        "name": "sets-ui",
+                        "collection_type": "Custom",
+                        "species": "unknown",
+                        "gene_id_type": "symbol",
+                        "status": "available",
+                        "local_path": str(gene_set_path.relative_to(project_summary.project_root)),
+                        "source": "user_import",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    task_log = project_summary.project_root / "analysis_runs" / "ora" / "ora-run-ui" / "task_run.json"
+    task_log.parent.mkdir(parents=True, exist_ok=True)
+    task_log.write_text(json.dumps({"task_run_id": "ora-run-ui", "status": "completed"}), encoding="utf-8")
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    register_result(
+        project_summary.project_root,
+        ResultIndexEntry(result_id="formal-ui", task_run_id="formal-ui-run", task_type="deg", result_semantics="formal_computed_result", validation_status="passed"),
+    )
     register_result(
         project_summary.project_root,
         {
@@ -4160,10 +4191,10 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
             "source_deg_result_id": "formal-ui",
             "source_result_semantics": "formal_computed_result",
             "gene_set_resource_id": "sets-ui",
-            "parameters_manifest": {"test_method": "hypergeometric", "fdr_threshold": 0.05},
+            "parameters_manifest": {"ora_parameter_id": "ora-ui-params", "test_method": "hypergeometric", "fdr_threshold": 0.05, "selected_gene_rule": "adjusted_p_value_and_abs_log2fc", "background_universe_rule": "source_deg_detected_genes"},
             "engine_name": "python_scipy_statsmodels_ora_mvp",
             "engine_version": "0.1",
-            "dependency_snapshot": {"packages": {"scipy": {"version": "1.17.1"}, "statsmodels": {"version": "0.14.6"}}},
+            "dependency_snapshot": {"status": "passed", "packages": {"scipy": {"version": "1.17.1"}, "statsmodels": {"version": "0.14.6"}}},
             "output_artifacts": [{"artifact_type": "ora_result_table", "path": str(table_path.relative_to(project_summary.project_root))}],
             "plot_artifacts": [],
             "report_artifacts": [],
@@ -4215,6 +4246,17 @@ def test_results_browser_ora_review_table_summary_and_exports(qt_app, project_su
     assert plot_result["plot_artifact"]["image_artifacts"] == []
     assert plot_result["plot_artifact"]["plot_spec_artifact"]["rendering"] == "spec_only_no_image_dependency"
     assert "未生成 PNG/SVG/PDF" in widget.status_message()
+    report_status = widget.findChild(QLabel, "oraReportReadyStatus")
+    assert report_status is not None
+    assert "ORA report-ready gate passed" in report_status.text()
+    report_button = widget.findChild(QPushButton, "oraReportReadyButton")
+    assert report_button is not None
+    assert report_button.isEnabled()
+    report_package = widget.generate_ora_report_ready_package()
+    assert report_package is not None
+    assert report_package["status"] == "ora_report_ready_package_created"
+    assert Path(str(report_package["package_path"])).is_dir()
+    assert "未生成 GSEA、survival、完整综合报告或临床结论" in widget.status_message()
 
 
 def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_summary) -> None:

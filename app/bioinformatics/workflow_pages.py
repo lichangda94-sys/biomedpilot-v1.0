@@ -58,6 +58,7 @@ from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_
 from app.bioinformatics.enrichment import build_ora_result_review, export_ora_review_table, run_controlled_ora
 from app.bioinformatics.plots import build_formal_deg_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_ora_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
+from app.bioinformatics.reports.ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
 from app.bioinformatics.data_source_requests import create_data_source_request
 from app.bioinformatics.data_sources import (
     GTExDownloadExecutionResult,
@@ -6409,6 +6410,27 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._render_ora_plot_gate(result)
         return result
 
+    def generate_ora_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._ora_review.get("selected_result_id") or "")
+        allow_table_only = bool(self._ora_table_only_report.isChecked()) if hasattr(self, "_ora_table_only_report") else False
+        result = create_ora_report_ready_package(self._project_root, result_id=result_id or None, allow_table_only_report=allow_table_only)
+        if result.get("status") in {"ora_report_ready_package_created", "imported_derived_ora_report_package_created"}:
+            self.refresh_results()
+            imported_note = "；imported-derived 来源已明确标注" if result.get("status") == "imported_derived_ora_report_package_created" else ""
+            self._status_label.setText(
+                "已生成 ORA report package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}{imported_note}；"
+                "仅包含 ORA section，未生成 GSEA、survival、完整综合报告或临床结论。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "ORA report-ready gate 未通过"
+            self._status_label.setText(f"ORA report package 未生成：{blockers}")
+            self._render_ora_report_gate(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
+        return result
+
     def generate_formal_deg_plot_artifact(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -6605,6 +6627,19 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         ora_plot_controls.addWidget(self._ora_plot_status)
         ora_plot_controls.addStretch(1)
         ora_layout.addLayout(ora_plot_controls)
+        ora_report_controls = QHBoxLayout()
+        self._ora_table_only_report = QCheckBox("允许无图 ORA table-only report mode")
+        self._ora_table_only_report.setObjectName("oraTableOnlyReportMode")
+        self._ora_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._ora_report_button = _button("生成 ORA report package", "secondaryButton", self.generate_ora_report_ready_package)
+        self._ora_report_button.setObjectName("oraReportReadyButton")
+        self._ora_report_status = _muted("ORA report-ready gate 需要完整 ORA result index、passed dependency/table/gene set/task log 和 ORA plot artifact；无图 ORA table-only 模式需显式勾选。")
+        self._ora_report_status.setObjectName("oraReportReadyStatus")
+        ora_report_controls.addWidget(self._ora_table_only_report)
+        ora_report_controls.addWidget(self._ora_report_button)
+        ora_report_controls.addWidget(self._ora_report_status)
+        ora_report_controls.addStretch(1)
+        ora_layout.addLayout(ora_report_controls)
         self._ora_summary_label = _muted("ORA summary：暂无 controlled ORA result。")
         self._ora_summary_label.setObjectName("oraReviewSummary")
         self._ora_downstream_label = _muted("ORA plot waits for ORA result gate；report-ready/GSEA/survival 禁用。")
@@ -6681,6 +6716,12 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             plot_type=self._ora_plot_type.currentText(),
         ) if self._project_root else {}
         self._render_ora_plot_gate(ora_plot_gate)
+        ora_report_gate = evaluate_ora_report_ready_gate(
+            self._project_root,
+            result_id=str(ora_review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._ora_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_ora_report_gate(ora_report_gate)
         plot_gate = build_formal_deg_plot_gate(
             self._project_root,
             result_id=str(review.get("selected_result_id") or "") or None,
@@ -6862,6 +6903,26 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._ora_plot_status.setText(f"ORA plot disabled：{reason}")
+
+    def _render_ora_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_ora_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") in {"eligible_for_ora_report_ready", "eligible_for_imported_derived_ora_report_package"}:
+            self._ora_report_button.setEnabled(True)
+            imported_note = "；imported-derived source will stay labeled" if gate.get("status") == "eligible_for_imported_derived_ora_report_package" else ""
+            self._ora_report_status.setText(
+                f"ORA report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"deps={gate.get('dependency_versions', {})}；table-only={gate.get('allow_table_only_report', False)}{imported_note}；"
+                "package scope=ORA only；GSEA/survival/full report/clinical conclusions disabled."
+            )
+        else:
+            self._ora_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "ORA report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._ora_report_status.setText(f"ORA report-ready disabled：{reason}")
 
 
 class BioinformaticsReportViewerWidget(QWidget):

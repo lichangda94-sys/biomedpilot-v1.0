@@ -27,6 +27,7 @@ def build_action_rows(
     ora_result_schema_gate: dict[str, Any] | None = None,
     ora_dependency: dict[str, Any] | None = None,
     ora_plot_gate: dict[str, Any] | None = None,
+    ora_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -45,6 +46,7 @@ def build_action_rows(
     ora_result_schema_gate = ora_result_schema_gate or {}
     ora_dependency = ora_dependency or {}
     ora_plot_gate = ora_plot_gate or {}
+    ora_report_gate = ora_report_gate or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -60,7 +62,7 @@ def build_action_rows(
     rows.append(_ora_readiness_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
     rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate, ora_dependency))
     rows.append(_ora_plot_action(ora_plot_gate))
-    rows.append(_constant_disabled_action("ora_report_ready", "Add ORA to report-ready package", "hidden_until_ready", "ORA report-ready integration is not activated before B10.4."))
+    rows.append(_ora_report_ready_action(ora_report_gate))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
     rows.append(_constant_disabled_action("survival_formal", "Run formal survival analysis", "hidden_until_ready", "Survival remains design/preflight only; no KM/Cox/log-rank/HR output."))
@@ -318,6 +320,34 @@ def _ora_plot_action(gate: dict[str, Any]) -> dict[str, Any]:
         "blocked_ora_plot_gate",
         "; ".join(blockers),
         "Register a valid ORA enrichment result before creating a spec-only ORA plot artifact.",
+    )
+
+
+def _ora_report_ready_action(gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") in {"eligible_for_ora_report_ready", "eligible_for_imported_derived_ora_report_package"}:
+        warnings = _list(gate.get("warnings"))
+        imported = gate.get("status") == "eligible_for_imported_derived_ora_report_package"
+        return {
+            "action_id": "ora_report_ready",
+            "label": "Export ORA report-ready package" if not imported else "Export imported-derived ORA package",
+            "state": "available_imported_derived" if imported else "available",
+            "button_behavior": "enabled_imported_derived_ora_report_package" if imported else "enabled_ora_report_ready_package",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": (
+                "Export ORA-only package with explicit imported-derived warning; no formal recomputed ORA label, GSEA, survival or clinical conclusions."
+                if imported
+                else "Export ORA-only report-ready package; no GSEA, survival, full integrated report or clinical conclusions."
+            ) + (f" Warnings: {'; '.join(warnings)}" if warnings else ""),
+        }
+    blockers = _list(gate.get("blockers")) or ["ora_report_ready_gate_not_passed"]
+    return _disabled(
+        "ora_report_ready",
+        "Export ORA report-ready package",
+        "blocked_ora_report_ready_gate",
+        "; ".join(blockers),
+        "Resolve ORA result index, table, gene set, dependency, task log, plot/table-only and provenance gates.",
     )
 
 

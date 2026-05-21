@@ -170,6 +170,29 @@ def test_ora_plot_action_is_enabled_only_when_plot_gate_passes() -> None:
     assert "ora_result_not_found" in _row(blocked, "ora_plot")["disabled_reason"]
 
 
+def test_ora_report_ready_action_is_gate_controlled() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        ora_report_gate={"status": "eligible_for_ora_report_ready", "warnings": []},
+    )
+
+    report = _row(rows, "ora_report_ready")
+    assert report["enabled"] is True
+    assert report["button_behavior"] == "enabled_ora_report_ready_package"
+    assert "no GSEA, survival" in report["next_action"]
+
+    imported = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"}, ora_report_gate={"status": "eligible_for_imported_derived_ora_report_package", "warnings": ["imported_derived_ora_report_not_biomedpilot_formal_recomputed_ora"]})
+    assert _row(imported, "ora_report_ready")["button_behavior"] == "enabled_imported_derived_ora_report_package"
+    assert "imported-derived" in _row(imported, "ora_report_ready")["next_action"]
+
+    blocked = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"}, ora_report_gate={"status": "blocked", "blockers": ["ora_report_task_run_log_missing"]})
+    assert _row(blocked, "ora_report_ready")["enabled"] is False
+    assert "ora_report_task_run_log_missing" in _row(blocked, "ora_report_ready")["disabled_reason"]
+
+
 def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:
     rows = build_action_rows(
         packages=[{"package_type": "deg_recompute", "blockers": ["display_value_type_not_allowed_for_count_model_deg"]}],
