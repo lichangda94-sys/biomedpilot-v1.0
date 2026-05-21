@@ -29,6 +29,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["action_rows"]
     assert state["dependency_rows"]
     assert state["gate_rows"]
+    assert state["ora_gate_rows"]
     assert state["survival_clinical_rows"]
     assert _file_set(tmp_path) == before
 
@@ -36,12 +37,17 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert formal_deg["enabled"] is False
     assert "missing_python_package:scipy" in formal_deg["disabled_reason"]
     assert _action(state, "formal_gsea")["enabled"] is False
+    assert _action(state, "run_ora_enrichment")["enabled"] is False
+    assert "b10_2_controlled_ora_execution_required" in _action(state, "run_ora_enrichment")["disabled_reason"]
     assert _action(state, "km_cox_logrank")["enabled"] is False
     assert _action(state, "report_ready_export")["state"] == "blocked_report_ready_gate"
     formal_gate_text = "\n".join(str(row) for row in state["formal_deg_gate_rows"])
     assert "Parameter manifest" in formal_gate_text
     assert "Result schema gate" in formal_gate_text
     assert "B9.2 controlled activation" in formal_gate_text
+    ora_gate_text = "\n".join(str(row) for row in state["ora_gate_rows"])
+    assert "ORA source DEG result" in ora_gate_text
+    assert "B10.2 controlled ORA execution" in ora_gate_text
 
 
 def test_analysis_center_state_shows_package_repair_guidance_for_deg_blockers(tmp_path: Path) -> None:

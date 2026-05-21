@@ -68,3 +68,24 @@ output:
   gsea_object_template: "{analysis_id}_GSEA_object.rds"
   dotplot_template: "{analysis_id}_{source}_{direction}_dotplot.png"
   gsea_plot_template: "GSEA_{keyword}_{index}_{safe_description}.png"
+
+b10_1_ora_gate:
+  status: gate_only_no_execution
+  allowed_sources:
+    - formal_computed_result_deg
+    - imported_external_result_deg
+  forbidden_sources:
+    - raw_expression
+    - preflight_only
+    - testing_level
+    - exploratory
+    - dry_run
+  resource_policy:
+    local_gmt: true
+    project_registry: true
+    online_download: false
+  methods_allowed_for_future_execution:
+    - hypergeometric
+    - fisher_exact
+  multiple_testing_policy: BH
+  report_ready_eligible: false

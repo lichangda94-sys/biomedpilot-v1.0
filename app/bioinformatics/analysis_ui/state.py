@@ -9,6 +9,7 @@ from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_fo
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
+from app.bioinformatics.enrichment import build_ora_gene_set_resource_gate, build_ora_input_gate, build_ora_parameter_manifest, build_ora_result_schema_gate
 from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATES, load_task_records
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
@@ -34,6 +35,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
+    ora_gates = build_ora_gate_state(project_root=root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
         packages=packages,
@@ -47,13 +49,27 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         survival_dependency=survival_dependency,
         report_gate=report_gate,
         formal_deg_report_gate=formal_deg_report_gate,
+        ora_input_gate=ora_gates["input_gate"],
+        ora_gene_set_gate=ora_gates["gene_set_gate"],
+        ora_parameter_gate=ora_gates["parameter_gate"],
+        ora_result_schema_gate=ora_gates["result_schema_gate"],
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
     survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency)
-    blockers = _dedupe([*resolver.get("blockers", [])] + [item for row in package_rows for item in row["raw_blockers"]] + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]])
-    warnings = _dedupe([*resolver.get("warnings", [])] + [item for row in package_rows for item in row["raw_warnings"]] + [item for row in dependency_rows for item in row["raw_warnings"]])
+    blockers = _dedupe(
+        [*resolver.get("blockers", [])]
+        + [item for row in package_rows for item in row["raw_blockers"]]
+        + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
+        + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"]) for item in gate.get("blockers", []) or []]
+    )
+    warnings = _dedupe(
+        [*resolver.get("warnings", [])]
+        + [item for row in package_rows for item in row["raw_warnings"]]
+        + [item for row in dependency_rows for item in row["raw_warnings"]]
+        + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"]) for item in gate.get("warnings", []) or []]
+    )
     return {
         "schema_version": "biomedpilot.analysis_center_ui_state.v1",
         "project_root": str(root),
@@ -68,6 +84,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "action_rows": action_rows,
         "dependency_rows": dependency_rows,
         "formal_deg_gate_rows": deg_gates["gate_rows"],
+        "ora_gate_rows": ora_gates["gate_rows"],
         "result_rows": result_rows,
         "gate_rows": gate_rows,
         "survival_clinical_rows": survival_rows,
@@ -80,6 +97,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "analysis_input_resolver": resolver,
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,
+            "ora_gate_state": ora_gates,
             "survival_dependency_snapshot": survival_dependency,
             "report_ready_gate": report_gate,
             "formal_deg_report_ready_gate": formal_deg_report_gate,
@@ -202,6 +220,61 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         "parameter_gate": parameter_gate,
         "confirmation_gate": confirmation_gate,
         "parameter_confirmation": confirmation,
+        "result_schema_gate": result_schema_gate,
+        "gate_rows": gate_rows,
+    }
+
+
+def build_ora_gate_state(*, project_root: str | Path) -> dict[str, Any]:
+    input_gate = build_ora_input_gate(project_root)
+    gene_set_gate = build_ora_gene_set_resource_gate(
+        project_root,
+        expected_species=str(input_gate.get("species") or "unknown"),
+        expected_gene_id_type=str(input_gate.get("source_gene_id_type") or "unknown"),
+    )
+    parameter_gate = build_ora_parameter_manifest(input_gate, gene_set_gate)
+    result_schema_gate = build_ora_result_schema_gate(parameter_manifest=parameter_gate)
+    gate_rows = [
+        _formal_deg_gate_row(
+            "ORA source DEG result",
+            input_gate.get("status"),
+            input_gate.get("blockers", []),
+            input_gate.get("warnings", []),
+            basis=f"{input_gate.get('source_result_id') or 'missing'} / {input_gate.get('source_result_semantics') or 'missing'}",
+        ),
+        _formal_deg_gate_row(
+            "ORA gene set resource",
+            gene_set_gate.get("status") or gene_set_gate.get("validation_status"),
+            gene_set_gate.get("blockers", []),
+            gene_set_gate.get("warnings", []),
+            basis=str(gene_set_gate.get("resource_name") or "local GMT or project registry only"),
+        ),
+        _formal_deg_gate_row(
+            "ORA parameter manifest",
+            parameter_gate.get("status"),
+            parameter_gate.get("blockers", []),
+            parameter_gate.get("warnings", []),
+            basis=f"{parameter_gate.get('test_method') or 'hypergeometric'} / {parameter_gate.get('multiple_testing_policy') or 'missing'}",
+        ),
+        _formal_deg_gate_row(
+            "ORA future result schema",
+            result_schema_gate.get("status"),
+            result_schema_gate.get("blockers", []),
+            result_schema_gate.get("warnings", []),
+            basis="Defines future ora_enrichment result index v2 fields only; no execution in B10.1.",
+        ),
+        _formal_deg_gate_row(
+            "B10.2 controlled ORA execution",
+            "blocked",
+            ["b10_2_controlled_ora_execution_required"],
+            [],
+            basis="Run ORA enrichment remains disabled in B10.1.",
+        ),
+    ]
+    return {
+        "input_gate": input_gate,
+        "gene_set_gate": gene_set_gate,
+        "parameter_gate": parameter_gate,
         "result_schema_gate": result_schema_gate,
         "gate_rows": gate_rows,
     }

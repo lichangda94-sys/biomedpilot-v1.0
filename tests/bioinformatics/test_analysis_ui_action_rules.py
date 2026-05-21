@@ -46,6 +46,9 @@ def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
     assert "KM/Cox/log-rank" in _row(rows, "km_cox_logrank")["label"]
+    assert _row(rows, "run_ora_enrichment")["enabled"] is False
+    assert _row(rows, "ora_plot")["enabled"] is False
+    assert _row(rows, "ora_report_ready")["enabled"] is False
 
 
 def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:
@@ -124,6 +127,27 @@ def test_imported_deg_review_is_review_only_not_formal() -> None:
     formal_plot = _row(rows, "plot_spec")
     assert formal_plot["enabled"] is False
     assert "formal_deg_plot_requires_formal_computed_result_source" in formal_plot["disabled_reason"]
+
+
+def test_ora_readiness_can_be_reviewed_but_execution_stays_disabled() -> None:
+    rows = build_action_rows(
+        packages=[],
+        results=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        ora_input_gate={"status": "passed", "source_result_id": "deg-1", "source_result_semantics": "formal_computed_result", "blockers": []},
+        ora_gene_set_gate={"status": "passed", "validation_status": "passed", "blockers": []},
+        ora_parameter_gate={"status": "passed", "blockers": []},
+        ora_result_schema_gate={"status": "passed", "blockers": []},
+    )
+
+    readiness = _row(rows, "ora_readiness_review")
+    assert readiness["enabled"] is True
+    assert readiness["button_behavior"] == "enabled_gate_review_only"
+    run = _row(rows, "run_ora_enrichment")
+    assert run["enabled"] is False
+    assert "b10_2_controlled_ora_execution_required" in run["disabled_reason"]
 
 
 def test_formal_deg_disabled_reason_lists_all_failed_b9_1_gates() -> None:

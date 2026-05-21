@@ -21,6 +21,10 @@ def build_action_rows(
     survival_dependency: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
+    ora_input_gate: dict[str, Any] | None = None,
+    ora_gene_set_gate: dict[str, Any] | None = None,
+    ora_parameter_gate: dict[str, Any] | None = None,
+    ora_result_schema_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     package_by_type = {str(item.get("package_type") or ""): item for item in packages if isinstance(item, dict)}
     tasks = tasks or []
@@ -33,6 +37,10 @@ def build_action_rows(
     survival_dependency = survival_dependency or {}
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
+    ora_input_gate = ora_input_gate or {}
+    ora_gene_set_gate = ora_gene_set_gate or {}
+    ora_parameter_gate = ora_parameter_gate or {}
+    ora_result_schema_gate = ora_result_schema_gate or {}
 
     deg_package = package_by_type.get("deg_recompute")
     imported_package = package_by_type.get("deg_imported_result")
@@ -45,6 +53,10 @@ def build_action_rows(
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
     rows.append(_constant_disabled_action("formal_gsea", "Run formal GSEA", "hidden_until_ready", "GSEA formal executor is not implemented in B8.9."))
     rows.append(_imported_deg_action(imported_package, results))
+    rows.append(_ora_readiness_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate))
+    rows.append(_ora_run_action(ora_input_gate, ora_gene_set_gate, ora_parameter_gate, ora_result_schema_gate))
+    rows.append(_constant_disabled_action("ora_plot", "Generate ORA plot artifact", "hidden_until_ready", "ORA plot artifacts are not activated in B10.1."))
+    rows.append(_constant_disabled_action("ora_report_ready", "Add ORA to report-ready package", "hidden_until_ready", "ORA report-ready integration is not activated in B10.1."))
     rows.append(_immune_action(immune_package, tasks))
     rows.append(_survival_preflight_action(survival_package, survival_dependency))
     rows.append(_constant_disabled_action("survival_formal", "Run formal survival analysis", "hidden_until_ready", "Survival remains design/preflight only; no KM/Cox/log-rank/HR output."))
@@ -202,6 +214,69 @@ def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str,
             "next_action": "Review external result with imported_external_result semantics.",
         }
     return _disabled("imported_deg_review", "Review imported DEG", "blocked_missing_input_package", "missing imported DEG package/result", "Import an external DEG result if needed.")
+
+
+def _ora_readiness_action(
+    ora_input_gate: dict[str, Any],
+    gene_set_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> dict[str, Any]:
+    blockers = _ora_blockers(ora_input_gate, gene_set_gate, parameter_gate, result_schema_gate)
+    source_id = str(ora_input_gate.get("source_result_id") or "")
+    if source_id:
+        return {
+            "action_id": "ora_readiness_review",
+            "label": "Review ORA readiness / Configure ORA",
+            "state": "gate_review_available" if blockers else "ready_for_future_execution",
+            "button_behavior": "enabled_gate_review_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Review source DEG semantics, selected gene policy, gene set resource, parameters and B10.1 disabled execution reasons.",
+        }
+    return _disabled(
+        "ora_readiness_review",
+        "Review ORA readiness / Configure ORA",
+        "blocked_missing_result_schema",
+        "; ".join(blockers or ["ora_source_deg_result_missing"]),
+        "Register or import a DEG result before ORA readiness review.",
+    )
+
+
+def _ora_run_action(
+    ora_input_gate: dict[str, Any],
+    gene_set_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> dict[str, Any]:
+    blockers = _ora_blockers(ora_input_gate, gene_set_gate, parameter_gate, result_schema_gate)
+    blockers.append("b10_2_controlled_ora_execution_required")
+    return _disabled(
+        "run_ora_enrichment",
+        "Run ORA enrichment",
+        "hidden_until_ready",
+        "; ".join(dict.fromkeys(blockers)),
+        "B10.1 is gate-only; controlled ORA execution requires a later audited stage.",
+    )
+
+
+def _ora_blockers(
+    ora_input_gate: dict[str, Any],
+    gene_set_gate: dict[str, Any],
+    parameter_gate: dict[str, Any],
+    result_schema_gate: dict[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    if ora_input_gate.get("status") != "passed":
+        blockers.extend(_list(ora_input_gate.get("blockers")) or ["ora_input_gate_not_passed"])
+    if gene_set_gate.get("status") != "passed" and gene_set_gate.get("validation_status") != "passed":
+        blockers.extend(_list(gene_set_gate.get("blockers")) or ["ora_gene_set_gate_not_passed"])
+    if parameter_gate.get("status") != "passed":
+        blockers.extend(_list(parameter_gate.get("blockers")) or ["ora_parameter_gate_not_passed"])
+    if result_schema_gate.get("status") != "passed":
+        blockers.extend(_list(result_schema_gate.get("blockers")) or ["ora_result_schema_gate_not_passed"])
+    return list(dict.fromkeys(blockers))
 
 
 def _immune_action(package: dict[str, Any] | None, tasks: list[dict[str, Any]]) -> dict[str, Any]:

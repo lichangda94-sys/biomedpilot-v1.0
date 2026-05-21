@@ -5629,7 +5629,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._formal_deg_confirmation_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
 
         gate_card, gate_layout = _card("Result / plot / report gate preview")
-        gate_layout.addWidget(_muted("Result semantics、plot source 和 report-ready gate 均来自 B8 contracts；preflight/testing/imported 不会升级为 formal result。"))
+        gate_layout.addWidget(_muted("Result semantics、plot source、report-ready 和 ORA readiness gate 均来自 B8/B10 contracts；preflight/testing/imported 不会升级为 formal result。"))
         self._formal_deg_gate_table = _table(["Formal DEG gate", "状态", "依据", "Blockers", "Warnings"])
         self._formal_deg_gate_table.setObjectName("analysisFormalDegGateTable")
         gate_layout.addWidget(self._formal_deg_gate_table)
@@ -5699,7 +5699,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._sync_confirmation_controls(analysis_state)
         _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
         _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
-        _fill_table(self._gate_table, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        _fill_table(self._gate_table, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or [])]))
         _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
         self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}, "analysis_center_state": analysis_state})
 
