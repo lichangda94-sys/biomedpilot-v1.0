@@ -19,11 +19,18 @@ from .materialization import (
     materialize_legacy_standardized_asset_candidates,
     validate_legacy_candidate_materialization_plan,
 )
+from .repository_merge import (
+    LEGACY_REPOSITORY_MERGE_MANIFEST_VERSION,
+    merge_legacy_materialized_assets_into_repository_manifest,
+    plan_legacy_repository_manifest_merge,
+    validate_legacy_repository_manifest_merge_plan,
+)
 
 __all__ = [
     "LEGACY_ACQUISITION_SCHEMA_VERSION",
     "LEGACY_ASSET_CANDIDATE_SCHEMA_VERSION",
     "LEGACY_MATERIALIZATION_MANIFEST_VERSION",
+    "LEGACY_REPOSITORY_MERGE_MANIFEST_VERSION",
     "LegacyAcquisitionManifest",
     "adapt_geo_detection_manifest",
     "adapt_gtex_preview_manifest",
@@ -31,8 +38,11 @@ __all__ = [
     "build_legacy_standardized_asset_candidates",
     "build_legacy_candidate_materialization_plan",
     "materialize_legacy_standardized_asset_candidates",
+    "merge_legacy_materialized_assets_into_repository_manifest",
+    "plan_legacy_repository_manifest_merge",
     "validate_legacy_acquisition_manifest",
     "validate_legacy_candidate_materialization_plan",
+    "validate_legacy_repository_manifest_merge_plan",
     "validate_legacy_standardized_asset_candidate",
     "write_legacy_acquisition_manifest",
     "write_legacy_standardized_asset_candidates",
