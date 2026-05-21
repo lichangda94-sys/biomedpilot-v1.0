@@ -70,14 +70,43 @@ def make_card(*, object_name: str = "uiCard"):
     return card
 
 
-def make_empty_state(title: str, body: str, *, action_text: str | None = None):
+def make_empty_state(
+    title: str,
+    body: str,
+    *,
+    action_text: str | None = None,
+    empty_state_key: str | None = None,
+    semantic_key: str | None = None,
+    illustration_size: int = 72,
+):
+    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QLabel, QVBoxLayout
+
+    from app.app_identity import empty_state_image_key_for, load_empty_state_pixmap
 
     frame = make_card(object_name="uiEmptyState")
     frame.setProperty("uiPrimitive", "empty_state")
+    resolved_empty_state_key = empty_state_image_key_for(empty_state_key, semantic_key)
+    frame.setProperty("emptyStateKey", resolved_empty_state_key or "")
+    frame.setProperty("emptyStateSemanticKey", semantic_key or "")
     layout = QVBoxLayout(frame)
     layout.setContentsMargins(16, 16, 16, 16)
     layout.setSpacing(8)
+
+    if resolved_empty_state_key:
+        illustration = QLabel()
+        illustration.setObjectName("uiEmptyStateIllustration")
+        illustration.setProperty("emptyStateKey", resolved_empty_state_key)
+        illustration.setProperty("semanticKey", semantic_key or "")
+        illustration.setAlignment(Qt.AlignCenter)
+        pixmap = load_empty_state_pixmap(resolved_empty_state_key, semantic_key=semantic_key, size=illustration_size)
+        illustration.setProperty("imageFallback", pixmap.isNull())
+        if not pixmap.isNull():
+            illustration.setPixmap(pixmap)
+            illustration.setFixedHeight(max(illustration_size, 56))
+            layout.addWidget(illustration)
+    else:
+        frame.setProperty("emptyStateImageFallback", True)
 
     title_label = QLabel(title)
     title_label.setObjectName("uiEmptyStateTitle")
@@ -94,6 +123,7 @@ def make_empty_state(title: str, body: str, *, action_text: str | None = None):
     if action_text:
         layout.addWidget(make_button(action_text, role="secondary"))
 
+    frame.setProperty("emptyStateImageFallback", frame.findChild(QLabel, "uiEmptyStateIllustration") is None)
     return frame
 
 

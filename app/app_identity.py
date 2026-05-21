@@ -6,7 +6,14 @@ from dataclasses import dataclass
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QApplication
 
-from app.shared.semantic_keys import ModuleKey, PageKey
+from app.shared.semantic_keys import (
+    AnalysisStatusKey,
+    FeatureStatusKey,
+    ModuleKey,
+    PageKey,
+    ResourceStatusKey,
+    ResultSemanticKey,
+)
 
 
 APP_NAME = "BioMedPilot / 医研智析"
@@ -17,6 +24,7 @@ LABTOOLS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "labtools"
 BIOINFORMATICS_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "bioinformatics" / "pages"
 META_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "meta" / "pages"
 SETTINGS_RESOURCE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "settings" / "resources"
+EMPTY_STATE_IMAGE_DIR = PROJECT_ROOT / "assets" / "images" / "empty_states"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -83,6 +91,22 @@ SETTINGS_RESOURCE_ICON_PATHS = {
     "resource_analysis_package": SETTINGS_RESOURCE_ICON_DIR / "resource_analysis_package.svg",
     "resource_plotting_package": SETTINGS_RESOURCE_ICON_DIR / "resource_plotting_package.svg",
     "resource_developer_diagnostics": SETTINGS_RESOURCE_ICON_DIR / "resource_developer_diagnostics.svg",
+}
+EMPTY_STATE_IMAGE_PATHS = {
+    "empty_project": EMPTY_STATE_IMAGE_DIR / "empty_project.svg",
+    "empty_result": EMPTY_STATE_IMAGE_DIR / "empty_result.svg",
+    "empty_missing_resource": EMPTY_STATE_IMAGE_DIR / "empty_missing_resource.svg",
+    "empty_blocked": EMPTY_STATE_IMAGE_DIR / "empty_blocked.svg",
+    "empty_shell_only": EMPTY_STATE_IMAGE_DIR / "empty_shell_only.svg",
+    "empty_preflight_only": EMPTY_STATE_IMAGE_DIR / "empty_preflight_only.svg",
+}
+EMPTY_STATE_SEMANTIC_IMAGE_KEYS = {
+    PageKey.BIO_PROJECT_HOME.value: "empty_project",
+    ResultSemanticKey.TESTING_SUMMARY_ONLY.value: "empty_result",
+    ResourceStatusKey.NOT_CONFIGURED.value: "empty_missing_resource",
+    FeatureStatusKey.BLOCKED.value: "empty_blocked",
+    FeatureStatusKey.SHELL_ONLY.value: "empty_shell_only",
+    AnalysisStatusKey.PREFLIGHT_ONLY.value: "empty_preflight_only",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -195,6 +219,12 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("settings.resource.analysis_package", "Settings 分析包资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_analysis_package"], ("Settings 分析资源卡片",)),
     IconAssetSlot("settings.resource.plotting_package", "Settings 绘图包资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_plotting_package"], ("Settings 分析资源卡片",)),
     IconAssetSlot("settings.resource.developer_diagnostics", "Settings 开发者诊断资源图标", "Settings resource", SETTINGS_RESOURCE_ICON_PATHS["resource_developer_diagnostics"], ("Settings 开发者诊断折叠入口",)),
+    IconAssetSlot("empty_state.project", "Empty project illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_project"], ("Shared empty state primitive",)),
+    IconAssetSlot("empty_state.result", "Empty result illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_result"], ("Result / Report / Export empty preview",)),
+    IconAssetSlot("empty_state.missing_resource", "Missing resource illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_missing_resource"], ("Shared empty state primitive",)),
+    IconAssetSlot("empty_state.blocked", "Blocked empty state illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_blocked"], ("Shared empty state primitive",)),
+    IconAssetSlot("empty_state.shell_only", "Shell-only empty state illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_shell_only"], ("Shared empty state primitive",)),
+    IconAssetSlot("empty_state.preflight_only", "Preflight-only empty state illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_preflight_only"], ("Shared empty state primitive",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -311,6 +341,30 @@ def load_settings_resource_icon(resource_key: str) -> QIcon:
 
 def load_settings_resource_pixmap(resource_key: str, size: int = 32) -> QPixmap:
     icon = load_settings_resource_icon(resource_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def empty_state_image_key_for(empty_state_key: str | None = None, semantic_key: str | None = None) -> str | None:
+    if empty_state_key in EMPTY_STATE_IMAGE_PATHS:
+        return empty_state_key
+    if semantic_key in EMPTY_STATE_SEMANTIC_IMAGE_KEYS:
+        return EMPTY_STATE_SEMANTIC_IMAGE_KEYS[semantic_key]
+    return None
+
+
+def load_empty_state_illustration(empty_state_key: str | None = None, *, semantic_key: str | None = None) -> QIcon:
+    resolved_key = empty_state_image_key_for(empty_state_key, semantic_key)
+    if resolved_key is None:
+        return QIcon()
+    path = EMPTY_STATE_IMAGE_PATHS.get(resolved_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_empty_state_pixmap(empty_state_key: str | None = None, *, semantic_key: str | None = None, size: int = 72) -> QPixmap:
+    icon = load_empty_state_illustration(empty_state_key, semantic_key=semantic_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 

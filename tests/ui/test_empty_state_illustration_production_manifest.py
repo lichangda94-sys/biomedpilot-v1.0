@@ -86,7 +86,10 @@ def test_empty_state_stage_does_not_touch_active_assets_or_deferred_families() -
     assert all("app_icon" not in row["resource_id"] for row in rows)
     assert all(row["svg_path"].startswith(EMPTY_STATE_ROOT) for row in rows)
     assert all(not row["svg_path"].startswith("assets/") for row in rows)
-    assert not ACTIVE_EMPTY_STATE_DIR.exists()
+    if ACTIVE_EMPTY_STATE_DIR.exists():
+        assert all(path.name.startswith("empty_") for path in ACTIVE_EMPTY_STATE_DIR.glob("*"))
+        assert not any(path.name.startswith(("status_", "result_", "report_", "export_", "share_")) for path in ACTIVE_EMPTY_STATE_DIR.glob("*"))
+        assert not any("app_icon" in path.name for path in ACTIVE_EMPTY_STATE_DIR.glob("*"))
 
 
 def test_empty_state_semantics_do_not_claim_formal_results_or_reports() -> None:

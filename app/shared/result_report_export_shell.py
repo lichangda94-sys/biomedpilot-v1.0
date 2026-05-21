@@ -107,6 +107,9 @@ def make_result_preview_empty_state(state: ResultReportExportState | None = None
     empty = make_empty_state(
         "No result preview / 暂无结果预览",
         f"{shell_state.gate_reason} {shell_state.disclaimer}",
+        empty_state_key="empty_result",
+        semantic_key=shell_state.result_semantic_key,
+        illustration_size=84,
     )
     empty.setObjectName("resultPreviewEmptyState")
     empty.setProperty("resultSemanticKey", shell_state.result_semantic_key)
