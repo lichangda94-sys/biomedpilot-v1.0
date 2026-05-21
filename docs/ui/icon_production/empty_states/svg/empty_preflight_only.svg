@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+<defs>
+  <linearGradient id="softBlue" x1="8" y1="8" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#EAF4FF"/>
+    <stop offset="1" stop-color="#D9EAFE"/>
+  </linearGradient>
+  <linearGradient id="softMint" x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#EAF9F3"/>
+    <stop offset="1" stop-color="#D7F0E7"/>
+  </linearGradient>
+  <linearGradient id="softAmber" x1="10" y1="12" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#FFF5DF"/>
+    <stop offset="1" stop-color="#FFE7B8"/>
+  </linearGradient>
+  <linearGradient id="softViolet" x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#F2EFFF"/>
+    <stop offset="1" stop-color="#E4DDFB"/>
+  </linearGradient>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2" stdDeviation="1.3" flood-color="#476178" flood-opacity="0.14"/>
+  </filter>
+</defs>
+  <circle cx="32" cy="33" r="24" fill="#E8F2FF" opacity="0.82"/>
+  <rect x="17" y="14" width="28" height="34" rx="5" fill="#FFFFFF" stroke="#456E9A" stroke-width="2.2" filter="url(#softShadow)"/>
+  <path d="M24 25h13M24 31h13M24 37h8" stroke="#9CB8D7" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M21 25l1.3 1.4L25 23.5M21 31l1.3 1.4L25 29.5" stroke="#5A8FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="43" cy="43" r="7" fill="#FFFFFF" stroke="#456E9A" stroke-width="2.2"/>
+  <path d="M48.5 48.5l4.5 4.5" stroke="#456E9A" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M40.2 43h5.6" stroke="#A9C2DD" stroke-width="2" stroke-linecap="round"/>
+</svg>
