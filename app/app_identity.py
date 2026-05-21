@@ -15,6 +15,7 @@ APP_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "app"
 MODULE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "modules"
 LABTOOLS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "labtools"
 BIOINFORMATICS_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "bioinformatics" / "pages"
+META_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "meta" / "pages"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -54,6 +55,18 @@ BIOINFORMATICS_PAGE_ICON_PATHS = {
     PageKey.BIO_REPORT_EXPORT.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_report_export.svg",
     PageKey.BIO_SETTINGS_RESOURCES.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_settings_resources.svg",
     PageKey.BIO_PROJECT_LOGS_TECHNICAL_DETAILS.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_project_logs.svg",
+}
+META_PAGE_ICON_PATHS = {
+    PageKey.META_PROJECT_HOME.value: META_PAGE_ICON_DIR / "meta_page_project_home.svg",
+    PageKey.META_QUESTION_TYPE.value: META_PAGE_ICON_DIR / "meta_page_question_meta_type.svg",
+    PageKey.META_SEARCH_STRATEGY.value: META_PAGE_ICON_DIR / "meta_page_search_strategy.svg",
+    PageKey.META_IMPORT_DEDUP.value: META_PAGE_ICON_DIR / "meta_page_import_deduplication.svg",
+    PageKey.META_SCREENING.value: META_PAGE_ICON_DIR / "meta_page_screening.svg",
+    PageKey.META_FULLTEXT_EXTRACTION.value: META_PAGE_ICON_DIR / "meta_page_fulltext_extraction.svg",
+    PageKey.META_QUALITY_ASSESSMENT.value: META_PAGE_ICON_DIR / "meta_page_quality_assessment.svg",
+    PageKey.META_ANALYSIS_TASKS.value: META_PAGE_ICON_DIR / "meta_page_analysis_tasks.svg",
+    PageKey.META_RESULT_REPORT.value: META_PAGE_ICON_DIR / "meta_page_result_report.svg",
+    PageKey.META_REPORT_EXPORT.value: META_PAGE_ICON_DIR / "meta_page_report_export.svg",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -143,6 +156,16 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("bio.page.report_export", "Bioinformatics 报告导出图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_REPORT_EXPORT.value], ("Bioinformatics 目标 IA 导航",)),
     IconAssetSlot("bio.page.settings_resources", "Bioinformatics 设置与资源图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_SETTINGS_RESOURCES.value], ("Bioinformatics 辅助 IA 导航",)),
     IconAssetSlot("bio.page.project_logs_technical_details", "Bioinformatics 项目日志与技术详情图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_PROJECT_LOGS_TECHNICAL_DETAILS.value], ("Bioinformatics 辅助 IA 导航",)),
+    IconAssetSlot("meta.page.project_home", "Meta Analysis 项目首页图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_PROJECT_HOME.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.question_meta_type", "Meta Analysis 研究问题与类型图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_QUESTION_TYPE.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.search_strategy", "Meta Analysis 检索策略图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_SEARCH_STRATEGY.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.import_dedup", "Meta Analysis 文献导入与去重图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_IMPORT_DEDUP.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.screening", "Meta Analysis 文献筛选图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_SCREENING.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.fulltext_extraction", "Meta Analysis 全文与数据提取图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_FULLTEXT_EXTRACTION.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.quality_assessment", "Meta Analysis 质量评价图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_QUALITY_ASSESSMENT.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.analysis_tasks", "Meta Analysis 统计分析图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_ANALYSIS_TASKS.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.result_report", "Meta Analysis 结果与报告图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_RESULT_REPORT.value], ("Meta Analysis 目标 IA 导航",)),
+    IconAssetSlot("meta.page.report_export", "Meta Analysis 报告导出图标", "Meta Analysis 页面", META_PAGE_ICON_PATHS[PageKey.META_REPORT_EXPORT.value], ("Meta Analysis 目标 IA 导航",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -233,6 +256,19 @@ def load_bioinformatics_page_icon(page_key: str) -> QIcon:
 
 def load_bioinformatics_page_pixmap(page_key: str, size: int = 32) -> QPixmap:
     icon = load_bioinformatics_page_icon(page_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_meta_page_icon(page_key: str) -> QIcon:
+    path = META_PAGE_ICON_PATHS.get(page_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_meta_page_pixmap(page_key: str, size: int = 32) -> QPixmap:
+    icon = load_meta_page_icon(page_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 

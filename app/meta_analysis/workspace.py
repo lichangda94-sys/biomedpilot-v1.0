@@ -15,6 +15,7 @@ from app.meta_analysis.project_workspace import MetaProjectSummary, open_meta_an
 from app.meta_analysis.version import META_ANALYSIS_MAINLINE_CONTRACT_VERSION
 
 try:
+    from PySide6.QtCore import QSize
     from PySide6.QtWidgets import (
         QFrame,
         QGridLayout,
@@ -28,8 +29,13 @@ try:
         QVBoxLayout,
         QWidget,
     )
+
+    from app.app_identity import META_PAGE_ICON_PATHS, load_meta_page_icon
 except Exception:  # pragma: no cover
+    QSize = None  # type: ignore[assignment]
     QWidget = None  # type: ignore[assignment]
+    META_PAGE_ICON_PATHS = {}
+    load_meta_page_icon = None  # type: ignore[assignment]
 
 
 def meta_analysis_features() -> list[FeatureItem]:
@@ -207,6 +213,14 @@ if QWidget is not None:
         widget.style().unpolish(widget)
         widget.style().polish(widget)
         widget.update()
+
+    def _apply_meta_page_icon(button: QPushButton, semantic_key: str, *, size: int) -> None:
+        icon = load_meta_page_icon(semantic_key)
+        if not icon.isNull():
+            button.setIcon(icon)
+            button.setIconSize(QSize(size, size))
+        button.setProperty("iconSource", str(META_PAGE_ICON_PATHS.get(semantic_key, "")))
+        button.setProperty("iconFallback", icon.isNull())
 
     class MetaAnalysisWorkspaceWidget(QWidget):
         def __init__(self, on_back: Callable[[], None] | None = None) -> None:
@@ -396,6 +410,7 @@ if QWidget is not None:
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.boundary)
                 item.setStyleSheet(_META_FLOW_BUTTON_STYLESHEET)
+                _apply_meta_page_icon(item, _META_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 item.clicked.connect(lambda _checked=False, key=page.key: self.show_target_ia_page(key))
                 self._target_ia_buttons[page.key] = item
                 page_grid.addWidget(item, index // 4, index % 4)

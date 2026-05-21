@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">meta_page_result_report</title>
+  <desc id="desc">Production candidate vector icon for meta_pages; transparent background.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="25" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.5" opacity="0.65"/>
+    <rect x="18" y="12" width="28" height="40" rx="4" fill="none" stroke="#6D28D9" stroke-width="3"/>
+    <path d="M46 22 L36 22 L36 12" stroke="#6D28D9" stroke-width="3"/>
+    <rect x="24" y="36" width="3" height="10" rx="1" fill="#6D28D9" stroke="#6D28D9" stroke-width="2"/>
+    <rect x="31" y="30" width="3" height="16" rx="1" fill="#6D28D9" stroke="#6D28D9" stroke-width="2"/>
+    <rect x="38" y="24" width="3" height="22" rx="1" fill="#6D28D9" stroke="#6D28D9" stroke-width="2"/>
+  </g>
+</svg>
