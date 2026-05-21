@@ -14,6 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "app"
 MODULE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "modules"
 LABTOOLS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "labtools"
+BIOINFORMATICS_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "bioinformatics" / "pages"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
 UI03_PROJECT_HOME_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui03_project_home"
@@ -42,6 +43,17 @@ LABTOOLS_ICON_PATHS = {
     PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value: LABTOOLS_ICON_DIR / "labtools_nucleic_acid_experiments.svg",
     PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value: LABTOOLS_ICON_DIR / "labtools_immuno_absorbance.svg",
     PageKey.LABTOOLS_IHC.value: LABTOOLS_ICON_DIR / "labtools_ihc.svg",
+}
+BIOINFORMATICS_PAGE_ICON_PATHS = {
+    PageKey.BIO_PROJECT_HOME.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_project_home.svg",
+    PageKey.BIO_DATA_SOURCE.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_data_source.svg",
+    PageKey.BIO_DATA_CHECK_PREPARATION.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_data_check_preparation.svg",
+    PageKey.BIO_GROUP_DESIGN.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_group_design.svg",
+    PageKey.BIO_ANALYSIS_TASKS.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_analysis_tasks.svg",
+    PageKey.BIO_RESULT_REPORT.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_result_report.svg",
+    PageKey.BIO_REPORT_EXPORT.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_report_export.svg",
+    PageKey.BIO_SETTINGS_RESOURCES.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_settings_resources.svg",
+    PageKey.BIO_PROJECT_LOGS_TECHNICAL_DETAILS.value: BIOINFORMATICS_PAGE_ICON_DIR / "bio_page_project_logs.svg",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -122,6 +134,15 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("labtools.nucleic_acid_experiments", "LabTools 核酸实验图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_NUCLEIC_ACID_EXPERIMENTS.value], ("LabTools 实验模块分类",)),
     IconAssetSlot("labtools.immuno_absorbance", "LabTools 免疫与吸光度实验图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value], ("LabTools 实验模块分类",)),
     IconAssetSlot("labtools.ihc", "LabTools 免疫组化图标", "LabTools", LABTOOLS_ICON_PATHS[PageKey.LABTOOLS_IHC.value], ("LabTools 实验模块分类",)),
+    IconAssetSlot("bio.page.project_home", "Bioinformatics 项目首页图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_PROJECT_HOME.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.data_source", "Bioinformatics 数据来源图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_DATA_SOURCE.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.data_check_preparation", "Bioinformatics 数据检查与准备图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_DATA_CHECK_PREPARATION.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.group_design", "Bioinformatics 分组与设计图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_GROUP_DESIGN.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.analysis_tasks", "Bioinformatics 分析任务图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_ANALYSIS_TASKS.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.result_report", "Bioinformatics 结果与报告图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_RESULT_REPORT.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.report_export", "Bioinformatics 报告导出图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_REPORT_EXPORT.value], ("Bioinformatics 目标 IA 导航",)),
+    IconAssetSlot("bio.page.settings_resources", "Bioinformatics 设置与资源图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_SETTINGS_RESOURCES.value], ("Bioinformatics 辅助 IA 导航",)),
+    IconAssetSlot("bio.page.project_logs_technical_details", "Bioinformatics 项目日志与技术详情图标", "Bioinformatics 页面", BIOINFORMATICS_PAGE_ICON_PATHS[PageKey.BIO_PROJECT_LOGS_TECHNICAL_DETAILS.value], ("Bioinformatics 辅助 IA 导航",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -199,6 +220,19 @@ def load_labtools_icon(semantic_key: str) -> QIcon:
 
 def load_labtools_pixmap(semantic_key: str, size: int = 48) -> QPixmap:
     icon = load_labtools_icon(semantic_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_bioinformatics_page_icon(page_key: str) -> QIcon:
+    path = BIOINFORMATICS_PAGE_ICON_PATHS.get(page_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_bioinformatics_page_pixmap(page_key: str, size: int = 32) -> QPixmap:
+    icon = load_bioinformatics_page_icon(page_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 

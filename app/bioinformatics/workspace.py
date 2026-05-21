@@ -263,9 +263,14 @@ def bioinformatics_legacy_routes() -> tuple[BioinformaticsLegacyRoute, ...]:
 
 
 try:
+    from PySide6.QtCore import QSize
     from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
+    from app.app_identity import BIOINFORMATICS_PAGE_ICON_PATHS, load_bioinformatics_page_icon
 except Exception:  # pragma: no cover - non-GUI environments import feature registry only.
+    QSize = None
     QFrame = QGridLayout = QHBoxLayout = QLabel = QPushButton = QSizePolicy = QStackedWidget = QVBoxLayout = QWidget = None
+    BIOINFORMATICS_PAGE_ICON_PATHS = {}
+    load_bioinformatics_page_icon = None
     _WORKSPACE_IMPORT_ERROR: Exception | None = None
 else:
     try:
@@ -328,6 +333,14 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
     def _bio_flow_button_text(page: BioinformaticsIAPage) -> str:
         status = page.status_key.replace("_", " ")
         return f"{page.flow_index:02d}\n{_compact_flow_label(page.label)}\n{status}"
+
+    def _apply_bio_page_icon(button: QPushButton, semantic_key: str, *, size: int) -> None:
+        icon = load_bioinformatics_page_icon(semantic_key)
+        if not icon.isNull():
+            button.setIcon(icon)
+            button.setIconSize(QSize(size, size))
+        button.setProperty("iconSource", str(BIOINFORMATICS_PAGE_ICON_PATHS.get(semantic_key, "")))
+        button.setProperty("iconFallback", icon.isNull())
 
     def _refresh_dynamic_style(widget: QWidget) -> None:
         widget.style().unpolish(widget)
@@ -501,6 +514,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.label)
                 item.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
+                _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=22)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
                 flow_grid.addWidget(item, index // 4, index % 4)
@@ -537,6 +551,7 @@ if QWidget is not None and _WORKSPACE_IMPORT_ERROR is None:
                 item.setProperty("formalActionEnabled", False)
                 item.setToolTip(page.label)
                 item.setStyleSheet(_BIO_FLOW_BUTTON_STYLESHEET)
+                _apply_bio_page_icon(item, _BIO_PAGE_SEMANTIC_KEYS[page.key], size=20)
                 item.setEnabled(False)
                 self._target_ia_buttons[page.key] = item
                 auxiliary_row.addWidget(item)
