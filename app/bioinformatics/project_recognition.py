@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import gzip
 import re
+import uuid
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -13,13 +15,14 @@ from xml.etree import ElementTree
 from app.bioinformatics.geo_family_soft_parser import parse_geo_family_soft
 from app.bioinformatics.geo_series_matrix_parser import parse_geo_series_matrix
 from app.bioinformatics.group_preview import GROUP_PREVIEW_REPORT, build_group_preview_report
+from app.bioinformatics.tcga.barcode import validate_tcga_sample_barcodes
 
 RECOGNITION_REPORT = Path("logs") / "recognition" / "recognition_report.json"
-RECOGNITION_RUNS_DIR = Path("recognized_data") / "runs"
-CURRENT_RECOGNITION_RUN = Path("recognized_data") / "current.json"
 RECOGNIZED_FILES = Path("logs") / "recognition" / "recognized_files.json"
-RECOGNITION_REPORT_SCHEMA_VERSION = "biomedpilot.recognition_report.v1"
-RECOGNITION_ENGINE_VERSION = "developer-preview"
+CURRENT_RECOGNITION_RUN = Path("logs") / "recognition" / "current_recognition_run.json"
+RECOGNITION_REPORT_SCHEMA_VERSION = "biomedpilot.recognition_report.v2"
+RECOGNIZED_FILES_SCHEMA_VERSION = "biomedpilot.recognized_files.v2"
+RECOGNITION_ENGINE_VERSION = "bioinformatics-recognition-engine.v2"
 
 TYPE_LABELS = {
     "expression_matrix": "表达矩阵",
@@ -37,6 +40,13 @@ TYPE_LABELS = {
     "gmt_gene_set": "GMT 基因集",
     "geo_soft_container": "GEO SOFT 容器",
     "geo_series_matrix_container": "GEO Series Matrix 容器",
+    "tcga_expression_matrix": "TCGA 表达矩阵",
+    "tcga_clinical_metadata": "TCGA 临床信息",
+    "tcga_sample_metadata": "TCGA 样本信息",
+    "gtex_expression_matrix": "GTEx 表达矩阵",
+    "gtex_sample_metadata": "GTEx 样本信息",
+    "gdc_manifest": "GDC manifest / sample sheet",
+    "raw_heavy_file": "RAW/heavy 文件",
     "tabular_text_file": "表格文本文件",
     "unknown": "未知文件",
 }
@@ -53,9 +63,68 @@ INPUT_ELIGIBLE_ROLES = {
     "gene_annotation",
     "comparison_config",
     "gmt_gene_set",
+    "tcga_expression_matrix",
+    "tcga_clinical_metadata",
+    "tcga_sample_metadata",
+    "gtex_expression_matrix",
+    "gtex_sample_metadata",
 }
 
 TEXT_TABLE_SUFFIXES = {".csv", ".tsv", ".txt", ".matrix"}
+EXPRESSION_ROLE_TYPES = {
+    "expression_matrix",
+    "normalized_expression_matrix",
+    "raw_count_matrix",
+    "tcga_expression_matrix",
+    "gtex_expression_matrix",
+}
+REFERENCE_ONLY_TYPES = {"platform_annotation", "gene_annotation", "platform_reference_hint", "gdc_manifest", "gmt_gene_set"}
+BLOCKED_TYPES = {"raw_heavy_file", "unknown"}
+RAW_HEAVY_SUFFIXES = {
+    ".bam",
+    ".cram",
+    ".sra",
+    ".cel",
+    ".idat",
+    ".tar",
+    ".tgz",
+    ".zip",
+    ".rar",
+    ".7z",
+}
+RAW_HEAVY_COMPOUND_SUFFIXES = {
+    ".fastq.gz",
+    ".fq.gz",
+    ".tar.gz",
+    ".tar.bz2",
+    ".tar.xz",
+}
+DEG_STAT_COLUMNS = {
+    "logfc",
+    "log2fc",
+    "log2_fold_change",
+    "log_fold_change",
+    "fold_change",
+    "avg_log2fc",
+    "p",
+    "pvalue",
+    "p_value",
+    "p_val",
+    "p_val_adj",
+    "p_value_adj",
+    "adj_p_val",
+    "adj_p_value",
+    "padj",
+    "fdr",
+    "qvalue",
+    "q_value",
+    "false_discovery_rate",
+    "stat",
+    "statistic",
+    "t",
+    "b",
+    "wald_stat",
+}
 CLINICAL_HINT_TOKENS = (
     "tumor",
     "normal",
@@ -90,15 +159,7 @@ class RecognitionClassification:
 def run_project_recognition(project_root: str | Path) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
     files = _candidate_files(root)
-    report = _run_project_recognition_for_files(root, files)
-    _write_recognition_run(
-        root,
-        report,
-        selected_inputs=[str(path) for path in files],
-        batch_label="本次识别",
-        set_current=True,
-    )
-    return report
+    return _run_project_recognition_for_files(root, files)
 
 
 def run_project_recognition_for_paths(
@@ -113,19 +174,16 @@ def run_project_recognition_for_paths(
     report["selected_input_count"] = len(files)
     report["skipped_unselected_count"] = max(0, int(skipped_unselected_count))
     report["selected_inputs"] = [str(path) for path in files]
-    _write_recognition_run(
-        root,
-        report,
-        selected_inputs=[str(path) for path in files],
-        batch_label="本次识别",
-        set_current=True,
-    )
+    _write_json(root / RECOGNITION_REPORT, report)
     return report
 
 
 def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[str, object]:
     warnings: list[str] = []
     records: list[dict[str, object]] = []
+    generated_at = _now()
+    recognition_run_id = f"rec-{uuid.uuid4().hex[:12]}"
+    input_fingerprint = _build_input_fingerprint(files)
     if not files:
         warnings.append("未找到可识别的数据文件，请返回数据来源页补充数据。")
     for path in files:
@@ -134,298 +192,290 @@ def _run_project_recognition_for_files(root: Path, files: list[Path]) -> dict[st
         reason = classification.reason
         confidence = classification.confidence
         content_profile = classification.content_profile or {}
+        file_size = path.stat().st_size if path.exists() else 0
         record = {
+            "recognition_run_id": recognition_run_id,
+            "recognition_engine_version": RECOGNITION_ENGINE_VERSION,
             "file_name": path.name,
             "original_path": str(path),
             "recognized_type": kind,
             "recognized_type_zh": TYPE_LABELS.get(kind, "未知文件"),
+            "primary_type": kind,
+            "primary_type_zh": TYPE_LABELS.get(kind, "未知文件"),
             "recognized_roles": list(classification.roles),
+            "roles": list(classification.roles),
             "recognized_roles_zh": [TYPE_LABELS.get(role, role) for role in classification.roles],
             "secondary_roles": [role for role in classification.roles if role != kind],
             "detected_assets": list(classification.detected_assets),
             "container_format": classification.container_format,
             "content_profile": content_profile,
             "confidence": confidence,
-            "file_size": path.stat().st_size if path.exists() else 0,
+            "file_size": file_size,
             "reason": reason,
             "warning": "低置信度，需要人工确认。" if confidence < 0.5 else "",
             "route_path": str(root / "recognized_data" / kind / path.name),
         }
-        record.update(_semantic_record_fields(kind, content_profile))
         if classification.file_level_details:
             record.update(classification.file_level_details)
+        record.update(_v2_record_profiles(record, path))
+        record.update(_semantic_record_fields(kind, content_profile))
         records.append(record)
     warnings.extend(_recognition_warnings(records))
     group_preview = build_group_preview_report(root, records)
     report = {
-        "schema_version": "biomedpilot.recognition_report.v1",
-        "generated_at": _now(),
+        "schema_version": RECOGNITION_REPORT_SCHEMA_VERSION,
+        "generated_at": generated_at,
+        "recognition_run_id": recognition_run_id,
+        "recognition_engine_version": RECOGNITION_ENGINE_VERSION,
         "project_root": str(root),
+        "input_fingerprint": input_fingerprint,
+        "report_status": "current",
         "files": records,
         "type_counts": _type_counts(records),
         "group_preview": group_preview,
         "warnings": warnings,
     }
+    _write_json(root / RECOGNITION_REPORT, report)
+    _write_json(
+        root / RECOGNIZED_FILES,
+        {
+            "schema_version": RECOGNIZED_FILES_SCHEMA_VERSION,
+            "generated_at": generated_at,
+            "recognition_run_id": recognition_run_id,
+            "recognition_engine_version": RECOGNITION_ENGINE_VERSION,
+            "project_root": str(root),
+            "input_fingerprint": input_fingerprint,
+            "report_status": "current",
+            "files": records,
+        },
+    )
+    _write_json(
+        root / CURRENT_RECOGNITION_RUN,
+        {
+            "schema_version": "biomedpilot.current_recognition_run.v1",
+            "generated_at": generated_at,
+            "run_id": recognition_run_id,
+            "run_dir": str(root / "logs" / "recognition"),
+            "recognition_report_path": str(root / RECOGNITION_REPORT),
+            "recognition_run_id": recognition_run_id,
+            "recognition_engine_version": RECOGNITION_ENGINE_VERSION,
+            "input_fingerprint": input_fingerprint,
+            "report_path": str(root / RECOGNITION_REPORT),
+            "recognized_files_path": str(root / RECOGNIZED_FILES),
+        },
+    )
+    _write_json(
+        root / "recognized_data" / "current.json",
+        {
+            "schema_version": "biomedpilot.current_recognition_run.v1",
+            "run_id": recognition_run_id,
+            "run_dir": str(root / "logs" / "recognition"),
+            "recognition_report_path": str(root / RECOGNITION_REPORT),
+            "set_at": generated_at,
+        },
+    )
+    _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
     return report
 
 
 def load_recognition_report(project_root: str | Path) -> dict[str, object] | None:
-    root = Path(project_root).expanduser().resolve()
-    current = _load_current_run(root)
-    if current is None:
-        return _read_json_if_exists(root / RECOGNITION_REPORT)
-    report_path = Path(str(current.get("recognition_report_path") or ""))
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    try:
-        if report_path.exists():
-            return json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        pass
-    return _read_json_if_exists(root / RECOGNITION_REPORT)
+    path = Path(project_root).expanduser().resolve() / RECOGNITION_REPORT
+    if not path.exists():
+        return None
+    report = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(report, dict):
+        stale_status = recognition_report_stale_status(project_root, report)
+        report["stale_status"] = stale_status
+        if stale_status.get("is_stale"):
+            warning = str(stale_status.get("message") or "识别报告可能已过期，请重新识别。")
+            warnings = [str(item) for item in report.get("warnings", []) or []]
+            if warning not in warnings:
+                warnings.append(warning)
+                report["warnings"] = warnings
+            report["report_status"] = "stale"
+    return report
 
 
-def list_recognition_runs(project_root: str | Path, *, include_legacy: bool = True) -> list[dict[str, object]]:
+def recognition_report_stale_status(project_root: str | Path, report: dict[str, object] | None = None) -> dict[str, object]:
     root = Path(project_root).expanduser().resolve()
-    if include_legacy:
-        archive_legacy_recognition_report(root)
-    runs_dir = root / RECOGNITION_RUNS_DIR
-    current = _load_current_run(root) or {}
-    current_run_id = str(current.get("run_id") or "")
-    runs: list[dict[str, object]] = []
-    if not runs_dir.exists():
-        return []
-    for run_dir in sorted((path for path in runs_dir.iterdir() if path.is_dir()), reverse=True):
-        manifest_path = run_dir / "input_manifest.json"
+    loaded = report
+    if loaded is None:
+        path = root / RECOGNITION_REPORT
+        if not path.exists():
+            return {"is_stale": True, "reason": "missing_report", "message": "尚未生成数据识别报告。"}
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {"is_stale": True, "reason": "unreadable_report", "message": "识别报告无法读取，请重新识别。"}
+    schema = str(loaded.get("schema_version") or "")
+    engine = str(loaded.get("recognition_engine_version") or "")
+    if schema != RECOGNITION_REPORT_SCHEMA_VERSION or engine != RECOGNITION_ENGINE_VERSION:
+        return {
+            "is_stale": True,
+            "reason": "schema_or_engine_mismatch",
+            "message": "识别报告版本已过期，请重新识别。",
+            "expected_schema_version": RECOGNITION_REPORT_SCHEMA_VERSION,
+            "actual_schema_version": schema,
+            "expected_engine_version": RECOGNITION_ENGINE_VERSION,
+            "actual_engine_version": engine,
+        }
+    expected = loaded.get("input_fingerprint")
+    files = [Path(str(item.get("original_path") or "")) for item in loaded.get("files", []) or [] if isinstance(item, dict) and item.get("original_path")]
+    current = _build_input_fingerprint(files)
+    if not isinstance(expected, dict) or expected.get("fingerprint_hash") != current.get("fingerprint_hash"):
+        return {
+            "is_stale": True,
+            "reason": "source_files_changed",
+            "message": "识别输入文件已变化，请重新识别。",
+            "expected_fingerprint": expected,
+            "current_fingerprint": current,
+        }
+    return {"is_stale": False, "reason": "", "message": "", "fingerprint_hash": current.get("fingerprint_hash")}
+
+
+def _build_input_fingerprint(files: list[Path]) -> dict[str, object]:
+    entries: list[dict[str, object]] = []
+    for path in files:
+        expanded = Path(path).expanduser()
+        exists = expanded.exists()
+        stat = expanded.stat() if exists else None
+        entry: dict[str, object] = {
+            "path": str(expanded.resolve()) if exists else str(expanded),
+            "exists": exists,
+            "size_bytes": stat.st_size if stat is not None else 0,
+            "mtime_ns": stat.st_mtime_ns if stat is not None else 0,
+        }
+        if exists and stat is not None and stat.st_size <= 10 * 1024 * 1024 and not _is_raw_heavy_path(expanded):
+            digest = hashlib.sha256()
+            try:
+                with expanded.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                entry["sha256"] = digest.hexdigest()
+            except OSError:
+                entry["sha256"] = ""
+        entries.append(entry)
+    entries.sort(key=lambda item: str(item.get("path") or ""))
+    fingerprint_hash = hashlib.sha256(json.dumps(entries, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return {"algorithm": "path-size-mtime-smallfile-sha256", "fingerprint_hash": fingerprint_hash, "files": entries}
+
+
+def _v2_record_profiles(record: dict[str, object], path: Path) -> dict[str, object]:
+    content_profile = record.get("content_profile") if isinstance(record.get("content_profile"), dict) else {}
+    roles = [str(role) for role in record.get("recognized_roles", []) or [] if str(role)]
+    primary = str(record.get("recognized_type") or "unknown")
+    standardization_status, status_zh, next_action = _standardization_status_for_record(primary, roles, record)
+    evidence = {
+        "filename": path.name,
+        "headers": content_profile.get("header") or content_profile.get("headers") or [],
+        "parser_result": record.get("container_format") or content_profile.get("container_type") or "",
+        "source_manifest": _source_manifest_reference(path),
+        "barcode_sample_id": content_profile.get("tcga_sample_barcodes") or content_profile.get("gtex_sample_ids") or [],
+        "numeric_profile": {
+            "numeric_ratio": content_profile.get("numeric_ratio"),
+            "integer_numeric_ratio": content_profile.get("integer_numeric_ratio"),
+            "numeric_column_count": content_profile.get("numeric_column_count"),
+        },
+    }
+    dimensions = record.get("expression_matrix_dimensions") if isinstance(record.get("expression_matrix_dimensions"), dict) else {}
+    matrix_profile = {
+        "gene_or_probe_id_column": content_profile.get("first_column_name") or record.get("id_column") or "",
+        "gene_id_type_candidate": record.get("gene_id_type_candidate") or content_profile.get("first_column_id_pattern") or "",
+        "sample_columns": content_profile.get("sample_columns") or record.get("sample_columns") or [],
+        "value_type_candidate": record.get("expression_value_type_candidate") or content_profile.get("expression_value_type_candidate") or "",
+        "numeric_ratio": content_profile.get("numeric_ratio"),
+        "row_count": content_profile.get("sampled_row_count") or dimensions.get("rows"),
+        "column_count": content_profile.get("column_count") or dimensions.get("columns"),
+    }
+    metadata_profile = {
+        "sample_id_columns": content_profile.get("sample_id_columns") or [],
+        "clinical_fields": content_profile.get("clinical_fields") or record.get("clinical_candidate_fields") or [],
+        "group_candidates": record.get("phenotype_candidate_fields") or content_profile.get("group_candidate_fields") or [],
+        "species_evidence": record.get("species_evidence") or content_profile.get("species_evidence") or [],
+        "tcga_sample_type_summary": content_profile.get("tcga_sample_type_summary") or {},
+        "gtex_tissue_candidates": content_profile.get("gtex_tissue_candidates") or [],
+    }
+    risk_profile = {
+        "raw_heavy": primary == "raw_heavy_file" or bool(content_profile.get("raw_heavy")),
+        "large_file": _is_large_file_size(record.get("file_size")),
+        "unsupported": primary == "unknown",
+        "ambiguous": float(record.get("confidence") or 0) < 0.6,
+        "risk_level": "blocked" if standardization_status == "blocked" else ("review" if standardization_status == "reference_only" else "normal"),
+    }
+    return {
+        "standardization_status": standardization_status,
+        "standardization_status_zh": status_zh,
+        "next_action": next_action,
+        "evidence": evidence,
+        "matrix_profile": matrix_profile,
+        "metadata_profile": metadata_profile,
+        "risk_profile": risk_profile,
+    }
+
+
+def _standardization_status_for_record(primary: str, roles: list[str], record: dict[str, object]) -> tuple[str, str, str]:
+    if primary in BLOCKED_TYPES or primary == "raw_heavy_file":
+        return "blocked", "不能用于分析", "保留来源记录；普通流程不解析或下载 RAW/heavy 文件。"
+    assets = [asset for asset in record.get("detected_assets", []) or [] if isinstance(asset, dict)]
+    if any(asset.get("input_eligible") is True for asset in assets) or any(role in INPUT_ELIGIBLE_ROLES for role in roles):
+        return "eligible", "可进入标准化", "进入标准化阶段，由用户确认用途、样本列、值类型和分组。"
+    if primary in REFERENCE_ONLY_TYPES or any(role in REFERENCE_ONLY_TYPES for role in roles):
+        return "reference_only", "仅作参考/注释", "作为注释、manifest 或参考文件保留，不作为主表达输入。"
+    return "blocked", "不能用于分析", "当前识别结果不能作为标准化输入。"
+
+
+def _source_manifest_reference(path: Path) -> dict[str, object]:
+    for parent in path.parents:
+        acquisition_root = parent / "acquisition" / "source_manifests"
+        if acquisition_root.exists():
+            return _find_source_manifest_for_path(acquisition_root, path)
+    return {}
+
+
+def _find_source_manifest_for_path(manifest_root: Path, path: Path) -> dict[str, object]:
+    target = str(path.resolve()) if path.exists() else str(path)
+    for manifest_path in sorted(manifest_root.glob("*.json"), reverse=True):
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if not isinstance(manifest, dict):
+        records = manifest.get("files") or manifest.get("file_records") or []
+        if not isinstance(records, list):
             continue
-        report_path = run_dir / "recognition_report.json"
-        report = _read_json_if_exists(report_path) or {}
-        files = report.get("files") if isinstance(report, dict) else []
-        warnings = report.get("warnings") if isinstance(report, dict) else []
-        runs.append(
-            {
-                **manifest,
-                "run_id": str(manifest.get("run_id") or run_dir.name),
-                "run_dir": str(run_dir),
-                "recognition_report_path": str(report_path),
-                "recognized_file_count": len(files) if isinstance(files, list) else 0,
-                "warning_count": len(warnings) if isinstance(warnings, list) else 0,
-                "status": str(manifest.get("status") or "completed"),
-                "is_current": str(manifest.get("run_id") or run_dir.name) == current_run_id,
-            }
-        )
-    return runs
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            values = {str(record.get("local_path") or ""), str(record.get("source_path") or ""), str(record.get("path") or "")}
+            if target in values:
+                return {
+                    "manifest_path": str(manifest_path),
+                    "source": manifest.get("source") or manifest.get("source_type") or "",
+                    "matched_record_status": record.get("status") or "",
+                    "matched_record_role": record.get("role") or "",
+                    "matched_record_message": record.get("message") or "",
+                }
+    return {}
 
 
-def archive_legacy_recognition_report(project_root: str | Path) -> dict[str, object] | None:
-    root = Path(project_root).expanduser().resolve()
-    legacy_path = _legacy_recognition_report_path(root, current_exists=(root / CURRENT_RECOGNITION_RUN).exists())
-    if legacy_path is None:
-        return None
-    legacy_run_dir = root / RECOGNITION_RUNS_DIR / "legacy_recognition_report"
-    manifest_path = legacy_run_dir / "input_manifest.json"
-    if manifest_path.exists():
-        return _read_json_if_exists(manifest_path)
+def _is_large_file_size(value: object) -> bool:
     try:
-        report = json.loads(legacy_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(report, dict):
-        return None
-    report = _filter_system_file_records(report)
-    _write_recognition_run(
-        root,
-        report,
-        selected_inputs=[str(item.get("original_path") or "") for item in report.get("files", []) or [] if isinstance(item, dict)],
-        batch_label="旧版识别记录",
-        run_id="legacy_recognition_report",
-        set_current=False,
-        legacy=True,
-    )
-    return _read_json_if_exists(manifest_path)
-
-
-def _legacy_recognition_report_path(root: Path, *, current_exists: bool = False) -> Path | None:
-    candidates = [root / "recognized_data" / "recognition_report.json"]
-    if not current_exists:
-        candidates.insert(0, root / RECOGNITION_REPORT)
-    for path in candidates:
-        if path.exists():
-            return path
-    unknown_dir = root / "recognized_data" / "unknown"
-    if unknown_dir.exists():
-        files = [path for path in unknown_dir.rglob("*") if path.is_file() and not _is_system_path(path.relative_to(root) if _is_relative_to(path, root) else path)]
-        records = [
-            {
-                "file_name": path.name,
-                "original_path": str(path),
-                "recognized_type": "unknown",
-                "recognized_type_zh": TYPE_LABELS["unknown"],
-                "recognized_roles": [],
-                "confidence": 0.2,
-                "file_size": path.stat().st_size if path.exists() else 0,
-                "reason": "由旧版 recognized_data/unknown 结构导入。",
-                "warning": "旧版项目结构导入，需要人工确认。",
-                "route_path": str(path),
-            }
-            for path in sorted(files)
-        ]
-        if records:
-            report_path = root / "recognized_data" / "legacy_unknown_recognition_report.json"
-            _write_json(
-                report_path,
-                {
-                    "schema_version": "biomedpilot.recognition_report.v1",
-                    "generated_at": _now(),
-                    "project_root": str(root),
-                    "files": records,
-                    "type_counts": _type_counts(records),
-                    "warnings": ["由旧版项目结构导入"],
-                },
-            )
-            return report_path
-    return None
-
-
-def set_current_recognition_run(project_root: str | Path, run_id: str) -> bool:
-    root = Path(project_root).expanduser().resolve()
-    run_dir = root / RECOGNITION_RUNS_DIR / run_id
-    report_path = run_dir / "recognition_report.json"
-    if not report_path.exists():
+        return int(value) >= 500 * 1024 * 1024
+    except (TypeError, ValueError):
         return False
-    report = _read_json_if_exists(report_path) or {}
-    group_preview = report.get("group_preview") if isinstance(report, dict) else {}
-    _write_json(root / CURRENT_RECOGNITION_RUN, {
-        "schema_version": "biomedpilot.current_recognition_run.v1",
-        "run_id": run_id,
-        "run_dir": str(run_dir),
-        "recognition_report_path": str(report_path),
-        "set_at": _now(),
-    })
-    if isinstance(group_preview, dict):
-        _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
-    return True
 
 
-def delete_recognition_run(project_root: str | Path, run_id: str) -> bool:
-    root = Path(project_root).expanduser().resolve()
-    run_dir = root / RECOGNITION_RUNS_DIR / run_id
-    if not run_dir.exists() or not run_dir.is_dir():
-        return False
-    current = _load_current_run(root) or {}
-    if str(current.get("run_id") or "") == run_id:
-        try:
-            (root / CURRENT_RECOGNITION_RUN).unlink(missing_ok=True)
-        except OSError:
-            pass
-    import shutil
-
-    shutil.rmtree(run_dir)
-    return True
-
-
-def _write_recognition_run(
-    root: Path,
-    report: dict[str, object],
-    *,
-    selected_inputs: list[str],
-    batch_label: str,
-    set_current: bool,
-    run_id: str | None = None,
-    legacy: bool = False,
-) -> dict[str, object]:
-    clean_report = _filter_system_file_records(report)
-    run_id = run_id or _unique_run_id(root)
-    run_dir = root / RECOGNITION_RUNS_DIR / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
-    files = [item for item in clean_report.get("files", []) or [] if isinstance(item, dict)]
-    warnings = [str(item) for item in clean_report.get("warnings", []) or []]
-    manifest = {
-        "schema_version": "biomedpilot.recognition_run.v1",
-        "run_id": run_id,
-        "batch_name": batch_label,
-        "generated_at": str(clean_report.get("generated_at") or _now()),
-        "input_data": [value for value in selected_inputs if str(value).strip()],
-        "input_count": len([value for value in selected_inputs if str(value).strip()]),
-        "recognized_file_count": len(files),
-        "warning_count": len(warnings),
-        "status": "completed",
-        "legacy": legacy,
-    }
-    _write_json(run_dir / "input_manifest.json", manifest)
-    _write_json(run_dir / "recognized_files.json", {"files": files})
-    _write_json(run_dir / "recognition_report.json", clean_report)
-    _write_json(run_dir / "warnings.json", {"warnings": warnings})
-    if set_current:
-        _write_json(root / CURRENT_RECOGNITION_RUN, {
-            "schema_version": "biomedpilot.current_recognition_run.v1",
-            "run_id": run_id,
-            "run_dir": str(run_dir),
-            "recognition_report_path": str(run_dir / "recognition_report.json"),
-            "set_at": _now(),
-        })
-        group_preview = clean_report.get("group_preview")
-        if isinstance(group_preview, dict):
-            _write_json(root / GROUP_PREVIEW_REPORT, group_preview)
-        _write_json(root / RECOGNITION_REPORT, clean_report)
-        _write_json(
-            root / RECOGNIZED_FILES,
-            {
-                "schema_version": "biomedpilot.recognized_files.v1",
-                "generated_at": manifest["generated_at"],
-                "project_root": str(root),
-                "files": files,
-            },
-        )
-    return manifest
-
-
-def _unique_run_id(root: Path) -> str:
-    base = "recognition_" + datetime.now().strftime("%Y%m%d_%H%M%S")
-    runs_dir = root / RECOGNITION_RUNS_DIR
-    candidate = base
-    index = 2
-    while (runs_dir / candidate).exists():
-        candidate = f"{base}_{index}"
-        index += 1
-    return candidate
-
-
-def _load_current_run(root: Path) -> dict[str, object] | None:
-    return _read_json_if_exists(root / CURRENT_RECOGNITION_RUN)
-
-
-def _read_json_if_exists(path: Path) -> dict[str, object] | None:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
-    except (OSError, json.JSONDecodeError):
-        return None
-    return payload if isinstance(payload, dict) else None
-
-
-def _is_relative_to(path: Path, parent: Path) -> bool:
-    try:
-        path.resolve().relative_to(parent.resolve())
-    except ValueError:
-        return False
-    return True
-
-
-def _filter_system_file_records(report: dict[str, object]) -> dict[str, object]:
-    files = [
-        item
-        for item in report.get("files", []) or []
-        if isinstance(item, dict)
-        and not _is_system_file_name(str(item.get("file_name") or Path(str(item.get("original_path") or "")).name))
-        and not _is_system_path(Path(str(item.get("original_path") or "")))
+def _recognition_warnings(records: list[dict[str, object]]) -> list[str]:
+    warnings: list[str] = []
+    expression_records = [
+        record
+        for record in records
+        if any(role in set(record.get("recognized_roles", []) or []) for role in EXPRESSION_ROLE_TYPES)
     ]
-    clean = {**report, "files": files, "type_counts": _type_counts(files)}
-    return clean
+    if len(expression_records) > 1:
+        warnings.append("multiple expression candidates detected; manual review may be required")
+    if records and not any(record.get("recognized_roles") for record in records):
+        warnings.append("未检测到明确的基因表达、差异分析或样本注释结构。")
+    return warnings
 
 
 def _semantic_record_fields(file_kind: str, content_profile: dict[str, object]) -> dict[str, object]:
@@ -434,21 +484,15 @@ def _semantic_record_fields(file_kind: str, content_profile: dict[str, object]) 
         value = content_profile.get(key)
         if value not in (None, "", []):
             fields[key] = value
+    if "species" not in fields:
+        evidence_text = " ".join(str(item) for item in content_profile.get("species_evidence", []) or [])
+        if "Mus musculus" in evidence_text:
+            fields["species"] = "Mus musculus"
+            fields["species_group"] = "mouse"
+        elif "Homo sapiens" in evidence_text:
+            fields["species"] = "Homo sapiens"
+            fields["species_group"] = "human"
     return fields
-
-
-def _recognition_warnings(records: list[dict[str, object]]) -> list[str]:
-    warnings: list[str] = []
-    expression_records = [
-        record
-        for record in records
-        if any(role in set(record.get("recognized_roles", []) or []) for role in ("expression_matrix", "normalized_expression_matrix", "raw_count_matrix"))
-    ]
-    if len(expression_records) > 1:
-        warnings.append("multiple expression candidates detected; manual review may be required")
-    if records and not any(record.get("recognized_roles") for record in records):
-        warnings.append("未检测到明确的基因表达、差异分析或样本注释结构。")
-    return warnings
 
 
 def classify_file(path: Path) -> tuple[str, str, float]:
@@ -458,6 +502,24 @@ def classify_file(path: Path) -> tuple[str, str, float]:
 
 def classify_file_details(path: Path) -> RecognitionClassification:
     name = path.name.lower()
+    if _is_raw_heavy_path(path):
+        return _classification(
+            "raw_heavy_file",
+            "文件类型属于 RAW/heavy 数据，普通识别与标准化流程默认阻断。",
+            0.92,
+            roles=("raw_heavy_file",),
+            detected_assets=(
+                _detected_asset(
+                    "raw_heavy_file",
+                    confidence=0.92,
+                    reason="FASTQ/SRA/BAM/CRAM/CEL/IDAT 或大型归档文件需要专门预处理，当前流程不解析。",
+                    input_eligible=False,
+                    evidence=(path.name,),
+                    extra={"risk_level": "blocked", "blocked_reason": "raw_heavy"},
+                ),
+            ),
+            content_profile={"raw_heavy": True, "suffixes": _suffixes_lower(path)},
+        )
     if name.endswith((".gmt", ".gmx")):
         return _classification("gmt_gene_set", "文件扩展名提示为基因集。", 0.85)
     if _is_geo_soft_path(path):
@@ -478,6 +540,22 @@ def classify_file_details(path: Path) -> RecognitionClassification:
         workbook_kind = _classify_xlsx_table(path)
         if workbook_kind is not None:
             return workbook_kind
+    if _is_gdc_manifest_name(name):
+        return _classification(
+            "gdc_manifest",
+            "文件名提示为 GDC manifest 或 sample sheet，作为下载/样本选择控制文件，不作为表达矩阵。",
+            0.78,
+            roles=("gdc_manifest",),
+            detected_assets=(
+                _detected_asset(
+                    "gdc_manifest",
+                    confidence=0.78,
+                    reason="GDC manifest/sample sheet 属于获取控制文件，仅作参考。",
+                    input_eligible=False,
+                    evidence=(path.name,),
+                ),
+            ),
+        )
     if any(token in name for token in ("clinical", "survival", "patient")):
         return _classification("clinical_metadata", "文件名包含临床/生存信息提示。", 0.72)
     if any(token in name for token in ("sample", "metadata", "phenotype", "pheno")):
@@ -521,6 +599,8 @@ def _classify_xlsx_table(path: Path) -> RecognitionClassification | None:
     profile = _profile_xlsx_table(path)
     if not profile:
         return None
+    profile["filename"] = path.name
+    profile["expression_value_type_candidate"] = _expression_value_type_candidate([path.name, *[str(item) for item in profile.get("header", []) or []]])
     classification = _classification_from_table_profile(profile, source_format="xlsx_workbook", container_format="xlsx_workbook")
     if classification is None:
         return None
@@ -529,13 +609,6 @@ def _classify_xlsx_table(path: Path) -> RecognitionClassification | None:
 
 def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
     profile = parse_geo_series_matrix(path)
-    organism = str(profile.get("organism") or _species_from_evidence(profile) or "").strip()
-    if organism:
-        if not profile.get("species"):
-            profile["species"] = organism
-        species_group = _species_group_from_organism(organism)
-        if species_group and not profile.get("species_group"):
-            profile["species_group"] = species_group
     if (
         not profile.get("series_accession")
         and not profile.get("sample_metadata_fields")
@@ -670,8 +743,6 @@ def _classify_geo_series_matrix(path: Path) -> RecognitionClassification | None:
         "sample_columns",
         "expression_value_type_candidate",
         "gene_id_type_candidate",
-        "species",
-        "species_group",
         "species_evidence",
         "warnings",
         "requires_user_confirmation",
@@ -693,6 +764,8 @@ def _classify_tabular_text(path: Path) -> RecognitionClassification | None:
     profile = _profile_tabular_text(path)
     if not profile:
         return None
+    profile["filename"] = path.name
+    profile["expression_value_type_candidate"] = _expression_value_type_candidate([path.name, *[str(item) for item in profile.get("header", []) or []]])
     return _classification_from_table_profile(profile, source_format="tabular_text", container_format="tabular_text")
 
 
@@ -709,7 +782,40 @@ def _classification_from_table_profile(
     assets: list[dict[str, object]] = []
     header_line = int(profile.get("header_line") or 1)
     evidence = [str(item) for item in profile.get("evidence", []) or []]
-    if primary == "differential_result_table":
+    source_domain = str(profile.get("source_domain") or "")
+    if primary in {"normalized_expression_matrix", "raw_count_matrix", "expression_matrix"} and source_domain == "tcga":
+        primary = "tcga_expression_matrix"
+        roles = [primary, "sample_metadata"]
+        evidence.extend(["TCGA barcode sample columns", "TCGA sample type code evidence"])
+    elif primary in {"normalized_expression_matrix", "raw_count_matrix", "expression_matrix"} and source_domain == "gtex":
+        primary = "gtex_expression_matrix"
+        roles = [primary, "sample_metadata"]
+        evidence.extend(["GTEx sample id columns", "GTEx normal reference expression evidence"])
+    elif primary in {"clinical_metadata", "survival_metadata", "sample_metadata"} and source_domain == "tcga":
+        has_clinical_role = "clinical_metadata" in [str(role) for role in profile.get("extra_roles", []) or []]
+        primary = "tcga_clinical_metadata" if primary in {"clinical_metadata", "survival_metadata"} or has_clinical_role else "tcga_sample_metadata"
+        roles = [primary, "clinical_metadata" if "clinical" in primary else "sample_metadata"]
+        if primary == "tcga_clinical_metadata":
+            roles.append("survival_metadata")
+        evidence.append("TCGA barcode or patient clinical field evidence")
+    elif primary in {"clinical_metadata", "survival_metadata", "sample_metadata"} and source_domain == "gtex":
+        primary = "gtex_sample_metadata"
+        roles = [primary, "sample_metadata"]
+        evidence.append("GTEx sample/subject phenotype field evidence")
+    if primary == "gdc_manifest":
+        assets.append(
+            _detected_asset(
+                primary,
+                confidence=0.8,
+                reason="表头匹配 GDC manifest 或 sample sheet，属于下载/选择控制文件。",
+                source_section="tabular_header",
+                source_format=source_format,
+                input_eligible=False,
+                evidence=tuple(evidence),
+                location={"header_line": header_line},
+            )
+        )
+    elif primary == "differential_result_table":
         assets.append(
             _detected_asset(
                 primary,
@@ -722,13 +828,15 @@ def _classification_from_table_profile(
                 location={"header_line": header_line},
             )
         )
-    elif primary in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}:
+    elif primary in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
         confidence = 0.86 if primary == "raw_count_matrix" else 0.82
+        if primary in {"tcga_expression_matrix", "gtex_expression_matrix"}:
+            confidence = 0.88
         assets.append(
             _detected_asset(
                 primary,
                 confidence=confidence,
-                reason="表格第一列像基因/探针 ID，后续多列为高比例数值样本列。",
+                reason=_expression_asset_reason(primary),
                 source_section="tabular_matrix",
                 source_format=source_format,
                 input_eligible=True,
@@ -738,9 +846,39 @@ def _classification_from_table_profile(
                     "delimiter": profile.get("delimiter"),
                     "numeric_column_count": profile.get("numeric_column_count", 0),
                     "sample_like_column_count": profile.get("sample_like_column_count", 0),
+                    "expression_value_type_candidate": profile.get("expression_value_type_candidate") or _expression_value_type_from_role(primary),
+                    "tcga_sample_type_summary": profile.get("tcga_sample_type_summary") or {},
+                    "gtex_tissue_candidates": profile.get("gtex_tissue_candidates") or [],
                 },
             )
         )
+        if primary == "tcga_expression_matrix":
+            assets.append(
+                _detected_asset(
+                    "tcga_sample_metadata",
+                    confidence=0.78,
+                    reason="TCGA barcode 可推断 patient barcode 与 tumor/normal sample type。",
+                    source_section="tabular_header",
+                    source_format=source_format,
+                    input_eligible=True,
+                    evidence=tuple(str(item) for item in profile.get("tcga_sample_barcodes", []) or ()),
+                    location={"header_line": header_line},
+                    extra={"tcga_sample_type_summary": profile.get("tcga_sample_type_summary") or {}},
+                )
+            )
+        if primary == "gtex_expression_matrix":
+            assets.append(
+                _detected_asset(
+                    "gtex_sample_metadata",
+                    confidence=0.74,
+                    reason="GTEx sample ID 或组织字段提示该文件可作为 normal reference metadata。",
+                    source_section="tabular_header",
+                    source_format=source_format,
+                    input_eligible=True,
+                    evidence=tuple(str(item) for item in profile.get("gtex_sample_ids", []) or profile.get("gtex_tissue_candidates", []) or ()),
+                    location={"header_line": header_line},
+                )
+            )
         if profile.get("has_embedded_annotation"):
             roles.append("platform_annotation")
             assets.append(
@@ -755,10 +893,14 @@ def _classification_from_table_profile(
                     location={"header_line": header_line},
                 )
             )
-    elif primary == "sample_metadata":
+    elif primary in {"sample_metadata", "tcga_sample_metadata", "gtex_sample_metadata"}:
         roles.extend(str(role) for role in profile.get("extra_roles", []) or [])
         for role in dict.fromkeys(roles):
             role_reason = "表头包含 sample/group/condition/tissue/disease 等样本属性字段。"
+            if role == "tcga_sample_metadata":
+                role_reason = "表头包含 TCGA barcode、sample type 或 GDC sample metadata 线索。"
+            elif role == "gtex_sample_metadata":
+                role_reason = "表头包含 GTEx sample/subject/tissue phenotype 线索。"
             if role == "clinical_metadata":
                 role_reason = "表头包含 age/sex/stage/grade/status 等临床字段。"
             elif role == "survival_metadata":
@@ -775,14 +917,14 @@ def _classification_from_table_profile(
                     location={"header_line": header_line},
                 )
             )
-    elif primary in {"clinical_metadata", "survival_metadata", "platform_annotation", "gene_annotation"}:
+    elif primary in {"clinical_metadata", "survival_metadata", "platform_annotation", "gene_annotation", "tcga_clinical_metadata"}:
         roles.extend(str(role) for role in profile.get("extra_roles", []) or [])
         for role in dict.fromkeys(roles):
             input_eligible = role not in {"platform_reference_hint"}
             assets.append(
                 _detected_asset(
                     role,
-                    confidence=0.78,
+                    confidence=0.82 if role == "tcga_clinical_metadata" else 0.78,
                     reason=_tabular_role_reason(role),
                     source_section="tabular_header",
                     source_format=source_format,
@@ -1024,7 +1166,6 @@ def _scan_geo_series_matrix(path: Path) -> dict[str, object]:
         "platform_evidence": [],
         "phenotype_hits": [],
         "clinical_hits": [],
-        "organism": "",
     }
     sample_lines: list[int] = []
     sample_accessions: set[str] = set()
@@ -1050,11 +1191,6 @@ def _scan_geo_series_matrix(path: Path) -> dict[str, object]:
                     scan["platform_id"] = platform_id
                     scan["platform_line"] = line_number
                     scan["platform_evidence"] = [f"Series_platform_id={platform_id}"] if platform_id else ["!Series_platform_id"]
-                elif stripped.startswith("!Series_organism_ch1") or stripped.startswith("!Sample_organism_ch1"):
-                    scan["is_geo_series_matrix"] = True
-                    organism = _metadata_value(stripped)
-                    if organism and not scan.get("organism"):
-                        scan["organism"] = organism
                 elif stripped.startswith("!Sample_title"):
                     sample_lines.append(line_number)
                     scan["sample_evidence"] = _append_unique(scan["sample_evidence"], "!Sample_title")
@@ -1190,19 +1326,24 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         for index, count in numeric_by_column.items()
         if sampled_row_count and count / max(sampled_row_count, 1) >= 0.7
     ]
-    sample_like_column_count = sum(1 for column in header[1:] if _looks_like_sample_column(column))
+    deg_stat_column_count = sum(1 for column in normalized_header[1:] if column in DEG_STAT_COLUMNS or column.replace("_", "") in {"adjpval", "pvaladj", "qvalue"})
+    sample_column_scores = {index: _sample_column_score(header[index], normalized_header[index], rows, index) for index in range(1, len(header))}
+    sample_like_column_count = sum(1 for score in sample_column_scores.values() if score >= 2)
     header_hits = _header_keyword_hits(normalized_header)
     first_column_values = [row[0] for row in rows if row]
     first_column_pattern = _first_column_id_pattern(first_column_values)
     blocks_summary = _tabular_content_blocks(header, normalized_header, first_column_values)
-    content_blocks = list(blocks_summary.get("content_blocks", []) or [])
-    expression_sample_columns = list(blocks_summary.get("expression_sample_columns", []) or [])
+    content_blocks = [block for block in blocks_summary.get("content_blocks", []) or [] if isinstance(block, dict)]
+    expression_sample_columns = [str(item) for item in blocks_summary.get("expression_sample_columns", []) or [] if str(item)]
+    tcga_barcodes = _tcga_barcodes_from_values([*header, *first_column_values])
+    gtex_sample_ids = _gtex_sample_ids_from_values([*header, *first_column_values])
     diff_like = _is_differential_header(normalized_header)
     sample_metadata_like = _is_sample_metadata_header(normalized_header)
     clinical_like = _is_clinical_header(normalized_header)
     survival_like = _is_survival_header(normalized_header)
     annotation_like = _is_annotation_header(normalized_header)
-    first_gene_like = _is_gene_identifier_header(normalized_header[0]) or first_column_pattern in {"ensembl_id", "probe_id", "gene_symbol", "entrez_id"} or bool(blocks_summary.get("gene_id_type"))
+    gdc_manifest_like = _is_gdc_manifest_header(normalized_header)
+    first_gene_like = _is_gene_identifier_header(normalized_header[0]) or first_column_pattern in {"ensembl_id", "probe_id", "gene_symbol", "entrez_id"}
     numeric_ratio = numeric_cells / total_cells if total_cells else 0.0
     integer_numeric_ratio = integer_cells / numeric_cells if numeric_cells else 0.0
     non_negative_integer_ratio = non_negative_integer_cells / numeric_cells if numeric_cells else 0.0
@@ -1211,7 +1352,12 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
     possible_role = "unknown"
     has_embedded_annotation = False
     annotation_evidence: list[str] = []
-    if diff_like and not expression_sample_columns:
+    has_deg_block = any(block.get("block_type") == "deg_comparisons" for block in content_blocks)
+    has_expression_block = any(str(block.get("block_type") or "").endswith("_expression_matrix") for block in content_blocks)
+    if gdc_manifest_like:
+        possible_role = "gdc_manifest"
+        evidence.extend(["GDC manifest/sample sheet header"])
+    elif (diff_like or has_deg_block) and not expression_sample_columns:
         possible_role = "differential_result_table"
         evidence.extend(["logFC header", "p-value header", "adjusted p-value/FDR header"])
     elif sample_metadata_like and numeric_ratio < 0.65:
@@ -1231,7 +1377,7 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
     elif annotation_like and not expression_sample_columns and numeric_ratio < 0.55:
         possible_role = "platform_annotation" if any("probe" in item or item == "id_ref" for item in normalized_header) else "gene_annotation"
         evidence.extend(["annotation header keywords"])
-    elif first_gene_like and len(numeric_column_indices) >= 2 and numeric_ratio >= 0.55:
+    elif first_gene_like and len(numeric_column_indices) >= 2 and numeric_ratio >= 0.55 and deg_stat_column_count < max(2, len(numeric_column_indices) // 2):
         possible_role = "raw_count_matrix" if integer_numeric_ratio >= 0.9 and non_negative_integer_ratio >= 0.95 else "normalized_expression_matrix"
         evidence.extend(["gene/probe first column", "numeric sample columns"])
         if sample_like_column_count:
@@ -1249,8 +1395,17 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         for index in numeric_column_indices
         if index < len(header) and not _is_non_expression_sample_column(normalized_header[index])
     ]
+    if possible_role == "unknown" and content_blocks:
+        if has_deg_block:
+            possible_role = "differential_result_table"
+            evidence.extend(["embedded DEG comparison columns"])
+        elif has_expression_block:
+            possible_role = "raw_count_matrix" if any(block.get("value_type") == "count" for block in content_blocks) else "normalized_expression_matrix"
+            evidence.extend(["embedded expression matrix columns"])
     profile = {
         "delimiter": delimiter,
+        "header": header,
+        "normalized_header": normalized_header,
         "header_line": header_line,
         "column_count": len(header),
         "sampled_row_count": sampled_row_count,
@@ -1260,8 +1415,19 @@ def _profile_table_from_rows(*, header: list[str], rows: list[list[str]], delimi
         "first_column_name": header[0],
         "first_column_id_pattern": first_column_pattern,
         "sample_like_column_count": sample_like_column_count,
+        "deg_stat_column_count": deg_stat_column_count,
         "numeric_column_count": len(numeric_column_indices),
         "sample_columns": sample_columns,
+        "sample_column_scores": {header[index]: score for index, score in sample_column_scores.items() if index < len(header)},
+        "sample_id_columns": [header[index] for index, normalized in enumerate(normalized_header) if _is_sample_id_header(normalized)],
+        "clinical_fields": [header[index] for index, normalized in enumerate(normalized_header) if _is_clinical_header([normalized]) or _is_survival_header([normalized])],
+        "group_candidate_fields": [header[index] for index, normalized in enumerate(normalized_header) if any(token in normalized for token in ("group", "condition", "tissue", "disease", "case", "control", "treatment", "phenotype"))],
+        "expression_value_type_candidate": _expression_value_type_candidate(header),
+        "tcga_sample_barcodes": tcga_barcodes[:20],
+        "tcga_sample_type_summary": _tcga_sample_type_summary(tcga_barcodes),
+        "gtex_sample_ids": gtex_sample_ids[:20],
+        "gtex_tissue_candidates": _gtex_tissue_candidates([*header, *first_column_values]),
+        "source_domain": _source_domain_from_profile(normalized_header, tcga_barcodes, gtex_sample_ids),
         "known_keyword_hits": header_hits,
         "possible_table_role": possible_role,
         "evidence": evidence,
@@ -1576,12 +1742,32 @@ def _is_gene_annotation_column(normalized: str) -> bool:
 
 
 def _is_non_expression_sample_column(normalized: str) -> bool:
-    return _is_gene_annotation_column(normalized) or _parse_deg_column(normalized, normalized) is not None or bool(_deg_metric_from_header(normalized)) or _is_annotation_header([normalized])
+    return (
+        _is_gene_annotation_column(normalized)
+        or _parse_deg_column(normalized, normalized) is not None
+        or bool(_deg_metric_from_header(normalized))
+        or _is_annotation_header([normalized])
+    )
 
 
 def _is_geo_soft_path(path: Path) -> bool:
     name = path.name.lower()
     return name.endswith(".soft") or name.endswith(".soft.gz")
+
+
+def _is_raw_heavy_path(path: Path) -> bool:
+    name = path.name.lower()
+    suffixes = _suffixes_lower(path)
+    if any(name.endswith(suffix) for suffix in RAW_HEAVY_COMPOUND_SUFFIXES):
+        return True
+    if suffixes and suffixes[-1] in RAW_HEAVY_SUFFIXES:
+        return True
+    return path.suffix.lower() in {".fastq", ".fq"}
+
+
+def _is_gdc_manifest_name(name: str) -> bool:
+    normalized = name.lower()
+    return "gdc" in normalized and ("manifest" in normalized or "sample_sheet" in normalized or "sample-sheet" in normalized)
 
 
 def _is_geo_series_matrix_path(path: Path) -> bool:
@@ -1628,31 +1814,6 @@ def _open_text(path: Path):
 
 def _metadata_value(line: str) -> str:
     return _clean_cell(line.partition("=")[2].strip())
-
-
-def _species_group_from_organism(organism: str) -> str:
-    normalized = organism.strip().lower()
-    if normalized == "mus musculus" or "mouse" in normalized:
-        return "mouse"
-    if normalized == "homo sapiens" or "human" in normalized:
-        return "human"
-    return ""
-
-
-def _species_from_evidence(profile: dict[str, object]) -> str:
-    evidence = profile.get("species_evidence")
-    if not isinstance(evidence, list):
-        return ""
-    for confidence in ("high", "medium", "low"):
-        for item in evidence:
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("confidence") or "") != confidence:
-                continue
-            species = str(item.get("species") or "").strip()
-            if species:
-                return species
-    return ""
 
 
 def _append_unique(values: object, value: str) -> list[str]:
@@ -1720,15 +1881,130 @@ def _is_integer_value(raw_value: str, numeric_value: float) -> bool:
     return numeric_value.is_integer() and re.fullmatch(r"[+-]?\d+(?:\.0+)?", _clean_cell(raw_value)) is not None
 
 
+def _sample_column_score(column: str, normalized: str, rows: list[list[str]], index: int) -> int:
+    score = 0
+    if _looks_like_sample_column(column):
+        score += 2
+    if normalized.startswith(("tcga", "gtex", "gsm", "srr", "err", "drr")):
+        score += 2
+    if normalized in DEG_STAT_COLUMNS or _is_annotation_header([normalized]):
+        score -= 4
+    sampled = 0
+    numeric = 0
+    for row in rows[:100]:
+        if index >= len(row):
+            continue
+        sampled += 1
+        if _to_float(row[index]) is not None:
+            numeric += 1
+    if sampled and numeric / sampled >= 0.7:
+        score += 1
+    return score
+
+
 def _looks_like_sample_column(value: str) -> bool:
     normalized = _normalize_header(value)
     if not normalized:
         return False
-    if normalized.startswith(("gsm", "srr", "err", "drr", "tcga")):
+    if normalized.startswith(("gsm", "srr", "err", "drr", "tcga", "gtex")):
         return True
-    if any(token in normalized for token in ("sample", "count", "counts", "tpm", "fpkm")):
+    if any(token in normalized for token in ("sample", "count", "counts", "tpm", "fpkm")) and normalized not in DEG_STAT_COLUMNS:
         return True
     return re.fullmatch(r"[a-z]{0,3}\d+[a-z]?(?:_\d+)?", normalized) is not None
+
+
+def _tcga_barcodes_from_values(values: list[str]) -> list[str]:
+    barcodes: list[str] = []
+    for value in values:
+        for match in re.findall(r"TCGA-[A-Z0-9]{2}-[A-Z0-9]{4}(?:-[0-9]{2}[A-Z]?)?", str(value), flags=re.IGNORECASE):
+            normalized = match.upper()
+            if normalized not in barcodes:
+                barcodes.append(normalized)
+    return barcodes
+
+
+def _tcga_sample_type_summary(barcodes: list[str]) -> dict[str, object]:
+    if not barcodes:
+        return {}
+    validation = validate_tcga_sample_barcodes(barcodes)
+    counts: dict[str, int] = {}
+    tumor = 0
+    normal = 0
+    for parsed in validation.get("valid_barcodes", []) or []:
+        if not isinstance(parsed, dict):
+            continue
+        code = str(parsed.get("sample_type_code") or "unknown")
+        counts[code] = counts.get(code, 0) + 1
+        tumor += 1 if parsed.get("is_tumor") else 0
+        normal += 1 if parsed.get("is_normal") else 0
+    return {
+        "valid_count": validation.get("valid_count", 0),
+        "invalid_count": validation.get("invalid_count", 0),
+        "sample_type_counts": counts,
+        "tumor_sample_count": tumor,
+        "normal_sample_count": normal,
+    }
+
+
+def _gtex_sample_ids_from_values(values: list[str]) -> list[str]:
+    ids: list[str] = []
+    for value in values:
+        for match in re.findall(r"GTEX-[A-Z0-9]+(?:-[A-Z0-9]+){1,4}", str(value), flags=re.IGNORECASE):
+            normalized = match.upper()
+            if normalized not in ids:
+                ids.append(normalized)
+    return ids
+
+
+def _gtex_tissue_candidates(values: list[str]) -> list[str]:
+    candidates: list[str] = []
+    for value in values:
+        lowered = str(value).lower()
+        if "tissue" in lowered or "tissuesitedetail" in lowered or "tissue_site_detail" in lowered:
+            cleaned = _clean_cell(value)
+            if cleaned and cleaned not in candidates:
+                candidates.append(cleaned)
+    return candidates[:20]
+
+
+def _source_domain_from_profile(headers: list[str], tcga_barcodes: list[str], gtex_sample_ids: list[str]) -> str:
+    header_text = " ".join(headers)
+    if tcga_barcodes or "tcga" in header_text or "submitter_id" in header_text or "case_id" in header_text:
+        return "tcga"
+    if gtex_sample_ids or "gtex" in header_text or "smts" in headers or "smtssd" in headers or "tissue_site_detail" in header_text:
+        return "gtex"
+    return ""
+
+
+def _expression_value_type_candidate(headers: list[str]) -> str:
+    text = " ".join(_normalize_header(header) for header in headers)
+    if any(token in text for token in ("raw_count", "counts", "count")):
+        return "count"
+    if "tpm" in text:
+        return "TPM"
+    if "fpkm" in text:
+        return "FPKM"
+    if "cpm" in text:
+        return "CPM"
+    if any(token in text for token in ("log2", "log_expression", "logexpr")):
+        return "log_expression"
+    if "normalized" in text or "norm" in text:
+        return "normalized_expression"
+    return "unknown_expression_value"
+
+
+def _expression_value_type_from_role(role: str) -> str:
+    if role == "raw_count_matrix":
+        return "count"
+    return "unknown_expression_value"
+
+
+def _expression_asset_reason(role: str) -> str:
+    if role == "tcga_expression_matrix":
+        return "表格第一列像基因/探针 ID，后续多列为 TCGA barcode 样本表达值。"
+    if role == "gtex_expression_matrix":
+        return "表格第一列像基因/探针 ID，后续多列为 GTEx normal reference 样本表达值。"
+    return "表格第一列像基因/探针 ID，后续多列为高比例数值样本列。"
 
 
 def _header_keyword_hits(headers: list[str]) -> list[str]:
@@ -1797,16 +2073,20 @@ def _is_gene_identifier_header(header: str) -> bool:
 
 
 def _is_differential_header(headers: list[str]) -> bool:
-    has_logfc = any(header in {"logfc", "log2fc", "log2foldchange", "log2_fold_change", "log_fold_change"} or "logfc" in header or "log2foldchange" in header for header in headers)
-    has_p = any(header in {"p", "pvalue", "p_value", "p_val", "p_val_adj", "p_value_adj"} or header.startswith("p_") or header.endswith("_pvalue") for header in headers)
-    has_adj = any(header in {"adj_p_val", "adj_p_value", "padj", "fdr", "qvalue", "q_value", "false_discovery_rate"} or header.endswith(("_padj", "_fdr", "_qvalue")) for header in headers)
+    has_logfc = any(header in {"logfc", "log2fc", "log2_fold_change", "log_fold_change"} or "logfc" in header for header in headers)
+    has_p = any(header in {"p", "pvalue", "p_value", "p_val", "p_val_adj", "p_value_adj"} or header.startswith("p_") for header in headers)
+    has_adj = any(header in {"adj_p_val", "adj_p_value", "padj", "fdr", "qvalue", "q_value", "false_discovery_rate"} for header in headers)
     has_stat = any(header in {"stat", "statistic", "t", "b", "wald_stat"} for header in headers)
     return has_logfc and has_p and (has_adj or has_stat)
 
 
+def _is_sample_id_header(header: str) -> bool:
+    return header in {"sample", "sample_id", "sampleid", "gsm", "geo_accession", "barcode", "submitter_id", "case_submitter_id"} or "sample_id" in header
+
+
 def _is_sample_metadata_header(headers: list[str]) -> bool:
-    has_sample = any(header in {"sample", "sample_id", "sampleid", "gsm", "geo_accession"} or "sample" in header for header in headers)
-    has_attribute = any(any(token in header for token in ("group", "condition", "tissue", "disease", "case", "control", "treatment", "phenotype")) for header in headers)
+    has_sample = any(_is_sample_id_header(header) or "sample" in header or header.startswith(("gtex", "tcga")) for header in headers)
+    has_attribute = any(any(token in header for token in ("group", "condition", "tissue", "disease", "case", "control", "treatment", "phenotype", "smts", "smtssd", "sample_type")) for header in headers)
     return has_sample and has_attribute
 
 
@@ -1822,8 +2102,13 @@ def _is_survival_header(headers: list[str]) -> bool:
 
 
 def _is_annotation_header(headers: list[str]) -> bool:
-    annotation_tokens = ("probe", "id_ref", "gene_symbol", "symbol", "gene_assignment", "entrez", "ensembl", "chromosome", "chr", "description", "biotype")
+    annotation_tokens = ("probe", "id_ref", "gene_symbol", "symbol", "gene_assignment", "entrez", "ensembl", "chromosome", "chr", "description")
     return any(any(token in header for token in annotation_tokens) for header in headers)
+
+
+def _is_gdc_manifest_header(headers: list[str]) -> bool:
+    header_set = set(headers)
+    return {"id", "filename"} <= header_set and bool(header_set & {"md5", "size", "state", "data_type", "experimental_strategy"})
 
 
 def _tabular_role_reason(role: str) -> str:
@@ -1832,6 +2117,9 @@ def _tabular_role_reason(role: str) -> str:
         "survival_metadata": "表头同时包含生存时间和状态字段。",
         "platform_annotation": "表头包含 probe/ID_REF/gene_symbol/ENTREZ/ENSEMBL/chromosome 等平台注释字段。",
         "gene_annotation": "表头包含 gene_symbol/ENTREZ/ENSEMBL/chromosome 等基因注释字段。",
+        "tcga_clinical_metadata": "表头包含 TCGA patient/sample barcode、临床字段或生存字段。",
+        "tcga_sample_metadata": "表头包含 TCGA barcode、sample type 或 GDC sample metadata 字段。",
+        "gtex_sample_metadata": "表头包含 GTEx sample/subject/tissue phenotype 字段。",
     }.get(role, "表格内容命中该资产角色。")
 
 
@@ -1976,20 +2264,10 @@ def _is_recognition_candidate_file(path: Path, root: Path) -> bool:
         relative = path.resolve().relative_to(root.resolve())
     except ValueError:
         relative = path
-    if _is_system_path(relative):
-        return False
     parts = relative.parts
     if len(parts) >= 3 and parts[0] == "raw_data" and parts[1] == "geo" and parts[2] == "organized":
         return False
     return True
-
-
-def _is_system_file_name(name: str) -> bool:
-    return name == ".DS_Store" or name == "__MACOSX" or name.startswith("._")
-
-
-def _is_system_path(path: Path) -> bool:
-    return any(_is_system_file_name(part) for part in path.parts)
 
 
 def _registered_reference_files(root: Path) -> list[Path]:
@@ -2010,7 +2288,7 @@ def _registered_reference_files(root: Path) -> list[Path]:
                 continue
             for raw in values:
                 candidate = Path(str(raw)).expanduser()
-                if candidate.is_file() and _is_recognition_candidate_file(candidate, root):
+                if candidate.is_file():
                     paths.append(candidate.resolve())
                 elif candidate.is_dir():
                     paths.extend(path.resolve() for path in candidate.rglob("*") if _is_recognition_candidate_file(path, root))
@@ -2025,30 +2303,6 @@ def _type_counts(records: list[dict[str, object]]) -> dict[str, int]:
         for key in dict.fromkeys(key for key in keys if key):
             counts[key] = counts.get(key, 0) + 1
     return counts
-
-
-def _build_input_fingerprint(paths: list[Path]) -> dict[str, object]:
-    rows: list[dict[str, object]] = []
-    for path in paths:
-        candidate = path.expanduser()
-        try:
-            stat = candidate.stat()
-        except OSError:
-            rows.append({"path": str(candidate), "exists": False})
-            continue
-        rows.append(
-            {
-                "path": str(candidate.resolve()),
-                "exists": True,
-                "size_bytes": stat.st_size,
-                "mtime_ns": stat.st_mtime_ns,
-            }
-        )
-    return {
-        "schema_version": "bioinformatics_recognition_input_fingerprint.v1",
-        "file_count": len(rows),
-        "files": rows,
-    }
 
 
 def _now() -> str:

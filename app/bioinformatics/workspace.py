@@ -34,7 +34,7 @@ try:
         BioinformaticsChineseDatasetSearchWidget,
         BioinformaticsDataSourceWidget,
         BioinformaticsDegConfigWidget,
-        BioinformaticsGroupComparisonDesignWidget,
+        BioinformaticsImmuneInfiltrationWidget,
         BioinformaticsImportedDegBrowserWidget,
         BioinformaticsRecognitionWidget,
         BioinformaticsReadinessDashboardWidget,
@@ -80,8 +80,6 @@ if QWidget is not None:
                 on_continue=self.show_readiness,
                 on_back=self.show_data_source,
             )
-            if hasattr(self._recognition_page, "navigate_requested"):
-                self._recognition_page.navigate_requested.connect(self._handle_workflow_navigation)
             self._readiness_page = BioinformaticsReadinessDashboardWidget(
                 on_continue=self.show_standardization,
                 on_back=self.show_data_source,
@@ -90,32 +88,31 @@ if QWidget is not None:
                 on_continue=self.show_analysis_tasks,
                 on_back=self.show_readiness,
             )
-            if hasattr(self._standardized_assets_page, "group_design_requested"):
-                self._standardized_assets_page.group_design_requested.connect(self.show_group_design)
-            self._group_design_page = BioinformaticsGroupComparisonDesignWidget(
-                on_continue=self.show_analysis_tasks,
-                on_back=self.show_standardization,
-            )
             self._workflow_status_page = BioinformaticsWorkflowStatusWidget(
                 on_continue=self.show_analysis_tasks,
                 on_back=self.show_project_home,
             )
             self._analysis_task_page = BioinformaticsAnalysisTaskCenterWidget(
                 on_continue=self.show_results_browser,
-                on_back=self.show_workflow_status,
+                on_back=self.show_standardization,
+                on_configure_deg=self.show_deg_config,
+                on_view_imported_deg=self.show_imported_deg_browser,
+                on_configure_immune_scoring=self.show_immune_scoring,
             )
-            if hasattr(self._analysis_task_page, "group_design_requested"):
-                self._analysis_task_page.group_design_requested.connect(self.show_group_design)
             self._deg_config_page = BioinformaticsDegConfigWidget(
                 on_back=self.show_analysis_tasks,
             )
-            self._imported_deg_browser_page = BioinformaticsImportedDegBrowserWidget(
+            self._immune_scoring_page = BioinformaticsImmuneInfiltrationWidget(
                 on_back=self.show_analysis_tasks,
+            )
+            self._imported_deg_page = BioinformaticsImportedDegBrowserWidget(
+                on_back=self.show_results_browser,
                 on_report=self.show_report_viewer,
             )
             self._results_browser_page = BioinformaticsResultsBrowserWidget(
                 on_continue=self.show_report_viewer,
                 on_back=self.show_analysis_tasks,
+                on_view_imported_deg=self.show_imported_deg_browser,
             )
             self._report_viewer_page = BioinformaticsReportViewerWidget(
                 on_back=self.show_results_browser,
@@ -131,11 +128,11 @@ if QWidget is not None:
                 self._recognition_page,
                 self._readiness_page,
                 self._standardized_assets_page,
-                self._group_design_page,
                 self._workflow_status_page,
                 self._analysis_task_page,
                 self._deg_config_page,
-                self._imported_deg_browser_page,
+                self._immune_scoring_page,
+                self._imported_deg_page,
                 self._results_browser_page,
                 self._report_viewer_page,
                 self._settings_page,
@@ -184,11 +181,6 @@ if QWidget is not None:
             self._workflow_status_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._workflow_status_page)
 
-        def show_group_design(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
-            self._set_current_project(summary)
-            self._group_design_page.refresh_project(self._current_project)
-            self._stack.setCurrentWidget(self._group_design_page)
-
         def show_analysis_tasks(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._analysis_task_page.refresh_project(self._current_project)
@@ -199,15 +191,20 @@ if QWidget is not None:
             self._deg_config_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._deg_config_page)
 
-        def show_imported_deg_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+        def show_immune_scoring(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
-            self._imported_deg_browser_page.refresh_project(self._current_project)
-            self._stack.setCurrentWidget(self._imported_deg_browser_page)
+            self._immune_scoring_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._immune_scoring_page)
 
         def show_results_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
             self._results_browser_page.refresh_project(self._current_project)
             self._stack.setCurrentWidget(self._results_browser_page)
+
+        def show_imported_deg_browser(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
+            self._set_current_project(summary)
+            self._imported_deg_page.refresh_project(self._current_project)
+            self._stack.setCurrentWidget(self._imported_deg_page)
 
         def show_report_viewer(self, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
             self._set_current_project(summary)
@@ -216,18 +213,6 @@ if QWidget is not None:
 
         def show_settings(self) -> None:
             self._stack.setCurrentWidget(self._settings_page)
-
-        def _handle_workflow_navigation(self, target: str, summary: BioinformaticsProjectSummary | Path | None = None) -> None:
-            if target == "data_source":
-                self.show_data_source(summary)
-            elif target == "standardization":
-                self.show_standardization(summary)
-            elif target == "analysis_tasks":
-                self.show_analysis_tasks(summary)
-            elif target == "group_design":
-                self.show_group_design(summary)
-            elif target == "result_browser":
-                self.show_results_browser(summary)
 
         def current_project(self) -> BioinformaticsProjectSummary | Path | None:
             return self._current_project

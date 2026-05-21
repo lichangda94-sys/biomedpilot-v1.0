@@ -11,7 +11,8 @@ from app.bioinformatics.project_recognition import load_recognition_report
 
 
 STANDARDIZATION_CONFIRMATION = Path("manifests") / "standardization_confirmation.json"
-EXPRESSION_ASSET_TYPES = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix"}
+EXPRESSION_ASSET_TYPES = {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
+METADATA_ASSET_TYPES = {"sample_metadata", "clinical_metadata", "survival_metadata", "tcga_clinical_metadata", "tcga_sample_metadata", "gtex_sample_metadata"}
 
 
 def load_standardization_confirmation(project_root: str | Path) -> dict[str, object] | None:
@@ -51,7 +52,7 @@ def collect_standardization_candidates(project_root: str | Path) -> dict[str, ob
             asset_type = str(asset.get("asset_type") or asset.get("role") or "")
             if asset_type in EXPRESSION_ASSET_TYPES and asset.get("input_eligible") is not False:
                 expression.append(_candidate(record, asset, "expression_matrix", source_name, parser_type, parser_depth, warnings))
-            elif asset_type in {"sample_metadata", "clinical_metadata", "survival_metadata"} and asset.get("input_eligible") is not False:
+            elif asset_type in METADATA_ASSET_TYPES and asset.get("input_eligible") is not False:
                 sample_metadata.append(_candidate(record, asset, "sample_metadata", source_name, parser_type, parser_depth, warnings))
             elif asset_type == "phenotype_metadata" and asset.get("input_eligible") is not False:
                 group_candidates.append(_candidate(record, asset, "group_candidate", source_name, parser_type, parser_depth, warnings))
@@ -62,7 +63,7 @@ def collect_standardization_candidates(project_root: str | Path) -> dict[str, ob
         if not assets:
             if roles & EXPRESSION_ASSET_TYPES:
                 expression.append(_candidate(record, {}, "expression_matrix", source_name, parser_type, parser_depth, warnings))
-            if roles & {"sample_metadata", "clinical_metadata", "survival_metadata"}:
+            if roles & METADATA_ASSET_TYPES:
                 sample_metadata.append(_candidate(record, {}, "sample_metadata", source_name, parser_type, parser_depth, warnings))
         species_candidates.extend(_species_candidates(record, source_name, parser_type, parser_depth, warnings))
         gene_candidate = _gene_id_candidate(record, source_name, parser_type, parser_depth, warnings)
@@ -274,6 +275,8 @@ def _candidate(
         "candidate_type": candidate_type,
         "asset_type": asset_type,
         "source_file": source_name,
+        "source_path": str(record.get("original_path") or ""),
+        "source_recognition_run_id": str(record.get("recognition_run_id") or ""),
         "source_parser": parser_type,
         "parser_depth": parser_depth,
         "requires_user_confirmation": bool(asset.get("requires_user_confirmation") or record.get("requires_user_confirmation") or candidate_type in {"expression_matrix", "group_candidate"}),
@@ -283,6 +286,8 @@ def _candidate(
         "gene_id_type_candidate": gene_id_type,
         "sample_count": int(record.get("sample_count") or 0),
         "matrix_dimensions": record.get("expression_matrix_dimensions") or asset.get("matrix_dimensions") or {},
+        "matrix_profile": record.get("matrix_profile") if isinstance(record.get("matrix_profile"), dict) else {},
+        "metadata_profile": record.get("metadata_profile") if isinstance(record.get("metadata_profile"), dict) else {},
         "reason": str(asset.get("reason") or record.get("reason") or ""),
     }
     if candidate_type == "imported_deg_result":
@@ -427,14 +432,14 @@ def _parser_type(record: dict[str, object]) -> str:
         return "xlsx"
     if source in {".csv", ".tsv"}:
         return source.lstrip(".")
-    if primary in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tabular_text_file"}:
+    if primary in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix", "tabular_text_file"}:
         return "processed_table"
     return primary or "unknown"
 
 
 def _expression_value_type(record: dict[str, object], asset_type: str, asset: dict[str, object]) -> str:
     existing = str(asset.get("expression_value_type_candidate") or record.get("expression_value_type_candidate") or "")
-    if existing:
+    if existing and existing not in {"unknown", "unknown_expression_value"}:
         return existing
     label = str(asset.get("label_zh") or asset.get("reason") or "").lower()
     if "fpkm" in label:
@@ -443,6 +448,15 @@ def _expression_value_type(record: dict[str, object], asset_type: str, asset: di
         return "TPM"
     if asset_type == "raw_count_matrix":
         return "count"
+    if asset_type == "tcga_expression_matrix":
+        evidence = record.get("evidence") if isinstance(record.get("evidence"), dict) else {}
+        source_manifest = evidence.get("source_manifest") if isinstance(evidence.get("source_manifest"), dict) else {}
+        manifest_message = str(source_manifest.get("matched_record_message") or "").lower() if isinstance(source_manifest, dict) else ""
+        if "b6.4" in manifest_message and "raw count" in manifest_message:
+            return "count"
+        return "tcga_expression_candidate"
+    if asset_type == "gtex_expression_matrix":
+        return "gtex_reference_expression_candidate"
     if asset_type == "normalized_expression_matrix":
         return "normalized_or_log_expression"
     profile = _content_profile(record)

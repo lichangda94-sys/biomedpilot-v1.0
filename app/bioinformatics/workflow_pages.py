@@ -51,7 +51,55 @@ from app.bioinformatics.comparison_config import (
     load_confirmed_comparison_config,
 )
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
+from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
+from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
+from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
+from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
+from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
+from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
+from app.bioinformatics.data_source_requests import create_data_source_request
+from app.bioinformatics.data_sources import (
+    GTExDownloadExecutionResult,
+    GTExDownloadPlanDraft,
+    GTExDownloadPlanExecutor,
+    GTExExpressionBuildResult,
+    GTExExpressionMatrixBuilder,
+    GTExMetadataPreviewService,
+    GTExPreviewSummary,
+    GTExWorkflowState,
+    TCGADownloadPlanExecutor,
+    TCGADownloadPlanDraft,
+    TCGADownloadExecutionResult,
+    TCGAClinicalBuildResult,
+    TCGAClinicalMetadataBuilder,
+    TCGAExpressionBuildResult,
+    TCGAExpressionQuantificationBuilder,
+    TCGAMetadataPreviewService,
+    TCGAPreviewSummary,
+    TCGAWorkflowState,
+    build_gtex_preview_request,
+    build_gtex_workflow_state,
+    build_tcga_preview_request,
+    build_tcga_workflow_state,
+    format_bytes_zh,
+    latest_gtex_download_plan_path,
+    latest_gtex_raw_expression_record_path,
+    latest_tcga_download_plan_path,
+    latest_tcga_expression_build_manifest_path,
+    latest_tcga_raw_expression_record_path,
+    write_gtex_download_plan_draft,
+    write_tcga_download_plan_draft,
+)
+from app.bioinformatics.gtex_tissue_registry import GTEX_USE_PURPOSES, get_gtex_tissue, get_gtex_use_purpose, grouped_gtex_tissues
 from app.bioinformatics.imported_deg_results import imported_deg_summary, list_imported_deg_results, mark_imported_deg_report_candidates
+from app.bioinformatics.immune_infiltration import (
+    build_immune_infiltration_readiness,
+    build_linkage_preflight,
+    generate_immune_tme_report,
+    load_signature_catalog,
+    run_immune_scoring,
+)
+from app.bioinformatics.immune_infiltration.signature_models import signature_from_dict
 from app.bioinformatics.project_readiness import (
     has_standardizable_expression_input,
     load_readiness_artifacts,
@@ -120,19 +168,25 @@ from app.bioinformatics.search_center import (
     UnifiedDatasetCandidate,
 )
 from app.bioinformatics.services.geo_differential_expression_runner import run_geo_differential_expression
+from app.bioinformatics.tcga_project_registry import (
+    TCGA_ANALYSIS_PURPOSES,
+    TCGA_SAMPLE_SCOPES,
+    get_tcga_analysis_purpose,
+    get_tcga_project,
+    get_tcga_sample_scope,
+    grouped_tcga_projects,
+)
 from app.shared.ai_gateway import (
-    AI_ROLE_MEDICAL,
-    AI_ROLE_TRANSLATOR,
-    DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING,
     create_ai_draft_record,
     desktop_local_ollama_config,
     load_ai_gateway_config,
     mark_ai_draft_status,
-    resolve_task_role_model,
     save_ai_draft_record,
     save_ai_gateway_config,
 )
 from app.shared.ai_gateway.drafts import AIDraftRecord
+from app.shared.ai_gateway.models import AIProviderStatus
+from app.shared.ai_gateway.providers.ollama_provider import DEFAULT_OLLAMA_BASE_URL, DEFAULT_OLLAMA_MODEL, OllamaProvider
 from app.shared.query_intelligence import LocalModelConfig
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
@@ -664,6 +718,24 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._gse_preview: GseDatasetPreview | None = None
         self._geo_candidates: dict[str, UnifiedDatasetCandidate] = {}
         self._geo_brief_cache: dict[str, dict[str, object]] = {}
+        self._tcga_preview_service = TCGAMetadataPreviewService()
+        self._tcga_download_executor = TCGADownloadPlanExecutor()
+        self._tcga_expression_builder = TCGAExpressionQuantificationBuilder()
+        self._tcga_clinical_builder = TCGAClinicalMetadataBuilder()
+        self._tcga_preview_summary: TCGAPreviewSummary | None = None
+        self._tcga_download_plan_draft: TCGADownloadPlanDraft | None = None
+        self._tcga_download_result: TCGADownloadExecutionResult | None = None
+        self._tcga_expression_build_result: TCGAExpressionBuildResult | None = None
+        self._tcga_clinical_build_result: TCGAClinicalBuildResult | None = None
+        self._tcga_workflow_state: TCGAWorkflowState | None = None
+        self._gtex_preview_service = GTExMetadataPreviewService()
+        self._gtex_download_executor = GTExDownloadPlanExecutor()
+        self._gtex_expression_builder = GTExExpressionMatrixBuilder()
+        self._gtex_preview_summary: GTExPreviewSummary | None = None
+        self._gtex_download_plan_draft: GTExDownloadPlanDraft | None = None
+        self._gtex_download_result: GTExDownloadExecutionResult | None = None
+        self._gtex_expression_build_result: GTExExpressionBuildResult | None = None
+        self._gtex_workflow_state: GTExWorkflowState | None = None
         self._dataset_entries: dict[str, DatasetListEntry] = {}
         self._pending_chinese_query = ""
         self._download_service = DatasetDownloadService()
@@ -687,6 +759,11 @@ class BioinformaticsDataSourceWidget(QWidget):
             self._set_status("先添加数据，下一步进入数据检查与准备。")
         self._refresh_registered_sources()
         self._refresh_geo_download_list()
+        self._refresh_tcga_download_plan_state()
+        self._refresh_tcga_expression_build_state()
+        self._refresh_tcga_clinical_build_state()
+        self._refresh_tcga_workflow_state()
+        self._refresh_gtex_workflow_state()
 
     def status_message(self) -> str:
         return self._status_label.text()
@@ -830,8 +907,8 @@ class BioinformaticsDataSourceWidget(QWidget):
         root = _scroll_root(self, max_width=1040)
         root.addWidget(
             _header(
-                "数据导入与检索",
-                "先添加数据，下一步进入数据检查与准备。",
+                "选择数据来源",
+                "请选择数据来源。软件会根据所选数据库、研究目的和样本范围自动构建数据获取与检查流程。",
                 back_text="返回项目首页",
                 back_signal=self.back_requested,
             )
@@ -841,9 +918,13 @@ class BioinformaticsDataSourceWidget(QWidget):
         self._status_label = _status_label("先添加数据，下一步进入数据检查与准备。")
         root.addWidget(self._status_label)
 
-        root.addWidget(self._local_import_card())
+        root.addWidget(self._data_source_home_card())
+        root.addWidget(self._geo_database_card())
         root.addWidget(self._gse_card())
         root.addWidget(self._research_card())
+        root.addWidget(self._tcga_database_card())
+        root.addWidget(self._gtex_database_card())
+        root.addWidget(self._local_import_card())
 
         self._selection_status_card = self._data_selection_status_card()
         root.addWidget(self._selection_status_card)
@@ -884,6 +965,61 @@ class BioinformaticsDataSourceWidget(QWidget):
         actions.addWidget(self._next_button)
         root.addWidget(actions_frame)
 
+    def _data_source_home_card(self) -> QFrame:
+        card, layout = _card("选择数据来源")
+        card.setObjectName("dataSourceEntryHomeCard")
+        layout.addWidget(_muted("GEO 保留现有真实下载能力；TCGA 与 GTEx 本阶段先建立中文类目、选择流程和任务草案。"))
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(SPACING["md"])
+        grid.setVerticalSpacing(SPACING["sm"])
+        entries = (
+            ("GEO 数据库", "GSE 编号、中文研究问题检索、本地 GEO 文件导入", "geo", "openGeoDatabaseButton"),
+            ("TCGA 数据库", "按癌种选择 TCGA 项目并构建分析数据集", "tcga", "openTcgaDatabaseButton"),
+            ("GTEx 数据库", "按正常组织选择 GTEx 表达数据", "gtex", "openGtexDatabaseButton"),
+            ("本地数据导入", "导入已有表达矩阵、样本注释或分析结果", "local", "openLocalImportButton"),
+        )
+        for index, (title, description, key, object_name) in enumerate(entries):
+            entry = QFrame()
+            entry.setObjectName(f"dataSourceEntry_{key}")
+            entry_layout = QVBoxLayout(entry)
+            entry_layout.setContentsMargins(SPACING["md"], SPACING["sm"], SPACING["md"], SPACING["sm"])
+            entry_layout.setSpacing(SPACING["xs"])
+            label = QLabel(title)
+            label.setObjectName("bioProjectCardTitle")
+            label.setWordWrap(True)
+            entry_layout.addWidget(label)
+            entry_layout.addWidget(_muted(description))
+            button = _button("进入", "primaryButton", lambda checked=False, target=key: self._jump_to_data_source_section(target))
+            button.setObjectName(object_name)
+            entry_layout.addWidget(button, alignment=Qt.AlignLeft)
+            grid.addWidget(entry, index // 2, index % 2)
+        layout.addLayout(grid)
+        return card
+
+    def _geo_database_card(self) -> QFrame:
+        card, layout = _card("GEO 数据库")
+        card.setObjectName("geoDatabaseSectionCard")
+        layout.addWidget(_muted("GEO 专区保留 GSE 编号检索/下载、中文研究问题检索和本地 GEO 文件导入入口。下载或导入完成后仍进入当前数据检查与准备。"))
+        return card
+
+    def _jump_to_data_source_section(self, target: str) -> None:
+        labels = {
+            "geo": "已进入 GEO 数据库区域；可按 GSE 编号检索，或进入中文研究问题检索。",
+            "tcga": "已进入 TCGA 数据库区域；本阶段生成任务草案，不执行真实 GDC 下载。",
+            "gtex": "已进入 GTEx 数据库区域；本阶段生成任务草案，不作为 TCGA 自动对照。",
+            "local": "已进入本地数据导入区域。",
+        }
+        if target == "geo":
+            self._gse_input.setFocus()
+        elif target == "tcga":
+            self._tcga_project_combo.setFocus()
+        elif target == "gtex":
+            self._gtex_tissue_combo.setFocus()
+        elif target == "local":
+            self._local_strategy_combo.setFocus()
+        self._set_status(labels.get(target, "请选择数据来源。"))
+
     def _local_import_card(self) -> QFrame:
         card, layout = _card("本地数据导入")
         card.setObjectName("localImportEntryCard")
@@ -902,7 +1038,7 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _gse_card(self) -> QFrame:
-        card, layout = _card("GSE 编号检索")
+        card, layout = _card("按 GSE 编号检索/下载")
         card.setObjectName("gseSearchEntryCard")
         layout.addWidget(_muted("已知 GEO 数据集编号时使用，可查看详情并加入项目数据来源。"))
         self._gse_input = QLineEdit()
@@ -946,9 +1082,9 @@ class BioinformaticsDataSourceWidget(QWidget):
         return card
 
     def _research_card(self) -> QFrame:
-        card, layout = _card("中文研究主题检索")
+        card, layout = _card("按中文研究问题检索 GEO 数据集")
         card.setObjectName("chineseResearchSearchEntryCard")
-        layout.addWidget(_muted("面向 GEO / TCGA / GTEx 的生信数据检索辅助，用于寻找表达数据来源。"))
+        layout.addWidget(_muted("面向 GEO 的中文研究问题检索入口；TCGA / GTEx 请选择各自数据库页面。"))
         self._chinese_query_input = QLineEdit()
         self._chinese_query_input.setObjectName("chineseResearchTopicEntry")
         self._chinese_query_input.setPlaceholderText("请输入研究方向，例如：甲状腺癌与肥胖相关基因表达数据")
@@ -960,6 +1096,947 @@ class BioinformaticsDataSourceWidget(QWidget):
         button.setMinimumHeight(44)
         layout.addWidget(button, alignment=Qt.AlignLeft)
         return card
+
+    def _tcga_database_card(self) -> QFrame:
+        card, layout = _card("TCGA 数据库")
+        card.setObjectName("tcgaDatabaseEntryCard")
+        layout.addWidget(_muted("请选择癌种、分析目的和样本范围。本步骤仅预览 TCGA 可下载数据，不会下载大文件。"))
+        layout.addWidget(_muted("软件会根据分析目的自动选择所需数据类型；下载计划草案不会进入差异分析或 GSEA。"))
+        self._tcga_project_combo = QComboBox()
+        self._tcga_project_combo.setObjectName("tcgaProjectCombo")
+        for group, projects in grouped_tcga_projects().items():
+            for project in projects:
+                self._tcga_project_combo.addItem(f"{group} / {project.chinese_name} ({project.project_id})", project.project_id)
+        self._tcga_purpose_combo = QComboBox()
+        self._tcga_purpose_combo.setObjectName("tcgaAnalysisPurposeCombo")
+        for purpose in TCGA_ANALYSIS_PURPOSES:
+            self._tcga_purpose_combo.addItem(purpose.chinese_name, purpose.purpose_id)
+        self._tcga_sample_scope_combo = QComboBox()
+        self._tcga_sample_scope_combo.setObjectName("tcgaSampleScopeCombo")
+        for scope in TCGA_SAMPLE_SCOPES:
+            self._tcga_sample_scope_combo.addItem(scope.chinese_name, scope.scope_id)
+        form = QGridLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(SPACING["md"])
+        form.setVerticalSpacing(SPACING["sm"])
+        form.addWidget(QLabel("癌种项目"), 0, 0)
+        form.addWidget(self._tcga_project_combo, 0, 1)
+        form.addWidget(QLabel("分析目的"), 1, 0)
+        form.addWidget(self._tcga_purpose_combo, 1, 1)
+        form.addWidget(QLabel("样本范围"), 2, 0)
+        form.addWidget(self._tcga_sample_scope_combo, 2, 1)
+        layout.addLayout(form)
+        self._tcga_preview_table = _table(["项目", "分析目的", "样本范围", "预览状态", "case", "sample", "file", "预计大小"])
+        self._tcga_preview_table.setObjectName("tcgaPreviewTable")
+        self._tcga_preview_table.setMaximumHeight(128)
+        layout.addWidget(self._tcga_preview_table)
+        self._tcga_sample_type_table = _table(["样本类型", "数量"])
+        self._tcga_sample_type_table.setObjectName("tcgaSampleTypeDistributionTable")
+        self._tcga_sample_type_table.setMaximumHeight(150)
+        layout.addWidget(self._tcga_sample_type_table)
+        self._tcga_summary_text = _text_preview(118)
+        self._tcga_summary_text.setObjectName("tcgaMetadataPreviewSummary")
+        self._tcga_summary_text.setPlainText("尚未预览。点击“预览可下载数据”后显示 case/sample/file 和预计下载内容。")
+        layout.addWidget(self._tcga_summary_text)
+        self._tcga_warning_text = _text_preview(92)
+        self._tcga_warning_text.setObjectName("tcgaMetadataPreviewWarnings")
+        self._tcga_warning_text.setPlainText("风险/限制提示会显示在这里。TCGA 与 GTEx 不会被自动合并。")
+        layout.addWidget(self._tcga_warning_text)
+        self._tcga_status_label = _status_label("当前阶段已建立 TCGA 中文类目和任务流程。可先执行真实 GDC metadata 预览。")
+        layout.addWidget(self._tcga_status_label)
+        layout.addWidget(_muted("TCGA 数据构建流程"))
+        self._tcga_workflow_table = _table(["步骤", "状态", "摘要", "下一步"])
+        self._tcga_workflow_table.setObjectName("tcgaWorkflowStepsTable")
+        self._tcga_workflow_table.setMinimumHeight(190)
+        self._tcga_workflow_table.setMaximumHeight(240)
+        layout.addWidget(self._tcga_workflow_table)
+        self._tcga_workflow_summary_text = _text_preview(92)
+        self._tcga_workflow_summary_text.setObjectName("tcgaWorkflowSummary")
+        self._tcga_workflow_summary_text.setPlainText("请选择 TCGA project 后按步骤预览、下载、构建表达矩阵和获取临床信息。")
+        layout.addWidget(self._tcga_workflow_summary_text)
+        actions = QHBoxLayout()
+        preview_button = _button("预览可下载数据", "primaryButton", self.preview_tcga_downloadable_data)
+        preview_button.setObjectName("previewTcgaDownloadableDataButton")
+        self._tcga_preview_button = preview_button
+        self._tcga_plan_button = _button("生成下载计划草案", "secondaryButton", self.create_tcga_download_plan_draft)
+        self._tcga_plan_button.setObjectName("createTcgaDownloadPlanDraftButton")
+        self._tcga_plan_button.setEnabled(False)
+        self._tcga_download_button = _button("下载 TCGA 原始文件", "secondaryButton", self.download_tcga_raw_files)
+        self._tcga_download_button.setObjectName("downloadTcgaRawFilesButton")
+        self._tcga_download_button.setEnabled(False)
+        self._tcga_expression_build_button = _button("构建 TCGA 表达矩阵", "secondaryButton", self.build_tcga_expression_matrix)
+        self._tcga_expression_build_button.setObjectName("buildTcgaExpressionMatrixButton")
+        self._tcga_expression_build_button.setEnabled(False)
+        self._tcga_clinical_build_button = _button("获取 TCGA 临床信息", "secondaryButton", self.fetch_tcga_clinical_metadata)
+        self._tcga_clinical_build_button.setObjectName("fetchTcgaClinicalMetadataButton")
+        self._tcga_clinical_build_button.setEnabled(False)
+        self._tcga_data_check_button = _button("进入数据检查与准备", "primaryButton", self.continue_to_recognition)
+        self._tcga_data_check_button.setObjectName("enterTcgaDataCheckButton")
+        self._tcga_data_check_button.setEnabled(False)
+        self._tcga_data_check_button.setVisible(False)
+        self._tcga_data_check_button.setText("进入准备")
+        actions.addWidget(preview_button)
+        actions.addWidget(self._tcga_plan_button)
+        actions.addWidget(self._tcga_download_button)
+        actions.addWidget(self._tcga_expression_build_button)
+        actions.addWidget(self._tcga_clinical_build_button)
+        actions.addWidget(self._tcga_data_check_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._tcga_download_status_text = _text_preview(88)
+        self._tcga_download_status_text.setObjectName("tcgaRawDownloadStatus")
+        self._tcga_download_status_text.setPlainText("尚未生成下载计划草案。")
+        layout.addWidget(self._tcga_download_status_text)
+        self._tcga_expression_build_status_text = _text_preview(88)
+        self._tcga_expression_build_status_text.setObjectName("tcgaExpressionBuildStatus")
+        self._tcga_expression_build_status_text.setPlainText("尚未获取 TCGA 原始表达文件。")
+        layout.addWidget(self._tcga_expression_build_status_text)
+        self._tcga_clinical_build_status_text = _text_preview(92)
+        self._tcga_clinical_build_status_text.setObjectName("tcgaClinicalBuildStatus")
+        self._tcga_clinical_build_status_text.setPlainText("尚未构建 TCGA clinical metadata。")
+        layout.addWidget(self._tcga_clinical_build_status_text)
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开开发者诊断", "secondaryButton", lambda: _toggle_details(self._tcga_developer_details)))
+        developer_actions.addStretch(1)
+        layout.addLayout(developer_actions)
+        self._tcga_developer_details = _text_preview(150)
+        self._tcga_developer_details.setObjectName("tcgaMetadataPreviewDeveloperDiagnostics")
+        self._tcga_developer_details.setVisible(False)
+        layout.addWidget(self._tcga_developer_details)
+        self._tcga_project_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
+        self._tcga_purpose_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
+        self._tcga_sample_scope_combo.currentIndexChanged.connect(lambda _: self._refresh_tcga_preview())
+        self._refresh_tcga_preview()
+        return card
+
+    def _gtex_database_card(self) -> QFrame:
+        card, layout = _card("GTEx 数据库")
+        card.setObjectName("gtexDatabaseEntryCard")
+        layout.addWidget(_muted("请选择正常组织和使用目的。GTEx 将作为独立正常组织表达资源管理，不作为 TCGA 的自动合并对照。"))
+        self._gtex_tissue_combo = QComboBox()
+        self._gtex_tissue_combo.setObjectName("gtexTissueCombo")
+        for group, tissues in grouped_gtex_tissues().items():
+            for tissue in tissues:
+                self._gtex_tissue_combo.addItem(f"{group} / {tissue.chinese_name} ({tissue.tissue_site_detail})", tissue.tissue_id)
+        self._gtex_purpose_combo = QComboBox()
+        self._gtex_purpose_combo.setObjectName("gtexUsePurposeCombo")
+        for purpose in GTEX_USE_PURPOSES:
+            self._gtex_purpose_combo.addItem(purpose.chinese_name, purpose.purpose_id)
+        form = QGridLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(SPACING["md"])
+        form.setVerticalSpacing(SPACING["sm"])
+        form.addWidget(QLabel("组织"), 0, 0)
+        form.addWidget(self._gtex_tissue_combo, 0, 1)
+        form.addWidget(QLabel("使用目的"), 1, 0)
+        form.addWidget(self._gtex_purpose_combo, 1, 1)
+        layout.addLayout(form)
+        self._gtex_preview_table = _table(["组织大类", "具体组织", "使用目的", "预览状态", "sample", "file"])
+        self._gtex_preview_table.setObjectName("gtexPreviewTable")
+        self._gtex_preview_table.setMaximumHeight(120)
+        layout.addWidget(self._gtex_preview_table)
+        self._gtex_status_label = _status_label("GTEx 作为独立正常组织表达资源管理，不自动作为 TCGA normal control。")
+        layout.addWidget(self._gtex_status_label)
+        self._gtex_workflow_table = _table(["步骤", "状态", "摘要", "下一步"])
+        self._gtex_workflow_table.setObjectName("gtexWorkflowStepsTable")
+        self._gtex_workflow_table.setMinimumHeight(160)
+        self._gtex_workflow_table.setMaximumHeight(220)
+        layout.addWidget(self._gtex_workflow_table)
+        self._gtex_workflow_summary_text = _text_preview(86)
+        self._gtex_workflow_summary_text.setObjectName("gtexWorkflowSummary")
+        self._gtex_workflow_summary_text.setPlainText("按步骤预览、下载并构建 GTEx 独立正常组织表达资源。")
+        layout.addWidget(self._gtex_workflow_summary_text)
+        gtex_actions = QHBoxLayout()
+        self._gtex_preview_button = _button("预览 GTEx 可下载数据", "primaryButton", self.preview_gtex_downloadable_data)
+        self._gtex_preview_button.setObjectName("previewGtexDownloadableDataButton")
+        self._gtex_plan_button = _button("生成 GTEx 下载计划草案", "secondaryButton", self.create_gtex_download_plan_draft)
+        self._gtex_plan_button.setObjectName("createGtexDownloadPlanDraftButton")
+        self._gtex_plan_button.setEnabled(False)
+        self._gtex_download_button = _button("下载 GTEx 原始文件", "secondaryButton", self.download_gtex_raw_files)
+        self._gtex_download_button.setObjectName("downloadGtexRawFilesButton")
+        self._gtex_download_button.setEnabled(False)
+        self._gtex_expression_build_button = _button("构建 GTEx 表达矩阵", "secondaryButton", self.build_gtex_expression_matrix)
+        self._gtex_expression_build_button.setObjectName("buildGtexExpressionMatrixButton")
+        self._gtex_expression_build_button.setEnabled(False)
+        self._gtex_data_check_button = _button("进入数据检查与准备", "primaryButton", self.continue_to_recognition)
+        self._gtex_data_check_button.setObjectName("enterGtexDataCheckButton")
+        self._gtex_data_check_button.setEnabled(False)
+        self._gtex_data_check_button.setVisible(False)
+        self._gtex_data_check_button.setText("进入准备")
+        legacy_button = _button("下载并构建数据集", "secondaryButton", self.create_gtex_source_request)
+        legacy_button.setObjectName("createGtexDataSourceRequestButton")
+        legacy_button.setVisible(False)
+        for button in (self._gtex_preview_button, self._gtex_plan_button, self._gtex_download_button, self._gtex_expression_build_button, self._gtex_data_check_button, legacy_button):
+            gtex_actions.addWidget(button)
+        gtex_actions.addStretch(1)
+        layout.addLayout(gtex_actions)
+        self._gtex_status_text = _text_preview(90)
+        self._gtex_status_text.setObjectName("gtexWorkflowStatus")
+        self._gtex_status_text.setPlainText("尚未预览 GTEx metadata。")
+        layout.addWidget(self._gtex_status_text)
+        self._gtex_developer_details = _text_preview(130)
+        self._gtex_developer_details.setObjectName("gtexDeveloperDiagnostics")
+        self._gtex_developer_details.setVisible(False)
+        layout.addWidget(self._gtex_developer_details)
+        self._gtex_tissue_combo.currentIndexChanged.connect(lambda _: self._refresh_gtex_preview())
+        self._gtex_purpose_combo.currentIndexChanged.connect(lambda _: self._refresh_gtex_preview())
+        self._refresh_gtex_preview()
+        return card
+
+    def _refresh_tcga_preview(self) -> None:
+        if not hasattr(self, "_tcga_preview_table"):
+            return
+        self._tcga_preview_summary = None
+        self._tcga_download_plan_draft = None
+        if hasattr(self, "_tcga_plan_button"):
+            self._tcga_plan_button.setEnabled(False)
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or "TCGA-THCA"))
+        purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or "differential_expression"))
+        scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or "tumor"))
+        request = build_tcga_preview_request(project=project, purpose=purpose, scope=scope)
+        _fill_table(
+            self._tcga_preview_table,
+            [
+                [
+                    f"{project.chinese_name} ({project.project_id})",
+                    purpose.chinese_name,
+                    scope.chinese_name,
+                    "尚未预览",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                ]
+            ],
+        )
+        _fill_table(self._tcga_sample_type_table, [[sample_type, "-"] for sample_type in request.sample_types] or [["全部可用样本", "-"]])
+        expected = "、".join(_user_asset_label(asset) for asset in purpose.required_internal_assets)
+        if hasattr(self, "_tcga_summary_text"):
+            self._tcga_summary_text.setPlainText(
+                "预计内容："
+                + (expected or "项目元数据")
+                + "\n本阶段仅预览可下载数据，不执行下载和矩阵构建。"
+            )
+        if hasattr(self, "_tcga_warning_text"):
+            self._tcga_warning_text.setPlainText("尚未执行 GDC metadata 预览。下载计划草案不会进入 DEG/GSEA ready。")
+        if hasattr(self, "_tcga_developer_details"):
+            self._tcga_developer_details.setPlainText("")
+        self._refresh_tcga_download_plan_state()
+        self._refresh_tcga_workflow_state()
+
+    def preview_tcga_downloadable_data(self) -> TCGAPreviewSummary | None:
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or ""))
+        purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or ""))
+        scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or ""))
+        request = build_tcga_preview_request(project=project, purpose=purpose, scope=scope)
+        self._tcga_status_label.setText("正在查询 GDC metadata，请稍候。")
+        QApplication.processEvents()
+        summary = self._tcga_preview_service.build_preview(request)
+        self._tcga_preview_summary = summary
+        self._tcga_download_plan_draft = None
+        self._render_tcga_metadata_preview(summary)
+        self._refresh_tcga_workflow_state()
+        if summary.status == "failed":
+            self._set_status("TCGA metadata 预览失败；请稍后重试或更换条件。", error=True)
+        elif summary.status == "empty":
+            self._set_status("未找到符合当前项目、分析目的和样本范围的数据。", error=True)
+        else:
+            self._set_status("TCGA metadata 预览已生成；如满足条件，可生成下载计划草案。")
+        return summary
+
+    def _render_tcga_metadata_preview(self, summary: TCGAPreviewSummary) -> None:
+        status_text = _tcga_preview_status_text(summary)
+        _fill_table(
+            self._tcga_preview_table,
+            [
+                [
+                    f"{summary.request.project_label_zh} ({summary.request.project_id})",
+                    summary.request.analysis_purpose_zh,
+                    summary.request.sample_scope_zh,
+                    status_text,
+                    str(summary.case_count),
+                    str(summary.sample_count),
+                    str(summary.file_count),
+                    format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown),
+                ]
+            ],
+        )
+        sample_rows = [[sample_type, str(count)] for sample_type, count in summary.sample_type_counts.items()]
+        _fill_table(self._tcga_sample_type_table, sample_rows or [["未返回样本类型", "0"]])
+        self._tcga_summary_text.setPlainText(_tcga_preview_summary_text(summary))
+        self._tcga_warning_text.setPlainText("\n".join(summary.warnings) if summary.warnings else "未发现阻断性提示。")
+        self._tcga_developer_details.setPlainText(_json(_tcga_preview_developer_payload(summary)))
+        self._tcga_plan_button.setEnabled(summary.is_download_plan_available)
+        if summary.is_download_plan_available:
+            self._tcga_status_label.setText("TCGA metadata 预览完成，可生成下载计划草案；不会下载文件。")
+        elif summary.status == "failed":
+            self._tcga_status_label.setText("TCGA metadata 预览失败，未生成下载计划。")
+        else:
+            self._tcga_status_label.setText("当前预览不满足生成下载计划草案条件。")
+
+    def _refresh_gtex_preview(self) -> None:
+        if not hasattr(self, "_gtex_preview_table"):
+            return
+        tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or "gtex_thyroid"))
+        purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or "normal_expression_view"))
+        _fill_table(
+            self._gtex_preview_table,
+            [
+                [
+                    tissue.tissue_group,
+                    f"{tissue.chinese_name} ({tissue.tissue_site_detail})",
+                    purpose.chinese_name,
+                    "尚未预览",
+                    "-",
+                    "-",
+                ]
+            ],
+        )
+        self._gtex_preview_summary = None
+        self._gtex_download_plan_draft = None
+        if hasattr(self, "_gtex_plan_button"):
+            self._gtex_plan_button.setEnabled(False)
+        if hasattr(self, "_gtex_status_text"):
+            self._gtex_status_text.setPlainText("尚未预览 GTEx metadata。GTEx 不自动作为 TCGA normal control。")
+        self._refresh_gtex_workflow_state()
+
+    def preview_gtex_downloadable_data(self) -> GTExPreviewSummary | None:
+        tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or ""))
+        purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or ""))
+        request = build_gtex_preview_request(tissue=tissue, purpose=purpose)
+        self._gtex_status_label.setText("正在查询 GTEx metadata，请稍候。")
+        QApplication.processEvents()
+        summary = self._gtex_preview_service.build_preview(request)
+        self._gtex_preview_summary = summary
+        self._gtex_download_plan_draft = None
+        self._render_gtex_preview(summary)
+        self._refresh_gtex_workflow_state()
+        if summary.status == "failed":
+            self._set_status("GTEx metadata 预览失败；请稍后重试。", error=True)
+        elif summary.status == "empty":
+            self._set_status("未找到 GTEx metadata 或表达文件。", error=True)
+        else:
+            self._set_status("GTEx metadata 预览已生成；如有公共表达文件，可生成下载计划草案。")
+        return summary
+
+    def _render_gtex_preview(self, summary: GTExPreviewSummary) -> None:
+        _fill_table(
+            self._gtex_preview_table,
+            [[summary.request.tissue_group, f"{summary.request.tissue_label_zh} ({summary.request.tissue_site_detail})", summary.request.use_purpose_zh, _gtex_preview_status_text(summary), str(summary.sample_count), str(summary.file_count)]],
+        )
+        self._gtex_plan_button.setEnabled(summary.is_download_plan_available)
+        self._gtex_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"组织：{summary.request.tissue_label_zh} ({summary.request.tissue_site_detail})",
+                    f"sample：{summary.sample_count}；donor：{summary.donor_count}；file：{summary.file_count}",
+                    "GTEx 是独立正常组织表达资源，不自动作为 TCGA normal control，也不自动与 TCGA 合并。",
+                    "提示：" + ("；".join(summary.warnings[:3]) if summary.warnings else "无"),
+                ]
+            )
+        )
+        self._gtex_developer_details.setPlainText(_json({"preview_summary": summary.to_dict()}))
+
+    def create_tcga_source_request(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        project = get_tcga_project(str(self._tcga_project_combo.currentData() or ""))
+        purpose = get_tcga_analysis_purpose(str(self._tcga_purpose_combo.currentData() or ""))
+        scope = get_tcga_sample_scope(str(self._tcga_sample_scope_combo.currentData() or ""))
+        warnings = (
+            "真实 GDC 查询与下载将在下一阶段接入；本阶段不伪造 case/sample/file 数。",
+            "TCGA request 处于等待下载与构建状态，不进入 DEG/GSEA ready。",
+        )
+        draft = create_data_source_request(
+            self._project_root,
+            source_type="TCGA",
+            user_title=f"TCGA 数据库 - {project.chinese_name}",
+            user_selection_summary=f"{project.chinese_name} / {purpose.chinese_name} / {scope.chinese_name}",
+            internal_selection={
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "analysis_purpose": purpose.purpose_id,
+                "sample_scope": scope.scope_id,
+                "internal_sample_types": list(scope.internal_sample_types),
+                "readiness_profile": purpose.readiness_profile,
+            },
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="pending_download",
+        )
+        summary = register_acquisition(
+            self._project_root,
+            source_type="tcga_project",
+            source_label=project.project_id,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "tcga_gdc",
+                "ui_source": "tcga_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "registered_pending_tcga_build",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": draft.request.request_id,
+                "data_source_request_path": str(draft.request_path),
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "chinese_name": project.chinese_name,
+                "english_name": project.english_name,
+                "organ_system": project.organ_system,
+                "analysis_purpose": purpose.purpose_id,
+                "analysis_purpose_zh": purpose.chinese_name,
+                "sample_scope": scope.scope_id,
+                "sample_scope_zh": scope.chinese_name,
+                "expected_assets": list(purpose.required_internal_assets),
+                "display_title_zh": f"TCGA {project.chinese_name}",
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = summary
+        self._tcga_status_label.setText(f"已生成 TCGA 任务草案：{project.project_id}；等待下一阶段真实 GDC 查询与下载。")
+        self._refresh_registered_sources()
+        self._set_status("TCGA 数据源 request 草案已生成；不会执行虚假下载，也不会进入真实分析 ready。")
+        return summary
+
+    def create_tcga_download_plan_draft(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        summary = self._tcga_preview_summary
+        if summary is None:
+            self._set_status("请先点击“预览可下载数据”。", error=True)
+            return None
+        if not summary.is_download_plan_available:
+            self._set_status("当前预览没有可用表达文件，不能生成下载计划草案。", error=True)
+            return None
+        draft = write_tcga_download_plan_draft(self._project_root, summary)
+        self._tcga_download_plan_draft = draft
+        project = get_tcga_project(summary.request.project_id)
+        purpose = get_tcga_analysis_purpose(summary.request.analysis_purpose)
+        scope = get_tcga_sample_scope(summary.request.sample_scope)
+        warnings = tuple(dict.fromkeys((
+            *summary.warnings,
+            "本阶段只生成 TCGA/GDC 下载计划草案，不下载大文件。",
+            "TCGA 下载计划草案不写 source_files，不进入 DEG/GSEA ready。",
+        )))
+        request_draft = create_data_source_request(
+            self._project_root,
+            source_type="TCGA",
+            user_title=f"TCGA 数据库 - {project.chinese_name}",
+            user_selection_summary=f"{project.chinese_name} / {purpose.chinese_name} / {scope.chinese_name}",
+            internal_selection={
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "analysis_purpose": purpose.purpose_id,
+                "sample_scope": scope.scope_id,
+                "internal_sample_types": list(scope.internal_sample_types),
+                "readiness_profile": purpose.readiness_profile,
+                "metadata_preview": summary.to_dict(),
+                "download_plan_draft_path": str(draft.plan_path),
+                "download_plan_status": draft.status,
+            },
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="download_plan_draft",
+        )
+        acquisition = register_acquisition(
+            self._project_root,
+            source_type="tcga_project",
+            source_label=project.project_id,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "tcga_gdc",
+                "ui_source": "tcga_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "tcga_gdc_download_plan_draft_created",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": request_draft.request.request_id,
+                "data_source_request_path": str(request_draft.request_path),
+                "download_plan_draft_id": draft.plan_id,
+                "download_plan_draft_path": str(draft.plan_path),
+                "download_plan_status": draft.status,
+                "project_id": project.project_id,
+                "short_code": project.short_code,
+                "chinese_name": project.chinese_name,
+                "english_name": project.english_name,
+                "organ_system": project.organ_system,
+                "analysis_purpose": purpose.purpose_id,
+                "analysis_purpose_zh": purpose.chinese_name,
+                "sample_scope": scope.scope_id,
+                "sample_scope_zh": scope.chinese_name,
+                "expected_assets": list(purpose.required_internal_assets),
+                "metadata_preview_summary": summary.to_dict(),
+                "tcga_preview_file_count": summary.file_count,
+                "tcga_preview_case_count": summary.case_count,
+                "tcga_preview_sample_count": summary.sample_count,
+                "tcga_preview_estimated_size": format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown),
+                "display_title_zh": f"TCGA {project.chinese_name}",
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = acquisition
+        self._tcga_status_label.setText(f"已生成 TCGA 下载计划草案：{project.project_id}；未下载文件。")
+        self._refresh_tcga_download_plan_state()
+        self._refresh_tcga_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("TCGA 下载计划草案已生成；未写 source_files，也不会进入真实分析 ready。")
+        return acquisition
+
+    def download_tcga_raw_files(self) -> TCGADownloadExecutionResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        plan_path = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id())
+        if plan_path is None:
+            self._tcga_download_status_text.setPlainText("未找到 TCGA 下载计划草案，请先生成 B6.2 下载计划。")
+            self._set_status("未找到 TCGA 下载计划草案。", error=True)
+            return None
+        self._tcga_download_status_text.setPlainText("正在下载 TCGA/GDC 原始文件；已存在文件会直接计为缓存命中。")
+        self._tcga_status_label.setText("正在执行 TCGA 原始文件下载，请稍候。")
+        QApplication.processEvents()
+        try:
+            result = self._tcga_download_executor.execute_plan(self._project_root, plan_path=plan_path)
+        except Exception as exc:
+            self._tcga_download_status_text.setPlainText(f"TCGA 下载执行失败：{exc}")
+            self._set_status(f"TCGA 下载执行失败：{exc}", error=True)
+            return None
+        self._tcga_download_result = result
+        self._render_tcga_download_result(result)
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._refresh_tcga_expression_build_state()
+        self._refresh_tcga_workflow_state()
+        self._set_status("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵；当前不会进入 DEG/GSEA ready。")
+        return result
+
+    def _render_tcga_download_result(self, result: TCGADownloadExecutionResult) -> None:
+        self._tcga_download_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"下载状态：{result.message}",
+                    f"成功：{result.success_count}；缓存：{result.cache_hit_count}；失败：{result.failed_count}；阻断：{result.blocked_count}；跳过：{result.skipped_count}",
+                    f"总大小：{format_bytes_zh(result.total_size_bytes)}",
+                    f"本地缓存路径：{result.target_dir}",
+                    f"receipt：{result.receipt_path}",
+                ]
+            )
+        )
+        self._tcga_status_label.setText("TCGA 原始文件已获取，等待 B6.4 构建表达矩阵。")
+
+    def build_tcga_expression_matrix(self) -> TCGAExpressionBuildResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        record_path = latest_tcga_raw_expression_record_path(self._project_root, project_id=self._selected_tcga_project_id())
+        if record_path is None:
+            self._tcga_expression_build_status_text.setPlainText("未找到等待 B6.4 构建的 TCGA 原始文件记录。")
+            self._set_status("未找到等待 B6.4 构建的 TCGA 原始文件记录。", error=True)
+            return None
+        self._tcga_expression_build_status_text.setPlainText("正在解析 TCGA expression quantification 文件并构建本地表达矩阵。")
+        self._tcga_status_label.setText("正在构建 TCGA 表达矩阵，请稍候。")
+        QApplication.processEvents()
+        try:
+            result = self._tcga_expression_builder.build_from_record(self._project_root, record_path=record_path)
+        except Exception as exc:
+            self._tcga_expression_build_status_text.setPlainText(f"TCGA 表达矩阵构建失败：{exc}")
+            self._set_status(f"TCGA 表达矩阵构建失败：{exc}", error=True)
+            return None
+        self._tcga_expression_build_result = result
+        self._render_tcga_expression_build_result(result)
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._refresh_tcga_expression_build_state()
+        self._refresh_tcga_clinical_build_state()
+        self._refresh_tcga_workflow_state()
+        self._set_status("TCGA 表达矩阵已构建，等待统一数据检查与准备；仍不会直接进入 DEG/GSEA ready。")
+        return result
+
+    def _render_tcga_expression_build_result(self, result: TCGAExpressionBuildResult) -> None:
+        warning_line = f"警告：{len(result.warnings)} 条" if result.warnings else "警告：无"
+        self._tcga_expression_build_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"构建状态：{result.message}",
+                    f"解析文件：{result.parsed_file_count}/{result.source_file_count}",
+                    f"样本：{result.sample_count}；基因：{result.gene_count}",
+                    f"counts 矩阵：{result.expression_matrix_path}",
+                    f"sample metadata：{result.sample_metadata_path}",
+                    f"sample mapping：{result.sample_mapping_path}",
+                    f"build manifest：{result.build_manifest_path}",
+                    warning_line,
+                ]
+            )
+        )
+        self._tcga_status_label.setText("TCGA 表达矩阵已构建，等待统一数据检查与准备。")
+
+    def fetch_tcga_clinical_metadata(self) -> TCGAClinicalBuildResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        project = get_tcga_project(self._selected_tcga_project_id() or "TCGA-THCA")
+        expression_manifest = latest_tcga_expression_build_manifest_path(self._project_root, project_id=project.project_id)
+        if expression_manifest is not None:
+            self._tcga_clinical_build_status_text.setPlainText("正在从 GDC /cases 获取 TCGA clinical metadata，并与 B6.4 表达样本映射。")
+            self._tcga_status_label.setText("正在获取 TCGA clinical metadata，请稍候。")
+            QApplication.processEvents()
+            try:
+                result = self._tcga_clinical_builder.build_for_latest_expression_build(self._project_root, project_id=project.project_id)
+            except Exception as exc:
+                self._tcga_clinical_build_status_text.setPlainText(f"TCGA clinical metadata 构建失败：{exc}")
+                self._set_status(f"TCGA clinical metadata 构建失败：{exc}", error=True)
+                return None
+        else:
+            self._tcga_clinical_build_status_text.setPlainText("未找到 B6.4 build；将仅按项目获取 TCGA clinical 概况，不能做表达-临床映射。")
+            self._tcga_status_label.setText("正在获取项目 clinical 概况，请稍候。")
+            QApplication.processEvents()
+            try:
+                result = self._tcga_clinical_builder.build_for_project(self._project_root, project.project_id)
+            except Exception as exc:
+                self._tcga_clinical_build_status_text.setPlainText(f"TCGA clinical metadata 预览失败：{exc}")
+                self._set_status(f"TCGA clinical metadata 预览失败：{exc}", error=True)
+                return None
+        self._tcga_clinical_build_result = result
+        self._render_tcga_clinical_build_result(result)
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._refresh_tcga_clinical_build_state()
+        self._refresh_tcga_workflow_state()
+        self._set_status("TCGA clinical metadata 已获取；仅进入 clinical/survival preflight readiness，不自动执行 survival、DEG 或 GSEA。")
+        return result
+
+    def _render_tcga_clinical_build_result(self, result: TCGAClinicalBuildResult) -> None:
+        mode_text = "表达数据匹配" if result.mode == "expression_matched_cases" else "项目 clinical 概况预览"
+        warning_line = f"警告：{len(result.warnings)} 条" if result.warnings else "警告：无"
+        self._tcga_clinical_build_status_text.setPlainText(
+            "\n".join(
+                [
+                    f"构建状态：{result.message}",
+                    f"模式：{mode_text}",
+                    f"case：{result.case_count}；匹配 case：{result.matched_case_count}；匹配 sample：{result.matched_sample_count}",
+                    f"基础 OS 可用 case：{result.survival_case_count}；死亡事件：{result.death_event_count}",
+                    f"case table：{result.case_table_path}",
+                    f"mapping table：{result.mapping_table_path}",
+                    f"clinical manifest：{result.clinical_manifest_path}",
+                    f"receipt：{result.clinical_receipt_path}",
+                    warning_line,
+                    "当前不会执行 KM/Cox/log-rank，也不会生成 clinical 结论。",
+                ]
+            )
+        )
+        self._tcga_status_label.setText("TCGA clinical metadata 已获取，等待数据检查与准备。")
+
+    def _refresh_tcga_download_plan_state(self) -> None:
+        if not hasattr(self, "_tcga_download_button"):
+            return
+        plan_path = latest_tcga_download_plan_path(self._project_root, project_id=self._selected_tcga_project_id()) if self._project_root is not None else None
+        self._tcga_download_button.setEnabled(plan_path is not None)
+        if hasattr(self, "_tcga_download_status_text") and self._tcga_download_result is None:
+            self._tcga_download_status_text.setPlainText(
+                f"可执行下载计划：{plan_path.name}" if plan_path is not None else "尚未生成下载计划草案。"
+            )
+
+    def _refresh_tcga_expression_build_state(self) -> None:
+        if not hasattr(self, "_tcga_expression_build_button"):
+            return
+        record_path = latest_tcga_raw_expression_record_path(self._project_root, project_id=self._selected_tcga_project_id()) if self._project_root is not None else None
+        self._tcga_expression_build_button.setEnabled(record_path is not None)
+        if hasattr(self, "_tcga_expression_build_status_text") and self._tcga_expression_build_result is None:
+            self._tcga_expression_build_status_text.setPlainText(
+                f"可构建表达矩阵：{record_path.name}" if record_path is not None else "尚未获取 TCGA 原始表达文件。"
+            )
+
+    def _refresh_tcga_clinical_build_state(self) -> None:
+        if not hasattr(self, "_tcga_clinical_build_button"):
+            return
+        state = self._build_tcga_workflow_state()
+        self._tcga_workflow_state = state
+        clinical_step = state.step("clinical")
+        has_project = self._project_root is not None
+        self._tcga_clinical_build_button.setEnabled(has_project and clinical_step.enabled)
+        if hasattr(self, "_tcga_clinical_build_status_text") and self._tcga_clinical_build_result is None:
+            if not has_project:
+                self._tcga_clinical_build_status_text.setPlainText("请先创建或打开项目。")
+                return
+            if clinical_step.enabled:
+                self._tcga_clinical_build_status_text.setPlainText(clinical_step.summary)
+            else:
+                detail = f"\n阻断原因：{clinical_step.blocking_reason}" if clinical_step.blocking_reason else ""
+                self._tcga_clinical_build_status_text.setPlainText(f"{clinical_step.summary}{detail}")
+
+    def _build_tcga_workflow_state(self) -> TCGAWorkflowState:
+        project_id = self._selected_tcga_project_id()
+        analysis_purpose = str(self._tcga_purpose_combo.currentData() or "") if hasattr(self, "_tcga_purpose_combo") else ""
+        sample_scope = str(self._tcga_sample_scope_combo.currentData() or "") if hasattr(self, "_tcga_sample_scope_combo") else ""
+        return build_tcga_workflow_state(
+            self._project_root,
+            project_id=project_id,
+            analysis_purpose=analysis_purpose,
+            sample_scope=sample_scope,
+        )
+
+    def _selected_tcga_project_id(self) -> str:
+        return str(self._tcga_project_combo.currentData() or "TCGA-THCA") if hasattr(self, "_tcga_project_combo") else ""
+
+    def _refresh_tcga_workflow_state(self) -> None:
+        if not hasattr(self, "_tcga_workflow_table"):
+            return
+        state = self._build_tcga_workflow_state()
+        self._tcga_workflow_state = state
+        _fill_table(
+            self._tcga_workflow_table,
+            [
+                [
+                    step.title,
+                    _tcga_workflow_status_zh(step.status),
+                    _tcga_workflow_user_summary(step),
+                    step.action_label if step.enabled and step.action_label else step.blocking_reason or "-",
+                ]
+                for step in state.steps
+            ],
+        )
+        warning_text = "；".join(state.warnings[:3]) if state.warnings else "无阻断性提示。"
+        self._tcga_workflow_summary_text.setPlainText(
+            "\n".join(
+                [
+                    f"当前阶段：{_tcga_workflow_stage_zh(state.current_stage)}",
+                    f"下一步：{state.next_action or '暂无可执行主步骤'}",
+                    "可进入数据检查与准备：" + ("是" if state.can_enter_data_check else "否"),
+                    f"提示：{warning_text}",
+                ]
+            )
+        )
+        if hasattr(self, "_tcga_preview_button"):
+            self._tcga_preview_button.setEnabled(state.step("preview").enabled)
+        if hasattr(self, "_tcga_download_button"):
+            self._tcga_download_button.setEnabled(state.step("download").enabled)
+        if hasattr(self, "_tcga_expression_build_button"):
+            self._tcga_expression_build_button.setEnabled(state.step("expression_build").enabled)
+        if hasattr(self, "_tcga_clinical_build_button"):
+            self._tcga_clinical_build_button.setEnabled(state.step("clinical").enabled)
+        if hasattr(self, "_tcga_data_check_button"):
+            self._tcga_data_check_button.setEnabled(state.can_enter_data_check)
+            self._tcga_data_check_button.setVisible(state.can_enter_data_check)
+            self._tcga_data_check_button.setText("进入数据检查与准备" if state.can_enter_data_check else "进入准备")
+        if hasattr(self, "_tcga_developer_details"):
+            workflow_payload = _json(
+                {
+                    "tcga_workflow_state": state.to_dict(),
+                    "note": "GDC filters, file UUIDs, manifest/source paths and raw paths are intentionally kept in developer diagnostics.",
+                }
+            )
+            self._tcga_developer_details.setPlainText(workflow_payload)
+
+    def create_gtex_download_plan_draft(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        summary = self._gtex_preview_summary
+        if summary is None:
+            self._set_status("请先点击“预览 GTEx 可下载数据”。", error=True)
+            return None
+        if not summary.is_download_plan_available:
+            self._set_status("当前 GTEx 预览没有可用下载计划。", error=True)
+            return None
+        draft = write_gtex_download_plan_draft(self._project_root, summary)
+        self._gtex_download_plan_draft = draft
+        tissue = get_gtex_tissue(summary.request.tissue_id)
+        purpose = get_gtex_use_purpose(summary.request.use_purpose)
+        warnings = tuple(dict.fromkeys((*summary.warnings, "GTEx 下载计划草案不写 source_files，不进入 DEG/GSEA ready。")))
+        request_draft = create_data_source_request(
+            self._project_root,
+            source_type="GTEx",
+            user_title=f"GTEx 数据库 - {tissue.chinese_name}",
+            user_selection_summary=f"{tissue.tissue_group} / {tissue.chinese_name} / {purpose.chinese_name}",
+            internal_selection={"tissue_id": tissue.tissue_id, "tissue_site_detail": tissue.tissue_site_detail, "use_purpose": purpose.purpose_id, "download_plan_draft_path": str(draft.plan_path), "not_tcga_auto_control": True},
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="download_plan_draft",
+        )
+        acquisition = register_acquisition(
+            self._project_root,
+            source_type="gtex_tissue",
+            source_label=tissue.tissue_id,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "gtex",
+                "ui_source": "gtex_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "gtex_download_plan_draft_created",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": request_draft.request.request_id,
+                "data_source_request_path": str(request_draft.request_path),
+                "download_plan_draft_id": draft.plan_id,
+                "download_plan_draft_path": str(draft.plan_path),
+                "tissue_id": tissue.tissue_id,
+                "tissue_site_detail": tissue.tissue_site_detail,
+                "use_purpose": purpose.purpose_id,
+                "display_title_zh": f"GTEx {tissue.chinese_name}",
+                "gtex_preview_summary": summary.to_dict(),
+                "tcga_merge_status": "not_merged",
+                "tcga_default_control_status": "disabled",
+                "requires_explicit_joint_config": True,
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = acquisition
+        self._refresh_gtex_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("GTEx 下载计划草案已生成；不会作为 TCGA normal control。")
+        return acquisition
+
+    def download_gtex_raw_files(self) -> GTExDownloadExecutionResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        selected_tissue_id = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        plan_path = latest_gtex_download_plan_path(self._project_root, tissue_id=selected_tissue_id or None)
+        if plan_path is None:
+            self._gtex_status_text.setPlainText("未找到 GTEx 下载计划草案，请先生成 G6.1 下载计划。")
+            self._set_status("未找到 GTEx 下载计划草案。", error=True)
+            return None
+        self._gtex_status_text.setPlainText("正在下载 GTEx 原始文件；已存在文件会计为缓存命中。")
+        QApplication.processEvents()
+        try:
+            result = self._gtex_download_executor.execute_plan(self._project_root, plan_path=plan_path)
+        except Exception as exc:
+            self._gtex_status_text.setPlainText(f"GTEx 下载执行失败：{exc}")
+            self._set_status(f"GTEx 下载执行失败：{exc}", error=True)
+            return None
+        self._gtex_download_result = result
+        self._gtex_status_text.setPlainText(f"{result.message}\n成功：{result.success_count}；缓存：{result.cache_hit_count}；失败：{result.failed_count}\n本地缓存路径：{result.target_dir}\nreceipt：{result.receipt_path}")
+        self._refresh_gtex_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("GTEx 原始文件已获取，等待构建表达矩阵；不会自动与 TCGA 合并。")
+        return result
+
+    def build_gtex_expression_matrix(self) -> GTExExpressionBuildResult | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        selected_tissue_id = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        record_path = latest_gtex_raw_expression_record_path(self._project_root, tissue_id=selected_tissue_id or None)
+        if record_path is None:
+            self._gtex_status_text.setPlainText("未找到等待 G6.3 构建的 GTEx 原始文件记录。")
+            self._set_status("未找到等待 G6.3 构建的 GTEx 原始文件记录。", error=True)
+            return None
+        self._gtex_status_text.setPlainText("正在解析 GTEx 表达矩阵并构建本地标准产物。")
+        QApplication.processEvents()
+        try:
+            result = self._gtex_expression_builder.build_from_record(self._project_root, record_path=record_path)
+        except Exception as exc:
+            self._gtex_status_text.setPlainText(f"GTEx 表达矩阵构建失败：{exc}")
+            self._set_status(f"GTEx 表达矩阵构建失败：{exc}", error=True)
+            return None
+        self._gtex_expression_build_result = result
+        self._gtex_status_text.setPlainText(f"{result.message}\nsample：{result.sample_count}；donor：{result.donor_count}；gene：{result.gene_count}\nexpression matrix：{result.expression_matrix_path}\nbuild manifest：{result.build_manifest_path}\nGTEx 不自动作为 TCGA normal control。")
+        self._refresh_gtex_workflow_state()
+        self._refresh_registered_sources()
+        self._refresh_geo_download_list()
+        self._set_status("GTEx 表达矩阵已构建，等待数据检查与准备；不自动与 TCGA 合并。")
+        return result
+
+    def _build_gtex_workflow_state(self) -> GTExWorkflowState:
+        tissue_id = str(self._gtex_tissue_combo.currentData() or "") if hasattr(self, "_gtex_tissue_combo") else ""
+        use_purpose = str(self._gtex_purpose_combo.currentData() or "") if hasattr(self, "_gtex_purpose_combo") else ""
+        return build_gtex_workflow_state(self._project_root, tissue_id=tissue_id, use_purpose=use_purpose)
+
+    def _refresh_gtex_workflow_state(self) -> None:
+        if not hasattr(self, "_gtex_workflow_table"):
+            return
+        state = self._build_gtex_workflow_state()
+        self._gtex_workflow_state = state
+        _fill_table(
+            self._gtex_workflow_table,
+            [[step.title, _tcga_workflow_status_zh(step.status), _tcga_workflow_user_summary(step), step.action_label if step.enabled and step.action_label else step.blocking_reason or "-"] for step in state.steps],
+        )
+        self._gtex_workflow_summary_text.setPlainText(
+            "\n".join(
+                [
+                    f"当前阶段：{_gtex_workflow_stage_zh(state.current_stage)}",
+                    f"下一步：{state.next_action or '暂无可执行主步骤'}",
+                    "可进入数据检查与准备：" + ("是" if state.can_enter_data_check else "否"),
+                    "提示：" + ("；".join(state.warnings[:3]) if state.warnings else "无"),
+                ]
+            )
+        )
+        self._gtex_preview_button.setEnabled(state.step("preview").enabled)
+        self._gtex_download_button.setEnabled(state.step("download").enabled)
+        self._gtex_expression_build_button.setEnabled(state.step("expression_build").enabled)
+        self._gtex_data_check_button.setEnabled(state.can_enter_data_check)
+        self._gtex_data_check_button.setVisible(state.can_enter_data_check)
+        self._gtex_data_check_button.setText("进入数据检查与准备" if state.can_enter_data_check else "进入准备")
+        if self._gtex_preview_summary is not None:
+            self._gtex_plan_button.setEnabled(self._gtex_preview_summary.is_download_plan_available)
+        else:
+            self._gtex_plan_button.setEnabled(False)
+        self._gtex_developer_details.setPlainText(_json({"gtex_workflow_state": state.to_dict()}))
+
+    def create_gtex_source_request(self) -> AcquisitionSummary | None:
+        if self._project_root is None:
+            self._set_status("请先创建或打开生信分析项目。", error=True)
+            return None
+        tissue = get_gtex_tissue(str(self._gtex_tissue_combo.currentData() or ""))
+        purpose = get_gtex_use_purpose(str(self._gtex_purpose_combo.currentData() or ""))
+        warnings = (
+            "真实 GTEx 查询与下载将在下一阶段接入；本阶段不伪造 sample/donor/file 数。",
+            "GTEx request 不会被自动作为 TCGA normal control，也不进入 DEG/GSEA ready。",
+        )
+        draft = create_data_source_request(
+            self._project_root,
+            source_type="GTEx",
+            user_title=f"GTEx 数据库 - {tissue.chinese_name}",
+            user_selection_summary=f"{tissue.tissue_group} / {tissue.chinese_name} / {purpose.chinese_name}",
+            internal_selection={
+                "tissue_id": tissue.tissue_id,
+                "tissue_site_detail": tissue.tissue_site_detail,
+                "use_purpose": purpose.purpose_id,
+                "version": tissue.version,
+                "readiness_profile": purpose.readiness_profile,
+                "not_tcga_auto_control": True,
+            },
+            expected_assets=purpose.required_internal_assets,
+            warnings=warnings,
+            status="pending_download",
+        )
+        summary = register_acquisition(
+            self._project_root,
+            source_type="gtex_tissue",
+            source_label=tissue.tissue_site_detail,
+            strategy="plan_only",
+            selected_paths=[],
+            metadata={
+                "source": "gtex",
+                "ui_source": "gtex_database_page",
+                "registration_status": "registered_as_planned_source",
+                "download_status": "registered_pending_gtex_build",
+                "ready_for_recognition": "pending_download",
+                "data_source_request_id": draft.request.request_id,
+                "data_source_request_path": str(draft.request_path),
+                "tissue_id": tissue.tissue_id,
+                "tissue_name": tissue.tissue_site_detail,
+                "tissue_site_detail": tissue.tissue_site_detail,
+                "chinese_name": tissue.chinese_name,
+                "tissue_group": tissue.tissue_group,
+                "version": tissue.version,
+                "use_purpose": purpose.purpose_id,
+                "use_purpose_zh": purpose.chinese_name,
+                "expected_assets": list(purpose.required_internal_assets),
+                "display_title_zh": f"GTEx {tissue.chinese_name}",
+                "not_tcga_auto_control": True,
+                "warnings": list(warnings),
+            },
+        )
+        self._latest_summary = summary
+        self._gtex_status_label.setText(f"已生成 GTEx 任务草案：{tissue.chinese_name}；等待下一阶段真实 GTEx 查询与下载。")
+        self._refresh_registered_sources()
+        self._set_status("GTEx 数据源 request 草案已生成；不会执行虚假下载，也不会作为 TCGA 自动对照。")
+        return summary
 
     def _data_selection_status_card(self) -> QFrame:
         card, layout = _card("当前数据选择状态")
@@ -1923,8 +3000,6 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         input_layout.addWidget(self._status_label)
         self._topic_summary_label = _status_label("主题识别：尚未开始。")
         input_layout.addWidget(self._topic_summary_label)
-        self._local_model_assist_label = _status_label("本地模型辅助：未启用，当前使用规则词库结果。AI 生成内容仅作为草稿，需用户确认后使用。")
-        input_layout.addWidget(self._local_model_assist_label)
         root.addWidget(input_card)
 
         draft_card, draft_layout = _card("Query draft（草稿 / 待确认）")
@@ -2229,7 +3304,6 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
         self._tcga_query_box.setPlainText(", ".join(query.tcga_project_ids) if query.tcga_project_ids else "暂无 TCGA/GDC 项目草稿")
         self._gtex_query_box.setPlainText(", ".join(query.gtex_tissues) if query.gtex_tissues else "暂无 GTEx 组织草稿")
         self._topic_summary_label.setText(_topic_summary_text(query))
-        self._local_model_assist_label.setText(_local_model_assist_status_text(query.metadata.get("ai_assist_status"), query.metadata.get("local_model_status")))
         self._geo_draft_summary.setText(_geo_draft_summary_text(query))
         self._tcga_draft_summary.setText(f"TCGA：{', '.join(query.tcga_project_ids) if query.tcga_project_ids else '未生成项目草稿'}")
         self._gtex_draft_summary.setText(f"GTEx：{', '.join(query.gtex_tissues) if query.gtex_tissues else '未生成组织草稿'}")
@@ -2696,7 +3770,9 @@ class BioinformaticsChineseDatasetSearchWidget(QWidget):
             key = (str(metadata.get("source") or ""), str(metadata.get("accession_or_project") or payload.get("source_label") or ""))
             if key != (source, accession_or_project):
                 continue
-            if metadata.get("ready_for_recognition") == "ready" or payload.get("strategy") != "plan_only":
+            if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+                state = "planned"
+            elif metadata.get("ready_for_recognition") == "ready" or payload.get("strategy") != "plan_only":
                 state = "ready"
             elif not state:
                 state = "planned"
@@ -4138,62 +5214,6 @@ class BioinformaticsStandardizedAssetsWidget(QWidget):
         )
 
 
-class BioinformaticsGroupComparisonDesignWidget(QWidget):
-    continue_requested = Signal(object)
-    back_requested = Signal()
-
-    def __init__(self, *, on_continue: Callable[[Path], None] | None = None, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._project_root: Path | None = None
-        self.setObjectName("bioinformaticsGroupComparisonDesignPage")
-        self.setStyleSheet(bioinformatics_project_home_stylesheet())
-        root = _scroll_root(self)
-        root.addWidget(_header("分组与比较设计", "当前集成预览保留入口；请优先在数据准备与标准化页确认候选分组。", back_text="返回标准化资产", back_signal=self.back_requested))
-        self._status_label = _status_label("请先打开项目。")
-        self._summary = _read_only_report_view(160)
-        root.addWidget(self._status_label)
-        root.addWidget(self._summary)
-        actions = QHBoxLayout()
-        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_design))
-        actions.addWidget(_button("继续：分析任务中心", "primaryButton", self.continue_to_tasks))
-        actions.addStretch(1)
-        root.addLayout(actions)
-        if on_continue is not None:
-            self.continue_requested.connect(on_continue)
-        if on_back is not None:
-            self.back_requested.connect(on_back)
-
-    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
-        self._project_root = _project_root(summary)
-        self.refresh_design()
-
-    def refresh_design(self) -> dict[str, object] | None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            self._summary.setPlainText("")
-            return None
-        recognition = load_recognition_report(self._project_root) or {}
-        comparison = load_confirmed_comparison_config(self._project_root)
-        preview = recognition.get("group_preview") if isinstance(recognition, dict) else {}
-        payload = {
-            "confirmed_comparison": comparison.to_dict() if comparison is not None else {},
-            "group_preview": preview if isinstance(preview, dict) else {},
-            "boundary": "integration_preview_entry_only",
-        }
-        self._status_label.setText("已确认比较组。" if comparison is not None else "尚未确认比较组；请返回标准化页确认候选分组或手动补充。")
-        self._summary.setPlainText(_json(payload))
-        return payload
-
-    def continue_to_tasks(self) -> None:
-        if self._project_root is None:
-            self._status_label.setText("请先创建或打开生信分析项目。")
-            return
-        self.continue_requested.emit(self._project_root)
-
-    def status_message(self) -> str:
-        return self._status_label.text()
-
-
 class BioinformaticsWorkflowStatusWidget(QWidget):
     continue_requested = Signal(object)
     back_requested = Signal()
@@ -4298,6 +5318,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     back_requested = Signal()
     deg_config_requested = Signal(object)
     imported_deg_requested = Signal(object)
+    immune_scoring_requested = Signal(object)
 
     def __init__(
         self,
@@ -4306,6 +5327,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         on_back: Callable[[], None] | None = None,
         on_configure_deg: Callable[[Path], None] | None = None,
         on_view_imported_deg: Callable[[Path], None] | None = None,
+        on_configure_immune_scoring: Callable[[Path], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -4321,6 +5343,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self.deg_config_requested.connect(on_configure_deg)
         if on_view_imported_deg is not None:
             self.imported_deg_requested.connect(on_view_imported_deg)
+        if on_configure_immune_scoring is not None:
+            self.immune_scoring_requested.connect(on_configure_immune_scoring)
 
     def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
         self._project_root = _project_root(summary)
@@ -4363,6 +5387,60 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self.imported_deg_requested.emit(self._project_root)
         self._status_label.setText("已打开导入结果浏览；该入口只查看用户导入 / 外部分析结果，不运行 DEG。")
         return {"next_page": "imported_deg", "project_root": str(self._project_root)}
+
+    def open_immune_scoring(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        self.immune_scoring_requested.emit(self._project_root)
+        self._status_label.setText("已打开免疫浸润 / TME评分页；该入口只生成探索性 bulk signature score。")
+        return {"next_page": "immune_tme_scoring", "project_root": str(self._project_root)}
+
+    def run_formal_controlled_deg_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        confirmation = load_deg_parameter_confirmation(self._project_root)
+        parameter_manifest = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+        result = run_formal_controlled_deg(
+            self._project_root,
+            method=str(parameter_manifest.get("method") or "welch_t_test"),
+            log2fc_threshold=float(parameter_manifest.get("log2fc_threshold") or 1.0),
+            p_value_threshold=float(parameter_manifest.get("p_value_threshold") or 0.05),
+            fdr_threshold=float(parameter_manifest.get("fdr_threshold") or 0.05),
+            pseudocount=float(parameter_manifest.get("pseudocount") or 1e-9),
+        )
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成两组 controlled DEG MVP，并写入 result index v2。未生成 GSEA、plot、report-ready 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG gate 未通过"
+            self._status_label.setText(f"两组 controlled DEG 未运行：{blockers}")
+        return result
+
+    def confirm_formal_deg_parameters(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        try:
+            confirmation = save_deg_parameter_confirmation(
+                self._project_root,
+                method=self._formal_deg_method_input.currentText(),
+                log2fc_threshold=float(self._formal_deg_log2fc_input.text() or "1.0"),
+                p_value_threshold=float(self._formal_deg_pvalue_input.text() or "0.05"),
+                fdr_threshold=float(self._formal_deg_fdr_input.text() or "0.05"),
+            )
+        except ValueError:
+            self._status_label.setText("Formal DEG 参数确认失败：threshold 必须是数字。")
+            return None
+        self.refresh_task_center()
+        if confirmation.get("status") == "confirmed":
+            plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+            self._status_label.setText(f"已确认 formal DEG 参数；task-run id：{plan.get('task_run_id', '')}。确认后仍只允许运行两组 controlled DEG MVP。")
+        else:
+            blockers = "；".join(str(item) for item in confirmation.get("blockers", []) or []) or "formal DEG gate 未通过"
+            self._status_label.setText(f"Formal DEG 参数未确认：{blockers}")
+        return confirmation
 
     def run_geo_differential_expression_task(self) -> dict[str, object] | None:
         if self._project_root is None:
@@ -4458,11 +5536,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         summary_card, summary_layout = _card("当前分析条件")
         self._analysis_input_label = _muted("核心输入：待检查。")
         self._analysis_input_label.setObjectName("analysisTaskInputSummary")
+        self._analysis_resolver_label = _muted("Resolver：待检查 standardized analysis input packages。")
+        self._analysis_resolver_label.setObjectName("analysisInputResolverSummary")
         self._analysis_result_label = _muted("结果状态：暂无结果。")
         self._analysis_result_label.setObjectName("analysisTaskResultSummary")
         self._analysis_next_step_label = _muted("下一步建议：先返回数据标准化确认输入。")
         self._analysis_next_step_label.setObjectName("analysisTaskNextStep")
         summary_layout.addWidget(self._analysis_input_label)
+        summary_layout.addWidget(self._analysis_resolver_label)
         summary_layout.addWidget(self._analysis_result_label)
         summary_layout.addWidget(self._analysis_next_step_label)
         root.addWidget(summary_card)
@@ -4471,6 +5552,13 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("刷新任务状态", "secondaryButton", self.refresh_task_center))
         actions.addWidget(_button("确认分组与比较设计", "secondaryButton", self.configure_comparison_groups))
         actions.addWidget(_button("进入差异分析配置", "primaryButton", self.create_deg_task_draft))
+        self._formal_deg_confirm_button = _button("确认 formal DEG 参数", "secondaryButton", self.confirm_formal_deg_parameters)
+        self._formal_deg_confirm_button.setEnabled(False)
+        actions.addWidget(self._formal_deg_confirm_button)
+        self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
+        self._formal_deg_button.setEnabled(False)
+        actions.addWidget(self._formal_deg_button)
+        actions.addWidget(_button("免疫浸润 / TME评分", "secondaryButton", self.open_immune_scoring))
         actions.addWidget(_button("查看已导入差异分析结果", "secondaryButton", self.open_imported_deg_browser))
         actions.addStretch(1)
         root.addLayout(actions)
@@ -4480,6 +5568,88 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         root.addWidget(self._tasks)
         _set_table_widths(self._tasks, [160, 150, 220, 220, 300])
         self._tasks.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
+        package_card, package_layout = _card("Analysis input packages")
+        package_layout.addWidget(_muted("来源：B8 resolver，仅使用 standardized repository / registry / analysis_input_repository。"))
+        self._package_table = _table(["Package", "状态", "Value", "Gene ID", "下游任务", "Blockers", "Warnings", "修复建议"])
+        self._package_table.setObjectName("analysisPackageTable")
+        package_layout.addWidget(self._package_table)
+        root.addWidget(package_card)
+        _set_table_widths(self._package_table, [180, 110, 110, 110, 200, 260, 260, 320])
+        self._package_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+
+        action_card, action_layout = _card("Action matrix and disabled reasons")
+        action_layout.addWidget(_muted("Formal actions stay disabled until B8 gates pass and later activation stages explicitly enable execution."))
+        self._action_table = _table(["动作", "状态", "按钮", "Disabled reason", "下一步"])
+        self._action_table.setObjectName("analysisActionGateTable")
+        action_layout.addWidget(self._action_table)
+        root.addWidget(action_card)
+        _set_table_widths(self._action_table, [190, 150, 180, 360, 300])
+        self._action_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        dependency_card, dependency_layout = _card("Dependency status")
+        dependency_layout.addWidget(_muted("Detect-first only：显示缺失依赖并阻断 formal action，不自动安装。"))
+        self._dependency_table = _table(["依赖", "状态", "版本", "Blockers", "打包影响", "操作"])
+        self._dependency_table.setObjectName("analysisDependencyTable")
+        dependency_layout.addWidget(self._dependency_table)
+        root.addWidget(dependency_card)
+        _set_table_widths(self._dependency_table, [150, 130, 110, 280, 260, 220])
+        self._dependency_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        confirm_card, confirm_layout = _card("Formal DEG user confirmation")
+        confirm_layout.addWidget(_muted("运行正式 DEG 前，用户必须确认 comparison、method、thresholds、value type compatibility、dependency snapshot、输出位置和 task-run id。"))
+        confirm_controls = QHBoxLayout()
+        self._formal_deg_method_input = QComboBox()
+        self._formal_deg_method_input.addItems(["welch_t_test", "mann_whitney"])
+        self._formal_deg_method_input.setObjectName("formalDegMethodInput")
+        self._formal_deg_log2fc_input = QLineEdit("1.0")
+        self._formal_deg_log2fc_input.setObjectName("formalDegLog2fcThresholdInput")
+        self._formal_deg_log2fc_input.setPlaceholderText("log2FC")
+        self._formal_deg_pvalue_input = QLineEdit("0.05")
+        self._formal_deg_pvalue_input.setObjectName("formalDegPvalueThresholdInput")
+        self._formal_deg_pvalue_input.setPlaceholderText("p-value")
+        self._formal_deg_fdr_input = QLineEdit("0.05")
+        self._formal_deg_fdr_input.setObjectName("formalDegFdrThresholdInput")
+        self._formal_deg_fdr_input.setPlaceholderText("FDR")
+        confirm_controls.addWidget(QLabel("Method"))
+        confirm_controls.addWidget(self._formal_deg_method_input)
+        confirm_controls.addWidget(QLabel("log2FC"))
+        confirm_controls.addWidget(self._formal_deg_log2fc_input)
+        confirm_controls.addWidget(QLabel("p-value"))
+        confirm_controls.addWidget(self._formal_deg_pvalue_input)
+        confirm_controls.addWidget(QLabel("FDR"))
+        confirm_controls.addWidget(self._formal_deg_fdr_input)
+        confirm_controls.addStretch(1)
+        confirm_layout.addLayout(confirm_controls)
+        self._formal_deg_confirmation_table = _table(["确认项", "当前值", "状态"])
+        self._formal_deg_confirmation_table.setObjectName("analysisFormalDegConfirmationTable")
+        confirm_layout.addWidget(self._formal_deg_confirmation_table)
+        root.addWidget(confirm_card)
+        _set_table_widths(self._formal_deg_confirmation_table, [180, 520, 240])
+        self._formal_deg_confirmation_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+
+        gate_card, gate_layout = _card("Result / plot / report gate preview")
+        gate_layout.addWidget(_muted("Result semantics、plot source 和 report-ready gate 均来自 B8 contracts；preflight/testing/imported 不会升级为 formal result。"))
+        self._formal_deg_gate_table = _table(["Formal DEG gate", "状态", "依据", "Blockers", "Warnings"])
+        self._formal_deg_gate_table.setObjectName("analysisFormalDegGateTable")
+        gate_layout.addWidget(self._formal_deg_gate_table)
+        self._gate_table = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
+        self._gate_table.setObjectName("analysisGatePreviewTable")
+        gate_layout.addWidget(self._gate_table)
+        root.addWidget(gate_card)
+        _set_table_widths(self._formal_deg_gate_table, [170, 170, 230, 320, 300])
+        self._formal_deg_gate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        _set_table_widths(self._gate_table, [170, 170, 230, 320, 300])
+        self._gate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+        survival_card, survival_layout = _card("Survival / clinical preflight")
+        survival_layout.addWidget(_muted("Survival/clinical association 仅显示设计和 preflight 状态；KM/Cox/log-rank/HR/KM plot 禁用。"))
+        self._survival_table = _table(["项目", "状态", "资产/字段", "Backend", "禁用原因"])
+        self._survival_table.setObjectName("analysisSurvivalClinicalTable")
+        survival_layout.addWidget(self._survival_table)
+        root.addWidget(survival_card)
+        _set_table_widths(self._survival_table, [190, 140, 190, 190, 360])
+        self._survival_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
 
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
@@ -4502,19 +5672,56 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
         records = load_task_records(self._project_root) if self._project_root else []
         result_index = load_result_index(self._project_root) if self._project_root else {}
+        resolver = resolve_analysis_inputs(self._project_root) if self._project_root else None
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         entries = [item for item in result_index.get("entries", []) or [] if isinstance(item, dict)]
         imported_deg = _analysis_imported_deg_detected(self._project_root)
         configurable = sum(1 for item in tasks if item.get("can_run"))
         blocked = len(tasks) - configurable
         self._status_label.setText(f"分析任务中心：{len(tasks)} 类任务；可配置 {configurable} 类，需要补充 {blocked} 类。")
         self._analysis_input_label.setText(_analysis_task_input_summary(tasks))
+        self._analysis_resolver_label.setText(_analysis_input_resolver_summary(resolver.to_dict() if resolver else {}))
         self._analysis_result_label.setText(_analysis_task_result_summary(entries, records, imported_deg))
         self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
         _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
-        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index})
+        _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
+        _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
+        formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
+        confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
+        self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
+        self._formal_deg_confirm_button.setToolTip(str(confirmation_action.get("disabled_reason") or confirmation_action.get("next_action") or "确认 formal DEG 参数"))
+        self._formal_deg_button.setEnabled(bool(formal_action.get("enabled")))
+        if formal_action.get("enabled"):
+            self._formal_deg_button.setToolTip("运行两组 controlled DEG MVP；只写 result index v2，不生成 GSEA/plot/report-ready/survival。")
+        else:
+            self._formal_deg_button.setToolTip(str(formal_action.get("disabled_reason") or "formal DEG gate 未通过"))
+        _fill_table(self._dependency_table, _analysis_ui_dependency_rows(analysis_state.get("dependency_rows", [])))
+        self._sync_confirmation_controls(analysis_state)
+        _fill_table(self._formal_deg_confirmation_table, _analysis_ui_confirmation_rows(analysis_state.get("developer_diagnostics", {}).get("formal_deg_gate_state", {}) if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}))
+        _fill_table(self._formal_deg_gate_table, _analysis_ui_gate_rows(analysis_state.get("formal_deg_gate_rows", [])))
+        _fill_table(self._gate_table, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        _fill_table(self._survival_table, _analysis_ui_survival_rows(analysis_state.get("survival_clinical_rows", [])))
+        self._set_developer_details({"analysis_task_center": center, "task_records": records, "result_index": result_index, "analysis_input_resolver": resolver.to_dict() if resolver else {}, "analysis_center_state": analysis_state})
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._records.setPlainText(_json(payload))
+
+    def _sync_confirmation_controls(self, analysis_state: dict[str, object]) -> None:
+        diagnostics = analysis_state.get("developer_diagnostics") if isinstance(analysis_state.get("developer_diagnostics"), dict) else {}
+        formal_state = diagnostics.get("formal_deg_gate_state") if isinstance(diagnostics.get("formal_deg_gate_state"), dict) else {}
+        parameter_gate = formal_state.get("parameter_gate") if isinstance(formal_state.get("parameter_gate"), dict) else {}
+        method = str(parameter_gate.get("method") or "welch_t_test")
+        index = self._formal_deg_method_input.findText(method)
+        if index >= 0:
+            self._formal_deg_method_input.setCurrentIndex(index)
+        for widget, key, default in (
+            (self._formal_deg_log2fc_input, "log2fc_threshold", "1.0"),
+            (self._formal_deg_pvalue_input, "p_value_threshold", "0.05"),
+            (self._formal_deg_fdr_input, "fdr_threshold", "0.05"),
+        ):
+            value = parameter_gate.get(key, default)
+            if not widget.hasFocus():
+                widget.setText(str(value))
 
 
 class BioinformaticsDegConfigWidget(QWidget):
@@ -4675,6 +5882,250 @@ class BioinformaticsDegConfigWidget(QWidget):
 
     def _set_developer_details(self, payload: dict[str, object]) -> None:
         self._developer_details.setPlainText(_json(payload))
+
+
+class BioinformaticsImmuneInfiltrationWidget(QWidget):
+    back_requested = Signal()
+
+    def __init__(self, *, on_back: Callable[[], None] | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._project_root: Path | None = None
+        self._readiness: dict[str, object] = {}
+        self._last_result: object | None = None
+        self.setObjectName("bioinformaticsImmuneInfiltrationPage")
+        self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._build_ui()
+        if on_back is not None:
+            self.back_requested.connect(on_back)
+
+    def refresh_project(self, summary: BioinformaticsProjectSummary | Path | None) -> None:
+        self._project_root = _project_root(summary)
+        self.refresh_state()
+
+    def refresh_state(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        readiness = build_immune_infiltration_readiness(self._project_root)
+        self._readiness = readiness
+        self._render_readiness(readiness)
+        return readiness
+
+    def run_scoring(self) -> object | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        dataset = self._selected_dataset()
+        if not dataset:
+            self._status_label.setText("没有可用于 B7 的表达矩阵。")
+            return None
+        signatures = self._selected_signatures()
+        if not signatures:
+            self._status_label.setText("请至少选择一个 immune / TME signature。")
+            return None
+        readiness = build_immune_infiltration_readiness(self._project_root, dataset_id=str(dataset.get("dataset_id") or ""), signatures=signatures)
+        if not readiness.get("can_run_scoring"):
+            self._render_readiness(readiness)
+            self._status_label.setText("当前输入未通过 B7 readiness，不能运行评分。")
+            return None
+        try:
+            result = run_immune_scoring(
+                self._project_root,
+                expression_matrix_path=str(dataset.get("expression_matrix_path") or ""),
+                selected_signatures=signatures,
+                dataset_id=str(dataset.get("dataset_id") or ""),
+                dataset_label=str(dataset.get("label") or ""),
+                input_value_type=str(dataset.get("value_type") or "unknown"),
+                gene_id_column=str(dataset.get("gene_id_column") or ""),
+                sample_columns=[str(item) for item in dataset.get("sample_columns", []) or []],
+                scoring_method=self._method_combo.currentText(),
+                value_transform=self._transform_combo.currentText(),
+            )
+            preflight = build_linkage_preflight(
+                self._project_root,
+                score_matrix_path=result.score_matrix_path,
+                expression_matrix_path=str(dataset.get("expression_matrix_path") or ""),
+                target_gene=self._target_gene_input.text().strip(),
+            )
+            report = generate_immune_tme_report(self._project_root, manifest_path=result.manifest_path, linkage_preflight=preflight)
+        except Exception as exc:
+            self._status_label.setText(f"免疫浸润 / TME评分失败：{exc}")
+            return None
+        self._last_result = result
+        self._render_result(result, preflight, report)
+        self._status_label.setText("免疫浸润 / TME评分已完成；结果为探索性 bulk signature score，不自动进入 DEG/GSEA/KM/Cox。")
+        return result
+
+    def status_message(self) -> str:
+        return self._status_label.text()
+
+    def _build_ui(self) -> None:
+        root = _scroll_root(self)
+        root.addWidget(
+            _header(
+                "免疫浸润 / TME评分",
+                "基于 bulk 表达矩阵计算探索性 immune / TME signature score。",
+                back_text="返回分析任务中心",
+                back_signal=self.back_requested,
+            )
+        )
+        self._status_label = _status_label("请先完成数据检查与准备，并选择可用于 B7 的表达矩阵。")
+        root.addWidget(self._status_label)
+
+        input_card, input_layout = _card("输入与规则")
+        self._dataset_combo = QComboBox()
+        self._dataset_combo.setObjectName("immuneDatasetCombo")
+        self._dataset_combo.currentIndexChanged.connect(lambda _index: self._render_dataset_detail())
+        input_layout.addWidget(QLabel("表达矩阵"))
+        input_layout.addWidget(self._dataset_combo)
+        self._input_status_label = _muted("输入状态待检查。")
+        self._input_status_label.setObjectName("immuneInputStatusCard")
+        self._value_policy_label = _muted("value type policy：推荐 TPM；raw counts / unknown 默认阻断。")
+        self._value_policy_label.setObjectName("immuneValueTypePolicy")
+        self._limitations_label = _muted("限制：bulk signature score 不等同于真实免疫细胞比例；不执行 CIBERSORT/xCell/ESTIMATE。")
+        self._limitations_label.setObjectName("immuneLimitationsLabel")
+        input_layout.addWidget(self._input_status_label)
+        input_layout.addWidget(self._value_policy_label)
+        input_layout.addWidget(self._limitations_label)
+        root.addWidget(input_card)
+
+        config_card, config_layout = _card("Signature 与评分配置")
+        self._signature_ids_input = QLineEdit("cd8_t_cell,cytolytic_activity,pdcd1_checkpoint")
+        self._signature_ids_input.setObjectName("immuneSignatureIdsInput")
+        self._signature_ids_input.setPlaceholderText("signature id，逗号分隔")
+        config_layout.addWidget(self._signature_ids_input)
+        option_row = QHBoxLayout()
+        self._method_combo = QComboBox()
+        self._method_combo.setObjectName("immuneScoringMethodCombo")
+        self._method_combo.addItems(["mean_zscore", "mean_expression"])
+        self._transform_combo = QComboBox()
+        self._transform_combo.setObjectName("immuneValueTransformCombo")
+        self._transform_combo.addItems(["none", "log2_x_plus_1"])
+        self._target_gene_input = QLineEdit()
+        self._target_gene_input.setObjectName("immuneTargetGeneInput")
+        self._target_gene_input.setPlaceholderText("可选 target gene correlation preflight")
+        option_row.addWidget(self._method_combo)
+        option_row.addWidget(self._transform_combo)
+        option_row.addWidget(self._target_gene_input)
+        config_layout.addLayout(option_row)
+        self._signature_table = _table(["Signature", "类别", "基因数", "说明"])
+        self._signature_table.setObjectName("immuneSignatureTable")
+        _set_table_widths(self._signature_table, [190, 120, 80, 420])
+        self._signature_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        config_layout.addWidget(self._signature_table)
+        root.addWidget(config_card)
+
+        actions = QHBoxLayout()
+        self._run_button = _button("运行免疫浸润 / TME评分", "primaryButton", self.run_scoring)
+        self._run_button.setObjectName("immuneRunButton")
+        actions.addWidget(self._run_button)
+        actions.addWidget(_button("刷新状态", "secondaryButton", self.refresh_state))
+        actions.addWidget(_button("返回分析任务中心", "secondaryButton", self.back_requested.emit))
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        result_card, result_layout = _card("结果预览")
+        self._run_summary_label = _muted("尚未运行评分。")
+        self._run_summary_label.setObjectName("immuneRunSummary")
+        result_layout.addWidget(self._run_summary_label)
+        self._score_preview = _table(["signature_id", "display_name", "coverage_status"])
+        self._score_preview.setObjectName("immuneScorePreviewTable")
+        self._coverage_preview = _table(["signature_id", "matched_gene_count", "coverage_ratio", "status"])
+        self._coverage_preview.setObjectName("immuneCoverageTable")
+        result_layout.addWidget(self._score_preview)
+        result_layout.addWidget(self._coverage_preview)
+        root.addWidget(result_card)
+
+        developer_card, developer_layout = _card("开发者诊断")
+        developer_actions = QHBoxLayout()
+        developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._developer_details)))
+        developer_actions.addStretch(1)
+        developer_layout.addLayout(developer_actions)
+        self._developer_details = _text_preview(160)
+        self._developer_details.setObjectName("immuneDeveloperDiagnostics")
+        self._developer_details.setVisible(False)
+        developer_layout.addWidget(self._developer_details)
+        root.addWidget(developer_card)
+
+    def _render_readiness(self, readiness: dict[str, object]) -> None:
+        datasets = [item for item in readiness.get("available_datasets", []) or [] if isinstance(item, dict)]
+        selected_id = str((readiness.get("input_summary") or {}).get("dataset_id") if isinstance(readiness.get("input_summary"), dict) else "")
+        self._dataset_combo.blockSignals(True)
+        self._dataset_combo.clear()
+        for dataset in datasets:
+            self._dataset_combo.addItem(str(dataset.get("label") or dataset.get("dataset_id") or "未命名表达矩阵"), dataset)
+            if selected_id and str(dataset.get("dataset_id") or "") == selected_id:
+                self._dataset_combo.setCurrentIndex(self._dataset_combo.count() - 1)
+        self._dataset_combo.blockSignals(False)
+        self._render_dataset_detail()
+        catalog_payload = load_signature_catalog()
+        signatures = [_signature_from_catalog_item(item) for item in catalog_payload.get("signatures", []) if isinstance(item, dict)]
+        _fill_table(
+            self._signature_table,
+            [
+                [
+                    signature.display_name,
+                    signature.category,
+                    str(len(signature.genes)),
+                    signature.notes or "exploratory built-in signature",
+                ]
+                for signature in signatures
+            ],
+        )
+        blockers = [str(item) for item in readiness.get("blockers", []) or []]
+        warnings = [str(item) for item in readiness.get("warnings", []) or []]
+        self._run_button.setEnabled(bool(readiness.get("can_run_scoring")))
+        self._status_label.setText(
+            "B7 readiness："
+            + ("可运行。" if readiness.get("can_run_scoring") else "不可运行。")
+            + (f" 阻塞：{'；'.join(blockers)}。" if blockers else "")
+            + (f" 提示：{'；'.join(warnings[:3])}。" if warnings else "")
+        )
+        self._developer_details.setPlainText(_json({"immune_infiltration_readiness": readiness}))
+
+    def _render_dataset_detail(self) -> None:
+        dataset = self._selected_dataset()
+        if not dataset:
+            self._input_status_label.setText("未发现可用于 B7 的表达矩阵。")
+            self._value_policy_label.setText("value type policy：无输入。")
+            return
+        self._input_status_label.setText(
+            f"输入：{dataset.get('source')}；样本 {dataset.get('sample_count')}；基因 {dataset.get('gene_count')}；gene id {dataset.get('gene_id_type')}。"
+        )
+        self._value_policy_label.setText(f"value type：{dataset.get('value_type')}；推荐 TPM / normalized expression；raw counts / unknown 默认阻断。")
+
+    def _render_result(self, result: object, preflight: dict[str, object], report: dict[str, object]) -> None:
+        self._run_summary_label.setText(
+            f"run：{getattr(result, 'run_id', '')}；signature {getattr(result, 'scored_signature_count', 0)}/{getattr(result, 'signature_count', 0)}；"
+            f"sample {getattr(result, 'sample_count', 0)}；report 已生成。"
+        )
+        _fill_table(self._score_preview, _tsv_rows(getattr(result, "score_matrix_path", ""), limit=8, columns=["signature_id", "display_name", "coverage_status"]))
+        _fill_table(self._coverage_preview, _tsv_rows(getattr(result, "coverage_path", ""), limit=8, columns=["signature_id", "matched_gene_count", "coverage_ratio", "status"]))
+        self._developer_details.setPlainText(
+            _json(
+                {
+                    "immune_scoring_result": result.to_dict() if hasattr(result, "to_dict") else {},
+                    "linkage_preflight": preflight,
+                    "report": report,
+                }
+            )
+        )
+
+    def _selected_dataset(self) -> dict[str, object] | None:
+        data = self._dataset_combo.currentData()
+        return data if isinstance(data, dict) else None
+
+    def _selected_signatures(self) -> list[object]:
+        requested = {
+            item.strip()
+            for item in self._signature_ids_input.text().replace("\n", ",").split(",")
+            if item.strip()
+        }
+        catalog_payload = load_signature_catalog()
+        catalog = [_signature_from_catalog_item(item) for item in catalog_payload.get("signatures", []) if isinstance(item, dict)]
+        if not requested:
+            return catalog
+        return [signature for signature in catalog if signature.signature_id in requested or signature.display_name in requested]
 
 
 class BioinformaticsImportedDegBrowserWidget(QWidget):
@@ -4868,6 +6319,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._project_root: Path | None = None
         self.setObjectName("bioinformaticsResultsBrowserPage")
         self.setStyleSheet(bioinformatics_project_home_stylesheet())
+        self._formal_deg_review: dict[str, object] = {}
         self._build_ui()
         if on_continue is not None:
             self.continue_requested.connect(on_continue)
@@ -4907,6 +6359,61 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._status_label.setText("已打开导入结果浏览；这里只查看 imported DEG，不运行或生成 DEG。")
         return {"next_page": "imported_deg", "project_root": str(self._project_root)}
 
+    def export_formal_deg_review_tsv(self) -> dict[str, object] | None:
+        return self._export_formal_deg_review("tsv")
+
+    def export_formal_deg_review_csv(self) -> dict[str, object] | None:
+        return self._export_formal_deg_review("csv")
+
+    def generate_formal_deg_plot_artifact(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._formal_deg_review.get("selected_result_id") or "")
+        plot_type = self._formal_deg_plot_type.currentText() if hasattr(self, "_formal_deg_plot_type") else "volcano_plot"
+        result = create_formal_deg_plot_artifact(self._project_root, result_id=result_id or None, plot_type=plot_type)
+        if result.get("status") == "passed":
+            self.refresh_results()
+            self._status_label.setText(f"已注册 formal DEG {plot_type} plot artifact；未生成 report-ready、GSEA 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG plot gate 未通过"
+            self._status_label.setText(f"formal DEG plot artifact 未生成：{blockers}")
+            self._render_formal_deg_plot_gate(result)
+        return result
+
+    def generate_formal_deg_report_ready_package(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._formal_deg_review.get("selected_result_id") or "")
+        allow_table_only = bool(self._formal_deg_table_only_report.isChecked()) if hasattr(self, "_formal_deg_table_only_report") else False
+        result = create_formal_deg_report_ready_package(self._project_root, result_id=result_id or None, allow_table_only_report=allow_table_only)
+        if result.get("status") == "formal_deg_report_ready_package_created":
+            self.refresh_results()
+            self._status_label.setText(
+                "已生成 formal DEG report-ready package；"
+                f"输出位置：{result.get('user_visible_package_path') or result.get('package_path') or ''}；"
+                "仅包含 formal DEG section，未生成 GSEA、survival 或临床结论。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "formal DEG report-ready gate 未通过"
+            self._status_label.setText(f"formal DEG report-ready package 未生成：{blockers}")
+            self._render_formal_deg_report_gate(result.get("gate", {}) if isinstance(result.get("gate"), dict) else result)
+        return result
+
+    def _export_formal_deg_review(self, file_format: str) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result_id = str(self._formal_deg_review.get("selected_result_id") or "")
+        result = export_formal_deg_review_table(self._project_root, result_id=result_id, file_format=file_format)
+        if result.get("status") == "passed":
+            self._status_label.setText(f"已导出 formal DEG {file_format.upper()} 表格；未生成 report-ready、plot、GSEA 或 survival 输出。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "没有可导出的 formal DEG result"
+            self._status_label.setText(f"formal DEG 表格未导出：{blockers}")
+        return result
+
     def status_message(self) -> str:
         return self._status_label.text()
 
@@ -4940,6 +6447,81 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         _set_table_widths(self._results, [170, 110, 170, 120, 120, 160, 280, 100])
         self._results.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
 
+        review_card, review_layout = _card("Formal DEG result review")
+        self._formal_deg_guard_label = _muted("Formal DEG review shows statistical analysis results only. It is not a clinical conclusion or treatment recommendation.")
+        self._formal_deg_guard_label.setObjectName("formalDegReviewGuard")
+        review_layout.addWidget(self._formal_deg_guard_label)
+        controls = QHBoxLayout()
+        self._formal_deg_sort_input = QComboBox()
+        self._formal_deg_sort_input.setObjectName("formalDegReviewSort")
+        self._formal_deg_sort_input.addItems(["adjusted_p_value", "p_value", "log2_fold_change", "significance_label", "input_order"])
+        self._formal_deg_sort_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        self._formal_deg_filter_input = QComboBox()
+        self._formal_deg_filter_input.setObjectName("formalDegReviewFilter")
+        self._formal_deg_filter_input.addItems(["all", "significant", "up", "down", "not_significant"])
+        self._formal_deg_filter_input.currentIndexChanged.connect(lambda _index: self.refresh_results())
+        controls.addWidget(QLabel("Sort"))
+        controls.addWidget(self._formal_deg_sort_input)
+        controls.addWidget(QLabel("Filter"))
+        controls.addWidget(self._formal_deg_filter_input)
+        controls.addWidget(_button("导出 DEG TSV", "secondaryButton", self.export_formal_deg_review_tsv))
+        controls.addWidget(_button("导出 DEG CSV", "secondaryButton", self.export_formal_deg_review_csv))
+        controls.addStretch(1)
+        review_layout.addLayout(controls)
+        plot_controls = QHBoxLayout()
+        self._formal_deg_plot_type = QComboBox()
+        self._formal_deg_plot_type.setObjectName("formalDegPlotType")
+        self._formal_deg_plot_type.addItems(["volcano_plot", "deg_heatmap"])
+        plot_controls.addWidget(QLabel("Plot artifact"))
+        plot_controls.addWidget(self._formal_deg_plot_type)
+        self._formal_deg_plot_button = _button("生成 formal DEG plot artifact", "secondaryButton", self.generate_formal_deg_plot_artifact)
+        self._formal_deg_plot_button.setObjectName("formalDegPlotButton")
+        plot_controls.addWidget(self._formal_deg_plot_button)
+        self._formal_deg_plot_status = _muted("Formal plot artifact 只接受 formal_computed_result DEG source；不生成 report-ready。")
+        self._formal_deg_plot_status.setObjectName("formalDegPlotStatus")
+        plot_controls.addWidget(self._formal_deg_plot_status)
+        plot_controls.addStretch(1)
+        review_layout.addLayout(plot_controls)
+        report_controls = QHBoxLayout()
+        self._formal_deg_table_only_report = QCheckBox("允许无图 table-only report mode")
+        self._formal_deg_table_only_report.setObjectName("formalDegTableOnlyReportMode")
+        self._formal_deg_table_only_report.stateChanged.connect(lambda _state: self.refresh_results())
+        self._formal_deg_report_button = _button("生成 formal DEG report-ready package", "secondaryButton", self.generate_formal_deg_report_ready_package)
+        self._formal_deg_report_button.setObjectName("formalDegReportReadyButton")
+        self._formal_deg_report_status = _muted("Formal DEG report-ready gate 需要完整 result index、未过期 confirmation、passed dependency/table validation 和 formal plot artifact；无图 table-only 模式需显式勾选，且不表示 volcano/heatmap 已生成。")
+        self._formal_deg_report_status.setObjectName("formalDegReportReadyStatus")
+        report_controls.addWidget(self._formal_deg_table_only_report)
+        report_controls.addWidget(self._formal_deg_report_button)
+        report_controls.addWidget(self._formal_deg_report_status)
+        report_controls.addStretch(1)
+        review_layout.addLayout(report_controls)
+        self._formal_deg_summary_label = _muted("Formal DEG summary：暂无 formal computed DEG result。")
+        self._formal_deg_summary_label.setObjectName("formalDegReviewSummary")
+        self._formal_deg_downstream_label = _muted("Plot/report disabled：等待 B9.6 plot artifact / B9.7 report-ready gate。")
+        self._formal_deg_downstream_label.setObjectName("formalDegReviewDownstream")
+        review_layout.addWidget(self._formal_deg_summary_label)
+        review_layout.addWidget(self._formal_deg_downstream_label)
+        self._formal_deg_table = _table(["feature_id", "gene_symbol", "log2FC", "p-value", "FDR", "significance_label"])
+        self._formal_deg_table.setObjectName("formalDegReviewTable")
+        review_layout.addWidget(self._formal_deg_table)
+        _set_table_widths(self._formal_deg_table, [160, 160, 110, 110, 110, 160])
+        self._formal_deg_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self._formal_deg_provenance = _table(["Provenance", "Value"])
+        self._formal_deg_provenance.setObjectName("formalDegReviewProvenanceTable")
+        review_layout.addWidget(self._formal_deg_provenance)
+        _set_table_widths(self._formal_deg_provenance, [190, 620])
+        self._formal_deg_provenance.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        root.addWidget(review_card)
+
+        gate_card, gate_layout = _card("Result semantics / plot / report gates")
+        gate_layout.addWidget(_muted("结果浏览只展示 result index 语义和 eligibility；不会把 testing/imported/preflight 输出升级为 formal result。"))
+        self._gate_preview = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
+        self._gate_preview.setObjectName("resultsGatePreviewTable")
+        gate_layout.addWidget(self._gate_preview)
+        root.addWidget(gate_card)
+        _set_table_widths(self._gate_preview, [170, 170, 230, 320, 300])
+        self._gate_preview.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
         developer_card, developer_layout = _card("开发者诊断")
         developer_actions = QHBoxLayout()
         developer_actions.addWidget(_button("展开技术细节", "secondaryButton", lambda: _toggle_details(self._details)))
@@ -4969,7 +6551,120 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._results,
             _results_user_rows(self._project_root, entries, records),
         )
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings}))
+        review = build_formal_deg_result_review(
+            self._project_root,
+            sort_by=self._formal_deg_sort_input.currentText(),
+            significance_filter=self._formal_deg_filter_input.currentText(),
+        ) if self._project_root else {}
+        self._formal_deg_review = review
+        self._render_formal_deg_review(review)
+        plot_gate = build_formal_deg_plot_gate(
+            self._project_root,
+            result_id=str(review.get("selected_result_id") or "") or None,
+            plot_type=self._formal_deg_plot_type.currentText(),
+        ) if self._project_root else {}
+        self._render_formal_deg_plot_gate(plot_gate)
+        report_gate = evaluate_formal_deg_report_ready_gate(
+            self._project_root,
+            result_id=str(review.get("selected_result_id") or "") or None,
+            allow_table_only_report=bool(self._formal_deg_table_only_report.isChecked()),
+        ) if self._project_root else {}
+        self._render_formal_deg_report_gate(report_gate)
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
+        _fill_table(self._gate_preview, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state}))
+
+    def _render_formal_deg_review(self, review: dict[str, object]) -> None:
+        summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
+        provenance = review.get("provenance") if isinstance(review.get("provenance"), dict) else {}
+        downstream = review.get("disabled_downstream") if isinstance(review.get("disabled_downstream"), dict) else {}
+        rows = [row for row in review.get("rows", []) or [] if isinstance(row, dict)]
+        if review.get("status") != "passed":
+            self._formal_deg_summary_label.setText("Formal DEG summary：暂无 formal_computed_result DEG；imported/testing/exploratory/preflight 不会混入此审阅区。")
+            _fill_table(self._formal_deg_table, [])
+            _fill_table(self._formal_deg_provenance, [["Status", "; ".join(str(item) for item in review.get("blockers", []) or []) or "blocked"]])
+            return
+        thresholds = summary.get("thresholds") if isinstance(summary.get("thresholds"), dict) else {}
+        sample_counts = summary.get("sample_counts") if isinstance(summary.get("sample_counts"), dict) else {}
+        deps = summary.get("dependency_versions") if isinstance(summary.get("dependency_versions"), dict) else {}
+        self._formal_deg_summary_label.setText(
+            "Formal DEG summary："
+            f"genes={summary.get('total_gene_count', 0)}；up={summary.get('significant_up_count', 0)}；down={summary.get('significant_down_count', 0)}；"
+            f"method={summary.get('method', '')}；threshold log2FC={thresholds.get('log2fc_threshold', '')}, p={thresholds.get('p_value_threshold', '')}, FDR={thresholds.get('fdr_threshold', '')}；"
+            f"samples case={sample_counts.get('case', 0)}, control={sample_counts.get('control', 0)}；"
+            f"deps numpy={deps.get('numpy', '')}, pandas={deps.get('pandas', '')}, scipy={deps.get('scipy', '')}, statsmodels={deps.get('statsmodels', '')}."
+        )
+        self._formal_deg_downstream_label.setText(
+            "；".join(str(value) for value in downstream.values())
+            if downstream
+            else "等待 B9.6 plot artifact / B9.7 report-ready gate。"
+        )
+        _fill_table(
+            self._formal_deg_table,
+            [
+                [
+                    row.get("feature_id", ""),
+                    row.get("gene_symbol", ""),
+                    row.get("log2_fold_change", ""),
+                    row.get("p_value", ""),
+                    row.get("adjusted_p_value", ""),
+                    row.get("significance_label", ""),
+                ]
+                for row in rows[:200]
+            ],
+        )
+        _fill_table(
+            self._formal_deg_provenance,
+            [
+                ["input_package_id", provenance.get("input_package_id", "")],
+                ["parameter_confirmation", provenance.get("parameter_confirmation", "")],
+                ["dependency_snapshot", "present" if provenance.get("dependency_snapshot_present") else "missing"],
+                ["task_run_log", provenance.get("task_run_log", "")],
+                ["result_index_path", provenance.get("result_index_path", "")],
+                ["result_table_path", provenance.get("result_table_path", "")],
+                ["plot_artifacts", provenance.get("plot_artifacts", [])],
+                ["report_artifacts", provenance.get("report_artifacts", [])],
+                ["report_ready_eligible", provenance.get("report_ready_eligible", False)],
+            ],
+        )
+
+    def _render_formal_deg_plot_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_formal_deg_plot_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "passed":
+            existing = gate.get("existing_plot_artifacts", []) if isinstance(gate.get("existing_plot_artifacts"), list) else []
+            self._formal_deg_plot_button.setEnabled(True)
+            self._formal_deg_plot_status.setText(
+                f"Formal DEG plot gate passed；source={gate.get('selected_result_id', '')}；existing artifacts={len(existing)}；"
+                "inherits formal_computed_result semantics；report-ready remains disabled."
+            )
+        else:
+            self._formal_deg_plot_button.setEnabled(False)
+            reason = "；".join(blockers) or "formal DEG plot gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._formal_deg_plot_status.setText(f"Formal DEG plot disabled：{reason}")
+
+    def _render_formal_deg_report_gate(self, gate: dict[str, object]) -> None:
+        if not hasattr(self, "_formal_deg_report_status"):
+            return
+        blockers = [str(item) for item in gate.get("blockers", []) or []]
+        warnings = [str(item) for item in gate.get("warnings", []) or []]
+        if gate.get("status") == "eligible_for_formal_deg_report_ready":
+            self._formal_deg_report_button.setEnabled(True)
+            self._formal_deg_report_status.setText(
+                f"Formal DEG report-ready gate passed；source={gate.get('selected_result_id', '')}；"
+                f"confirmation={gate.get('confirmation_created_at', '')}；deps={gate.get('dependency_versions', {})}；"
+                "package scope=formal DEG only；GSEA/survival/clinical conclusions disabled."
+            )
+        else:
+            self._formal_deg_report_button.setEnabled(False)
+            reason = "；".join(blockers) or "formal DEG report-ready gate 未通过"
+            if warnings:
+                reason = f"{reason}；warnings={'；'.join(warnings)}"
+            self._formal_deg_report_status.setText(f"Formal DEG report-ready disabled：{reason}")
 
 
 class BioinformaticsReportViewerWidget(QWidget):
@@ -5037,6 +6732,12 @@ class BioinformaticsReportViewerWidget(QWidget):
         _set_table_widths(self._sections, [170, 150, 260, 320])
         self._sections.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
+        self._report_ready_gate = _table(["Gate", "状态", "依据", "Blockers", "Warnings"])
+        self._report_ready_gate.setObjectName("reportReadyGateTable")
+        root.addWidget(self._report_ready_gate)
+        _set_table_widths(self._report_ready_gate, [170, 170, 230, 320, 300])
+        self._report_ready_gate.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
         self._markdown = _text_preview(220)
         self._markdown.setObjectName("reportDraftUserPreview")
         root.addWidget(self._markdown)
@@ -5067,8 +6768,10 @@ class BioinformaticsReportViewerWidget(QWidget):
         self._report_semantics_label.setText(_report_result_semantics_text(entries, records))
         self._report_next_step_label.setText(_report_next_step_text(markdown, entries, records))
         _fill_table(self._sections, _report_section_rows(self._project_root, entries, records, bool(markdown)))
+        analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
+        _fill_table(self._report_ready_gate, _analysis_ui_gate_rows(analysis_state.get("gate_rows", [])))
         self._markdown.setPlainText(_report_user_preview_text(markdown, entries, records))
-        self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records}))
+        self._manifest.setPlainText(_json({"markdown": markdown, "report_payload": payload, "report_manifest": manifest, "result_index": result_payload, "task_records": records, "analysis_center_state": analysis_state}))
 
     def copy_report_summary(self) -> str:
         summary = self._markdown.toPlainText().strip()
@@ -5104,10 +6807,9 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         enabled = self._local_ai_enabled.isChecked()
         config = desktop_local_ollama_config(
             enabled=enabled,
-            base_url=self._ollama_base_url_input.text().strip(),
-            default_model=self._ollama_model_input.text().strip() or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL],
+            base_url=self._ollama_base_url_input.text().strip() or DEFAULT_OLLAMA_BASE_URL,
+            default_model=self._ollama_model_input.text().strip() or DEFAULT_OLLAMA_MODEL,
             timeout_seconds=20,
-            role_model_mapping=DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING,
         )
         save_ai_gateway_config(config)
         self._refresh_ai_status(config)
@@ -5118,18 +6820,16 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
     def test_local_ai_connection(self) -> str:
         config = desktop_local_ollama_config(
             enabled=self._local_ai_enabled.isChecked(),
-            base_url=self._ollama_base_url_input.text().strip(),
-            default_model=self._ollama_model_input.text().strip() or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL],
+            base_url=self._ollama_base_url_input.text().strip() or DEFAULT_OLLAMA_BASE_URL,
+            default_model=self._ollama_model_input.text().strip() or DEFAULT_OLLAMA_MODEL,
             timeout_seconds=20,
-            role_model_mapping=DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING,
         )
-        provider_config = config.provider_configs.get("ollama", {})
-        enabled = config.default_provider == "ollama" and config.allow_network and isinstance(provider_config, dict) and provider_config.get("enabled") is True
-        role_ready = all(resolve_task_role_model(config, task).available for task in ("bio_generate_dataset_query_draft", "bio_translate_dataset_detail", "bio_summarize_dataset_detail"))
-        status = "configured" if enabled and role_ready else "disabled"
-        self._connection_status.setText("连接状态：已配置；请在外部引擎页运行 Ollama 检查。" if status == "configured" else "连接状态：未启用")
-        self._refresh_ai_status(config)
-        return status
+        provider = OllamaProvider.from_provider_config(config.provider_configs.get("ollama", {}))
+        status = provider.detect_ollama_status()
+        label = _ai_provider_status_label(status)
+        self._connection_status.setText(f"连接状态：{label}")
+        self._refresh_ai_status(config, detected_status=status)
+        return status.value
 
     def run_geo_legacy_environment_check(self) -> str:
         result = run_geo_environment_check()
@@ -5156,7 +6856,7 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
     def status_message(self) -> str:
         return self._ai_status.text()
 
-    def _refresh_ai_status(self, config: object | None = None) -> None:
+    def _refresh_ai_status(self, config: object | None = None, *, detected_status: AIProviderStatus | None = None) -> None:
         config = config or load_ai_gateway_config()
         if not getattr(config, "allow_network", False) or getattr(config, "default_provider", "disabled") != "ollama":
             self._ai_mode.setText("当前 AI 模式：关闭")
@@ -5169,6 +6869,8 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
             self._connection_status.setText("连接状态：未启用")
             return
         self._ai_mode.setText("当前 AI 模式：本地 Ollama")
+        if detected_status is not None:
+            self._connection_status.setText(f"连接状态：{_ai_provider_status_label(detected_status)}")
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
@@ -5180,6 +6882,16 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         env_layout.addWidget(_muted("核心依赖状态：随测试环境预检；缺失时由测试或打包流程提示。"))
         env_layout.addWidget(_muted("package manifest 状态：占位"))
         root.addWidget(env_card)
+
+        analysis_dep_card, analysis_dep_layout = _card("Analysis dependency detection")
+        analysis_dep_layout.addWidget(_muted("Detect-first only：不自动安装 scipy/statsmodels/R/lifelines；缺失时显示 blocker 并禁用 formal analysis。"))
+        self._analysis_dependency_status = _table(["依赖", "状态", "版本", "Blockers", "打包影响", "操作"])
+        self._analysis_dependency_status.setObjectName("analysisDependencyStatusTable")
+        analysis_dep_layout.addWidget(self._analysis_dependency_status)
+        root.addWidget(analysis_dep_card)
+        _set_table_widths(self._analysis_dependency_status, [150, 130, 110, 280, 260, 220])
+        self._analysis_dependency_status.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        _fill_table(self._analysis_dependency_status, _analysis_ui_dependency_rows(build_dependency_rows()))
 
         geo_card, geo_layout = _card("GEO legacy 环境检查")
         self._geo_check_status = _status_label("尚未运行 GEO legacy 环境检查。")
@@ -5209,9 +6921,9 @@ class BioinformaticsSettingsAndLocalAIWidget(QWidget):
         self._local_ai_enabled = QCheckBox("启用本地 AI")
         self._local_ai_enabled.setChecked(config.default_provider == "ollama" and config.allow_network and isinstance(provider_config, dict) and provider_config.get("enabled") is True)
         ai_layout.addWidget(self._local_ai_enabled)
-        self._ollama_base_url_input = QLineEdit(str(provider_config.get("base_url") or "") if isinstance(provider_config, dict) else "")
+        self._ollama_base_url_input = QLineEdit(str(provider_config.get("base_url") or DEFAULT_OLLAMA_BASE_URL) if isinstance(provider_config, dict) else DEFAULT_OLLAMA_BASE_URL)
         self._ollama_base_url_input.setPlaceholderText("Ollama 地址")
-        self._ollama_model_input = QLineEdit(str(provider_config.get("default_model") or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL]) if isinstance(provider_config, dict) else DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL])
+        self._ollama_model_input = QLineEdit(str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL) if isinstance(provider_config, dict) else DEFAULT_OLLAMA_MODEL)
         self._ollama_model_input.setPlaceholderText("默认模型名称")
         ai_layout.addWidget(_muted("Ollama 地址"))
         ai_layout.addWidget(self._ollama_base_url_input)
@@ -5592,6 +7304,20 @@ def _data_selection_next_step_text(project_root: Path | None, *, count: int, rea
     return "下一步：请检查数据来源状态。"
 
 
+def _user_asset_label(asset: str) -> str:
+    return {
+        "rna_seq_expression": "RNA-seq 表达矩阵",
+        "sample_metadata": "样本信息",
+        "clinical_metadata": "临床信息",
+        "case_sample_mapping": "case/sample 映射",
+        "project_metadata": "项目元数据",
+        "gene_expression": "基因表达",
+        "gene_level_expression": "gene-level 表达矩阵",
+        "sample_annotation": "样本注释",
+        "tissue_metadata": "组织元数据",
+    }.get(asset, asset)
+
+
 def _dataset_entry_from_record(
     project_root: Path,
     row: RegisteredSourceRow,
@@ -5712,6 +7438,126 @@ def _geo_file_dataset_technical_info(entry: DatasetListEntry, focused_source_fil
     )
 
 
+def _tcga_preview_status_text(summary: TCGAPreviewSummary) -> str:
+    if summary.status == "failed":
+        return "预览失败"
+    if summary.status == "empty":
+        return "未找到匹配数据"
+    if summary.is_download_plan_available:
+        return "可生成下载计划草案"
+    return "metadata 预览完成"
+
+
+def _tcga_preview_summary_text(summary: TCGAPreviewSummary) -> str:
+    lines = [
+        f"项目：{summary.request.project_label_zh} ({summary.request.project_id})",
+        f"分析目的：{summary.request.analysis_purpose_zh}",
+        f"样本范围：{summary.request.sample_scope_zh}",
+        f"case 数：{summary.case_count}",
+        f"sample 数：{summary.sample_count}",
+        f"file 数：{summary.file_count}",
+        f"预计下载大小：{format_bytes_zh(summary.estimated_size_bytes, has_unknown=summary.size_has_unknown)}",
+    ]
+    if summary.request.analysis_purpose == "differential_expression":
+        lines.append("预计下载内容：开放 RNA-Seq STAR - Counts，用于后续表达矩阵构建和差异分析 preflight。")
+    elif summary.request.analysis_purpose == "expression_clinical":
+        lines.append("预计下载内容：开放 RNA-Seq STAR - Counts，并预览 clinical/sample metadata 可用性。")
+    elif summary.request.analysis_purpose == "survival":
+        lines.append("预计下载内容：clinical/case/sample metadata 概况；本阶段不执行生存分析。")
+    else:
+        lines.append("预计下载内容：项目样本 metadata 概况，不创建可分析表达数据集。")
+    lines.append("本阶段仅预览和生成草案，不下载文件、不构建表达矩阵、不进入 DEG/GSEA ready。")
+    if summary.access_counts:
+        lines.append("访问类型分布：" + _counter_text(summary.access_counts))
+    if summary.workflow_type_counts:
+        lines.append("工作流摘要：" + _counter_text(summary.workflow_type_counts))
+    if summary.data_format_counts:
+        lines.append("文件格式摘要：" + _counter_text(summary.data_format_counts))
+    return "\n".join(lines)
+
+
+def _tcga_preview_developer_payload(summary: TCGAPreviewSummary) -> dict[str, object]:
+    return {
+        "endpoint": {
+            "files": "/files",
+            "cases": "/cases",
+        },
+        "filters": {
+            "files": summary.gdc_filters,
+            "cases": summary.case_filters,
+        },
+        "fields": {
+            "files": "see app.bioinformatics.data_sources.tcga_preview.FILE_FIELDS",
+            "cases": "see app.bioinformatics.data_sources.tcga_preview.CASE_FIELDS",
+        },
+        "pagination": {
+            "files_fetched": summary.files_fetched,
+            "files_total": summary.files_total,
+            "cases_fetched": summary.cases_fetched,
+            "cases_total": summary.cases_total,
+        },
+        "selected_file_ids_preview": list(summary.selected_file_ids_preview[:10]),
+        "warnings": list(summary.warnings),
+        "status": summary.status,
+        "error_message": summary.error_message,
+    }
+
+
+def _tcga_workflow_status_zh(status: str) -> str:
+    return {
+        "not_started": "未开始",
+        "available": "可执行",
+        "running_or_requested": "已请求",
+        "completed": "已完成",
+        "failed": "失败",
+        "blocked": "被阻断",
+        "skipped": "已跳过",
+    }.get(status, status)
+
+
+def _tcga_workflow_stage_zh(stage: str) -> str:
+    return {
+        "preview": "预览可下载数据",
+        "download": "下载 TCGA 原始文件",
+        "expression_build": "构建 TCGA 表达矩阵",
+        "clinical": "获取 TCGA 临床信息",
+        "data_check": "进入数据检查与准备",
+    }.get(stage, stage or "未开始")
+
+
+def _gtex_workflow_stage_zh(stage: str) -> str:
+    return {
+        "preview": "预览 GTEx 可下载数据",
+        "download": "下载 GTEx 原始文件",
+        "expression_build": "构建 GTEx 表达矩阵",
+        "data_check": "进入数据检查与准备",
+        "manual_config": "后续手动配置用途",
+    }.get(stage, stage or "未开始")
+
+
+def _tcga_workflow_user_summary(step) -> str:
+    summary = str(getattr(step, "summary", "") or "")
+    warning = str(getattr(step, "warning", "") or "")
+    text = summary if len(summary) <= 130 else summary[:127] + "..."
+    if warning:
+        text = f"{text}；提示：{warning}"
+    return text
+
+
+def _gtex_preview_status_text(summary: GTExPreviewSummary) -> str:
+    if summary.status == "failed":
+        return "预览失败"
+    if summary.status == "empty":
+        return "未找到匹配数据"
+    if summary.is_download_plan_available:
+        return "可生成下载计划草案"
+    return "metadata 预览完成"
+
+
+def _counter_text(values: dict[str, int]) -> str:
+    return "、".join(f"{key} {count}" for key, count in values.items())
+
+
 def _local_import_batch_summary(source_files: tuple[str, ...], storage_policy: str, status: str) -> str:
     if not source_files:
         return ""
@@ -5776,6 +7622,10 @@ def _dataset_source_label(row: RegisteredSourceRow, metadata: dict[str, object])
         return "本地导入"
     if ui_source == "chinese_research_question_search":
         return "中文检索"
+    if ui_source == "tcga_database_page":
+        return "TCGA 数据库"
+    if ui_source == "gtex_database_page":
+        return "GTEx 数据库"
     if row.source_type_key in GEO_SOURCE_TYPES:
         return "GSE 编号检索"
     if "tcga" in row.source_type_key:
@@ -5795,6 +7645,14 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
                 return "元数据已下载"
             if payload.get("strategy") == "plan_only":
                 return "未下载"
+    if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
+        return "TCGA 表达矩阵已构建，等待数据检查与准备"
+    if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+        if str(metadata.get("mode") or "") == "project_clinical_preview_only":
+            return "TCGA clinical 概况已获取，等待 B6.4 表达矩阵后映射"
+        return "TCGA clinical metadata 已获取，等待数据检查与准备"
+    if "gtex" in row.source_type_key and str(metadata.get("download_status") or "") == "gtex_expression_matrix_built":
+        return "GTEx 表达矩阵已构建，等待数据检查与准备"
     if _record_ready_for_recognition(payload, metadata):
         if row.source_type_key == "local_import":
             return "已导入"
@@ -5804,7 +7662,13 @@ def _dataset_status_text(row: RegisteredSourceRow, payload: dict[str, object], m
     if payload.get("strategy") == "plan_only":
         if row.source_type_key in GEO_SOURCE_TYPES:
             return "未下载"
+        if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
+            return "等待下载与构建"
         return "未下载"
+    if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+        return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
+    if "gtex" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_gtex_expression_matrix_build":
+        return "GTEx 原始文件已获取，等待构建表达矩阵"
     if row.status and row.status not in {"已登记", "已登记，需确认"}:
         return row.status.replace("已登记", "已添加")
     return "需要补充信息" if row.status.endswith("需确认") else "待识别"
@@ -5823,9 +7687,50 @@ def _dataset_available_content(row: RegisteredSourceRow, status: str, metadata: 
     if "平台" in raw_status or metadata.get("platform_accessions"):
         assets.append("平台注释")
     if "tcga" in row.source_type_key:
-        return "表达矩阵、临床信息"
+        if str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+            summary = metadata.get("tcga_clinical_summary")
+            if isinstance(summary, dict):
+                cases = int(summary.get("case_count") or 0)
+                matched = int(summary.get("matched_case_count") or 0)
+                survival = int(summary.get("survival_case_count") or 0)
+                return f"clinical metadata（{cases} case / 匹配 {matched} case / OS {survival} case）"
+            return "clinical metadata、case/sample mapping"
+        if str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
+            summary = metadata.get("tcga_expression_build_summary")
+            if isinstance(summary, dict):
+                samples = int(summary.get("sample_count") or 0)
+                genes = int(summary.get("gene_count") or 0)
+                return f"表达矩阵、样本信息（{samples} 样本 / {genes} 基因）"
+            return "表达矩阵、样本信息、sample mapping"
+        if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+            summary = metadata.get("tcga_download_summary")
+            if isinstance(summary, dict):
+                acquired = int(summary.get("acquired_count") or 0)
+                return f"TCGA 原始文件：{acquired} 个"
+            return "TCGA 原始文件"
+        if str(metadata.get("download_status") or "") == "tcga_gdc_download_plan_draft_created":
+            return "下载计划草案"
+        expected = metadata.get("expected_assets")
+        if isinstance(expected, list) and expected:
+            return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
+        return "待下载与构建"
     if "gtex" in row.source_type_key:
-        return "表达矩阵"
+        if str(metadata.get("download_status") or "") == "gtex_expression_matrix_built":
+            summary = metadata.get("gtex_expression_build_summary")
+            if isinstance(summary, dict):
+                return f"GTEx 表达矩阵（{int(summary.get('sample_count') or 0)} 样本 / {int(summary.get('gene_count') or 0)} 基因）"
+            return "GTEx 表达矩阵、sample/donor metadata"
+        if str(metadata.get("analysis_gate_status") or "") == "waiting_gtex_expression_matrix_build":
+            summary = metadata.get("gtex_download_summary")
+            if isinstance(summary, dict):
+                return f"GTEx 原始文件：{int(summary.get('acquired_count') or 0)} 个"
+            return "GTEx 原始文件"
+        if str(metadata.get("download_status") or "") == "gtex_download_plan_draft_created":
+            return "GTEx 下载计划草案"
+        expected = metadata.get("expected_assets")
+        if isinstance(expected, list) and expected:
+            return "预计：" + "、".join(_user_asset_label(str(item)) for item in expected)
+        return "待下载与构建"
     return "、".join(dict.fromkeys(assets)) if assets else "待确认"
 
 
@@ -5839,6 +7744,18 @@ def _dataset_missing_content(row: RegisteredSourceRow, status: str, metadata: di
     if "平台" not in raw_status and not metadata.get("platform_accessions") and row.source_type_key in GEO_SOURCE_TYPES:
         missing.append("平台注释")
     if "tcga" in row.source_type_key or "gtex" in row.source_type_key:
+        if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+            if str(metadata.get("mode") or "") == "project_clinical_preview_only":
+                return "B6.4 表达矩阵构建后再做表达-临床映射"
+            return "统一数据检查与准备；survival 仅进入 preflight"
+        if "tcga" in row.source_type_key and str(metadata.get("download_status") or "") == "tcga_expression_matrix_built":
+            return "统一数据检查与准备"
+        if "tcga" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+            return "B6.4 表达矩阵构建"
+        if "gtex" in row.source_type_key and str(metadata.get("download_status") or "") == "gtex_expression_matrix_built":
+            return "统一数据检查与准备；不会自动作为 TCGA 对照"
+        if "gtex" in row.source_type_key and str(metadata.get("analysis_gate_status") or "") == "waiting_gtex_expression_matrix_build":
+            return "G6.3 表达矩阵构建"
         return "数据文件"
     return "、".join(dict.fromkeys(missing)) if missing else "无"
 
@@ -5897,9 +7814,9 @@ def _dataset_is_downloadable(row: RegisteredSourceRow, payload: dict[str, object
 
 def _dataset_entry_rank(entry: DatasetListEntry, created_at: str) -> tuple[int, str]:
     score = 0
-    if entry.status in {"识别完成", "已导入", "已下载"} or entry.ready_for_recognition:
+    if entry.status in {"识别完成", "已导入", "已下载"} or entry.ready_for_recognition or "表达矩阵已构建" in entry.status:
         score = 3
-    elif entry.status == "待识别":
+    elif entry.status == "待识别" or "原始文件已获取" in entry.status or "clinical" in entry.status:
         score = 2
     elif entry.status == "未下载":
         score = 1
@@ -6815,8 +8732,22 @@ def _registered_status_text(payload: dict[str, object]) -> str:
                 return asset_status
         if download_status in {"tcga_gdc_download_manifest_created", "tcga_gdc_download_manifest_pending_file_selection"}:
             return "GDC 文件清单已创建，待下载数据文件"
+        if download_status == "tcga_gdc_download_plan_draft_created":
+            return "GDC metadata 预览完成，下载计划草案已创建"
+        if download_status in {"tcga_gdc_raw_files_acquired", "tcga_gdc_raw_files_acquired_with_warnings", "tcga_gdc_files_downloaded", "tcga_gdc_files_downloaded_with_warnings"}:
+            return "TCGA 原始文件已获取，等待 B6.4 构建表达矩阵"
+        if download_status == "tcga_expression_matrix_built":
+            return "TCGA 表达矩阵已构建，等待数据检查与准备"
+        if download_status == "tcga_clinical_metadata_built":
+            return "TCGA clinical metadata 已获取，等待数据检查与准备"
         if download_status == "gtex_download_manifest_created":
             return "GTEx 下载清单已创建，待下载表达矩阵"
+        if download_status == "gtex_download_plan_draft_created":
+            return "GTEx metadata 预览完成，下载计划草案已创建"
+        if download_status in {"gtex_raw_files_acquired", "gtex_raw_files_acquired_with_warnings"}:
+            return "GTEx 原始文件已获取，等待构建表达矩阵"
+        if download_status == "gtex_expression_matrix_built":
+            return "GTEx 表达矩阵已构建，等待数据检查与准备"
         if ready == "ready" and download_status == "geo_metadata_downloaded":
             return "元数据已下载 / 表达矩阵待下载 / 可进入识别"
         if ready == "ready" or download_status == "downloaded":
@@ -6854,6 +8785,12 @@ def _geo_asset_status_text(metadata: dict[str, object]) -> str:
 
 
 def _record_ready_for_recognition(payload: dict[str, object], metadata: dict[str, object]) -> bool:
+    if str(metadata.get("analysis_gate_status") or "") == "waiting_b6_4_expression_matrix_build":
+        return False
+    if str(metadata.get("ready_for_recognition") or "") == "pending_expression_matrix_build":
+        return False
+    if str(metadata.get("download_status") or "") == "tcga_clinical_metadata_built":
+        return False
     if metadata.get("ready_for_recognition") == "ready" or metadata.get("download_status") == "downloaded":
         return True
     if payload.get("strategy") != "plan_only":
@@ -7316,19 +9253,6 @@ def _topic_summary_text(query: object) -> str:
     return f"主题识别：{diseases_zh} → {diseases_en}；TCGA：{tcga}；GTEx：{gtex}"
 
 
-def _local_model_assist_status_text(ai_status: object, local_model_status: object = "") -> str:
-    status = ai_status if isinstance(ai_status, dict) else {}
-    source = str(status.get("source") or "rule_based")
-    role = str(status.get("ai_role") or "")
-    model = str(status.get("model_name") or "")
-    if source == "local_model_draft":
-        detail = f"role={role}；model={model}" if role or model else "role/model 已由 AI Gateway 配置"
-        return f"本地模型辅助：可用，已生成草稿（{detail}）。AI 生成内容仅作为草稿，需用户确认后使用。"
-    if source == "fallback" or str(local_model_status).endswith("fallback_registry"):
-        return "本地模型辅助：调用失败，当前使用规则词库结果。AI 生成内容仅作为草稿，需用户确认后使用。"
-    return "本地模型辅助：未启用，当前使用规则词库结果。AI 生成内容仅作为草稿，需用户确认后使用。"
-
-
 def _candidate_source_bucket(source: str) -> str:
     if source == "tcga_gdc":
         return "tcga_gdc"
@@ -7757,22 +9681,18 @@ def _geo_text_summary_user_display(candidate: UnifiedDatasetCandidate, summary: 
 def _desktop_local_model_config() -> LocalModelConfig:
     config = load_ai_gateway_config()
     provider_config = config.provider_configs.get("ollama", {})
-    query_model = str(config.role_model_mapping.get("general_3b") or "")
-    translator_model = str(config.role_model_mapping.get("translator") or "")
-    medical_model = str(config.role_model_mapping.get("medical") or "")
     enabled = (
         config.default_provider == "ollama"
         and config.allow_network
         and isinstance(provider_config, dict)
         and provider_config.get("enabled") is True
-        and bool(query_model and translator_model and medical_model)
     )
     return LocalModelConfig(
         enabled=enabled,
         provider="ollama",
         base_url=str(provider_config.get("base_url") or ""),
-        medical_model=medical_model or str(provider_config.get("default_model") or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_MEDICAL]),
-        translator_model=translator_model or str(provider_config.get("default_model") or DEFAULT_LOCAL_OLLAMA_ROLE_MODEL_MAPPING[AI_ROLE_TRANSLATOR]),
+        medical_model=str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL),
+        translator_model=str(provider_config.get("default_model") or DEFAULT_OLLAMA_MODEL),
         timeout_seconds=int(provider_config.get("timeout_seconds") or 20) if isinstance(provider_config.get("timeout_seconds") or 20, int) else 20,
     )
 
@@ -7798,7 +9718,6 @@ def _query_draft_summary(result: BioinformaticsSearchCenterResult, *, editable_o
         "geo_query_draft": list(query.geo_query_candidates),
         "tcga_project_hint": list(query.tcga_project_ids),
         "gtex_tissue_hint": list(query.gtex_tissues),
-        "ai_assist_status": query.metadata.get("ai_assist_status", {}),
         "confirmed_draft_text_hash_only": bool(editable_output),
         "search_executed": False,
     }
@@ -7818,8 +9737,8 @@ def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, o
     return create_ai_draft_record(
         module="bioinformatics",
         task_type="bio_translate_dataset_detail",
-        provider=str(payload.get("ai_provider") or ("ollama" if payload.get("status") == "completed" else "disabled")),
-        model=str(payload.get("model_name") or " / ".join(str(payload.get(key) or "") for key in ("translate_model", "brief_model")).strip(" / ")),
+        provider="ollama" if payload.get("status") == "completed" else "disabled",
+        model=" / ".join(str(payload.get(key) or "") for key in ("translate_model", "brief_model")).strip(" / "),
         input_text=input_text,
         output_text=output_text,
         warnings=tuple(str(item) for item in payload.get("quality_warnings", ()) or ()),
@@ -7829,17 +9748,19 @@ def _geo_text_summary_draft_record(text: GeoStudyTextInput, payload: dict[str, o
             "title_zh": str(payload.get("title_zh") or ""),
             "summary_zh": str(payload.get("summary_zh") or ""),
             "brief_zh": str(payload.get("brief_zh") or ""),
-            "source": str(payload.get("source") or "fallback"),
-            "ai_provider": str(payload.get("ai_provider") or "disabled"),
-            "ai_role": str(payload.get("ai_role") or ""),
-            "model_name": str(payload.get("model_name") or ""),
-            "generated_at": str(payload.get("generated_at") or ""),
-            "user_confirmation_required": bool(payload.get("user_confirmation_required", True)),
-            "accepted_by_user": bool(payload.get("accepted_by_user", False)),
         },
         status=status,
     )
 
+
+def _ai_provider_status_label(status: AIProviderStatus) -> str:
+    if status == AIProviderStatus.AVAILABLE:
+        return "可用"
+    if status == AIProviderStatus.DISABLED:
+        return "未启用"
+    if status == AIProviderStatus.ERROR:
+        return "错误"
+    return "不可用"
 
 
 def _geo_topic_match_label(summary: dict[str, object], *, status: str, warnings: list[str]) -> str:
@@ -8569,6 +10490,10 @@ def _analysis_task_user_status(
         return "需要先有结果"
     if task_type == "tcga_gtex_joint":
         return "测试级 / 暂不可用"
+    if task_type == "immune_tme_scoring":
+        if _analysis_has_result(result_entries, "immune_tme_scoring"):
+            return "已有探索性评分"
+        return "可配置" if task.get("can_run") else "需要合适表达矩阵"
     if _analysis_has_task_record(task_records, task_type):
         return "已有配置草稿"
     if task.get("can_run"):
@@ -8581,6 +10506,7 @@ def _analysis_required_inputs_text(task_type: str) -> str:
         "differential_expression": "表达矩阵、样本信息、分组设计",
         "enrichment": "表达矩阵或差异分析结果",
         "gsea": "表达矩阵、GSEA 基因集选择",
+        "immune_tme_scoring": "TPM / 标准化表达矩阵、immune / TME signatures",
         "correlation": "表达矩阵、目标基因",
         "survival": "表达矩阵、临床/生存信息",
         "clinical_association": "临床信息",
@@ -8626,6 +10552,12 @@ def _analysis_task_next_action(
         return "需要差异分析结果或基因列表；不要生成假富集结果。"
     if task_type == "gsea":
         return "先在 GSEA 基因集资源管理器选择本地资源；未选择只阻断 GSEA preflight / execution。"
+    if task_type == "immune_tme_scoring":
+        if _analysis_has_result(result_entries, "immune_tme_scoring"):
+            return "进入结果浏览或重新运行 B7 评分；结果仍为探索性 bulk score。"
+        if task.get("can_run"):
+            return "进入免疫浸润 / TME评分；不执行 CIBERSORT/xCell/ESTIMATE，也不自动进入 DEG/GSEA/KM/Cox。"
+        return "请补充 TPM / 标准化表达矩阵；raw counts / unknown 默认不能评分。"
     if task_type == "correlation":
         return "确认目标基因和样本数量后再配置。"
     if task_type == "survival":
@@ -8651,6 +10583,161 @@ def _analysis_task_input_summary(tasks: list[dict[str, object]]) -> str:
     if diff.get("can_run"):
         return "核心输入：已具备表达矩阵、样本信息和分组设计，可进入 DEG 配置与 preflight。"
     return f"核心输入：差异表达分析仍缺少 {missing}。"
+
+
+def _analysis_input_resolver_summary(resolver: dict[str, object]) -> str:
+    packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
+    if not packages:
+        blockers = resolver.get("blockers", []) or []
+        if blockers:
+            return "Resolver：尚未形成可用 input package；阻断项：" + "、".join(str(item) for item in blockers[:3]) + "。"
+        return "Resolver：尚未发现 standardized analysis input package。"
+    ready = [item for item in packages if not item.get("blockers")]
+    package_types = "、".join(str(item.get("package_type") or "") for item in packages if item.get("package_type"))
+    blockers = _resolver_issue_preview(packages, "blockers")
+    warnings = _resolver_issue_preview(packages, "warnings")
+    disabled = "；formal DEG/GSEA/Survival/Plot/Report-ready 仍按阶段 gate 禁用"
+    issue_text = ""
+    if blockers:
+        issue_text += f"；阻断：{blockers}"
+    if warnings:
+        issue_text += f"；提示：{warnings}"
+    return f"Resolver：发现 {len(packages)} 个 input package（可进入预检查/探索 {len(ready)} 个）：{package_types}{issue_text}{disabled}。"
+
+
+def _resolver_issue_preview(packages: list[dict[str, object]], field_name: str) -> str:
+    issues: list[str] = []
+    for package in packages:
+        package_type = str(package.get("package_type") or "package")
+        for issue in package.get(field_name, []) or []:
+            if len(issues) >= 4:
+                break
+            issues.append(f"{package_type}:{issue}")
+        if len(issues) >= 4:
+            break
+    return "、".join(issues)
+
+
+def _analysis_ui_package_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("package_label", ""),
+            row.get("status", ""),
+            row.get("value_type", ""),
+            row.get("gene_id_type", ""),
+            row.get("allowed_downstream_tasks", ""),
+            row.get("blockers", ""),
+            row.get("warnings", ""),
+            row.get("repair_action", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_action_rows(rows: object, *, normal_user_only: bool = False) -> list[list[object]]:
+    visible_rows = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if normal_user_only and row.get("normal_user_visible") is False:
+            continue
+        visible_rows.append(
+            [
+                row.get("label", ""),
+                row.get("state", ""),
+                row.get("button_behavior", ""),
+                row.get("disabled_reason", ""),
+                row.get("next_action", ""),
+            ]
+        )
+    return visible_rows
+
+
+def _analysis_ui_action(rows: object, action_id: str) -> dict[str, object]:
+    for row in rows:
+        if isinstance(row, dict) and row.get("action_id") == action_id:
+            return row
+    return {}
+
+
+def _analysis_ui_dependency_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("label", ""),
+            row.get("status", ""),
+            row.get("version", ""),
+            row.get("blockers", ""),
+            row.get("packaging_impact", ""),
+            row.get("action", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_gate_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("gate", ""),
+            row.get("status", ""),
+            row.get("basis", ""),
+            row.get("blockers", ""),
+            row.get("warnings", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
+
+
+def _analysis_ui_confirmation_rows(formal_state: object) -> list[list[object]]:
+    if not isinstance(formal_state, dict):
+        return [["Confirmation", "missing formal DEG gate state", "blocked"]]
+    parameter = formal_state.get("parameter_gate") if isinstance(formal_state.get("parameter_gate"), dict) else {}
+    confirmation = formal_state.get("parameter_confirmation") if isinstance(formal_state.get("parameter_confirmation"), dict) else {}
+    dependency = parameter.get("dependency_snapshot") if isinstance(parameter.get("dependency_snapshot"), dict) else {}
+    packages = dependency.get("packages") if isinstance(dependency.get("packages"), dict) else {}
+    output_plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+    confirmation_gate = formal_state.get("confirmation_gate") if isinstance(formal_state.get("confirmation_gate"), dict) else {}
+    return [
+        [
+            "Comparison",
+            f"{parameter.get('case_group', '')} ({len(parameter.get('case_samples', []) or [])}) vs {parameter.get('control_group', '')} ({len(parameter.get('control_samples', []) or [])}); case={', '.join(parameter.get('case_samples', []) or [])}; control={', '.join(parameter.get('control_samples', []) or [])}",
+            parameter.get("status", "blocked"),
+        ],
+        ["Method", parameter.get("method", ""), parameter.get("method_family", "")],
+        [
+            "Thresholds",
+            f"log2FC={parameter.get('log2fc_threshold', '')}; p={parameter.get('p_value_threshold', '')}; FDR={parameter.get('fdr_threshold', '')}; pseudocount={parameter.get('pseudocount', '')}",
+            parameter.get("fdr_policy", ""),
+        ],
+        ["Value type compatibility", f"{parameter.get('value_type', '')}; {parameter.get('value_type_policy', '')}", parameter.get("gene_mapping_policy", "")],
+        [
+            "Dependency snapshot",
+            "; ".join(f"{name}={status.get('version', '')}" for name, status in packages.items() if isinstance(status, dict) and name in {"numpy", "pandas", "scipy", "statsmodels"}),
+            dependency.get("status", "blocked"),
+        ],
+        [
+            "Output plan",
+            f"task_run_id={output_plan.get('task_run_id', 'not confirmed')}; result={output_plan.get('result_table_path', 'not confirmed')}; log={output_plan.get('task_run_log_path', 'not confirmed')}",
+            confirmation.get("status", "not confirmed"),
+        ],
+        ["Confirmation gate", "; ".join(str(item) for item in confirmation_gate.get("blockers", []) or []) if isinstance(confirmation_gate.get("blockers"), list | tuple) else "None", confirmation_gate.get("status", "blocked")],
+    ]
+
+
+def _analysis_ui_survival_rows(rows: object) -> list[list[object]]:
+    return [
+        [
+            row.get("label", ""),
+            row.get("status", ""),
+            row.get("asset_status", ""),
+            row.get("backend_status", ""),
+            row.get("disabled_reason", ""),
+        ]
+        for row in rows
+        if isinstance(row, dict)
+    ]
 
 
 def _analysis_task_result_summary(entries: list[dict[str, object]], records: list[dict[str, object]], imported_deg: bool) -> str:
@@ -8692,6 +10779,27 @@ def _analysis_has_task_record(records: list[dict[str, object]], task_type: str) 
 
 def _analysis_has_result(entries: list[dict[str, object]], analysis_type: str) -> bool:
     return any(str(item.get("analysis_type") or "") == analysis_type for item in entries)
+
+
+def _tsv_rows(path_text: str, *, limit: int = 8, columns: list[str] | None = None) -> list[list[object]]:
+    import csv
+
+    path = Path(str(path_text or "")).expanduser()
+    if not path.is_file():
+        return []
+    rows: list[list[object]] = []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        selected = columns or list(reader.fieldnames or [])
+        for index, row in enumerate(reader):
+            if index >= limit:
+                break
+            rows.append([str(row.get(column, "")) for column in selected])
+    return rows
+
+
+def _signature_from_catalog_item(item: dict[str, object]) -> object:
+    return signature_from_dict(item)
 
 
 def _analysis_entry_semantics(entry: dict[str, object]) -> str:
@@ -9236,6 +11344,33 @@ def _dataset_readiness_user_rows(summary: dict[str, object]) -> list[list[str]]:
         ["进入 DEG preflight", _yes_no(summary.get("can_enter_deg_preflight")), "需要表达矩阵、样本信息和已确认比较组。"],
         ["GSEA 数据基础", _yes_no(summary.get("has_gsea_data_basis")), "GSEA gene set 未选择不阻断当前数据检查和 DEG preflight。"],
     ]
+    tcga = summary.get("tcga_readiness") if isinstance(summary.get("tcga_readiness"), dict) else {}
+    if tcga and tcga.get("has_tcga_b6_4_build"):
+        rows.extend(
+            [
+                ["TCGA B6.4 构建产物", str(tcga.get("status") or "unknown"), f"{tcga.get('sample_count') or 0} 样本 / {tcga.get('gene_count') or 0} 基因。"],
+                ["TCGA 默认分组候选", str(tcga.get("default_group_status") or "unknown"), "Primary Tumor vs Solid Tissue Normal；仍需用户确认比较组。"],
+                ["TCGA DEG 值类型", str(tcga.get("deg_input_value_type") or "count"), "raw counts 用于 DEG preflight；TPM/FPKM/FPKM-UQ 仅默认展示。"],
+            ]
+        )
+    tcga_clinical = summary.get("tcga_clinical_readiness") if isinstance(summary.get("tcga_clinical_readiness"), dict) else {}
+    if tcga_clinical and tcga_clinical.get("has_tcga_clinical_build"):
+        rows.extend(
+            [
+                ["TCGA clinical metadata", str(tcga_clinical.get("clinical_gate_status") or "clinical_unavailable"), f"{tcga_clinical.get('case_count') or 0} case；匹配 {tcga_clinical.get('matched_case_count') or 0} case。"],
+                ["表达-临床映射", str(tcga_clinical.get("mode") or "unknown"), f"{tcga_clinical.get('matched_sample_count') or 0}/{tcga_clinical.get('sample_count') or 0} sample 已匹配 clinical。"],
+                ["TCGA 基础 OS readiness", str(tcga_clinical.get("survival_gate_status") or "survival_unavailable"), f"OS 可用 {tcga_clinical.get('survival_case_count') or 0} case；死亡事件 {tcga_clinical.get('death_event_count') or 0}。不自动运行 survival，不生成临床结论。"],
+            ]
+        )
+    gtex = summary.get("gtex_readiness") if isinstance(summary.get("gtex_readiness"), dict) else {}
+    if gtex and gtex.get("has_gtex_expression_build"):
+        rows.extend(
+            [
+                ["GTEx G6 构建产物", str(gtex.get("status") or "gtex_expression_matrix_built"), f"{gtex.get('sample_count') or 0} 样本 / {gtex.get('donor_count') or 0} donor / {gtex.get('gene_count') or 0} 基因。"],
+                ["GTEx TCGA 边界", str(gtex.get("tcga_default_control_status") or "disabled"), "GTEx 不自动作为 TCGA normal control；TCGA+GTEx 需要显式联合配置。"],
+                ["GTEx 值类型", str(gtex.get("value_type") or "expression_values"), "作为独立正常组织表达资源进入数据检查；不默认进入 TCGA DEG/GSEA 执行。"],
+            ]
+        )
     return rows
 
 
@@ -9463,13 +11598,13 @@ def _standardization_expression_status_text(assets: list[object], readiness: dic
     expression_assets = [
         item
         for item in assets
-        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
+        if isinstance(item, dict) and str(item.get("asset_type") or "") in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}
     ]
     if expression_assets:
         labels = "、".join(dict.fromkeys(_standardization_asset_display_name(item) for item in expression_assets))
         return f"表达矩阵：已整理为 BioMedPilot 内部标准格式 {len(expression_assets)} 项（{labels}）；未执行生物学 normalization。"
-    if available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
-        return "表达矩阵：已整理为 BioMedPilot 内部标准格式 0 项；数据准备检查已识别到可用输入，请生成标准化数据；未执行生物学 normalization。"
+    if available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+        return "表达矩阵：数据准备检查已识别到可用输入；请生成标准化数据。"
     return "表达矩阵：未识别到可用于后续分析的矩阵，请返回数据识别或数据选择补充。"
 
 
@@ -9523,7 +11658,7 @@ def _standardization_next_step_text(project_root: Path, assets: list[object], re
     if not assets:
         return "下一步建议：点击“生成标准化数据”，把识别结果登记为后续分析可用的数据。"
     available = {str(item) for item in readiness.get("available_inputs", []) or []}
-    if not available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
+    if not available & {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}:
         return "下一步建议：返回数据识别或数据选择，补充表达矩阵。"
     if load_confirmed_comparison_config(project_root) is None:
         return "下一步建议：确认分组与比较设计，再进入分析任务中心。"
@@ -9875,11 +12010,8 @@ def _can_continue_from_standardization(project_root: Path) -> tuple[bool, str]:
     if stale.get("is_stale"):
         return False, str(stale.get("message") or "标准化资产仓库已过期，请重新生成。")
     assets = [item for item in registry.get("assets", []) or [] if isinstance(item, dict)]
-    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"} for item in assets)
+    has_ready_core = any(item.get("analysis_ready") and str(item.get("asset_type")) in {"expression_matrix", "normalized_expression_matrix", "raw_count_matrix", "count_matrix", "tcga_expression_matrix", "gtex_expression_matrix"} for item in assets)
     if not has_ready_core:
-        readiness = load_readiness_artifacts(project_root).get("readiness_report")
-        if isinstance(readiness, dict) and readiness.get("standardization_ready"):
-            return True, ""
         return False, "没有 analysis-ready 表达矩阵资产。"
     return True, ""
 

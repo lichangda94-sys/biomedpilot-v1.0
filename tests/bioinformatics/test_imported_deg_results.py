@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from app.bioinformatics.deg_executor_preflight import run_deg_executor_preflight
+from app.bioinformatics.deg_task_plan import build_deg_preflight
 from app.bioinformatics.imported_deg_results import (
     list_imported_deg_results,
     mark_imported_deg_report_candidates,
@@ -92,7 +92,7 @@ def test_imported_deg_can_be_report_candidate_but_not_preflight_input(tmp_path: 
     run_project_recognition(project_root)
 
     entries = mark_imported_deg_report_candidates(project_root)
-    preflight = run_deg_executor_preflight(project_root)
+    preflight = build_deg_preflight(project_root)
 
     assert entries
     assert entries[0]["result_semantics"] == "imported result"
@@ -106,8 +106,9 @@ def test_imported_deg_can_be_report_candidate_but_not_preflight_input(tmp_path: 
     assert manifest["semantic_boundary"] == "imported_external_deg_not_biomedpilot_computed"
     assert manifest["report_sentence_policy"] == "用户导入的外部分析结果显示"
     assert "重新计算" in entries[0]["warning"]
-    assert preflight["status"] == "failed"
-    assert "缺少默认 count matrix。" in preflight["errors"]
+    assert preflight.status == "blocked"
+    assert preflight.manifest["input_summary"]["imported_deg_detected"] is True  # type: ignore[index]
+    assert any("导入差异结果不能作为重新计算 DEG" in item for item in preflight.manifest["warnings"])  # type: ignore[index]
     result_index = load_result_index(project_root)
     assert result_index["entries"][0]["result_semantics"] == "imported result"  # type: ignore[index]
     assert not (project_root / "results" / "tables").exists()

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import sys
 import argparse
+import json
+from pathlib import Path
 
 from app.shell.dashboard import build_dashboard_model
 from app.shared.environment.checks import check_local_environment
@@ -11,6 +13,8 @@ from app.version import app_version_summary
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch BioMedPilot.")
     parser.add_argument("--smoke-test", action="store_true", help="Load startup state and exit without opening the GUI event loop.")
+    parser.add_argument("--bio-formal-deg-runtime-check", action="store_true", help="Validate formal DEG runtime dependencies and fixture execution.")
+    parser.add_argument("--bio-formal-deg-runtime-check-output", default="", help="Optional JSON output path for --bio-formal-deg-runtime-check.")
     normalized_argv = list(sys.argv[1:] if argv is None else argv)
     filtered_argv = [arg for arg in normalized_argv if not arg.startswith("-psn_")]
     return parser.parse_args(filtered_argv)
@@ -18,6 +22,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.bio_formal_deg_runtime_check:
+        from app.bioinformatics.deg_engine.runtime_validation import run_formal_deg_runtime_validation
+
+        output_path = Path(args.bio_formal_deg_runtime_check_output) if args.bio_formal_deg_runtime_check_output else None
+        payload = run_formal_deg_runtime_validation(output_path=output_path)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0 if payload["status"] in {"passed", "blocked_missing_dependency"} else 1
+
     if args.smoke_test:
         dashboard = build_dashboard_model()
         environment = check_local_environment()
