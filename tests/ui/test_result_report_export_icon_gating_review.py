@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PRODUCTION_MANIFEST = ROOT / "docs/ui/icon_production/UI_B8b7a_result_report_export_icon_production_manifest_20260521.csv"
 GATING_MANIFEST = ROOT / "docs/ui/UI_B8b7b_result_report_export_icon_gating_manifest_20260521.csv"
 ACTIVE_RRE_DIR = ROOT / "assets/icons/result_report_export"
+ACTIVE_PILOT_ALLOWED_IDS = {"result_overview", "result_table", "result_summary", "report_template", "result_clear"}
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -95,7 +96,11 @@ def test_gating_manifest_does_not_point_to_active_assets_or_deferred_families() 
     assert all(not row["candidate_svg_path"].startswith("assets/icons/result_report_export/") for row in rows)
     assert all(not row["resource_id"].startswith(("status_", "empty_")) for row in rows)
     assert all("app_icon" not in row["resource_id"] for row in rows)
-    assert not ACTIVE_RRE_DIR.exists()
+    if ACTIVE_RRE_DIR.exists():
+        active_stems = {path.stem.removesuffix("_24").removesuffix("_32").removesuffix("_48").removesuffix("_64") for path in ACTIVE_RRE_DIR.glob("*")}
+        assert active_stems == ACTIVE_PILOT_ALLOWED_IDS
+        assert not any(path.name.startswith(("status_", "empty_")) for path in ACTIVE_RRE_DIR.glob("*"))
+        assert not any("app_icon" in path.name for path in ACTIVE_RRE_DIR.glob("*"))
 
 
 def test_gating_manifest_keeps_non_formal_semantics() -> None:

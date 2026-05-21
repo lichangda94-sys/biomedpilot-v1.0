@@ -9,6 +9,7 @@ MATRIX_PATH = ROOT / "docs/ui/resource_inventory/UI_B8b3_icon_replacement_readin
 MANIFEST_PATH = ROOT / "docs/ui/icon_production/UI_B8b7a_result_report_export_icon_production_manifest_20260521.csv"
 RRE_ROOT = "docs/ui/icon_production/result_report_export/"
 ACTIVE_RRE_DIR = ROOT / "assets/icons/result_report_export"
+ACTIVE_PILOT_ALLOWED_IDS = {"result_overview", "result_table", "result_summary", "report_template", "result_clear"}
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -87,7 +88,11 @@ def test_result_report_export_stage_does_not_touch_active_assets_or_deferred_fam
     assert all("app_icon" not in row["resource_id"] for row in rows)
     assert all(row["svg_path"].startswith(RRE_ROOT) for row in rows)
     assert all(not row["svg_path"].startswith("assets/") for row in rows)
-    assert not ACTIVE_RRE_DIR.exists()
+    if ACTIVE_RRE_DIR.exists():
+        active_stems = {path.stem.removesuffix("_24").removesuffix("_32").removesuffix("_48").removesuffix("_64") for path in ACTIVE_RRE_DIR.glob("*")}
+        assert active_stems == ACTIVE_PILOT_ALLOWED_IDS
+        assert not any(path.name.startswith(("status_", "empty_")) for path in ACTIVE_RRE_DIR.glob("*"))
+        assert not any("app_icon" in path.name for path in ACTIVE_RRE_DIR.glob("*"))
 
 
 def test_result_report_export_semantics_remain_gated_and_non_formal() -> None:

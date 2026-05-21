@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from app.app_identity import RESULT_REPORT_EXPORT_ICON_PATHS, load_result_report_export_pixmap
 from app.shared.semantic_keys import ExportKey, ReportKey, ReportStatusKey, ResultSemanticKey
 
 
@@ -121,7 +122,7 @@ def make_result_preview_empty_state(state: ResultReportExportState | None = None
 
 
 def make_report_draft_boundary(state: ResultReportExportState | None = None):
-    from PySide6.QtWidgets import QLabel, QVBoxLayout
+    from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout
 
     from app.shared.ui_components.primitives import make_card, make_status_chip
 
@@ -135,6 +136,13 @@ def make_report_draft_boundary(state: ResultReportExportState | None = None):
     layout.setContentsMargins(16, 14, 16, 14)
     layout.setSpacing(8)
     layout.addWidget(make_status_chip(status_key=_visual_status_for_report(shell_state.report_status_key)))
+
+    header = QHBoxLayout()
+    header.setSpacing(8)
+    header.addWidget(_make_result_report_export_marker("report_template", "Report draft boundary / 报告草稿边界", shell_state))
+    header.addStretch(1)
+    layout.addLayout(header)
+
     title = QLabel("Report draft boundary / 报告草稿边界")
     title.setObjectName("reportDraftBoundaryTitle")
     body = QLabel(shell_state.disclaimer)
@@ -199,6 +207,7 @@ def make_result_report_export_adoption_panel(
     detail.setWordWrap(True)
     layout.addWidget(title)
     layout.addWidget(detail)
+    layout.addLayout(_make_result_report_export_marker_strip(shell_state))
 
     content_row = QHBoxLayout()
     content_row.setSpacing(12)
@@ -217,6 +226,69 @@ def make_result_report_export_adoption_panel(
     button_row.addStretch(1)
     layout.addLayout(button_row)
     return frame
+
+
+def _make_result_report_export_marker_strip(shell_state: ResultReportExportState):
+    from PySide6.QtWidgets import QHBoxLayout
+
+    row = QHBoxLayout()
+    row.setSpacing(8)
+    for resource_id, label in (
+        ("result_overview", "Overview / 概览"),
+        ("result_table", "Table marker / 表格标记"),
+        ("result_summary", "Summary / 摘要"),
+        ("result_clear", "Clear gated / 清理受控"),
+    ):
+        row.addWidget(_make_result_report_export_marker(resource_id, label, shell_state))
+    row.addStretch(1)
+    return row
+
+
+def _make_result_report_export_marker(resource_id: str, label: str, shell_state: ResultReportExportState):
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel
+
+    marker = QFrame()
+    marker.setObjectName("resultReportExportIconMarker")
+    marker.setProperty("uiPrimitive", "result_report_export_marker")
+    marker.setProperty("resultReportExportIconKey", resource_id)
+    marker.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    marker.setProperty("reportStatusKey", shell_state.report_status_key)
+    marker.setProperty("exportGate", shell_state.export_gate.value)
+    marker.setProperty("formalActionEnabled", False)
+    marker.setProperty("reportReadyPackageAllowed", shell_state.report_ready_package_allowed)
+    marker.setProperty("iconSource", str(RESULT_REPORT_EXPORT_ICON_PATHS.get(resource_id, "")))
+    marker.setToolTip(f"{label}: {shell_state.gate_reason}")
+    marker.setStyleSheet(
+        "QFrame#resultReportExportIconMarker { "
+        "border: 1px solid #D8DEE9; border-radius: 6px; background: #F8FAFC; "
+        "}"
+    )
+
+    layout = QHBoxLayout(marker)
+    layout.setContentsMargins(8, 5, 8, 5)
+    layout.setSpacing(6)
+    icon = QLabel()
+    icon.setObjectName("resultReportExportMarkerIcon")
+    icon.setProperty("resultReportExportIconKey", resource_id)
+    pixmap = load_result_report_export_pixmap(resource_id, 22)
+    icon.setProperty("iconFallback", pixmap.isNull())
+    icon.setFixedSize(22, 22)
+    icon.setAlignment(Qt.AlignCenter)
+    if not pixmap.isNull():
+        icon.setPixmap(pixmap)
+    layout.addWidget(icon)
+
+    text = QLabel(label)
+    text.setObjectName("resultReportExportMarkerLabel")
+    text.setProperty("resultReportExportIconKey", resource_id)
+    text.setProperty("resultSemanticKey", shell_state.result_semantic_key)
+    text.setProperty("reportStatusKey", shell_state.report_status_key)
+    text.setProperty("exportGate", shell_state.export_gate.value)
+    text.setStyleSheet("color: #52616F; font-size: 12px; font-weight: 650;")
+    text.setAlignment(Qt.AlignVCenter)
+    layout.addWidget(text)
+    return marker
 
 
 def _visual_status_for_report(report_status_key: str) -> str:

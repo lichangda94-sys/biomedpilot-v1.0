@@ -24,6 +24,7 @@ LABTOOLS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "labtools"
 BIOINFORMATICS_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "bioinformatics" / "pages"
 META_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "meta" / "pages"
 SETTINGS_RESOURCE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "settings" / "resources"
+RESULT_REPORT_EXPORT_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "result_report_export"
 EMPTY_STATE_IMAGE_DIR = PROJECT_ROOT / "assets" / "images" / "empty_states"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
@@ -107,6 +108,13 @@ EMPTY_STATE_SEMANTIC_IMAGE_KEYS = {
     FeatureStatusKey.BLOCKED.value: "empty_blocked",
     FeatureStatusKey.SHELL_ONLY.value: "empty_shell_only",
     AnalysisStatusKey.PREFLIGHT_ONLY.value: "empty_preflight_only",
+}
+RESULT_REPORT_EXPORT_ICON_PATHS = {
+    "result_overview": RESULT_REPORT_EXPORT_ICON_DIR / "result_overview.svg",
+    "result_table": RESULT_REPORT_EXPORT_ICON_DIR / "result_table.svg",
+    "result_summary": RESULT_REPORT_EXPORT_ICON_DIR / "result_summary.svg",
+    "report_template": RESULT_REPORT_EXPORT_ICON_DIR / "report_template.svg",
+    "result_clear": RESULT_REPORT_EXPORT_ICON_DIR / "result_clear.svg",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -225,6 +233,11 @@ ICON_ASSET_SLOTS: tuple[IconAssetSlot, ...] = (
     IconAssetSlot("empty_state.blocked", "Blocked empty state illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_blocked"], ("Shared empty state primitive",)),
     IconAssetSlot("empty_state.shell_only", "Shell-only empty state illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_shell_only"], ("Shared empty state primitive",)),
     IconAssetSlot("empty_state.preflight_only", "Preflight-only empty state illustration", "Empty state", EMPTY_STATE_IMAGE_PATHS["empty_preflight_only"], ("Shared empty state primitive",)),
+    IconAssetSlot("result_report_export.result_overview", "Result overview marker icon", "Result / Report / Export marker", RESULT_REPORT_EXPORT_ICON_PATHS["result_overview"], ("Result / Report / Export marker strip",)),
+    IconAssetSlot("result_report_export.result_table", "Result table marker icon", "Result / Report / Export marker", RESULT_REPORT_EXPORT_ICON_PATHS["result_table"], ("Result / Report / Export marker strip",)),
+    IconAssetSlot("result_report_export.result_summary", "Result summary marker icon", "Result / Report / Export marker", RESULT_REPORT_EXPORT_ICON_PATHS["result_summary"], ("Result / Report / Export marker strip",)),
+    IconAssetSlot("result_report_export.report_template", "Report template marker icon", "Result / Report / Export marker", RESULT_REPORT_EXPORT_ICON_PATHS["report_template"], ("Report draft boundary marker",)),
+    IconAssetSlot("result_report_export.result_clear", "Result clear helper marker icon", "Result / Report / Export marker", RESULT_REPORT_EXPORT_ICON_PATHS["result_clear"], ("Result / Report / Export disabled helper marker",)),
     IconAssetSlot("ui01.brand", "UI-01 Brand 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["brand"], ("UI-01 左侧品牌展示区",)),
     IconAssetSlot("ui01.user", "UI-01 User 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["user"], ("UI-01 用户名输入框",)),
     IconAssetSlot("ui01.security", "UI-01 Security 图标", "UI-01 登录页", UI01_LOGIN_ICON_PATHS["security"], ("UI-01 密码输入框",)),
@@ -365,6 +378,19 @@ def load_empty_state_illustration(empty_state_key: str | None = None, *, semanti
 
 def load_empty_state_pixmap(empty_state_key: str | None = None, *, semantic_key: str | None = None, size: int = 72) -> QPixmap:
     icon = load_empty_state_illustration(empty_state_key, semantic_key=semantic_key)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_result_report_export_icon(resource_id: str) -> QIcon:
+    path = RESULT_REPORT_EXPORT_ICON_PATHS.get(resource_id)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_result_report_export_pixmap(resource_id: str, size: int = 24) -> QPixmap:
+    icon = load_result_report_export_icon(resource_id)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 
