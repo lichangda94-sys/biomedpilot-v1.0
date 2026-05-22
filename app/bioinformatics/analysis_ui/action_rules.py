@@ -26,6 +26,8 @@ def build_action_rows(
     cox_multivariate_parameter_gate: dict[str, Any] | None = None,
     cox_multivariate_confirmation_gate: dict[str, Any] | None = None,
     risk_score_design: dict[str, Any] | None = None,
+    km_real_plot_gate: dict[str, Any] | None = None,
+    cox_real_plot_gate: dict[str, Any] | None = None,
     report_gate: dict[str, Any] | None = None,
     formal_deg_report_gate: dict[str, Any] | None = None,
     ora_input_gate: dict[str, Any] | None = None,
@@ -62,6 +64,8 @@ def build_action_rows(
     cox_multivariate_parameter_gate = cox_multivariate_parameter_gate or {}
     cox_multivariate_confirmation_gate = cox_multivariate_confirmation_gate or {}
     risk_score_design = risk_score_design or {}
+    km_real_plot_gate = km_real_plot_gate or {}
+    cox_real_plot_gate = cox_real_plot_gate or {}
     report_gate = report_gate or {}
     formal_deg_report_gate = formal_deg_report_gate or {}
     ora_input_gate = ora_input_gate or {}
@@ -113,7 +117,8 @@ def build_action_rows(
     rows.append(_cox_univariate_action(survival_package, survival_dependency, cox_parameter_gate, cox_confirmation_gate))
     rows.append(_cox_multivariate_action(survival_package, survival_dependency, cox_multivariate_parameter_gate, cox_multivariate_confirmation_gate))
     rows.append(_risk_score_action(risk_score_design))
-    rows.append(_constant_disabled_action("generate_km_plot", "Generate KM plot", "disabled_b14_spec_only", "KM plot artifact is spec-only in B14; no PNG/SVG/PDF is generated."))
+    rows.append(_survival_real_plot_action("generate_km_plot", "Generate KM plot", km_real_plot_gate))
+    rows.append(_survival_real_plot_action("generate_cox_plot", "Generate Cox forest plot", cox_real_plot_gate))
     rows.append(_constant_disabled_action("survival_report_ready", "Export survival report-ready package", "disabled_b12_contract", "Survival report-ready is disabled; no full integrated report in B12."))
     rows.append(_constant_disabled_action("clinical_association_statistics", "Run clinical association statistics", "disabled_b12_contract", "Clinical association p-values are disabled; input/variable audit only."))
     rows.append(_constant_disabled_action("survival_formal", "Survival report-ready", "hidden_until_ready", "Cox/KM survival report-ready package is not implemented in B14."))
@@ -818,6 +823,28 @@ def _risk_score_action(design: dict[str, Any]) -> dict[str, Any]:
         "design_audit_only" if design else "hidden_until_ready",
         "; ".join(dict.fromkeys([*blockers, "B21 is design audit only; no risk score result, nomogram, high/low-risk group or clinical conclusion is generated."])),
         "Review risk score prerequisites only: training/validation, variable source, model formula, coefficient source, cutoff, overfitting protection and provenance.",
+    )
+
+
+def _survival_real_plot_action(action_id: str, label: str, gate: dict[str, Any]) -> dict[str, Any]:
+    if gate.get("status") == "passed":
+        return {
+            "action_id": action_id,
+            "label": label,
+            "state": "enabled_real_plot_artifact",
+            "button_behavior": "enabled_survival_real_plot_artifact_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Generate a real SVG plot artifact from a formal KM/Cox result; this does not create survival report-ready output or clinical interpretation.",
+        }
+    blockers = _list(gate.get("blockers")) or ["survival_real_plot_gate_not_passed"]
+    return _disabled(
+        action_id,
+        label,
+        "blocked_survival_real_plot_gate",
+        "; ".join(dict.fromkeys(blockers)),
+        "Register a valid formal KM/log-rank or Cox result and pass renderer dependency detection before creating a real plot artifact.",
     )
 
 

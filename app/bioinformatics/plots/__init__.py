@@ -8,6 +8,7 @@ from .ora import build_ora_plot_gate, create_ora_plot_artifact
 from .registry import create_plot_artifact
 from .schema import validate_plot_artifact
 from .survival import create_km_plot_artifact
+from .survival_real import build_survival_real_plot_gate, check_survival_plot_renderer_dependencies, create_survival_real_plot_artifact
 
 __all__ = [
     "build_basic_plot_spec",
@@ -20,5 +21,8 @@ __all__ = [
     "create_km_plot_artifact",
     "create_ora_plot_artifact",
     "create_plot_artifact",
+    "build_survival_real_plot_gate",
+    "check_survival_plot_renderer_dependencies",
+    "create_survival_real_plot_artifact",
     "validate_plot_artifact",
 ]

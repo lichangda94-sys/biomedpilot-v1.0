@@ -24,7 +24,7 @@ from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.results.models import normalize_result_semantics
 from app.bioinformatics.results.project_results import load_result_index
-from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate
+from app.bioinformatics.plots import build_gsea_plot_gate, build_ora_plot_gate, build_survival_real_plot_gate, check_survival_plot_renderer_dependencies
 from app.bioinformatics.survival_clinical import (
     audit_clinical_variables,
     audit_cox_multivariate_design,
@@ -96,6 +96,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     gsea_plot_gate = build_gsea_plot_gate(root)
     gsea_gates = build_gsea_gate_state(project_root=root)
     survival_clinical_state = build_survival_clinical_gate_state(project_root=root)
+    km_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"survival_km_logrank"}))
+    cox_real_plot_gate = build_survival_real_plot_gate(root, _latest_result_id(result_entries, {"cox_univariate", "cox_multivariate"}))
     legacy_pipeline = build_legacy_asset_pipeline_state(root)
     package_rows = build_package_rows(packages)
     action_rows = build_action_rows(
@@ -133,12 +135,20 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_result_schema_gate=gsea_gates["result_schema_gate"],
         gsea_dependency=gsea_gates["dependency_snapshot"],
         survival_clinical_state=survival_clinical_state,
+        km_real_plot_gate=km_real_plot_gate,
+        cox_real_plot_gate=cox_real_plot_gate,
         legacy_asset_pipeline=legacy_pipeline,
     )
     result_rows = build_result_gate_rows(result_entries)
     gate_rows = build_gate_preview_rows(result_entries=result_entries, report_gate=report_gate, formal_deg_report_gate=formal_deg_report_gate, ora_report_gate=ora_report_gate)
     dependency_rows = build_dependency_rows(deg_dependency=deg_dependency, survival_dependency=survival_dependency)
-    survival_rows = build_survival_clinical_rows(packages=packages, survival_dependency=survival_dependency, survival_clinical_state=survival_clinical_state)
+    survival_rows = build_survival_clinical_rows(
+        packages=packages,
+        survival_dependency=survival_dependency,
+        survival_clinical_state=survival_clinical_state,
+        km_real_plot_gate=km_real_plot_gate,
+        cox_real_plot_gate=cox_real_plot_gate,
+    )
     capability_map = build_analysis_capability_map(
         action_rows=action_rows,
         formal_deg_gate_rows=deg_gates["gate_rows"],
@@ -207,6 +217,8 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "gsea_report_ready_gate": gsea_report_gate,
             "gsea_gate_state": gsea_gates,
             "survival_clinical_state": survival_clinical_state,
+            "km_real_plot_gate": km_real_plot_gate,
+            "cox_real_plot_gate": cox_real_plot_gate,
             "legacy_asset_pipeline": legacy_pipeline,
             "analysis_capability_map": capability_map,
             "survival_dependency_snapshot": survival_dependency,
@@ -437,6 +449,24 @@ def build_dependency_rows(*, deg_dependency: dict[str, Any] | None = None, survi
         )
     lifelines = survival_dependency.get("python_lifelines") if isinstance(survival_dependency.get("python_lifelines"), dict) else {}
     rows.append(_dependency_row("python:lifelines", "lifelines", lifelines, required=False, blocker_if_missing="lifelines_missing_formal_survival_disabled"))
+    builtin_plot = check_survival_plot_renderer_dependencies(renderer="builtin_svg")
+    rows.append(
+        {
+            "dependency_id": "renderer:survival_builtin_svg",
+            "label": "survival builtin SVG renderer",
+            "status": "installed" if builtin_plot.get("status") == "passed" else "missing",
+            "version": str((builtin_plot.get("packages", {}).get("biomedpilot_builtin_svg") or {}).get("version") or ""),
+            "blockers": "None" if builtin_plot.get("status") == "passed" else compact_list(builtin_plot.get("blockers", []) or []),
+            "warnings": "Detect-first only; no auto-install.",
+            "action": "Detect only; no install action.",
+            "packaging_impact": str(builtin_plot.get("packaging_impact") or "no_external_runtime_dependency_for_svg_survival_plots"),
+            "raw_blockers": list(builtin_plot.get("blockers", []) or []),
+            "raw_warnings": list(builtin_plot.get("warnings", []) or []),
+        }
+    )
+    matplotlib_plot = check_survival_plot_renderer_dependencies(renderer="matplotlib_png")
+    matplotlib = matplotlib_plot.get("packages", {}).get("matplotlib") if isinstance(matplotlib_plot.get("packages"), dict) else {}
+    rows.append(_dependency_row("python:matplotlib", "matplotlib", matplotlib if isinstance(matplotlib, dict) else {}, required=False, blocker_if_missing="matplotlib_missing_for_survival_plot_renderer"))
     for name in ("survival", "survminer"):
         rows.append(
             {
@@ -995,7 +1025,14 @@ def build_gate_preview_rows(
     ]
 
 
-def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dependency: dict[str, Any], survival_clinical_state: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def build_survival_clinical_rows(
+    *,
+    packages: list[dict[str, Any]],
+    survival_dependency: dict[str, Any],
+    survival_clinical_state: dict[str, Any] | None = None,
+    km_real_plot_gate: dict[str, Any] | None = None,
+    cox_real_plot_gate: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     package = next((item for item in packages if item.get("package_type") == "tcga_clinical_survival_preflight"), None)
     survival_clinical_state = survival_clinical_state or {}
     input_state = survival_clinical_state.get("input_resolver") if isinstance(survival_clinical_state.get("input_resolver"), dict) else {}
@@ -1009,6 +1046,8 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
     cox_multivariate_parameter_gate = survival_clinical_state.get("cox_multivariate_parameter_gate") if isinstance(survival_clinical_state.get("cox_multivariate_parameter_gate"), dict) else {}
     cox_multivariate_confirmation_gate = survival_clinical_state.get("cox_multivariate_confirmation_gate") if isinstance(survival_clinical_state.get("cox_multivariate_confirmation_gate"), dict) else {}
     risk_score_design = survival_clinical_state.get("risk_score_design") if isinstance(survival_clinical_state.get("risk_score_design"), dict) else {}
+    km_real_plot_gate = km_real_plot_gate or {}
+    cox_real_plot_gate = cox_real_plot_gate or {}
     blockers = _list(package.get("blockers")) if package else ["missing_survival_preflight_package"]
     warnings = _list(package.get("warnings")) if package else []
     dep_blockers = _list(survival_dependency.get("blockers"))
@@ -1071,12 +1110,12 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
         },
         {
             "row_id": "km_plot_artifact",
-            "label": "KM plot artifact/spec",
-            "status": "available_after_survival_km_logrank_result",
-            "asset_status": "spec-only no image dependency",
-            "backend_status": "not matplotlib/R/survminer",
-            "disabled_reason": "Requires formal_computed_result survival_km_logrank source; image_artifacts=[] in B13.",
-            "warnings": "No PNG/SVG/PDF generated in B13.",
+            "label": "KM real plot artifact",
+            "status": str(km_real_plot_gate.get("status") or "blocked"),
+            "asset_status": f"source={km_real_plot_gate.get('source_result_id') or 'missing'}; format={km_real_plot_gate.get('image_format') or 'svg'}",
+            "backend_status": str(km_real_plot_gate.get("renderer") or "builtin_svg"),
+            "disabled_reason": compact_list(_list(km_real_plot_gate.get("blockers"))),
+            "warnings": compact_list(_list(km_real_plot_gate.get("warnings")) or ["Real SVG artifact only; no survival report-ready."]),
         },
         {
             "row_id": "cox_hr",
@@ -1089,12 +1128,12 @@ def build_survival_clinical_rows(*, packages: list[dict[str, Any]], survival_dep
         },
         {
             "row_id": "cox_forest_plot",
-            "label": "Cox forest plot artifact/spec",
-            "status": "available_after_cox_univariate_result",
-            "asset_status": "spec-only no image dependency",
-            "backend_status": "not matplotlib/R/ggplot2",
-            "disabled_reason": "Requires formal_computed_result cox_univariate source; image_artifacts=[] in B14.",
-            "warnings": "No PNG/SVG/PDF generated in B14.",
+            "label": "Cox real forest plot artifact",
+            "status": str(cox_real_plot_gate.get("status") or "blocked"),
+            "asset_status": f"source={cox_real_plot_gate.get('source_result_id') or 'missing'}; format={cox_real_plot_gate.get('image_format') or 'svg'}",
+            "backend_status": str(cox_real_plot_gate.get("renderer") or "builtin_svg"),
+            "disabled_reason": compact_list(_list(cox_real_plot_gate.get("blockers"))),
+            "warnings": compact_list(_list(cox_real_plot_gate.get("warnings")) or ["Real SVG artifact only; no survival report-ready."]),
         },
         {
             "row_id": "cox_multivariate_design",
@@ -1217,6 +1256,15 @@ def _plot_status(entry: dict[str, Any], semantics: str) -> str:
     if semantics in {"testing_level", "exploratory", "imported_external_result"}:
         return "blocked: not a formal DEG plot source"
     return "blocked: missing result schema"
+
+
+def _latest_result_id(entries: list[dict[str, Any]], task_types: set[str]) -> str:
+    for entry in reversed(entries):
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("task_type") or "") in task_types and normalize_result_semantics(entry.get("result_semantics")) == "formal_computed_result":
+            return str(entry.get("result_id") or "")
+    return ""
 
 
 def _list(value: object) -> list[str]:

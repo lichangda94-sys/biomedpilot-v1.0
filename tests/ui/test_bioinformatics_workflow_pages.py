@@ -3097,7 +3097,8 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Clinical variable typing / missingness" in survival_text
     assert "Two-group KM/log-rank" in survival_text
     assert "Single-variable Cox" in survival_text
-    assert "Cox forest plot artifact/spec" in survival_text
+    assert "KM real plot artifact" in survival_text
+    assert "Cox real forest plot artifact" in survival_text
     assert "Multivariate Cox gated execution" in survival_text
     assert "Risk score / nomogram" in survival_text
     assert "disabled" in survival_text
