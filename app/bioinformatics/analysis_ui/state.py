@@ -10,7 +10,7 @@ from app.bioinformatics.acquisition_adapters.repository_merge import LEGACY_REPO
 from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_SELECTION_PATH
 from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
-from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate, build_multifactor_deg_preflight_manifest
+from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate, build_multifactor_deg_preflight_manifest, build_r_deg_runtime_gate_matrix
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
@@ -64,7 +64,9 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         deg_gates.get("deg_ready_package") if isinstance(deg_gates.get("deg_ready_package"), dict) else {},
         dependency_snapshot=deg_dependency,
     )
+    r_deg_adapter_gates = build_r_deg_runtime_gate_matrix(multi_factor_deg_gate)
     deg_gates["multi_factor_deg_gate"] = multi_factor_deg_gate
+    deg_gates["r_deg_adapter_gates"] = r_deg_adapter_gates
     deg_gates["gate_rows"].append(
         _formal_deg_gate_row(
             "Multi-factor DEG preflight",
@@ -74,6 +76,17 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             basis=f"{multi_factor_deg_gate.get('method_family') or 'missing'} / {multi_factor_deg_gate.get('value_type_policy') or 'missing'}",
         )
     )
+    for method, gate in r_deg_adapter_gates.get("gates", {}).items():
+        if isinstance(gate, dict):
+            deg_gates["gate_rows"].append(
+                _formal_deg_gate_row(
+                    f"R adapter contract: {method}",
+                    gate.get("status"),
+                    gate.get("blockers", []),
+                    gate.get("warnings", []),
+                    basis="B19 contract/gate only; no R invocation from Bioinformatics UI.",
+                )
+            )
     ora_gates = build_ora_gate_state(project_root=root)
     ora_plot_gate = build_ora_plot_gate(root)
     gsea_plot_gate = build_gsea_plot_gate(root)
@@ -127,12 +140,14 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         survival_clinical_rows=survival_rows,
         dependency_rows=dependency_rows,
         multi_factor_deg_gate=multi_factor_deg_gate,
+        r_deg_adapter_gates=r_deg_adapter_gates,
     )
     blockers = _dedupe(
         [*resolver.get("blockers", [])]
         + [item for row in package_rows for item in row["raw_blockers"]]
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
         + [item for item in multi_factor_deg_gate.get("blockers", []) or []]
+        + [item for item in r_deg_adapter_gates.get("blockers", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
     )
@@ -159,6 +174,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "dependency_rows": dependency_rows,
         "formal_deg_gate_rows": deg_gates["gate_rows"],
         "multi_factor_deg_gate": multi_factor_deg_gate,
+        "r_deg_adapter_gates": r_deg_adapter_gates,
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
         "legacy_asset_pipeline": legacy_pipeline,
@@ -176,6 +192,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "deg_dependency_snapshot": deg_dependency,
             "formal_deg_gate_state": deg_gates,
             "multi_factor_deg_gate": multi_factor_deg_gate,
+            "r_deg_adapter_gates": r_deg_adapter_gates,
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,
             "ora_report_ready_gate": ora_report_gate,

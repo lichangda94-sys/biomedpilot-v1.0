@@ -34,6 +34,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["analysis_capability_map"]["schema_version"] == "biomedpilot.deep_analysis_capability_map.v1"
     assert state["multi_factor_deg_gate"]["result_semantics"] == "preflight_only"
     assert state["multi_factor_deg_gate"]["formal_execution_enabled"] is False
+    assert state["r_deg_adapter_gates"]["status"] == "blocked"
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
@@ -50,6 +51,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "B9.2 controlled activation" in formal_gate_text
     assert "Multi-factor DEG preflight" in formal_gate_text
     assert "multi_factor_design_config_missing" in formal_gate_text
+    assert "R adapter contract: limma" in formal_gate_text
+    assert "external_engine_capability_registry_missing" in formal_gate_text
     ora_gate_text = "\n".join(str(row) for row in state["ora_gate_rows"])
     assert "ORA source DEG result" in ora_gate_text
     assert "B10.2 controlled ORA execution" in ora_gate_text
