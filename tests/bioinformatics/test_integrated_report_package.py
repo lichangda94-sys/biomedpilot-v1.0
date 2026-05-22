@@ -3,7 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.bioinformatics.reports import integrated
-from app.bioinformatics.reports.integrated import build_full_integrated_report_package_plan, create_full_integrated_report_package
+from app.bioinformatics.reports.integrated import (
+    build_full_integrated_report_package_plan,
+    create_full_integrated_report_package,
+    evaluate_full_integrated_report_renderer_gate,
+)
 from app.bioinformatics.results.registry import save_registry
 
 
@@ -27,6 +31,8 @@ def test_integrated_report_package_plan_lists_stable_layout(tmp_path: Path) -> N
     assert "sections" in plan["required_directories"]
     assert "integrated_report.md" in plan["required_files"]
     assert "manifests/full_integrated_gate_snapshot.json" in plan["required_files"]
+    assert plan["renderer_status"] == "passed"
+    assert plan["renderer_id"] == "builtin_markdown"
     assert "preflight_only" in plan["artifact_policy"]["forbidden_sources"]
 
 
@@ -37,9 +43,23 @@ def test_integrated_report_package_blocks_non_markdown_format_even_when_gate_is_
     package = create_full_integrated_report_package(tmp_path, export_format="pdf")
 
     assert package["status"] == "blocked"
-    assert "full_integrated_export_format_not_enabled:pdf" in package["blockers"]
+    assert "full_integrated_pdf_renderer_not_enabled_in_b23_4" in package["blockers"]
+    assert package["renderer_gate"]["export_format"] == "pdf"
     assert package["package_plan"]["can_create_package"] is False
     assert not (tmp_path / "report_package" / "integrated").exists()
+
+
+def test_integrated_report_package_plan_surfaces_renderer_gate_for_docx(tmp_path: Path) -> None:
+    gate = {"status": "eligible_for_full_integrated_report", "blockers": []}
+    renderer = evaluate_full_integrated_report_renderer_gate("docx")
+
+    plan = build_full_integrated_report_package_plan(tmp_path, gate=gate, export_format="docx", renderer_gate=renderer)
+
+    assert plan["export_format"] == "docx"
+    assert plan["renderer_id"] == "pandoc_docx"
+    assert plan["renderer_status"] == "blocked"
+    assert "full_integrated_docx_renderer_not_enabled_in_b23_4" in plan["disabled_reasons"]
+    assert plan["can_create_package"] is False
 
 
 def test_integrated_report_package_skeleton_writes_timestamped_auditable_layout_when_gate_passes(tmp_path: Path, monkeypatch) -> None:

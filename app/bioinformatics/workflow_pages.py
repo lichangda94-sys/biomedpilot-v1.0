@@ -7180,12 +7180,14 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             return
         blockers = [str(item) for item in gate.get("blockers", []) or []]
         warnings = [str(item) for item in gate.get("warnings", []) or []]
+        disabled_reasons = [str(item) for item in plan.get("disabled_reasons", []) or []]
         can_create = bool(plan.get("can_create_package"))
         self._full_integrated_button.setEnabled(gate.get("status") == "eligible_for_full_integrated_report" and can_create)
         if self._full_integrated_button.isEnabled():
-            self._full_integrated_status.setText("Full integrated report gate passed；Markdown package can be created；no clinical diagnosis/prognosis/treatment advice.")
+            renderer_id = str(plan.get("renderer_id") or "builtin_markdown")
+            self._full_integrated_status.setText(f"Full integrated report gate passed；renderer={renderer_id}；package can be created；no clinical diagnosis/prognosis/treatment advice.")
         else:
-            reason = "；".join(blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
+            reason = "；".join(disabled_reasons or blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._full_integrated_status.setText(f"Full integrated report disabled：{reason}")
@@ -7195,6 +7197,10 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["section_scope", plan.get("section_scope", gate.get("section_scope", "full_integrated_report"))],
                 ["export_format", plan.get("export_format", self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown")],
                 ["can_create_package", plan.get("can_create_package", False)],
+                ["renderer_status", plan.get("renderer_status", "")],
+                ["renderer_id", plan.get("renderer_id", "")],
+                ["renderer_dependencies", ", ".join(str(item) for item in plan.get("renderer_dependencies", []) or [])],
+                ["renderer_disabled_reason", plan.get("renderer_disabled_reason", "")],
                 ["package_root_policy", plan.get("package_root_policy", "")],
                 ["required_directories", ", ".join(str(item) for item in plan.get("required_directories", []) or [])],
                 ["required_files", ", ".join(str(item) for item in plan.get("required_files", []) or [])],

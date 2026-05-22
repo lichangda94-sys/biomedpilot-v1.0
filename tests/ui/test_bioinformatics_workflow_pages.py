@@ -14,7 +14,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PySide6.QtWidgets import QApplication, QCheckBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
+    from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QHeaderView, QLabel, QPlainTextEdit, QPushButton, QFrame, QScrollArea, QTableWidget, QTextEdit
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
@@ -4602,6 +4602,18 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     full_plan_text = _table_text(full_plan)
     assert "report_package/integrated" in full_plan_text
     assert "integrated_report.md" in full_plan_text
+    assert "renderer_status" in full_plan_text
+    assert "builtin_markdown" in full_plan_text
+    full_format = widget.findChild(QComboBox, "fullIntegratedReportFormat")
+    assert full_format is not None
+    full_format.setCurrentText("pdf")
+    widget.refresh_results()
+    full_status_after_pdf = widget.findChild(QLabel, "fullIntegratedReportStatus")
+    assert full_status_after_pdf is not None
+    assert "full_integrated_pdf_renderer_not_enabled_in_b23_4" in full_status_after_pdf.text()
+    full_plan_pdf_text = _table_text(full_plan)
+    assert "pandoc_pdf" in full_plan_pdf_text
+    assert "renderer_disabled_reason" in full_plan_pdf_text
     full_sections = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
     assert full_sections is not None
     full_sections_text = _table_text(full_sections)

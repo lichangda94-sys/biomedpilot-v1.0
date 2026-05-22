@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from .ora import evaluate_ora_report_ready_gate
 
 FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION = "biomedpilot.full_integrated_report_gate.v1"
 FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_package.v1"
+FULL_INTEGRATED_REPORT_RENDERER_GATE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_renderer_gate.v1"
 REQUIRED_SECTION_IDS = ("formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox")
 PACKAGE_DIRECTORIES = ("sections", "tables", "plots", "manifests", "logs", "provenance")
 PACKAGE_REQUIRED_FILES = (
@@ -36,6 +38,7 @@ SECTION_TASK_TYPES = {
     "survival_km_logrank": ("survival_km_logrank",),
     "cox": ("cox_univariate", "cox_multivariate"),
 }
+SUPPORTED_EXPORT_FORMATS = ("markdown", "pdf", "docx")
 
 
 def create_full_integrated_report_package(
@@ -47,9 +50,10 @@ def create_full_integrated_report_package(
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     gate = evaluate_full_integrated_report_gate(root, section_result_ids=section_result_ids, include_sections=include_sections)
-    package_plan = build_full_integrated_report_package_plan(root, gate=gate, export_format=export_format)
-    format_blockers = [] if _canonical_export_format(export_format) == "markdown" else [f"full_integrated_export_format_not_enabled:{export_format}"]
-    if gate.get("status") != "eligible_for_full_integrated_report" or format_blockers:
+    renderer_gate = evaluate_full_integrated_report_renderer_gate(export_format)
+    package_plan = build_full_integrated_report_package_plan(root, gate=gate, export_format=export_format, renderer_gate=renderer_gate)
+    renderer_blockers = list(renderer_gate.get("blockers", []) or [])
+    if gate.get("status") != "eligible_for_full_integrated_report" or renderer_gate.get("status") != "passed":
         return {
             "schema_version": FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION,
             "status": "blocked",
@@ -58,7 +62,8 @@ def create_full_integrated_report_package(
             "overwrite_policy": "create_new_timestamped_package_directory_when_gate_passes",
             "gate": gate,
             "package_plan": package_plan,
-            "blockers": list(dict.fromkeys([*list(gate.get("blockers", []) or []), *format_blockers])),
+            "renderer_gate": renderer_gate,
+            "blockers": list(dict.fromkeys([*list(gate.get("blockers", []) or []), *renderer_blockers])),
             "warnings": list(gate.get("warnings", []) or []),
         }
     package_dir = _next_package_dir(root)
@@ -86,6 +91,7 @@ def create_full_integrated_report_package(
         "overwrite_policy": "create_new_timestamped_package_directory",
         "export_format": export_format,
         "gate": gate,
+        "renderer_gate": renderer_gate,
         "package_plan": package_plan,
         "package_inventory": {},
     }
@@ -97,16 +103,29 @@ def create_full_integrated_report_package(
     return manifest
 
 
-def build_full_integrated_report_package_plan(project_root: str | Path, *, gate: dict[str, Any] | None = None, export_format: str = "markdown") -> dict[str, Any]:
+def build_full_integrated_report_package_plan(
+    project_root: str | Path,
+    *,
+    gate: dict[str, Any] | None = None,
+    export_format: str = "markdown",
+    renderer_gate: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     gate = gate or evaluate_full_integrated_report_gate(root)
+    renderer_gate = renderer_gate or evaluate_full_integrated_report_renderer_gate(export_format)
+    disabled_reasons = _package_plan_disabled_reasons(gate, renderer_gate)
     return {
         "schema_version": "biomedpilot.full_integrated_report_package_plan.v1",
         "section_scope": "full_integrated_report",
-        "export_format": export_format,
+        "export_format": renderer_gate.get("export_format", _canonical_export_format(export_format)),
         "package_root_policy": "report_package/integrated/<timestamp>_<project_name>",
         "required_directories": list(PACKAGE_DIRECTORIES),
         "required_files": list(PACKAGE_REQUIRED_FILES),
+        "renderer_gate": renderer_gate,
+        "renderer_status": renderer_gate.get("status", "blocked"),
+        "renderer_id": renderer_gate.get("renderer_id", ""),
+        "renderer_disabled_reason": renderer_gate.get("disabled_reason", ""),
+        "renderer_dependencies": list(renderer_gate.get("required_dependencies", []) or []),
         "artifact_policy": {
             "tables": "copy only registered source result output_artifacts",
             "plots": "copy only registered plot artifacts and image_artifacts",
@@ -114,8 +133,71 @@ def build_full_integrated_report_package_plan(project_root: str | Path, *, gate:
             "manifests": "write gate, result index, section, dependency, warnings and inventory snapshots",
             "forbidden_sources": ["preflight_only", "testing_level", "exploratory", "imported_external_result", "legacy_only"],
         },
-        "can_create_package": gate.get("status") == "eligible_for_full_integrated_report" and _canonical_export_format(export_format) == "markdown",
-        "blocked_reason": _package_plan_blocked_reason(gate, export_format),
+        "can_create_package": gate.get("status") == "eligible_for_full_integrated_report" and renderer_gate.get("status") == "passed",
+        "disabled_reasons": disabled_reasons,
+        "blocked_reason": "; ".join(disabled_reasons),
+    }
+
+
+def evaluate_full_integrated_report_renderer_gate(export_format: str = "markdown") -> dict[str, Any]:
+    canonical = _canonical_export_format(export_format)
+    blockers: list[str] = []
+    warnings: list[str] = []
+    required_dependencies: list[str] = []
+    detected_dependencies: dict[str, dict[str, Any]] = {}
+    renderer_id = ""
+    implementation_enabled = False
+    if canonical not in SUPPORTED_EXPORT_FORMATS:
+        blockers.append(f"full_integrated_export_format_unsupported:{canonical or 'missing'}")
+    elif canonical == "markdown":
+        renderer_id = "builtin_markdown"
+        implementation_enabled = True
+    elif canonical == "docx":
+        renderer_id = "pandoc_docx"
+        required_dependencies = ["pandoc"]
+        detected_dependencies = {name: _detect_renderer_dependency(name) for name in required_dependencies}
+        if not detected_dependencies["pandoc"]["available"]:
+            blockers.append("renderer_dependency_missing:pandoc")
+        blockers.append("full_integrated_docx_renderer_not_enabled_in_b23_4")
+    elif canonical == "pdf":
+        renderer_id = "pandoc_pdf"
+        pandoc = _detect_renderer_dependency("pandoc")
+        latex = _detect_renderer_dependency("xelatex")
+        wkhtmltopdf = _detect_renderer_dependency("wkhtmltopdf")
+        required_dependencies = ["pandoc", "xelatex_or_wkhtmltopdf"]
+        detected_dependencies = {"pandoc": pandoc, "xelatex": latex, "wkhtmltopdf": wkhtmltopdf}
+        if not pandoc["available"]:
+            blockers.append("renderer_dependency_missing:pandoc")
+        if not latex["available"] and not wkhtmltopdf["available"]:
+            blockers.append("renderer_dependency_missing:xelatex_or_wkhtmltopdf")
+        blockers.append("full_integrated_pdf_renderer_not_enabled_in_b23_4")
+    dependency_checks_passed = all(item.get("available") for item in detected_dependencies.values()) if canonical == "docx" else (
+        bool(detected_dependencies.get("pandoc", {}).get("available"))
+        and (bool(detected_dependencies.get("xelatex", {}).get("available")) or bool(detected_dependencies.get("wkhtmltopdf", {}).get("available")))
+        if canonical == "pdf"
+        else canonical == "markdown"
+    )
+    status = "passed" if not blockers and implementation_enabled else "blocked"
+    disabled_reason = "; ".join(blockers)
+    return {
+        "schema_version": FULL_INTEGRATED_REPORT_RENDERER_GATE_SCHEMA_VERSION,
+        "created_at": _now(),
+        "status": status,
+        "export_format": canonical,
+        "requested_format": export_format,
+        "renderer_id": renderer_id,
+        "renderer_scope": "full_integrated_report_export_format",
+        "required_dependencies": required_dependencies,
+        "detected_dependencies": detected_dependencies,
+        "checks": {
+            "format_supported": canonical in SUPPORTED_EXPORT_FORMATS,
+            "dependencies_detected": dependency_checks_passed,
+            "implementation_enabled": implementation_enabled,
+            "detect_first_no_install_action": True,
+        },
+        "disabled_reason": disabled_reason,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 
@@ -514,11 +596,42 @@ def _canonical_export_format(value: str) -> str:
     return "markdown" if text in {"markdown", "md"} else text
 
 
-def _package_plan_blocked_reason(gate: dict[str, Any], export_format: str) -> str:
-    blockers = list(gate.get("blockers", []) or []) if gate.get("status") != "eligible_for_full_integrated_report" else []
-    if _canonical_export_format(export_format) != "markdown":
-        blockers.append(f"full_integrated_export_format_not_enabled:{export_format}")
-    return "; ".join(str(item) for item in blockers)
+def _package_plan_disabled_reasons(gate: dict[str, Any], renderer_gate: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    if gate.get("status") != "eligible_for_full_integrated_report":
+        reasons.extend(str(item) for item in gate.get("blockers", []) or [])
+    if renderer_gate.get("status") != "passed":
+        reasons.extend(str(item) for item in renderer_gate.get("blockers", []) or [])
+    return list(dict.fromkeys(reasons))
+
+
+def _detect_renderer_dependency(command: str) -> dict[str, Any]:
+    executable = shutil.which(command)
+    payload = {
+        "command": command,
+        "available": bool(executable),
+        "path": executable or "",
+        "version": "",
+        "missing_reason": "" if executable else f"{command}_not_found_on_path",
+    }
+    if executable:
+        payload["version"] = _renderer_dependency_version(executable)
+    return payload
+
+
+def _renderer_dependency_version(executable: str) -> str:
+    try:
+        completed = subprocess.run(
+            [executable, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except Exception:
+        return "version_unavailable"
+    text = (completed.stdout or completed.stderr or "").splitlines()
+    return text[0].strip() if text else "version_unavailable"
 
 
 def _write_json(path: Path, payload: Any) -> None:
