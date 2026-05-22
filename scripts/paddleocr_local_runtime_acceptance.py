@@ -75,10 +75,29 @@ def main(argv: list[str] | None = None) -> int:
     workdir = Path(args.workdir).expanduser().resolve() if args.workdir else runtime_root / "smoke" / _stamp()
     workdir.mkdir(parents=True, exist_ok=True)
     image_path, pdf_path = _prepare_smoke_inputs(runtime_root, workdir, runtime_python)
+    paddleocr_source_root = Path(args.paddleocr_source_root).expanduser().resolve() if args.paddleocr_source_root else None
+    if paddleocr_source_root is not None and not (paddleocr_source_root / "paddleocr" / "__init__.py").exists():
+        raise SystemExit(f"PaddleOCR source root is invalid: {paddleocr_source_root}")
 
     source_worker_results = [
-        _run_worker_smoke(runtime_python, REPO_ROOT, image_path, mode="image", record_id="acceptance-source-image", workdir=workdir),
-        _run_worker_smoke(runtime_python, REPO_ROOT, pdf_path, mode="pdf", record_id="acceptance-source-pdf", workdir=workdir),
+        _run_worker_smoke(
+            runtime_python,
+            REPO_ROOT,
+            image_path,
+            mode="image",
+            record_id="acceptance-source-image",
+            workdir=workdir,
+            paddleocr_source_root=paddleocr_source_root,
+        ),
+        _run_worker_smoke(
+            runtime_python,
+            REPO_ROOT,
+            pdf_path,
+            mode="pdf",
+            record_id="acceptance-source-pdf",
+            workdir=workdir,
+            paddleocr_source_root=paddleocr_source_root,
+        ),
     ]
 
     packaged_worker_results: list[WorkerSmokeResult] = []
@@ -94,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                 mode="image",
                 record_id="acceptance-packaged-image",
                 workdir=workdir,
+                paddleocr_source_root=paddleocr_source_root,
             ),
             _run_worker_smoke(
                 runtime_python,
@@ -102,10 +122,11 @@ def main(argv: list[str] | None = None) -> int:
                 mode="pdf",
                 record_id="acceptance-packaged-pdf",
                 workdir=workdir,
+                paddleocr_source_root=paddleocr_source_root,
             ),
         ]
 
-    meta_result = _run_meta_fulltext_ocr_smoke(pdf_path, runtime_root, workdir)
+    meta_result = _run_meta_fulltext_ocr_smoke(pdf_path, runtime_root, workdir, paddleocr_source_root=paddleocr_source_root)
     payload = {
         "schema_version": ACCEPTANCE_SCHEMA_VERSION,
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -119,6 +140,7 @@ def main(argv: list[str] | None = None) -> int:
             "status": runtime_status.status,
             "available": runtime_status.available,
         },
+        "paddleocr_source_root": str(paddleocr_source_root) if paddleocr_source_root is not None else "",
         "source_worker_smoke": [item.to_dict() for item in source_worker_results],
         "packaged_worker_smoke": [item.to_dict() for item in packaged_worker_results],
         "packaged_worker_boundary": package_boundary,
@@ -142,6 +164,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run BioMedPilot PaddleOCR local runtime acceptance checks.")
     parser.add_argument("--runtime-root", default=str(default_paddleocr_runtime_root()), help="Configured PaddleOCR runtime root.")
     parser.add_argument("--packaged-resource-root", help="Optional .app Contents/Resources/app root to validate packaged worker calls.")
+    parser.add_argument("--paddleocr-source-root", help="Optional local PaddleOCR source checkout used by worker subprocesses.")
     parser.add_argument("--workdir", help="Optional output directory for smoke artifacts.")
     return parser.parse_args(argv)
 
@@ -194,12 +217,15 @@ def _run_worker_smoke(
     mode: str,
     record_id: str,
     workdir: Path,
+    paddleocr_source_root: Path | None = None,
 ) -> WorkerSmokeResult:
     stdout_path = workdir / f"{record_id}.stdout.json"
     stderr_path = workdir / f"{record_id}.stderr.log"
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{module_root}{os.pathsep}{env['PYTHONPATH']}" if env.get("PYTHONPATH") else str(module_root)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    if paddleocr_source_root is not None:
+        env["BIOMEDPILOT_PADDLEOCR_SOURCE_ROOT"] = str(paddleocr_source_root)
     completed = subprocess.run(
         [
             str(runtime_python),
@@ -241,21 +267,30 @@ def _run_worker_smoke(
     )
 
 
-def _run_meta_fulltext_ocr_smoke(pdf_path: Path, runtime_root: Path, workdir: Path) -> dict[str, Any]:
+def _run_meta_fulltext_ocr_smoke(pdf_path: Path, runtime_root: Path, workdir: Path, *, paddleocr_source_root: Path | None = None) -> dict[str, Any]:
+    previous_source_root = os.environ.get("BIOMEDPILOT_PADDLEOCR_SOURCE_ROOT")
+    if paddleocr_source_root is not None:
+        os.environ["BIOMEDPILOT_PADDLEOCR_SOURCE_ROOT"] = str(paddleocr_source_root)
     project_dir = workdir / "meta_project"
-    management = FullTextManagementService()
-    management.attach_pdf(
-        project_dir,
-        record_id="paddleocr-acceptance",
-        source_file_path=str(pdf_path),
-        actor="acceptance",
-        notes="Local PaddleOCR acceptance smoke; user-provided local file only.",
-    )
-    service = FullTextParsingService(
-        fulltext_management=management,
-        ocr_runtime_service=MetaOcrRuntimeService(runtime_root=runtime_root),
-    )
-    result = service.parse_record(project_dir, record_id="paddleocr-acceptance", use_ocr=True)
+    try:
+        management = FullTextManagementService()
+        management.attach_pdf(
+            project_dir,
+            record_id="paddleocr-acceptance",
+            source_file_path=str(pdf_path),
+            actor="acceptance",
+            notes="Local PaddleOCR acceptance smoke; user-provided local file only.",
+        )
+        service = FullTextParsingService(
+            fulltext_management=management,
+            ocr_runtime_service=MetaOcrRuntimeService(runtime_root=runtime_root),
+        )
+        result = service.parse_record(project_dir, record_id="paddleocr-acceptance", use_ocr=True)
+    finally:
+        if previous_source_root is None:
+            os.environ.pop("BIOMEDPILOT_PADDLEOCR_SOURCE_ROOT", None)
+        else:
+            os.environ["BIOMEDPILOT_PADDLEOCR_SOURCE_ROOT"] = previous_source_root
     output_payload = json.loads(Path(result.output_path).read_text(encoding="utf-8"))
     extracted_text = Path(result.extracted_text_path).read_text(encoding="utf-8") if Path(result.extracted_text_path).exists() else ""
     audit = MetaAuditLogService().list_events(project_dir)

@@ -35,6 +35,7 @@ def test_package_app_builds_local_launcher_bundle(tmp_path) -> None:
     assert os.access(result.launcher_path, os.X_OK)
     assert (result.resource_root / "app" / "main.py").exists()
     assert (result.resource_root / "biomedpilot_ocr_worker" / "__main__.py").exists()
+    assert (result.resource_root / "biomedpilot_ocr_worker" / "paddleocr_engine.py").exists()
     assert not (result.resource_root / "paddleocr").exists()
     assert not (result.resource_root / "paddlepaddle").exists()
     assert not (result.resource_root / "runtime_manifest.json").exists()
