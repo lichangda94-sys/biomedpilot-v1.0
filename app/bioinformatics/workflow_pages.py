@@ -39,6 +39,8 @@ from PySide6.QtWidgets import (
 )
 
 from app.bioinformatics.analysis_task_runs import create_deg_task_run, list_analysis_task_runs, task_run_status_label
+from app.bioinformatics.analysis_ui.labels import label_status
+from app.bioinformatics.analysis_ui.state import build_analysis_center_state
 from app.bioinformatics.project_analysis_tasks import create_analysis_task, load_analysis_task_center, load_task_records
 from app.bioinformatics.deg_executor_preflight import run_deg_executor_preflight
 from app.bioinformatics.deg_task_plan import save_deg_task_plan
@@ -4115,6 +4117,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     def refresh_task_center(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
+            self._render_gate_preview(build_analysis_center_state(None))
             return None
         center = load_analysis_task_center(self._project_root)
         self._render(center)
@@ -4301,9 +4304,19 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         actions.addWidget(_button("生成 DEG 分析任务记录", "primaryButton", self.create_deg_task_run_record))
         actions.addWidget(_button("生成并校验 DEG 输入", "primaryButton", self.generate_deg_executor_preflight))
         actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
-        actions.addWidget(_button("运行 GEO 差异分析", "primaryButton", self.run_geo_differential_expression_task))
+        self._geo_deg_button = _button("运行 GEO 差异分析 - 开发诊断禁用", "secondaryButton", self.run_geo_differential_expression_task)
+        self._geo_deg_button.setObjectName("bioinformaticsFormalDegDisabledButton")
+        self._geo_deg_button.setProperty("actionId", "developer_geo_deg_runner")
+        self._geo_deg_button.setProperty("formalActionEnabled", False)
+        self._geo_deg_button.setProperty("gateState", "developer_diagnostics_only")
+        self._geo_deg_button.setToolTip("UI-C2b 不在普通工作流启用 GEO 差异分析 runner；如需验证旧 runner，应走单独开发诊断。")
+        self._geo_deg_button.setEnabled(False)
+        actions.addWidget(self._geo_deg_button)
         actions.addStretch(1)
         root.addLayout(actions)
+        self._gate_actions = _table(["action_id", "state", "enabled", "button_behavior", "disabled_reason", "next_action"])
+        self._gate_actions.setObjectName("bioinformaticsActionGateMatrix")
+        root.addWidget(self._gate_actions)
         self._capability_summary = _read_only_report_view(150)
         self._capability_summary.setObjectName("analysisCapabilityGroupedSummary")
         root.addWidget(self._capability_summary)
@@ -4325,6 +4338,7 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self.group_design_requested.emit(self._project_root)
 
     def _render(self, center: dict[str, object]) -> None:
+        self._render_gate_preview(build_analysis_center_state(self._project_root))
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
         self._status_label.setText(f"分析任务中心：{len(tasks)} 个任务模板。不可运行任务将显示缺失输入。")
         self._capability_summary.setPlainText(_analysis_task_group_summary(center))
@@ -4347,6 +4361,31 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         runs = [item for item in center.get("task_runs", []) or [] if isinstance(item, dict)]
         _fill_table(self._task_runs, [_analysis_task_run_row(item) for item in runs])
         self._records.setPlainText(_json({"已创建任务": load_task_records(self._project_root) if self._project_root else [], "任务运行记录": runs}))
+
+    def _render_gate_preview(self, state: dict[str, object]) -> None:
+        rows = [item for item in state.get("action_rows", []) or [] if isinstance(item, dict)]
+        _fill_table(
+            self._gate_actions,
+            [
+                [
+                    item.get("action_id", ""),
+                    label_status(str(item.get("state") or "")),
+                    "enabled" if item.get("enabled") else "disabled",
+                    item.get("button_behavior", ""),
+                    item.get("disabled_reason", ""),
+                    item.get("next_action", ""),
+                ]
+                for item in rows
+            ],
+        )
+        for row_index, item in enumerate(rows):
+            if bool(item.get("formal_action")):
+                for column in range(self._gate_actions.columnCount()):
+                    cell = self._gate_actions.item(row_index, column)
+                    if cell is not None:
+                        cell.setData(Qt.UserRole, {"formalActionEnabled": False, "actionId": item.get("action_id")})
+        self._gate_actions.setProperty("formalActionEnabled", False)
+        self._gate_actions.setProperty("schemaVersion", state.get("schema_version", ""))
 
 
 class BioinformaticsResultsBrowserWidget(QWidget):
@@ -4371,6 +4410,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
     def refresh_results(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
+            self._render_result_gate_preview(build_analysis_center_state(None))
             return None
         payload = load_result_index(self._project_root)
         self._render(payload)
@@ -4399,9 +4439,18 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         actions.addWidget(_button("刷新结果", "secondaryButton", self.refresh_results))
         actions.addWidget(_button("打开结果文件夹", "secondaryButton", lambda: _open_path(self._project_root / "results" if self._project_root else None)))
         actions.addWidget(_button("打开参数 JSON", "secondaryButton", lambda: _open_path(self._project_root / "manifests/result_manager.json" if self._project_root else None)))
-        actions.addWidget(_button("加入报告", "secondaryButton", lambda: self._status_label.setText("加入报告：占位功能。")))
+        self._add_to_report_button = _button("加入报告 - disabled", "secondaryButton", lambda: self._status_label.setText("加入报告：UI-C2b 禁用。"))
+        self._add_to_report_button.setObjectName("bioinformaticsAddToReportDisabledButton")
+        self._add_to_report_button.setProperty("formalActionEnabled", False)
+        self._add_to_report_button.setProperty("reportStatusKey", "report.status.draft")
+        self._add_to_report_button.setToolTip("UI-C2b 只显示 result/report gate preview，不生成或追加正式报告内容。")
+        self._add_to_report_button.setEnabled(False)
+        actions.addWidget(self._add_to_report_button)
         actions.addStretch(1)
         root.addLayout(actions)
+        self._result_gate_preview = _read_only_report_view(96)
+        self._result_gate_preview.setObjectName("bioinformaticsResultGatePreview")
+        root.addWidget(self._result_gate_preview)
         comparison_row = QHBoxLayout()
         comparison_row.addWidget(_muted("已有 DEG 比较："))
         self._imported_deg_selector = QComboBox()
@@ -4423,6 +4472,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         root.addWidget(_button("继续：报告查看", "primaryButton", self.continue_to_report), alignment=Qt.AlignLeft)
 
     def _render(self, payload: dict[str, object]) -> None:
+        self._render_result_gate_preview(build_analysis_center_state(self._project_root))
         entries = [item for item in payload.get("entries", []) or [] if isinstance(item, dict)]
         warnings = [str(item) for item in payload.get("warnings", []) or []]
         if not entries:
@@ -4446,6 +4496,25 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         )
         self._details.setPlainText(_json({"结果详情": entries[:1], "warnings": warnings}))
         self._render_imported_deg_selector()
+
+    def _render_result_gate_preview(self, state: dict[str, object]) -> None:
+        result_gate = state.get("result_gate", {}) if isinstance(state.get("result_gate"), dict) else {}
+        report_gate = state.get("report_gate", {}) if isinstance(state.get("report_gate"), dict) else {}
+        export_gate = state.get("export_gate", {}) if isinstance(state.get("export_gate"), dict) else {}
+        self._result_gate_preview.setPlainText(
+            _json(
+                {
+                    "result_gate": result_gate,
+                    "report_gate": report_gate,
+                    "export_gate": export_gate,
+                    "boundary": "read_only_gate_preview_no_fake_result_no_fake_plot_no_report_ready_package",
+                }
+            )
+        )
+        self._result_gate_preview.setProperty("resultSemanticKey", result_gate.get("result_semantic_key", "result.semantic.testing_summary_only"))
+        self._result_gate_preview.setProperty("reportStatusKey", report_gate.get("report_status_key", "report.status.draft"))
+        self._result_gate_preview.setProperty("exportGate", export_gate.get("export_gate", "disabled_missing_report_ready"))
+        self._result_gate_preview.setProperty("formalActionEnabled", False)
 
     def _render_imported_deg_selector(self) -> None:
         self._imported_deg_selector.blockSignals(True)
@@ -4526,6 +4595,7 @@ class BioinformaticsReportViewerWidget(QWidget):
     def refresh_report(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
+            self._render_export_gate_preview(build_analysis_center_state(None))
             return None
         payload = load_project_report(self._project_root)
         self._render(payload)
@@ -4538,15 +4608,35 @@ class BioinformaticsReportViewerWidget(QWidget):
         root = _scroll_root(self)
         root.addWidget(_header("项目报告", "Developer Preview / 本地测试版", back_text="返回结果浏览", back_signal=self.back_requested))
         actions = QHBoxLayout()
-        actions.addWidget(_button("生成 / 刷新项目报告", "primaryButton", self.generate_report))
+        self._generate_report_button = _button("生成 / 刷新项目报告 - disabled", "secondaryButton", self.generate_report)
+        self._generate_report_button.setObjectName("bioinformaticsGenerateReportDisabledButton")
+        self._generate_report_button.setProperty("formalActionEnabled", False)
+        self._generate_report_button.setProperty("reportReadyPackageAllowed", False)
+        self._generate_report_button.setProperty("gateState", "disabled_missing_report_ready")
+        self._generate_report_button.setToolTip("UI-C2b 只显示报告草稿边界，不生成正式报告或 report-ready package。")
+        self._generate_report_button.setEnabled(False)
+        actions.addWidget(self._generate_report_button)
         actions.addWidget(_button("打开报告文件", "secondaryButton", lambda: _open_path(self._project_root / "reports/project_analysis_report.md" if self._project_root else None)))
         actions.addWidget(_button("打开报告文件夹", "secondaryButton", lambda: _open_path(self._project_root / "reports" if self._project_root else None)))
-        actions.addWidget(_button("导出 DOCX", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：testing placeholder，未正式支持。")))
-        actions.addWidget(_button("导出 HTML", "secondaryButton", lambda: self._status_label.setText("HTML 导出：testing placeholder。")))
+        self._docx_export_button = _button("导出 DOCX - disabled", "secondaryButton", lambda: self._status_label.setText("DOCX 导出：UI-C2b 禁用。"))
+        self._html_export_button = _button("导出 HTML - disabled", "secondaryButton", lambda: self._status_label.setText("HTML 导出：UI-C2b 禁用。"))
+        for button, fmt in ((self._docx_export_button, "export.format.docx"), (self._html_export_button, "export.format.html")):
+            button.setObjectName("bioinformaticsReportExportDisabledButton")
+            button.setProperty("exportFormatKey", fmt)
+            button.setProperty("exportGate", "disabled_missing_report_ready")
+            button.setProperty("reportStatusKey", "report.status.draft")
+            button.setProperty("formalActionEnabled", False)
+            button.setProperty("reportReadyPackageAllowed", False)
+            button.setToolTip("Export requires report-ready gate and file picker; disabled in UI-C2b.")
+            button.setEnabled(False)
+            actions.addWidget(button)
         actions.addStretch(1)
         root.addLayout(actions)
-        self._status_label = _status_label("没有报告时请点击生成 / 刷新项目报告。PDF 当前未正式支持。")
+        self._status_label = _status_label("报告草稿与导出 gate preview；正式报告生成和导出在 UI-C2b 禁用。")
         root.addWidget(self._status_label)
+        self._export_gate_preview = _read_only_report_view(110)
+        self._export_gate_preview.setObjectName("bioinformaticsReportExportGatePreview")
+        root.addWidget(self._export_gate_preview)
         root.addWidget(_muted("可纳入报告的内容"))
         self._reportable_content = _read_only_report_view(100)
         self._reportable_content.setObjectName("reportableContentSummary")
@@ -4557,6 +4647,7 @@ class BioinformaticsReportViewerWidget(QWidget):
         root.addWidget(self._manifest)
 
     def _render(self, payload: dict[str, object]) -> None:
+        self._render_export_gate_preview(build_analysis_center_state(self._project_root))
         markdown = str(payload.get("markdown") or "")
         manifest = payload.get("manifest")
         if self._project_root is not None:
@@ -4568,6 +4659,24 @@ class BioinformaticsReportViewerWidget(QWidget):
             self._status_label.setText("已读取项目级 Markdown 报告。PDF 当前只能显示 placeholder，未正式支持。")
             self._markdown.setPlainText(markdown)
         self._manifest.setPlainText(_json(manifest or {"PDF": "未正式支持", "DOCX": "testing placeholder"}))
+
+    def _render_export_gate_preview(self, state: dict[str, object]) -> None:
+        export_gate = state.get("export_gate", {}) if isinstance(state.get("export_gate"), dict) else {}
+        report_gate = state.get("report_gate", {}) if isinstance(state.get("report_gate"), dict) else {}
+        self._export_gate_preview.setPlainText(
+            _json(
+                {
+                    "report_gate": report_gate,
+                    "export_gate": export_gate,
+                    "disabled_actions": ["report_ready_package", "export_package", "export_pdf", "export_docx", "export_html"],
+                    "boundary": "draft_preview_only_no_report_ready_package_no_export",
+                }
+            )
+        )
+        self._export_gate_preview.setProperty("exportGate", export_gate.get("export_gate", "disabled_missing_report_ready"))
+        self._export_gate_preview.setProperty("reportStatusKey", export_gate.get("report_status_key", "report.status.draft"))
+        self._export_gate_preview.setProperty("formalActionEnabled", False)
+        self._export_gate_preview.setProperty("reportReadyPackageAllowed", False)
 
 
 class BioinformaticsSettingsAndLocalAIWidget(QWidget):

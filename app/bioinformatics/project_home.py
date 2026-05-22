@@ -26,6 +26,7 @@ from app.bioinformatics.project_workspace import (
     create_bioinformatics_project,
     open_bioinformatics_project,
 )
+from app.bioinformatics.analysis_ui.state import build_analysis_center_state
 from app.app_identity import load_ui03_project_home_icon, load_ui03_project_home_pixmap
 from app.ui_style_tokens import SPACING, bioinformatics_project_home_stylesheet
 
@@ -342,6 +343,11 @@ class BioinformaticsProjectHomeWidget(QWidget):
             self._status_blocks[key] = (title, value)
             status_grid.addWidget(block, 0, index)
         content_layout.addLayout(status_grid)
+        self._gate_summary_label = QLabel("")
+        self._gate_summary_label.setObjectName("bioinformaticsGatePreviewSummary")
+        self._gate_summary_label.setWordWrap(True)
+        self._gate_summary_label.setProperty("formalActionEnabled", False)
+        content_layout.addWidget(self._gate_summary_label)
 
         self._technical_toggle = QPushButton("技术详情")
         self._technical_toggle.setObjectName("secondaryButton")
@@ -393,6 +399,15 @@ class BioinformaticsProjectHomeWidget(QWidget):
             title_text, value_text = _mini_status(summary, key)
             title.setText(title_text)
             value.setText(value_text)
+        gate_state = build_analysis_center_state(summary.project_root)
+        result_gate = gate_state.get("result_gate", {})
+        export_gate = gate_state.get("export_gate", {})
+        self._gate_summary_label.setText(
+            "Gate preview："
+            f"formal actions disabled；结果条目 {result_gate.get('entry_count', 0)}；"
+            f"exportGate={export_gate.get('export_gate', 'disabled_missing_report_ready')}。"
+        )
+        self._gate_summary_label.setProperty("exportGate", export_gate.get("export_gate", "disabled_missing_report_ready"))
         self._technical_details.setPlainText(_technical_details_text(summary))
         self._technical_details.setVisible(self._technical_toggle.isChecked())
 
