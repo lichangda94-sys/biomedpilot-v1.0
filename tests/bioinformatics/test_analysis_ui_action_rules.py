@@ -41,11 +41,59 @@ def test_can_run_task_does_not_enable_formal_deg() -> None:
 def test_formal_gsea_survival_and_km_actions_are_disabled_or_hidden() -> None:
     rows = build_action_rows(packages=[], deg_dependency={"status": "blocked"}, survival_dependency={"status": "preflight_only"}, report_gate={"status": "blocked"})
 
+    legacy = _row(rows, "legacy_asset_pipeline_review")
+    assert legacy["enabled"] is False
+    assert legacy["state"] == "not_started"
     assert _row(rows, "formal_gsea")["enabled"] is False
     assert _row(rows, "formal_gsea")["state"] == "hidden_until_ready"
     assert _row(rows, "survival_formal")["enabled"] is False
     assert _row(rows, "km_cox_logrank")["enabled"] is False
     assert "KM/log-rank" in _row(rows, "km_cox_logrank")["label"]
+
+
+def test_legacy_asset_pipeline_action_is_review_only() -> None:
+    rows = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "blocked"},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        legacy_asset_pipeline={
+            "status": "available_for_review",
+            "artifact_count": 4,
+            "boundary_message": "Legacy assets still require B8 resolver and downstream task gates.",
+            "operations": [
+                {
+                    "operation_id": "legacy_build_candidates",
+                    "label": "Build legacy asset candidates",
+                    "enabled": True,
+                    "state": "available",
+                    "button_behavior": "controlled_standardization_artifact_write_no_formal_execution",
+                    "next_action": "Write candidate-only bundle.",
+                },
+                {
+                    "operation_id": "legacy_materialize_candidates",
+                    "label": "Materialize legacy candidates",
+                    "enabled": False,
+                    "state": "blocked",
+                    "disabled_reason": "legacy_asset_candidates_missing",
+                    "button_behavior": "controlled_standardization_artifact_write_no_formal_execution",
+                    "next_action": "Write materialization manifest.",
+                },
+            ],
+        },
+    )
+
+    legacy = _row(rows, "legacy_asset_pipeline_review")
+    assert legacy["enabled"] is True
+    assert legacy["button_behavior"] == "enabled_review_only_no_formal_execution"
+    assert "B8 resolver" in legacy["next_action"]
+    build = _row(rows, "legacy_build_candidates")
+    assert build["enabled"] is True
+    assert build["button_behavior"] == "controlled_standardization_artifact_write_no_formal_execution"
+    materialize = _row(rows, "legacy_materialize_candidates")
+    assert materialize["enabled"] is False
+    assert materialize["disabled_reason"] == "legacy_asset_candidates_missing"
+    assert _row(rows, "formal_deg")["enabled"] is False
 
 
 def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:

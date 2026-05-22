@@ -53,6 +53,13 @@ from app.bioinformatics.comparison_config import (
 from app.bioinformatics.deg_task_plan import build_deg_preflight, load_deg_preflight_manifest
 from app.bioinformatics.analysis_inputs import resolve_analysis_inputs
 from app.bioinformatics.analysis_ui import build_analysis_center_state, build_dependency_rows
+from app.bioinformatics.acquisition_adapters import (
+    apply_legacy_asset_selection_to_repository_manifest,
+    build_legacy_asset_selection_manifest,
+    materialize_legacy_standardized_asset_candidates,
+    merge_legacy_materialized_assets_into_repository_manifest,
+    write_legacy_standardized_asset_candidates,
+)
 from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.plots import build_formal_deg_plot_gate, create_formal_deg_plot_artifact
@@ -5396,6 +5403,69 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._status_label.setText("已打开免疫浸润 / TME评分页；该入口只生成探索性 bulk signature score。")
         return {"next_page": "immune_tme_scoring", "project_root": str(self._project_root)}
 
+    def build_legacy_asset_candidates(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        result = write_legacy_standardized_asset_candidates(self._project_root)
+        self.refresh_task_center()
+        self._status_label.setText(
+            f"已生成 legacy asset candidates：{result.get('candidate_count', 0)} 个；"
+            "这是候选资产，不是 analysis input package 或 formal result。"
+        )
+        return result
+
+    def materialize_legacy_asset_candidates(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        if not (self._project_root / "standardized_data/asset_candidates/legacy_acquisition_asset_candidates.json").is_file():
+            self._status_label.setText("不能物化：尚未生成 legacy asset candidates。")
+            return None
+        result = materialize_legacy_standardized_asset_candidates(self._project_root)
+        self.refresh_task_center()
+        self._status_label.setText(
+            f"已物化 legacy candidates：{result.get('materialized_asset_count', 0)} 个；"
+            "仅写入隔离 repository 文件和 materialization manifest，不写 result index。"
+        )
+        return result
+
+    def merge_legacy_assets_into_repository_manifest(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        if not (self._project_root / "standardized_data/asset_candidates/legacy_materialized_assets_manifest.json").is_file():
+            self._status_label.setText("不能合并：尚未物化 legacy candidates。")
+            return None
+        result = merge_legacy_materialized_assets_into_repository_manifest(self._project_root)
+        self.refresh_task_center()
+        self._status_label.setText(
+            f"已合并 legacy assets 到 standardized repository manifest：{result.get('merged_asset_count', 0)} 个；"
+            "仍需 B8 resolver 和 downstream gates，未生成 formal analysis。"
+        )
+        return result
+
+    def confirm_legacy_asset_selection(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        repository_manifest = _read_json_file(self._project_root / "standardized_data/repositories/repository_manifest.json")
+        selection_ids, blockers = _legacy_default_selection_ids(repository_manifest)
+        if blockers:
+            self._status_label.setText(f"不能确认 legacy asset selection：{'；'.join(blockers)}")
+            return {"status": "blocked", "blockers": blockers}
+        selection = build_legacy_asset_selection_manifest(self._project_root, confirmed_by_user=True, **selection_ids)
+        result = apply_legacy_asset_selection_to_repository_manifest(self._project_root, selection)
+        self.refresh_task_center()
+        validation = result.get("validation") if isinstance(result.get("validation"), dict) else {}
+        downstream = validation.get("downstream_blockers") if isinstance(validation.get("downstream_blockers"), list) else []
+        suffix = f"；downstream blockers：{'；'.join(str(item) for item in downstream)}" if downstream else ""
+        self._status_label.setText(
+            "已确认 legacy asset selection；仅更新 standardized repository default selection，"
+            f"不写 analysis_input_repository/result_index{suffix}。"
+        )
+        return result
+
     def run_formal_controlled_deg_task(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5578,6 +5648,28 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _set_table_widths(self._package_table, [180, 110, 110, 110, 200, 260, 260, 320])
         self._package_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
 
+        legacy_card, legacy_layout = _card("Legacy asset pipeline")
+        legacy_layout.addWidget(_muted("B16 legacy 链路仅用于 acquisition / standardization 收敛；不能绕过 B8 resolver 或直接生成 formal result。"))
+        legacy_actions = QHBoxLayout()
+        self._legacy_build_candidates_button = _button("生成 legacy candidates", "secondaryButton", self.build_legacy_asset_candidates)
+        self._legacy_build_candidates_button.setObjectName("legacyBuildAssetCandidatesButton")
+        self._legacy_materialize_button = _button("物化 candidates", "secondaryButton", self.materialize_legacy_asset_candidates)
+        self._legacy_materialize_button.setObjectName("legacyMaterializeCandidatesButton")
+        self._legacy_merge_button = _button("合并 repository manifest", "secondaryButton", self.merge_legacy_assets_into_repository_manifest)
+        self._legacy_merge_button.setObjectName("legacyMergeRepositoryManifestButton")
+        self._legacy_select_button = _button("确认 legacy asset selection", "secondaryButton", self.confirm_legacy_asset_selection)
+        self._legacy_select_button.setObjectName("legacyConfirmAssetSelectionButton")
+        for button in (self._legacy_build_candidates_button, self._legacy_materialize_button, self._legacy_merge_button, self._legacy_select_button):
+            legacy_actions.addWidget(button)
+        legacy_actions.addStretch(1)
+        legacy_layout.addLayout(legacy_actions)
+        self._legacy_pipeline_table = _table(["阶段", "状态", "Artifact", "数量", "Blockers / Warnings", "下一步"])
+        self._legacy_pipeline_table.setObjectName("analysisLegacyAssetPipelineTable")
+        legacy_layout.addWidget(self._legacy_pipeline_table)
+        root.addWidget(legacy_card)
+        _set_table_widths(self._legacy_pipeline_table, [210, 150, 320, 80, 360, 340])
+        self._legacy_pipeline_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
         action_card, action_layout = _card("Action matrix and disabled reasons")
         action_layout.addWidget(_muted("Formal actions stay disabled until B8 gates pass and later activation stages explicitly enable execution."))
         self._action_table = _table(["动作", "状态", "按钮", "Disabled reason", "下一步"])
@@ -5685,6 +5777,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._analysis_next_step_label.setText(_analysis_task_next_step(tasks, entries, records, imported_deg))
         _fill_table(self._tasks, _analysis_task_user_rows(tasks, self._project_root, entries, records))
         _fill_table(self._package_table, _analysis_ui_package_rows(analysis_state.get("package_rows", [])))
+        _fill_table(self._legacy_pipeline_table, _analysis_ui_legacy_pipeline_rows(analysis_state.get("legacy_asset_pipeline", {})))
+        self._sync_legacy_pipeline_buttons(analysis_state)
         _fill_table(self._action_table, _analysis_ui_action_rows(analysis_state.get("action_rows", []), normal_user_only=True))
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
         confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
@@ -5722,6 +5816,25 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             value = parameter_gate.get(key, default)
             if not widget.hasFocus():
                 widget.setText(str(value))
+
+    def _sync_legacy_pipeline_buttons(self, analysis_state: dict[str, object]) -> None:
+        pipeline = analysis_state.get("legacy_asset_pipeline") if isinstance(analysis_state.get("legacy_asset_pipeline"), dict) else {}
+        operations = {
+            str(item.get("operation_id") or ""): item
+            for item in pipeline.get("operations", []) or []
+            if isinstance(item, dict)
+        }
+        for operation_id, button in (
+            ("legacy_build_candidates", self._legacy_build_candidates_button),
+            ("legacy_materialize_candidates", self._legacy_materialize_button),
+            ("legacy_merge_repository_manifest", self._legacy_merge_button),
+            ("legacy_confirm_asset_selection", self._legacy_select_button),
+        ):
+            operation = operations.get(operation_id, {})
+            enabled = bool(operation.get("enabled"))
+            button.setEnabled(enabled)
+            tooltip = str(operation.get("next_action") if enabled else operation.get("disabled_reason") or "legacy pipeline operation blocked")
+            button.setToolTip(tooltip)
 
 
 class BioinformaticsDegConfigWidget(QWidget):
@@ -10633,6 +10746,79 @@ def _analysis_ui_package_rows(rows: object) -> list[list[object]]:
         for row in rows
         if isinstance(row, dict)
     ]
+
+
+def _read_json_file(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _legacy_default_selection_ids(repository_manifest: dict[str, object]) -> tuple[dict[str, str], list[str]]:
+    assets = [asset for asset in repository_manifest.get("assets", []) or [] if isinstance(asset, dict)]
+    if not assets:
+        return {}, ["repository_manifest_has_no_assets"]
+    selection: dict[str, str] = {}
+    blockers: list[str] = []
+    for kwarg, role, types, required in (
+        ("expression_asset_id", "expression_matrix", {"raw_count_matrix", "expression_matrix", "normalized_expression_matrix", "tcga_expression_matrix", "gtex_expression_matrix"}, True),
+        ("sample_metadata_asset_id", "sample_metadata", {"sample_metadata", "phenotype_metadata", "tcga_sample_metadata", "gtex_sample_metadata"}, False),
+        ("feature_annotation_asset_id", "feature_annotation", {"feature_annotation", "platform_annotation", "gene_annotation", "platform_reference_hint"}, False),
+        ("clinical_asset_id", "clinical_metadata", {"clinical_metadata", "survival_metadata", "tcga_clinical_metadata"}, False),
+        ("group_design_asset_id", "group_design", {"group_design"}, False),
+    ):
+        candidates = [
+            asset
+            for asset in assets
+            if str(asset.get("asset_role") or "") == role or str(asset.get("asset_type") or "") in types or str(asset.get("repository") or "") in types
+        ]
+        if len(candidates) > 1:
+            blockers.append(f"ambiguous_{role}_asset_selection")
+            continue
+        if candidates:
+            selection[kwarg] = str(candidates[0].get("asset_id") or "")
+        elif required:
+            blockers.append(f"missing_{role}_asset")
+    return selection, blockers
+
+
+def _analysis_ui_legacy_pipeline_rows(state: object) -> list[list[object]]:
+    if not isinstance(state, dict):
+        return []
+    rows = state.get("rows")
+    if not isinstance(rows, list):
+        return []
+    table_rows: list[list[object]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        issues = "；".join(str(item) for item in (row.get("blockers"), row.get("warnings")) if str(item) and str(item) != "None")
+        table_rows.append(
+            [
+                row.get("label", ""),
+                row.get("status", ""),
+                row.get("artifact_path", ""),
+                row.get("count_summary", ""),
+                issues or "None",
+                row.get("next_action", ""),
+            ]
+        )
+    if table_rows:
+        table_rows.append(
+            [
+                "Formal boundary",
+                "disabled",
+                "",
+                "",
+                "writes_analysis_input_repository=False；writes_result_index=False；report_ready_eligible=False",
+                state.get("boundary_message", ""),
+            ]
+        )
+    return table_rows
 
 
 def _analysis_ui_action_rows(rows: object, *, normal_user_only: bool = False) -> list[list[object]]:

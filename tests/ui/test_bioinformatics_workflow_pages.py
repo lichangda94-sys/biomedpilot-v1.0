@@ -18,6 +18,7 @@ try:
 
     from app.bioinformatics.comparison_config import ComparisonSampleAssignment, build_comparison_config_text, comparison_config_path
     from app.bioinformatics.deg_engine.confirmation import CONFIRMATION_PATH, CONFIRMATION_SCHEMA_VERSION
+    from app.bioinformatics.acquisition_adapters import adapt_geo_detection_manifest, write_legacy_acquisition_manifest
     from app.bioinformatics.plots import create_formal_deg_plot_artifact
     from app.bioinformatics.project_workspace import create_bioinformatics_project
     from app.bioinformatics.results.models import ResultIndexEntry
@@ -2943,6 +2944,20 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     workflow_pages.run_project_recognition(project_summary.project_root)
     workflow_pages.run_project_readiness(project_summary.project_root)
     workflow_pages.generate_standardized_assets(project_summary.project_root)
+    legacy_candidates = project_summary.project_root / "standardized_data" / "asset_candidates" / "legacy_acquisition_asset_candidates.json"
+    legacy_candidates.parent.mkdir(parents=True, exist_ok=True)
+    legacy_candidates.write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.legacy_standardized_asset_candidate_bundle.v1",
+                "status": "candidate_only",
+                "candidate_count": 1,
+                "warnings": ["candidate_only_not_repository_asset"],
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     widget = BioinformaticsAnalysisTaskCenterWidget()
     widget.refresh_project(project_summary)
@@ -2985,9 +3000,25 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Blockers" not in package_text
     assert "sample metadata" in package_text or "Return to" in package_text or "raw count matrix" in package_text
 
+    legacy_table = widget.findChild(QTableWidget, "analysisLegacyAssetPipelineTable")
+    assert legacy_table is not None
+    legacy_text = _table_text(legacy_table)
+    assert "Standardized asset candidates" in legacy_text
+    assert "candidate_only" in legacy_text
+    assert "Formal boundary" in legacy_text
+    assert "writes_result_index=False" in legacy_text
+    assert "formal result" not in legacy_text.lower()
+    assert widget.findChild(QPushButton, "legacyBuildAssetCandidatesButton") is not None
+    assert widget.findChild(QPushButton, "legacyMaterializeCandidatesButton").isEnabled()
+    assert widget.findChild(QPushButton, "legacyMergeRepositoryManifestButton").isEnabled() is False
+
     action_table = widget.findChild(QTableWidget, "analysisActionGateTable")
     assert action_table is not None
     action_text = _table_text(action_table)
+    assert "Review legacy asset pipeline" in action_text
+    assert "enabled_review_only_no_formal_execution" in action_text
+    assert "Build legacy asset candidates" in action_text
+    assert "controlled_standardization_artifact_write_no_formal_execution" in action_text
     assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
     assert "disabled" in action_text
@@ -3038,6 +3069,59 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Multivariate Cox design audit" in survival_text
     assert "Risk score / nomogram" in survival_text
     assert "disabled" in survival_text
+
+
+def test_analysis_task_center_runs_legacy_pipeline_operations_without_formal_outputs(qt_app, project_summary, tmp_path: Path) -> None:
+    expression_file = tmp_path / "gene_symbol_counts.tsv"
+    expression_file.write_text("gene_symbol\ts1\ts2\nTP53\t1\t2\n", encoding="utf-8")
+    sample_file = tmp_path / "sample_metadata.tsv"
+    sample_file.write_text("sample_id\tgroup\ns1\tcase\ns2\tcontrol\n", encoding="utf-8")
+    manifest = adapt_geo_detection_manifest(
+        accession="GSE_LEGACY_UI",
+        scan_root=tmp_path,
+        detection_result={
+            "accession_type": "GSE",
+            "has_expression_payload": True,
+            "matrix_level": "gene",
+            "candidate_expression_files": [str(expression_file)],
+            "candidate_metadata_files": [str(sample_file)],
+        },
+    )
+    write_legacy_acquisition_manifest(project_summary.project_root, manifest)
+
+    widget = BioinformaticsAnalysisTaskCenterWidget()
+    widget.refresh_project(project_summary)
+    assert widget.findChild(QPushButton, "legacyBuildAssetCandidatesButton").isEnabled()
+    assert not widget.findChild(QPushButton, "legacyMaterializeCandidatesButton").isEnabled()
+
+    candidates = widget.build_legacy_asset_candidates()
+    assert candidates is not None
+    assert candidates["candidate_count"] == 2
+    assert "不是 analysis input package 或 formal result" in widget.status_message()
+    assert widget.findChild(QPushButton, "legacyMaterializeCandidatesButton").isEnabled()
+
+    materialized = widget.materialize_legacy_asset_candidates()
+    assert materialized is not None
+    assert materialized["materialized_asset_count"] == 2
+    assert "不写 result index" in widget.status_message()
+    assert widget.findChild(QPushButton, "legacyMergeRepositoryManifestButton").isEnabled()
+
+    merged = widget.merge_legacy_assets_into_repository_manifest()
+    assert merged is not None
+    assert merged["merged_asset_count"] == 2
+    assert "未生成 formal analysis" in widget.status_message()
+    assert widget.findChild(QPushButton, "legacyConfirmAssetSelectionButton").isEnabled()
+
+    selection = widget.confirm_legacy_asset_selection()
+    assert selection is not None
+    assert selection["status"] == "selection_recorded_preflight_only"
+    assert "不写 analysis_input_repository/result_index" in widget.status_message()
+    assert not (project_summary.project_root / "standardized_data/repositories/analysis_input_repository").exists()
+    result_index_path = project_summary.project_root / "results/summaries/result_index.json"
+    if result_index_path.exists():
+        result_index = json.loads(result_index_path.read_text(encoding="utf-8"))
+        assert result_index.get("entries", []) == []
+        assert result_index.get("items", []) == []
 
 
 def test_analysis_task_center_imported_deg_is_not_presented_as_computed(qt_app, project_summary, tmp_path: Path) -> None:
