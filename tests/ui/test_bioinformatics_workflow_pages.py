@@ -4763,6 +4763,56 @@ def test_results_browser_full_integrated_markdown_ux_when_gate_passes(qt_app, pr
     assert "risk score" in widget.status_message()
 
 
+def test_results_browser_docx_rendered_export_gate_surfaces_missing_pandoc(qt_app, project_summary, monkeypatch) -> None:
+    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", lambda *args, **kwargs: _docx_renderer_gate(available=False))
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    docx_button = widget.findChild(QPushButton, "fullIntegratedDocxRenderedExportButton")
+    assert docx_button is not None
+    assert docx_button.isEnabled() is False
+    plan = widget.findChild(QTableWidget, "fullIntegratedReportPlanTable")
+    assert plan is not None
+    plan_text = _table_text(plan)
+    assert "docx_rendered_export_status" in plan_text
+    assert str(package_path) in plan_text
+    assert "renderer_dependency_missing:pandoc" in plan_text
+    assert "package artifact only" in plan_text
+
+
+def test_results_browser_docx_rendered_export_runs_only_after_gate_passes(qt_app, project_summary, monkeypatch) -> None:
+    package_path = _write_full_integrated_markdown_package(project_summary.project_root)
+    output_path = package_path / "exports" / "integrated_report_ui.docx"
+    monkeypatch.setattr(workflow_pages, "evaluate_full_integrated_report_renderer_gate", lambda *args, **kwargs: _docx_renderer_gate(available=True))
+    monkeypatch.setattr(
+        workflow_pages,
+        "create_full_integrated_docx_rendered_export",
+        lambda _package_path: {
+            "status": "full_integrated_docx_rendered_export_created",
+            "output_path": str(output_path),
+            "blockers": [],
+            "warnings": [],
+            "export_artifact": {"artifact_type": "full_integrated_report_rendered_export", "validation_status": "passed"},
+        },
+    )
+
+    widget = BioinformaticsResultsBrowserWidget()
+    widget.refresh_project(project_summary)
+
+    docx_button = widget.findChild(QPushButton, "fullIntegratedDocxRenderedExportButton")
+    assert docx_button is not None
+    assert docx_button.isEnabled() is True
+    result = widget.generate_full_integrated_docx_rendered_export()
+
+    assert result is not None
+    assert result["status"] == "full_integrated_docx_rendered_export_created"
+    assert "DOCX rendered export" in widget.status_message()
+    assert "不写入 result index" in widget.status_message()
+    assert "不生成 PDF" in widget.status_message()
+
+
 def _full_integrated_ui_gate() -> dict[str, object]:
     rows = [
         _full_integrated_ui_section("formal_deg", "deg-ui", "deg", package_status="not_required"),
@@ -4795,6 +4845,59 @@ def _full_integrated_ui_gate() -> dict[str, object]:
             "Warnings, blockers, dependencies, and provenance must remain attached.",
         ],
         "blockers": [],
+        "warnings": [],
+    }
+
+
+def _write_full_integrated_markdown_package(project_root: Path) -> Path:
+    package_path = project_root / "report_package" / "integrated" / "ui_docx_ready"
+    package_path.mkdir(parents=True, exist_ok=True)
+    (package_path / "integrated_report.md").write_text("# Integrated report\n\nStatistical research report only.\n", encoding="utf-8")
+    (package_path / "integrated_report_package_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "biomedpilot.full_integrated_report_package.v1",
+                "created_at": "2026-05-22T00:00:00+00:00",
+                "status": "full_integrated_report_package_created",
+                "section_scope": "full_integrated_report",
+                "export_format": "markdown",
+                "gate": {"status": "eligible_for_full_integrated_report"},
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return package_path
+
+
+def _docx_renderer_gate(*, available: bool) -> dict[str, object]:
+    blockers = [] if available else ["renderer_dependency_missing:pandoc"]
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_renderer_gate.v1",
+        "status": "passed" if available else "blocked",
+        "export_format": "docx",
+        "renderer_id": "pandoc_docx",
+        "required_dependencies": ["pandoc"],
+        "detected_dependencies": {
+            "pandoc": {
+                "command": "pandoc",
+                "available": available,
+                "path": "/usr/local/bin/pandoc" if available else "",
+                "version": "pandoc 3.2" if available else "",
+                "missing_reason": "" if available else "pandoc_not_found_on_renderer_search_paths",
+                "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled",
+            }
+        },
+        "checks": {
+            "dependencies_detected": available,
+            "implementation_enabled": available,
+            "docx_activation_requested": True,
+            "detect_first_no_install_action": True,
+            "external_renderers_bundled": False,
+        },
+        "blockers": blockers,
         "warnings": [],
     }
 

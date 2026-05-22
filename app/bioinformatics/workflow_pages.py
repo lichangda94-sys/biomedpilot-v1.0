@@ -67,7 +67,14 @@ from app.bioinformatics.gsea import build_gsea_result_review, export_gsea_review
 from app.bioinformatics.plots import build_formal_deg_plot_gate, build_gsea_plot_gate, build_ora_plot_gate, create_formal_deg_plot_artifact, create_gsea_plot_artifact, create_ora_plot_artifact
 from app.bioinformatics.reports.formal_deg import create_formal_deg_report_ready_package, evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.gsea import create_gsea_report_ready_package, evaluate_gsea_report_ready_gate
-from app.bioinformatics.reports.integrated import build_full_integrated_report_package_plan, create_full_integrated_report_package, evaluate_full_integrated_report_gate
+from app.bioinformatics.reports.integrated import (
+    build_full_integrated_report_package_plan,
+    create_full_integrated_docx_rendered_export,
+    create_full_integrated_report_package,
+    evaluate_full_integrated_docx_preflight_gate,
+    evaluate_full_integrated_report_gate,
+    evaluate_full_integrated_report_renderer_gate,
+)
 from app.bioinformatics.reports.ora import create_ora_report_ready_package, evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.survival_clinical import (
     create_cox_report_ready_package,
@@ -6726,6 +6733,41 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             self._render_full_integrated_report_preview(gate, plan)
         return result
 
+    def generate_full_integrated_docx_rendered_export(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        package_path = _latest_full_integrated_markdown_package(self._project_root)
+        if package_path is None:
+            gate = self._build_full_integrated_docx_rendered_export_ui_gate()
+            blockers = "；".join(str(item) for item in gate.get("blockers", []) or []) or "full integrated markdown package missing"
+            self._status_label.setText(f"DOCX rendered export 未生成：{blockers}")
+            self._render_full_integrated_report_preview(
+                evaluate_full_integrated_report_gate(self._project_root),
+                build_full_integrated_report_package_plan(self._project_root, gate=evaluate_full_integrated_report_gate(self._project_root), export_format=self._full_integrated_format.currentText()),
+                gate,
+            )
+            return gate
+        result = create_full_integrated_docx_rendered_export(package_path)
+        if result.get("status") == "full_integrated_docx_rendered_export_created":
+            self.refresh_results()
+            self._status_label.setText(
+                "已生成 DOCX rendered export；"
+                f"输出位置：{result.get('output_path') or ''}；"
+                "这是 full integrated markdown package 的渲染副本，不写入 result index，不生成 PDF，不包含临床诊断、预后、risk score 或治疗建议。"
+            )
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "DOCX renderer gate 未通过"
+            self._status_label.setText(f"DOCX rendered export 未生成：{blockers}")
+            gate = evaluate_full_integrated_report_gate(self._project_root)
+            plan = build_full_integrated_report_package_plan(
+                self._project_root,
+                gate=gate,
+                export_format=self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown",
+            )
+            self._render_full_integrated_report_preview(gate, plan, result.get("preflight_gate", {}) if isinstance(result.get("preflight_gate"), dict) else {})
+        return result
+
     def _export_formal_deg_review(self, file_format: str) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -7052,6 +7094,9 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         self._full_integrated_button = _button("生成 full integrated report package", "secondaryButton", self.generate_full_integrated_report_package)
         self._full_integrated_button.setObjectName("fullIntegratedReportButton")
         integrated_controls.addWidget(self._full_integrated_button)
+        self._full_integrated_docx_button = _button("生成 DOCX rendered export", "secondaryButton", self.generate_full_integrated_docx_rendered_export)
+        self._full_integrated_docx_button.setObjectName("fullIntegratedDocxRenderedExportButton")
+        integrated_controls.addWidget(self._full_integrated_docx_button)
         self._full_integrated_status = _muted("Full integrated report gate 尚未通过；当前显示 gate/package plan、renderer disabled reason 和 section provenance。")
         self._full_integrated_status.setObjectName("fullIntegratedReportStatus")
         integrated_controls.addWidget(self._full_integrated_status)
@@ -7172,10 +7217,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             gate=integrated_gate,
             export_format=self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown",
         ) if self._project_root else {}
-        self._render_full_integrated_report_preview(integrated_gate, integrated_plan)
+        docx_gate = self._build_full_integrated_docx_rendered_export_ui_gate()
+        self._render_full_integrated_report_preview(integrated_gate, integrated_plan, docx_gate)
         analysis_state = build_analysis_center_state(self._project_root) if self._project_root else {}
         _fill_table(self._gate_preview, _analysis_ui_gate_rows([*(analysis_state.get("gate_rows", []) or []), *(analysis_state.get("ora_gate_rows", []) or []), *(analysis_state.get("gsea_gate_rows", []) or []), *(analysis_state.get("survival_clinical_report_gate_rows", []) or [])]))
-        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan}))
+        self._details.setPlainText(_json({"result_index": payload, "display_entries": entries, "task_records": records, "warnings": warnings, "analysis_center_state": analysis_state, "ora_review": ora_review, "gsea_review": gsea_review, "gsea_plot_gate": gsea_plot_gate, "gsea_report_gate": gsea_report_gate, "km_logrank_report_gate": km_report_gate, "cox_report_gate": cox_report_gate, "full_integrated_report_gate": integrated_gate, "full_integrated_report_package_plan": integrated_plan, "full_integrated_docx_rendered_export_gate": docx_gate}))
 
     def _render_formal_deg_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -7319,25 +7365,33 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             label.setText(f"{display_name} disabled：{reason}")
 
-    def _render_full_integrated_report_preview(self, gate: dict[str, object], plan: dict[str, object]) -> None:
+    def _render_full_integrated_report_preview(self, gate: dict[str, object], plan: dict[str, object], docx_gate: dict[str, object] | None = None) -> None:
         if not hasattr(self, "_full_integrated_status"):
             return
+        docx_gate = docx_gate or self._build_full_integrated_docx_rendered_export_ui_gate()
         blockers = [str(item) for item in gate.get("blockers", []) or []]
         warnings = [str(item) for item in gate.get("warnings", []) or []]
         disabled_reasons = [str(item) for item in plan.get("disabled_reasons", []) or []]
         can_create = bool(plan.get("can_create_package"))
         self._full_integrated_button.setEnabled(gate.get("status") == "eligible_for_full_integrated_report" and can_create)
+        if hasattr(self, "_full_integrated_docx_button"):
+            self._full_integrated_docx_button.setEnabled(docx_gate.get("status") == "passed")
         if self._full_integrated_button.isEnabled():
             renderer_id = str(plan.get("renderer_id") or "builtin_markdown")
             self._full_integrated_status.setText(
                 f"Full integrated report gate passed；renderer={renderer_id}；markdown-only package can be created；"
-                "PDF/DOCX disabled；no clinical diagnosis/prognosis/risk score/treatment advice."
+                f"DOCX rendered export={docx_gate.get('status', 'blocked')}；PDF/DOCX disabled unless DOCX rendered export gate passes；no clinical diagnosis/prognosis/risk score/treatment advice."
             )
         else:
             reason = "；".join(disabled_reasons or blockers) or str(plan.get("blocked_reason") or "full integrated report gate 未通过")
             if warnings:
                 reason = f"{reason}；warnings={'；'.join(warnings)}"
             self._full_integrated_status.setText(f"Full integrated report disabled：{reason}")
+        docx_blockers = [str(item) for item in docx_gate.get("blockers", []) or []]
+        docx_warnings = [str(item) for item in docx_gate.get("warnings", []) or []]
+        docx_reason = "；".join(docx_blockers) or str(docx_gate.get("disabled_reason") or "")
+        if docx_warnings:
+            docx_reason = f"{docx_reason}；warnings={'；'.join(docx_warnings)}" if docx_reason else f"warnings={'；'.join(docx_warnings)}"
         _fill_table(
             self._full_integrated_plan,
             [
@@ -7353,6 +7407,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["renderer_dependencies", ", ".join(str(item) for item in plan.get("renderer_dependencies", []) or [])],
                 ["renderer_disabled_reason", plan.get("renderer_disabled_reason", "")],
                 ["renderer_preflight_policy", plan.get("renderer_preflight_policy", {})],
+                ["docx_rendered_export_status", docx_gate.get("status", "")],
+                ["docx_rendered_export_source_package", docx_gate.get("source_package_path", "")],
+                ["docx_rendered_export_renderer", docx_gate.get("renderer_id", "pandoc_docx")],
+                ["docx_rendered_export_disabled_reason", docx_reason],
+                ["docx_rendered_export_output_policy", "package artifact only; no result_index_v2 write; no formal_computed_result"],
                 ["package_root_policy", plan.get("package_root_policy", "")],
                 ["required_directories", ", ".join(str(item) for item in plan.get("required_directories", []) or [])],
                 ["required_files", ", ".join(str(item) for item in plan.get("required_files", []) or [])],
@@ -7384,6 +7443,55 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 if isinstance(row, dict)
             ],
         )
+
+    def _build_full_integrated_docx_rendered_export_ui_gate(self) -> dict[str, object]:
+        if self._project_root is None:
+            return {"status": "blocked", "blockers": ["project_root_missing"], "warnings": [], "renderer_id": "pandoc_docx"}
+        package_path = _latest_full_integrated_markdown_package(self._project_root)
+        renderer_gate = evaluate_full_integrated_report_renderer_gate("docx", allow_docx_activation=True)
+        if package_path is None:
+            blockers = ["full_integrated_markdown_package_missing", *[str(item) for item in renderer_gate.get("blockers", []) or []]]
+            return {
+                "schema_version": "biomedpilot.full_integrated_docx_rendered_export_ui_gate.v1",
+                "status": "blocked",
+                "source_package_path": "",
+                "renderer_id": "pandoc_docx",
+                "renderer_gate": renderer_gate,
+                "checks": {
+                    "source_markdown_package_exists": False,
+                    "pandoc_detected": bool((renderer_gate.get("detected_dependencies", {}).get("pandoc") or {}).get("available")) if isinstance(renderer_gate.get("detected_dependencies"), dict) else False,
+                    "detect_first_no_install_action": True,
+                    "writes_result_index_v2": False,
+                },
+                "blockers": list(dict.fromkeys(blockers)),
+                "warnings": [],
+                "disabled_reason": "；".join(dict.fromkeys(blockers)),
+            }
+        preflight = evaluate_full_integrated_docx_preflight_gate(
+            package_path,
+            renderer_gate=renderer_gate,
+            include_activation_blocker=False,
+        )
+        blockers = [str(item) for item in preflight.get("blockers", []) or []]
+        warnings = [str(item) for item in preflight.get("warnings", []) or []]
+        return {
+            "schema_version": "biomedpilot.full_integrated_docx_rendered_export_ui_gate.v1",
+            "status": "passed" if preflight.get("status") == "passed" else "blocked",
+            "source_package_path": str(package_path),
+            "renderer_id": "pandoc_docx",
+            "renderer_gate": renderer_gate,
+            "preflight_gate": preflight,
+            "checks": {
+                "source_markdown_package_exists": True,
+                "pandoc_detected": bool((renderer_gate.get("detected_dependencies", {}).get("pandoc") or {}).get("available")) if isinstance(renderer_gate.get("detected_dependencies"), dict) else False,
+                "docx_preflight_passed": preflight.get("status") == "passed",
+                "detect_first_no_install_action": True,
+                "writes_result_index_v2": False,
+            },
+            "blockers": blockers,
+            "warnings": warnings,
+            "disabled_reason": "；".join(blockers),
+        }
 
     def _render_ora_review(self, review: dict[str, object]) -> None:
         summary = review.get("summary") if isinstance(review.get("summary"), dict) else {}
@@ -11553,6 +11661,26 @@ def _read_json_file(path: Path) -> dict[str, object]:
     except (OSError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _latest_full_integrated_markdown_package(project_root: Path) -> Path | None:
+    package_root = project_root / "report_package" / "integrated"
+    if not package_root.is_dir():
+        return None
+    candidates: list[tuple[float, Path]] = []
+    for manifest_path in package_root.glob("*/integrated_report_package_manifest.json"):
+        manifest = _read_json_file(manifest_path)
+        package_dir = manifest_path.parent
+        if (
+            manifest.get("status") == "full_integrated_report_package_created"
+            and manifest.get("section_scope") == "full_integrated_report"
+            and manifest.get("export_format") == "markdown"
+            and (package_dir / "integrated_report.md").is_file()
+        ):
+            candidates.append((manifest_path.stat().st_mtime, package_dir))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
 
 
 def _legacy_default_selection_ids(repository_manifest: dict[str, object]) -> tuple[dict[str, str], list[str]]:

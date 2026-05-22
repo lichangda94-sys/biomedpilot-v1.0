@@ -20,7 +20,7 @@ from app.bioinformatics.project_analysis_tasks import TASK_CENTER, TASK_TEMPLATE
 from app.bioinformatics.project_readiness import load_readiness_artifacts
 from app.bioinformatics.reports.formal_deg import evaluate_formal_deg_report_ready_gate
 from app.bioinformatics.reports.gsea import evaluate_gsea_report_ready_gate
-from app.bioinformatics.reports.integrated import evaluate_full_integrated_report_gate
+from app.bioinformatics.reports.integrated import evaluate_full_integrated_docx_preflight_gate, evaluate_full_integrated_report_gate, evaluate_full_integrated_report_renderer_gate
 from app.bioinformatics.reports.ora import evaluate_ora_report_ready_gate
 from app.bioinformatics.reports.readiness import evaluate_report_ready_gate
 from app.bioinformatics.reports.renderer_capability import build_report_renderer_capability_snapshot
@@ -65,6 +65,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     ora_report_gate = evaluate_ora_report_ready_gate(root)
     gsea_report_gate = evaluate_gsea_report_ready_gate(root)
     full_integrated_report_gate = evaluate_full_integrated_report_gate(root)
+    full_integrated_docx_gate = build_full_integrated_docx_rendered_export_gate_state(root)
     packages = [item for item in resolver.get("packages", []) or [] if isinstance(item, dict)]
     tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
     deg_gates = build_formal_deg_gate_state(packages=packages, deg_dependency=deg_dependency, project_root=root)
@@ -135,6 +136,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_plot_gate=gsea_plot_gate,
         gsea_report_gate=gsea_report_gate,
         full_integrated_report_gate=full_integrated_report_gate,
+        full_integrated_docx_gate=full_integrated_docx_gate,
         gsea_input_gate=gsea_gates["input_gate"],
         gsea_rank_metric_gate=gsea_gates["rank_metric_gate"],
         gsea_gene_set_gate=gsea_gates["gene_set_gate"],
@@ -155,6 +157,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         formal_deg_report_gate=formal_deg_report_gate,
         ora_report_gate=ora_report_gate,
         full_integrated_report_gate=full_integrated_report_gate,
+        full_integrated_docx_gate=full_integrated_docx_gate,
         km_report_gate=km_report_gate,
         cox_report_gate=cox_report_gate,
     )
@@ -187,6 +190,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
         + [item for gate in (km_report_gate, cox_report_gate) for item in gate.get("blockers", []) or []]
+        + [item for item in full_integrated_docx_gate.get("blockers", []) or []]
     )
     warnings = _dedupe(
         [*resolver.get("warnings", [])]
@@ -238,6 +242,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "gsea_plot_gate": gsea_plot_gate,
             "gsea_report_ready_gate": gsea_report_gate,
             "full_integrated_report_gate": full_integrated_report_gate,
+            "full_integrated_docx_rendered_export_gate": full_integrated_docx_gate,
             "km_logrank_report_ready_gate": km_report_gate,
             "cox_report_ready_gate": cox_report_gate,
             "gsea_gate_state": gsea_gates,
@@ -569,6 +574,55 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         "result_schema_gate": result_schema_gate,
         "deg_ready_package": deg_ready_package,
         "gate_rows": gate_rows,
+    }
+
+
+def build_full_integrated_docx_rendered_export_gate_state(project_root: str | Path) -> dict[str, Any]:
+    root = Path(project_root).expanduser().resolve()
+    package_path = _latest_full_integrated_markdown_package(root)
+    renderer_gate = evaluate_full_integrated_report_renderer_gate("docx", allow_docx_activation=True)
+    if package_path is None:
+        blockers = ["full_integrated_markdown_package_missing", *[str(item) for item in renderer_gate.get("blockers", []) or []]]
+        return {
+            "schema_version": "biomedpilot.full_integrated_docx_rendered_export_ui_gate.v1",
+            "status": "blocked",
+            "source_package_path": "",
+            "renderer_id": "pandoc_docx",
+            "renderer_gate": renderer_gate,
+            "checks": {
+                "source_markdown_package_exists": False,
+                "pandoc_detected": bool((renderer_gate.get("detected_dependencies", {}).get("pandoc") or {}).get("available")) if isinstance(renderer_gate.get("detected_dependencies"), dict) else False,
+                "detect_first_no_install_action": True,
+                "writes_result_index_v2": False,
+            },
+            "blockers": _dedupe(blockers),
+            "warnings": [],
+            "disabled_reason": compact_list(_dedupe(blockers)),
+        }
+    preflight = evaluate_full_integrated_docx_preflight_gate(
+        package_path,
+        renderer_gate=renderer_gate,
+        include_activation_blocker=False,
+    )
+    blockers = [str(item) for item in preflight.get("blockers", []) or []]
+    warnings = [str(item) for item in preflight.get("warnings", []) or []]
+    return {
+        "schema_version": "biomedpilot.full_integrated_docx_rendered_export_ui_gate.v1",
+        "status": "passed" if preflight.get("status") == "passed" else "blocked",
+        "source_package_path": str(package_path),
+        "renderer_id": "pandoc_docx",
+        "renderer_gate": renderer_gate,
+        "preflight_gate": preflight,
+        "checks": {
+            "source_markdown_package_exists": True,
+            "pandoc_detected": bool((renderer_gate.get("detected_dependencies", {}).get("pandoc") or {}).get("available")) if isinstance(renderer_gate.get("detected_dependencies"), dict) else False,
+            "docx_preflight_passed": preflight.get("status") == "passed",
+            "detect_first_no_install_action": True,
+            "writes_result_index_v2": False,
+        },
+        "blockers": blockers,
+        "warnings": warnings,
+        "disabled_reason": compact_list(blockers),
     }
 
 
@@ -1010,6 +1064,7 @@ def build_gate_preview_rows(
     formal_deg_report_gate: dict[str, Any] | None = None,
     ora_report_gate: dict[str, Any] | None = None,
     full_integrated_report_gate: dict[str, Any] | None = None,
+    full_integrated_docx_gate: dict[str, Any] | None = None,
     km_report_gate: dict[str, Any] | None = None,
     cox_report_gate: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
@@ -1073,6 +1128,13 @@ def build_gate_preview_rows(
             "basis": str((full_integrated_report_gate or {}).get("status") or "blocked"),
             "blockers": compact_list((full_integrated_report_gate or {}).get("blockers", []) or []),
             "warnings": compact_list((full_integrated_report_gate or {}).get("warnings", []) or []),
+        },
+        {
+            "gate": "DOCX rendered export",
+            "status": "available" if (full_integrated_docx_gate or {}).get("status") == "passed" else "blocked_docx_rendered_export_gate",
+            "basis": str((full_integrated_docx_gate or {}).get("status") or "blocked"),
+            "blockers": compact_list((full_integrated_docx_gate or {}).get("blockers", []) or []),
+            "warnings": "Package artifact only; no result_index_v2 write; no formal_computed_result.",
         },
         {
             "gate": "Report-ready export",
@@ -1404,3 +1466,23 @@ def _read_json(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _latest_full_integrated_markdown_package(root: Path) -> Path | None:
+    package_root = root / "report_package" / "integrated"
+    if not package_root.is_dir():
+        return None
+    candidates: list[tuple[float, Path]] = []
+    for manifest_path in package_root.glob("*/integrated_report_package_manifest.json"):
+        manifest = _read_json(manifest_path)
+        package_dir = manifest_path.parent
+        if (
+            manifest.get("status") == "full_integrated_report_package_created"
+            and manifest.get("section_scope") == "full_integrated_report"
+            and manifest.get("export_format") == "markdown"
+            and (package_dir / "integrated_report.md").is_file()
+        ):
+            candidates.append((manifest_path.stat().st_mtime, package_dir))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
