@@ -30,6 +30,53 @@ class LabToolsUiResult:
         return not self.errors
 
 
+@dataclass(frozen=True)
+class ReagentTemplateSummary:
+    template_id: str
+    name: str
+    category: str
+    default_volume: str
+    component_count: int
+    ph_target: str
+    status_label: str
+
+
+@dataclass(frozen=True)
+class ReagentComponentView:
+    name: str
+    component_type: str
+    amount: str
+    stage: str
+    notes: str
+    warning: str
+
+
+@dataclass(frozen=True)
+class ReagentTemplateDetail:
+    summary: ReagentTemplateSummary
+    notes: str
+    components: tuple[ReagentComponentView, ...]
+    ph_target: str
+    ph_measured: str
+    ph_adjustment_note: str
+    validation_rows: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ReagentPreparationUiResult:
+    title: str
+    primary_result: str
+    detail_text: str
+    component_rows: tuple[ReagentComponentView, ...]
+    warnings: tuple[str, ...]
+    errors: tuple[str, ...]
+    copy_text: str
+
+    @property
+    def valid(self) -> bool:
+        return not self.errors
+
+
 def runtime_status() -> LabToolsRuntimeStatus:
     try:
         _ensure_labtools_importable()
@@ -225,6 +272,98 @@ def execute_formula(spec_id: str, solve_target: str, values: dict[str, str], uni
         return _error_result(spec.short_title, exc)
 
 
+def list_reagent_templates() -> tuple[ReagentTemplateSummary, ...]:
+    templates = _demo_reagent_templates()
+    return tuple(_reagent_template_summary(template) for template in templates)
+
+
+def get_reagent_template_detail(template_id: str) -> ReagentTemplateDetail:
+    template = _get_demo_reagent_template(template_id)
+    summary = _reagent_template_summary(template)
+    components = tuple(
+        ReagentComponentView(
+            name=component.name,
+            component_type=component.component_type,
+            amount=f"{component.base_amount:g} {component.unit}",
+            stage=component.stage_label or "默认",
+            notes=component.notes,
+            warning="水合物形式需人工确认" if component.name == "Na2HPO4" else "",
+        )
+        for component in template.components
+    )
+    ph_record = template.ph_record
+    validation_rows = (
+        "Na2HPO4：水合物形式需人工确认。",
+        "KH2PO4：称量量由模板换算，使用前需复核 SOP。",
+        "保存模板需要 BioMedPilotLabToolsStorageAdapter。",
+    )
+    return ReagentTemplateDetail(
+        summary=summary,
+        notes=template.notes,
+        components=components,
+        ph_target=ph_record.target_ph if ph_record else "",
+        ph_measured=ph_record.measured_ph if ph_record else "",
+        ph_adjustment_note=ph_record.adjustment_note if ph_record else "",
+        validation_rows=validation_rows,
+    )
+
+
+def calculate_reagent_preparation(
+    *,
+    template_id: str,
+    target_volume: str,
+    target_volume_unit: str,
+    operator_name: str = "",
+    measured_ph: str = "",
+    adjustment_note: str = "",
+) -> ReagentPreparationUiResult:
+    _ensure_labtools_importable()
+    from labtools.reagent_templates import PreparationRequest, calculate_preparation
+
+    templates = _demo_reagent_templates(measured_ph=measured_ph, adjustment_note=adjustment_note)
+    try:
+        request = PreparationRequest(
+            template_id=template_id,
+            target_volume=float(target_volume),
+            target_volume_unit=target_volume_unit or "mL",
+            target_strength="1X",
+            operator_name=operator_name,
+            notes="UI-C2d preview only; not saved.",
+        )
+        result = calculate_preparation(request, templates)
+        component_rows = tuple(
+            ReagentComponentView(
+                name=component.name,
+                component_type=component.component_type,
+                amount=component.display_amount,
+                stage=component.stage_label or "默认",
+                notes=component.notes or component.initial_addition_detail,
+                warning="; ".join(component.warnings),
+            )
+            for component in result.direct_components
+        )
+        warnings = tuple(dict.fromkeys((*tuple(result.warnings or ()), REVIEW_NOTICE, "保存模板和配制记录需要存储适配；当前不会写入 ~/.labtools。")))
+        return ReagentPreparationUiResult(
+            title=result.title,
+            primary_result=f"{result.template_name}: {result.suggested_volume:g} {result.suggested_volume_unit}",
+            detail_text=result.as_text(),
+            component_rows=component_rows,
+            warnings=warnings,
+            errors=(),
+            copy_text=result.as_text(),
+        )
+    except Exception as exc:
+        return ReagentPreparationUiResult(
+            title="本次试剂配制",
+            primary_result="输入需要调整",
+            detail_text="",
+            component_rows=(),
+            warnings=(REVIEW_NOTICE,),
+            errors=(str(exc),),
+            copy_text="",
+        )
+
+
 def _ensure_labtools_importable() -> None:
     if LABTOOLS_SIBLING_ROOT.exists():
         root = str(LABTOOLS_SIBLING_ROOT)
@@ -343,6 +482,64 @@ def _value(values: dict[str, str], field_id: str) -> str | None:
 
 def _unit(units: dict[str, str], field_id: str, default: str) -> str:
     return units.get(field_id) or default
+
+
+def _demo_reagent_templates(*, measured_ph: str = "", adjustment_note: str = "") -> tuple[Any, ...]:
+    _ensure_labtools_importable()
+    from labtools.reagent_templates import PHRecord, ReagentComponent, ReagentTemplate
+
+    ph_note = adjustment_note or "必要时用 HCl/NaOH 微调；软件不预测酸碱加入量。"
+    return (
+        ReagentTemplate(
+            template_id="demo_pbs_1x",
+            name="PBS 1x 示例模板",
+            default_volume=1000,
+            default_volume_unit="mL",
+            default_strength="1X",
+            notes="UI-C2d in-memory demo template; not stored and not linked to inventory.",
+            components=(
+                ReagentComponent(name="NaCl", component_type="powder", base_amount=8.0, unit="g", stage_label="称量", addition_order=1),
+                ReagentComponent(name="KCl", component_type="powder", base_amount=0.2, unit="g", stage_label="称量", addition_order=2),
+                ReagentComponent(name="Na2HPO4", component_type="powder", base_amount=1.44, unit="g", stage_label="称量", addition_order=3, notes="水合物形式需复核"),
+                ReagentComponent(name="KH2PO4", component_type="powder", base_amount=0.24, unit="g", stage_label="称量", addition_order=4),
+                ReagentComponent(
+                    name="ddH2O",
+                    component_type="solvent",
+                    base_amount=1000,
+                    unit="mL",
+                    contributes_to_final_volume=True,
+                    auto_fill_to_final_volume=True,
+                    stage_label="定容",
+                    addition_order=5,
+                    initial_addition_mode="percent_of_final",
+                    initial_addition_percent=80,
+                    initial_addition_note="先加约 80% 体积，溶解后定容。",
+                ),
+            ),
+            ph_record=PHRecord(target_ph="7.4", measured_ph=measured_ph, adjustment_note=ph_note),
+        ),
+    )
+
+
+def _get_demo_reagent_template(template_id: str) -> Any:
+    templates = _demo_reagent_templates()
+    for template in templates:
+        if template.template_id == template_id:
+            return template
+    raise KeyError(f"Unknown reagent template: {template_id}")
+
+
+def _reagent_template_summary(template: Any) -> ReagentTemplateSummary:
+    ph_record = getattr(template, "ph_record", None)
+    return ReagentTemplateSummary(
+        template_id=template.template_id,
+        name=template.name,
+        category="缓冲液 / buffer",
+        default_volume=f"{template.default_volume:g} {template.default_volume_unit}",
+        component_count=len(template.components),
+        ph_target=ph_record.target_ph if ph_record else "",
+        status_label="demo_preview / storage_adapter_needed",
+    )
 
 
 _QUICK_FIELD_LABELS: dict[str, str] = {

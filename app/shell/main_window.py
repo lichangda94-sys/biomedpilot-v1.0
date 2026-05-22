@@ -849,78 +849,286 @@ class MainWindow(QMainWindow):
                 self._clear_layout(child_layout)
 
     def _show_labtools_reagent_preparation_shell(self) -> None:
-        content = self._build_labtools_section_content(
+        semantic_key = PageKey.LABTOOLS_REAGENT_PREPARATION.value
+        content = self._build_labtools_base_content(
             page_key="reagent_preparation",
-            semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+            semantic_key=semantic_key,
             title="试剂制备 / Reagent Preparation",
-            subtitle="模板、编辑侧栏和本次配制只建立安全占位路由；本阶段不读取或写入真实 store。",
-            status_label="backend_ready / storage_adapter_needed",
-            status_key="planned",
-            cards=[
-                {
-                    "title": "Reagent Template List",
-                    "page_key": "reagent_template_list",
-                    "semantic_key": "labtools.page.reagent_template_list",
-                    "status_label": "需存储适配",
-                    "status_key": "planned",
-                    "rows": ["项目内试剂模板列表占位。", "未接入 BioMedPilotLabToolsStorageAdapter 前保持空状态。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Reagent Template List / 试剂模板列表",
-                        page_key="reagent_template_list",
-                        semantic_key="labtools.page.reagent_template_list",
-                        status_label="storage_adapter_needed",
-                        status_key="planned",
-                        body_rows=[
-                            "当前项目暂无试剂模板；列表不会默认读取或写入 ~/.labtools。",
-                            "模板保存必须等待 BioMedPilot project storage adapter。",
-                        ],
-                        disabled_actions=("新建模板 - 需存储适配", "保存模板 - 需存储适配"),
-                    ),
-                },
-                {
-                    "title": "Template Editor Side Panel",
-                    "page_key": "reagent_template_editor",
-                    "semantic_key": "labtools.page.reagent_template_editor",
-                    "status_label": "需存储适配",
-                    "status_key": "planned",
-                    "rows": ["模板编辑侧栏占位，显示 dirty state 和 validation 入口。", "保存按钮保持禁用。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Reagent Template Editor / 模板编辑侧栏",
-                        page_key="reagent_template_editor",
-                        semantic_key="labtools.page.reagent_template_editor",
-                        status_label="storage_adapter_needed",
-                        status_key="planned",
-                        body_rows=[
-                            "侧栏用于后续承载组分表、pH 字段和 validation summary。",
-                            "已修改未保存只能表示 UI dirty state，不表示版本管理已完成。",
-                        ],
-                        disabled_actions=("保存模板 - 需存储适配",),
-                    ),
-                },
-                {
-                    "title": "Reagent Preparation Run",
-                    "page_key": "reagent_preparation_run",
-                    "semantic_key": "labtools.page.reagent_preparation_run",
-                    "status_label": "backend_ready / adapter_needed",
-                    "status_key": "testing",
-                    "rows": ["本次配制计算预览占位。", "保存配制记录和导出仍需 adapter。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Reagent Preparation Run / 本次试剂配制",
-                        page_key="reagent_preparation_run",
-                        semantic_key="labtools.page.reagent_preparation_run",
-                        status_label="backend_ready / adapter_needed",
-                        status_key="testing",
-                        body_rows=[
-                            "后续可显示配制计算预览，但本阶段不调用真实计算或保存记录。",
-                            "不启用库存扣减、生产批次放行、云模板库或多人同步。",
-                        ],
-                        disabled_actions=("保存配制记录 - 需存储适配", "导出配制摘要 - 需文件选择器"),
-                    ),
-                },
-            ],
-            notice_rows=["桌面 UI 不默认写入 ~/.labtools；所有保存路径必须由 BioMedPilotLabToolsStorageAdapter 提供。"],
+            subtitle="展示只读试剂模板、模板详情和本次配制计算预览；保存、导出和记录写入都保持 storage adapter gated。",
         )
+        root = content.layout()
+        nav = QHBoxLayout()
+        back = make_button("返回 LabTools 首页", role="secondary")
+        back.setObjectName("labtoolsBackButton")
+        back.clicked.connect(self._show_labtools_home)
+        nav.addWidget(back)
+        nav.addWidget(make_status_chip("backend_ready / storage_adapter_needed", status_key="testing"))
+        nav.addWidget(make_status_chip("storage_adapter_needed", status_key="planned"))
+        nav.addStretch(1)
+        root.addLayout(nav)
+        root.addWidget(
+            self._labtools_notice_card(
+                "桌面 UI 不默认写入 ~/.labtools；模板保存、配制记录和导出必须等待 BioMedPilotLabToolsStorageAdapter / FilePickerExportAdapter。",
+                object_name="labtoolsAdapterNotice",
+                semantic_key=semantic_key,
+            )
+        )
+
+        try:
+            templates = labtools_runtime.list_reagent_templates()
+        except Exception as exc:
+            root.addWidget(
+                make_empty_state(
+                    "试剂模板暂不可用",
+                    f"LabTools reagent backend 未就绪：{exc}",
+                    empty_state_key="empty_missing_resource",
+                    semantic_key=semantic_key,
+                )
+            )
+            self._set_labtools_content(content)
+            return
+
+        self._labtools_reagent_templates = {template.template_id: template for template in templates}
+        self._labtools_reagent_selected_template_id = templates[0].template_id if templates else ""
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        body.addWidget(self._labtools_reagent_template_list_panel(templates), 1)
+        body.addWidget(self._labtools_reagent_run_panel(), 2)
+        body.addWidget(self._labtools_reagent_detail_panel(), 1)
+        root.addLayout(body)
+        root.addWidget(
+            make_empty_state(
+                "暂无已保存配制记录",
+                "历史记录需要 BioMedPilot project storage adapter；当前页面只显示预览，不创建记录。",
+                empty_state_key="empty_history",
+                semantic_key=semantic_key,
+            )
+        )
+        root.addStretch(1)
         self._set_labtools_content(content)
+        if templates:
+            self._select_labtools_reagent_template(self._labtools_reagent_selected_template_id)
+            self._run_labtools_reagent_preparation()
+
+    def _labtools_reagent_template_list_panel(self, templates: tuple[labtools_runtime.ReagentTemplateSummary, ...]) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsReagentTemplateListPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "reagent_preparation")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
+        frame.setStyleSheet("QFrame#labtoolsReagentTemplateListPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("试剂模板列表")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        search = QLineEdit()
+        search.setObjectName("labtoolsReagentSearchInput")
+        search.setPlaceholderText("搜索模板（当前为本地示例过滤占位）")
+        layout.addWidget(search)
+        if not templates:
+            layout.addWidget(make_empty_state("暂无模板", "未接入存储适配前不读取真实模板库。", empty_state_key="empty_project", semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value))
+        for template in templates:
+            row = QPushButton(f"{template.name}\n{template.category} · {template.default_volume} · {template.component_count} 组分")
+            row.setObjectName("labtoolsReagentTemplateRow")
+            row.setProperty("templateId", template.template_id)
+            row.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            row.setProperty("pageKey", "reagent_preparation")
+            row.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
+            row.clicked.connect(lambda _checked=False, item=template.template_id: self._select_labtools_reagent_template(item))
+            layout.addWidget(row)
+            status = make_status_chip(template.status_label, status_key="planned")
+            status.setProperty("templateId", template.template_id)
+            layout.addWidget(status)
+        layout.addWidget(self._labtools_notice_card("当前只展示内存示例模板；不连接外部模板源、库存系统、批次放行或协作能力。", object_name="labtoolsAdapterNotice", semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value))
+        layout.addStretch(1)
+        return frame
+
+    def _labtools_reagent_run_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsReagentRunPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "reagent_preparation")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
+        frame.setStyleSheet("QFrame#labtoolsReagentRunPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("本次配制计算预览")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        self._labtools_reagent_run_inputs: dict[str, QLineEdit] = {}
+        self._labtools_reagent_target_unit = QComboBox()
+        self._labtools_reagent_target_unit.setObjectName("labtoolsReagentTargetVolumeUnit")
+        self._labtools_reagent_target_unit.addItems(["mL", "µL", "L"])
+        layout.addLayout(self._labtools_reagent_input_row("目标体积", "target_volume", "500", unit_widget=self._labtools_reagent_target_unit))
+        layout.addLayout(self._labtools_reagent_input_row("操作者", "operator_name", "Researcher"))
+        layout.addLayout(self._labtools_reagent_input_row("实测 pH", "measured_ph", "7.4"))
+        layout.addLayout(self._labtools_reagent_input_row("pH 调整说明", "adjustment_note", "按 SOP 微调并人工记录"))
+        calculate = make_button("重新计算预览", role="primary")
+        calculate.setObjectName("labtoolsReagentCalculateButton")
+        calculate.clicked.connect(self._run_labtools_reagent_preparation)
+        layout.addWidget(calculate)
+        self._labtools_reagent_result_primary = QLabel("请选择模板并计算。")
+        self._labtools_reagent_result_primary.setObjectName("labtoolsReagentResultPrimary")
+        self._labtools_reagent_result_primary.setWordWrap(True)
+        layout.addWidget(self._labtools_reagent_result_primary)
+        self._labtools_reagent_result_rows = QVBoxLayout()
+        result_rows_frame = QFrame()
+        result_rows_frame.setObjectName("labtoolsReagentResultTable")
+        result_rows_frame.setStyleSheet("QFrame#labtoolsReagentResultTable { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        result_rows_frame.setLayout(self._labtools_reagent_result_rows)
+        layout.addWidget(result_rows_frame)
+        self._labtools_reagent_result_text = QPlainTextEdit()
+        self._labtools_reagent_result_text.setObjectName("labtoolsReagentResultText")
+        self._labtools_reagent_result_text.setReadOnly(True)
+        self._labtools_reagent_result_text.setMinimumHeight(140)
+        layout.addWidget(self._labtools_reagent_result_text)
+        self._labtools_reagent_issue_rows = QLabel(labtools_runtime.REVIEW_NOTICE)
+        self._labtools_reagent_issue_rows.setObjectName("labtoolsReagentIssueRows")
+        self._labtools_reagent_issue_rows.setWordWrap(True)
+        layout.addWidget(self._labtools_reagent_issue_rows)
+        actions = QHBoxLayout()
+        copy = make_button("复制摘要", role="secondary")
+        copy.setObjectName("labtoolsReagentCopySummaryButton")
+        copy.clicked.connect(self._copy_labtools_reagent_summary)
+        save = make_button("保存配制记录 - 需存储适配", role="secondary")
+        save.setObjectName("labtoolsReagentSaveRecordButton")
+        save.setEnabled(False)
+        save.setProperty("disabledState", "disabled_missing_storage_adapter")
+        export = make_button("导出配制摘要 - 需文件选择器", role="secondary")
+        export.setObjectName("labtoolsReagentExportButton")
+        export.setEnabled(False)
+        export.setProperty("disabledState", "disabled_missing_file_picker")
+        actions.addWidget(copy)
+        actions.addWidget(save)
+        actions.addWidget(export)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        self._labtools_reagent_copy_text = ""
+        return frame
+
+    def _labtools_reagent_detail_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsReagentDetailPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "reagent_preparation")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_REAGENT_PREPARATION.value)
+        frame.setStyleSheet("QFrame#labtoolsReagentDetailPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("模板详情 / 编辑侧栏")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        dirty = make_status_chip("已修改未保存 / storage_adapter_needed", status_key="planned")
+        dirty.setObjectName("labtoolsReagentDirtyState")
+        layout.addWidget(dirty)
+        detail_body = QFrame()
+        detail_body.setObjectName("labtoolsReagentDetailBody")
+        detail_body_layout = QVBoxLayout(detail_body)
+        detail_body_layout.setContentsMargins(0, 0, 0, 0)
+        detail_body_layout.setSpacing(8)
+        self._labtools_reagent_detail_rows_layout = detail_body_layout
+        layout.addWidget(detail_body)
+        save = make_button("保存模板 - 需存储适配", role="secondary")
+        save.setObjectName("labtoolsReagentSaveTemplateButton")
+        save.setEnabled(False)
+        save.setProperty("disabledState", "disabled_missing_storage_adapter")
+        layout.addWidget(save)
+        layout.addStretch(1)
+        return frame
+
+    def _labtools_reagent_input_row(self, label: str, field_id: str, default_value: str, *, unit_widget: QComboBox | None = None) -> QHBoxLayout:
+        row = QHBoxLayout()
+        title = QLabel(label)
+        title.setObjectName("labtoolsReagentInputLabel")
+        title.setProperty("fieldId", field_id)
+        row.addWidget(title)
+        field = QLineEdit(default_value)
+        field.setObjectName("labtoolsReagentInput")
+        field.setProperty("fieldId", field_id)
+        self._labtools_reagent_run_inputs[field_id] = field
+        row.addWidget(field, 1)
+        if unit_widget is not None:
+            unit_widget.setProperty("fieldId", field_id)
+            row.addWidget(unit_widget)
+        return row
+
+    def _select_labtools_reagent_template(self, template_id: str) -> None:
+        self._labtools_reagent_selected_template_id = template_id
+        detail = labtools_runtime.get_reagent_template_detail(template_id)
+        self._render_labtools_reagent_template_detail(detail)
+
+    def _render_labtools_reagent_template_detail(self, detail: labtools_runtime.ReagentTemplateDetail) -> None:
+        layout = self._labtools_reagent_detail_rows_layout
+        self._clear_layout(layout)
+        rows = [
+            f"模板名称：{detail.summary.name}",
+            f"分类：{detail.summary.category}",
+            f"默认体积：{detail.summary.default_volume}",
+            f"pH 目标：{detail.ph_target or '未设置'}",
+            f"说明：{detail.notes}",
+        ]
+        for text in rows:
+            label = QLabel(text)
+            label.setObjectName("labtoolsReagentDetailRow")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        component_header = QLabel("组分与 validation")
+        component_header.setObjectName("labtoolsReagentComponentHeader")
+        component_header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(component_header)
+        for component in detail.components:
+            label = QLabel(f"{component.stage} · {component.name} · {component.amount} · {component.notes or component.warning or '需人工复核'}")
+            label.setObjectName("labtoolsReagentComponentRow")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        validation_header = QLabel("Validation summary")
+        validation_header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(validation_header)
+        for row in detail.validation_rows:
+            label = QLabel(row)
+            label.setObjectName("labtoolsReagentValidationRow")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        layout.addStretch(1)
+
+    def _run_labtools_reagent_preparation(self) -> None:
+        result = labtools_runtime.calculate_reagent_preparation(
+            template_id=self._labtools_reagent_selected_template_id,
+            target_volume=self._labtools_reagent_run_inputs["target_volume"].text().strip(),
+            target_volume_unit=self._labtools_reagent_target_unit.currentText(),
+            operator_name=self._labtools_reagent_run_inputs["operator_name"].text().strip(),
+            measured_ph=self._labtools_reagent_run_inputs["measured_ph"].text().strip(),
+            adjustment_note=self._labtools_reagent_run_inputs["adjustment_note"].text().strip(),
+        )
+        self._render_labtools_reagent_preparation_result(result)
+
+    def _render_labtools_reagent_preparation_result(self, result: labtools_runtime.ReagentPreparationUiResult) -> None:
+        self._labtools_reagent_result_primary.setText(result.primary_result)
+        self._labtools_reagent_result_text.setPlainText(result.detail_text)
+        self._clear_layout(self._labtools_reagent_result_rows)
+        for component in result.component_rows:
+            row = QLabel(f"{component.stage} | {component.name} | {component.amount} | {component.notes or component.warning or 'OK'}")
+            row.setObjectName("labtoolsReagentResultRow")
+            row.setWordWrap(True)
+            self._labtools_reagent_result_rows.addWidget(row)
+        if not result.component_rows:
+            row = QLabel("未生成组分预览。")
+            row.setObjectName("labtoolsReagentResultRow")
+            self._labtools_reagent_result_rows.addWidget(row)
+        issues = list(result.errors) + list(result.warnings)
+        self._labtools_reagent_issue_rows.setText("\n".join(f"- {issue}" for issue in issues))
+        self._labtools_reagent_issue_rows.setProperty("hasError", bool(result.errors))
+        self._labtools_reagent_copy_text = result.copy_text if result.valid else ""
+
+    def _copy_labtools_reagent_summary(self) -> None:
+        from PySide6.QtWidgets import QApplication
+
+        if self._labtools_reagent_copy_text:
+            QApplication.clipboard().setText(self._labtools_reagent_copy_text)
 
     def _show_labtools_experiment_modules_shell(self) -> None:
         content = self._build_labtools_section_content(

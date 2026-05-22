@@ -80,16 +80,23 @@ def test_primary_entries_route_to_safe_secondary_shells(labtools_window) -> None
 
 def test_reagent_shell_keeps_save_and_export_adapter_needed(labtools_window) -> None:
     _click_primary(labtools_window, PageKey.LABTOOLS_REAGENT_PREPARATION.value)
-    _click_secondary(labtools_window, "reagent_preparation_run")
     content = _content(labtools_window)
-    buttons = content.findChildren(QPushButton, "labtoolsDisabledActionButton")
+    save_template = content.findChild(QPushButton, "labtoolsReagentSaveTemplateButton")
+    save_record = content.findChild(QPushButton, "labtoolsReagentSaveRecordButton")
+    export = content.findChild(QPushButton, "labtoolsReagentExportButton")
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
 
-    assert content.property("pageKey") == "reagent_preparation_run"
-    assert all(not button.isEnabled() for button in buttons)
-    assert [button.text() for button in buttons] == ["保存配制记录 - 需存储适配", "导出配制摘要 - 需文件选择器"]
-    assert "库存扣减" in labels
-    assert "默认写入 ~/.labtools" not in labels
+    assert content.property("pageKey") == "reagent_preparation"
+    assert content.findChild(QLabel, "labtoolsReagentResultPrimary") is not None
+    assert save_template is not None and not save_template.isEnabled()
+    assert save_record is not None and not save_record.isEnabled()
+    assert export is not None and not export.isEnabled()
+    assert save_record.property("disabledState") == "disabled_missing_storage_adapter"
+    assert export.property("disabledState") == "disabled_missing_file_picker"
+    assert "不默认写入 ~/.labtools" in labels
+    assert "库存扣减" not in labels
+    assert "云模板库" not in labels
+    assert "多用户同步" not in labels
 
 
 def test_experiment_modules_render_boundaries_without_enabling_actions(labtools_window) -> None:
