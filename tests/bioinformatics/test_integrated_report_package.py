@@ -20,7 +20,8 @@ def test_integrated_report_package_is_blocked_while_gate_blocked(tmp_path: Path)
     assert package["package_path"] == ""
     assert package["user_visible_package_path"] == ""
     assert package["package_plan"]["can_create_package"] is False
-    assert "survival_clinical_report_ready_not_implemented" in package["blockers"]
+    assert "survival_clinical_report_ready_not_implemented" not in package["blockers"]
+    assert "full_integrated_prerequisite_survival_clinical_section_package_not_passed:survival_km_logrank" in package["blockers"]
     assert not (tmp_path / "report_package" / "integrated").exists()
 
 

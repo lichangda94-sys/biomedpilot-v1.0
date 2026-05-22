@@ -54,6 +54,27 @@ SECTION_PLOT_REQUIREMENTS = {
     "cox": "formal_cox_plot_artifact_required_after_survival_report_ready_exists",
 }
 SUPPORTED_EXPORT_FORMATS = ("markdown", "pdf", "docx")
+SURVIVAL_CLINICAL_SECTION_SCOPES = {
+    "survival_km_logrank": "survival_km_logrank_only",
+    "cox": "cox_univariate_only",
+}
+SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES = {
+    "survival_km_logrank": "km_logrank_report.md",
+    "cox": "cox_univariate_report.md",
+}
+SECTION_PACKAGE_REQUIRED_FILES = (
+    "README_limitations.md",
+    "manifests/gate_snapshot.json",
+    "manifests/result_index_snapshot.json",
+    "manifests/source_result_entry.json",
+    "manifests/parameters_manifest.json",
+    "manifests/dependency_snapshot.json",
+    "manifests/table_validation.json",
+    "manifests/plot_artifacts.json",
+    "manifests/warnings_limitations.json",
+    "manifests/package_inventory.json",
+    "provenance/provenance.json",
+)
 
 
 def create_full_integrated_report_package(
@@ -264,15 +285,15 @@ def evaluate_full_integrated_report_gate(
         checks["all_sections_source_tables_present"] = checks["all_sections_source_tables_present"] and row["source_tables_present"]
         checks["section_report_ready_gates_passed"] = checks["section_report_ready_gates_passed"] and row["section_report_ready_status"] == "passed"
         checks["no_imported_testing_exploratory_or_preflight"] = checks["no_imported_testing_exploratory_or_preflight"] and row["result_semantics"] not in {"imported_external_result", "testing_level", "exploratory", "preflight_only"}
-    prerequisite_rows = _full_integrated_prerequisite_rows(section_rows)
+    prerequisite_rows = _full_integrated_prerequisite_rows(section_rows, section_ids=section_ids)
     prerequisite_summary = _full_integrated_prerequisite_summary(prerequisite_rows)
     checks["full_integrated_content_prerequisites_passed"] = prerequisite_summary["blocked_count"] == 0
+    checks["survival_clinical_report_ready_available"] = _survival_clinical_prerequisites_available(prerequisite_rows, section_ids)
     if not allow_missing_optional_sections:
         for check_name, passed in checks.items():
-            if not passed and check_name not in {"survival_clinical_report_ready_available"}:
+            if not passed:
                 blockers.append(check_name)
     blockers.extend(row_blocker for row in prerequisite_rows for row_blocker in row.get("blockers", []) or [])
-    blockers.append("survival_clinical_report_ready_not_implemented")
     blockers.append("full_integrated_report_export_not_enabled_in_b23_1")
     status = "blocked" if blockers else "eligible_for_full_integrated_report"
     return {
@@ -288,7 +309,8 @@ def evaluate_full_integrated_report_gate(
         "prerequisite_rows": prerequisite_rows,
         "prerequisite_summary": prerequisite_summary,
         "survival_clinical_report_ready_required": True,
-        "export_activation_status": "blocked_until_full_integrated_content_gate_and_renderer_gate_pass",
+        "survival_clinical_section_package_policy": "KM/Cox section-only packages may satisfy section prerequisites only after package integrity validation passes; they do not enable full integrated export by themselves.",
+        "export_activation_status": "blocked_until_full_integrated_export_activation_after_content_gate_and_renderer_gate_pass",
         "checks": checks,
         "package_layout": [
             "integrated_report.md",
@@ -369,6 +391,7 @@ def _section_row(root: Path, entries: list[dict[str, Any]], section_id: str, exp
     plot_status = _plot_status(entry)
     report_gate = _section_report_gate(root, section_id, result_id)
     report_status = _section_report_status(section_id, report_gate)
+    package_validation = _survival_clinical_section_package_validation(root, entry, section_id)
     if report_status != "passed":
         blockers.append(f"section_report_ready_not_passed:{section_id}:{result_id}")
         if section_id in {"survival_km_logrank", "cox"}:
@@ -391,6 +414,7 @@ def _section_row(root: Path, entries: list[dict[str, Any]], section_id: str, exp
         "section_report_ready_gate_schema": str(report_gate.get("schema_version") or ""),
         "section_package_scope": _section_package_scope(report_gate),
         "registered_report_scopes": _registered_report_scopes(entry),
+        "section_package_validation": package_validation,
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
@@ -436,9 +460,9 @@ def _section_report_status(section_id: str, gate: dict[str, Any]) -> str:
     return "passed" if gate.get("status") == passing.get(section_id) else "blocked"
 
 
-def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]], *, section_ids: tuple[str, ...] = REQUIRED_SECTION_IDS) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for section_id in REQUIRED_SECTION_IDS:
+    for section_id in section_ids:
         section = next((row for row in section_rows if row.get("section_id") == section_id), {})
         blockers: list[str] = []
         if not section.get("result_present"):
@@ -456,10 +480,14 @@ def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]]) -> li
         if section.get("section_report_ready_status") != "passed":
             blockers.append(f"full_integrated_prerequisite_section_report_ready_not_passed:{section_id}")
         if section_id in {"survival_km_logrank", "cox"}:
-            blockers.append(f"full_integrated_prerequisite_survival_clinical_report_ready_missing:{section_id}")
-        if _has_section_only_report_scope(section):
+            package_validation = section.get("section_package_validation") if isinstance(section.get("section_package_validation"), dict) else {}
+            if package_validation.get("status") != "passed":
+                blockers.append(f"full_integrated_prerequisite_survival_clinical_section_package_not_passed:{section_id}")
+                blockers.extend(str(item) for item in package_validation.get("blockers", []) or [])
+        if _has_section_only_report_scope(section) and not _section_only_package_satisfies_prerequisite(section_id, section):
             blockers.append(f"full_integrated_prerequisite_forbids_section_package_as_full_report:{section_id}")
         row_status = "passed" if not blockers else "blocked"
+        section_package_validation = section.get("section_package_validation") if isinstance(section.get("section_package_validation"), dict) else {}
         rows.append(
             {
                 "section_id": section_id,
@@ -477,9 +505,10 @@ def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]]) -> li
                 "section_report_ready_status": str(section.get("section_report_ready_status") or ""),
                 "section_report_ready_gate_schema": str(section.get("section_report_ready_gate_schema") or ""),
                 "section_package_scope": str(section.get("section_package_scope") or ""),
+                "section_package_validation_status": str(section_package_validation.get("status") or "not_required"),
                 "registered_report_scopes": list(section.get("registered_report_scopes", []) or []),
                 "full_integrated_scope_required": True,
-                "section_only_package_sufficient": False,
+                "section_only_package_sufficient": _section_only_package_satisfies_prerequisite(section_id, section),
                 "status": row_status,
                 "disabled_reason": "; ".join(dict.fromkeys(blockers)),
                 "blockers": list(dict.fromkeys(blockers)),
@@ -499,8 +528,20 @@ def _full_integrated_prerequisite_summary(rows: list[dict[str, Any]]) -> dict[st
         "status": "passed" if blocked == 0 else "blocked",
         "blocked_sections": [row.get("section_id") for row in rows if row.get("status") != "passed"],
         "survival_clinical_report_ready_required": True,
-        "section_only_package_sufficient": False,
+        "section_only_package_sufficient": all(
+            row.get("section_only_package_sufficient")
+            for row in rows
+            if row.get("section_id") in SURVIVAL_CLINICAL_SECTION_SCOPES
+        ),
     }
+
+
+def _survival_clinical_prerequisites_available(rows: list[dict[str, Any]], section_ids: tuple[str, ...]) -> bool:
+    required = [section_id for section_id in section_ids if section_id in SURVIVAL_CLINICAL_SECTION_SCOPES]
+    if not required:
+        return True
+    by_section = {str(row.get("section_id") or ""): row for row in rows}
+    return all(by_section.get(section_id, {}).get("section_only_package_sufficient") is True for section_id in required)
 
 
 def _section_package_scope(gate: dict[str, Any]) -> str:
@@ -521,6 +562,76 @@ def _registered_report_scopes(entry: dict[str, Any]) -> list[str]:
 def _has_section_only_report_scope(section: dict[str, Any]) -> bool:
     scopes = [str(section.get("section_package_scope") or ""), *(str(item) for item in section.get("registered_report_scopes", []) or [])]
     return any(scope and scope != "full_integrated_report" and scope.endswith("_only") for scope in scopes)
+
+
+def _section_only_package_satisfies_prerequisite(section_id: str, section: dict[str, Any]) -> bool:
+    if section_id not in SURVIVAL_CLINICAL_SECTION_SCOPES:
+        return False
+    validation = section.get("section_package_validation") if isinstance(section.get("section_package_validation"), dict) else {}
+    return validation.get("status") == "passed"
+
+
+def _survival_clinical_section_package_validation(root: Path, entry: dict[str, Any], section_id: str) -> dict[str, Any]:
+    expected_scope = SURVIVAL_CLINICAL_SECTION_SCOPES.get(section_id)
+    if not expected_scope:
+        return {"status": "not_required", "blockers": [], "warnings": []}
+    blockers: list[str] = []
+    warnings: list[str] = []
+    result_id = str(entry.get("result_id") or "")
+    artifacts = [artifact for artifact in entry.get("report_artifacts", []) or [] if isinstance(artifact, dict)]
+    matching = [artifact for artifact in artifacts if str(artifact.get("section_scope") or "") == expected_scope]
+    if not matching:
+        blockers.append(f"section_package_artifact_missing:{section_id}:{expected_scope}")
+        return _section_package_validation_payload(section_id, expected_scope, "", "", blockers, warnings, {})
+    artifact = matching[-1]
+    manifest_path = _artifact_path(root, artifact)
+    if not manifest_path.is_file():
+        blockers.append(f"section_package_manifest_missing:{section_id}:{expected_scope}")
+        return _section_package_validation_payload(section_id, expected_scope, str(manifest_path), "", blockers, warnings, {})
+    manifest = _read_json(manifest_path)
+    package_dir = Path(str(manifest.get("package_path") or manifest_path.parent)).expanduser()
+    if not package_dir.is_absolute():
+        package_dir = root / package_dir
+    if not package_dir.is_dir():
+        blockers.append(f"section_package_directory_missing:{section_id}")
+    expected_status = f"{expected_scope}_report_ready_package_created"
+    if manifest.get("status") != expected_status:
+        blockers.append(f"section_package_status_invalid:{section_id}:{manifest.get('status') or 'missing'}")
+    if manifest.get("section_scope") != expected_scope:
+        blockers.append(f"section_package_scope_mismatch:{section_id}:{manifest.get('section_scope') or 'missing'}")
+    if result_id not in [str(item) for item in manifest.get("included_result_ids", []) or []]:
+        blockers.append(f"section_package_source_result_mismatch:{section_id}:{result_id}")
+    if manifest.get("clinical_conclusion_enabled") is not False:
+        blockers.append(f"section_package_clinical_conclusion_flag_not_false:{section_id}")
+    if manifest.get("full_integrated_report_enabled") is not False:
+        blockers.append(f"section_package_full_integrated_flag_not_false:{section_id}")
+    required_files = [SURVIVAL_CLINICAL_SECTION_PACKAGE_FILES[section_id], *SECTION_PACKAGE_REQUIRED_FILES]
+    missing_files = [relative for relative in required_files if not (package_dir / relative).is_file()]
+    blockers.extend(f"section_package_required_file_missing:{section_id}:{relative}" for relative in missing_files)
+    for dirname in ("tables", "plots", "manifests", "logs", "provenance"):
+        if not (package_dir / dirname).is_dir():
+            blockers.append(f"section_package_required_directory_missing:{section_id}:{dirname}")
+    excluded = set(str(item) for item in manifest.get("excluded_result_semantics", []) or [])
+    forbidden = {"imported_external_result", "testing_level", "exploratory", "preflight_only"}
+    if not forbidden.issubset(excluded):
+        blockers.append(f"section_package_forbidden_semantics_policy_incomplete:{section_id}")
+    return _section_package_validation_payload(section_id, expected_scope, str(manifest_path), str(package_dir), blockers, warnings, manifest)
+
+
+def _section_package_validation_payload(section_id: str, expected_scope: str, manifest_path: str, package_path: str, blockers: list[str], warnings: list[str], manifest: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "biomedpilot.full_integrated_survival_clinical_section_package_prerequisite_gate.v1",
+        "section_id": section_id,
+        "expected_section_scope": expected_scope,
+        "status": "passed" if not blockers else "blocked",
+        "manifest_path": manifest_path,
+        "package_path": package_path,
+        "manifest_status": str(manifest.get("status") or ""),
+        "section_only_package_sufficient": not blockers,
+        "full_integrated_export_enabled": False,
+        "blockers": list(dict.fromkeys(blockers)),
+        "warnings": list(dict.fromkeys(warnings)),
+    }
 
 
 def _source_tables_present(root: Path, entry: dict[str, Any]) -> bool:
@@ -755,6 +866,14 @@ def _renderer_dependency_version(executable: str) -> str:
         return "version_unavailable"
     text = (completed.stdout or completed.stderr or "").splitlines()
     return text[0].strip() if text else "version_unavailable"
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _write_json(path: Path, payload: Any) -> None:

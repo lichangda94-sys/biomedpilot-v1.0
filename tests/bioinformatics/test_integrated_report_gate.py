@@ -6,14 +6,14 @@ from app.bioinformatics.reports.integrated import evaluate_full_integrated_repor
 from app.bioinformatics.results.registry import save_registry
 
 
-def test_full_integrated_gate_blocks_until_survival_clinical_report_ready_exists(tmp_path: Path) -> None:
+def test_full_integrated_gate_blocks_until_survival_clinical_section_packages_pass(tmp_path: Path) -> None:
     _write_full_layer_fixture(tmp_path)
 
     gate = evaluate_full_integrated_report_gate(tmp_path)
 
     assert gate["status"] == "blocked"
     assert gate["section_scope"] == "full_integrated_report"
-    assert "survival_clinical_report_ready_not_implemented" in gate["blockers"]
+    assert "survival_clinical_report_ready_not_implemented" not in gate["blockers"]
     assert "full_integrated_report_export_not_enabled_in_b23_1" in gate["blockers"]
     sections = {row["section_id"]: row for row in gate["section_rows"]}
     assert sections["formal_deg"]["result_id"] == "deg-formal"
@@ -25,7 +25,7 @@ def test_full_integrated_gate_blocks_until_survival_clinical_report_ready_exists
     assert gate["prerequisite_summary"]["survival_clinical_report_ready_required"] is True
     assert prerequisites["formal_deg"]["required_result_semantics"] == "formal_computed_result"
     assert prerequisites["survival_km_logrank"]["section_only_package_sufficient"] is False
-    assert "full_integrated_prerequisite_survival_clinical_report_ready_missing:survival_km_logrank" in prerequisites["survival_km_logrank"]["blockers"]
+    assert "full_integrated_prerequisite_survival_clinical_section_package_not_passed:survival_km_logrank" in prerequisites["survival_km_logrank"]["blockers"]
 
 
 def test_full_integrated_gate_blocks_missing_required_sections(tmp_path: Path) -> None:
@@ -61,11 +61,12 @@ def test_section_only_report_artifacts_do_not_make_full_integrated_report(tmp_pa
 
     assert gate["status"] == "blocked"
     assert gate["section_scope"] == "full_integrated_report"
-    assert "survival_clinical_report_ready_not_implemented" in gate["blockers"]
+    assert "survival_clinical_report_ready_not_implemented" not in gate["blockers"]
     assert gate["package_layout"][0] == "integrated_report.md"
     assert all("full_integrated_report" not in str(row.get("section_report_ready_gate", {}).get("package_layout", "")) for row in gate["section_rows"])
     prerequisites = {row["section_id"]: row for row in gate["prerequisite_rows"]}
     assert "full_integrated_prerequisite_forbids_section_package_as_full_report:formal_deg" in prerequisites["formal_deg"]["blockers"]
+    assert "section_package_manifest_missing:survival_km_logrank:survival_km_logrank_only" in prerequisites["survival_km_logrank"]["blockers"]
     assert prerequisites["formal_deg"]["registered_report_scopes"] == ["formal_deg_only"]
 
 

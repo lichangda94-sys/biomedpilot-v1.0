@@ -80,7 +80,10 @@ def test_full_integrated_gate_consumes_km_and_cox_report_ready_gates_but_stays_b
     assert sections["cox"]["section_report_ready_gate_schema"] == "biomedpilot.cox_univariate_report_ready_gate.v1"
     assert sections["cox"]["section_report_ready_status"] == "passed"
     assert gate["status"] == "blocked"
-    assert "survival_clinical_report_ready_not_implemented" in gate["blockers"]
+    assert "survival_clinical_report_ready_not_implemented" not in gate["blockers"]
+    assert "survival_clinical_report_ready_available" in gate["blockers"]
+    prerequisites = {row["section_id"]: row for row in gate["prerequisite_rows"]}
+    assert "full_integrated_prerequisite_survival_clinical_section_package_not_passed:survival_km_logrank" in prerequisites["survival_km_logrank"]["blockers"]
     assert "full_integrated_report_export_not_enabled_in_b23_1" in gate["blockers"]
 
 
@@ -104,9 +107,13 @@ def test_km_report_ready_package_writes_section_only_layout_and_updates_source_r
     assert entry["report_ready_eligible"] is True
     assert entry["report_artifacts"][0]["section_scope"] == "survival_km_logrank_only"
     assert "clinical advice" in (package_path / "km_logrank_report.md").read_text(encoding="utf-8")
-    full = evaluate_full_integrated_report_gate(tmp_path, section_result_ids={"survival_km_logrank": "km-ready"})
+    full = evaluate_full_integrated_report_gate(tmp_path, section_result_ids={"survival_km_logrank": "km-ready"}, include_sections=["survival_km_logrank"])
     assert full["status"] == "blocked"
-    assert "full_integrated_prerequisite_forbids_section_package_as_full_report:survival_km_logrank" in full["blockers"]
+    assert full["checks"]["survival_clinical_report_ready_available"] is True
+    assert full["prerequisite_summary"]["status"] == "passed"
+    assert full["prerequisite_summary"]["section_only_package_sufficient"] is True
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report:survival_km_logrank" not in full["blockers"]
+    assert "full_integrated_report_export_not_enabled_in_b23_1" in full["blockers"]
 
 
 def test_cox_report_ready_package_writes_section_only_layout_and_updates_source_result(tmp_path: Path) -> None:
@@ -126,6 +133,12 @@ def test_cox_report_ready_package_writes_section_only_layout_and_updates_source_
     entry = load_registry(tmp_path)["results"][0]
     assert entry["report_ready_eligible"] is True
     assert entry["report_artifacts"][0]["section_scope"] == "cox_univariate_only"
+    full = evaluate_full_integrated_report_gate(tmp_path, section_result_ids={"cox": "cox-ready"}, include_sections=["cox"])
+    assert full["status"] == "blocked"
+    assert full["checks"]["survival_clinical_report_ready_available"] is True
+    assert full["prerequisite_summary"]["section_only_package_sufficient"] is True
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report:cox" not in full["blockers"]
+    assert "full_integrated_report_export_not_enabled_in_b23_1" in full["blockers"]
 
 
 def test_survival_clinical_report_ready_package_blocks_without_gate_pass_and_writes_nothing(tmp_path: Path) -> None:

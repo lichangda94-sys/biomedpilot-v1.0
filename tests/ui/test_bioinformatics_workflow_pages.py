@@ -3033,7 +3033,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "Resolve B12 input, Cox parameter, confirmation and lifelines dependency gates" in action_text
     assert "Export report-ready package" in action_text
     assert "Export full integrated report" in action_text
-    assert "survival_clinical_report_ready_not_implemented" in action_text
+    assert "survival_clinical_section_package_not_passed" in action_text or "missing_km_logrank_result" in action_text
     assert "blocked_report_ready_gate" in action_text
 
     capability_table = widget.findChild(QTableWidget, "analysisCapabilityMapTable")
@@ -3086,7 +3086,7 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     gate_text = _table_text(gate_table)
     assert "Report-ready export" in gate_text
     assert "Full integrated report" in gate_text
-    assert "survival_clinical_report_ready_not_implemented" in gate_text
+    assert "survival_clinical_section_package_not_passed" in gate_text or "missing_km_logrank_result" in gate_text
     assert "GSEA source DEG result" in gate_text
     assert "GSEA rank metric" in gate_text
     assert "B11.2 controlled GSEA execution" in gate_text
@@ -4593,7 +4593,7 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     full_status = widget.findChild(QLabel, "fullIntegratedReportStatus")
     assert full_status is not None
     assert "Full integrated report disabled" in full_status.text()
-    assert "survival_clinical_report_ready_not_implemented" in full_status.text()
+    assert "survival_clinical_section_package_not_passed" in full_status.text() or "section_result_missing:survival_km_logrank" in full_status.text()
     full_button = widget.findChild(QPushButton, "fullIntegratedReportButton")
     assert full_button is not None
     assert not full_button.isEnabled()
@@ -4625,7 +4625,7 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     blocked_full = widget.generate_full_integrated_report_package()
     assert blocked_full is not None
     assert blocked_full["status"] == "blocked"
-    assert "survival_clinical_report_ready_not_implemented" in blocked_full["blockers"]
+    assert "full_integrated_prerequisite_survival_clinical_section_package_not_passed:survival_km_logrank" in blocked_full["blockers"] or "section_result_missing:survival_km_logrank" in blocked_full["blockers"]
     assert not (project_summary.project_root / "report_package" / "integrated").exists()
     button = widget.findChild(QPushButton, "formalDegReportReadyButton")
     assert button is not None
@@ -4682,7 +4682,8 @@ def test_results_browser_survival_clinical_section_report_package_gate(qt_app, p
     full_status = widget.findChild(QLabel, "fullIntegratedReportStatus")
     assert full_status is not None
     assert "Full integrated report disabled" in full_status.text()
-    assert "full_integrated_prerequisite_forbids_section_package_as_full_report" in full_status.text()
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report" not in full_status.text()
+    assert "full_integrated_report_export_not_enabled_in_b23_1" in full_status.text()
 
 
 def _register_survival_clinical_section_results(root: Path) -> None:
