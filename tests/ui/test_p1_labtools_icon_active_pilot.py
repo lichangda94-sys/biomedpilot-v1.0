@@ -139,7 +139,7 @@ def test_labtools_icon_fallback_preserves_labels_and_disabled_shell_buttons(qt_a
         assert "细胞实验" in labels
         assert all(icon.property("iconFallback") is True for icon in icons)
         assert all(button.property("moduleKey") == ModuleKey.LABTOOLS.value for button in buttons)
-        assert all(not button.isEnabled() for button in buttons)
+        assert all(button.isEnabled() for button in buttons)
     finally:
         window.close()
         window.deleteLater()

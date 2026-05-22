@@ -48,7 +48,7 @@ def test_labtools_entry_is_reachable_from_global_shell(labtools_window) -> None:
     assert page.accessibleName() == "LabTools shell page"
     assert title is not None
     assert title.property("moduleKey") == ModuleKey.LABTOOLS.value
-    assert title.property("semanticKey") == ModuleKey.LABTOOLS.value
+    assert title.property("semanticKey") == PageKey.LABTOOLS_HOME.value
 
 
 def test_labtools_primary_ia_has_only_three_entries(labtools_window) -> None:
@@ -64,7 +64,7 @@ def test_labtools_primary_ia_has_only_three_entries(labtools_window) -> None:
     assert len(entry_buttons) == 3
     assert all(button.property("moduleKey") == ModuleKey.LABTOOLS.value for button in entry_buttons)
     assert [button.property("semanticKey") for button in entry_buttons] == entry_pages
-    assert all(not button.isEnabled() for button in entry_buttons)
+    assert all(button.isEnabled() for button in entry_buttons)
 
 
 def test_general_calculator_excludes_experiment_specific_workflows(labtools_window) -> None:

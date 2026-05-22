@@ -39,7 +39,7 @@ from app.shared.project_center.service import ProjectCenter, ProjectRecord
 from app.shared.semantic_keys import ModuleKey, PageKey
 from app.shared.settings import SettingsProfile
 from app.shared.testing_mode import generate_feedback_template, testing_mode_summary
-from app.shared.ui_components.primitives import diagnostic_disclosure_title, make_button, make_status_chip
+from app.shared.ui_components.primitives import diagnostic_disclosure_title, make_button, make_empty_state, make_status_chip
 
 
 _SETTINGS_RESOURCE_SEMANTIC_KEYS = {
@@ -309,25 +309,49 @@ class MainWindow(QMainWindow):
         page.setProperty("semanticKey", PageKey.LABTOOLS_HOME.value)
         page.setProperty("usabilityRole", "scrollable_shell_page")
         page.setAccessibleName("LabTools shell page")
+        self._labtools_shell_page = page
+        self._set_labtools_content(self._build_labtools_home_content())
+        return page
+
+    def _set_labtools_content(self, content: QWidget) -> None:
+        page = self._labtools_shell_page
+        old_widget = page.takeWidget()
+        if old_widget is not None:
+            old_widget.deleteLater()
+        page.setProperty("pageKey", content.property("pageKey"))
+        page.setProperty("semanticKey", content.property("semanticKey"))
+        page.setWidget(content)
+
+    def _build_labtools_base_content(self, *, page_key: str, semantic_key: str, title: str, subtitle: str) -> QWidget:
         content = QWidget()
         content.setObjectName("labtoolsShellContent")
         content.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
-        content.setProperty("pageKey", "home")
-        content.setProperty("semanticKey", PageKey.LABTOOLS_HOME.value)
+        content.setProperty("pageKey", page_key)
+        content.setProperty("semanticKey", semantic_key)
         root = QVBoxLayout(content)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
-        title = QLabel("LabTools / 实验工具")
-        title.setObjectName("labtoolsShellTitle")
-        title.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
-        title.setProperty("semanticKey", ModuleKey.LABTOOLS.value)
-        title.setStyleSheet("font-size: 24px; font-weight: 700;")
-        root.addWidget(title)
-        subtitle = QLabel("通用计算、试剂配制与实验流程工具集合，为生物医学实验提供可靠的计算与规划支持。")
-        subtitle.setObjectName("labtoolsShellSubtitle")
-        subtitle.setWordWrap(True)
-        root.addWidget(subtitle)
+        title_label = QLabel(title)
+        title_label.setObjectName("labtoolsShellTitle")
+        title_label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        title_label.setProperty("semanticKey", semantic_key)
+        title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        root.addWidget(title_label)
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("labtoolsShellSubtitle")
+        subtitle_label.setWordWrap(True)
+        root.addWidget(subtitle_label)
         root.addWidget(make_status_chip("Developer Preview / 本地测试版", status_key="developer_preview"))
+        return content
+
+    def _build_labtools_home_content(self) -> QWidget:
+        content = self._build_labtools_base_content(
+            page_key="home",
+            semantic_key=PageKey.LABTOOLS_HOME.value,
+            title="LabTools / 实验工具",
+            subtitle="通用计算、试剂配制与实验流程工具集合，为生物医学实验提供可靠的计算与规划支持。",
+        )
+        root = content.layout()
 
         entry_row = QHBoxLayout()
         entry_row.setSpacing(14)
@@ -342,8 +366,9 @@ class MainWindow(QMainWindow):
                     "加样计算",
                     "分子量 / 摩尔量换算",
                     "单位换算",
-                    "更多计算工具",
+                    "更多通用计算入口（规划中）",
                 ],
+                callback=self._show_labtools_general_calculator_shell,
             )
         )
         entry_row.addWidget(
@@ -356,9 +381,11 @@ class MainWindow(QMainWindow):
                     "溶液配制",
                     "稀释系列",
                     "缓冲液配方",
-                    "保存与稳定性提示",
+                    "配制复核提示",
+                    "记录保存需适配",
                     "更多配制工具",
                 ],
+                callback=self._show_labtools_reagent_preparation_shell,
             )
         )
         entry_row.addWidget(
@@ -370,10 +397,19 @@ class MainWindow(QMainWindow):
                 rows=[
                     "包含以下实验模块：",
                     "细胞实验、蛋白实验、核酸实验、免疫与吸光度实验、免疫组化。",
+                    "提供实验模块入口与计算辅助。",
                 ],
+                callback=self._show_labtools_experiment_modules_shell,
             )
         )
         root.addLayout(entry_row)
+        root.addWidget(
+            self._labtools_notice_card(
+                "实验计算结果需由用户复核后用于台面操作。",
+                object_name="labtoolsReviewNotice",
+                semantic_key=PageKey.LABTOOLS_HOME.value,
+            )
+        )
         root.addWidget(
             self._quick_access_card(
                 module_key=ModuleKey.LABTOOLS.value,
@@ -382,10 +418,369 @@ class MainWindow(QMainWindow):
             )
         )
         root.addStretch(1)
-        page.setWidget(content)
-        return page
+        return content
 
-    def _labtools_primary_entry_card(self, *, title: str, page_key: str, semantic_key: str, status_key: str, rows: list[str]) -> QFrame:
+    def _show_labtools_home(self) -> None:
+        self._set_labtools_content(self._build_labtools_home_content())
+
+    def _show_labtools_general_calculator_shell(self) -> None:
+        content = self._build_labtools_section_content(
+            page_key="general_calculators",
+            semantic_key=PageKey.LABTOOLS_GENERAL_CALCULATORS.value,
+            title="通用计算器 / General Calculator",
+            subtitle="仅建立 Quick Calculator 与 Dynamic Formula Solver 的安全占位路由；本阶段不执行真实计算。",
+            status_label="后端可用 / 需 UI 适配",
+            status_key="testing",
+            cards=[
+                {
+                    "title": "Quick Calculator",
+                    "page_key": "quick_calculator",
+                    "semantic_key": "labtools.page.quick_calculator",
+                    "status_label": "backend_ready / ui_adapter_needed",
+                    "status_key": "testing",
+                    "rows": ["稀释、单位换算、细胞铺板辅助仅作为计算入口占位。", "保存历史与导出保持禁用。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Quick Calculator / 快速计算",
+                        page_key="quick_calculator",
+                        semantic_key="labtools.page.quick_calculator",
+                        status_label="backend_ready / ui_adapter_needed",
+                        status_key="testing",
+                        body_rows=[
+                            "本阶段只展示计算器占位页面和状态边界，不调用 LabTools calculator execution。",
+                            "细胞铺板只作为计算辅助，不是细胞实验记录保存。",
+                        ],
+                        disabled_actions=("保存到历史 - 需存储适配", "导出结果 - 暂未开放"),
+                    ),
+                },
+                {
+                    "title": "Dynamic Formula Solver",
+                    "page_key": "formula_solver",
+                    "semantic_key": "labtools.page.formula_solver",
+                    "status_label": "backend_ready / ui_adapter_needed",
+                    "status_key": "testing",
+                    "rows": ["公式选择、求解目标与单位输入将在后续 adapter 层接入。", "本阶段不生成计算结果。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Dynamic Formula Solver / 动态公式求解",
+                        page_key="formula_solver",
+                        semantic_key="labtools.page.formula_solver",
+                        status_label="backend_ready / ui_adapter_needed",
+                        status_key="testing",
+                        body_rows=[
+                            "保留公式求解页面壳层、结果区空状态和复核提示。",
+                            "无效输入不会生成假结果；真实求解等待 UI adapter。",
+                        ],
+                        disabled_actions=("保存公式运行 - 需存储适配", "导出结果 - 暂未开放"),
+                    ),
+                },
+            ],
+        )
+        self._set_labtools_content(content)
+
+    def _show_labtools_reagent_preparation_shell(self) -> None:
+        content = self._build_labtools_section_content(
+            page_key="reagent_preparation",
+            semantic_key=PageKey.LABTOOLS_REAGENT_PREPARATION.value,
+            title="试剂制备 / Reagent Preparation",
+            subtitle="模板、编辑侧栏和本次配制只建立安全占位路由；本阶段不读取或写入真实 store。",
+            status_label="backend_ready / storage_adapter_needed",
+            status_key="planned",
+            cards=[
+                {
+                    "title": "Reagent Template List",
+                    "page_key": "reagent_template_list",
+                    "semantic_key": "labtools.page.reagent_template_list",
+                    "status_label": "需存储适配",
+                    "status_key": "planned",
+                    "rows": ["项目内试剂模板列表占位。", "未接入 BioMedPilotLabToolsStorageAdapter 前保持空状态。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Reagent Template List / 试剂模板列表",
+                        page_key="reagent_template_list",
+                        semantic_key="labtools.page.reagent_template_list",
+                        status_label="storage_adapter_needed",
+                        status_key="planned",
+                        body_rows=[
+                            "当前项目暂无试剂模板；列表不会默认读取或写入 ~/.labtools。",
+                            "模板保存必须等待 BioMedPilot project storage adapter。",
+                        ],
+                        disabled_actions=("新建模板 - 需存储适配", "保存模板 - 需存储适配"),
+                    ),
+                },
+                {
+                    "title": "Template Editor Side Panel",
+                    "page_key": "reagent_template_editor",
+                    "semantic_key": "labtools.page.reagent_template_editor",
+                    "status_label": "需存储适配",
+                    "status_key": "planned",
+                    "rows": ["模板编辑侧栏占位，显示 dirty state 和 validation 入口。", "保存按钮保持禁用。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Reagent Template Editor / 模板编辑侧栏",
+                        page_key="reagent_template_editor",
+                        semantic_key="labtools.page.reagent_template_editor",
+                        status_label="storage_adapter_needed",
+                        status_key="planned",
+                        body_rows=[
+                            "侧栏用于后续承载组分表、pH 字段和 validation summary。",
+                            "已修改未保存只能表示 UI dirty state，不表示版本管理已完成。",
+                        ],
+                        disabled_actions=("保存模板 - 需存储适配",),
+                    ),
+                },
+                {
+                    "title": "Reagent Preparation Run",
+                    "page_key": "reagent_preparation_run",
+                    "semantic_key": "labtools.page.reagent_preparation_run",
+                    "status_label": "backend_ready / adapter_needed",
+                    "status_key": "testing",
+                    "rows": ["本次配制计算预览占位。", "保存配制记录和导出仍需 adapter。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Reagent Preparation Run / 本次试剂配制",
+                        page_key="reagent_preparation_run",
+                        semantic_key="labtools.page.reagent_preparation_run",
+                        status_label="backend_ready / adapter_needed",
+                        status_key="testing",
+                        body_rows=[
+                            "后续可显示配制计算预览，但本阶段不调用真实计算或保存记录。",
+                            "不启用库存扣减、生产批次放行、云模板库或多人同步。",
+                        ],
+                        disabled_actions=("保存配制记录 - 需存储适配", "导出配制摘要 - 需文件选择器"),
+                    ),
+                },
+            ],
+            notice_rows=["桌面 UI 不默认写入 ~/.labtools；所有保存路径必须由 BioMedPilotLabToolsStorageAdapter 提供。"],
+        )
+        self._set_labtools_content(content)
+
+    def _show_labtools_experiment_modules_shell(self) -> None:
+        content = self._build_labtools_section_content(
+            page_key="experiment_modules",
+            semantic_key=PageKey.LABTOOLS_EXPERIMENT_MODULES.value,
+            title="实验模块 / Experiment Modules",
+            subtitle="实验模块只建立二级占位路由；不会启用 WB、BCA、ELISA、细胞记录或 ImageJ/Fiji 的真实执行。",
+            status_label="testing / shell-only boundaries",
+            status_key="testing",
+            cards=[
+                {
+                    "title": "Western Blot Loading",
+                    "page_key": "wb_loading",
+                    "semantic_key": PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                    "status_label": "active_backend_ready / adapter_needed",
+                    "status_key": "testing",
+                    "rows": ["WB 上样计算页面占位。", "不执行真实 WB calculation；保存和导出保持禁用。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Western Blot Loading / WB 上样计算",
+                        page_key="wb_loading",
+                        semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                        status_label="active_backend_ready / adapter_needed",
+                        status_key="testing",
+                        body_rows=[
+                            "当前仅提供 WB 上样计算壳层；不调用 calculate_wb_loading。",
+                            "泳道布局是后续示意区域，不生成假胶图、假条带或图像分析结果。",
+                        ],
+                        disabled_actions=("保存 WB 记录 - 需存储适配", "导出 CSV / Markdown - 需文件选择器"),
+                    ),
+                },
+                {
+                    "title": "SDS-PAGE",
+                    "page_key": "sds_page",
+                    "semantic_key": PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                    "status_label": "active_backend_ready / adapter_needed",
+                    "status_key": "planned",
+                    "rows": ["配胶子页面占位。", "XLSX 导出和模板持久化未启用。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="SDS-PAGE / 配胶",
+                        page_key="sds_page",
+                        semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
+                        status_label="adapter_needed",
+                        status_key="planned",
+                        body_rows=["SDS-PAGE 后端 helper 可规划接入，但本阶段只显示子页面占位。"],
+                        disabled_actions=("保存配胶模板 - 需存储适配", "导出 XLSX - 需文件选择器"),
+                    ),
+                },
+                {
+                    "title": "BCA / OD MVP Boundary",
+                    "page_key": "bca_od_mvp",
+                    "semantic_key": PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+                    "status_label": "testing_preview_only",
+                    "status_key": "testing",
+                    "rows": ["8 x 12 OD matrix / annotation / linear-fit summary 仅保留边界占位。", "不声明正式保存、导出或临床级定量。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="BCA / OD MVP Boundary",
+                        page_key="bca_od_mvp",
+                        semantic_key=PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+                        status_label="testing_preview_only",
+                        status_key="testing",
+                        body_rows=["BCA / OD 可以显示 MVP 边界，但本阶段不运行 BCA helper、不保存、不导出。"],
+                        disabled_actions=("保存 BCA 记录 - 后端记录模型未完成", "导出 BCA 结果 - 暂未开放"),
+                    ),
+                },
+                {
+                    "title": "Cell Experiment Workspace",
+                    "page_key": "cell_experiment_workspace",
+                    "semantic_key": PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
+                    "status_label": "shell_only / record_store_missing",
+                    "status_key": "shell_only",
+                    "rows": ["细胞信息、实验记录模板、结果处理工具三主区占位。", "保存细胞记录保持禁用。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Cell Experiment Workspace / 细胞实验工作区",
+                        page_key="cell_experiment_workspace",
+                        semantic_key=PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
+                        status_label="shell_only / record_store_missing",
+                        status_key="shell_only",
+                        body_rows=[
+                            "细胞实验记录 store 尚未接入；不显示假记录、假时间线或真实保存。",
+                            "ELISA 不属于此页面。",
+                        ],
+                        disabled_actions=("保存细胞记录 - 后端未完成", "运行图像分析 - 暂未开放"),
+                    ),
+                },
+                {
+                    "title": "ELISA / Immuno-Absorbance",
+                    "page_key": "elisa_boundary",
+                    "semantic_key": PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+                    "status_label": "blocked_until_backend",
+                    "status_key": "blocked",
+                    "rows": ["ELISA backend 未完成。", "不启用 4PL、正式报告、保存或导出。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="ELISA / Immuno-Absorbance Boundary",
+                        page_key="elisa_boundary",
+                        semantic_key=PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
+                        status_label="blocked_until_backend",
+                        status_key="blocked",
+                        body_rows=["ELISA 后端缺失；4PL、正式结果、报告和导出都保持禁用。"],
+                        disabled_actions=("运行 ELISA 分析 - 后端未完成", "保存记录 - 后端未完成", "导出报告 - 后端未完成"),
+                    ),
+                },
+                {
+                    "title": "Image Processing Workspace",
+                    "page_key": "image_processing_boundary",
+                    "semantic_key": "labtools.page.image_processing_boundary",
+                    "status_label": "shell_only / external_engine_adapter_missing",
+                    "status_key": "shell_only",
+                    "rows": ["ImageJ/Fiji 仅作为 Settings-linked 外部能力入口。", "不运行 macro、自动 ROI、自动细胞计数或条带识别。"],
+                    "callback": lambda: self._show_labtools_placeholder_page(
+                        title="Image Processing Workspace / 图像处理边界",
+                        page_key="image_processing_boundary",
+                        semantic_key="labtools.page.image_processing_boundary",
+                        status_label="shell_only / external_engine_adapter_missing",
+                        status_key="shell_only",
+                        body_rows=[
+                            "ImageJ/Fiji 仅显示为 Settings-linked 外部能力配置入口。",
+                            "本阶段不实现可执行检测、macro runner、ROI model、result parser 或批量处理。",
+                        ],
+                        disabled_actions=("运行图像分析 - 暂未开放", "保存图像结果 - 暂未开放"),
+                        settings_link=True,
+                    ),
+                },
+            ],
+        )
+        self._set_labtools_content(content)
+
+    def _build_labtools_section_content(
+        self,
+        *,
+        page_key: str,
+        semantic_key: str,
+        title: str,
+        subtitle: str,
+        status_label: str,
+        status_key: str,
+        cards: list[dict],
+        notice_rows: list[str] | None = None,
+    ) -> QWidget:
+        content = self._build_labtools_base_content(page_key=page_key, semantic_key=semantic_key, title=title, subtitle=subtitle)
+        root = content.layout()
+        nav = QHBoxLayout()
+        back = make_button("返回 LabTools 首页", role="secondary")
+        back.setObjectName("labtoolsBackButton")
+        back.clicked.connect(self._show_labtools_home)
+        nav.addWidget(back)
+        nav.addWidget(make_status_chip(status_label, status_key=status_key))
+        nav.addStretch(1)
+        root.addLayout(nav)
+        if notice_rows:
+            for row in notice_rows:
+                root.addWidget(self._labtools_notice_card(row, object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+
+        grid = QGridLayout()
+        grid.setSpacing(12)
+        for index, card in enumerate(cards):
+            grid.addWidget(self._labtools_secondary_entry_card(**card), index // 2, index % 2)
+        root.addLayout(grid)
+        root.addWidget(
+            make_empty_state(
+                "暂无历史记录",
+                "历史记录、保存和导出需要 storage/export adapter；本阶段只保留安全壳层。",
+                empty_state_key="empty_history",
+                semantic_key=semantic_key,
+            )
+        )
+        root.addStretch(1)
+        return content
+
+    def _show_labtools_placeholder_page(
+        self,
+        *,
+        title: str,
+        page_key: str,
+        semantic_key: str,
+        status_label: str,
+        status_key: str,
+        body_rows: list[str],
+        disabled_actions: tuple[str, ...],
+        settings_link: bool = False,
+    ) -> None:
+        content = self._build_labtools_base_content(
+            page_key=page_key,
+            semantic_key=semantic_key,
+            title=title,
+            subtitle="UI-C2b 导航壳层：只展示页面入口、状态边界和禁用动作，不执行真实业务逻辑。",
+        )
+        root = content.layout()
+        nav = QHBoxLayout()
+        back_home = make_button("返回 LabTools 首页", role="secondary")
+        back_home.setObjectName("labtoolsBackButton")
+        back_home.clicked.connect(self._show_labtools_home)
+        nav.addWidget(back_home)
+        nav.addWidget(make_status_chip(status_label, status_key=status_key))
+        nav.addStretch(1)
+        root.addLayout(nav)
+        card = self._labtools_boundary_card("页面边界", body_rows)
+        card.setProperty("pageKey", page_key)
+        card.setProperty("semanticKey", semantic_key)
+        root.addWidget(card)
+        root.addWidget(
+            make_empty_state(
+                "暂无运行结果",
+                "本阶段不生成计算结果、报告、导出文件或保存记录。",
+                empty_state_key="empty_result",
+                semantic_key=semantic_key,
+            )
+        )
+        action_row = QHBoxLayout()
+        action_row.setSpacing(10)
+        for text in disabled_actions:
+            action = make_button(text, role="secondary")
+            action.setObjectName("labtoolsDisabledActionButton")
+            action.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            action.setProperty("pageKey", page_key)
+            action.setProperty("semanticKey", semantic_key)
+            action.setProperty("disabledState", "adapter_needed_or_blocked")
+            action.setEnabled(False)
+            action_row.addWidget(action)
+        if settings_link:
+            settings_button = make_button("前往 Settings 外部能力配置", role="secondary")
+            settings_button.setObjectName("labtoolsSettingsLinkButton")
+            settings_button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            settings_button.setProperty("pageKey", page_key)
+            settings_button.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
+            settings_button.clicked.connect(self.show_settings)
+            action_row.addWidget(settings_button)
+        action_row.addStretch(1)
+        root.addLayout(action_row)
+        root.addStretch(1)
+        self._set_labtools_content(content)
+
+    def _labtools_primary_entry_card(self, *, title: str, page_key: str, semantic_key: str, status_key: str, rows: list[str], callback) -> QFrame:
         frame = QFrame()
         frame.setObjectName("labtoolsPrimaryEntryCard")
         frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
@@ -421,8 +816,59 @@ class MainWindow(QMainWindow):
         button.setProperty("pageKey", page_key)
         button.setProperty("semanticKey", semantic_key)
         button.setProperty("statusKey", status_key)
-        button.setEnabled(False)
+        button.clicked.connect(callback)
         layout.addWidget(button)
+        return frame
+
+    def _labtools_secondary_entry_card(self, *, title: str, page_key: str, semantic_key: str, status_label: str, status_key: str, rows: list[str], callback) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsSecondaryEntryCard")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", page_key)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setProperty("statusKey", status_key)
+        frame.setStyleSheet("QFrame#labtoolsSecondaryEntryCard { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
+        header = QHBoxLayout()
+        title_label = QLabel(title)
+        title_label.setObjectName("labtoolsSecondaryEntryTitle")
+        title_label.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        title_label.setProperty("pageKey", page_key)
+        title_label.setProperty("semanticKey", semantic_key)
+        title_label.setStyleSheet("font-weight: 700;")
+        header.addWidget(title_label)
+        header.addStretch(1)
+        header.addWidget(make_status_chip(status_label, status_key=status_key))
+        layout.addLayout(header)
+        for row in rows:
+            label = QLabel(row)
+            label.setObjectName("labtoolsSecondaryEntryDetail")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        button = make_button("查看占位页", role="secondary")
+        button.setObjectName("labtoolsSecondaryEntryButton")
+        button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        button.setProperty("pageKey", page_key)
+        button.setProperty("semanticKey", semantic_key)
+        button.setProperty("statusKey", status_key)
+        button.clicked.connect(callback)
+        layout.addWidget(button)
+        return frame
+
+    def _labtools_notice_card(self, text: str, *, object_name: str, semantic_key: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName(object_name)
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("semanticKey", semantic_key)
+        frame.setStyleSheet(f"QFrame#{object_name} {{ border: 1px solid #F5D899; border-radius: 8px; background: #FFF7E6; }}")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(14, 10, 14, 10)
+        label = QLabel(text)
+        label.setObjectName("labtoolsNoticeText")
+        label.setWordWrap(True)
+        layout.addWidget(label)
         return frame
 
     def _labtools_icon_label(self, semantic_key: str, *, object_name: str, size: int = 28) -> QLabel:
