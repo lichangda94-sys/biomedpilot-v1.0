@@ -116,14 +116,14 @@ def test_experiment_modules_render_boundaries_without_enabling_actions(labtools_
     _click_secondary(labtools_window, "elisa_boundary")
     content = _content(labtools_window)
     chips = content.findChildren(QLabel, "uiStatusChip")
-    buttons = content.findChildren(QPushButton, "labtoolsDisabledActionButton")
+    buttons = content.findChildren(QPushButton, "labtoolsBoundaryActionButton")
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
 
     assert content.property("pageKey") == "elisa_boundary"
     assert any(chip.property("statusKey") == "blocked" for chip in chips)
     assert all(not button.isEnabled() for button in buttons)
-    assert "ELISA 后端缺失" in labels
-    assert "4PL" in labels
+    assert "ELISA 后端未完成" in labels
+    assert "正式报告" in labels
 
 
 def test_cell_and_image_processing_boundaries_preserve_shell_only_semantics(labtools_window) -> None:
@@ -131,22 +131,21 @@ def test_cell_and_image_processing_boundaries_preserve_shell_only_semantics(labt
     _click_secondary(labtools_window, "cell_experiment_workspace")
     content = _content(labtools_window)
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
-    buttons = content.findChildren(QPushButton, "labtoolsDisabledActionButton")
+    buttons = content.findChildren(QPushButton, "labtoolsBoundaryActionButton")
 
     assert content.property("pageKey") == "cell_experiment_workspace"
-    assert "record store" in labels or "store 尚未接入" in labels
-    assert "ELISA 不属于此页面" in labels
+    assert "record store 未接入" in labels
+    assert "细胞信息" in labels
     assert all(not button.isEnabled() for button in buttons)
 
     labtools_window.findChild(QPushButton, "labtoolsBackButton").click()
-    _click_primary(labtools_window, PageKey.LABTOOLS_EXPERIMENT_MODULES.value)
     _click_secondary(labtools_window, "image_processing_boundary")
     content = _content(labtools_window)
     settings_link = content.findChild(QPushButton, "labtoolsSettingsLinkButton")
     labels = "\n".join(label.text() for label in content.findChildren(QLabel))
 
     assert content.property("pageKey") == "image_processing_boundary"
-    assert "ImageJ/Fiji 仅显示为 Settings-linked 外部能力配置入口" in labels
+    assert "ImageJ/Fiji：外部能力配置" in labels
     assert settings_link is not None
     assert settings_link.isEnabled()
     assert settings_link.property("moduleKey") == ModuleKey.LABTOOLS.value

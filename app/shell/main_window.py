@@ -1412,6 +1412,333 @@ class MainWindow(QMainWindow):
         if getattr(self, "_labtools_wb_copy_text", ""):
             QApplication.clipboard().setText(self._labtools_wb_copy_text)
 
+    def _show_labtools_sds_page_boundary(self) -> None:
+        semantic_key = PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
+        content = self._build_labtools_base_content(
+            page_key="sds_page",
+            semantic_key=semantic_key,
+            title="SDS-PAGE / 配胶边界页",
+            subtitle="SDS-PAGE 属于 Protein Experiment 后续 subpage；当前只展示 adapter-needed 结构，不执行真实保存或 XLSX 导出。",
+        )
+        root = content.layout()
+        root.addLayout(self._labtools_boundary_nav(status_label="adapter_needed / file_picker_needed", status_key="planned"))
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "模板选择",
+                ["Mini-PROTEAN TGX 4-20%（示例）", "10 孔 / 1 胶（静态布局）", "模板保存需存储适配。"],
+                object_name="labtoolsSdsTemplatePanel",
+            )
+        )
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "Resolving gel section",
+                ["Acrylamide %：待用户确认", "Buffer / APS / TEMED：adapter-needed placeholder", "配胶计算需后续 UI adapter。"],
+                object_name="labtoolsSdsResolvingPanel",
+            )
+        )
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "Stacking gel section",
+                ["Stacking %：静态占位", "体积与组分表暂不导出。", "导出 XLSX 需文件选择器适配。"],
+                object_name="labtoolsSdsStackingPanel",
+            )
+        )
+        root.addLayout(body)
+        root.addWidget(self._labtools_notice_card("配胶计算 / 导出 XLSX 需文件选择器适配；本页不启用模板保存、历史记录或 XLSX export。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+        root.addLayout(
+            self._labtools_boundary_actions(
+                page_key="sds_page",
+                semantic_key=semantic_key,
+                actions=(
+                    ("保存配胶模板 - 需存储适配", "disabled_missing_storage_adapter"),
+                    ("导出 XLSX - 需文件选择器", "disabled_missing_file_picker"),
+                    ("历史记录 - 需存储适配", "disabled_missing_storage_adapter"),
+                ),
+            )
+        )
+        root.addStretch(1)
+        self._set_labtools_content(content)
+
+    def _show_labtools_bca_od_boundary(self) -> None:
+        semantic_key = PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value
+        content = self._build_labtools_base_content(
+            page_key="bca_od_mvp",
+            semantic_key=semantic_key,
+            title="BCA / OD MVP Boundary",
+            subtitle="8 x 12 OD matrix、孔位标注和 linear-fit summary 仅作为 testing / MVP preview；不保存、不导出、不生成正式报告。",
+        )
+        root = content.layout()
+        root.addLayout(self._labtools_boundary_nav(status_label="testing / MVP preview", status_key="testing"))
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        matrix_panel = QFrame()
+        matrix_panel.setObjectName("labtoolsBcaMatrixPanel")
+        matrix_panel.setStyleSheet("QFrame#labtoolsBcaMatrixPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        matrix_layout = QGridLayout(matrix_panel)
+        matrix_layout.setContentsMargins(12, 12, 12, 12)
+        matrix_layout.setSpacing(4)
+        for col in range(12):
+            header = QLabel(str(col + 1))
+            header.setAlignment(Qt.AlignCenter)
+            header.setObjectName("labtoolsBcaMatrixHeader")
+            matrix_layout.addWidget(header, 0, col + 1)
+        for row_index, row_name in enumerate("ABCDEFGH", start=1):
+            row_header = QLabel(row_name)
+            row_header.setAlignment(Qt.AlignCenter)
+            row_header.setObjectName("labtoolsBcaMatrixHeader")
+            matrix_layout.addWidget(row_header, row_index, 0)
+            for col in range(1, 13):
+                well = QLabel("空")
+                if row_name == "A" and col <= 3:
+                    well.setText(f"Std {col}")
+                elif row_name in ("B", "C") and col <= 2:
+                    well.setText("Sample")
+                well.setObjectName("labtoolsBcaWellCell")
+                well.setProperty("wellId", f"{row_name}{col}")
+                well.setAlignment(Qt.AlignCenter)
+                well.setStyleSheet("border: 1px solid #E5E7EB; border-radius: 4px; padding: 4px; background: #F8FAFC;")
+                matrix_layout.addWidget(well, row_index, col)
+        body.addWidget(matrix_panel, 3)
+        side = self._labtools_boundary_panel(
+            "孔位标注 / Summary",
+            [
+                "标准孔：A1-A3；样本孔：B1-C2（示例）",
+                "Linear-fit summary：testing / MVP preview",
+                "R2: 0.91 low R2 warning",
+                "High CV warning",
+                "Negative corrected OD warning",
+                "Out-of-range warning",
+            ],
+            object_name="labtoolsBcaSidePanel",
+        )
+        body.addWidget(side, 1)
+        root.addLayout(body)
+        root.addWidget(self._labtools_notice_card("BCA / OD MVP 不包含免疫吸光度后续分析、正式报告或临床级定量；保存 BCA 记录和导出结果保持禁用。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+        root.addLayout(
+            self._labtools_boundary_actions(
+                page_key="bca_od_mvp",
+                semantic_key=semantic_key,
+                actions=(
+                    ("保存 BCA 记录 - 后端记录模型未完成", "disabled_backend_missing"),
+                    ("导出结果 - 暂未开放", "disabled_missing_file_picker"),
+                    ("历史记录 - 暂未开放", "disabled_missing_storage_adapter"),
+                ),
+            )
+        )
+        root.addStretch(1)
+        self._set_labtools_content(content)
+
+    def _show_labtools_cell_experiment_workspace(self) -> None:
+        semantic_key = PageKey.LABTOOLS_CELL_EXPERIMENTS.value
+        content = self._build_labtools_base_content(
+            page_key="cell_experiment_workspace",
+            semantic_key=semantic_key,
+            title="Cell Experiment Workspace / 细胞实验工作区",
+            subtitle="细胞信息、实验记录模板和结果处理工具三主区；当前 record store 未接入，保存记录保持禁用。",
+        )
+        root = content.layout()
+        root.addLayout(self._labtools_boundary_nav(status_label="shell_only / record_store_missing", status_key="shell_only"))
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "细胞信息 / Cell Profile & Dynamic State",
+                [
+                    "Cell line: A549（mock-labelled shell field）",
+                    "Passage: P12",
+                    "Culture condition: DMEM + 10% FBS, 37 C, 5% CO2",
+                    "Current state: 培养中 / 待处理",
+                    "污染 / 支原体 / 形态观察 / 汇合度：待记录",
+                ],
+                object_name="labtoolsCellProfilePanel",
+            ),
+            1,
+        )
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "细胞实验记录 / Experiment Record Templates",
+                [
+                    "传代、复苏、冻存、接种、给药 / 处理、转染",
+                    "从上次记录创建：需 record store",
+                    "接种：计算辅助可用；保存记录 disabled",
+                    "不显示假保存记录或假时间线。",
+                ],
+                object_name="labtoolsCellRecordPanel",
+            ),
+            1,
+        )
+        result_panel = self._labtools_boundary_panel(
+            "细胞结果处理工具 / Result Processing",
+            [
+                "Scratch / Transwell / Fluorescence/Staining：规划中",
+                "ImageJ/Fiji：Settings-linked 外部能力配置入口",
+                "不显示自动 ROI、自动细胞计数或自动分析结果。",
+            ],
+            object_name="labtoolsCellProcessingPanel",
+        )
+        result_layout = result_panel.layout()
+        settings_button = make_button("前往 Settings 外部能力配置", role="secondary")
+        settings_button.setObjectName("labtoolsSettingsLinkButton")
+        settings_button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        settings_button.setProperty("pageKey", "cell_experiment_workspace")
+        settings_button.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
+        settings_button.clicked.connect(self.show_settings)
+        result_layout.addWidget(settings_button)
+        body.addWidget(result_panel, 1)
+        root.addLayout(body)
+        root.addWidget(self._labtools_notice_card("免疫与吸光度边界不属于细胞实验页面；细胞记录保存和图像分析运行均需后续 adapter。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+        root.addLayout(
+            self._labtools_boundary_actions(
+                page_key="cell_experiment_workspace",
+                semantic_key=semantic_key,
+                actions=(
+                    ("保存细胞记录 - 后端未完成", "disabled_backend_missing"),
+                    ("运行图像分析 - 暂未开放", "disabled_backend_missing"),
+                    ("历史记录 - 需存储适配", "disabled_missing_storage_adapter"),
+                ),
+            )
+        )
+        root.addStretch(1)
+        self._set_labtools_content(content)
+
+    def _show_labtools_elisa_boundary(self) -> None:
+        semantic_key = PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value
+        content = self._build_labtools_base_content(
+            page_key="elisa_boundary",
+            semantic_key=semantic_key,
+            title="ELISA / Immuno-Absorbance Boundary",
+            subtitle="路径：LabTools > 实验模块 > 免疫与吸光度。状态 blocked_until_backend；当前不运行 ELISA 分析。",
+        )
+        root = content.layout()
+        root.addLayout(self._labtools_boundary_nav(status_label="blocked_until_backend", status_key="blocked"))
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "标准曲线与样本稀释",
+                ["标准曲线模型尚未固化。", "样本稀释流程尚未接入。", "当前不生成正式结果。"],
+                object_name="labtoolsElisaStandardCurvePanel",
+            )
+        )
+        body.addWidget(
+            self._labtools_boundary_panel(
+                "记录 / 报告 / 导出",
+                ["记录保存：disabled", "报告：不生成正式报告", "生产级保存 / 导出：disabled"],
+                object_name="labtoolsElisaReportPanel",
+            )
+        )
+        root.addLayout(body)
+        root.addWidget(self._labtools_notice_card("ELISA 后端未完成；运行分析、保存记录和导出报告都保持禁用。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+        root.addLayout(
+            self._labtools_boundary_actions(
+                page_key="elisa_boundary",
+                semantic_key=semantic_key,
+                actions=(
+                    ("运行 ELISA 分析 - 后端未完成", "disabled_backend_missing"),
+                    ("保存记录 - 后端未完成", "disabled_backend_missing"),
+                    ("导出报告 - 后端未完成", "disabled_backend_missing"),
+                ),
+            )
+        )
+        root.addStretch(1)
+        self._set_labtools_content(content)
+
+    def _show_labtools_image_processing_boundary(self) -> None:
+        semantic_key = "labtools.page.image_processing_boundary"
+        content = self._build_labtools_base_content(
+            page_key="image_processing_boundary",
+            semantic_key=semantic_key,
+            title="Image Processing Workspace / 图像处理边界",
+            subtitle="通用图像处理工作台结构预览；ImageJ/Fiji 仅作为 Settings-linked 外部能力配置，不运行图像分析。",
+        )
+        root = content.layout()
+        root.addLayout(self._labtools_boundary_nav(status_label="shell_only / external_engine_adapter_missing", status_key="shell_only"))
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        body.addWidget(self._labtools_boundary_panel("图像列表", ["未导入图像", "本阶段不读取文件、不批量处理。"], object_name="labtoolsImageListPanel"), 1)
+        body.addWidget(self._labtools_boundary_panel("中央图像预览", ["空预览区域", "不显示自动 ROI 或分析结果。"], object_name="labtoolsImagePreviewPanel"), 2)
+        option_panel = self._labtools_boundary_panel(
+            "功能选项",
+            [
+                "Scratch：planned",
+                "Transwell：planned",
+                "WB band ROI：planned",
+                "IHC / staining：planned",
+                "ImageJ/Fiji：外部能力配置",
+            ],
+            object_name="labtoolsImageOptionPanel",
+        )
+        option_layout = option_panel.layout()
+        settings_button = make_button("前往 Settings 外部能力配置", role="secondary")
+        settings_button.setObjectName("labtoolsSettingsLinkButton")
+        settings_button.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        settings_button.setProperty("pageKey", "image_processing_boundary")
+        settings_button.setProperty("semanticKey", PageKey.SETTINGS_EXTERNAL_CAPABILITIES.value)
+        settings_button.clicked.connect(self.show_settings)
+        option_layout.addWidget(settings_button)
+        body.addWidget(option_panel, 1)
+        root.addLayout(body)
+        root.addWidget(self._labtools_notice_card("不启用自动 ROI、自动细胞计数、自动条带识别、自动 IHC scoring；运行分析、保存和导出均保持 disabled。", object_name="labtoolsAdapterNotice", semantic_key=semantic_key))
+        root.addLayout(
+            self._labtools_boundary_actions(
+                page_key="image_processing_boundary",
+                semantic_key=semantic_key,
+                actions=(
+                    ("运行分析 - 暂未开放", "disabled_backend_missing"),
+                    ("保存图像结果 - 暂未开放", "disabled_missing_storage_adapter"),
+                    ("导出结果 - 暂未开放", "disabled_missing_file_picker"),
+                ),
+            )
+        )
+        root.addStretch(1)
+        self._set_labtools_content(content)
+
+    def _labtools_boundary_nav(self, *, status_label: str, status_key: str) -> QHBoxLayout:
+        nav = QHBoxLayout()
+        back = make_button("返回实验模块", role="secondary")
+        back.setObjectName("labtoolsBackButton")
+        back.clicked.connect(self._show_labtools_experiment_modules_shell)
+        nav.addWidget(back)
+        nav.addWidget(make_status_chip(status_label, status_key=status_key))
+        nav.addStretch(1)
+        return nav
+
+    def _labtools_boundary_panel(self, title: str, rows: list[str], *, object_name: str) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName(object_name)
+        frame.setStyleSheet(f"QFrame#{object_name} {{ border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }}")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
+        header = QLabel(title)
+        header.setObjectName("labtoolsBoundaryPanelTitle")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        for row in rows:
+            label = QLabel(row)
+            label.setObjectName("labtoolsBoundaryPanelRow")
+            label.setWordWrap(True)
+            layout.addWidget(label)
+        layout.addStretch(1)
+        return frame
+
+    def _labtools_boundary_actions(self, *, page_key: str, semantic_key: str, actions: tuple[tuple[str, str], ...]) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        for text, disabled_state in actions:
+            action = make_button(text, role="secondary")
+            action.setObjectName("labtoolsBoundaryActionButton")
+            action.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+            action.setProperty("pageKey", page_key)
+            action.setProperty("semanticKey", semantic_key)
+            action.setProperty("disabledState", disabled_state)
+            action.setEnabled(False)
+            row.addWidget(action)
+        row.addStretch(1)
+        return row
+
     def _show_labtools_experiment_modules_shell(self) -> None:
         content = self._build_labtools_section_content(
             page_key="experiment_modules",
@@ -1437,15 +1764,7 @@ class MainWindow(QMainWindow):
                     "status_label": "active_backend_ready / adapter_needed",
                     "status_key": "planned",
                     "rows": ["配胶子页面占位。", "XLSX 导出和模板持久化未启用。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="SDS-PAGE / 配胶",
-                        page_key="sds_page",
-                        semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
-                        status_label="adapter_needed",
-                        status_key="planned",
-                        body_rows=["SDS-PAGE 后端 helper 可规划接入，但本阶段只显示子页面占位。"],
-                        disabled_actions=("保存配胶模板 - 需存储适配", "导出 XLSX - 需文件选择器"),
-                    ),
+                    "callback": self._show_labtools_sds_page_boundary,
                 },
                 {
                     "title": "BCA / OD MVP Boundary",
@@ -1454,15 +1773,7 @@ class MainWindow(QMainWindow):
                     "status_label": "testing_preview_only",
                     "status_key": "testing",
                     "rows": ["8 x 12 OD matrix / annotation / linear-fit summary 仅保留边界占位。", "不声明正式保存、导出或临床级定量。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="BCA / OD MVP Boundary",
-                        page_key="bca_od_mvp",
-                        semantic_key=PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
-                        status_label="testing_preview_only",
-                        status_key="testing",
-                        body_rows=["BCA / OD 可以显示 MVP 边界，但本阶段不运行 BCA helper、不保存、不导出。"],
-                        disabled_actions=("保存 BCA 记录 - 后端记录模型未完成", "导出 BCA 结果 - 暂未开放"),
-                    ),
+                    "callback": self._show_labtools_bca_od_boundary,
                 },
                 {
                     "title": "Cell Experiment Workspace",
@@ -1471,18 +1782,7 @@ class MainWindow(QMainWindow):
                     "status_label": "shell_only / record_store_missing",
                     "status_key": "shell_only",
                     "rows": ["细胞信息、实验记录模板、结果处理工具三主区占位。", "保存细胞记录保持禁用。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Cell Experiment Workspace / 细胞实验工作区",
-                        page_key="cell_experiment_workspace",
-                        semantic_key=PageKey.LABTOOLS_CELL_EXPERIMENTS.value,
-                        status_label="shell_only / record_store_missing",
-                        status_key="shell_only",
-                        body_rows=[
-                            "细胞实验记录 store 尚未接入；不显示假记录、假时间线或真实保存。",
-                            "ELISA 不属于此页面。",
-                        ],
-                        disabled_actions=("保存细胞记录 - 后端未完成", "运行图像分析 - 暂未开放"),
-                    ),
+                    "callback": self._show_labtools_cell_experiment_workspace,
                 },
                 {
                     "title": "ELISA / Immuno-Absorbance",
@@ -1490,16 +1790,8 @@ class MainWindow(QMainWindow):
                     "semantic_key": PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
                     "status_label": "blocked_until_backend",
                     "status_key": "blocked",
-                    "rows": ["ELISA backend 未完成。", "不启用 4PL、正式报告、保存或导出。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="ELISA / Immuno-Absorbance Boundary",
-                        page_key="elisa_boundary",
-                        semantic_key=PageKey.LABTOOLS_IMMUNO_ABSORBANCE.value,
-                        status_label="blocked_until_backend",
-                        status_key="blocked",
-                        body_rows=["ELISA 后端缺失；4PL、正式结果、报告和导出都保持禁用。"],
-                        disabled_actions=("运行 ELISA 分析 - 后端未完成", "保存记录 - 后端未完成", "导出报告 - 后端未完成"),
-                    ),
+                    "rows": ["ELISA backend 未完成。", "不启用正式报告、保存或导出。"],
+                    "callback": self._show_labtools_elisa_boundary,
                 },
                 {
                     "title": "Image Processing Workspace",
@@ -1507,20 +1799,8 @@ class MainWindow(QMainWindow):
                     "semantic_key": "labtools.page.image_processing_boundary",
                     "status_label": "shell_only / external_engine_adapter_missing",
                     "status_key": "shell_only",
-                    "rows": ["ImageJ/Fiji 仅作为 Settings-linked 外部能力入口。", "不运行 macro、自动 ROI、自动细胞计数或条带识别。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Image Processing Workspace / 图像处理边界",
-                        page_key="image_processing_boundary",
-                        semantic_key="labtools.page.image_processing_boundary",
-                        status_label="shell_only / external_engine_adapter_missing",
-                        status_key="shell_only",
-                        body_rows=[
-                            "ImageJ/Fiji 仅显示为 Settings-linked 外部能力配置入口。",
-                            "本阶段不实现可执行检测、macro runner、ROI model、result parser 或批量处理。",
-                        ],
-                        disabled_actions=("运行图像分析 - 暂未开放", "保存图像结果 - 暂未开放"),
-                        settings_link=True,
-                    ),
+                    "rows": ["ImageJ/Fiji 仅作为 Settings-linked 外部能力入口。", "不运行自动 ROI、自动细胞计数或条带识别。"],
+                    "callback": self._show_labtools_image_processing_boundary,
                 },
             ],
         )
