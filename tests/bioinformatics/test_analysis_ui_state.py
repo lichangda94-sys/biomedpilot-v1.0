@@ -36,12 +36,16 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["multi_factor_deg_gate"]["result_semantics"] == "preflight_only"
     assert state["multi_factor_deg_gate"]["formal_execution_enabled"] is False
     assert state["r_deg_adapter_gates"]["status"] == "blocked"
+    assert state["limma_rscript_gate"]["schema_version"] == "biomedpilot.r_limma_rscript_ui_execution_gate.v1"
+    assert state["limma_rscript_gate"]["formal_execution_enabled"] is False
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_design"]["result_semantics"] == "design_audit_only"
     assert state["developer_diagnostics"]["survival_clinical_state"]["risk_score_design"]["writes_result_index"] is False
     assert _file_set(tmp_path) == before
 
     formal_deg = _action(state, "formal_deg")
     assert formal_deg["enabled"] is False
+    assert _action(state, "formal_deg_limma_rscript")["enabled"] is False
+    assert "multi_factor_design_config_missing" in _action(state, "formal_deg_limma_rscript")["disabled_reason"]
     assert formal_deg["disabled_reason"]
     assert any(
         blocker in formal_deg["disabled_reason"]
@@ -61,6 +65,8 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert "Multi-factor DEG preflight" in formal_gate_text
     assert "multi_factor_design_config_missing" in formal_gate_text
     assert "R adapter contract: limma" in formal_gate_text
+    assert "limma Rscript runtime detection" in formal_gate_text
+    assert "limma Rscript user confirmation" in formal_gate_text
     assert "external_engine_capability_registry_missing" in formal_gate_text
     ora_gate_text = "\n".join(str(row) for row in state["ora_gate_rows"])
     assert "ORA source DEG result" in ora_gate_text
@@ -76,7 +82,7 @@ def test_analysis_center_state_comes_from_b8_contracts_and_has_no_side_effects(t
     assert state["legacy_asset_pipeline"]["writes_result_index"] is False
     assert _action(state, "legacy_asset_pipeline_review")["enabled"] is False
     capabilities = {row["capability_id"]: row for row in state["analysis_capability_map"]["rows"]}
-    for capability_id in ("deg_limma", "deg_deseq2", "deg_edger", "deg_multifactor", "cox_multivariate", "risk_score", "full_integrated_report"):
+    for capability_id in ("deg_limma", "deg_limma_rscript_execution", "deg_deseq2", "deg_edger", "deg_multifactor", "cox_multivariate", "risk_score", "full_integrated_report"):
         assert capabilities[capability_id]["formal_execution_enabled"] is False
         assert capabilities[capability_id]["can_display_as_completed"] is False
         assert capabilities[capability_id]["disabled_reason"]

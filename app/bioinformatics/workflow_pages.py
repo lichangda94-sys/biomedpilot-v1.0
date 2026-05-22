@@ -60,7 +60,14 @@ from app.bioinformatics.acquisition_adapters import (
     merge_legacy_materialized_assets_into_repository_manifest,
     write_legacy_standardized_asset_candidates,
 )
-from app.bioinformatics.deg_engine import load_deg_parameter_confirmation, run_formal_controlled_deg, save_deg_parameter_confirmation
+from app.bioinformatics.deg_engine import (
+    load_deg_parameter_confirmation,
+    load_r_limma_parameter_confirmation,
+    run_formal_controlled_deg,
+    run_r_limma_rscript_execution,
+    save_deg_parameter_confirmation,
+    save_r_limma_parameter_confirmation,
+)
 from app.bioinformatics.deg_engine.result_review import build_formal_deg_result_review, export_formal_deg_review_table
 from app.bioinformatics.enrichment import build_ora_result_review, export_ora_review_table, run_controlled_ora
 from app.bioinformatics.gsea import build_gsea_result_review, export_gsea_review_table, run_controlled_preranked_gsea
@@ -5506,6 +5513,65 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._status_label.setText(f"两组 controlled DEG 未运行：{blockers}")
         return result
 
+    def confirm_r_limma_parameters(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        analysis_state = build_analysis_center_state(self._project_root)
+        limma_gate = analysis_state.get("limma_rscript_gate") if isinstance(analysis_state.get("limma_rscript_gate"), dict) else {}
+        try:
+            confirmation = save_r_limma_parameter_confirmation(
+                self._project_root,
+                deg_ready_package=limma_gate.get("deg_ready_package", {}) if isinstance(limma_gate.get("deg_ready_package"), dict) else {},
+                multi_factor_preflight=limma_gate.get("multi_factor_preflight", {}) if isinstance(limma_gate.get("multi_factor_preflight"), dict) else {},
+                dependency_snapshot=limma_gate.get("dependency_snapshot", {}) if isinstance(limma_gate.get("dependency_snapshot"), dict) else {},
+                log2fc_threshold=float(self._formal_deg_log2fc_input.text() or "1.0"),
+                p_value_threshold=float(self._formal_deg_pvalue_input.text() or "0.05"),
+                fdr_threshold=float(self._formal_deg_fdr_input.text() or "0.05"),
+            )
+        except ValueError:
+            self._status_label.setText("limma Rscript 参数确认失败：threshold 必须是数字。")
+            return None
+        self.refresh_task_center()
+        if confirmation.get("status") == "confirmed":
+            plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+            self._status_label.setText(f"已确认 limma Rscript 参数；task-run id：{plan.get('task_run_id', '')}。仍只允许运行 limma DEG，不生成 plot/report-ready。")
+        else:
+            blockers = "；".join(str(item) for item in confirmation.get("blockers", []) or []) or "limma Rscript gate 未通过"
+            self._status_label.setText(f"limma Rscript 参数未确认：{blockers}")
+        return confirmation
+
+    def run_r_limma_rscript_task(self) -> dict[str, object] | None:
+        if self._project_root is None:
+            self._status_label.setText("请先创建或打开生信分析项目。")
+            return None
+        analysis_state = build_analysis_center_state(self._project_root)
+        limma_gate = analysis_state.get("limma_rscript_gate") if isinstance(analysis_state.get("limma_rscript_gate"), dict) else {}
+        confirmation = load_r_limma_parameter_confirmation(self._project_root)
+        parameter_manifest = confirmation.get("parameter_manifest") if isinstance(confirmation.get("parameter_manifest"), dict) else {}
+        output_plan = confirmation.get("output_plan") if isinstance(confirmation.get("output_plan"), dict) else {}
+        result = run_r_limma_rscript_execution(
+            self._project_root,
+            expression_table_path=str(parameter_manifest.get("expression_table_path") or ""),
+            sample_group_map=parameter_manifest.get("sample_group_map") if isinstance(parameter_manifest.get("sample_group_map"), dict) else {},
+            case_group=str(parameter_manifest.get("case_group") or ""),
+            control_group=str(parameter_manifest.get("control_group") or ""),
+            multi_factor_preflight=limma_gate.get("multi_factor_preflight", {}) if isinstance(limma_gate.get("multi_factor_preflight"), dict) else {},
+            parameters_manifest=parameter_manifest,
+            external_capabilities=limma_gate.get("external_capabilities") if isinstance(limma_gate.get("external_capabilities"), dict) else None,
+            dependency_snapshot=limma_gate.get("dependency_snapshot") if isinstance(limma_gate.get("dependency_snapshot"), dict) else None,
+            result_id=str(output_plan.get("result_id") or ""),
+            task_run_id=str(output_plan.get("task_run_id") or ""),
+            input_package_id=str(parameter_manifest.get("input_package_id") or ""),
+        )
+        self.refresh_task_center()
+        if result.get("status") == "passed":
+            self._status_label.setText("已完成 limma Rscript DEG，并通过 B25 handoff 写入 result index v2。未生成 plot/report-ready/GSEA/survival。")
+        else:
+            blockers = "；".join(str(item) for item in result.get("blockers", []) or []) or "limma Rscript gate 未通过"
+            self._status_label.setText(f"limma Rscript DEG 未运行：{blockers}")
+        return result
+
     def run_controlled_ora_task(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -5672,6 +5738,14 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self._formal_deg_button = _button("运行两组 controlled DEG", "primaryButton", self.run_formal_controlled_deg_task)
         self._formal_deg_button.setEnabled(False)
         actions.addWidget(self._formal_deg_button)
+        self._limma_confirm_button = _button("确认 limma Rscript 参数", "secondaryButton", self.confirm_r_limma_parameters)
+        self._limma_confirm_button.setEnabled(False)
+        self._limma_confirm_button.setObjectName("confirmRLimmaParametersButton")
+        actions.addWidget(self._limma_confirm_button)
+        self._limma_rscript_button = _button("运行 limma Rscript DEG", "secondaryButton", self.run_r_limma_rscript_task)
+        self._limma_rscript_button.setEnabled(False)
+        self._limma_rscript_button.setObjectName("runRLimmaRscriptDegButton")
+        actions.addWidget(self._limma_rscript_button)
         self._ora_button = _button("运行 controlled ORA", "secondaryButton", self.run_controlled_ora_task)
         self._ora_button.setEnabled(False)
         self._ora_button.setObjectName("runControlledOraButton")
@@ -5844,6 +5918,8 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         _fill_table(self._capability_table, _analysis_ui_capability_rows(analysis_state.get("analysis_capability_map", {})))
         formal_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg")
         confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_parameter_confirmation")
+        limma_confirmation_action = _analysis_ui_action(analysis_state.get("action_rows", []), "r_limma_parameter_confirmation")
+        limma_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_deg_limma_rscript")
         ora_action = _analysis_ui_action(analysis_state.get("action_rows", []), "run_ora_enrichment")
         gsea_action = _analysis_ui_action(analysis_state.get("action_rows", []), "formal_gsea")
         self._formal_deg_confirm_button.setEnabled(bool(confirmation_action.get("enabled")))
@@ -5853,6 +5929,10 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
             self._formal_deg_button.setToolTip("运行两组 controlled DEG MVP；只写 result index v2，不生成 GSEA/plot/report-ready/survival。")
         else:
             self._formal_deg_button.setToolTip(str(formal_action.get("disabled_reason") or "formal DEG gate 未通过"))
+        self._limma_confirm_button.setEnabled(bool(limma_confirmation_action.get("enabled")))
+        self._limma_confirm_button.setToolTip(str(limma_confirmation_action.get("disabled_reason") or limma_confirmation_action.get("next_action") or "确认 limma Rscript 参数"))
+        self._limma_rscript_button.setEnabled(bool(limma_action.get("enabled")))
+        self._limma_rscript_button.setToolTip(str(limma_action.get("next_action") or limma_action.get("disabled_reason") or "limma Rscript gate 未通过"))
         self._ora_button.setEnabled(bool(ora_action.get("enabled")))
         self._ora_button.setToolTip(str(ora_action.get("next_action") or ora_action.get("disabled_reason") or "controlled ORA gate 未通过"))
         self._gsea_button.setEnabled(bool(gsea_action.get("enabled")))

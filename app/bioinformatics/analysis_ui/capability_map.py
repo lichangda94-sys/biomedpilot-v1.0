@@ -27,6 +27,7 @@ def build_analysis_capability_map(
     external_capabilities: dict[str, Any] | None = None,
     multi_factor_deg_gate: dict[str, Any] | None = None,
     r_deg_adapter_gates: dict[str, Any] | None = None,
+    limma_rscript_gate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     action_by_id = {str(row.get("action_id") or ""): row for row in action_rows or [] if isinstance(row, dict)}
     dependency_by_id = {str(row.get("dependency_id") or ""): row for row in dependency_rows or [] if isinstance(row, dict)}
@@ -43,6 +44,15 @@ def build_analysis_capability_map(
             result_semantics="formal_computed_result when all gates pass",
         ),
         _r_method_row("deg_limma", "limma", "limma", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, LIMMA_KEY], external_capabilities, r_deg_adapter_gates, method_policy="normalized/log expression or limma-voom contract planned"),
+        _row_from_action(
+            "deg_limma_rscript_execution",
+            "limma Rscript controlled execution",
+            "DEG",
+            "b25_3_gated_execution_control",
+            action_by_id.get("formal_deg_limma_rscript"),
+            required_contracts=["B8 resolver", "B18 limma design preflight", "B25 Rscript runtime detection", "B25 limma parameter confirmation", "result_index_v2"],
+            result_semantics="formal_computed_result only after limma Rscript execution and B25 handoff/result schema gates pass",
+        ),
         _r_method_row("deg_deseq2", "DESeq2", "deseq2", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, DESEQ2_KEY], external_capabilities, r_deg_adapter_gates, method_policy="raw integer count model only; TPM/FPKM blocked"),
         _r_method_row("deg_edger", "edgeR", "edger", [R_RUNTIME_KEY, BIOCONDUCTOR_KEY, EDGER_KEY], external_capabilities, r_deg_adapter_gates, method_policy="raw integer count model only; TPM/FPKM blocked"),
         _multifactor_deg_row(multi_factor_deg_gate),
@@ -136,6 +146,7 @@ def build_analysis_capability_map(
         "external_engine_handoff": {
             "required_capability_keys": sorted({key for row in rows for key in row.get("dependency_capability_keys", [])}),
             "query_policy": "Bioinformatics reads capability status/snapshots from external engine handoff only; it does not install or maintain R/Bioconductor/Python plotting tools.",
+            "limma_rscript_gate_status": str((limma_rscript_gate or {}).get("status") or "blocked"),
         },
     }
 

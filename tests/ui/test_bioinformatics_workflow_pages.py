@@ -3021,6 +3021,9 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "controlled_standardization_artifact_write_no_formal_execution" in action_text
     assert "Confirm formal DEG parameters" in action_text
     assert "Run controlled two-group DEG" in action_text
+    assert "Confirm limma Rscript parameters" in action_text
+    assert "Run limma Rscript DEG" in action_text
+    assert "blocked_limma_rscript_gate" in action_text
     assert "Review GSEA preranked readiness" in action_text
     assert "Run controlled preranked GSEA" in action_text
     assert "gsea_source_result_missing" in action_text or "gsea_input_gate_not_passed" in action_text
@@ -3071,6 +3074,15 @@ def test_analysis_task_center_userized_main_surface_and_diagnostics(qt_app, proj
     assert "User parameter confirmation" in formal_deg_gate_text
     assert "Result schema gate" in formal_deg_gate_text
     assert "B9.2 controlled activation" in formal_deg_gate_text
+    assert "limma Rscript runtime detection" in formal_deg_gate_text
+    assert "limma Rscript user confirmation" in formal_deg_gate_text
+
+    limma_confirm_button = widget.findChild(QPushButton, "confirmRLimmaParametersButton")
+    assert limma_confirm_button is not None
+    assert limma_confirm_button.isEnabled() is False
+    limma_run_button = widget.findChild(QPushButton, "runRLimmaRscriptDegButton")
+    assert limma_run_button is not None
+    assert limma_run_button.isEnabled() is False
 
     confirmation_table = widget.findChild(QTableWidget, "analysisFormalDegConfirmationTable")
     assert confirmation_table is not None

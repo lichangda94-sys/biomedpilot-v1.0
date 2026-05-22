@@ -10,7 +10,18 @@ from app.bioinformatics.acquisition_adapters.repository_merge import LEGACY_REPO
 from app.bioinformatics.acquisition_adapters.selection_gate import LEGACY_ASSET_SELECTION_PATH
 from app.bioinformatics.acquisition_adapters.standardized_bridge import LEGACY_ASSET_CANDIDATE_PATH
 from app.bioinformatics.clinical_analysis.dependency_check import check_survival_backend_dependencies
-from app.bioinformatics.deg_engine import build_deg_parameter_manifest, build_formal_deg_result_schema_gate, build_multifactor_deg_preflight_manifest, build_r_deg_runtime_gate_matrix
+from app.bioinformatics.deg_engine import (
+    build_deg_parameter_manifest,
+    build_formal_deg_result_schema_gate,
+    build_multifactor_deg_preflight_manifest,
+    build_r_deg_runtime_gate_matrix,
+    build_r_limma_parameter_manifest,
+    detect_r_limma_runtime_capabilities,
+    load_r_limma_design_config,
+    load_r_limma_parameter_confirmation,
+    validate_r_limma_parameter_confirmation,
+)
+from app.bioinformatics.deg_engine.r_adapter_contract import build_r_deg_runtime_gate
 from app.bioinformatics.deg_engine.confirmation import load_deg_parameter_confirmation, validate_deg_parameter_confirmation
 from app.bioinformatics.deg_engine.dependency_check import check_deg_backend_dependencies
 from app.bioinformatics.deg_ready.builder import build_deg_ready_package
@@ -76,6 +87,11 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
     r_deg_adapter_gates = build_r_deg_runtime_gate_matrix(multi_factor_deg_gate)
     deg_gates["multi_factor_deg_gate"] = multi_factor_deg_gate
     deg_gates["r_deg_adapter_gates"] = r_deg_adapter_gates
+    limma_rscript_gate = build_limma_rscript_ui_gate_state(
+        packages=packages,
+        project_root=root,
+        deg_ready_package=deg_gates.get("deg_ready_package") if isinstance(deg_gates.get("deg_ready_package"), dict) else {},
+    )
     deg_gates["gate_rows"].append(
         _formal_deg_gate_row(
             "Multi-factor DEG preflight",
@@ -96,6 +112,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
                     basis="B19 contract/gate only; no R invocation from Bioinformatics UI.",
                 )
             )
+    deg_gates["gate_rows"].extend(limma_rscript_gate["gate_rows"])
     ora_gates = build_ora_gate_state(project_root=root)
     ora_plot_gate = build_ora_plot_gate(root)
     gsea_plot_gate = build_gsea_plot_gate(root)
@@ -116,6 +133,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         parameter_gate=deg_gates["parameter_gate"],
         confirmation_gate=deg_gates["confirmation_gate"],
         result_schema_gate=deg_gates["result_schema_gate"],
+        limma_rscript_gate=limma_rscript_gate,
         survival_dependency=survival_dependency,
         km_parameter_gate=survival_clinical_state["km_parameter_gate"],
         km_confirmation_gate=survival_clinical_state["km_confirmation_gate"],
@@ -178,8 +196,10 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         gsea_gate_rows=gsea_gates["gate_rows"],
         survival_clinical_rows=survival_rows,
         dependency_rows=dependency_rows,
+        external_capabilities=limma_rscript_gate.get("external_capabilities") if isinstance(limma_rscript_gate.get("external_capabilities"), dict) else {},
         multi_factor_deg_gate=multi_factor_deg_gate,
         r_deg_adapter_gates=r_deg_adapter_gates,
+        limma_rscript_gate=limma_rscript_gate,
     )
     blockers = _dedupe(
         [*resolver.get("blockers", [])]
@@ -187,6 +207,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [row["disabled_reason"] for row in action_rows if not row["enabled"] and row["disabled_reason"]]
         + [item for item in multi_factor_deg_gate.get("blockers", []) or []]
         + [item for item in r_deg_adapter_gates.get("blockers", []) or []]
+        + [item for item in limma_rscript_gate.get("blockers", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("blockers", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("blockers", []) or []]
         + [item for gate in (km_report_gate, cox_report_gate) for item in gate.get("blockers", []) or []]
@@ -197,6 +218,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         + [item for row in package_rows for item in row["raw_warnings"]]
         + [item for row in dependency_rows for item in row["raw_warnings"]]
         + [item for item in multi_factor_deg_gate.get("warnings", []) or []]
+        + [item for item in limma_rscript_gate.get("warnings", []) or []]
         + [item for gate in (ora_gates["input_gate"], ora_gates["gene_set_gate"], ora_gates["parameter_gate"], ora_gates["result_schema_gate"], ora_gates["dependency_snapshot"], ora_plot_gate, ora_report_gate, gsea_plot_gate, gsea_report_gate) for item in gate.get("warnings", []) or []]
         + [item for gate in (gsea_gates["input_gate"], gsea_gates["rank_metric_gate"], gsea_gates["gene_set_gate"], gsea_gates["parameter_gate"], gsea_gates["result_schema_gate"], gsea_gates["dependency_snapshot"]) for item in gate.get("warnings", []) or []]
         + [item for gate in (km_report_gate, cox_report_gate) for item in gate.get("warnings", []) or []]
@@ -217,6 +239,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
         "formal_deg_gate_rows": deg_gates["gate_rows"],
         "multi_factor_deg_gate": multi_factor_deg_gate,
         "r_deg_adapter_gates": r_deg_adapter_gates,
+        "limma_rscript_gate": limma_rscript_gate,
         "ora_gate_rows": ora_gates["gate_rows"],
         "gsea_gate_rows": gsea_gates["gate_rows"],
         "survival_clinical_report_gate_rows": survival_clinical_report_gate_rows(km_report_gate=km_report_gate, cox_report_gate=cox_report_gate),
@@ -236,6 +259,7 @@ def build_analysis_center_state(project_root: str | Path) -> dict[str, Any]:
             "formal_deg_gate_state": deg_gates,
             "multi_factor_deg_gate": multi_factor_deg_gate,
             "r_deg_adapter_gates": r_deg_adapter_gates,
+            "limma_rscript_gate": limma_rscript_gate,
             "ora_gate_state": ora_gates,
             "ora_plot_gate": ora_plot_gate,
             "ora_report_ready_gate": ora_report_gate,
@@ -574,6 +598,102 @@ def build_formal_deg_gate_state(*, packages: list[dict[str, Any]], deg_dependenc
         "result_schema_gate": result_schema_gate,
         "deg_ready_package": deg_ready_package,
         "gate_rows": gate_rows,
+    }
+
+
+def build_limma_rscript_ui_gate_state(
+    *,
+    packages: list[dict[str, Any]],
+    project_root: str | Path,
+    deg_ready_package: dict[str, Any],
+) -> dict[str, Any]:
+    deg_package = next((item for item in packages if item.get("package_type") == "deg_recompute"), None)
+    root = Path(project_root).expanduser().resolve()
+    runtime_detection = detect_r_limma_runtime_capabilities(timeout_seconds=5)
+    external_capabilities = runtime_detection.get("external_capabilities") if isinstance(runtime_detection.get("external_capabilities"), dict) else {}
+    dependency_snapshot = runtime_detection.get("dependency_snapshot") if isinstance(runtime_detection.get("dependency_snapshot"), dict) else {"status": "blocked", "blockers": ["r_limma_runtime_detection_missing"]}
+    design_config = load_r_limma_design_config(root)
+    if design_config.get("status") == "blocked":
+        multi_factor_preflight = {
+            "status": "blocked",
+            "method": "limma",
+            "method_family": "limma_normalized_expression",
+            "value_type_policy": "blocked_invalid_design_config",
+            "blockers": list(design_config.get("blockers", []) or []),
+            "warnings": list(design_config.get("warnings", []) or []),
+        }
+    else:
+        multi_factor_preflight = build_multifactor_deg_preflight_manifest(
+            deg_ready_package,
+            design_config=design_config,
+            method="limma",
+            dependency_snapshot=dependency_snapshot,
+        )
+    runtime_gate = build_r_deg_runtime_gate(
+        method="limma",
+        multi_factor_preflight=multi_factor_preflight,
+        external_capabilities=external_capabilities,
+        dependency_snapshot=dependency_snapshot,
+    )
+    parameter_manifest = build_r_limma_parameter_manifest(
+        deg_ready_package,
+        multi_factor_preflight=multi_factor_preflight,
+        dependency_snapshot=dependency_snapshot,
+    )
+    confirmation = load_r_limma_parameter_confirmation(root)
+    confirmation_gate = validate_r_limma_parameter_confirmation(
+        confirmation,
+        parameter_manifest=parameter_manifest,
+        dependency_snapshot=dependency_snapshot,
+    )
+    result_schema_gate = build_formal_deg_result_schema_gate(parameter_manifest=parameter_manifest, dependency_snapshot=dependency_snapshot)
+    resolver_status = "passed" if deg_package and not deg_package.get("blockers") else "blocked"
+    resolver_blockers = list(deg_package.get("blockers", []) or []) if deg_package else ["missing_deg_recompute_input_package"]
+    gate_rows = [
+        _formal_deg_gate_row("limma Rscript resolver package", resolver_status, resolver_blockers),
+        _formal_deg_gate_row("limma Rscript design preflight", multi_factor_preflight.get("status"), multi_factor_preflight.get("blockers", []), multi_factor_preflight.get("warnings", []), basis=str(multi_factor_preflight.get("value_type_policy") or "")),
+        _formal_deg_gate_row("limma Rscript runtime detection", runtime_detection.get("status"), runtime_detection.get("blockers", []), runtime_detection.get("warnings", []), basis=str(runtime_detection.get("rscript_path") or "")),
+        _formal_deg_gate_row("limma Rscript runtime gate", runtime_gate.get("status"), runtime_gate.get("blockers", []), runtime_gate.get("warnings", [])),
+        _formal_deg_gate_row("limma Rscript parameter manifest", parameter_manifest.get("status"), parameter_manifest.get("blockers", []), parameter_manifest.get("warnings", [])),
+        _formal_deg_gate_row("limma Rscript user confirmation", confirmation_gate.get("status"), confirmation_gate.get("blockers", []), confirmation_gate.get("warnings", [])),
+        _formal_deg_gate_row("limma Rscript result schema gate", result_schema_gate.get("status"), result_schema_gate.get("blockers", []), result_schema_gate.get("warnings", [])),
+    ]
+    blockers = _dedupe(
+        resolver_blockers
+        + list(multi_factor_preflight.get("blockers", []) or [])
+        + list(runtime_detection.get("blockers", []) or [])
+        + list(runtime_gate.get("blockers", []) or [])
+        + list(parameter_manifest.get("blockers", []) or [])
+        + list(confirmation_gate.get("blockers", []) or [])
+        + list(result_schema_gate.get("blockers", []) or [])
+    )
+    warnings = _dedupe(
+        list(multi_factor_preflight.get("warnings", []) or [])
+        + list(runtime_detection.get("warnings", []) or [])
+        + list(runtime_gate.get("warnings", []) or [])
+        + list(parameter_manifest.get("warnings", []) or [])
+        + list(confirmation_gate.get("warnings", []) or [])
+        + list(result_schema_gate.get("warnings", []) or [])
+    )
+    return {
+        "schema_version": "biomedpilot.r_limma_rscript_ui_execution_gate.v1",
+        "status": "passed" if not blockers else "blocked",
+        "formal_execution_enabled": not blockers,
+        "result_semantics_if_run": "formal_computed_result",
+        "runtime_detection": runtime_detection,
+        "external_capabilities": external_capabilities,
+        "dependency_snapshot": dependency_snapshot,
+        "deg_ready_package": deg_ready_package,
+        "design_config": design_config,
+        "multi_factor_preflight": multi_factor_preflight,
+        "runtime_gate": runtime_gate,
+        "parameter_manifest": parameter_manifest,
+        "parameter_confirmation": confirmation,
+        "confirmation_gate": confirmation_gate,
+        "result_schema_gate": result_schema_gate,
+        "gate_rows": gate_rows,
+        "blockers": blockers,
+        "warnings": warnings,
     }
 
 

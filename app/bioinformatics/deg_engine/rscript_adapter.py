@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
 import subprocess
 import uuid
 from datetime import UTC, datetime
@@ -40,7 +41,8 @@ def detect_r_limma_runtime_capabilities(
         "  }\n"
         "}\n"
     )
-    command = [rscript_path, "-e", script]
+    resolved_rscript_path = resolve_rscript_path(rscript_path)
+    command = [resolved_rscript_path, "-e", script]
     try:
         completed = subprocess.run(
             command,
@@ -51,14 +53,14 @@ def detect_r_limma_runtime_capabilities(
         )
     except FileNotFoundError as exc:
         return _runtime_detection_blocked(
-            rscript_path,
+            resolved_rscript_path,
             ["rscript_not_found"],
             str(exc),
             command=command,
         )
     except subprocess.TimeoutExpired as exc:
         return _runtime_detection_blocked(
-            rscript_path,
+            resolved_rscript_path,
             ["rscript_detection_timeout"],
             str(exc),
             command=command,
@@ -81,7 +83,7 @@ def detect_r_limma_runtime_capabilities(
     capabilities = {
         "runtime.r.available": {
             "available": completed.returncode == 0 and bool(parsed.get("R")),
-            "path": rscript_path,
+            "path": resolved_rscript_path,
             "version": parsed.get("R", ""),
             "platform": parsed.get("platform", ""),
         },
@@ -97,7 +99,7 @@ def detect_r_limma_runtime_capabilities(
     dependency_snapshot = {
         "status": "passed" if available else "blocked",
         "runtime": "system_rscript",
-        "rscript_path": rscript_path,
+        "rscript_path": resolved_rscript_path,
         "platform": parsed.get("platform", ""),
         "dependencies": {
             "R": capabilities["runtime.r.available"],
@@ -109,7 +111,7 @@ def detect_r_limma_runtime_capabilities(
     return {
         "schema_version": "biomedpilot.r_limma_runtime_detection.v1",
         "status": "passed" if available else "blocked",
-        "rscript_path": rscript_path,
+        "rscript_path": resolved_rscript_path,
         "command": command,
         "returncode": completed.returncode,
         "stdout": completed.stdout,
@@ -119,6 +121,18 @@ def detect_r_limma_runtime_capabilities(
         "warnings": [],
         "blockers": blockers,
     }
+
+
+def resolve_rscript_path(rscript_path: str = "Rscript") -> str:
+    if rscript_path and rscript_path != "Rscript":
+        return rscript_path
+    discovered = shutil.which("Rscript")
+    if discovered:
+        return discovered
+    for candidate in ("/usr/local/bin/Rscript", "/opt/homebrew/bin/Rscript"):
+        if Path(candidate).is_file():
+            return candidate
+    return rscript_path or "Rscript"
 
 
 def run_r_limma_rscript_execution(

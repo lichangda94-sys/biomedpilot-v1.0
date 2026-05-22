@@ -18,6 +18,7 @@ def build_action_rows(
     parameter_gate: dict[str, Any] | None = None,
     confirmation_gate: dict[str, Any] | None = None,
     result_schema_gate: dict[str, Any] | None = None,
+    limma_rscript_gate: dict[str, Any] | None = None,
     survival_dependency: dict[str, Any] | None = None,
     km_parameter_gate: dict[str, Any] | None = None,
     km_confirmation_gate: dict[str, Any] | None = None,
@@ -60,6 +61,7 @@ def build_action_rows(
     parameter_gate = parameter_gate or {}
     confirmation_gate = confirmation_gate or {}
     result_schema_gate = result_schema_gate or {}
+    limma_rscript_gate = limma_rscript_gate or {}
     survival_dependency = survival_dependency or {}
     km_parameter_gate = km_parameter_gate or {}
     km_confirmation_gate = km_confirmation_gate or {}
@@ -105,6 +107,8 @@ def build_action_rows(
     rows.append(_deg_preflight_action(deg_package))
     rows.append(_formal_deg_confirmation_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, result_schema_gate, confirmation_gate))
     rows.append(_formal_deg_action(deg_package, deg_dependency, deg_ready_gate, parameter_gate, confirmation_gate, result_schema_gate))
+    rows.append(_limma_rscript_confirmation_action(limma_rscript_gate))
+    rows.append(_limma_rscript_action(limma_rscript_gate))
     rows.append(_gsea_readiness_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
     rows.append(_gsea_run_action(gsea_input_gate, gsea_rank_metric_gate, gsea_gene_set_gate, gsea_parameter_gate, gsea_result_schema_gate, gsea_dependency))
     rows.append(_imported_deg_action(imported_package, results))
@@ -311,6 +315,71 @@ def _formal_deg_confirmation_action(
         "disabled_reason": "",
         "next_action": "Review comparison, method, thresholds, value type policy, dependencies and output plan before formal DEG.",
     }
+
+
+def _limma_rscript_confirmation_action(gate: dict[str, Any]) -> dict[str, Any]:
+    blockers = _limma_gate_blockers_without_confirmation(gate)
+    if blockers:
+        return _disabled(
+            "r_limma_parameter_confirmation",
+            "Confirm limma Rscript parameters",
+            "blocked_limma_prerequisites",
+            "; ".join(dict.fromkeys(blockers)),
+            "Resolve resolver, limma design preflight, Rscript runtime detection, parameter manifest and result schema gates before confirmation.",
+        )
+    confirmation_gate = gate.get("confirmation_gate") if isinstance(gate.get("confirmation_gate"), dict) else {}
+    if confirmation_gate.get("status") == "passed":
+        return {
+            "action_id": "r_limma_parameter_confirmation",
+            "label": "Confirm limma Rscript parameters",
+            "state": "confirmed",
+            "button_behavior": "enabled_reconfirm_limma_parameters_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "limma Rscript parameters are confirmed; re-confirm only if design, thresholds or R/limma versions changed.",
+        }
+    return {
+        "action_id": "r_limma_parameter_confirmation",
+        "label": "Confirm limma Rscript parameters",
+        "state": "requires_user_confirmation",
+        "button_behavior": "enabled_limma_parameter_confirmation_only",
+        "enabled": True,
+        "normal_user_visible": True,
+        "disabled_reason": "",
+        "next_action": "Review limma comparison, samples, thresholds, Rscript/limma versions and output plan before execution.",
+    }
+
+
+def _limma_rscript_action(gate: dict[str, Any]) -> dict[str, Any]:
+    blockers = _list(gate.get("blockers"))
+    if not blockers and gate.get("status") == "passed":
+        return {
+            "action_id": "formal_deg_limma_rscript",
+            "label": "Run limma Rscript DEG",
+            "state": "enabled_formal_limma_rscript",
+            "button_behavior": "enabled_b25_2_audited_limma_rscript_only",
+            "enabled": True,
+            "normal_user_visible": True,
+            "disabled_reason": "",
+            "next_action": "Run audited limma Rscript adapter; register formal DEG result only through B25 handoff/result index gates.",
+        }
+    return _disabled(
+        "formal_deg_limma_rscript",
+        "Run limma Rscript DEG",
+        "blocked_limma_rscript_gate",
+        "; ".join(dict.fromkeys(blockers or ["r_limma_rscript_gate_not_passed"])),
+        "Resolve resolver, limma design preflight, runtime detection, parameter confirmation and result schema gates.",
+    )
+
+
+def _limma_gate_blockers_without_confirmation(gate: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for key in ("multi_factor_preflight", "runtime_detection", "runtime_gate", "parameter_manifest", "result_schema_gate"):
+        item = gate.get(key) if isinstance(gate.get(key), dict) else {}
+        if item.get("status") not in {"passed", "ready_for_external_runtime_execution", "design_ready"}:
+            blockers.extend(_list(item.get("blockers")) or [f"{key}_not_passed"])
+    return list(dict.fromkeys(blockers))
 
 
 def _imported_deg_action(package: dict[str, Any] | None, results: list[dict[str, Any]]) -> dict[str, Any]:

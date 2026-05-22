@@ -240,6 +240,52 @@ def test_formal_deg_enabled_only_after_user_parameter_confirmation() -> None:
     assert _row(rows, "formal_deg_parameter_confirmation")["state"] == "confirmed"
 
 
+def test_limma_rscript_action_requires_all_gates_and_confirmation() -> None:
+    blocked = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "passed", "blockers": []},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        limma_rscript_gate={
+            "status": "blocked",
+            "multi_factor_preflight": {"status": "blocked", "blockers": ["multi_factor_design_config_missing"]},
+            "runtime_detection": {"status": "passed", "blockers": []},
+            "runtime_gate": {"status": "ready_for_external_runtime_execution", "blockers": []},
+            "parameter_manifest": {"status": "blocked", "blockers": ["multi_factor_design_config_missing"]},
+            "confirmation_gate": {"status": "blocked", "blockers": ["r_limma_parameter_confirmation_missing"]},
+            "result_schema_gate": {"status": "blocked", "blockers": ["parameter_gate_not_passed"]},
+            "blockers": ["multi_factor_design_config_missing", "r_limma_parameter_confirmation_missing"],
+        },
+    )
+
+    assert _row(blocked, "r_limma_parameter_confirmation")["enabled"] is False
+    assert "multi_factor_design_config_missing" in _row(blocked, "r_limma_parameter_confirmation")["disabled_reason"]
+    assert _row(blocked, "formal_deg_limma_rscript")["enabled"] is False
+    assert "r_limma_parameter_confirmation_missing" in _row(blocked, "formal_deg_limma_rscript")["disabled_reason"]
+
+    enabled = build_action_rows(
+        packages=[],
+        deg_dependency={"status": "passed", "blockers": []},
+        survival_dependency={"status": "preflight_only"},
+        report_gate={"status": "blocked"},
+        limma_rscript_gate={
+            "status": "passed",
+            "multi_factor_preflight": {"status": "design_ready", "blockers": []},
+            "runtime_detection": {"status": "passed", "blockers": []},
+            "runtime_gate": {"status": "ready_for_external_runtime_execution", "blockers": []},
+            "parameter_manifest": {"status": "passed", "blockers": []},
+            "confirmation_gate": {"status": "passed", "blockers": []},
+            "result_schema_gate": {"status": "passed", "blockers": []},
+            "blockers": [],
+        },
+    )
+
+    assert _row(enabled, "r_limma_parameter_confirmation")["state"] == "confirmed"
+    limma = _row(enabled, "formal_deg_limma_rscript")
+    assert limma["enabled"] is True
+    assert limma["button_behavior"] == "enabled_b25_2_audited_limma_rscript_only"
+
+
 def test_preflight_only_plot_source_is_blocked_and_report_gate_controls_export() -> None:
     rows = build_action_rows(
         packages=[],
