@@ -11,6 +11,7 @@ from app.shared.semantic_keys import (
     FeatureStatusKey,
     ModuleKey,
     PageKey,
+    ReportStatusKey,
     ResourceStatusKey,
     ResultSemanticKey,
 )
@@ -25,6 +26,7 @@ BIOINFORMATICS_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "bioinformati
 META_PAGE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "meta" / "pages"
 SETTINGS_RESOURCE_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "settings" / "resources"
 RESULT_REPORT_EXPORT_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "result_report_export"
+STATUS_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "status"
 EMPTY_STATE_IMAGE_DIR = PROJECT_ROOT / "assets" / "images" / "empty_states"
 UI01_LOGIN_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui01_login"
 UI02_MODULE_SELECTION_ICON_DIR = PROJECT_ROOT / "assets" / "icons" / "ui02_module_selection"
@@ -115,6 +117,18 @@ RESULT_REPORT_EXPORT_ICON_PATHS = {
     "result_summary": RESULT_REPORT_EXPORT_ICON_DIR / "result_summary.svg",
     "report_template": RESULT_REPORT_EXPORT_ICON_DIR / "report_template.svg",
     "result_clear": RESULT_REPORT_EXPORT_ICON_DIR / "result_clear.svg",
+}
+STATUS_ICON_PATHS = {
+    FeatureStatusKey.TESTING.value: STATUS_ICON_DIR / "status_testing.svg",
+    FeatureStatusKey.PLANNED.value: STATUS_ICON_DIR / "status_planned.svg",
+    FeatureStatusKey.SHELL_ONLY.value: STATUS_ICON_DIR / "status_shell_only.svg",
+    FeatureStatusKey.DEVELOPER_PREVIEW.value: STATUS_ICON_DIR / "status_developer_preview.svg",
+    FeatureStatusKey.BLOCKED.value: STATUS_ICON_DIR / "status_blocked.svg",
+    ResourceStatusKey.AVAILABLE.value: STATUS_ICON_DIR / "status_available.svg",
+    ResourceStatusKey.NOT_CONFIGURED.value: STATUS_ICON_DIR / "status_not_configured.svg",
+    ResourceStatusKey.FAILED.value: STATUS_ICON_DIR / "status_failed.svg",
+    AnalysisStatusKey.PREFLIGHT_ONLY.value: STATUS_ICON_DIR / "status_preflight_only.svg",
+    ReportStatusKey.DRAFT.value: STATUS_ICON_DIR / "status_draft.svg",
 }
 UI01_LOGIN_ICON_SHEET_PATH = UI01_LOGIN_ICON_DIR / "ui01_login_icon_sheet.png"
 UI01_LOGIN_ICON_PATHS = {
@@ -391,6 +405,19 @@ def load_result_report_export_icon(resource_id: str) -> QIcon:
 
 def load_result_report_export_pixmap(resource_id: str, size: int = 24) -> QPixmap:
     icon = load_result_report_export_icon(resource_id)
+    return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
+
+
+def load_status_icon(semantic_key: str) -> QIcon:
+    path = STATUS_ICON_PATHS.get(semantic_key)
+    if path is None or not path.exists():
+        return QIcon()
+    icon = QIcon(str(path))
+    return icon if not icon.isNull() else QIcon()
+
+
+def load_status_pixmap(semantic_key: str, size: int = 14) -> QPixmap:
+    icon = load_status_icon(semantic_key)
     return icon.pixmap(size, size) if not icon.isNull() else QPixmap()
 
 

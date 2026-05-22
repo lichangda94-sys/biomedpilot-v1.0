@@ -9,6 +9,18 @@ MATRIX_PATH = ROOT / "docs/ui/resource_inventory/UI_B8b3_icon_replacement_readin
 MANIFEST_PATH = ROOT / "docs/ui/icon_production/UI_B8b8a_status_icon_production_manifest_20260521.csv"
 STATUS_ROOT = "docs/ui/icon_production/status/"
 ACTIVE_STATUS_DIR = ROOT / "assets/icons/status"
+STATUS_IDS = {
+    "status_testing",
+    "status_planned",
+    "status_shell_only",
+    "status_developer_preview",
+    "status_blocked",
+    "status_available",
+    "status_not_configured",
+    "status_failed",
+    "status_preflight_only",
+    "status_draft",
+}
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -87,7 +99,11 @@ def test_status_stage_does_not_touch_active_assets_or_other_families() -> None:
     assert all("app_icon" not in row["resource_id"] for row in rows)
     assert all(row["svg_path"].startswith(STATUS_ROOT) for row in rows)
     assert all(not row["svg_path"].startswith("assets/") for row in rows)
-    assert not ACTIVE_STATUS_DIR.exists()
+    if ACTIVE_STATUS_DIR.exists():
+        active_stems = {path.stem.removesuffix("_24").removesuffix("_32").removesuffix("_48").removesuffix("_64") for path in ACTIVE_STATUS_DIR.glob("*")}
+        assert active_stems == STATUS_IDS
+        assert not any(path.name.startswith(("result_", "report_", "export_", "share_", "empty_")) for path in ACTIVE_STATUS_DIR.glob("*"))
+        assert not any("app_icon" in path.name for path in ACTIVE_STATUS_DIR.glob("*"))
 
 
 def test_status_semantics_stay_non_final_until_gating_review() -> None:

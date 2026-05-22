@@ -136,10 +136,10 @@ def test_pilot_manifest_marks_only_modules_active() -> None:
 
 def test_non_p1_icon_families_are_not_in_active_pilot_assets() -> None:
     forbidden_paths = [
-        ROOT / "assets/icons/status/status_testing.svg",
-        ROOT / "assets/icons/settings/resources/resource_cloud_ai.svg",
-        ROOT / "assets/icons/result_report_export/export_pdf.svg",
-        ROOT / "assets/images/empty_states/empty_project.svg",
+        ROOT / "assets/icons/modules/resource_cloud_ai.svg",
+        ROOT / "assets/icons/modules/export_pdf.svg",
+        ROOT / "assets/icons/modules/empty_project.svg",
+        ROOT / "assets/icons/modules/status_testing.svg",
         ROOT / "assets/icons/app/module_bioinformatics.svg",
     ]
 

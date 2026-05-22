@@ -13,6 +13,18 @@ ROOT = Path(__file__).resolve().parents[2]
 PRODUCTION_MANIFEST = ROOT / "docs/ui/icon_production/UI_B8b8a_status_icon_production_manifest_20260521.csv"
 GATING_MANIFEST = ROOT / "docs/ui/UI_B8b8b_status_icon_semantic_gating_manifest_20260521.csv"
 ACTIVE_STATUS_DIR = ROOT / "assets/icons/status"
+STATUS_IDS = {
+    "status_testing",
+    "status_planned",
+    "status_shell_only",
+    "status_developer_preview",
+    "status_blocked",
+    "status_available",
+    "status_not_configured",
+    "status_failed",
+    "status_preflight_only",
+    "status_draft",
+}
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -37,7 +49,11 @@ def test_status_gating_manifest_stays_docs_only() -> None:
     assert all(not row["candidate_svg_path"].startswith("assets/icons/status/") for row in rows)
     assert all(row["resource_id"].startswith("status_") for row in rows)
     assert all("app_icon" not in row["resource_id"] for row in rows)
-    assert not ACTIVE_STATUS_DIR.exists()
+    if ACTIVE_STATUS_DIR.exists():
+        active_stems = {path.stem.removesuffix("_24").removesuffix("_32").removesuffix("_48").removesuffix("_64") for path in ACTIVE_STATUS_DIR.glob("*")}
+        assert active_stems == STATUS_IDS
+        assert not any(path.name.startswith(("result_", "report_", "export_", "share_", "empty_")) for path in ACTIVE_STATUS_DIR.glob("*"))
+        assert not any("app_icon" in path.name for path in ACTIVE_STATUS_DIR.glob("*"))
 
 
 def test_allowed_status_icons_require_labels_semantics_and_gates() -> None:

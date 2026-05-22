@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from html import escape
+
 from app.ui_style_tokens import (
     BUTTON_TOKENS,
     COLORS,
@@ -12,6 +14,7 @@ from app.ui_style_tokens import (
     status_chip_stylesheet,
 )
 from app.shared.semantic_keys import AnalysisStatusKey, FeatureStatusKey, ReportStatusKey, ResourceStatusKey
+from app.app_identity import STATUS_ICON_PATHS, load_status_pixmap
 
 
 STATUS_SEMANTIC_KEYS: dict[str, str] = {
@@ -29,6 +32,19 @@ STATUS_SEMANTIC_KEYS: dict[str, str] = {
     UIStatusKey.REPORT_READY.value: ReportStatusKey.REPORT_READY_FUTURE.value,
 }
 
+STATUS_TOOLTIPS: dict[str, str] = {
+    FeatureStatusKey.TESTING.value: "Testing-level only; not a formal or production-ready capability.",
+    FeatureStatusKey.PLANNED.value: "Planned only; not runnable and not currently available.",
+    FeatureStatusKey.SHELL_ONLY.value: "UI shell only; no business implementation is implied.",
+    FeatureStatusKey.DEVELOPER_PREVIEW.value: "Developer preview only; ordinary user production capability is not implied.",
+    FeatureStatusKey.BLOCKED.value: "Blocked by missing input, resolver, dependency, or precondition; action remains unavailable.",
+    ResourceStatusKey.AVAILABLE.value: "Detected resource available only; the icon does not install, configure, or enable a resource.",
+    ResourceStatusKey.NOT_CONFIGURED.value: "Resource is not configured; install, update, or cloud setup remains user-triggered and gated.",
+    ResourceStatusKey.FAILED.value: "Detection or resource check failed; this does not imply formal analysis failure.",
+    AnalysisStatusKey.PREFLIGHT_ONLY.value: "Preflight-only analysis surface; no formal DEG, GSEA, survival, clinical, or report-ready result.",
+    ReportStatusKey.DRAFT.value: "Draft report only; not report-ready and not a formal export package.",
+}
+
 
 def make_status_chip(label: str | None = None, *, status_key: str | UIStatusKey = UIStatusKey.NOT_CONFIGURED):
     from PySide6.QtCore import Qt
@@ -36,11 +52,29 @@ def make_status_chip(label: str | None = None, *, status_key: str | UIStatusKey 
 
     token = get_status_token(status_key)
     chip = QLabel(label or token.label)
+    semantic_key = STATUS_SEMANTIC_KEYS.get(token.key, ResourceStatusKey.NOT_CONFIGURED.value)
+    status_icon_source = STATUS_ICON_PATHS.get(semantic_key)
+    pixmap = load_status_pixmap(semantic_key, 14)
     chip.setObjectName("uiStatusChip")
     chip.setProperty("uiPrimitive", "status_chip")
     chip.setProperty("statusKey", token.key)
-    chip.setProperty("semanticKey", STATUS_SEMANTIC_KEYS.get(token.key, ResourceStatusKey.NOT_CONFIGURED.value))
+    chip.setProperty("semanticKey", semantic_key)
     chip.setProperty("iconHint", token.icon_hint)
+    chip.setProperty("statusLabel", label or token.label)
+    chip.setProperty("statusIconSemanticKey", semantic_key)
+    chip.setProperty("statusIconRole", "auxiliary_status_marker")
+    chip.setProperty("statusIconFallback", pixmap.isNull())
+    chip.setProperty("statusIconActivePilot", not pixmap.isNull())
+    chip.setProperty("statusAvailableRequiresDetectedResource", semantic_key == ResourceStatusKey.AVAILABLE.value)
+    chip.setToolTip(STATUS_TOOLTIPS.get(semantic_key, "Status marker; text label and semantic key remain authoritative."))
+    if status_icon_source is not None:
+        chip.setProperty("statusIconSource", str(status_icon_source))
+    if not pixmap.isNull() and status_icon_source is not None:
+        chip.setTextFormat(Qt.RichText)
+        chip.setText(
+            f'<img src="{status_icon_source.as_uri()}" width="14" height="14" style="vertical-align:middle;">'
+            f'&nbsp;{escape(label or token.label)}'
+        )
     chip.setAlignment(Qt.AlignCenter)
     chip.setWordWrap(False)
     chip.setStyleSheet(status_chip_stylesheet(token.key))
