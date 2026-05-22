@@ -38,6 +38,20 @@ SECTION_TASK_TYPES = {
     "survival_km_logrank": ("survival_km_logrank",),
     "cox": ("cox_univariate", "cox_multivariate"),
 }
+SECTION_LABELS = {
+    "formal_deg": "Formal DEG",
+    "ora_enrichment": "ORA enrichment",
+    "gsea_preranked": "Preranked GSEA",
+    "survival_km_logrank": "KM/log-rank survival",
+    "cox": "Cox clinical association",
+}
+SECTION_PLOT_REQUIREMENTS = {
+    "formal_deg": "formal_deg_plot_or_explicit_table_only_mode",
+    "ora_enrichment": "ora_plot_or_explicit_table_only_mode",
+    "gsea_preranked": "gsea_plot_or_explicit_table_only_mode",
+    "survival_km_logrank": "formal_km_plot_artifact_required_after_survival_report_ready_exists",
+    "cox": "formal_cox_plot_artifact_required_after_survival_report_ready_exists",
+}
 SUPPORTED_EXPORT_FORMATS = ("markdown", "pdf", "docx")
 
 
@@ -121,6 +135,7 @@ def build_full_integrated_report_package_plan(
         "package_root_policy": "report_package/integrated/<timestamp>_<project_name>",
         "required_directories": list(PACKAGE_DIRECTORIES),
         "required_files": list(PACKAGE_REQUIRED_FILES),
+        "prerequisite_summary": gate.get("prerequisite_summary", {}),
         "renderer_gate": renderer_gate,
         "renderer_status": renderer_gate.get("status", "blocked"),
         "renderer_id": renderer_gate.get("renderer_id", ""),
@@ -248,10 +263,14 @@ def evaluate_full_integrated_report_gate(
         checks["all_sections_source_tables_present"] = checks["all_sections_source_tables_present"] and row["source_tables_present"]
         checks["section_report_ready_gates_passed"] = checks["section_report_ready_gates_passed"] and row["section_report_ready_status"] == "passed"
         checks["no_imported_testing_exploratory_or_preflight"] = checks["no_imported_testing_exploratory_or_preflight"] and row["result_semantics"] not in {"imported_external_result", "testing_level", "exploratory", "preflight_only"}
+    prerequisite_rows = _full_integrated_prerequisite_rows(section_rows)
+    prerequisite_summary = _full_integrated_prerequisite_summary(prerequisite_rows)
+    checks["full_integrated_content_prerequisites_passed"] = prerequisite_summary["blocked_count"] == 0
     if not allow_missing_optional_sections:
         for check_name, passed in checks.items():
             if not passed and check_name not in {"survival_clinical_report_ready_available"}:
                 blockers.append(check_name)
+    blockers.extend(row_blocker for row in prerequisite_rows for row_blocker in row.get("blockers", []) or [])
     blockers.append("survival_clinical_report_ready_not_implemented")
     blockers.append("full_integrated_report_export_not_enabled_in_b23_1")
     status = "blocked" if blockers else "eligible_for_full_integrated_report"
@@ -265,6 +284,10 @@ def evaluate_full_integrated_report_gate(
         "allow_missing_optional_sections": allow_missing_optional_sections,
         "required_sections": list(section_ids),
         "section_rows": section_rows,
+        "prerequisite_rows": prerequisite_rows,
+        "prerequisite_summary": prerequisite_summary,
+        "survival_clinical_report_ready_required": True,
+        "export_activation_status": "blocked_until_full_integrated_content_gate_and_renderer_gate_pass",
         "checks": checks,
         "package_layout": [
             "integrated_report.md",
@@ -307,6 +330,9 @@ def _section_row(root: Path, entries: list[dict[str, Any]], section_id: str, exp
             "plot_artifact_status": "missing",
             "section_report_ready_status": "missing",
             "section_report_ready_gate": {},
+            "section_report_ready_gate_schema": "",
+            "section_package_scope": "",
+            "registered_report_scopes": [],
             "blockers": blockers,
             "warnings": warnings,
         }
@@ -361,6 +387,9 @@ def _section_row(root: Path, entries: list[dict[str, Any]], section_id: str, exp
         "plot_artifact_status": plot_status,
         "section_report_ready_status": report_status,
         "section_report_ready_gate": report_gate,
+        "section_report_ready_gate_schema": str(report_gate.get("schema_version") or ""),
+        "section_package_scope": _section_package_scope(report_gate),
+        "registered_report_scopes": _registered_report_scopes(entry),
         "blockers": list(dict.fromkeys(blockers)),
         "warnings": list(dict.fromkeys(warnings)),
     }
@@ -398,6 +427,93 @@ def _section_report_status(section_id: str, gate: dict[str, Any]) -> str:
         "gsea_preranked": "eligible_for_gsea_report_ready",
     }
     return "passed" if gate.get("status") == passing.get(section_id) else "blocked"
+
+
+def _full_integrated_prerequisite_rows(section_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for section_id in REQUIRED_SECTION_IDS:
+        section = next((row for row in section_rows if row.get("section_id") == section_id), {})
+        blockers: list[str] = []
+        if not section.get("result_present"):
+            blockers.append(f"full_integrated_prerequisite_missing_result:{section_id}")
+        if section.get("result_semantics") != "formal_computed_result":
+            blockers.append(f"full_integrated_prerequisite_requires_formal_result:{section_id}")
+        if section.get("validation_status") not in {"passed", "warning"}:
+            blockers.append(f"full_integrated_prerequisite_validation_not_passed:{section_id}")
+        if not section.get("dependency_snapshot_passed"):
+            blockers.append(f"full_integrated_prerequisite_dependency_not_passed:{section_id}")
+        if not section.get("task_run_log_present"):
+            blockers.append(f"full_integrated_prerequisite_task_log_missing:{section_id}")
+        if not section.get("source_tables_present"):
+            blockers.append(f"full_integrated_prerequisite_source_table_missing:{section_id}")
+        if section.get("section_report_ready_status") != "passed":
+            blockers.append(f"full_integrated_prerequisite_section_report_ready_not_passed:{section_id}")
+        if section_id in {"survival_km_logrank", "cox"}:
+            blockers.append(f"full_integrated_prerequisite_survival_clinical_report_ready_missing:{section_id}")
+        if _has_section_only_report_scope(section):
+            blockers.append(f"full_integrated_prerequisite_forbids_section_package_as_full_report:{section_id}")
+        row_status = "passed" if not blockers else "blocked"
+        rows.append(
+            {
+                "section_id": section_id,
+                "section_label": SECTION_LABELS.get(section_id, section_id),
+                "result_id": str(section.get("result_id") or ""),
+                "required_result_semantics": "formal_computed_result",
+                "observed_result_semantics": str(section.get("result_semantics") or ""),
+                "result_index_v2_status": "passed" if section.get("result_index_v2_fields_present") else "blocked",
+                "validation_status": str(section.get("validation_status") or ""),
+                "dependency_status": "passed" if section.get("dependency_snapshot_passed") else "blocked",
+                "task_run_log_status": "present" if section.get("task_run_log_present") else "missing",
+                "source_table_status": "present" if section.get("source_tables_present") else "missing",
+                "plot_requirement": SECTION_PLOT_REQUIREMENTS.get(section_id, "section_plot_or_table_only_requirement"),
+                "plot_artifact_status": str(section.get("plot_artifact_status") or ""),
+                "section_report_ready_status": str(section.get("section_report_ready_status") or ""),
+                "section_report_ready_gate_schema": str(section.get("section_report_ready_gate_schema") or ""),
+                "section_package_scope": str(section.get("section_package_scope") or ""),
+                "registered_report_scopes": list(section.get("registered_report_scopes", []) or []),
+                "full_integrated_scope_required": True,
+                "section_only_package_sufficient": False,
+                "status": row_status,
+                "disabled_reason": "; ".join(dict.fromkeys(blockers)),
+                "blockers": list(dict.fromkeys(blockers)),
+            }
+        )
+    return rows
+
+
+def _full_integrated_prerequisite_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    passed = sum(1 for row in rows if row.get("status") == "passed")
+    blocked = len(rows) - passed
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_prerequisite_summary.v1",
+        "required_section_count": len(rows),
+        "passed_count": passed,
+        "blocked_count": blocked,
+        "status": "passed" if blocked == 0 else "blocked",
+        "blocked_sections": [row.get("section_id") for row in rows if row.get("status") != "passed"],
+        "survival_clinical_report_ready_required": True,
+        "section_only_package_sufficient": False,
+    }
+
+
+def _section_package_scope(gate: dict[str, Any]) -> str:
+    scope = gate.get("section_scope") or gate.get("package_scope")
+    if scope:
+        return str(scope)
+    return str((gate.get("manifest") or {}).get("section_scope") or "") if isinstance(gate.get("manifest"), dict) else ""
+
+
+def _registered_report_scopes(entry: dict[str, Any]) -> list[str]:
+    scopes: list[str] = []
+    for artifact in entry.get("report_artifacts", []) or []:
+        if isinstance(artifact, dict) and artifact.get("section_scope"):
+            scopes.append(str(artifact.get("section_scope")))
+    return list(dict.fromkeys(scopes))
+
+
+def _has_section_only_report_scope(section: dict[str, Any]) -> bool:
+    scopes = [str(section.get("section_package_scope") or ""), *(str(item) for item in section.get("registered_report_scopes", []) or [])]
+    return any(scope and scope != "full_integrated_report" and scope.endswith("_only") for scope in scopes)
 
 
 def _source_tables_present(root: Path, entry: dict[str, Any]) -> bool:

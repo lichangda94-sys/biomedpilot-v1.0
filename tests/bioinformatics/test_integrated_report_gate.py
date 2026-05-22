@@ -20,6 +20,12 @@ def test_full_integrated_gate_blocks_until_survival_clinical_report_ready_exists
     assert sections["survival_km_logrank"]["plot_artifact_status"] == "real_artifact_registered"
     assert sections["cox"]["plot_artifact_status"] == "real_artifact_registered"
     assert sections["survival_km_logrank"]["section_report_ready_status"] == "blocked"
+    prerequisites = {row["section_id"]: row for row in gate["prerequisite_rows"]}
+    assert gate["prerequisite_summary"]["status"] == "blocked"
+    assert gate["prerequisite_summary"]["survival_clinical_report_ready_required"] is True
+    assert prerequisites["formal_deg"]["required_result_semantics"] == "formal_computed_result"
+    assert prerequisites["survival_km_logrank"]["section_only_package_sufficient"] is False
+    assert "full_integrated_prerequisite_survival_clinical_report_ready_missing:survival_km_logrank" in prerequisites["survival_km_logrank"]["blockers"]
 
 
 def test_full_integrated_gate_blocks_missing_required_sections(tmp_path: Path) -> None:
@@ -30,6 +36,8 @@ def test_full_integrated_gate_blocks_missing_required_sections(tmp_path: Path) -
     assert "section_result_missing:gsea_preranked" in gate["blockers"]
     assert "section_result_missing:cox" in gate["blockers"]
     assert gate["checks"]["required_sections_present"] is False
+    prerequisites = {row["section_id"]: row for row in gate["prerequisite_rows"]}
+    assert "full_integrated_prerequisite_missing_result:gsea_preranked" in prerequisites["gsea_preranked"]["blockers"]
 
 
 def test_full_integrated_gate_blocks_non_formal_sources(tmp_path: Path) -> None:
@@ -42,6 +50,8 @@ def test_full_integrated_gate_blocks_non_formal_sources(tmp_path: Path) -> None:
     assert "section_result_not_formal:survival_km_logrank:km-formal" in gate["blockers"]
     assert "non_formal_result_forbidden_in_full_integrated_report:km-formal" in gate["blockers"]
     assert gate["checks"]["no_imported_testing_exploratory_or_preflight"] is False
+    prerequisites = {row["section_id"]: row for row in gate["prerequisite_rows"]}
+    assert "full_integrated_prerequisite_requires_formal_result:gsea_preranked" in prerequisites["gsea_preranked"]["blockers"]
 
 
 def test_section_only_report_artifacts_do_not_make_full_integrated_report(tmp_path: Path) -> None:
@@ -54,6 +64,9 @@ def test_section_only_report_artifacts_do_not_make_full_integrated_report(tmp_pa
     assert "survival_clinical_report_ready_not_implemented" in gate["blockers"]
     assert gate["package_layout"][0] == "integrated_report.md"
     assert all("full_integrated_report" not in str(row.get("section_report_ready_gate", {}).get("package_layout", "")) for row in gate["section_rows"])
+    prerequisites = {row["section_id"]: row for row in gate["prerequisite_rows"]}
+    assert "full_integrated_prerequisite_forbids_section_package_as_full_report:formal_deg" in prerequisites["formal_deg"]["blockers"]
+    assert prerequisites["formal_deg"]["registered_report_scopes"] == ["formal_deg_only"]
 
 
 def _write_full_layer_fixture(

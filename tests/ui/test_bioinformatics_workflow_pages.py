@@ -4602,6 +4602,7 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     full_plan_text = _table_text(full_plan)
     assert "report_package/integrated" in full_plan_text
     assert "integrated_report.md" in full_plan_text
+    assert "prerequisite_summary" in full_plan_text
     assert "renderer_status" in full_plan_text
     assert "builtin_markdown" in full_plan_text
     full_format = widget.findChild(QComboBox, "fullIntegratedReportFormat")
@@ -4619,6 +4620,8 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     full_sections_text = _table_text(full_sections)
     assert "formal_deg" in full_sections_text
     assert "gsea_preranked" in full_sections_text
+    assert "Prerequisite" in "\n".join(full_sections.horizontalHeaderItem(column).text() for column in range(full_sections.columnCount()))
+    assert "blocked" in full_sections_text
     blocked_full = widget.generate_full_integrated_report_package()
     assert blocked_full is not None
     assert blocked_full["status"] == "blocked"

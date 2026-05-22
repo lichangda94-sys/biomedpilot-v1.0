@@ -6979,11 +6979,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
         integrated_layout.addWidget(self._full_integrated_plan)
         _set_table_widths(self._full_integrated_plan, [260, 660])
         self._full_integrated_plan.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self._full_integrated_sections = _table(["Section", "Result", "Semantics", "Validation", "Report gate", "Plot", "Blockers"])
+        self._full_integrated_sections = _table(["Section", "Result", "Semantics", "Validation", "Report gate", "Plot", "Prerequisite", "Blockers"])
         self._full_integrated_sections.setObjectName("fullIntegratedReportSectionTable")
         integrated_layout.addWidget(self._full_integrated_sections)
-        _set_table_widths(self._full_integrated_sections, [150, 160, 170, 110, 150, 150, 340])
-        self._full_integrated_sections.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
+        _set_table_widths(self._full_integrated_sections, [150, 160, 170, 110, 150, 150, 140, 340])
+        self._full_integrated_sections.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
         root.addWidget(integrated_card)
 
         developer_card, developer_layout = _card("开发者诊断")
@@ -7197,6 +7197,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["section_scope", plan.get("section_scope", gate.get("section_scope", "full_integrated_report"))],
                 ["export_format", plan.get("export_format", self._full_integrated_format.currentText() if hasattr(self, "_full_integrated_format") else "markdown")],
                 ["can_create_package", plan.get("can_create_package", False)],
+                ["prerequisite_summary", gate.get("prerequisite_summary", {})],
                 ["renderer_status", plan.get("renderer_status", "")],
                 ["renderer_id", plan.get("renderer_id", "")],
                 ["renderer_dependencies", ", ".join(str(item) for item in plan.get("renderer_dependencies", []) or [])],
@@ -7208,6 +7209,11 @@ class BioinformaticsResultsBrowserWidget(QWidget):
             ],
         )
         rows = gate.get("section_rows", []) if isinstance(gate.get("section_rows"), list) else []
+        prerequisite_rows = {
+            str(row.get("section_id") or ""): row
+            for row in gate.get("prerequisite_rows", []) or []
+            if isinstance(row, dict)
+        }
         _fill_table(
             self._full_integrated_sections,
             [
@@ -7218,6 +7224,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                     row.get("validation_status", ""),
                     row.get("section_report_ready_status", ""),
                     row.get("plot_artifact_status", ""),
+                    (prerequisite_rows.get(str(row.get("section_id") or "")) or {}).get("status", ""),
                     "; ".join(str(item) for item in row.get("blockers", []) or []),
                 ]
                 for row in rows

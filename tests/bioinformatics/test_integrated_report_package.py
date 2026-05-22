@@ -28,6 +28,7 @@ def test_integrated_report_package_plan_lists_stable_layout(tmp_path: Path) -> N
     plan = build_full_integrated_report_package_plan(tmp_path, gate={"status": "blocked", "blockers": ["survival_clinical_report_ready_not_implemented"]})
 
     assert plan["section_scope"] == "full_integrated_report"
+    assert "prerequisite_summary" in plan
     assert "sections" in plan["required_directories"]
     assert "integrated_report.md" in plan["required_files"]
     assert "manifests/full_integrated_gate_snapshot.json" in plan["required_files"]
