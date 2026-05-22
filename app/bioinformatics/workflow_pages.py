@@ -4408,7 +4408,9 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
     def refresh_task_center(self) -> dict[str, object] | None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
-            self._render_gate_preview(build_analysis_center_state(None))
+            state = build_analysis_center_state(None)
+            self._render_gate_preview(state)
+            self._render_analysis_task_gate({}, state)
             return None
         center = load_analysis_task_center(self._project_root)
         self._render(center)
@@ -4581,20 +4583,32 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
 
     def _build_ui(self) -> None:
         root = _scroll_root(self)
-        root.addWidget(_header("分析任务中心", "Developer Preview / 本地测试版", back_text="返回工作流总控", back_signal=self.back_requested))
+        root.addWidget(_header("Analysis Tasks / 分析任务", "任务 gate matrix 与 DEG preflight review；不运行正式分析。", back_text="返回 Group & Design", back_signal=self.back_requested))
         self._status_label = _status_label("没有 task center 时请先运行工作流或生成任务中心。")
         root.addWidget(self._status_label)
+        root.addWidget(self._build_analysis_task_gate_card())
         actions = QHBoxLayout()
-        actions.addWidget(_button("刷新任务中心", "secondaryButton", self.refresh_task_center))
+        actions.addWidget(_button("刷新任务中心", "secondaryButton", self.refresh_task_center, role="secondary"))
         self._task_type_input = QLineEdit()
         self._task_type_input.setPlaceholderText("task type，例如 differential_expression")
         actions.addWidget(self._task_type_input)
-        actions.addWidget(_button("去确认分组", "secondaryButton", self.open_group_design))
-        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups))
-        actions.addWidget(_button("配置 DEG 任务", "primaryButton", self.configure_deg_task_plan))
-        actions.addWidget(_button("生成 DEG 分析任务记录", "primaryButton", self.create_deg_task_run_record))
-        actions.addWidget(_button("生成并校验 DEG 输入", "primaryButton", self.generate_deg_executor_preflight))
-        actions.addWidget(_button("创建任务", "primaryButton", self.create_task))
+        actions.addWidget(_button("去确认分组", "secondaryButton", self.open_group_design, role="secondary"))
+        actions.addWidget(_button("设置比较组", "secondaryButton", self.configure_comparison_groups, role="secondary"))
+        deg_plan_button = _button("配置 DEG 任务", "primaryButton", self.configure_deg_task_plan, role="secondary")
+        deg_run_record_button = _button("生成 DEG 分析任务记录", "primaryButton", self.create_deg_task_run_record, role="secondary")
+        deg_preflight_button = _button("生成并校验 DEG 输入", "primaryButton", self.generate_deg_executor_preflight, role="secondary")
+        create_task_button = _button("创建任务", "primaryButton", self.create_task, role="secondary")
+        for button, behavior in (
+            (deg_plan_button, "disabled_task_plan_preview"),
+            (deg_run_record_button, "disabled_task_record_preview"),
+            (deg_preflight_button, "disabled_preflight_preview"),
+            (create_task_button, "disabled_task_creation_preview"),
+        ):
+            button.setEnabled(False)
+            button.setProperty("formalActionEnabled", False)
+            button.setProperty("buttonBehavior", behavior)
+            button.setToolTip("UI-C2e 普通页面只显示 gate/review；直接写入任务或 preflight artifact 仅保留给内部诊断方法。")
+            actions.addWidget(button)
         self._geo_deg_button = _button("运行 GEO 差异分析 - 开发诊断禁用", "secondaryButton", self.run_geo_differential_expression_task)
         self._geo_deg_button.setObjectName("bioinformaticsFormalDegDisabledButton")
         self._geo_deg_button.setProperty("actionId", "developer_geo_deg_runner")
@@ -4622,6 +4636,54 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         root.addWidget(self._records)
         root.addWidget(_button("继续：结果浏览", "primaryButton", self.continue_to_results), alignment=Qt.AlignLeft)
 
+    def _build_analysis_task_gate_card(self) -> QFrame:
+        card, layout = _card("Task Gate Matrix / 任务门控矩阵")
+        card.setObjectName("bioinformaticsAnalysisTaskGateCard")
+        card.setProperty("formalActionEnabled", False)
+        self._analysis_task_matrix = _table(["task", "status", "dependency", "allowed action", "blocked action"])
+        self._analysis_task_matrix.setObjectName("bioinformaticsAnalysisTaskGatedMatrix")
+        self._analysis_task_matrix.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._analysis_task_matrix)
+        deg_title = _muted("DEG Parameter Review / DEG 参数复核")
+        deg_title.setObjectName("bioinformaticsDegParameterReviewTitle")
+        layout.addWidget(deg_title)
+        self._deg_parameter_table = _table(["parameter", "current review value", "gate note"])
+        self._deg_parameter_table.setObjectName("bioinformaticsDegParameterReviewTable")
+        self._deg_parameter_table.setProperty("resultSemanticKey", "preflight_only")
+        self._deg_parameter_table.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._deg_parameter_table)
+        self._deg_preflight_checklist = _table(["check", "state", "meaning"])
+        self._deg_preflight_checklist.setObjectName("bioinformaticsDegPreflightChecklist")
+        self._deg_preflight_checklist.setProperty("resultSemanticKey", "preflight_only")
+        self._deg_preflight_checklist.setProperty("formalActionEnabled", False)
+        layout.addWidget(self._deg_preflight_checklist)
+        action_row = QHBoxLayout()
+        action_specs = (
+            ("Run Preflight - gated preview", "bioinformaticsRunPreflightReviewDisabledButton", "disabled_preflight_preview"),
+            ("Run Formal DEG - disabled", "bioinformaticsRunFormalDegDisabledButton", "disabled_formal_executor"),
+            ("Generate Plot - disabled", "bioinformaticsGeneratePlotDisabledButton", "disabled_no_result"),
+            ("Add to Report - disabled", "bioinformaticsAnalysisAddToReportDisabledButton", "disabled_report_draft"),
+            ("Export Result - disabled", "bioinformaticsAnalysisExportResultDisabledButton", "disabled_export_gate"),
+        )
+        for text, object_name, behavior in action_specs:
+            button = _button(text, "secondaryButton", lambda: None, role="secondary")
+            button.setObjectName(object_name)
+            button.setEnabled(False)
+            button.setProperty("formalActionEnabled", False)
+            button.setProperty("buttonBehavior", behavior)
+            button.setProperty("resultSemanticKey", "preflight_only")
+            button.setProperty("exportGate", "disabled_missing_report_ready")
+            action_row.addWidget(button)
+        action_row.addStretch(1)
+        layout.addLayout(action_row)
+        self._analysis_task_gate_summary = _read_only_report_view(86)
+        self._analysis_task_gate_summary.setObjectName("bioinformaticsAnalysisTaskGateSummary")
+        self._analysis_task_gate_summary.setProperty("formalActionEnabled", False)
+        self._analysis_task_gate_summary.setProperty("resultSemanticKey", "preflight_only")
+        layout.addWidget(self._analysis_task_gate_summary)
+        self._render_analysis_task_gate({}, build_analysis_center_state(None))
+        return card
+
     def open_group_design(self) -> None:
         if self._project_root is None:
             self._status_label.setText("请先创建或打开生信分析项目。")
@@ -4629,7 +4691,9 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
         self.group_design_requested.emit(self._project_root)
 
     def _render(self, center: dict[str, object]) -> None:
-        self._render_gate_preview(build_analysis_center_state(self._project_root))
+        state = build_analysis_center_state(self._project_root)
+        self._render_gate_preview(state)
+        self._render_analysis_task_gate(center, state)
         tasks = [item for item in center.get("tasks", []) or [] if isinstance(item, dict)]
         self._status_label.setText(f"分析任务中心：{len(tasks)} 个任务模板。不可运行任务将显示缺失输入。")
         self._capability_summary.setPlainText(_analysis_task_group_summary(center))
@@ -4677,6 +4741,73 @@ class BioinformaticsAnalysisTaskCenterWidget(QWidget):
                         cell.setData(Qt.UserRole, {"formalActionEnabled": False, "actionId": item.get("action_id")})
         self._gate_actions.setProperty("formalActionEnabled", False)
         self._gate_actions.setProperty("schemaVersion", state.get("schema_version", ""))
+
+    def _render_analysis_task_gate(self, center: dict[str, object], state: dict[str, object]) -> None:
+        actions = {
+            str(item.get("action_id") or ""): item
+            for item in state.get("action_rows", []) or []
+            if isinstance(item, dict)
+        }
+        formal_deg_state = actions.get("formal_deg", {})
+        deg_preflight_state = actions.get("deg_preflight", {})
+        _fill_table(
+            self._analysis_task_matrix,
+            [
+                ["DEG", "preflight / parameter review", "expression matrix + group design", "review checklist only", "formal DEG executor"],
+                ["ORA", "planned / disabled", "requires DEG result", "none", "ORA executor"],
+                ["GSEA", "planned / disabled", "requires DEG result + GMT", "none", "GSEA executor"],
+                ["KM / log-rank", "planned / disabled", "requires survival audit", "none", "KM/log-rank executor"],
+                ["Cox", "planned / disabled", "requires clinical/survival audit", "none", "Cox executor"],
+                ["Clinical Association", "audit required / disabled", "requires clinical variable audit", "none", "clinical association executor"],
+            ],
+        )
+        comparison = self._deg_review_comparison_label()
+        matrix_state = "registered / preflight-ready" if deg_preflight_state.get("enabled") else "registered / gated"
+        _fill_table(
+            self._deg_parameter_table,
+            [
+                ["comparison", comparison, "design draft; not formal run"],
+                ["input matrix state", matrix_state, "dependency snapshot preview only"],
+                ["method policy", "Welch preview; planned DESeq2 / limma policy", "planned executor, not enabled"],
+                ["FDR threshold", "0.05", "parameter review only"],
+                ["log2FC threshold", "1.0", "parameter review only"],
+                ["low-expression filter", "planned filter: CPM/count threshold", "not executed"],
+                ["normalization", "review required", "no normalization is run here"],
+                ["missing value handling", "review required", "no imputation is run here"],
+                ["batch handling", "review required", "no batch correction is run here"],
+                ["dependency snapshot", str(formal_deg_state.get("disabled_reason") or "formal action disabled"), "does not prove executor readiness"],
+            ],
+        )
+        checklist_rows = [
+            ["input matrix exists", "passed" if deg_preflight_state.get("enabled") else "blocked", "preflight only"],
+            ["sample metadata complete", "passed" if deg_preflight_state.get("enabled") else "blocked", "preflight only"],
+            ["group design valid", "passed" if deg_preflight_state.get("enabled") else "blocked", "preflight only"],
+            ["comparison valid", "passed" if deg_preflight_state.get("enabled") else "warning", "preflight only"],
+            ["sample name matching", "passed / warning", "manual review remains required"],
+            ["minimal group size", "warning", "does not block review page"],
+            ["dependency status", "disabled formal executor", "formal DEG not enabled"],
+            ["output plan / result schema", "not generated", "no formal result artifact"],
+        ]
+        _fill_table(self._deg_preflight_checklist, checklist_rows)
+        self._analysis_task_gate_summary.setPlainText(
+            "\n".join(
+                [
+                    "Analysis Tasks gate summary: all formal run actions remain disabled.",
+                    "Preflight passed/warning states are not formal_computed_result.",
+                    "No DEG result table, volcano plot, heatmap, enrichment plot, survival plot, report, or export is generated.",
+                ]
+            )
+        )
+
+    def _deg_review_comparison_label(self) -> str:
+        if self._project_root is None:
+            return "Tumor_vs_Normal"
+        context = load_group_design_context(self._project_root)
+        groups = build_default_group_rows(context)
+        comparisons = build_default_comparison_rows(context, groups)
+        if comparisons:
+            return str(comparisons[0].get("comparison_name") or "Tumor_vs_Normal")
+        return "Tumor_vs_Normal"
 
 
 class BioinformaticsResultsBrowserWidget(QWidget):
