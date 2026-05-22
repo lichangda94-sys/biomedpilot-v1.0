@@ -1130,6 +1130,288 @@ class MainWindow(QMainWindow):
         if self._labtools_reagent_copy_text:
             QApplication.clipboard().setText(self._labtools_reagent_copy_text)
 
+    def _show_labtools_wb_loading_page(self) -> None:
+        semantic_key = PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value
+        content = self._build_labtools_base_content(
+            page_key="wb_loading",
+            semantic_key=semantic_key,
+            title="蛋白实验 / Protein Experiment",
+            subtitle="当前仅展示 WB 上样计算；后续蛋白实验步骤为流程占位。",
+        )
+        root = content.layout()
+        nav = QHBoxLayout()
+        back = make_button("返回实验模块", role="secondary")
+        back.setObjectName("labtoolsBackButton")
+        back.clicked.connect(self._show_labtools_experiment_modules_shell)
+        nav.addWidget(back)
+        nav.addWidget(make_status_chip("backend_ready / WB loading", status_key="testing"))
+        nav.addWidget(make_status_chip("save/export adapter needed", status_key="planned"))
+        nav.addStretch(1)
+        root.addLayout(nav)
+        root.addLayout(self._labtools_wb_substep_bar())
+
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        body.addWidget(self._labtools_wb_config_panel(), 1)
+        body.addWidget(self._labtools_wb_results_panel(), 2)
+        body.addWidget(self._labtools_wb_lane_panel(), 2)
+        root.addLayout(body)
+
+        boundary = self._labtools_notice_card(
+            "边界：此页不提供 SDS-PAGE 配胶、图像分析、自动条带识别、抗体推荐或完整 WB 协议；泳道布局仅作为 layout helper，不代表真实凝胶图或伪凝胶条带。",
+            object_name="labtoolsAdapterNotice",
+            semantic_key=semantic_key,
+        )
+        root.addWidget(boundary)
+        actions = QHBoxLayout()
+        copy = make_button("复制上样表", role="primary")
+        copy.setObjectName("labtoolsWbCopyTableButton")
+        copy.clicked.connect(self._copy_labtools_wb_summary)
+        save = make_button("保存 WB 记录 - 需适配", role="secondary")
+        save.setObjectName("labtoolsWbSaveRecordButton")
+        save.setEnabled(False)
+        save.setProperty("disabledState", "disabled_missing_storage_adapter")
+        export = make_button("导出 CSV / Markdown - 需文件选择器", role="secondary")
+        export.setObjectName("labtoolsWbExportButton")
+        export.setEnabled(False)
+        export.setProperty("disabledState", "disabled_missing_file_picker")
+        history = make_button("历史记录 - 需存储适配", role="secondary")
+        history.setObjectName("labtoolsWbHistoryButton")
+        history.setEnabled(False)
+        history.setProperty("disabledState", "disabled_missing_storage_adapter")
+        actions.addWidget(copy)
+        actions.addWidget(save)
+        actions.addWidget(export)
+        actions.addWidget(history)
+        actions.addStretch(1)
+        root.addLayout(actions)
+        root.addStretch(1)
+        self._set_labtools_content(content)
+        self._run_labtools_wb_loading()
+
+    def _labtools_wb_substep_bar(self) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        steps = (
+            ("1", "蛋白定量", "流程占位", "planned"),
+            ("2", "WB 上样计算", "当前步骤", "testing"),
+            ("3", "SDS-PAGE 配胶", "流程占位", "planned"),
+            ("4", "泳道布局", "预览辅助", "testing"),
+            ("5", "转膜", "流程占位", "planned"),
+            ("6", "抗体孵育", "流程占位", "planned"),
+            ("7", "曝光记录", "流程占位", "planned"),
+            ("8", "结果辅助", "流程占位", "planned"),
+            ("9", "导出记录", "流程占位", "planned"),
+        )
+        for number, title, state, status_key in steps:
+            chip = QFrame()
+            chip.setObjectName("labtoolsWbSubstep")
+            chip.setProperty("stepNumber", number)
+            chip.setProperty("statusKey", status_key)
+            color = "#EAF2FF" if status_key == "testing" else "#FFFFFF"
+            chip.setStyleSheet(f"QFrame#labtoolsWbSubstep {{ border: 1px solid #D8DEE9; border-radius: 8px; background: {color}; }}")
+            layout = QVBoxLayout(chip)
+            layout.setContentsMargins(10, 8, 10, 8)
+            title_label = QLabel(f"{number}. {title}")
+            title_label.setObjectName("labtoolsWbSubstepTitle")
+            title_label.setProperty("stepNumber", number)
+            title_label.setStyleSheet("font-weight: 700;" if status_key == "testing" else "")
+            state_label = QLabel(state)
+            state_label.setObjectName("labtoolsWbSubstepState")
+            state_label.setProperty("stepNumber", number)
+            state_label.setStyleSheet("font-size: 11px; color: #64748B;")
+            layout.addWidget(title_label)
+            layout.addWidget(state_label)
+            row.addWidget(chip)
+        return row
+
+    def _labtools_wb_config_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsWbConfigPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "wb_loading")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
+        frame.setStyleSheet("QFrame#labtoolsWbConfigPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("WB 配置")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        self._labtools_wb_inputs: dict[str, QLineEdit] = {}
+        layout.addLayout(self._labtools_wb_input_row("目标上样蛋白量（每孔）", "target_protein_ug", "20", "µg"))
+        layout.addLayout(self._labtools_wb_input_row("Sample buffer 倍数", "loading_buffer_factor", "4", "x"))
+        layout.addLayout(self._labtools_wb_input_row("最终上样体积", "final_volume_ul", "20", "µL"))
+        layout.addLayout(self._labtools_wb_input_row("固定泳道数", "lane_count", "10", "lanes"))
+        reducing = QLabel("还原剂：Yes（当前示例视为已包含于上样体系，不额外占体积）")
+        reducing.setObjectName("labtoolsWbConfigRow")
+        reducing.setWordWrap(True)
+        layout.addWidget(reducing)
+        calculate = make_button("重新计算 WB 上样", role="primary")
+        calculate.setObjectName("labtoolsWbCalculateButton")
+        calculate.clicked.connect(self._run_labtools_wb_loading)
+        layout.addWidget(calculate)
+        layout.addWidget(self._labtools_notice_card("计算基于输入的蛋白浓度与目标上样量；结果需人工复核后用于台面操作。", object_name="labtoolsAdapterNotice", semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value))
+        layout.addStretch(1)
+        return frame
+
+    def _labtools_wb_results_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsWbSampleResultPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "wb_loading")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
+        frame.setStyleSheet("QFrame#labtoolsWbSampleResultPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QLabel("样本列表与上样计算结果")
+        header.setStyleSheet("font-weight: 700;")
+        layout.addWidget(header)
+        self._labtools_wb_sample_rows = QVBoxLayout()
+        sample_frame = QFrame()
+        sample_frame.setObjectName("labtoolsWbSampleTable")
+        sample_frame.setStyleSheet("QFrame#labtoolsWbSampleTable { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        sample_frame.setLayout(self._labtools_wb_sample_rows)
+        layout.addWidget(sample_frame)
+        self._labtools_wb_result_rows = QVBoxLayout()
+        result_frame = QFrame()
+        result_frame.setObjectName("labtoolsWbResultTable")
+        result_frame.setStyleSheet("QFrame#labtoolsWbResultTable { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        result_frame.setLayout(self._labtools_wb_result_rows)
+        layout.addWidget(result_frame)
+        self._labtools_wb_issue_rows = QLabel("上样计算结果需由实验人员复核后用于台面操作。")
+        self._labtools_wb_issue_rows.setObjectName("labtoolsWbIssueRows")
+        self._labtools_wb_issue_rows.setWordWrap(True)
+        layout.addWidget(self._labtools_wb_issue_rows)
+        self._labtools_wb_detail_text = QPlainTextEdit()
+        self._labtools_wb_detail_text.setObjectName("labtoolsWbDetailText")
+        self._labtools_wb_detail_text.setReadOnly(True)
+        self._labtools_wb_detail_text.setMinimumHeight(120)
+        layout.addWidget(self._labtools_wb_detail_text)
+        return frame
+
+    def _labtools_wb_lane_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("labtoolsWbLanePreviewPanel")
+        frame.setProperty("moduleKey", ModuleKey.LABTOOLS.value)
+        frame.setProperty("pageKey", "wb_loading")
+        frame.setProperty("semanticKey", PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value)
+        frame.setStyleSheet("QFrame#labtoolsWbLanePreviewPanel { border: 1px solid #D8DEE9; border-radius: 8px; background: #FFFFFF; }")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        header = QHBoxLayout()
+        title = QLabel("泳道布局预览（示意图）")
+        title.setStyleSheet("font-weight: 700;")
+        edit = make_button("编辑布局 - 仅预览", role="secondary")
+        edit.setObjectName("labtoolsWbEditLayoutButton")
+        edit.setEnabled(False)
+        edit.setProperty("disabledState", "preview_only")
+        header.addWidget(title)
+        header.addStretch(1)
+        header.addWidget(edit)
+        layout.addLayout(header)
+        self._labtools_wb_lane_grid = QGridLayout()
+        self._labtools_wb_lane_grid.setSpacing(8)
+        lane_frame = QFrame()
+        lane_frame.setObjectName("labtoolsWbLaneGrid")
+        lane_frame.setStyleSheet("QFrame#labtoolsWbLaneGrid { border: 1px solid #E5E7EB; border-radius: 8px; background: #F8FAFC; }")
+        lane_frame.setLayout(self._labtools_wb_lane_grid)
+        layout.addWidget(lane_frame)
+        legend = QLabel("Legend：Marker / Sample / Empty；预览不显示伪凝胶条带。")
+        legend.setObjectName("labtoolsWbLaneLegend")
+        legend.setWordWrap(True)
+        layout.addWidget(legend)
+        layout.addStretch(1)
+        return frame
+
+    def _labtools_wb_input_row(self, label: str, field_id: str, default_value: str, unit: str) -> QHBoxLayout:
+        row = QHBoxLayout()
+        title = QLabel(label)
+        title.setObjectName("labtoolsWbInputLabel")
+        title.setProperty("fieldId", field_id)
+        field = QLineEdit(default_value)
+        field.setObjectName("labtoolsWbInput")
+        field.setProperty("fieldId", field_id)
+        self._labtools_wb_inputs[field_id] = field
+        unit_label = QLabel(unit)
+        unit_label.setObjectName("labtoolsWbInputUnit")
+        unit_label.setProperty("fieldId", field_id)
+        row.addWidget(title)
+        row.addWidget(field, 1)
+        row.addWidget(unit_label)
+        return row
+
+    def _run_labtools_wb_loading(self) -> None:
+        result = labtools_runtime.calculate_wb_loading_preview(
+            target_protein_ug=self._labtools_wb_inputs["target_protein_ug"].text().strip(),
+            loading_buffer_factor=self._labtools_wb_inputs["loading_buffer_factor"].text().strip(),
+            final_volume_ul=self._labtools_wb_inputs["final_volume_ul"].text().strip(),
+            reducing_agent_enabled=True,
+            lane_count=self._labtools_wb_inputs["lane_count"].text().strip() or "10",
+        )
+        self._render_labtools_wb_loading_result(result)
+
+    def _render_labtools_wb_loading_result(self, result: labtools_runtime.WBLoadingUiResult) -> None:
+        self._clear_layout(self._labtools_wb_sample_rows)
+        for sample in result.samples:
+            label = QLabel(f"{sample.sample_id} | {sample.concentration} | {sample.note}")
+            label.setObjectName("labtoolsWbSampleRow")
+            label.setProperty("sampleId", sample.sample_id)
+            self._labtools_wb_sample_rows.addWidget(label)
+        self._clear_layout(self._labtools_wb_result_rows)
+        for row_data in result.rows:
+            row = QLabel(
+                f"{row_data.sample_id} | sample {row_data.sample_volume} | 4x buffer {row_data.loading_buffer_volume} | "
+                f"water {row_data.diluent_volume} | total {row_data.final_volume} | {row_data.status}"
+            )
+            row.setObjectName("labtoolsWbResultRow")
+            row.setProperty("sampleId", row_data.sample_id)
+            row.setProperty("status", row_data.status)
+            row.setWordWrap(True)
+            self._labtools_wb_result_rows.addWidget(row)
+            for issue in row_data.issues:
+                issue_label = QLabel(f"{row_data.sample_id} warning: {issue}")
+                issue_label.setObjectName("labtoolsWbWarningRow")
+                issue_label.setProperty("sampleId", row_data.sample_id)
+                issue_label.setWordWrap(True)
+                self._labtools_wb_result_rows.addWidget(issue_label)
+        self._clear_layout(self._labtools_wb_lane_grid)
+        for index, lane in enumerate(result.lanes):
+            card = QFrame()
+            card.setObjectName("labtoolsWbLaneCard")
+            card.setProperty("laneNumber", lane.lane_number)
+            card.setProperty("laneType", lane.lane_type)
+            card.setProperty("status", lane.status)
+            color = "#FFF1F2" if lane.status == "Error" else ("#F8FAFC" if lane.lane_type == "empty" else "#EFF6FF")
+            card.setStyleSheet(f"QFrame#labtoolsWbLaneCard {{ border: 1px solid #CBD5E1; border-radius: 8px; background: {color}; }}")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(8, 8, 8, 8)
+            lane_label = QLabel(f"Lane {lane.lane_number}")
+            lane_label.setObjectName("labtoolsWbLaneNumber")
+            sample_label = QLabel(lane.sample_id)
+            sample_label.setObjectName("labtoolsWbLaneSample")
+            sample_label.setProperty("laneNumber", lane.lane_number)
+            volume_label = QLabel(lane.sample_volume or "Empty / 空白")
+            volume_label.setObjectName("labtoolsWbLaneVolume")
+            volume_label.setProperty("laneNumber", lane.lane_number)
+            layout.addWidget(lane_label)
+            layout.addWidget(sample_label)
+            layout.addWidget(volume_label)
+            self._labtools_wb_lane_grid.addWidget(card, index // 5, index % 5)
+        issues = list(result.errors) + list(result.warnings)
+        self._labtools_wb_issue_rows.setText("\n".join(f"- {issue}" for issue in issues))
+        self._labtools_wb_issue_rows.setProperty("hasError", bool(result.errors))
+        self._labtools_wb_detail_text.setPlainText(result.detail_text)
+        self._labtools_wb_copy_text = result.copy_text if result.valid else result.detail_text
+
+    def _copy_labtools_wb_summary(self) -> None:
+        from PySide6.QtWidgets import QApplication
+
+        if getattr(self, "_labtools_wb_copy_text", ""):
+            QApplication.clipboard().setText(self._labtools_wb_copy_text)
+
     def _show_labtools_experiment_modules_shell(self) -> None:
         content = self._build_labtools_section_content(
             page_key="experiment_modules",
@@ -1145,19 +1427,8 @@ class MainWindow(QMainWindow):
                     "semantic_key": PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
                     "status_label": "active_backend_ready / adapter_needed",
                     "status_key": "testing",
-                    "rows": ["WB 上样计算页面占位。", "不执行真实 WB calculation；保存和导出保持禁用。"],
-                    "callback": lambda: self._show_labtools_placeholder_page(
-                        title="Western Blot Loading / WB 上样计算",
-                        page_key="wb_loading",
-                        semantic_key=PageKey.LABTOOLS_PROTEIN_EXPERIMENTS.value,
-                        status_label="active_backend_ready / adapter_needed",
-                        status_key="testing",
-                        body_rows=[
-                            "当前仅提供 WB 上样计算壳层；不调用 calculate_wb_loading。",
-                            "泳道布局是后续示意区域，不生成假胶图、假条带或图像分析结果。",
-                        ],
-                        disabled_actions=("保存 WB 记录 - 需存储适配", "导出 CSV / Markdown - 需文件选择器"),
-                    ),
+                    "rows": ["WB 上样计算 focused UI。", "调用只读计算预览；保存和导出保持禁用。"],
+                    "callback": self._show_labtools_wb_loading_page,
                 },
                 {
                     "title": "SDS-PAGE",

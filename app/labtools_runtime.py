@@ -77,6 +77,54 @@ class ReagentPreparationUiResult:
         return not self.errors
 
 
+@dataclass(frozen=True)
+class WBLoadingSampleView:
+    sample_id: str
+    concentration: str
+    note: str
+
+
+@dataclass(frozen=True)
+class WBLoadingResultRowView:
+    sample_id: str
+    concentration: str
+    sample_volume: str
+    loading_buffer_volume: str
+    diluent_volume: str
+    final_volume: str
+    status: str
+    issues: tuple[str, ...]
+    note: str
+
+
+@dataclass(frozen=True)
+class WBLaneView:
+    lane_number: int
+    lane_type: str
+    sample_id: str
+    sample_volume: str
+    status: str
+    issues: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class WBLoadingUiResult:
+    title: str
+    primary_result: str
+    samples: tuple[WBLoadingSampleView, ...]
+    rows: tuple[WBLoadingResultRowView, ...]
+    lanes: tuple[WBLaneView, ...]
+    warnings: tuple[str, ...]
+    errors: tuple[str, ...]
+    review_notice: str
+    copy_text: str
+    detail_text: str
+
+    @property
+    def valid(self) -> bool:
+        return not self.errors
+
+
 def runtime_status() -> LabToolsRuntimeStatus:
     try:
         _ensure_labtools_importable()
@@ -364,6 +412,110 @@ def calculate_reagent_preparation(
         )
 
 
+def calculate_wb_loading_preview(
+    *,
+    target_protein_ug: str = "20",
+    loading_buffer_factor: str = "4",
+    final_volume_ul: str = "20",
+    reducing_agent_enabled: bool = True,
+    lane_count: str | int = 10,
+) -> WBLoadingUiResult:
+    _ensure_labtools_importable()
+    from labtools.western_blot.calculator import calculate_wb_loading
+    from labtools.western_blot.models import WBLoadingConfig, WBSampleInput
+
+    try:
+        samples = (
+            WBSampleInput(sample_name="S1", concentration_ug_per_ul=2.0, note="control"),
+            WBSampleInput(sample_name="S2", concentration_ug_per_ul=1.5, note="treatment low"),
+            WBSampleInput(sample_name="S3", concentration_ug_per_ul=0.8, note="treatment high"),
+        )
+        config = WBLoadingConfig(
+            experiment_name="Protein Experiment / WB 上样计算",
+            target_protein_ug=float(target_protein_ug),
+            final_volume_ul=float(final_volume_ul),
+            loading_buffer_factor=float(loading_buffer_factor),
+            reducing_agent_mode="none",
+            reducing_agent_name="Yes" if reducing_agent_enabled else "",
+            marker_enabled=True,
+            marker_name="Marker",
+            marker_volume_ul=5,
+            lane_count_mode="fixed",
+            fixed_lane_count=int(lane_count),
+            min_pipette_volume_ul=0.5,
+        )
+        result = calculate_wb_loading(config, samples)
+        sample_views = tuple(
+            WBLoadingSampleView(
+                sample_id=sample.sample_name,
+                concentration=f"{sample.concentration_ug_per_ul:g} µg/µL",
+                note=sample.note,
+            )
+            for sample in samples
+        )
+        row_views = tuple(
+            WBLoadingResultRowView(
+                sample_id=row.sample_name,
+                concentration=f"{row.concentration_ug_per_ul:g} µg/µL",
+                sample_volume=f"{row.sample_volume_ul:.1f} µL",
+                loading_buffer_volume=f"{row.loading_buffer_volume_ul:.1f} µL",
+                diluent_volume=f"{row.diluent_volume_ul:.1f} µL",
+                final_volume=f"{row.final_volume_ul:.1f} µL",
+                status=row.status,
+                issues=tuple(row.errors or row.warnings),
+                note=row.note,
+            )
+            for row in result.rows
+        )
+        lane_views = tuple(
+            WBLaneView(
+                lane_number=lane.lane_index,
+                lane_type=lane.lane_type,
+                sample_id=lane.sample_name if lane.lane_type != "empty" else "Empty / 空白",
+                sample_volume=_lane_sample_volume_text(lane),
+                status="Error" if lane.errors else ("Warning" if lane.warnings else ("Empty" if lane.lane_type == "empty" else "OK")),
+                issues=tuple(lane.errors or lane.warnings),
+            )
+            for lane in result.lanes
+        )
+        errors = tuple(issue for row in result.rows for issue in row.errors)
+        warnings = tuple(
+            dict.fromkeys(
+                (
+                    *tuple(issue for row in result.rows for issue in row.warnings),
+                    *tuple(result.summary_warnings or ()),
+                    "上样计算结果需由实验人员复核后用于台面操作。",
+                    "此页不提供图像分析、自动条带识别、抗体推荐或完整 WB 协议。",
+                )
+            )
+        )
+        return WBLoadingUiResult(
+            title="Western Blot Loading",
+            primary_result="WB 上样计算预览：S3 存在体积异常" if errors else "WB 上样计算预览",
+            samples=sample_views,
+            rows=row_views,
+            lanes=lane_views,
+            warnings=warnings,
+            errors=errors,
+            review_notice=result.review_notice,
+            copy_text=result.as_text(),
+            detail_text=result.as_text(),
+        )
+    except Exception as exc:
+        return WBLoadingUiResult(
+            title="Western Blot Loading",
+            primary_result="输入需要调整",
+            samples=(),
+            rows=(),
+            lanes=(),
+            warnings=("上样计算结果需由实验人员复核后用于台面操作。",),
+            errors=(str(exc),),
+            review_notice="",
+            copy_text="",
+            detail_text="",
+        )
+
+
 def _ensure_labtools_importable() -> None:
     if LABTOOLS_SIBLING_ROOT.exists():
         root = str(LABTOOLS_SIBLING_ROOT)
@@ -540,6 +692,14 @@ def _reagent_template_summary(template: Any) -> ReagentTemplateSummary:
         ph_target=ph_record.target_ph if ph_record else "",
         status_label="demo_preview / storage_adapter_needed",
     )
+
+
+def _lane_sample_volume_text(lane: Any) -> str:
+    if lane.lane_type == "marker":
+        return f"{lane.marker_volume_ul:g} µL"
+    if lane.result_row is None:
+        return ""
+    return f"{lane.result_row.sample_volume_ul:.1f} µL"
 
 
 _QUICK_FIELD_LABELS: dict[str, str] = {
