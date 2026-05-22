@@ -19,22 +19,24 @@ def test_markdown_renderer_gate_uses_builtin_renderer_without_external_dependenc
 
 
 def test_pdf_renderer_gate_is_detect_first_and_blocked_when_dependencies_are_missing(monkeypatch) -> None:
-    monkeypatch.setattr(renderer_capability.shutil, "which", lambda _command: None)
+    monkeypatch.setattr(renderer_capability.shutil, "which", lambda _command, path=None: None)
 
     gate = evaluate_full_integrated_report_renderer_gate("pdf")
 
     assert gate["status"] == "blocked"
     assert gate["renderer_id"] == "pandoc_pdf"
     assert "renderer_dependency_missing:pandoc" in gate["blockers"]
-    assert "renderer_dependency_missing:xelatex_or_wkhtmltopdf" in gate["blockers"]
+    assert "renderer_dependency_missing:xelatex" in gate["blockers"]
     assert "full_integrated_pdf_renderer_not_enabled_in_b23_4" in gate["blockers"]
+    assert gate["required_dependencies"] == ["pandoc", "xelatex"]
     assert gate["checks"]["detect_first_no_install_action"] is True
+    assert gate["checks"]["external_renderers_bundled"] is False
     assert gate["renderer_capability_snapshot"]["checks"]["no_report_export_enabled"] is True
 
 
 def test_docx_renderer_gate_remains_disabled_even_when_pandoc_is_detected(monkeypatch) -> None:
-    monkeypatch.setattr(renderer_capability.shutil, "which", lambda command: f"/usr/local/bin/{command}")
-    monkeypatch.setattr(renderer_capability.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout="pandoc 3.1\n", stderr=""))
+    monkeypatch.setattr(renderer_capability.shutil, "which", lambda command, path=None: f"/usr/local/bin/{command}")
+    monkeypatch.setattr(renderer_capability.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout="pandoc 3.1\n", stderr="", returncode=0))
 
     gate = evaluate_full_integrated_report_renderer_gate("docx")
 

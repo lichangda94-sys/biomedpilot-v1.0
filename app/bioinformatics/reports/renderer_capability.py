@@ -8,7 +8,9 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+from .renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
 
 
 REPORT_RENDERER_CAPABILITY_SCHEMA_VERSION = "biomedpilot.report_renderer_capability_snapshot.v1"
@@ -25,6 +27,8 @@ PACKAGING_IMPACT = {
     "wkhtmltopdf": "external_binary_alternative_pdf_backend_not_bundled",
     "quarto": "future_renderer_detect_only_not_enabled",
 }
+CommandFinder = Callable[[str], str | None]
+SubprocessRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 def build_report_renderer_capability_snapshot(
@@ -32,13 +36,17 @@ def build_report_renderer_capability_snapshot(
     environment: str = "",
     commands: tuple[str, ...] = DEFAULT_RENDERER_COMMANDS,
     output_path: str | Path | None = None,
+    command_finder: CommandFinder | None = None,
+    runner: SubprocessRunner | None = None,
 ) -> dict[str, Any]:
-    capabilities = {command: detect_renderer_dependency(command) for command in commands}
+    capabilities = {command: detect_renderer_dependency(command, command_finder=command_finder, runner=runner) for command in commands}
     blockers = _snapshot_blockers(capabilities)
+    runtime_policy = build_full_integrated_renderer_runtime_packaging_policy()
     snapshot = {
         "schema_version": REPORT_RENDERER_CAPABILITY_SCHEMA_VERSION,
         "created_at": _now(),
         "status": "passed",
+        "detection_mode": "detect_first_no_install_no_download",
         "environment": environment or _runtime_environment(),
         "python_executable": sys.executable,
         "platform": {
@@ -49,11 +57,13 @@ def build_report_renderer_capability_snapshot(
         "capabilities": capabilities,
         "capability_keys": {command: CAPABILITY_KEYS.get(command, f"renderer.{command}.available") for command in commands},
         "packaging_impact": {command: PACKAGING_IMPACT.get(command, "external_renderer_binary_not_bundled") for command in commands},
+        "runtime_packaging_policy": runtime_policy,
         "checks": {
             "detect_first_no_install_action": True,
             "no_renderer_invoked": True,
             "no_report_export_enabled": True,
             "snapshot_generated": True,
+            "external_renderers_bundled": bool(runtime_policy.get("releasebuild_policy", {}).get("bundles_external_renderers")) if isinstance(runtime_policy.get("releasebuild_policy"), dict) else False,
         },
         "blockers": blockers,
         "warnings": ["renderer_detection_only_pdf_docx_activation_remains_disabled"],
@@ -63,35 +73,45 @@ def build_report_renderer_capability_snapshot(
     return snapshot
 
 
-def detect_renderer_dependency(command: str) -> dict[str, Any]:
-    executable = shutil.which(command)
+def detect_renderer_dependency(
+    command: str,
+    *,
+    command_finder: CommandFinder | None = None,
+    runner: SubprocessRunner | None = None,
+) -> dict[str, Any]:
+    executable = _resolve_command(command, command_finder=command_finder)
     payload = {
         "command": command,
         "capability_key": CAPABILITY_KEYS.get(command, f"renderer.{command}.available"),
         "available": bool(executable),
         "path": executable or "",
         "version": "",
-        "missing_reason": "" if executable else f"{command}_not_found_on_path",
+        "missing_reason": "" if executable else f"{command}_not_found_on_renderer_search_paths",
         "packaging_impact": PACKAGING_IMPACT.get(command, "external_renderer_binary_not_bundled"),
+        "detection_mode": "detect_first_no_install_no_download",
     }
     if executable:
-        payload["version"] = renderer_dependency_version(executable)
+        payload["version"] = renderer_dependency_version(executable, runner=runner)
     return payload
 
 
-def renderer_dependency_version(executable: str) -> str:
-    try:
-        completed = subprocess.run(
-            [executable, "--version"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
-    except Exception:
-        return "version_unavailable"
-    text = (completed.stdout or completed.stderr or "").splitlines()
-    return text[0].strip() if text else "version_unavailable"
+def renderer_dependency_version(executable: str, *, runner: SubprocessRunner | None = None) -> str:
+    runner = runner or subprocess.run
+    for args in ([executable, "--version"], [executable, "-version"]):
+        try:
+            completed = runner(
+                args,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+        except Exception:
+            continue
+        text = (completed.stdout or completed.stderr or "").splitlines()
+        if completed.returncode == 0 and text:
+            return text[0].strip()[:160]
+    return "version_unavailable"
 
 
 def _snapshot_blockers(capabilities: dict[str, dict[str, Any]]) -> list[str]:
@@ -113,6 +133,22 @@ def _runtime_environment() -> str:
     if "dist/BioMedPilot.app/Contents/Resources/app" in Path(__file__).as_posix():
         return "packaged_app_resource"
     return "source"
+
+
+def _resolve_command(command: str, *, command_finder: CommandFinder | None) -> str:
+    if command_finder is not None:
+        return command_finder(command) or ""
+    return shutil.which(command, path=_renderer_search_path()) or ""
+
+
+def _renderer_search_path() -> str:
+    policy = build_full_integrated_renderer_runtime_packaging_policy()
+    startup = policy.get("startup_path_policy") if isinstance(policy.get("startup_path_policy"), dict) else {}
+    env_name = str(startup.get("environment_variable") or "BIOMEDPILOT_RENDERER_SEARCH_PATHS")
+    configured = [part for part in os.environ.get(env_name, "").split(os.pathsep) if part]
+    defaults = [str(part) for part in startup.get("default_search_paths", []) or []]
+    existing = [part for part in os.environ.get("PATH", "").split(os.pathsep) if part]
+    return os.pathsep.join(dict.fromkeys([*configured, *defaults, *existing]))
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:

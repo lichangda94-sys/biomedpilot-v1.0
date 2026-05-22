@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from app.bioinformatics.reports import integrated
 from app.bioinformatics.reports.integrated import (
     build_full_integrated_report_package_plan,
+    create_full_integrated_docx_rendered_export_skeleton,
     create_full_integrated_report_package,
     evaluate_full_integrated_docx_preflight_gate,
     evaluate_full_integrated_report_renderer_gate,
 )
+from app.bioinformatics.reports.renderer_runtime_policy import build_full_integrated_renderer_runtime_packaging_policy
 from app.bioinformatics.reports.survival_clinical import create_cox_report_ready_package, create_km_logrank_report_ready_package
 from app.bioinformatics.results.registry import save_registry
 from tests.bioinformatics.test_survival_clinical_report_ready_gate import _cox_entry, _km_entry
@@ -67,6 +70,25 @@ def test_integrated_report_package_plan_surfaces_renderer_gate_for_docx(tmp_path
     assert "non-empty integrated_report.md" in plan["renderer_preflight_policy"]["checks"]
     assert "full_integrated_docx_renderer_not_enabled_in_b23_4" in plan["disabled_reasons"]
     assert plan["can_create_package"] is False
+
+
+def test_renderer_runtime_packaging_policy_keeps_releasebuild_external_only(tmp_path: Path) -> None:
+    policy = build_full_integrated_renderer_runtime_packaging_policy()
+    docx_gate = evaluate_full_integrated_report_renderer_gate("docx")
+    pdf_gate = evaluate_full_integrated_report_renderer_gate("pdf")
+    plan = build_full_integrated_report_package_plan(tmp_path)
+
+    assert policy["releasebuild_policy"]["bundles_external_renderers"] is False
+    assert policy["releasebuild_policy"]["network_downloads"] is False
+    assert policy["docx"]["runtime_provider"] == "user_system_pandoc_on_search_path"
+    assert policy["pdf"]["selected_engine"] == "pandoc_xelatex_when_pdf_activation_is_explicitly_approved"
+    assert policy["pdf"]["wkhtmltopdf_policy"] == "detect_only_not_formal_full_integrated_report_backend"
+    assert plan["renderer_runtime_packaging_policy"]["policy_id"] == "b24_3_system_path_no_bundled_renderers"
+    assert docx_gate["runtime_packaging_policy"]["policy_id"] == policy["policy_id"]
+    assert docx_gate["checks"]["external_renderers_bundled"] is False
+    assert pdf_gate["required_dependencies"] == ["pandoc", "xelatex"]
+    assert "xelatex" in pdf_gate["detected_dependencies"]
+    assert "wkhtmltopdf" in pdf_gate["detected_dependencies"]
 
 
 def test_integrated_report_package_skeleton_writes_timestamped_auditable_layout_when_gate_passes(tmp_path: Path, monkeypatch) -> None:
@@ -176,6 +198,57 @@ def test_docx_preflight_blocks_missing_local_markdown_references(tmp_path: Path,
 
     assert gate["preflight_status"] == "blocked"
     assert "docx_markdown_local_reference_missing:plots/missing.svg" in gate["blockers"]
+
+
+def test_docx_rendered_export_skeleton_writes_blocked_attempt_without_docx(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    skeleton = create_full_integrated_docx_rendered_export_skeleton(package["package_path"], renderer_gate=_docx_renderer_gate_without_activation_blocker())
+
+    package_path = Path(package["package_path"])
+    manifest_path = package_path / "manifests" / "rendered_exports.json"
+    log_path = Path(skeleton["conversion_log_path"])
+    package_manifest = json.loads((package_path / "integrated_report_package_manifest.json").read_text(encoding="utf-8"))
+    rendered = json.loads(manifest_path.read_text(encoding="utf-8"))
+    log_payload = json.loads(log_path.read_text(encoding="utf-8"))
+
+    assert skeleton["status"] == "blocked"
+    assert manifest_path.is_file()
+    assert log_path.is_file()
+    assert rendered["exports"] == []
+    assert rendered["attempts"][0]["validation_status"] == "blocked"
+    assert rendered["policy"]["rendered_exports_are_package_artifacts_not_analysis_results"] is True
+    assert "full_integrated_docx_conversion_not_enabled_b24_4" in rendered["attempts"][0]["blockers"]
+    assert log_payload["conversion_invoked"] is False
+    assert log_payload["markdown_package_preserved"] is True
+    assert package_manifest["rendered_exports_manifest"] == "manifests/rendered_exports.json"
+    assert package_manifest["rendered_exports_summary"]["exports_count"] == 0
+    assert not (package_path / "exports").exists()
+
+
+def test_docx_rendered_export_skeleton_keeps_existing_successful_exports(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+    package_path = Path(package["package_path"])
+    existing = {
+        "schema_version": "biomedpilot.full_integrated_rendered_exports.v1",
+        "package_scope": "full_integrated_report",
+        "source_package_id": package_path.name,
+        "source_package_path": str(package_path),
+        "exports": [{"artifact_id": "docx_previous", "validation_status": "passed"}],
+        "attempts": [],
+    }
+    (package_path / "manifests" / "rendered_exports.json").write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+
+    create_full_integrated_docx_rendered_export_skeleton(package["package_path"], renderer_gate=_docx_renderer_gate_without_activation_blocker())
+
+    rendered = json.loads((package_path / "manifests" / "rendered_exports.json").read_text(encoding="utf-8"))
+    assert rendered["exports"] == existing["exports"]
+    assert len(rendered["attempts"]) == 1
+    assert rendered["latest_attempt_status"] == "blocked"
 
 
 def _write_entries(root: Path) -> None:
