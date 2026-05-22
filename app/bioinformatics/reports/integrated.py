@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +20,7 @@ from .survival_clinical import evaluate_cox_report_ready_gate, evaluate_km_logra
 FULL_INTEGRATED_REPORT_READY_SCHEMA_VERSION = "biomedpilot.full_integrated_report_gate.v1"
 FULL_INTEGRATED_REPORT_PACKAGE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_package.v1"
 FULL_INTEGRATED_REPORT_RENDERER_GATE_SCHEMA_VERSION = "biomedpilot.full_integrated_report_renderer_gate.v1"
+FULL_INTEGRATED_DOCX_PREFLIGHT_SCHEMA_VERSION = "biomedpilot.full_integrated_docx_preflight_gate.v1"
 REQUIRED_SECTION_IDS = ("formal_deg", "ora_enrichment", "gsea_preranked", "survival_km_logrank", "cox")
 PACKAGE_DIRECTORIES = ("sections", "tables", "plots", "manifests", "logs", "provenance")
 PACKAGE_REQUIRED_FILES = (
@@ -163,6 +165,7 @@ def build_full_integrated_report_package_plan(
         "renderer_id": renderer_gate.get("renderer_id", ""),
         "renderer_disabled_reason": renderer_gate.get("disabled_reason", ""),
         "renderer_dependencies": list(renderer_gate.get("required_dependencies", []) or []),
+        "renderer_preflight_policy": _renderer_preflight_policy(str(renderer_gate.get("export_format") or export_format)),
         "artifact_policy": {
             "tables": "copy only registered source result output_artifacts",
             "plots": "copy only registered plot artifacts and image_artifacts",
@@ -173,6 +176,101 @@ def build_full_integrated_report_package_plan(
         "can_create_package": gate.get("status") == "eligible_for_full_integrated_report" and renderer_gate.get("status") == "passed",
         "disabled_reasons": disabled_reasons,
         "blocked_reason": "; ".join(disabled_reasons),
+    }
+
+
+def evaluate_full_integrated_docx_preflight_gate(
+    package_path: str | Path,
+    *,
+    renderer_gate: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    package_dir = Path(package_path).expanduser().resolve()
+    renderer_gate = renderer_gate or evaluate_full_integrated_report_renderer_gate("docx")
+    blockers: list[str] = []
+    warnings: list[str] = []
+    manifest_path = package_dir / "integrated_report_package_manifest.json"
+    markdown_path = package_dir / "integrated_report.md"
+    planned_output_path = package_dir / "exports" / "integrated_report.docx"
+    conversion_log_path = package_dir / "logs" / "docx_renderer_preflight.log"
+    manifest = _read_json(manifest_path)
+    markdown = ""
+
+    if not package_dir.is_dir():
+        blockers.append("docx_source_package_missing")
+    if not manifest_path.is_file():
+        blockers.append("docx_source_package_manifest_missing")
+    if manifest:
+        if manifest.get("status") != "full_integrated_report_package_created":
+            blockers.append("docx_source_package_status_not_created")
+        if manifest.get("section_scope") != "full_integrated_report":
+            blockers.append("docx_source_package_scope_not_full_integrated_report")
+        if manifest.get("export_format") != "markdown":
+            blockers.append("docx_source_package_must_be_markdown_export")
+        gate = manifest.get("gate") if isinstance(manifest.get("gate"), dict) else {}
+        if gate.get("status") != "eligible_for_full_integrated_report":
+            blockers.append("docx_source_full_integrated_gate_not_passed")
+    if not markdown_path.is_file():
+        blockers.append("docx_source_markdown_missing")
+    else:
+        markdown = markdown_path.read_text(encoding="utf-8")
+        if not markdown.strip():
+            blockers.append("docx_source_markdown_empty")
+    for reference in _markdown_local_references(markdown):
+        if not (package_dir / reference).resolve().is_file():
+            blockers.append(f"docx_markdown_local_reference_missing:{reference}")
+    forbidden = _forbidden_clinical_conclusion_terms(markdown)
+    blockers.extend(f"docx_source_markdown_forbidden_clinical_conclusion:{term}" for term in forbidden)
+    renderer_blockers = [str(item) for item in renderer_gate.get("blockers", []) or []]
+    blockers.extend(renderer_blockers)
+    blockers.append("full_integrated_docx_export_activation_required_b24_2")
+    unique_blockers = list(dict.fromkeys(blockers))
+    checks = {
+        "source_package_exists": package_dir.is_dir(),
+        "source_manifest_exists": manifest_path.is_file(),
+        "source_package_full_integrated_markdown": bool(
+            manifest
+            and manifest.get("status") == "full_integrated_report_package_created"
+            and manifest.get("section_scope") == "full_integrated_report"
+            and manifest.get("export_format") == "markdown"
+        ),
+        "source_markdown_exists": markdown_path.is_file(),
+        "source_markdown_nonempty": bool(markdown.strip()),
+        "local_references_resolve": not any(item.startswith("docx_markdown_local_reference_missing:") for item in unique_blockers),
+        "no_forbidden_clinical_conclusion": not any(item.startswith("docx_source_markdown_forbidden_clinical_conclusion:") for item in unique_blockers),
+        "pandoc_detected": bool((renderer_gate.get("detected_dependencies", {}).get("pandoc") or {}).get("available")) if isinstance(renderer_gate.get("detected_dependencies"), dict) else False,
+        "renderer_implementation_enabled": False,
+        "detect_first_no_install_action": True,
+        "no_conversion_invoked": True,
+    }
+    preflight_blockers = [item for item in unique_blockers if item != "full_integrated_docx_export_activation_required_b24_2"]
+    preflight_status = "passed_pending_activation" if not preflight_blockers else "blocked"
+    return {
+        "schema_version": FULL_INTEGRATED_DOCX_PREFLIGHT_SCHEMA_VERSION,
+        "created_at": _now(),
+        "status": "blocked",
+        "preflight_status": preflight_status,
+        "source_package_path": str(package_dir),
+        "source_manifest_path": str(manifest_path),
+        "source_markdown_path": str(markdown_path),
+        "export_format": "docx",
+        "renderer_id": "pandoc_docx",
+        "renderer_gate": renderer_gate,
+        "planned_output_path": str(planned_output_path),
+        "conversion_log_path": str(conversion_log_path),
+        "overwrite_policy": "create_or_validate_inside_existing_timestamped_package_without_overwriting_markdown_source",
+        "artifact_manifest_preview": {
+            "artifact_type": "full_integrated_report_rendered_export",
+            "source_package_id": str(manifest.get("created_at") or package_dir.name),
+            "source_markdown_path": str(markdown_path),
+            "export_format": "docx",
+            "renderer_id": "pandoc_docx",
+            "output_path": str(planned_output_path),
+            "validation_status": "not_created_preflight_only",
+        },
+        "checks": checks,
+        "disabled_reason": "; ".join(unique_blockers),
+        "blockers": unique_blockers,
+        "warnings": list(dict.fromkeys(warnings)),
     }
 
 
@@ -849,6 +947,69 @@ def _package_plan_disabled_reasons(gate: dict[str, Any], renderer_gate: dict[str
     if renderer_gate.get("status") != "passed":
         reasons.extend(str(item) for item in renderer_gate.get("blockers", []) or [])
     return list(dict.fromkeys(reasons))
+
+
+def _renderer_preflight_policy(export_format: str) -> dict[str, Any]:
+    canonical = _canonical_export_format(export_format)
+    if canonical == "docx":
+        return {
+            "schema_version": "biomedpilot.full_integrated_docx_preflight_policy.v1",
+            "source_package_required": "full_integrated markdown package",
+            "required_renderer": "pandoc_docx",
+            "activation_status": "disabled_until_docx_renderer_activation_stage",
+            "planned_output": "exports/integrated_report.docx",
+            "conversion_log": "logs/docx_renderer_preflight.log",
+            "checks": [
+                "source package manifest",
+                "non-empty integrated_report.md",
+                "local markdown references resolve",
+                "pandoc detected",
+                "no forbidden clinical conclusion wording",
+                "rendered artifact manifest registration planned",
+            ],
+        }
+    if canonical == "pdf":
+        return {
+            "schema_version": "biomedpilot.full_integrated_pdf_preflight_policy.v1",
+            "source_package_required": "full_integrated markdown package",
+            "required_renderer": "pandoc_pdf",
+            "activation_status": "disabled_until_pdf_renderer_activation_stage",
+            "planned_output": "exports/integrated_report.pdf",
+            "conversion_log": "logs/pdf_renderer_preflight.log",
+            "checks": ["pandoc detected", "xelatex or wkhtmltopdf detected", "assets/fonts resolve", "rendered artifact manifest registration planned"],
+        }
+    return {
+        "schema_version": "biomedpilot.full_integrated_markdown_renderer_policy.v1",
+        "source_package_required": "full integrated report gate",
+        "required_renderer": "builtin_markdown",
+        "activation_status": "enabled_when_full_integrated_gate_passes",
+    }
+
+
+def _markdown_local_references(markdown: str) -> list[str]:
+    references: list[str] = []
+    for pattern in (r"!\[[^\]]*\]\(([^)]+)\)", r"<img\s+[^>]*src=[\"']([^\"']+)[\"']"):
+        for match in re.finditer(pattern, markdown, flags=re.IGNORECASE):
+            target = match.group(1).strip()
+            if not target or target.startswith(("#", "http://", "https://", "data:", "mailto:")):
+                continue
+            if target.startswith("<") and target.endswith(">"):
+                target = target[1:-1].strip()
+            references.append(target.split("#", 1)[0])
+    return list(dict.fromkeys(references))
+
+
+def _forbidden_clinical_conclusion_terms(markdown: str) -> list[str]:
+    lowered = markdown.lower()
+    forbidden_patterns = {
+        "clinical_diagnosis_statement": r"\bclinical diagnosis\s*:",
+        "prognosis_statement": r"\bprognosis\s*:",
+        "treatment_recommendation_statement": r"\btreatment recommendation\s*:",
+        "recommended_treatment_statement": r"\brecommended treatment\s*:",
+        "risk_score_statement": r"\brisk score\s*:",
+        "nomogram_statement": r"\bnomogram\s*:",
+    }
+    return [name for name, pattern in forbidden_patterns.items() if re.search(pattern, lowered)]
 
 
 def _read_json(path: Path) -> dict[str, Any]:

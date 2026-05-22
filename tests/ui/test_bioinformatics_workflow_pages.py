@@ -4615,6 +4615,7 @@ def test_results_browser_formal_deg_report_ready_package_gate(qt_app, project_su
     full_plan_pdf_text = _table_text(full_plan)
     assert "pandoc_pdf" in full_plan_pdf_text
     assert "renderer_disabled_reason" in full_plan_pdf_text
+    assert "renderer_preflight_policy" in full_plan_pdf_text
     full_sections = widget.findChild(QTableWidget, "fullIntegratedReportSectionTable")
     assert full_sections is not None
     full_sections_text = _table_text(full_sections)

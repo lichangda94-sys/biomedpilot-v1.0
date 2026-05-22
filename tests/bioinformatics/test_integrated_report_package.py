@@ -6,6 +6,7 @@ from app.bioinformatics.reports import integrated
 from app.bioinformatics.reports.integrated import (
     build_full_integrated_report_package_plan,
     create_full_integrated_report_package,
+    evaluate_full_integrated_docx_preflight_gate,
     evaluate_full_integrated_report_renderer_gate,
 )
 from app.bioinformatics.reports.survival_clinical import create_cox_report_ready_package, create_km_logrank_report_ready_package
@@ -62,6 +63,8 @@ def test_integrated_report_package_plan_surfaces_renderer_gate_for_docx(tmp_path
     assert plan["export_format"] == "docx"
     assert plan["renderer_id"] == "pandoc_docx"
     assert plan["renderer_status"] == "blocked"
+    assert plan["renderer_preflight_policy"]["activation_status"] == "disabled_until_docx_renderer_activation_stage"
+    assert "non-empty integrated_report.md" in plan["renderer_preflight_policy"]["checks"]
     assert "full_integrated_docx_renderer_not_enabled_in_b23_4" in plan["disabled_reasons"]
     assert plan["can_create_package"] is False
 
@@ -140,6 +143,39 @@ def test_integrated_report_markdown_export_activates_when_all_section_prerequisi
     assert (package_path / "sections" / "cox.md").is_file()
     assert package["renderer_gate"]["renderer_id"] == "builtin_markdown"
     assert "clinical diagnosis" in (package_path / "README_limitations.md").read_text(encoding="utf-8")
+
+
+def test_docx_preflight_validates_markdown_package_but_keeps_activation_blocked(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+
+    gate = evaluate_full_integrated_docx_preflight_gate(package["package_path"], renderer_gate=_docx_renderer_gate_without_activation_blocker())
+
+    assert gate["status"] == "blocked"
+    assert gate["preflight_status"] == "passed_pending_activation"
+    assert gate["checks"]["source_package_full_integrated_markdown"] is True
+    assert gate["checks"]["source_markdown_nonempty"] is True
+    assert gate["checks"]["pandoc_detected"] is True
+    assert gate["checks"]["no_conversion_invoked"] is True
+    assert gate["artifact_manifest_preview"]["artifact_type"] == "full_integrated_report_rendered_export"
+    assert gate["artifact_manifest_preview"]["validation_status"] == "not_created_preflight_only"
+    assert "full_integrated_docx_export_activation_required_b24_2" in gate["blockers"]
+    assert not (Path(package["package_path"]) / "exports" / "integrated_report.docx").exists()
+
+
+def test_docx_preflight_blocks_missing_local_markdown_references(tmp_path: Path, monkeypatch) -> None:
+    _write_entries(tmp_path)
+    monkeypatch.setattr(integrated, "evaluate_full_integrated_report_gate", lambda *args, **kwargs: _passed_gate())
+    package = create_full_integrated_report_package(tmp_path)
+    package_path = Path(package["package_path"])
+    markdown = package_path / "integrated_report.md"
+    markdown.write_text(markdown.read_text(encoding="utf-8") + "\n\n![missing](plots/missing.svg)\n", encoding="utf-8")
+
+    gate = evaluate_full_integrated_docx_preflight_gate(package_path, renderer_gate=_docx_renderer_gate_without_activation_blocker())
+
+    assert gate["preflight_status"] == "blocked"
+    assert "docx_markdown_local_reference_missing:plots/missing.svg" in gate["blockers"]
 
 
 def _write_entries(root: Path) -> None:
@@ -222,6 +258,29 @@ def _eligible_section_gate(status: str, result_id: str) -> dict:
         "schema_version": "biomedpilot.test_section_report_gate.v1",
         "status": status,
         "selected_result_id": result_id,
+        "blockers": [],
+        "warnings": [],
+    }
+
+
+def _docx_renderer_gate_without_activation_blocker() -> dict:
+    return {
+        "schema_version": "biomedpilot.full_integrated_report_renderer_gate.v1",
+        "status": "blocked",
+        "export_format": "docx",
+        "renderer_id": "pandoc_docx",
+        "required_dependencies": ["pandoc"],
+        "detected_dependencies": {
+            "pandoc": {
+                "command": "pandoc",
+                "available": True,
+                "path": "/usr/local/bin/pandoc",
+                "version": "pandoc 3.2",
+                "missing_reason": "",
+                "packaging_impact": "external_binary_required_for_docx_and_pdf_activation_not_bundled",
+            }
+        },
+        "checks": {"dependencies_detected": True, "implementation_enabled": False, "detect_first_no_install_action": True},
         "blockers": [],
         "warnings": [],
     }

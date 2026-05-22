@@ -7352,6 +7352,7 @@ class BioinformaticsResultsBrowserWidget(QWidget):
                 ["renderer_id", plan.get("renderer_id", "")],
                 ["renderer_dependencies", ", ".join(str(item) for item in plan.get("renderer_dependencies", []) or [])],
                 ["renderer_disabled_reason", plan.get("renderer_disabled_reason", "")],
+                ["renderer_preflight_policy", plan.get("renderer_preflight_policy", {})],
                 ["package_root_policy", plan.get("package_root_policy", "")],
                 ["required_directories", ", ".join(str(item) for item in plan.get("required_directories", []) or [])],
                 ["required_files", ", ".join(str(item) for item in plan.get("required_files", []) or [])],
