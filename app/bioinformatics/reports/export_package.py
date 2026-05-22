@@ -7,9 +7,22 @@ from pathlib import Path
 from typing import Any
 
 from app.bioinformatics.results.registry import load_registry
+from app.shared.local_engines import (
+    REPORT_RENDERER_ENGINE_FAMILY,
+    ExternalEngineRegistry,
+    dependency_snapshot_handoff,
+    load_external_engine_registry,
+)
 
 from .models import REPORT_PACKAGE_SCHEMA_VERSION
 from .readiness import evaluate_report_ready_gate
+
+REPORT_RENDERER_CAPABILITIES = (
+    "renderer.pandoc.available",
+    "renderer.quarto.available",
+    "renderer.latex.available",
+    "renderer.wkhtmltopdf.available",
+)
 
 
 def create_report_export_package(
@@ -18,6 +31,8 @@ def create_report_export_package(
     report_markdown: str,
     include_result_ids: list[str] | None = None,
     test_report_mode: bool = False,
+    external_registry: ExternalEngineRegistry | None = None,
+    dependency_storage_root: str | Path | None = None,
 ) -> dict[str, Any]:
     root = Path(project_root).expanduser().resolve()
     gate = evaluate_report_ready_gate(root, include_result_ids=include_result_ids, test_report_mode=test_report_mode)
@@ -33,7 +48,8 @@ def create_report_export_package(
     (package_dir / "report.md").write_text(report_markdown, encoding="utf-8")
     registry = load_registry(root)
     _write_json(manifests_dir / "result_index_snapshot.json", registry)
-    _write_json(manifests_dir / "dependency_snapshot.json", _dependency_snapshot(registry))
+    external_engine_registry = external_registry or load_external_engine_registry(dependency_storage_root)
+    _write_json(manifests_dir / "dependency_snapshot.json", _dependency_snapshot(registry, external_engine_registry=external_engine_registry))
     _write_json(manifests_dir / "validation_report.json", gate)
     _write_json(manifests_dir / "warnings.json", {"warnings": gate.get("warnings", [])})
     _write_parameters_manifests(manifests_dir / "parameters_manifests", registry)
@@ -56,12 +72,26 @@ def create_report_export_package(
     return manifest
 
 
-def _dependency_snapshot(registry: dict[str, Any]) -> dict[str, Any]:
+def _dependency_snapshot(registry: dict[str, Any], *, external_engine_registry: ExternalEngineRegistry | None = None) -> dict[str, Any]:
     snapshots = {}
     for entry in registry.get("results", []) or []:
         if isinstance(entry, dict) and entry.get("dependency_snapshot"):
             snapshots[str(entry.get("result_id") or "")] = entry.get("dependency_snapshot")
-    return snapshots
+    return snapshots | {
+        "_external_engine_handoffs": {
+            "report_renderer": _report_renderer_handoff(external_engine_registry),
+        },
+        "_boundary": "renderer_dependency_state_does_not_decide_report_ready",
+    }
+
+
+def _report_renderer_handoff(external_engine_registry: ExternalEngineRegistry | None) -> dict[str, Any]:
+    registry = external_engine_registry or ExternalEngineRegistry(())
+    return dependency_snapshot_handoff(
+        registry,
+        engine_family=REPORT_RENDERER_ENGINE_FAMILY,
+        required_capabilities=REPORT_RENDERER_CAPABILITIES,
+    )
 
 
 def _write_parameters_manifests(target: Path, registry: dict[str, Any]) -> None:

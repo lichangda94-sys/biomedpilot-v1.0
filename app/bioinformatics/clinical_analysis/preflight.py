@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+
+from app.shared.local_engines import ExternalEngineRegistry
 
 from .dependency_check import check_survival_backend_dependencies
 from .models import CLINICAL_PREFLIGHT_SCHEMA_VERSION, SURVIVAL_PREFLIGHT_SCHEMA_VERSION, SurvivalInputPackage
 
 
-def build_survival_preflight(survival_package: SurvivalInputPackage | dict[str, Any]) -> dict[str, Any]:
+def build_survival_preflight(
+    survival_package: SurvivalInputPackage | dict[str, Any],
+    *,
+    external_registry: ExternalEngineRegistry | None = None,
+    storage_root: str | Path | None = None,
+) -> dict[str, Any]:
     package = survival_package.to_dict() if isinstance(survival_package, SurvivalInputPackage) else dict(survival_package)
-    dependency = check_survival_backend_dependencies()
+    dependency = check_survival_backend_dependencies(external_registry=external_registry, storage_root=storage_root)
     blockers = [str(item) for item in package.get("blockers", []) or []]
     warnings = [str(item) for item in package.get("warnings", []) or []]
     blockers.extend(str(item) for item in dependency.get("blockers", []) or [])
